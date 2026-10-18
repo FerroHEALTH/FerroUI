@@ -4,8 +4,10 @@
 //! The data table and the pager, drawn as static views.
 //!
 //! The table shows every row of its page, holds its header below the top
-//! bar on a wide screen and scrolls sideways inside its card on a narrow
-//! one, right aligns its numeric columns, keeps row actions at the end, and draws
+//! bar on a wide screen and stacks each row as a card below 40rem, each cell
+//! named by its column, so a phone reads every column with no sideways
+//! scroll; a small table that fits a phone opts out and scrolls inside its
+//! box instead. It right aligns its numeric columns, keeps row actions at the end, and draws
 //! skeleton rows while it loads and the empty state when there is nothing.
 //! A sortable header is a link carrying `aria-sort`. The pager states the
 //! range, then First, Previous, the position, Next and Last, and the sizes;
@@ -162,23 +164,27 @@ fn header(column: &Column, sort: Option<&Sort>, sort_href: &dyn Fn(&Sort) -> Str
     .into_any()
 }
 
-/// Returns the data table `table`.
+/// Returns the data table `table`, its rows stacked as cards below 40rem.
+///
+/// Every body cell that carries `data-label` (its column's name) shows the
+/// name beside its value, and the cell with none (the row's name) heads the
+/// card, so a phone shows every column with no sideways scroll
+/// (WCAG 2.2 SC 1.4.10). A console writes `data-label` on every cell but
+/// the row's name.
 #[must_use]
 pub fn data_table(table: DataTable<'_>) -> impl IntoView + use<> {
-    drawn(table, false)
-}
-
-/// Returns the data table `table`, its rows stacked as blocks below 40rem.
-///
-/// Every cell that carries `data-label` (its column's name) shows the name
-/// beside its value, and a cell with none (the row's name) heads the block,
-/// so a phone shows every column with no sideways scroll.
-#[must_use]
-pub fn data_table_stacked(table: DataTable<'_>) -> impl IntoView + use<> {
     drawn(table, true)
 }
 
-/// The table [`data_table`] and [`data_table_stacked`] draw.
+/// Returns the data table `table` as a grid at every width: the opt-out for
+/// a small table that fits a phone as it is (two short columns), which
+/// scrolls sideways inside its box if a value outgrows it.
+#[must_use]
+pub fn data_table_unstacked(table: DataTable<'_>) -> impl IntoView + use<> {
+    drawn(table, false)
+}
+
+/// The table [`data_table`] and [`data_table_unstacked`] draw.
 fn drawn(table: DataTable<'_>, stacked: bool) -> impl IntoView + use<> {
     let headers = table
         .columns

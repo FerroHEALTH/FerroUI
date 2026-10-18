@@ -493,17 +493,143 @@ async fn every_page_reflows_at_320_pixels_with_no_sideways_scroll() -> Result<()
                 "{path} scrolls sideways at 320 px: {metrics:?}"
             );
             if page == "/tables" {
-                // The table, wider than its card, scrolls sideways inside it.
-                let region = browser.element(By::Css(".fui-table-scroll")).await?;
-                let scroll = number(region.prop("scrollWidth").await?);
-                let client = number(region.prop("clientWidth").await?);
-                assert!(
-                    scroll > client,
-                    "the table box does not scroll sideways at 320 px ({scroll} in {client})"
-                );
+                // Every table reads whole at 320 px: a data table stacks its
+                // rows as cards, and the one that opts out fits its box.
+                let regions = browser
+                    .driver()
+                    .find_all(By::Css(".fui-table-scroll"))
+                    .await?;
+                assert!(regions.len() >= 6, "{} table boxes", regions.len());
+                for region in regions {
+                    let scroll = number(region.prop("scrollWidth").await?);
+                    let client = number(region.prop("clientWidth").await?);
+                    assert!(
+                        scroll <= client + 1.0,
+                        "a table box scrolls sideways at 320 px ({scroll} in {client})"
+                    );
+                }
+                let row = browser
+                    .element(By::XPath("(//table)[1]/tbody/tr[1]"))
+                    .await?;
+                assert_eq!("block", row.css_value("display").await?);
+                let named = browser
+                    .element(By::XPath(
+                        "(//table)[1]/tbody/tr[1]/td[@data-label = 'Lines']",
+                    ))
+                    .await?;
+                assert!(named.is_displayed().await?, "a stacked cell is hidden");
             }
         }
         browser.console_clean("the reflow").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_control_tabbed_to_above_the_fold_lands_below_the_sticky_top_bar()
+-> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        window(browser, 1440, 900).await?;
+        browser.goto(&gallery.url("/ferroehr/forms")).await?;
+        browser.element(By::Css("main h1")).await?;
+        // From the foot of the page, the focus goes to the control after one
+        // well above the fold without scrolling; Shift+Tab then moves to
+        // that control, which the browser scrolls into view at the top.
+        let marked = browser
+            .driver()
+            .execute(
+                r"window.scrollTo(0, document.documentElement.scrollHeight);
+                const all = [...document.querySelectorAll(
+                  'main a[href], main button:not([disabled]), main input:not([disabled]):not([type=hidden]), main select:not([disabled]), main textarea:not([disabled])'
+                )].filter((e) => e.offsetParent !== null && e.tabIndex >= 0);
+                const above = all.filter((e) => e.getBoundingClientRect().bottom < -200);
+                if (above.length === 0) { return false; }
+                const target = above[above.length - 1];
+                const after = all[all.indexOf(target) + 1];
+                target.setAttribute('data-journey', 'target');
+                after.focus({ preventScroll: true });
+                return document.activeElement === after;",
+                vec![],
+            )
+            .await?;
+        assert_eq!(
+            serde_json::Value::Bool(true),
+            *marked.json(),
+            "no control above the fold"
+        );
+        browser
+            .driver()
+            .active_element()
+            .await?
+            .send_keys(Key::Shift + Key::Tab)
+            .await?;
+        let landed = browser
+            .driver()
+            .execute(
+                r"const target = document.activeElement;
+                const bar = document.querySelector('.fui-topbar').getBoundingClientRect();
+                return [target.getAttribute('data-journey'), target.getBoundingClientRect().top, bar.bottom];",
+                vec![],
+            )
+            .await?;
+        let landed: (Option<String>, f64, f64) = serde_json::from_value(landed.json().clone())?;
+        assert_eq!(Some(String::from("target")), landed.0, "Shift+Tab missed the control");
+        assert!(
+            landed.1 >= landed.2,
+            "the focused control's top ({}) is under the top bar's foot ({})",
+            landed.1,
+            landed.2
+        );
+        browser.console_clean("the scroll padding").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_top_bar_status_shows_its_full_words_or_nothing_at_every_width()
+-> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        for width in [390, 640, 768, 900, 1024, 1100, 1280, 1440] {
+            window(browser, width, 900).await?;
+            browser.goto(&gallery.url("/ferroehr/forms")).await?;
+            browser.element(By::Css("main h1")).await?;
+            let measured = browser
+                .driver()
+                .execute(
+                    r"const pill = document.querySelector('.fui-topbar-end .fui-pill');
+                    const end = document.querySelector('.fui-topbar-end').getBoundingClientRect();
+                    const middle = document.querySelector('.fui-topbar-middle');
+                    const shown = pill !== null && pill.getClientRects().length > 0;
+                    if (!shown) { return [false, true, true, true]; }
+                    const box = pill.getBoundingClientRect();
+                    const search = middle.getBoundingClientRect();
+                    const clear = middle.offsetTop !== pill.offsetTop
+                      ? true
+                      : box.left >= search.right;
+                    return [true, pill.scrollWidth <= pill.clientWidth + 1, end.right <= window.innerWidth + 0.5, clear];",
+                    vec![],
+                )
+                .await?;
+            let (shown, whole, inside, clear): (bool, bool, bool, bool) =
+                serde_json::from_value(measured.json().clone())?;
+            assert!(whole, "the status pill is cut short at {width} px");
+            assert!(inside, "the top bar's end runs past the window at {width} px");
+            assert!(clear, "the status pill overlaps the search box at {width} px");
+            if width >= 1024 {
+                assert!(shown, "the status pill is hidden at {width} px");
+            } else {
+                assert!(!shown, "the status pill shows at {width} px");
+            }
+        }
+        browser.console_clean("the top bar status").await
     })
     .await
 }

@@ -370,3 +370,114 @@ async fn the_combobox_filters_as_typed_and_the_keys_choose() -> Result<(), Box<d
     })
     .await
 }
+
+/// Whether the tree item whose row starts with `words` is open.
+async fn open_item(browser: &Browser, words: &str) -> Result<bool, Box<dyn Error>> {
+    let item = browser
+        .element(By::XPath(format!(
+            "//ul[@id = 'gallery-tree']//li[@role = 'treeitem'][starts-with(normalize-space(div[contains(@class, 'fui-tree-row')]), '{words}')]"
+        )))
+        .await?;
+    Ok(item.attr("aria-expanded").await?.as_deref() == Some("true"))
+}
+
+/// The current address of the page.
+async fn address(browser: &Browser) -> Result<String, Box<dyn Error>> {
+    Ok(browser.driver().current_url().await?.to_string())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_tree_keeps_its_open_items_in_the_address_across_a_reload() -> Result<(), Box<dyn Error>>
+{
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/ferroterm/layouts")).await?;
+        let picked = browser.element(By::Id("run-value-set")).await?;
+        until("the page hydrates", async || {
+            Ok(!picked.is_displayed().await?)
+        })
+        .await?;
+        assert!(open_item(browser, "Synthetic finding").await?);
+        // Closing by the toggle removes the item from the address.
+        let toggle = browser
+            .element(By::Css("#gallery-tree > li:first-child .fui-tree-toggle"))
+            .await?;
+        press_until("the toggle closes the item", &toggle, async || {
+            Ok(!open_item(browser, "Synthetic finding").await?)
+        })
+        .await?;
+        until("the closed item leaves the address", async || {
+            let url = address(browser).await?;
+            Ok(url.contains("open=") && !url.contains("SYN-100"))
+        })
+        .await?;
+        let closed = address(browser).await?;
+        browser.goto(&closed).await?;
+        assert!(
+            !open_item(browser, "Synthetic finding").await?,
+            "the reload opened the closed item again ({closed})"
+        );
+        assert!(
+            browser
+                .driver()
+                .find_all(By::XPath(
+                    "//a[contains(., 'Synthetic finding of the arm')]"
+                ))
+                .await?
+                .is_empty(),
+            "a closed item's children show after the reload"
+        );
+        // Opening adds the item; the reload reads its children again.
+        let picked = browser.element(By::Id("run-value-set")).await?;
+        until("the page hydrates again", async || {
+            Ok(!picked.is_displayed().await?)
+        })
+        .await?;
+        let branch = browser
+            .element(By::XPath(
+                "//ul[@id = 'gallery-tree']/li[2]//button[contains(@class, 'fui-tree-toggle')]",
+            ))
+            .await?;
+        press_until("the toggle opens the branch", &branch, async || {
+            open_item(browser, "Synthetic procedure").await
+        })
+        .await?;
+        until("the opened item joins the address", async || {
+            Ok(address(browser).await?.contains("SYN-200"))
+        })
+        .await?;
+        let opened = address(browser).await?;
+        browser.goto(&opened).await?;
+        assert!(open_item(browser, "Synthetic procedure").await?);
+        browser
+            .text("a", "Synthetic child, read on opening")
+            .await?;
+        // Closing by the keyboard (Left) removes it again.
+        let picked = browser.element(By::Id("run-value-set")).await?;
+        until("the page hydrates a third time", async || {
+            Ok(!picked.is_displayed().await?)
+        })
+        .await?;
+        let item = browser
+            .element(By::XPath("//ul[@id = 'gallery-tree']/li[2]"))
+            .await?;
+        until("Left closes the branch", async || {
+            browser
+                .driver()
+                .execute("arguments[0].focus();", vec![item.to_json()?])
+                .await?;
+            item.send_keys(Key::Left).await?;
+            Ok(!open_item(browser, "Synthetic procedure").await?)
+        })
+        .await?;
+        until("the branch leaves the address", async || {
+            Ok(!address(browser).await?.contains("SYN-200"))
+        })
+        .await?;
+        browser.console_clean("the tree's address").await
+    })
+    .await
+}

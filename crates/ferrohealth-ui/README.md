@@ -67,9 +67,10 @@ which your server writes from its own cookie or setting (`theme::Theme`).
 
 The top bar keeps its start (the drawer button and the lockup) and its end
 on one row at every width. When the row is short of room, the lockup's
-accent word folds away first (below 30rem), and then a status pill in the
-end shortens its words to an ellipsis, keeping the full words in its text.
-The end's buttons (the theme toggle, the operator menu) never fold. A
+accent word folds away first (below 30rem). A status pill in the end keeps
+its full words and never shortens to its dot: show it from the width where
+the row has room (`fui-roomy-only`, from 64rem) and put it in the operator
+menu's `extra` below that if a narrow screen needs it. The end's buttons (the theme toggle, the operator menu) never fold. A
 search box between them takes a row of its own below 48rem. Put anything
 else a console offers, such as a three-way theme choice or a scope list, in
 the operator menu's `extra`.

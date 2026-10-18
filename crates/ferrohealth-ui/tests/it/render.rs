@@ -9,7 +9,7 @@ use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::table::model::{Paging, Sort, Window};
 use ferrohealth_ui::table::view::{
-    Body, Column, DataTable, data_table, data_table_stacked, link_pager,
+    Body, Column, DataTable, data_table, data_table_unstacked, link_pager,
 };
 use ferrohealth_ui::theme::Theme;
 use ferrohealth_ui::tone::Tone;
@@ -424,17 +424,16 @@ fn a_tree_item_states_its_level_by_name() {
 }
 
 #[test]
-fn a_stacked_table_marks_its_box_for_the_phone_layout() {
+fn a_data_table_stacks_on_a_phone_unless_it_opts_out() {
     let columns = [Column::text("name", "Name"), Column::text("kind", "Kind")];
+    let rows = || view! { <tr><td>"a"</td><td data-label="Kind">"model"</td></tr> }.into_any();
     let table = html(|| {
-        data_table_stacked(DataTable {
+        data_table(DataTable {
             caption: "Files",
             columns: &columns,
             sort: None,
             sort_href: &|_| String::new(),
-            body: Body::Rows(
-                view! { <tr><td>"a"</td><td data-label="Kind">"model"</td></tr> }.into_any(),
-            ),
+            body: Body::Rows(rows()),
         })
         .into_any()
     });
@@ -442,6 +441,18 @@ fn a_stacked_table_marks_its_box_for_the_phone_layout() {
         table.contains(r#"class="fui-table-scroll fui-table-stack""#),
         "{table}"
     );
+    let fitting = html(|| {
+        data_table_unstacked(DataTable {
+            caption: "Files",
+            columns: &columns,
+            sort: None,
+            sort_href: &|_| String::new(),
+            body: Body::Rows(rows()),
+        })
+        .into_any()
+    });
+    assert!(fitting.contains(r#"class="fui-table-scroll""#), "{fitting}");
+    assert!(!fitting.contains("fui-table-stack"), "{fitting}");
 }
 
 #[test]

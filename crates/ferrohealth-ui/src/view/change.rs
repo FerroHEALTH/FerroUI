@@ -69,8 +69,8 @@ pub fn change_table(caption: &'static str, changes: &[Change]) -> impl IntoView 
                     <th scope="row">
                         <code>{change.key.clone()}</code>
                     </th>
-                    <td>{side(change.from.as_ref(), "−", true)}</td>
-                    <td>{side(change.to.as_ref(), "+", false)}</td>
+                    <td data-label="Before">{side(change.from.as_ref(), "−", true)}</td>
+                    <td data-label="After">{side(change.to.as_ref(), "+", false)}</td>
                 </tr>
             }
         })

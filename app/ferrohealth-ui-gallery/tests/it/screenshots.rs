@@ -42,8 +42,8 @@ const WIDTH: u32 = 1440;
 /// measured.
 const HEIGHT: u32 = 900;
 
-/// The tallest screenshot.
-const TALLEST: u32 = 8000;
+/// The tallest screenshot, under the browser's 16384 pixel texture limit.
+const TALLEST: u32 = 16000;
 
 /// One screenshot: the image's name without the theme suffix, the path the
 /// browser loads, and a selector the page shows once it has loaded.

@@ -11,7 +11,7 @@ and this project adheres to
 
 ## [Unreleased]
 
-## [0.1.2] - 2026-10-18
+## [0.1.2] - 2026-10-19
 
 The fixes the owner's review of the four consoles asked for: links, fields,
 selects, buttons, definition grids, empty states, tabs, the top bar, the
@@ -40,11 +40,15 @@ public signature changes; the additions are new functions and classes.
 - `view::surface::link_card_glyph`, and a link card shows a chevron after its
   title and the accent edge under the pointer and the keyboard
   (FerroHEALTH/FerroUI#70).
-- `table::view::data_table_stacked`: below 40rem each row is a block, every
-  cell with a `data-label` named by its column, so a phone shows every column
-  (FerroHEALTH/FerroUI#56).
+- `table::view::data_table` stacks its rows on a phone: below 40rem each
+  row is a card, every cell with a `data-label` named by its column, so a
+  phone shows every column with no sideways scroll; the change table names
+  its cells the same way. `table::view::data_table_unstacked` is the opt-out
+  for a small table that fits a phone as it is (FerroHEALTH/FerroUI#56).
 - `widget::tree::tree_view_collapsing`: the console is told the key of every
-  item that closes (FerroHEALTH/FerroUI#47).
+  item that closes (FerroHEALTH/FerroUI#47). The gallery's tree keeps its
+  open items in its address, and a journey closes an item by the toggle and
+  by the keyboard and reloads.
 - A fieldset set apart as a well (`fui-fieldset fui-well`) keeps the well's
   frame and padding, its legend inside (FerroHEALTH/FerroUI#68).
 - The `--control` and `--control-small` heights, shared by buttons, inputs
@@ -53,6 +57,9 @@ public signature changes; the additions are new functions and classes.
 
 ### Changed
 
+- The minimum supported Rust is 1.97, checked on the host and the
+  `wasm32-unknown-unknown` target, so a console on Rust 1.97 builds the
+  crate (FerroEHR's minimum).
 - A link is the accent with an underline under the pointer; a link in running
   prose keeps its underline, and every component that draws an anchor sets
   its own decoration (FerroHEALTH/FerroUI#38). A link in a table cell keeps
@@ -85,7 +92,8 @@ public signature changes; the additions are new functions and classes.
 - Below 40rem the tab strip is one row that scrolls inside itself with a
   shade at the edge that has more tabs (FerroHEALTH/FerroUI#65).
 - The top bar keeps one row at every width: the lockup's accent word folds
-  away, then a status pill in the end shortens to an ellipsis
+  away, and a status pill in the end keeps its full words, shown from 64rem
+  with the new `fui-roomy-only` utility, never cut to its dot
   (FerroHEALTH/FerroUI#41).
 - A pager over one page draws the range and the sizes alone
   (FerroHEALTH/FerroUI#39).
@@ -112,8 +120,11 @@ public signature changes; the additions are new functions and classes.
 - A tree item carries `aria-level`, where it wrote a literal
   `attr:aria-level` (FerroHEALTH/FerroUI#48).
 - The scroll padding beside the sticky top bar, which keeps a focused
-  control clear of it (WCAG 2.2 SC 2.4.11), is pinned by a test
+  control clear of it (WCAG 2.2 SC 2.4.11), is pinned by a test and by a
+  gallery journey that moves the focus back to a control above the fold
   (FerroHEALTH/FerroUI#40).
+- A stacked card's loading bars and empty state span the card, and a
+  panel's stacked cards keep the panel's inset.
 
 ## [0.1.1] - 2026-10-18
 

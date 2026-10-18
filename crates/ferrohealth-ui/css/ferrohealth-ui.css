@@ -602,6 +602,14 @@
     }
   }
 
+  /* Shown from 64 rem up, where a top bar with a search box has room for a
+     status pill's full words beside its controls. */
+  @media (width < 64rem) {
+    .fui-roomy-only {
+      display: none !important;
+    }
+  }
+
   /* ---- The shell ---- */
 
   .fui-page {
@@ -728,21 +736,9 @@
     flex-shrink: 0;
   }
 
-  /* A status in the end is the part that gives way: its words shorten to an
-     ellipsis and the full words stay in its text for assistive technology. */
-  .fui-topbar-end > :has(.fui-pill),
-  .fui-topbar-end > .fui-pill {
-    min-width: 0;
-    flex-shrink: 1;
-  }
-
-  .fui-topbar-end .fui-pill {
-    display: block;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
+  /* A status pill in the end keeps its full words: a pill cut to its dot
+     says nothing. A console shows it from the width where the row has room
+     for it (`fui-roomy-only`). */
   .fui-topbar-end .fui-pill::before {
     display: inline-block;
     margin-inline-end: 0.375rem;
@@ -1994,6 +1990,12 @@
       box-shadow: none;
     }
 
+    /* A panel's table runs to the panel's edge; its cards keep the panel's
+       inset instead. */
+    .fui-panel > .fui-table-stack {
+      padding: var(--space-loose);
+    }
+
     .fui-table-stack .fui-table tbody tr {
       border: 1px solid var(--edge);
       border-radius: var(--radius-card);
@@ -2020,8 +2022,12 @@
       text-align: start;
     }
 
+    /* The cell that heads a card, a loading bar or the empty state spans
+       the card: `justify-items` applies to a block box too (CSS Box
+       Alignment 3), so the grid's `start` is put back to `normal`. */
     .fui-table-stack .fui-table tbody :is(td, th):not([data-label]) {
       display: block;
+      justify-items: normal;
       margin-block-end: var(--space-tight);
       padding-inline: 0;
       font-weight: 600;
@@ -2029,6 +2035,12 @@
 
     .fui-table-stack .fui-table tbody [data-label] {
       padding-inline: 0;
+    }
+
+    /* A card has no sideways scroll, so an identifier wraps inside it. */
+    .fui-table-stack .fui-table code {
+      white-space: normal;
+      overflow-wrap: anywhere;
     }
 
     .fui-table-stack .fui-table tbody [data-label]::before {

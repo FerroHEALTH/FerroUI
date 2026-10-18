@@ -3,15 +3,16 @@
 
 //! The tables page.
 //!
-//! It shows the data table with its page, size and sort in the URL,
-//! the same rows paged in the page's own state, a result set whose headers
-//! arrive at run time, the pagers of a listing with no stated total, and the
-//! loading and empty tables.
+//! It shows the data table, stacked as cards on a phone, with its page, size
+//! and sort in the URL, the same rows paged in the page's own state, a result
+//! set whose headers arrive at run time, the pagers of a listing with no
+//! stated total, the loading and empty tables, and a small table that fits a
+//! phone unstacked.
 
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::table::model::{Noun, OpenWindow, Paging, Sort, Window, href};
 use ferrohealth_ui::table::view::{
-    ACTIONS, Body, Column, DataTable, Listing, NUM, data_table, data_table_stacked,
+    ACTIONS, Body, Column, DataTable, Listing, NUM, data_table, data_table_unstacked,
     link_open_pager, link_pager,
 };
 use ferrohealth_ui::tone::Tone;
@@ -66,10 +67,10 @@ fn row(row: &Row) -> AnyView {
                     <code>{row.name.clone()}</code>
                 </a>
             </th>
-            <td>{row.kind}</td>
-            <td class=NUM>{row.lines.to_string()}</td>
-            <td>{badge(tone, row.state)}</td>
-            <td class=ACTIONS>
+            <td data-label="Kind">{row.kind}</td>
+            <td data-label="Lines" class=NUM>{row.lines.to_string()}</td>
+            <td data-label="State">{badge(tone, row.state)}</td>
+            <td data-label="Actions" class=ACTIONS>
                 <button type="button" class=Variant::Secondary.small()>
                     "Open"
                 </button>
@@ -176,8 +177,8 @@ fn result_set() -> AnyView {
                             <code>{format!("{index:08}-synthetic::node-a::1")}</code>
                         </a>
                     </td>
-                    <td>"Synthetic vital signs"</td>
-                    <td class=NUM>{(index * 7).to_string()}</td>
+                    <td data-label="c/name/value">"Synthetic vital signs"</td>
+                    <td data-label="count(*)" class=NUM>{(index * 7).to_string()}</td>
                 </tr>
             }
         })
@@ -186,8 +187,8 @@ fn result_set() -> AnyView {
     let long = view! {
         <tr>
             <td><code>"http://example.org/fhir/StructureDefinition/ferrohealth-synthetic-journey-diagnose"</code></td>
-            <td>"Synthetic profile"</td>
-            <td class=NUM>"1"</td>
+            <td data-label="c/name/value">"Synthetic profile"</td>
+            <td data-label="count(*)" class=NUM>"1"</td>
         </tr>
     };
     let body = view! {
@@ -208,31 +209,36 @@ fn result_set() -> AnyView {
     .into_any()
 }
 
-/// A table that stacks its rows on a phone, each cell named by its column.
-fn stacked() -> AnyView {
-    let rows = (1..=3_u32)
-        .map(|index| {
-            view! {
-                <tr>
-                    <td><code>{format!("synthetic-{index:03}.model.yml")}</code></td>
-                    <td data-label="Kind">"model"</td>
-                    <td data-label="Lines" class=NUM>{(index * 41).to_string()}</td>
-                    <td data-label="State">{badge(Tone::Ok, "compiled")}</td>
-                    <td data-label="Actions" class=ACTIONS>
-                        <button type="button" class=Variant::Secondary.small()>
-                            "Open"
-                        </button>
-                    </td>
-                </tr>
-            }
-        })
-        .collect_view()
-        .into_any();
+/// The columns of a small table that fits a phone as it is.
+const FITTING: [Column; 2] = [
+    Column::text("indicator", "Indicator"),
+    Column::text("status", "Status"),
+];
+
+/// A small table of two short columns, which fits a phone as it is and so
+/// opts out of the stacked rows.
+fn fitting() -> AnyView {
+    let rows = [
+        ("cdr", Tone::Ok, "up"),
+        ("terminology", Tone::Ok, "up"),
+        ("store", Tone::Warn, "slow"),
+    ]
+    .into_iter()
+    .map(|(name, tone, state)| {
+        view! {
+            <tr>
+                <th scope="row"><code>{name}</code></th>
+                <td>{badge(tone, state)}</td>
+            </tr>
+        }
+    })
+    .collect_view()
+    .into_any();
     card(
-        "Stacked on a phone",
-        data_table_stacked(DataTable {
-            caption: "Mapping files, stacked below 40rem",
-            columns: &PLAIN,
+        "Fits a phone as it is",
+        data_table_unstacked(DataTable {
+            caption: "Health indicators, unstacked at every width",
+            columns: &FITTING,
             sort: None,
             sort_href: &|_| String::new(),
             body: Body::Rows(rows),
@@ -371,7 +377,7 @@ pub fn TablesPage() -> impl IntoView {
         open_listing(),
         states(),
         changes(),
-        stacked(),
+        fitting(),
     );
     view! {
         {super::title("Tables and paging")}
