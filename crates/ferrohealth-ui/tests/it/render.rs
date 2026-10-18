@@ -8,7 +8,9 @@
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::table::model::{Paging, Sort, Window};
-use ferrohealth_ui::table::view::{Body, Column, DataTable, data_table, link_pager};
+use ferrohealth_ui::table::view::{
+    Body, Column, DataTable, data_table, data_table_stacked, link_pager,
+};
 use ferrohealth_ui::theme::Theme;
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::button::{Variant, link_button};
@@ -27,6 +29,7 @@ use ferrohealth_ui::view::tabs::{Tab, link_tabs};
 use ferrohealth_ui::view::theme_switch::{theme_switch, theme_toggle};
 use ferrohealth_ui::widget::chart::line_chart;
 use ferrohealth_ui::widget::document::{DocumentPane, document_pane_opening};
+use ferrohealth_ui::widget::tree::{Tree, TreeNode, tree_view};
 use leptos::prelude::*;
 
 /// The HTML `view` renders to, under a reactive owner as a server render
@@ -396,6 +399,48 @@ fn the_last_series_shown_cannot_be_hidden_and_each_chip_names_its_series() {
     assert!(
         one.contains(r#"data-series="diastolic" aria-pressed="true" disabled"#),
         "{one}"
+    );
+}
+
+#[test]
+fn a_tree_item_states_its_level_by_name() {
+    let tree = html(|| {
+        let mut parent = TreeNode::new("a", "Parent");
+        parent.expandable = true;
+        parent.children = vec![TreeNode::new("b", "Child")];
+        tree_view(Tree {
+            id: "browse",
+            label: "Concepts",
+            nodes: Signal::stored(vec![parent]),
+            expanded: RwSignal::new(std::collections::BTreeSet::from([String::from("a")])),
+            selected: Signal::stored(None),
+            on_expand: None,
+            actions: None,
+        })
+    });
+    assert!(tree.contains(r#"aria-level="1""#), "{tree}");
+    assert!(tree.contains(r#"aria-level="2""#), "{tree}");
+    assert!(!tree.contains("attr:aria-level"), "{tree}");
+}
+
+#[test]
+fn a_stacked_table_marks_its_box_for_the_phone_layout() {
+    let columns = [Column::text("name", "Name"), Column::text("kind", "Kind")];
+    let table = html(|| {
+        data_table_stacked(DataTable {
+            caption: "Files",
+            columns: &columns,
+            sort: None,
+            sort_href: &|_| String::new(),
+            body: Body::Rows(
+                view! { <tr><td>"a"</td><td data-label="Kind">"model"</td></tr> }.into_any(),
+            ),
+        })
+        .into_any()
+    });
+    assert!(
+        table.contains(r#"class="fui-table-scroll fui-table-stack""#),
+        "{table}"
     );
 }
 

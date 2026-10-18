@@ -10,7 +10,7 @@ use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::button::{Variant, label};
 use ferrohealth_ui::view::form::{
     FORM, INPUT, MEDIUM, SELECT, SWITCH, TEXTAREA, check, check_field, chip_choices, columns,
-    field, field_flow, fieldset, help_id,
+    field, field_flow, help_id,
 };
 use ferrohealth_ui::view::layout::action_bar;
 use ferrohealth_ui::view::notice::{Announce, notice};
@@ -176,7 +176,10 @@ fn grouped() -> AnyView {
         "Grouped fields",
         view! {
             <form method="post" action="#" class=FORM>
-                {fieldset("A federation member", pair)}
+                <fieldset class="fui-fieldset fui-well">
+                    <legend>"A federation member"</legend>
+                    {pair}
+                </fieldset>
                 {choice_reveal(
                     "secret",
                     "Its client secret",

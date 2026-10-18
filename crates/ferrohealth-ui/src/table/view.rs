@@ -165,6 +165,21 @@ fn header(column: &Column, sort: Option<&Sort>, sort_href: &dyn Fn(&Sort) -> Str
 /// Returns the data table `table`.
 #[must_use]
 pub fn data_table(table: DataTable<'_>) -> impl IntoView + use<> {
+    drawn(table, false)
+}
+
+/// Returns the data table `table`, its rows stacked as blocks below 40rem.
+///
+/// Every cell that carries `data-label` (its column's name) shows the name
+/// beside its value, and a cell with none (the row's name) heads the block,
+/// so a phone shows every column with no sideways scroll.
+#[must_use]
+pub fn data_table_stacked(table: DataTable<'_>) -> impl IntoView + use<> {
+    drawn(table, true)
+}
+
+/// The table [`data_table`] and [`data_table_stacked`] draw.
+fn drawn(table: DataTable<'_>, stacked: bool) -> impl IntoView + use<> {
     let headers = table
         .columns
         .iter()
@@ -198,7 +213,12 @@ pub fn data_table(table: DataTable<'_>) -> impl IntoView + use<> {
     let label = table.caption.to_owned();
     let caption = label.clone();
     view! {
-        <div class="fui-table-scroll" role="region" aria-label=label tabindex="0">
+        <div
+            class=if stacked { "fui-table-scroll fui-table-stack" } else { "fui-table-scroll" }
+            role="region"
+            aria-label=label
+            tabindex="0"
+        >
             <table class="fui-table" aria-busy=busy.then_some("true")>
                 <caption>{caption}</caption>
                 <thead>

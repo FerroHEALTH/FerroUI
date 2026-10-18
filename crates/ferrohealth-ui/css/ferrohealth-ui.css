@@ -1056,6 +1056,13 @@
     gap: 0.75rem;
   }
 
+  /* One stat per row on a phone, so every label stays on one line. */
+  @media (width < 30rem) {
+    .fui-grid-stats {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
   .fui-footer {
     display: flex;
     min-height: 2.5rem;
@@ -1443,8 +1450,10 @@
     font-weight: 500;
   }
 
+  /* The detail reads in the status's own tone, which the contrast test
+     holds on its ground, at the body weight. */
   .fui-status-detail {
-    color: var(--muted);
+    color: var(--tone);
     font-weight: 400;
   }
 
@@ -1930,6 +1939,66 @@
     background: color-mix(in srgb, var(--surface-sunken) 60%, transparent);
   }
 
+  /* A stacked table on a phone: each row a block, each cell its column's
+     name (its `data-label`) beside its value, the first cell, which names the
+     row, across the top. */
+  @media (width < 40rem) {
+    .fui-table-stack {
+      overflow: visible;
+    }
+
+    .fui-table-stack .fui-table thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+
+    .fui-table-stack .fui-table :is(tbody, tr) {
+      display: block;
+    }
+
+    .fui-table-stack .fui-table tbody tr {
+      border-bottom: 1px solid var(--edge);
+      padding-block: var(--row-y);
+    }
+
+    .fui-table-stack .fui-table tbody tr:last-child {
+      border-bottom: 0;
+    }
+
+    .fui-table-stack .fui-table tbody :is(td, th) {
+      display: grid;
+      grid-template-columns: minmax(6rem, 35%) minmax(0, 1fr);
+      justify-items: start;
+      align-items: center;
+      gap: 0.75rem;
+      border: 0;
+      padding-block: 0.125rem;
+      text-align: start;
+    }
+
+    .fui-table-stack .fui-table tbody :is(td, th):not([data-label]) {
+      display: block;
+      font-weight: 500;
+    }
+
+    .fui-table-stack .fui-table tbody [data-label]::before {
+      content: attr(data-label);
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .fui-table-stack .fui-table .fui-table-actions {
+      width: auto;
+    }
+
+    .fui-table-stack .fui-table .fui-table-actions :is(.fui-button, .fui-button-small) {
+      margin-block: 0;
+    }
+  }
+
   /* A link in a cell names the row it opens: the accent, underlined under
      the pointer, whatever a console's own anchor style says. */
   .fui-table tbody a:not(.fui-button, .fui-sort) {
@@ -1974,7 +2043,7 @@
     margin-block: calc((var(--leading-body) - var(--control)) / 2);
   }
 
-  .fui-table-actions > .fui-button-small {
+  .fui-table-actions .fui-button-small {
     margin-block: calc((var(--leading-body) - var(--control-small)) / 2);
   }
 
@@ -2280,6 +2349,18 @@
     margin-block-end: var(--space-default);
     padding: 0;
     font-weight: 600;
+  }
+
+  /* A fieldset set apart as a well keeps the well's frame and padding, its
+     legend inside the frame. */
+  .fui-fieldset.fui-well {
+    border: 1px solid var(--edge);
+    padding: 0.75rem;
+  }
+
+  .fui-fieldset.fui-well > legend {
+    float: left;
+    width: 100%;
   }
 
   .fui-choice > legend {

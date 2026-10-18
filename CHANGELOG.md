@@ -29,6 +29,13 @@ public signature changes; the additions are new functions and classes.
 - `view::surface::page_heading_live`: a page heading whose title follows a
   signal, so it stays true under client-side navigation
   (FerroHEALTH/FerroUI#51).
+- `table::view::data_table_stacked`: below 40rem each row is a block, every
+  cell with a `data-label` named by its column, so a phone shows every column
+  (FerroHEALTH/FerroUI#56).
+- `widget::tree::tree_view_collapsing`: the console is told the key of every
+  item that closes (FerroHEALTH/FerroUI#47).
+- A fieldset set apart as a well (`fui-fieldset fui-well`) keeps the well's
+  frame and padding, its legend inside (FerroHEALTH/FerroUI#68).
 - The `--control` and `--control-small` heights, shared by buttons, inputs
   and selects, and a definition list's pair may sit in a `<div>` of its own.
 - The README's rule for what the top bar folds first.
@@ -63,6 +70,10 @@ public signature changes; the additions are new functions and classes.
   (FerroHEALTH/FerroUI#57); fields side by side keep their labels and
   controls on one line whatever help each carries (FerroHEALTH/FerroUI#58).
 - A button in a table's actions cell sits on the row's first line.
+- Below 30rem the stat grid holds one stat per row, so every label stays on
+  one line (FerroHEALTH/FerroUI#46).
+- A status's detail reads in the status's own tone, which holds 4.5:1 on its
+  ground in both themes (FerroHEALTH/FerroUI#43).
 
 ### Fixed
 
@@ -74,6 +85,11 @@ public signature changes; the additions are new functions and classes.
   (FerroHEALTH/FerroUI#55).
 - An unavailable pager step reads "First (unavailable)", pinned by a test
   (FerroHEALTH/FerroUI#45).
+- A tree item carries `aria-level`, where it wrote a literal
+  `attr:aria-level` (FerroHEALTH/FerroUI#48).
+- The scroll padding beside the sticky top bar, which keeps a focused
+  control clear of it (WCAG 2.2 SC 2.4.11), is pinned by a test
+  (FerroHEALTH/FerroUI#40).
 
 ## [0.1.1] - 2026-10-18
 

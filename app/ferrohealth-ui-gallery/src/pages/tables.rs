@@ -11,7 +11,8 @@
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::table::model::{Noun, OpenWindow, Paging, Sort, Window, href};
 use ferrohealth_ui::table::view::{
-    ACTIONS, Body, Column, DataTable, Listing, NUM, data_table, link_open_pager, link_pager,
+    ACTIONS, Body, Column, DataTable, Listing, NUM, data_table, data_table_stacked,
+    link_open_pager, link_pager,
 };
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::button::Variant;
@@ -207,6 +208,39 @@ fn result_set() -> AnyView {
     .into_any()
 }
 
+/// A table that stacks its rows on a phone, each cell named by its column.
+fn stacked() -> AnyView {
+    let rows = (1..=3_u32)
+        .map(|index| {
+            view! {
+                <tr>
+                    <td><code>{format!("synthetic-{index:03}.model.yml")}</code></td>
+                    <td data-label="Kind">"model"</td>
+                    <td data-label="Lines" class=NUM>{(index * 41).to_string()}</td>
+                    <td data-label="State">{badge(Tone::Ok, "compiled")}</td>
+                    <td data-label="Actions" class=ACTIONS>
+                        <button type="button" class=Variant::Secondary.small()>
+                            "Open"
+                        </button>
+                    </td>
+                </tr>
+            }
+        })
+        .collect_view()
+        .into_any();
+    card(
+        "Stacked on a phone",
+        data_table_stacked(DataTable {
+            caption: "Mapping files, stacked below 40rem",
+            columns: &PLAIN,
+            sort: None,
+            sort_href: &|_| String::new(),
+            body: Body::Rows(rows),
+        }),
+    )
+    .into_any()
+}
+
 /// The rows a server with no total answers for `paging`: a full page until
 /// the last, which is short.
 fn open_rows(paging: Paging) -> u32 {
@@ -337,6 +371,7 @@ pub fn TablesPage() -> impl IntoView {
         open_listing(),
         states(),
         changes(),
+        stacked(),
     );
     view! {
         {super::title("Tables and paging")}
@@ -347,6 +382,7 @@ pub fn TablesPage() -> impl IntoView {
             {sections.2}
             {sections.3}
             {sections.4}
+            {sections.6}
             {sections.5}
         })}
     }

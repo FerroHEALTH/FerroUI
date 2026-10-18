@@ -127,3 +127,23 @@ fn the_layer_order_comes_first_and_no_style_is_inline() {
         "a component writes a style element"
     );
 }
+
+#[test]
+fn the_sticky_top_bar_pads_the_scroll_so_a_focused_control_clears_it() {
+    let rule = "@media (width >= 48rem) {\n    html {\n      scroll-padding-top: calc(var(--bar)";
+    assert!(
+        STYLESHEET.contains(rule),
+        "no scroll padding beside the sticky top bar"
+    );
+}
+
+#[test]
+fn a_fieldset_well_keeps_its_frame_after_the_fieldset_reset() {
+    let reset = STYLESHEET
+        .find("  .fui-fieldset {")
+        .expect("the fieldset reset");
+    let well = STYLESHEET
+        .find("  .fui-fieldset.fui-well {")
+        .expect("the fieldset well");
+    assert!(well > reset, "the well rule must follow the reset to win");
+}
