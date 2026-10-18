@@ -16,7 +16,7 @@ use ferrohealth_ui::view::layout::action_bar;
 use ferrohealth_ui::view::notice::{Announce, notice};
 use ferrohealth_ui::view::segmented::choice_reveal;
 use ferrohealth_ui::view::status::badge;
-use ferrohealth_ui::view::surface::{card, grid, page_header, stack};
+use ferrohealth_ui::view::surface::{card, grid, grid_start, page_header, stack};
 use ferrohealth_ui::widget::combobox::{ComboOption, Combobox, combobox};
 use ferrohealth_ui::widget::editor::{Editor, LineMark, MarkKind, code_editor, line_id};
 use ferrohealth_ui::widget::filter::{keeps, table_filter};
@@ -287,6 +287,106 @@ fn grouped() -> AnyView {
     .into_any()
 }
 
+/// A grant whose chosen kind reveals its settings, one of which is a secret
+/// revealed by a choice of its own: each reveal answers to its own choice.
+fn nested_reveal() -> AnyView {
+    let secret = choice_reveal(
+        "grant-secret",
+        "Its client secret",
+        &[("keep", "Keep"), ("replace", "Replace")],
+        "keep",
+        vec![
+            ().into_any(),
+            field(
+                "grant-secret-value",
+                "The new secret",
+                None,
+                view! { <input id="grant-secret-value" type="password" class=INPUT autocomplete="new-password" /> },
+            )
+            .into_any(),
+        ],
+    );
+    let client = view! {
+        <div class="fui-stack">
+            {field("grant-client-id", "Client id", None, view! { <input id="grant-client-id" type="text" class=INPUT value="synthetic-client" /> })}
+            {secret}
+        </div>
+    }
+    .into_any();
+    let token = field(
+        "grant-token-value",
+        "Token",
+        None,
+        view! { <input id="grant-token-value" type="password" class=INPUT autocomplete="off" /> },
+    )
+    .into_any();
+    card(
+        "A reveal inside a reveal",
+        view! {
+            <form method="post" action="#" class=FORM>
+                {choice_reveal(
+                    "grant",
+                    "The grant",
+                    &[("client", "Client credentials"), ("token", "A token")],
+                    "client",
+                    vec![client, token],
+                )}
+            </form>
+        },
+    )
+    .into_any()
+}
+
+/// A long form whose actions stay in the bar at the window's foot: a
+/// control the keyboard reaches is scrolled clear of the bar.
+fn long_form() -> AnyView {
+    let fields = (1..=14_u32)
+        .map(|index| {
+            let id = format!("long-field-{index}");
+            let input_id = id.clone();
+            view! {
+                <div class="fui-field">
+                    <label for=id class="fui-label">{format!("Synthetic setting {index}")}</label>
+                    <input id=input_id type="text" class=INPUT value=format!("value-{index}") />
+                </div>
+            }
+        })
+        .collect_view();
+    card(
+        "A long form",
+        view! {
+            <form method="post" action="#" class=FORM id="long-form">
+                {fields}
+                {action_bar(view! {
+                    <button type="button" class=Variant::Primary.class()>
+                        {label(Some(Glyph::CHECK), "Save the settings")}
+                    </button>
+                })}
+            </form>
+        },
+    )
+    .into_any()
+}
+
+/// A button whose words are longer than a phone's column, which break
+/// between words rather than push the page sideways, beside a short one.
+fn long_label() -> AnyView {
+    card(
+        "A long button label",
+        view! {
+            <div class="fui-cluster">
+                <button type="button" id="long-label" class=Variant::Primary.class()>
+                    {label(Some(Glyph::DOWNLOAD), "Download the whole configuration as TOML")}
+                </button>
+                <button type="button" class=Variant::Secondary.class()>
+                    {label(Some(Glyph::X), "Clear")}
+                </button>
+            </div>
+        },
+    )
+    .into_any()
+}
+
 /// The upload field: a file dropped or chosen, read into the text area.
 fn upload() -> AnyView {
     let source = RwSignal::new(String::new());
@@ -454,6 +554,13 @@ pub fn FormsPage() -> impl IntoView {
     })
     .into_any();
     let sections = (pair, upload(), editor(), filter(), inline(), choosing());
+    // Cards of unlike length side by side, each at its own height.
+    let unlike = grid_start(view! {
+        {long_label()}
+        {nested_reveal()}
+    })
+    .into_any();
+    let long = long_form();
     view! {
         {super::title("Forms and editor")}
         {header}
@@ -461,9 +568,11 @@ pub fn FormsPage() -> impl IntoView {
             {sections.0}
             {sections.4}
             {sections.5}
+            {unlike}
             {sections.1}
             {sections.2}
             {sections.3}
+            {long}
         })}
     }
 }

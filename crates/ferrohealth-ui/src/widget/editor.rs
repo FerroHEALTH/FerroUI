@@ -91,6 +91,10 @@ pub struct Editor {
 
 /// Returns the editor over `editor`; `on_input` receives the text after
 /// every edit, exactly as typed.
+///
+/// The editor is at least 16rem tall; an ancestor with the class
+/// `fui-editor-short` makes it 6rem, for a short value such as a parameter
+/// object.
 #[must_use]
 pub fn code_editor(editor: Editor, on_input: impl Fn(String) + 'static) -> AnyView {
     let Editor {
@@ -100,27 +104,71 @@ pub fn code_editor(editor: Editor, on_input: impl Fn(String) + 'static) -> AnyVi
         marks,
         editable,
     } = editor;
+    drawn(
+        Drawn {
+            id: id.to_owned(),
+            language: Signal::stored(language),
+            text,
+            marks,
+            editable,
+            placeholder: None,
+        },
+        on_input,
+    )
+}
+
+/// What [`drawn`] draws: an [`Editor`] whose id is known at run time, whose
+/// grammar may follow the text, and whose text area may say what goes in it.
+pub(crate) struct Drawn {
+    /// The text area's id and name.
+    pub(crate) id: String,
+    /// The grammar the text is highlighted as.
+    pub(crate) language: Signal<Language>,
+    /// The text, which the editor reads and never writes.
+    pub(crate) text: Signal<String>,
+    /// The lines a diagnostic names.
+    pub(crate) marks: Signal<Vec<LineMark>>,
+    /// False until the text area may be edited.
+    pub(crate) editable: Signal<bool>,
+    /// The text area's placeholder, shown while the text is empty.
+    pub(crate) placeholder: Option<&'static str>,
+}
+
+/// Returns the editor `drawn`, as [`code_editor`] and the upload field draw
+/// it.
+pub(crate) fn drawn(drawn: Drawn, on_input: impl Fn(String) + 'static) -> AnyView {
+    let Drawn {
+        id,
+        language,
+        text,
+        marks,
+        editable,
+        placeholder,
+    } = drawn;
     let prefix = format!("{id}-L");
     let layer = move || {
         let marks = marks.get();
+        let language = language.get();
         text.with(|text| {
             html(language, text, Lines { ids: Some(&prefix) }, |line| {
                 mark_class(&marks, line)
             })
         })
     };
+    let name = id.clone();
     view! {
         <div class="fui-editor">
             <div class="fui-editor-stack">
                 <pre class="fui-editor-layer" aria-hidden="true" inner_html=layer></pre>
                 <textarea
                     id=id
-                    name=id
+                    name=name
                     class="fui-editor-input"
                     autocomplete="off"
                     autocapitalize="off"
                     spellcheck="false"
                     wrap="soft"
+                    placeholder=placeholder
                     readonly=move || !editable.get()
                     prop:value=move || text.get()
                     on:input:target=move |event| on_input(event.target().value())

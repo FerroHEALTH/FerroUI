@@ -20,6 +20,12 @@ public signature changes; the additions are new functions and classes.
 
 ### Added
 
+- `view::surface::grid_start`: cards side by side at their own heights, for
+  cards of unlike length (FerroHEALTH/FerroUI#81).
+- `view::shell::About`, `footer_about`, `shell_about` and `centred_about`:
+  the footer's About link can be a full page load (`rel="external"`) for an
+  About page the server renders once (FerroHEALTH/FerroUI#82).
+
 - `view::form::FIELD_FLOW` and `field_flow`: fields in one row share its
   width, each growing from 10rem so a placeholder is not cut, and the row's
   buttons keep their own (FerroHEALTH/FerroUI#59).
@@ -57,6 +63,10 @@ public signature changes; the additions are new functions and classes.
 
 ### Changed
 
+- The upload field's text area is the highlighted editor, numbered, its
+  grammar read from the text (XML for an OPT, JSON for a JSON document), its
+  placeholder in the muted ink. An ancestor with the new `fui-editor-short`
+  class makes an editor 6rem tall for a short value.
 - The minimum supported Rust is 1.97, checked on the host and the
   `wasm32-unknown-unknown` target, so a console on Rust 1.97 builds the
   crate (FerroEHR's minimum).
@@ -107,6 +117,18 @@ public signature changes; the additions are new functions and classes.
   ground in both themes (FerroHEALTH/FerroUI#43).
 
 ### Fixed
+
+- A button's label breaks between words when it cannot fit its column, its
+  glyph beside the first line, so a long label never scrolls a phone page
+  sideways (FerroHEALTH/FerroUI#78).
+- A reveal nested in a part of another answers to its own choice alone
+  (FerroHEALTH/FerroUI#79).
+- A form in a table's actions cell sits on the row beside its links
+  (FerroHEALTH/FerroUI#80).
+- The scroll padding under the sticky action bar matches the bar's height,
+  so a control the browser scrolls into view lands clear of it (WCAG 2.2
+  SC 2.4.11), pinned by a gallery journey that tabs through a long form
+  (FerroHEALTH/FerroUI#83).
 
 - From 64rem up, an identifier longer than its column wraps inside the cell,
   so a table never runs past its card (FerroHEALTH/FerroUI#53).

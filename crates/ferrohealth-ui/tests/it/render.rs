@@ -19,7 +19,7 @@ use ferrohealth_ui::view::code::{code_lines, code_panel};
 use ferrohealth_ui::view::dialog::{Confirmation, confirm_dialog, confirm_trigger};
 use ferrohealth_ui::view::empty::{empty_state, skeleton};
 use ferrohealth_ui::view::refusal::{Issue, Refusal, Severity, refusal};
-use ferrohealth_ui::view::shell::{Footer, footer, lockup, mark};
+use ferrohealth_ui::view::shell::{About, Footer, footer, footer_about, lockup, mark};
 use ferrohealth_ui::view::sign_in::{Basic, Notice, Provider, SignIn, sign_in};
 use ferrohealth_ui::view::status::{badge, banner, pill, status};
 use ferrohealth_ui::view::surface::{
@@ -486,4 +486,32 @@ fn the_surfaces_render_and_none_writes_a_style_attribute() {
         assert!(page.contains(expected), "{expected}: {page}");
     }
     assert!(!page.contains("style="), "{page}");
+}
+
+#[test]
+fn the_footer_marks_its_about_link_external_only_when_asked() {
+    let text = Footer {
+        product: "FerroUI Gallery",
+        version: "0.1.2",
+        about: "/about",
+    };
+    let routed = html(|| footer(text).into_any());
+    assert!(!routed.contains("rel="), "{routed}");
+    let full = html(|| footer_about(text, About::FullLoad).into_any());
+    assert!(full.contains(r#"rel="external""#), "{full}");
+    assert_eq!(
+        routed,
+        html(|| footer_about(text, About::Routed).into_any())
+    );
+}
+
+#[test]
+fn a_start_grid_writes_the_start_class_and_the_grid_does_not() {
+    let start = html(|| ferrohealth_ui::view::surface::grid_start(view! { <p>"a"</p> }).into_any());
+    assert!(
+        start.contains(r#"class="fui-grid fui-grid-start""#),
+        "{start}"
+    );
+    let plain = html(|| ferrohealth_ui::view::surface::grid(view! { <p>"a"</p> }).into_any());
+    assert!(plain.contains(r#"class="fui-grid""#), "{plain}");
 }

@@ -156,15 +156,34 @@ pub fn topbar_with(
     .into_any()
 }
 
+/// How the footer's About link is followed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum About {
+    /// By the console's router, as every other link.
+    #[default]
+    Routed,
+    /// By a full page load (`rel="external"`), for an About page the server
+    /// renders once and the router could not draw.
+    FullLoad,
+}
+
 /// Returns the one line at the foot of every page: the product, its
 /// version, its maker and the About page.
 #[must_use]
 pub fn footer(footer: Footer) -> impl IntoView {
+    footer_about(footer, About::Routed)
+}
+
+/// Returns the footer [`footer`] draws, its About link followed as `about`
+/// says.
+#[must_use]
+pub fn footer_about(footer: Footer, about: About) -> impl IntoView {
+    let rel = (about == About::FullLoad).then_some("external");
     view! {
         <footer class="fui-footer">
             <p>
                 {footer.product} " v" {footer.version} " · " {MAKER} " · "
-                <a href=footer.about>"About"</a>
+                <a href=footer.about rel=rel>"About"</a>
             </p>
         </footer>
     }
@@ -177,8 +196,15 @@ pub fn footer(footer: Footer) -> impl IntoView {
 /// view type stays shallow (rustc's layout recursion limit).
 #[must_use]
 pub fn shell(shell: Shell) -> AnyView {
+    shell_about(shell, About::Routed)
+}
+
+/// Returns the page [`shell`] draws, its footer's About link followed as
+/// `about` says.
+#[must_use]
+pub fn shell_about(shell: Shell, about: About) -> AnyView {
     let skip = skip_link().into_any();
-    let foot = footer(shell.footer).into_any();
+    let foot = footer_about(shell.footer, about).into_any();
     view! {
         <div class="fui-page">
             {skip} {shell.topbar} {shell.banner} <div class="fui-body">
@@ -195,7 +221,14 @@ pub fn shell(shell: Shell) -> AnyView {
 /// does not serve, a fault) above the footer.
 #[must_use]
 pub fn centred(content: AnyView, footer_text: Footer) -> AnyView {
-    let foot = footer(footer_text).into_any();
+    centred_about(content, footer_text, About::Routed)
+}
+
+/// Returns the page [`centred`] draws, its footer's About link followed as
+/// `about` says.
+#[must_use]
+pub fn centred_about(content: AnyView, footer_text: Footer, about: About) -> AnyView {
+    let foot = footer_about(footer_text, about).into_any();
     view! {
         <div class="fui-page">
             <main id=MAIN_ID class="fui-centred">

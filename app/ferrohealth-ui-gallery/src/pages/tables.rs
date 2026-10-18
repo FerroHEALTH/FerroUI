@@ -247,6 +247,48 @@ fn fitting() -> AnyView {
     .into_any()
 }
 
+/// The columns of the table whose rows end in a link and a form.
+const ACTED: [Column; 3] = [
+    Column::text("member", "Member"),
+    Column::text("base", "Base URL"),
+    Column::text("actions", "Actions"),
+];
+
+/// Rows whose actions are an Edit link and a Remove form, side by side on
+/// the row's first line.
+fn row_actions() -> AnyView {
+    let rows = ["node-a", "node-b"]
+        .into_iter()
+        .map(|member| {
+            view! {
+                <tr>
+                    <th scope="row"><code>{format!("synthetic-{member}")}</code></th>
+                    <td data-label="Base URL"><code>{format!("https://{member}.example.org/")}</code></td>
+                    <td data-label="Actions" class=ACTIONS>
+                        <a href="#edit" class=Variant::Secondary.small()>"Edit"</a>
+                        " "
+                        <form method="post" action="#remove">
+                            <button type="submit" class=Variant::Danger.small()>"Remove"</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        })
+        .collect_view()
+        .into_any();
+    card(
+        "Row actions",
+        data_table(DataTable {
+            caption: "Members, each with an Edit link and a Remove form",
+            columns: &ACTED,
+            sort: None,
+            sort_href: &|_| String::new(),
+            body: Body::Rows(rows),
+        }),
+    )
+    .into_any()
+}
+
 /// The rows a server with no total answers for `paging`: a full page until
 /// the last, which is short.
 fn open_rows(paging: Paging) -> u32 {
@@ -378,6 +420,7 @@ pub fn TablesPage() -> impl IntoView {
         states(),
         changes(),
         fitting(),
+        row_actions(),
     );
     view! {
         {super::title("Tables and paging")}
@@ -389,6 +432,7 @@ pub fn TablesPage() -> impl IntoView {
             {sections.3}
             {sections.4}
             {sections.6}
+            {sections.7}
             {sections.5}
         })}
     }

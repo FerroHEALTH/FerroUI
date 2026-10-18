@@ -329,6 +329,16 @@ async fn upload(
     shot_of(browser, brand, theme, "drop-chosen", &field).await?;
     input.send_keys(refused.to_string_lossy()).await?;
     browser.text("p", "notes.txt was not read").await?;
+    // The refusal replaces the read's state in place; two frames let the
+    // browser paint the new icon in the refusal's tone before the capture.
+    browser
+        .driver()
+        .execute_async(
+            "const done = arguments[arguments.length - 1];
+            requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(done, 150)));",
+            vec![],
+        )
+        .await?;
     shot_of(browser, brand, theme, "drop-refused", &field).await
 }
 
@@ -563,8 +573,12 @@ async fn combobox_states(
         .element(By::Css("#choose-system[role='combobox']"))
         .await?;
     place(&input).await?;
-    input.click().await?;
+    // A click that lands while the narrow layout settles opens nothing, so
+    // the input is clicked again until the list shows.
     until("the combobox opens at 390 px", async || {
+        if input.attr("aria-expanded").await?.as_deref() != Some("true") {
+            input.click().await?;
+        }
         Ok(input.attr("aria-expanded").await?.as_deref() == Some("true"))
     })
     .await?;

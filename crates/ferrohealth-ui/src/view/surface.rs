@@ -410,6 +410,15 @@ pub fn grid(children: impl IntoView + 'static) -> impl IntoView {
     view! { <div class="fui-grid">{children}</div> }
 }
 
+/// Returns `children` in the grid [`grid`] draws, each card at its own
+/// height rather than stretched to its row's tallest: for cards of unlike
+/// length side by side.
+#[must_use]
+pub fn grid_start(children: impl IntoView + 'static) -> impl IntoView {
+    let children = children.into_any();
+    view! { <div class="fui-grid fui-grid-start">{children}</div> }
+}
+
 /// Returns stat cards in the grid a dashboard opens with, closer together.
 #[must_use]
 pub fn stat_grid(children: impl IntoView + 'static) -> impl IntoView {
