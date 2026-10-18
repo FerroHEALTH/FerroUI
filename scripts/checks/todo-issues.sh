@@ -18,7 +18,8 @@ cd "$(dirname "$0")/../.."
 
 # One "number<TAB>file:line" record per pointer.
 pointers() {
-  git grep -nE 'TODO\(#[0-9]+\)' -- . ':!crates/ferrohealth-ui/vendor' |
+  # git grep exits 1 when nothing matches, which is the clean tree.
+  { git grep -nE 'TODO\(#[0-9]+\)' -- . ':!crates/ferrohealth-ui/vendor' || true; } |
     while IFS= read -r hit; do
       local location=${hit%%:*}
       local rest=${hit#*:}
