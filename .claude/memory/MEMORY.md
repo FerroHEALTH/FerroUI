@@ -20,3 +20,5 @@
   every pull request body; the owner's standing consent
 - [Release tag](release-tag.md): the tag is signed on the merge commit and the
   crates-io environment waits for the owner's approval
+- [All consoles in lockstep](ferroui.md): every release rolls out to all four
+  consoles at once, one uniform design, screenshots read before a tag
