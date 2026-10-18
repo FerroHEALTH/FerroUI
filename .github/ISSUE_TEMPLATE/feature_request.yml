@@ -1,0 +1,27 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+name: Feature request
+description: Propose a component or an improvement.
+type: Feature
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: The screen or the console that needs it, and why.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What the component does, its roles and its keyboard path.
+    validations:
+      required: true
+  - type: textarea
+    id: standard
+    attributes:
+      label: Standard reference
+      description: The WCAG 2.2 criterion, the WAI-ARIA pattern or the HTML section this relates to, if any.
+    validations:
+      required: false
