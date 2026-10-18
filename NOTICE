@@ -7,6 +7,6 @@ Non-Commercial Purposes under the Additional Use Grant in the License; any other
 production use requires a commercial license from the Licensor. Each version
 becomes available under the Apache License, Version 2.0 on its Change Date.
 
-The Lucide icon outlines under crates/ferroui/vendor/lucide/ are published by
-the Lucide contributors under the ISC License, recorded in the PROVENANCE.md and
-LICENSE files beside them.
+The Lucide icon outlines under crates/ferrohealth-ui/vendor/lucide/ are
+published by the Lucide contributors under the ISC License, recorded in the
+PROVENANCE.md and LICENSE files beside them.

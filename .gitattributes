@@ -5,6 +5,6 @@
 * text=auto eol=lf
 
 # Vendored trees are exempt from language statistics and collapse in diffs.
-crates/ferroui/vendor/** linguist-vendored
+crates/ferrohealth-ui/vendor/** linguist-vendored
 # The gallery screenshots are images, never diffed as text.
 *.png binary
