@@ -1,0 +1,20 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+
+# Cargo's build tree.
+/target
+
+# Backup files rustfmt writes.
+**/*.rs.bk
+
+# Claude Code personal overrides and agent worktrees, never committed.
+.claude/settings.local.json
+.claude/worktrees/
+
+# The browser tools scripts/release/*-tools.sh install, never committed.
+/tools-cache/
+
+# The pending and new snapshots insta writes while a snapshot test awaits
+# review (<https://insta.rs/docs/cli/>).
+*.pending-snap
+*.snap.new

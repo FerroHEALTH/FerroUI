@@ -1,0 +1,12 @@
+FerroUI
+Copyright 2026 Cadasto B.V.
+
+Licensed under the Business Source License 1.1 (the "License"); see the LICENSE
+file for the terms. Use of this software in production is permitted for
+Non-Commercial Purposes under the Additional Use Grant in the License; any other
+production use requires a commercial license from the Licensor. Each version
+becomes available under the Apache License, Version 2.0 on its Change Date.
+
+The Lucide icon outlines under crates/ferroui/vendor/lucide/ are published by
+the Lucide contributors under the ISC License, recorded in the PROVENANCE.md and
+LICENSE files beside them.
