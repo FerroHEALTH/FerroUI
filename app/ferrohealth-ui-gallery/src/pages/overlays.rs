@@ -288,9 +288,7 @@ fn hide(id: &str) {
 pub fn OverlaysPage() -> impl IntoView {
     let header = page_header(
         "Overlays and feedback",
-        Some(String::from(
-            "Dialogs, the modal a signal opens, the side panel and the toasts.",
-        )),
+        Some(String::from("Dialogs, modals, the side panel and toasts.")),
         (),
     )
     .into_any();

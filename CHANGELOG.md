@@ -11,7 +11,7 @@ and this project adheres to
 
 ## [Unreleased]
 
-## [0.1.1] - 2026-10-21
+## [0.1.1] - 2026-10-18
 
 Every component the four FerroHEALTH consoles draw, compared across them and
 restyled to one visual language, so FerroEHR, FerroFED and FerroTERM can drop
