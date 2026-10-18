@@ -97,10 +97,11 @@ so a workspace `--all-features` build never enables both.
 `table::model` is the arithmetic, `table::view` the data table and the link
 pager, `widget::pager` the session pager. Page and size are read
 defensively (`?page=` 1-based, `?size=` with choices 25, 50, 100, clamped to
-200), the range label reads "1-25 of 312", a step that cannot be taken stays
-visible and says "(unavailable)" in text, a sortable header is a link with
-`aria-sort`, the header sticks, numbers align right, and the table scrolls in
-its card, never the page.
+200), the range label names the rows on the page ("1-25 of 312", a short
+last page "301-312 of 312"), a step that cannot be taken stays visible and
+says "(unavailable)" in text, a sortable header is a link with `aria-sort`,
+numbers align right, and the table shows every row of its page and scrolls
+sideways in its card, never the page.
 
 ## 7. Accessibility
 

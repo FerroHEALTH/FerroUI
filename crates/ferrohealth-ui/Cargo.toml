@@ -1,0 +1,37 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+[package]
+name = "ferrohealth-ui"
+description = "The shared UI components of the FerroHEALTH consoles: Leptos view functions and widgets, role tokens, a highlighter and one table model"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+publish = true
+readme = "README.md"
+keywords = ["leptos", "ui", "components", "design-system", "accessibility"]
+categories = ["gui", "wasm", "web-programming"]
+# The stylesheet, the brand themes and the vendored icon outlines travel with
+# the crate, so a console reads them from the registry checkout or from the
+# constants of `ferrohealth_ui::style`.
+include = ["src/**", "css/**", "themes/**", "vendor/**", "tests/**", "README.md"]
+
+# No render-mode feature: the library compiles under `csr`, `ssr` and
+# `hydrate` alike, whichever the console's own leptos dependency turns on
+# (features unify per build), and defines no server function.
+[dependencies]
+leptos.workspace = true
+leptos_router.workspace = true
+serde.workspace = true
+
+# The tests render the views to HTML on the host, which the `ssr` feature
+# draws; a dev-dependency reaches the test build alone.
+[dev-dependencies]
+leptos = { workspace = true, features = ["ssr"] }
+leptos_router = { workspace = true, features = ["ssr"] }
+
+[lints]
+workspace = true

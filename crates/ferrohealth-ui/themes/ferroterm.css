@@ -1,0 +1,33 @@
+/* SPDX-FileCopyrightText: Cadasto B.V. */
+/* SPDX-License-Identifier: BUSL-1.1 */
+/* The FerroTERM brand: the teal the FerroTERM viewer draws in, over the roles
+   of ferrohealth-ui.css. Light keeps the viewer's accent #0f766e and its
+   accent-soft #f0fdfa as the tint; dark keeps the viewer's #2dd4bf and its
+   ink #0f172a, with the tint translucent at 8%, since the viewer's opaque
+   #134e4a holds muted text under 4.5:1. Loaded after ferrohealth-ui.css;
+   tests/it/contrast.rs holds every pairing to WCAG 2.2 AA. */
+:root {
+  --accent: #0f766e;
+  --accent-hover: #115e59;
+  --accent-ink: #ffffff;
+  --accent-tint: #f0fdfa;
+  --focus: #0f766e;
+}
+
+:root[data-theme="dark"] {
+  --accent: #2dd4bf;
+  --accent-hover: #5eead4;
+  --accent-ink: #0f172a;
+  --accent-tint: rgb(45 212 191 / 0.08);
+  --focus: #2dd4bf;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"], [data-theme="dark"]) {
+    --accent: #2dd4bf;
+    --accent-hover: #5eead4;
+    --accent-ink: #0f172a;
+    --accent-tint: rgb(45 212 191 / 0.08);
+    --focus: #2dd4bf;
+  }
+}

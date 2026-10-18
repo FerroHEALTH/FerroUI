@@ -1,0 +1,34 @@
+/* SPDX-FileCopyrightText: Cadasto B.V. */
+/* SPDX-License-Identifier: BUSL-1.1 */
+/* The FerroEHR brand: the teal the FerroEHR viewer draws in, over the roles of
+   ferrohealth-ui.css. Light keeps the viewer's accent-subtle #ccfbf1 as the
+   tint and draws accent text and controls in the viewer's #0f766e, since its
+   #0d9488 falls under 4.5:1 as text on the light grounds. Dark keeps the
+   viewer's #2dd4bf, #5eead4 and #042f2e, with the tint translucent at 10%,
+   since the viewer's opaque #134e4a holds muted text under 4.5:1. Loaded after
+   ferrohealth-ui.css; tests/it/contrast.rs holds every pairing to WCAG 2.2 AA. */
+:root {
+  --accent: #0f766e;
+  --accent-hover: #115e59;
+  --accent-ink: #ffffff;
+  --accent-tint: #ccfbf1;
+  --focus: #0f766e;
+}
+
+:root[data-theme="dark"] {
+  --accent: #2dd4bf;
+  --accent-hover: #5eead4;
+  --accent-ink: #042f2e;
+  --accent-tint: rgb(45 212 191 / 0.1);
+  --focus: #2dd4bf;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"], [data-theme="dark"]) {
+    --accent: #2dd4bf;
+    --accent-hover: #5eead4;
+    --accent-ink: #042f2e;
+    --accent-tint: rgb(45 212 191 / 0.1);
+    --focus: #2dd4bf;
+  }
+}

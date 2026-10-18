@@ -1,0 +1,18 @@
+// SPDX-FileCopyrightText: Cadasto B.V.
+// SPDX-License-Identifier: BUSL-1.1
+
+//! The interactive components: each needs browser code for what HTML alone
+//! does not do.
+//!
+//! The browser code runs only inside an event handler or an effect, behind
+//! `#[cfg(target_arch = "wasm32")]`, so each widget renders the same on the
+//! server, in a hydrated page and under client-side rendering, and its first
+//! paint is the server's. A widget is a plain function where its state fits
+//! in its arguments, and none fetches.
+
+pub mod editor;
+pub mod filter;
+pub mod nav;
+pub mod pager;
+pub mod tabs;
+pub mod toast;
