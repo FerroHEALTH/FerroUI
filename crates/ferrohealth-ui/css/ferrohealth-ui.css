@@ -2158,6 +2158,11 @@
   .fui-table-actions > form {
     display: inline-flex;
     gap: var(--space-default);
+  }
+
+  /* Every action hangs from the top of the line, whatever its font's
+     baseline, so a link and a form's button share their top edge. */
+  .fui-table-actions > :is(.fui-button, button, a, form) {
     vertical-align: top;
   }
 
