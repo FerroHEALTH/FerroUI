@@ -552,7 +552,24 @@ pub fn activity_chart(chart: &ActivityChart) -> impl IntoView + use<> {
             path(&series.points, x, y)
         )
     });
-    let svg = close(svg, &lines, "");
+    // One day draws no line, so its point is marked instead.
+    let mut marks = String::new();
+    if let Some(&(px, py)) = line
+        .series
+        .first()
+        .filter(|series| series.points.len() == 1)
+        .and_then(|series| series.points.first())
+    {
+        put(
+            &mut marks,
+            format_args!(
+                "<circle class=\"fui-chart-point fui-chart-accent\" cx=\"{:.2}%\" cy=\"{:.1}\" r=\"3\"/>",
+                x.at(px) / WIDTH * 100.0,
+                y.at(py)
+            ),
+        );
+    }
+    let svg = close(svg, &lines, &marks);
     view! { <figure class="fui-chart fui-chart-activity" data-activity-chart=chart.name inner_html=svg></figure> }
 }
 
@@ -651,5 +668,22 @@ mod tests {
             step: 20.0,
         };
         assert_eq!(vec![0.0, 20.0, 40.0, 60.0], ticks(scale));
+    }
+
+    #[test]
+    fn an_activity_chart_of_one_day_marks_its_point() {
+        let chart = super::ActivityChart {
+            name: "contributions",
+            label: String::from("Contributions per day"),
+            summary: String::from("5 contributions over 1 day."),
+            points: vec![(0, 5)],
+            ends: (String::from("2026-10-18"), String::from("2026-10-18")),
+        };
+        let owner = leptos::prelude::Owner::new();
+        let html = owner.with(|| {
+            use leptos::prelude::*;
+            super::activity_chart(&chart).to_html()
+        });
+        assert!(html.contains("fui-chart-point fui-chart-accent"), "{html}");
     }
 }

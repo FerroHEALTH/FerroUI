@@ -43,7 +43,7 @@ pub const SWITCH: &str = "fui-switch";
 pub const FORM: &str = "fui-form";
 
 /// The classes of a row of fields and their buttons: the fields share the
-/// row's width, each growing from 12rem so a placeholder is not cut, the
+/// row's width, each growing from 10rem so a placeholder is not cut, the
 /// buttons keep their own, and the row wraps on a phone.
 pub const FIELD_FLOW: &str = "fui-field-flow";
 

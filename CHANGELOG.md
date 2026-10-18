@@ -21,7 +21,7 @@ public signature changes; the additions are new functions and classes.
 ### Added
 
 - `view::form::FIELD_FLOW` and `field_flow`: fields in one row share its
-  width, each growing from 12rem so a placeholder is not cut, and the row's
+  width, each growing from 10rem so a placeholder is not cut, and the row's
   buttons keep their own (FerroHEALTH/FerroUI#59).
 - `widget::document::document_pane_opening`: a document pane open on the view
   a deep link names, offering its rendered view only while the document has
@@ -104,6 +104,7 @@ public signature changes; the additions are new functions and classes.
   so a table never runs past its card (FerroHEALTH/FerroUI#53).
 - A bullet item with a long URL wraps inside its card on a phone
   (FerroHEALTH/FerroUI#54).
+- An activity chart over one day marks its point, where it drew nothing.
 - A page heading in the body face writes no empty `class` attribute
   (FerroHEALTH/FerroUI#55).
 - An unavailable pager step reads "First (unavailable)", pinned by a test
