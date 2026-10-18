@@ -39,12 +39,17 @@ FerroHEALTH consoles.
   pager and the table filter.
 - One table model (`table`): defensive paging (sizes 25, 50 and 100, at most
   200), the row window and its range label, `aria-sort` sorting, the URL or
-  session state source, and the data table with its link pager.
+  session state source, and the data table with its link pager. The table
+  shows every row of its page; from 64rem up its header sticks below the
+  top bar, and below 64rem it scrolls sideways inside its card.
 - Highlighters for YAML, JSON, XML and AQL (`highlight::html`).
 - 50 Lucide 1.51.0 icons, vendored verbatim with their ISC licence
   (`icon::icon`).
 - The contrast test over every brand and theme, and the stylesheet rules
   test.
+- The gallery (`app/ferrohealth-ui-gallery`, never published): every
+  component in every product theme, light and dark, with browser journeys,
+  a painted-colour check and the screenshots under `docs/screenshots/`.
 
 [Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/FerroHEALTH/FerroUI/releases/tag/v0.1.0

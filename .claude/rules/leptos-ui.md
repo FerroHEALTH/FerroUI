@@ -100,8 +100,12 @@ defensively (`?page=` 1-based, `?size=` with choices 25, 50, 100, clamped to
 200), the range label names the rows on the page ("1-25 of 312", a short
 last page "301-312 of 312"), a step that cannot be taken stays visible and
 says "(unavailable)" in text, a sortable header is a link with `aria-sort`,
-numbers align right, and the table shows every row of its page and scrolls
-sideways in its card, never the page.
+numbers align right, and the table shows every row of its page, never in a
+box capped in height. From 64rem up the header sticks to the viewport just
+below the sticky top bar, inside the scroll padding (SC 2.4.11); below
+64rem, where a table can be wider than its card, it scrolls sideways inside
+the card, never the page (SC 1.4.10), and gives up the sticky header, which
+an overflow box would hold to itself. Pure CSS, no script.
 
 ## 7. Accessibility
 

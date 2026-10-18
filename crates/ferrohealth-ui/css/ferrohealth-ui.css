@@ -923,15 +923,32 @@
 
   /* ---- Tables ---- */
 
-  /* A wide table scrolls sideways inside its card, never the page (WCAG 2.2
-     SC 1.4.10). It is never bounded in height: every row of the page shows,
-     so the pager's range label names the rows a reader sees. */
+  /* A table is never bounded in height: every row of the page shows, so the
+     pager's range label names the rows a reader sees. On a narrow screen a
+     table wider than its card scrolls sideways inside it, never the page
+     (WCAG 2.2 SC 1.4.10). */
   .fui-table-scroll {
     max-width: 100%;
     overflow-x: auto;
     border: 1px solid var(--edge);
     border-radius: var(--radius-card);
     background: var(--surface-raised);
+  }
+
+  /* From 64rem up a table fits its card beside the sidebar, so the box stops
+     being a scroll container and the header sticks to the viewport below the
+     sticky top bar, inside the scroll padding (SC 2.4.11). An overflow box
+     would hold the header to itself, so sticky is given up below 64rem. */
+  @media (width >= 64rem) {
+    .fui-table-scroll {
+      overflow: visible;
+    }
+
+    .fui-table thead th {
+      position: sticky;
+      top: var(--bar);
+      z-index: 1;
+    }
   }
 
   .fui-table {

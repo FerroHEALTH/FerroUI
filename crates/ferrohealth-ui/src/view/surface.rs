@@ -82,8 +82,10 @@ pub fn stat_card(stat: Stat) -> impl IntoView {
     }
 }
 
-/// Returns `table` in a box named `label` that scrolls sideways inside the
-/// page, showing every row, focusable so the keyboard scrolls it (WCAG 2.2
+/// Returns `table` in a box named `label` that shows every row.
+///
+/// On a wide screen the header sticks below the top bar; on a narrow one the
+/// box scrolls sideways, focusable so the keyboard scrolls it (WCAG 2.2
 /// SC 1.4.10, SC 2.1.1).
 #[must_use]
 pub fn table_card(label: impl Into<String>, table: impl IntoView) -> impl IntoView {
