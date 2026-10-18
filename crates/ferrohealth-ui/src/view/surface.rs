@@ -55,11 +55,31 @@ pub struct Header {
 /// pattern).
 #[must_use]
 pub fn page_heading(header: Header, actions: impl IntoView) -> impl IntoView {
+    let title = header.title.clone();
+    heading(header, Signal::stored(title), actions)
+}
+
+/// Returns the header [`page_heading`] draws, its title following `title`.
+///
+/// The title and the trail's current crumb follow the signal, so a page
+/// whose route names the thing it shows keeps its heading true when the
+/// route changes under client-side navigation; `header.title` is not read.
+#[must_use]
+pub fn page_heading_live(
+    header: Header,
+    title: Signal<String>,
+    actions: impl IntoView,
+) -> impl IntoView {
+    heading(header, title, actions)
+}
+
+/// The header both [`page_heading`] and [`page_heading_live`] draw.
+fn heading(header: Header, title: Signal<String>, actions: impl IntoView) -> impl IntoView {
     let Header {
-        title,
         subtitle,
         crumbs,
         mono,
+        ..
     } = header;
     let trail = (!crumbs.is_empty()).then(|| {
         let links = crumbs
@@ -75,18 +95,22 @@ pub fn page_heading(header: Header, actions: impl IntoView) -> impl IntoView {
                 }
             })
             .collect_view();
-        let current = title.clone();
         view! {
             <nav class="fui-crumbs" aria-label="Breadcrumb">
-                <ol>{links} <li aria-current="page">{current}</li></ol>
+                <ol>{links} <li aria-current="page">{move || title.get()}</li></ol>
             </nav>
         }
     });
-    let title_class = mono.then_some("fui-page-title-mono");
+    // Two arms, so a title in the body face writes no `class` attribute.
+    let h1 = if mono {
+        view! { <h1 class="fui-page-title-mono">{move || title.get()}</h1> }.into_any()
+    } else {
+        view! { <h1>{move || title.get()}</h1> }.into_any()
+    };
     view! {
         <header class="fui-page-header">
             {trail} <div class="fui-page-heading">
-                <h1 class=title_class>{title}</h1>
+                {h1}
                 <div class="fui-actions">{actions}</div>
             </div>
             {subtitle.map(|line| view! { <p class="fui-page-subtitle">{line}</p> })}

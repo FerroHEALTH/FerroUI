@@ -10,7 +10,7 @@ use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::button::{Variant, label};
 use ferrohealth_ui::view::form::{
     FORM, INPUT, MEDIUM, SELECT, SWITCH, TEXTAREA, check, check_field, chip_choices, columns,
-    field, fieldset, help_id,
+    field, field_flow, fieldset, help_id,
 };
 use ferrohealth_ui::view::layout::action_bar;
 use ferrohealth_ui::view::notice::{Announce, notice};
@@ -108,6 +108,58 @@ fn fields() -> AnyView {
                     {label(Some(Glyph::SAVE), "Save")}
                 </button>
             </form>
+        },
+    )
+    .into_any()
+}
+
+/// Fields in one row that share its width, a select and a date-time input
+/// beside text inputs, and the button variants enabled and disabled.
+fn inline() -> AnyView {
+    let ehr = view! { <input id="row-ehr" name="ehr" type="text" class=INPUT placeholder="ehr_id (UUID), blank lets the server mint one" /> };
+    let subject = view! { <input id="row-subject" name="subject" type="text" class=INPUT placeholder="external subject id" /> };
+    let namespace = view! { <input id="row-namespace" name="namespace" type="text" class=INPUT placeholder="namespace" /> };
+    let path = view! { <input id="row-path" name="path" type="text" class=INPUT placeholder="/context/start_time/value" /> };
+    let version = view! {
+        <select id="row-version" name="version" class=SELECT>
+            <option value="latest">"Latest"</option>
+            <option value="1">"Version 1"</option>
+        </select>
+    };
+    let at = view! { <input id="row-at" name="at" type="datetime-local" class=INPUT /> };
+    card(
+        "Fields in a row",
+        view! {
+            <div class=FORM>
+                {field_flow(view! {
+                    {field("row-ehr", "EHR id (optional)", None, ehr)}
+                    {field("row-subject", "Subject id (optional)", None, subject)}
+                    {field("row-namespace", "Subject namespace (optional)", None, namespace)}
+                    <button type="button" class=Variant::Primary.class()>
+                        "Create"
+                    </button>
+                })}
+                {field_flow(view! {
+                    {field("row-version", "Version", None, version)}
+                    {field("row-at", "Time travel (UTC)", None, at)}
+                    {field("row-path", "Target path (optional)", None, path)}
+                    <button type="button" class=Variant::Secondary.class()>
+                        "At time"
+                    </button>
+                })}
+                <div class="fui-cluster">
+                    <button type="button" class=Variant::Primary.class()>"Primary"</button>
+                    <button type="button" class=Variant::Secondary.class()>"Secondary"</button>
+                    <button type="button" class=Variant::Danger.class()>"Danger"</button>
+                    <button type="button" class=Variant::Ghost.class()>"Ghost"</button>
+                    <button type="button" class=Variant::Secondary.small()>"Small"</button>
+                </div>
+                <div class="fui-cluster">
+                    <button type="button" class=Variant::Primary.class() disabled=true>"Primary, disabled"</button>
+                    <button type="button" class=Variant::Secondary.class() disabled=true>"Secondary, disabled"</button>
+                    <button type="button" class=Variant::Danger.class() disabled=true>"Danger, disabled"</button>
+                </div>
+            </div>
         },
     )
     .into_any()
@@ -320,12 +372,13 @@ pub fn FormsPage() -> impl IntoView {
         })}
     })
     .into_any();
-    let sections = (pair, upload(), editor(), filter());
+    let sections = (pair, upload(), editor(), filter(), inline());
     view! {
         {super::title("Forms and editor")}
         {header}
         {stack(view! {
             {sections.0}
+            {sections.4}
             {sections.1}
             {sections.2}
             {sections.3}

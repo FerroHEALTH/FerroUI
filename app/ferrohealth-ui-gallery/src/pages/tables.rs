@@ -166,18 +166,34 @@ fn result_set() -> AnyView {
         .into_iter()
         .map(|path| Column::owned(path, path).mono())
         .collect();
-    let body = (1..=3_u32)
+    let rows = (1..=3_u32)
         .map(|index| {
             view! {
                 <tr>
-                    <td><code>{format!("{index:08}-synthetic::node-a::1")}</code></td>
+                    <td>
+                        <a href=format!("#result-{index}")>
+                            <code>{format!("{index:08}-synthetic::node-a::1")}</code>
+                        </a>
+                    </td>
                     <td>"Synthetic vital signs"</td>
                     <td class=NUM>{(index * 7).to_string()}</td>
                 </tr>
             }
         })
-        .collect_view()
-        .into_any();
+        .collect_view();
+    // A cell holding an identifier longer than its column can hold.
+    let long = view! {
+        <tr>
+            <td><code>"http://example.org/fhir/StructureDefinition/ferrohealth-synthetic-journey-diagnose"</code></td>
+            <td>"Synthetic profile"</td>
+            <td class=NUM>"1"</td>
+        </tr>
+    };
+    let body = view! {
+        {rows}
+        {long}
+    }
+    .into_any();
     card(
         "A result set",
         data_table(DataTable {

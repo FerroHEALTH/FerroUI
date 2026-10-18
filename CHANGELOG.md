@@ -11,6 +11,70 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-18
+
+The fixes the owner's review of the four consoles asked for: links, fields,
+selects, buttons, definition grids, empty states, tabs, the top bar, the
+pager and the charts, each fixed once here so every console gains it. No
+public signature changes; the additions are new functions and classes.
+
+### Added
+
+- `view::form::FIELD_FLOW` and `field_flow`: fields in one row share its
+  width, each growing from 12rem so a placeholder is not cut, and the row's
+  buttons keep their own (FerroHEALTH/FerroUI#59).
+- `widget::document::document_pane_opening`: a document pane open on the view
+  a deep link names, offering its rendered view only while the document has
+  one (FerroHEALTH/FerroUI#50).
+- `view::surface::page_heading_live`: a page heading whose title follows a
+  signal, so it stays true under client-side navigation
+  (FerroHEALTH/FerroUI#51).
+- The `--control` and `--control-small` heights, shared by buttons, inputs
+  and selects, and a definition list's pair may sit in a `<div>` of its own.
+- The README's rule for what the top bar folds first.
+
+### Changed
+
+- A link is the accent with an underline under the pointer; a link in running
+  prose keeps its underline, and every component that draws an anchor sets
+  its own decoration (FerroHEALTH/FerroUI#38). A link in a table cell keeps
+  that look whatever a console's own anchor style says.
+- The select draws FerroUI's chevron at the text input's height and frame,
+  and the date and time inputs share the frame (FerroHEALTH/FerroUI#60).
+- A disabled button keeps its variant's look, faded, so it is never read as
+  an enabled secondary action (FerroHEALTH/FerroUI#61); one label style for
+  every field.
+- The value axis of the line and activity charts steps in round numbers
+  (FerroHEALTH/FerroUI#62).
+- The line chart's last shown series cannot be hidden, and each legend chip
+  names its series in `data-series` (FerroHEALTH/FerroUI#49).
+- A definition grid breaks a value at its spaces and hyphens, and keeps the
+  card's gap after a title (FerroHEALTH/FerroUI#63, FerroHEALTH/FerroUI#52).
+- An empty state inside a card or a panel takes the quiet form
+  (FerroHEALTH/FerroUI#64).
+- Below 40rem the tab strip is one row that scrolls inside itself with a
+  shade at the edge that has more tabs (FerroHEALTH/FerroUI#65).
+- The top bar keeps one row at every width: the lockup's accent word folds
+  away, then a status pill in the end shortens to an ellipsis
+  (FerroHEALTH/FerroUI#41).
+- A pager over one page draws the range and the sizes alone
+  (FerroHEALTH/FerroUI#39).
+- A page header in a stack leaves the stack's gap and no more
+  (FerroHEALTH/FerroUI#57); fields side by side keep their labels and
+  controls on one line whatever help each carries (FerroHEALTH/FerroUI#58).
+- A button in a table's actions cell sits on the row's first line.
+
+### Fixed
+
+- From 64rem up, an identifier longer than its column wraps inside the cell,
+  so a table never runs past its card (FerroHEALTH/FerroUI#53).
+- A bullet item with a long URL wraps inside its card on a phone
+  (FerroHEALTH/FerroUI#54).
+- A page heading in the body face writes no empty `class` attribute
+  (FerroHEALTH/FerroUI#55).
+- An unavailable pager step reads "First (unavailable)", pinned by a test
+  (FerroHEALTH/FerroUI#45).
+
 ## [0.1.1] - 2026-10-18
 
 Every component the four FerroHEALTH consoles draw, compared across them and
@@ -166,6 +230,7 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/FerroHEALTH/FerroUI/releases/tag/v0.1.0

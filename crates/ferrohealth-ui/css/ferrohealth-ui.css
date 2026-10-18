@@ -93,6 +93,10 @@
     --space-loose: 1rem;
     --space-section: 2rem;
     --row-y: 0.5rem;
+    /* One control height per size: a button, an input and a select share
+       it. */
+    --control: 2.25rem;
+    --control-small: 1.875rem;
     --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
     --motion-state: 120ms;
@@ -106,6 +110,8 @@
     --space-loose: 0.625rem;
     --space-section: 1rem;
     --row-y: 0.25rem;
+    --control: 2rem;
+    --control-small: 1.75rem;
   }
 
   /* The dark block, written twice: once for an operator who chose dark, and
@@ -263,14 +269,23 @@
     margin: 0;
   }
 
+  /* A link is told by its colour and takes its underline under the
+     pointer; a link inside running prose keeps the underline, so it is told
+     from the words around it by more than colour (WCAG 2.2 SC 1.4.1). Every
+     component that draws an anchor sets its own decoration. */
   a {
     color: var(--accent);
-    text-decoration: underline;
+    text-decoration: none;
     text-underline-offset: 2px;
   }
 
   a:hover {
     color: var(--accent-hover);
+    text-decoration: underline;
+  }
+
+  :is(p, li, dd, figcaption) > a:not([class]) {
+    text-decoration: underline;
   }
 
   code,
@@ -374,6 +389,10 @@
     margin: 0;
     padding-inline-start: 1.25rem;
     list-style: disc;
+  }
+
+  .fui-bullets > li {
+    overflow-wrap: break-word;
   }
 
   .fui-bullets > li + li {
@@ -603,6 +622,7 @@
     background: var(--surface-raised);
     padding: var(--space-default) var(--space-loose);
     color: var(--accent);
+    text-decoration: none;
   }
 
   .fui-skip:focus {
@@ -629,6 +649,25 @@
     align-items: center;
     gap: var(--space-default) 0.75rem;
     padding: var(--space-default) var(--space-loose);
+  }
+
+  /* The start and the end share one row at every width: the lockup's
+     accent word folds away first, then the end's status words shorten to an
+     ellipsis; only a search box takes a row of its own below 48rem. */
+  .fui-topbar-row > .fui-lockup {
+    min-width: 0;
+    flex: 0 1 auto;
+  }
+
+  .fui-topbar-row > .fui-lockup > .fui-lockup-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  @media (width < 30rem) {
+    .fui-topbar-row > .fui-lockup .fui-lockup-accent {
+      display: none;
+    }
   }
 
   @media (width >= 48rem) {
@@ -676,11 +715,38 @@
 
   .fui-topbar-end {
     display: flex;
+    min-width: 0;
+    flex: 1 1 0;
     margin-inline-start: auto;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     justify-content: flex-end;
     gap: var(--space-default);
+  }
+
+  .fui-topbar-end > * {
+    flex-shrink: 0;
+  }
+
+  /* A status in the end is the part that gives way: its words shorten to an
+     ellipsis and the full words stay in its text for assistive technology. */
+  .fui-topbar-end > :has(.fui-pill),
+  .fui-topbar-end > .fui-pill {
+    min-width: 0;
+    flex-shrink: 1;
+  }
+
+  .fui-topbar-end .fui-pill {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .fui-topbar-end .fui-pill::before {
+    display: inline-block;
+    margin-inline-end: 0.375rem;
+    vertical-align: middle;
   }
 
   .fui-lockup {
@@ -826,6 +892,11 @@
   .fui-stack {
     display: grid;
     gap: var(--space-loose);
+  }
+
+  /* A page header in a stack leaves the stack's gap below it and no more. */
+  .fui-stack > .fui-page-header {
+    margin-block-end: 0;
   }
 
   /* A part of a stack or a grid never grows past its track for a long
@@ -999,6 +1070,7 @@
 
   .fui-footer a {
     color: inherit;
+    text-decoration: underline;
   }
 
   .fui-footer a:hover {
@@ -1121,6 +1193,7 @@
     gap: 0.375rem;
     border: 1px solid transparent;
     border-radius: var(--radius-control);
+    min-height: var(--control);
     padding: 0.375rem 0.75rem;
     font-size: var(--text-body);
     font-weight: 500;
@@ -1189,18 +1262,19 @@
     color: var(--ink);
   }
 
-  /* A control that cannot be used: neutral, on the sunken ground in muted
-     text with no accent, whatever its variant, and no hover. */
+  /* A control that cannot be used keeps its variant's look, faded, and takes
+     no pointer, so it is never read as an enabled secondary action; an
+     inactive control is exempt from the contrast minimum (WCAG 2.2 SC
+     1.4.3). */
   .fui-button:disabled,
   .fui-button[aria-disabled="true"] {
-    border-color: var(--edge);
-    background: var(--surface-sunken);
-    color: var(--muted);
+    opacity: 0.5;
     cursor: not-allowed;
     pointer-events: none;
   }
 
   .fui-button-small {
+    min-height: var(--control-small);
     padding: var(--space-tight) 0.625rem;
     font-size: var(--text-small);
     line-height: var(--leading-small);
@@ -1633,23 +1707,36 @@
 
   /* A definition grid: each label beside its value from 40 rem up, so a card
      of facts reads in half the height of one label above each value. */
+  :where(.fui-facts, .fui-facts-row) {
+    margin: 0;
+  }
+
   .fui-facts {
     display: grid;
-    margin: 0;
     grid-template-columns: minmax(0, 1fr);
     gap: var(--space-tight) 1.5rem;
   }
 
-  .fui-facts > dt {
+  /* A pair may sit in a <div> of its own (HTML Living Standard, the dl
+     element), which takes no box of its own in the grid. */
+  .fui-facts > div {
+    display: contents;
+  }
+
+  .fui-facts > dt,
+  .fui-facts > div > dt {
     color: var(--muted);
     font-weight: 500;
     white-space: nowrap;
   }
 
-  .fui-facts > dd {
+  /* A value breaks at its spaces and hyphens, and inside a token only when
+     the token cannot fit. */
+  .fui-facts > dd,
+  .fui-facts > div > dd {
     min-width: 0;
     margin: 0 0 0.375rem;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
 
   @media (width >= 40rem) {
@@ -1657,7 +1744,8 @@
       grid-template-columns: max-content minmax(0, 1fr);
     }
 
-    .fui-facts > dd {
+    .fui-facts > dd,
+    .fui-facts > div > dd {
       margin: 0;
     }
   }
@@ -1668,7 +1756,6 @@
      stays on one line, the facts wrapping whole onto the next line. */
   .fui-facts-row {
     display: flex;
-    margin: 0;
     flex-wrap: wrap;
     gap: 0.75rem 2rem;
   }
@@ -1688,7 +1775,7 @@
 
   .fui-facts-row dd {
     margin: 0;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
 
   /* A well: a sunken box inside a card, for a passage set apart. */
@@ -1756,6 +1843,17 @@
   @media (width >= 64rem) {
     .fui-table-scroll {
       overflow: visible;
+    }
+
+    /* With no scroll box, an identifier that cannot fit its column wraps
+       inside it, so the table never runs past its card. */
+    .fui-table code {
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+
+    .fui-table tbody :is(td, th) {
+      overflow-wrap: break-word;
     }
 
     .fui-table thead th {
@@ -1832,6 +1930,18 @@
     background: color-mix(in srgb, var(--surface-sunken) 60%, transparent);
   }
 
+  /* A link in a cell names the row it opens: the accent, underlined under
+     the pointer, whatever a console's own anchor style says. */
+  .fui-table tbody a:not(.fui-button, .fui-sort) {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  .fui-table tbody a:not(.fui-button, .fui-sort):hover {
+    color: var(--accent-hover);
+    text-decoration: underline;
+  }
+
   .fui-table .fui-num {
     text-align: end;
   }
@@ -1856,6 +1966,16 @@
     width: 1%;
     text-align: end;
     white-space: nowrap;
+  }
+
+  /* A button in the actions cell sits on the row's first line of text, as
+     the cells beside it start at the top. */
+  .fui-table-actions > :is(.fui-button, button, a) {
+    margin-block: calc((var(--leading-body) - var(--control)) / 2);
+  }
+
+  .fui-table-actions > .fui-button-small {
+    margin-block: calc((var(--leading-body) - var(--control-small)) / 2);
   }
 
   /* The tools over a table: the filter and, beside it, how many rows it
@@ -1929,6 +2049,7 @@
   }
 
   .fui-pager .fui-pager-sizes {
+    grid-column: 3;
     justify-self: end;
   }
 
@@ -1939,6 +2060,7 @@
 
     .fui-pager .fui-pager-steps,
     .fui-pager .fui-pager-sizes {
+      grid-column: auto;
       justify-self: start;
     }
   }
@@ -2045,13 +2167,39 @@
     justify-self: start;
   }
 
+  /* A field's parts start at the top of its cell, so two fields side by
+     side keep their labels and controls on one line whatever help each
+     carries. */
   .fui-field {
     display: grid;
+    align-content: start;
     gap: var(--space-tight);
   }
 
+  /* The one label style of every field. */
   .fui-label {
+    color: var(--ink);
+    font-size: var(--text-body);
     font-weight: 500;
+    line-height: var(--leading-body);
+  }
+
+  /* Fields in one row share its width, each growing from 12rem, and the
+     row's buttons keep their own; the row wraps on a phone. */
+  .fui-field-flow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.75rem;
+  }
+
+  .fui-field-flow > * {
+    min-width: 0;
+    flex: 1 1 12rem;
+  }
+
+  .fui-field-flow > :is(button, .fui-button, .fui-check, .fui-segmented, .fui-control-narrow) {
+    flex: 0 0 auto;
   }
 
   .fui-help {
@@ -2070,6 +2218,37 @@
     padding: 0.375rem 0.75rem;
     color: var(--ink);
     transition: border-color var(--motion-state) ease-out;
+  }
+
+  .fui-input,
+  .fui-select {
+    min-height: var(--control);
+  }
+
+  /* The select draws FerroUI's chevron in the stylesheet, two gradients and
+     no image, at the text input's height and frame. */
+  .fui-select {
+    appearance: none;
+    padding-inline-end: 2rem;
+    background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+      linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+    background-position: calc(100% - 1.0625rem) 55%, calc(100% - 0.75rem) 55%;
+    background-size: 0.3125rem 0.3125rem;
+    background-repeat: no-repeat;
+  }
+
+  .fui-select:is([multiple], [size]) {
+    padding-inline-end: 0.75rem;
+    background-image: none;
+  }
+
+  .fui-input:is([type="date"], [type="datetime-local"], [type="time"], [type="month"]) {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .fui-input::-webkit-calendar-picker-indicator {
+    opacity: 0.7;
+    cursor: pointer;
   }
 
   .fui-input:hover,
@@ -2307,9 +2486,34 @@
      until the pointer is on one, the current one on the accent's tint in
      the accent and named current or selected for assistive technology. */
   .fui-tabs {
+    --fade-ground: var(--surface);
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-tight);
+  }
+
+  :is(.fui-card, .fui-panel, .fui-dialog) .fui-tabs {
+    --fade-ground: var(--surface-raised);
+  }
+
+  /* Below 40rem the strip is one row that scrolls inside itself; a shade
+     marks the edge that has more tabs, covered at an end the strip has
+     reached (the covers scroll with the tabs, the shades stay put). */
+  @media (width < 40rem) {
+    .fui-tabs {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+      background:
+        linear-gradient(to right, var(--fade-ground) 40%, transparent) left / 2rem 100% no-repeat local,
+        linear-gradient(to left, var(--fade-ground) 40%, transparent) right / 2rem 100% no-repeat local,
+        linear-gradient(to right, color-mix(in srgb, var(--ink) 14%, transparent), transparent) left / 1rem 100% no-repeat scroll,
+        linear-gradient(to left, color-mix(in srgb, var(--ink) 14%, transparent), transparent) right / 1rem 100% no-repeat scroll;
+    }
+
+    .fui-tabs > .fui-tab {
+      flex-shrink: 0;
+    }
   }
 
   .fui-tab {
@@ -2479,6 +2683,10 @@
     background: var(--edge);
   }
 
+  .fui-sign-in-links a {
+    text-decoration: underline;
+  }
+
   .fui-sign-in-links {
     display: flex;
     flex-wrap: wrap;
@@ -2605,10 +2813,12 @@
     color: var(--muted);
   }
 
-  /* The quiet form inside a card: no frame, less room. */
-  .fui-empty-quiet {
+  /* The quiet form inside a card: no frame, less room. An empty state in a
+     card or a panel takes it on its own. */
+  .fui-empty-quiet,
+  :is(.fui-card, .fui-panel) .fui-empty {
     border: 0;
-    padding: 1.5rem var(--space-loose);
+    padding: 1.25rem var(--space-loose);
   }
 
   /* A refusal or a fault the page reports: a status and words in a box, the
@@ -3239,6 +3449,15 @@
   .fui-legend-chip[aria-pressed="true"] {
     color: var(--ink);
     text-decoration: none;
+  }
+
+  /* The last series shown: pressed, and it takes no press. */
+  .fui-legend-chip:disabled {
+    cursor: not-allowed;
+  }
+
+  .fui-legend-chip:disabled:hover {
+    background: var(--surface-raised);
   }
 
   .fui-swatch {

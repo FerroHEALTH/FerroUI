@@ -13,11 +13,22 @@ use leptos::prelude::*;
 
 use crate::view::chart::{LineChart, PALETTE, figures, has_gaps, line_svg};
 
+/// How many of `count` series `shown` keeps, a missing flag counting as
+/// shown.
+fn shown_count(shown: RwSignal<Vec<bool>>, count: usize) -> usize {
+    shown.with(|flags| {
+        (0..count)
+            .filter(|index| flags.get(*index).copied().unwrap_or(true))
+            .count()
+    })
+}
+
 /// Returns the line chart `chart`, its legend toggling `shown`, one flag
-/// per series.
+/// per series; the last series shown cannot be hidden.
 #[must_use]
 pub fn line_chart(chart: LineChart, shown: RwSignal<Vec<bool>>) -> AnyView {
     let table = figures(&chart).into_any();
+    let count = chart.series.len();
     let chips = chart
         .series
         .iter()
@@ -25,16 +36,24 @@ pub fn line_chart(chart: LineChart, shown: RwSignal<Vec<bool>>) -> AnyView {
         .map(|(index, series)| {
             let swatch = format!("fui-swatch fui-series-{}", series.palette % PALETTE);
             let on = move || shown.with(|flags| flags.get(index).copied().unwrap_or(true));
+            // The last series shown cannot be hidden, so the chart never
+            // empties itself; its chip stays pressed and refuses the press.
+            let last = move || on() && shown_count(shown, count) == 1;
             view! {
                 <button
                     type="button"
                     class="fui-legend-chip"
+                    data-series=series.name.clone()
                     aria-pressed=move || on().to_string()
+                    disabled=last
                     on:click=move |_| {
+                        if last() {
+                            return;
+                        }
                         shown
                             .update(|flags| {
-                                if flags.len() <= index {
-                                    flags.resize(index + 1, true);
+                                if flags.len() < count {
+                                    flags.resize(count, true);
                                 }
                                 if let Some(flag) = flags.get_mut(index) {
                                     *flag = !*flag;

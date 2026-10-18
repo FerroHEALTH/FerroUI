@@ -42,6 +42,11 @@ pub const SWITCH: &str = "fui-switch";
 /// The classes of a form laid out as one column of fields.
 pub const FORM: &str = "fui-form";
 
+/// The classes of a row of fields and their buttons: the fields share the
+/// row's width, each growing from 12rem so a placeholder is not cut, the
+/// buttons keep their own, and the row wraps on a phone.
+pub const FIELD_FLOW: &str = "fui-field-flow";
+
 /// The id of the help line of the control `id`, which the control names in
 /// `aria-describedby`.
 #[must_use]
@@ -90,6 +95,14 @@ pub fn fieldset(legend: &'static str, body: impl IntoView + 'static) -> impl Int
 pub fn columns(body: impl IntoView + 'static) -> impl IntoView {
     let body = body.into_any();
     view! { <div class="fui-columns">{body}</div> }
+}
+
+/// Returns the fields and buttons `body` in one row that shares its width
+/// ([`FIELD_FLOW`]).
+#[must_use]
+pub fn field_flow(body: impl IntoView + 'static) -> impl IntoView {
+    let body = body.into_any();
+    view! { <div class=FIELD_FLOW>{body}</div> }
 }
 
 /// Returns the checkbox `checkbox`, whose id is `id`, beside its label

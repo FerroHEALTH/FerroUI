@@ -382,15 +382,22 @@ pub fn pager(
         None => window.range_of(listing.noun),
     };
     let sizes = size_choices(listing, window.size, size);
-    view! {
-        <nav class="fui-pager" aria-label=listing.label>
-            <p role="status">{range}</p>
+    // A listing of one page draws the range and the sizes alone: no step can
+    // be taken, so none needs saying.
+    let steps = (window.pages > 1).then(|| {
+        view! {
             <div class="fui-pager-steps">
                 {first} {previous}
                 <span class="fui-pager-position">
                     {format!("Page {} of {}", window.page, window.pages)}
                 </span> {next} {last}
             </div>
+        }
+    });
+    view! {
+        <nav class="fui-pager" aria-label=listing.label>
+            <p role="status">{range}</p>
+            {steps}
             {sizes}
         </nav>
     }

@@ -196,7 +196,7 @@ fn facts() -> AnyView {
         "Definition grid",
         definitions(vec![
             ("Product", "FerroHEALTH UI".into_any()),
-            ("Version", "0.1.1".into_any()),
+            ("Version", "0.1.2".into_any()),
             ("Commit", view! { <code>"0123456789ab"</code> }.into_any()),
             ("Profile", or_none(String::new())),
             ("Licence", "Business Source License 1.1".into_any()),
@@ -206,7 +206,27 @@ fn facts() -> AnyView {
                 "Target",
                 view! { <code>"wasm32-unknown-unknown"</code> }.into_any(),
             ),
+            (
+                "Version uid",
+                view! { <code>"01a15050-e772-7541-b5d5-0f5ec26781d6::synthetic.local::1"</code> }
+                    .into_any(),
+            ),
+            (
+                "Subject",
+                "self, with no external subject reference, so the record names no person outside the server"
+                    .into_any(),
+            ),
         ]),
+    )
+    .into_any();
+    let listed = card(
+        "A bullet list",
+        view! {
+            <ul class="fui-bullets">
+                <li>"$validate-code on the value sets the server loaded"</li>
+                <li>"$tofhir http://fhirconnect.org/fhir/OperationDefinition/ToFhirSynthetic"</li>
+            </ul>
+        },
     )
     .into_any();
     let folded = card(
@@ -236,6 +256,7 @@ fn facts() -> AnyView {
         {stack(view! {
             {folded}
             {linked}
+            {listed}
         })}
     })
     .into_any();
@@ -284,6 +305,26 @@ fn tab_sets() -> AnyView {
                 key: "contributions",
                 href: String::from("?tab=contributions"),
                 label: "Contributions",
+            },
+            KeyedTab {
+                key: "directory",
+                href: String::from("?tab=directory"),
+                label: "Directory",
+            },
+            KeyedTab {
+                key: "history",
+                href: String::from("?tab=history"),
+                label: "Status history",
+            },
+            KeyedTab {
+                key: "commit",
+                href: String::from("?tab=commit"),
+                label: "Commit",
+            },
+            KeyedTab {
+                key: "tags",
+                href: String::from("?tab=tags"),
+                label: "Tags",
             },
         ],
         "status",
