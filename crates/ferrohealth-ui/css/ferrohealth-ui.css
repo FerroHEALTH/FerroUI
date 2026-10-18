@@ -351,6 +351,22 @@
     border: 0;
   }
 
+  /* The operator's name, visually hidden on a phone, where the icon and the
+     chevron name the menu and the name still names the button. */
+  @media (width < 40rem) {
+    .fui-operator-name {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      padding: 0;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+      border: 0;
+    }
+  }
+
   .fui-muted {
     color: var(--muted);
   }
@@ -773,6 +789,32 @@
     color: var(--ink);
   }
 
+  /* The theme toggle: of its two buttons, the one that leads away from the
+     theme on screen shows, read from data-theme and, for the system theme,
+     from the system's preference, so the first paint is right. */
+  .fui-theme-toggle {
+    display: inline-flex;
+  }
+
+  .fui-theme-to-light,
+  :root[data-theme="dark"] .fui-theme-to-dark {
+    display: none;
+  }
+
+  :root[data-theme="dark"] .fui-theme-to-light {
+    display: inline-flex;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"], [data-theme="dark"]) .fui-theme-to-dark {
+      display: none;
+    }
+
+    :root:not([data-theme="light"], [data-theme="dark"]) .fui-theme-to-light {
+      display: inline-flex;
+    }
+  }
+
   .fui-body {
     display: flex;
     flex: 1;
@@ -850,6 +892,7 @@
   @media (width >= 64rem) {
     .fui-panes {
       grid-template-columns: 20rem minmax(0, 1fr) 24rem;
+      align-items: stretch;
     }
 
     .fui-pane {
@@ -889,6 +932,11 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: var(--space-default) 0.75rem;
+  }
+
+  /* An action in a row of fields keeps its own width when the row stacks. */
+  .fui-field-row > .fui-button {
+    justify-self: start;
   }
 
   @media (width >= 40rem) {
@@ -944,7 +992,10 @@
   }
 
   /* The stat cards across the top of a dashboard, closer together. */
+  /* Stat tiles take two to a row on a phone: a tile holds a figure and a
+     short label, and one per row leaves most of each empty. */
   .fui-grid-stats {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
     gap: 0.75rem;
   }
 
@@ -1421,6 +1472,24 @@
     margin-block-start: 0.75rem;
   }
 
+  /* A card in a grid row is as tall as the row; an empty state inside it
+     fills what is left and centres its content, so no card ends in an
+     empty band. */
+  .fui-grid > .fui-card:has(> .fui-empty),
+  .fui-grid > .fui-card:has(> .fui-code-panel) {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .fui-grid > .fui-card > .fui-empty {
+    flex: 1 1 auto;
+    align-content: center;
+  }
+
+  .fui-grid > .fui-card > .fui-code-panel {
+    flex: 1 1 auto;
+  }
+
   /* A card that spans the whole row of the grid it sits in. */
   .fui-card-wide {
     grid-column: 1 / -1;
@@ -1520,10 +1589,11 @@
     line-height: var(--leading-body);
   }
 
+  /* A label wraps rather than be cut: a stat read as "With a war..." has
+     lost its meaning. */
   .fui-stat-label > span:first-child {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    min-width: 0;
+    overflow-wrap: break-word;
   }
 
   /* A panel: a card whose first row holds its title and actions over a
@@ -1589,24 +1659,26 @@
 
   /* Facts across a row, as a detail page opens: each label small and upper
      case over its value, the columns sharing the width. */
+  /* Facts across a row: each fact as wide as its value, so an identifier
+     stays on one line, the facts wrapping whole onto the next line. */
   .fui-facts-row {
-    display: grid;
+    display: flex;
     margin: 0;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
-    gap: 0.75rem var(--space-loose);
+    flex-wrap: wrap;
+    gap: 0.75rem 2rem;
   }
 
   .fui-facts-row > div {
     min-width: 0;
+    max-width: 100%;
+    flex: 0 1 auto;
   }
 
   .fui-facts-row dt {
     color: var(--muted);
-    font-size: var(--text-micro);
-    line-height: var(--leading-micro);
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
+    font-size: var(--text-small);
+    line-height: var(--leading-small);
+    font-weight: 500;
   }
 
   .fui-facts-row dd {
@@ -1655,7 +1727,10 @@
      pager's range label names the rows a reader sees. On a narrow screen a
      table wider than its card scrolls sideways inside it, never the page
      (WCAG 2.2 SC 1.4.10). */
+  /* Positioned, so a visually hidden part of the table (its caption, a
+     step's words) is clipped by the box and never widens the page. */
   .fui-table-scroll {
+    position: relative;
     max-width: 100%;
     overflow-x: auto;
     border: 1px solid var(--edge);
@@ -1731,6 +1806,13 @@
     border-bottom: 0;
   }
 
+  /* An identifier in a cell keeps its line: the table scrolls sideways in
+     its box rather than break a name into letters. */
+  .fui-table code {
+    overflow-wrap: normal;
+    white-space: nowrap;
+  }
+
   .fui-table tbody tr {
     transition: background-color var(--motion-state) ease-out;
   }
@@ -1783,6 +1865,32 @@
   .fui-table-tools > .fui-field {
     flex: 1 1 16rem;
     max-width: 28rem;
+  }
+
+  /* On a phone a pager step is its glyph, its words and "(unavailable)"
+     kept for assistive technology, so the steps and the position fit one
+     row; a step that cannot be taken also takes a dashed edge. */
+  @media (width < 40rem) {
+    .fui-pager .fui-step-words {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      padding: 0;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .fui-pager .fui-pager-steps {
+      flex-wrap: nowrap;
+    }
+  }
+
+  .fui-pager [aria-disabled="true"],
+  .fui-pager button:disabled {
+    border-style: dashed;
   }
 
   .fui-pager {
@@ -2148,6 +2256,8 @@
   }
 
   .fui-tree-code {
+    flex-shrink: 0;
+    white-space: nowrap;
     color: var(--muted);
     font-family: var(--font-mono);
     font-size: var(--text-small);
@@ -2546,6 +2656,22 @@
     min-width: 0;
   }
 
+  /* On a narrow screen the badge keeps its column and the head and the text
+     stack beside it, each breaking inside that column. */
+  @media (width < 40rem) {
+    .fui-issues > li {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: start;
+    }
+
+    .fui-issue-head,
+    .fui-issue-text {
+      grid-column: 2;
+      overflow-wrap: anywhere;
+    }
+  }
+
   .fui-issue-detail {
     display: inline-block;
     margin-inline-start: var(--space-tight);
@@ -2927,7 +3053,17 @@
   .fui-chart-svg {
     display: block;
     width: 100%;
-    height: auto;
+    overflow: visible;
+  }
+
+  .fui-chart-grid,
+  .fui-chart-axis,
+  .fui-chart-line {
+    vector-effect: non-scaling-stroke;
+  }
+
+  .fui-chart-plot-lines {
+    overflow: visible;
   }
 
   .fui-chart-grid {
@@ -2940,10 +3076,16 @@
     stroke-width: 1;
   }
 
+  /* A label keeps the type scale at every width, on a halo of the card's
+     ground so a line passing under it never hides it. */
   .fui-chart-label {
     fill: var(--muted);
     font-size: var(--text-micro);
     line-height: var(--leading-micro);
+    paint-order: stroke;
+    stroke: var(--surface-raised);
+    stroke-width: 3px;
+    stroke-linejoin: round;
   }
 
   .fui-chart-line {

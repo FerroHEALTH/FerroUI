@@ -6,8 +6,9 @@
 //!
 //! With `FERROUI_SCREENSHOTS=1` the capture drives the gallery through every
 //! page of every brand and every sign-in card, in the light and the dark
-//! theme, at 1440 CSS pixels wide and the full height of the page, and writes
-//! each as `<page>.png` and `<page>-dark.png` under [`IMAGES`]. Without the
+//! theme, at 1440 and at 390 CSS pixels wide and the full height of the page,
+//! and writes each as `<page>.png` and `<page>-dark.png`, the narrow ones
+//! `<page>-narrow.png` and `<page>-narrow-dark.png`, under [`IMAGES`]. Without the
 //! gate the capture returns at once. The guard runs in the ordinary suite:
 //! every shot has both images, and every image is a shot's.
 
@@ -30,7 +31,11 @@ const SCREENSHOTS_GATE: &str = "FERROUI_SCREENSHOTS";
 /// The folder of the screenshots, from the workspace root.
 pub(crate) const IMAGES: &str = "docs/screenshots";
 
-/// The width every screenshot is taken at, in CSS pixels.
+/// The widths every screenshot is taken at, in CSS pixels, with the suffix
+/// each image name takes: a wide screen and a phone.
+const WIDTHS: [(u32, &str); 2] = [(1440, ""), (390, "-narrow")];
+
+/// The width the window returns to between shots.
 const WIDTH: u32 = 1440;
 
 /// The height of the window a page is laid out in before its full height is
@@ -139,7 +144,9 @@ async fn capture(
     gallery: &Gallery,
     shot: &Shot,
     theme: &str,
+    (width, suffix): (u32, &str),
 ) -> Result<(), Box<dyn Error>> {
+    window(browser, width, HEIGHT).await?;
     browser.goto(&gallery.url(&shot.path)).await?;
     browser.element(By::Css(shot.ready)).await?;
     browser
@@ -149,7 +156,7 @@ async fn capture(
     // viewport), so the height is measured again until it holds.
     let mut height = content_height(browser).await?;
     for _ in 0..4 {
-        window(browser, WIDTH, height).await?;
+        window(browser, width, height).await?;
         let measured = content_height(browser).await?;
         if measured <= height {
             break;
@@ -158,7 +165,7 @@ async fn capture(
     }
     let png = browser.driver().screenshot_as_png().await?;
     window(browser, WIDTH, HEIGHT).await?;
-    let path = file(&shot.image, theme);
+    let path = file(&format!("{}{suffix}", shot.image), theme);
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }
@@ -196,7 +203,9 @@ async fn every_page_is_captured_in_every_brand_light_and_dark() -> Result<(), Bo
                 )
                 .await?;
             for shot in shots() {
-                capture(browser, &gallery, &shot, theme).await?;
+                for width in WIDTHS {
+                    capture(browser, &gallery, &shot, theme, width).await?;
+                }
             }
         }
         Ok(())
@@ -208,8 +217,11 @@ async fn every_page_is_captured_in_every_brand_light_and_dark() -> Result<(), Bo
 fn every_shot_has_its_light_and_dark_image_and_no_other_image_is_kept() {
     let mut expected = BTreeSet::new();
     for shot in shots() {
-        for theme in ["light", "dark"] {
-            let image = file(&shot.image, theme);
+        for (theme, (_, suffix)) in ["light", "dark"]
+            .into_iter()
+            .flat_map(|theme| WIDTHS.map(|width| (theme, width)))
+        {
+            let image = file(&format!("{}{suffix}", shot.image), theme);
             assert!(
                 image.is_file(),
                 "{} is missing: run the capture with {SCREENSHOTS_GATE}=1",

@@ -62,11 +62,15 @@ fn document() -> AnyView {
 
 /// A panel in each language.
 fn panels() -> AnyView {
-    grid(view! {
-        {card("YAML", code_panel("A mapping file, YAML", Language::Yaml, YAML))}
-        {card("JSON", code_panel("A resource, JSON", Language::Json, JSON))}
-        {card("XML", code_panel("A composition, XML", Language::Xml, XML))}
-        {card("AQL", code_panel("A query, AQL", Language::Aql, AQL))}
+    stack(view! {
+        {grid(view! {
+            {card("YAML", code_panel("A mapping file, YAML", Language::Yaml, YAML))}
+            {card("JSON", code_panel("A resource, JSON", Language::Json, JSON))}
+        })}
+        {grid(view! {
+            {card("XML", code_panel("A composition, XML", Language::Xml, XML))}
+            {card("AQL", code_panel("A query, AQL", Language::Aql, AQL))}
+        })}
     })
     .into_any()
 }

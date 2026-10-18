@@ -5,7 +5,7 @@
 //! the pointer on a navigation entry, a table row, each button variant, a
 //! linked card and a tab; the keyboard focus on a control, a navigation
 //! entry and the keyboard tabs; every overlay open (the dialogs, the modal
-//! a signal opens, the side panel, the operator and theme menus, the
+//! a signal opens, the side panel, the operator menu, the
 //! drawer); the toasts; the upload field empty, with a file over it, with a
 //! file read and with a file refused; the editor with its diagnostics; the
 //! help switch on, the picker open on its input, the tree walked by the
@@ -51,7 +51,7 @@ pub(crate) const STATES: [&str; 31] = [
     "modal-wide",
     "side-panel",
     "operator-menu",
-    "theme-menu",
+    "focus-theme-toggle",
     "toasts",
     "drawer-open",
     "focus-search",
@@ -192,6 +192,15 @@ async fn overview(
     away(browser).await?;
     focus(browser, &entry).await?;
     shot_of(browser, brand, theme, "focus-nav", &sidebar).await?;
+    let toggle = browser.element(By::Id("theme-to-dark")).await?;
+    let shown = if toggle.is_displayed().await? {
+        toggle
+    } else {
+        browser.element(By::Id("theme-to-light")).await?
+    };
+    focus(browser, &shown).await?;
+    let bar = browser.element(By::Css(".fui-topbar")).await?;
+    shot_of(browser, brand, theme, "focus-theme-toggle", &bar).await?;
     let stats = browser.element(By::Css(".fui-grid-stats")).await?;
     let first = browser.element(By::Css("a.fui-stat")).await?;
     hover(browser, &first).await?;
@@ -398,11 +407,6 @@ async fn overlays(
             "//button[@aria-controls = 'operator-menu']",
             "operator-menu",
         ),
-        (
-            "theme-menu",
-            "//button[@aria-controls = 'theme-menu']",
-            "theme-menu",
-        ),
     ];
     for (state, opener, id) in opened {
         overlay(browser, brand, theme, state, By::XPath(opener), By::Id(id)).await?;
@@ -419,7 +423,22 @@ async fn overlays(
     })
     .await?;
     shot_of(browser, brand, theme, "toasts", &region).await?;
-    window(browser, 600, HEIGHT).await?;
+    for close in browser
+        .driver()
+        .find_all(By::Css(".fui-toast button"))
+        .await?
+    {
+        close.click().await?;
+    }
+    until("the toasts are gone", async || {
+        Ok(browser
+            .driver()
+            .find_all(By::Css(".fui-toast"))
+            .await?
+            .is_empty())
+    })
+    .await?;
+    window(browser, 390, HEIGHT).await?;
     overlay(
         browser,
         brand,

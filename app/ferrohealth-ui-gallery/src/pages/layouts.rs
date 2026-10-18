@@ -338,12 +338,15 @@ fn stacks() -> AnyView {
     };
     card(
         "Stacks",
-        ferrohealth_ui::view::surface::grid(view! {
-            {lines(Gap::Tight, "Tight")}
-            {lines(Gap::Default, "Default")}
-            {lines(Gap::Loose, "Loose")}
-            {lines(Gap::Section, "Section")}
-        }),
+        stack_at(
+            Gap::Default,
+            view! {
+                {lines(Gap::Tight, "Tight")}
+                {lines(Gap::Default, "Default")}
+                {lines(Gap::Loose, "Loose")}
+                {lines(Gap::Section, "Section")}
+            },
+        ),
     )
     .into_any()
 }

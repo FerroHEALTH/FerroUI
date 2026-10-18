@@ -21,7 +21,7 @@ use ferrohealth_ui::view::sign_in::{Basic, Notice, Provider, SignIn, sign_in};
 use ferrohealth_ui::view::status::{badge, banner, pill, status};
 use ferrohealth_ui::view::surface::{Stat, definitions, stat_card};
 use ferrohealth_ui::view::tabs::{Tab, link_tabs};
-use ferrohealth_ui::view::theme_switch::theme_switch;
+use ferrohealth_ui::view::theme_switch::{theme_switch, theme_toggle};
 use leptos::prelude::*;
 
 /// The HTML `view` renders to, under a reactive owner as a server render
@@ -150,6 +150,26 @@ fn the_theme_switch_posts_and_marks_the_theme_in_force_by_more_than_colour() {
     assert!(
         switch.contains(Glyph::CHECK.markup()),
         "a check on the pressed one: {switch}"
+    );
+}
+
+#[test]
+fn the_theme_toggle_is_one_form_that_posts_the_other_theme() {
+    let toggle = html(|| theme_toggle(String::from("/theme"), String::from("/files")).into_any());
+    assert!(toggle.contains(r#"method="post""#), "{toggle}");
+    assert!(toggle.contains(r#"action="/theme""#), "{toggle}");
+    assert!(toggle.contains(r#"name="back" value="/files""#), "{toggle}");
+    assert!(
+        toggle.contains(r#"value="dark""#) && toggle.contains(r#"value="light""#),
+        "{toggle}"
+    );
+    assert!(
+        toggle.contains("Switch to the dark theme"),
+        "named, not a bare glyph: {toggle}"
+    );
+    assert!(
+        toggle.contains(Glyph::MOON.markup()) && toggle.contains(Glyph::SUN.markup()),
+        "{toggle}"
     );
 }
 

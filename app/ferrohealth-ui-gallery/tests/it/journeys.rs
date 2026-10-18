@@ -299,36 +299,62 @@ async fn the_url_pager_and_sort_are_links_and_the_session_pager_stays_out_of_the
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn the_theme_switch_posts_and_the_page_returns_in_the_theme() -> Result<(), Box<dyn Error>> {
+async fn the_theme_toggle_swaps_in_place_and_the_choice_is_kept() -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
         return Ok(());
     }
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
-        browser.goto(&gallery.url("/ferrofed/code")).await?;
         browser
-            .element(By::XPath("//button[starts-with(@aria-label, 'Theme')]"))
-            .await?
-            .click()
+            .driver()
+            .cdp()
+            .send_raw(
+                "Emulation.setEmulatedMedia",
+                json!({ "features": [{ "name": "prefers-color-scheme", "value": "light" }] }),
+            )
             .await?;
-        let dark = browser
-            .element(By::XPath("//button[@name = 'theme' and @value = 'dark']"))
+        browser.goto(&gallery.url("/ferrofed")).await?;
+        hydrated_tabs(browser).await?;
+        browser
+            .driver()
+            .execute("window.notReloaded = true;", vec![])
             .await?;
-        until("the theme menu opens", async || {
-            Ok(dark.is_displayed().await?)
-        })
-        .await?;
-        dark.click().await?;
+        let to_dark = browser.element(By::Id("theme-to-dark")).await?;
+        assert!(
+            to_dark.is_displayed().await?,
+            "the moon shows in the light theme"
+        );
+        to_dark.click().await?;
         browser
             .element(By::Css(r#"html[data-theme="dark"]"#))
             .await?;
-        browser.at(&gallery.url("/ferrofed/code")).await?;
-        browser
-            .element(By::XPath(
-                "//button[@value = 'dark' and @aria-pressed = 'true']",
-            ))
+        let kept = browser
+            .driver()
+            .execute("return window.notReloaded === true;", vec![])
             .await?;
-        browser.console_clean("the theme switch").await
+        assert_eq!(
+            &serde_json::Value::Bool(true),
+            kept.json(),
+            "swapped with no reload"
+        );
+        let to_light = browser.element(By::Id("theme-to-light")).await?;
+        until("the sun shows in the dark theme", async || {
+            Ok(to_light.is_displayed().await?)
+        })
+        .await?;
+        until("the choice reaches the cookie", async || {
+            Ok(browser
+                .driver()
+                .get_named_cookie("gallery-theme")
+                .await
+                .is_ok_and(|cookie| cookie.value == "dark"))
+        })
+        .await?;
+        browser.goto(&gallery.url("/ferrofed/code")).await?;
+        browser
+            .element(By::Css(r#"html[data-theme="dark"]"#))
+            .await?;
+        browser.console_clean("the theme toggle").await
     })
     .await
 }

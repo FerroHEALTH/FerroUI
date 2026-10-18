@@ -21,7 +21,6 @@ use ferrohealth_ui::view::shell::{
     Footer, Shell, centred, drawer_button, lockup, mark, shell, topbar_with,
 };
 use ferrohealth_ui::view::status::{banner, pill};
-use ferrohealth_ui::view::theme_switch::theme_menu;
 use ferrohealth_ui::widget::nav::{Entry, Group, sidebar};
 use ferrohealth_ui::widget::toast::{provide_toasts, toast_region};
 use leptos::prelude::*;
@@ -382,9 +381,44 @@ fn BrandShell() -> impl IntoView {
     }
 }
 
+/// Keeps `theme`, which the toggle has set in place, in the gallery's
+/// cookie by posting it to the theme route, as the toggle's form would.
+fn keep_theme(theme: Theme) {
+    #[cfg(target_arch = "wasm32")]
+    leptos::task::spawn_local(async move {
+        use wasm_bindgen::JsValue;
+        let init = web_sys::RequestInit::new();
+        init.set_method("POST");
+        init.set_body(&JsValue::from_str(&format!(
+            "theme={}&back=%2F",
+            theme.key()
+        )));
+        let Ok(headers) = web_sys::Headers::new() else {
+            leptos::logging::warn!("the browser refused the headers of the theme post");
+            return;
+        };
+        if headers
+            .set("content-type", "application/x-www-form-urlencoded")
+            .is_err()
+        {
+            leptos::logging::warn!("the browser refused the content type of the theme post");
+            return;
+        }
+        init.set_headers(&headers);
+        let Some(window) = web_sys::window() else {
+            return;
+        };
+        let sent = window.fetch_with_str_and_init(THEME_ROUTE, &init);
+        if wasm_bindgen_futures::JsFuture::from(sent).await.is_err() {
+            leptos::logging::warn!("the theme choice was not kept: the post failed");
+        }
+    });
+    #[cfg(not(target_arch = "wasm32"))]
+    let _: Theme = theme;
+}
+
 /// The shell of `brand`'s pages, whose theme switch returns to `back`.
 fn brand_shell(brand: Brand, back: String) -> AnyView {
-    let theme = use_context::<InForce>().map_or(Theme::System, |in_force| in_force.0);
     let start = view! {
         {drawer_button(SIDEBAR_ID)}
         {lockup("/", mark(brand_glyph(brand)), brand.product(), "Gallery")}
@@ -392,7 +426,7 @@ fn brand_shell(brand: Brand, back: String) -> AnyView {
     let switch = brand_switch(brand, &back).into_any();
     let end = view! {
         <span class="fui-wide-only">{switch}</span>
-        {pill(Tone::Ok, "Library v0.1.1")}
+        <span class="fui-wide-only">{pill(Tone::Ok, "Library v0.1.1")}</span>
         {operator_menu(
             OperatorMenu {
                 id: "operator-menu",
@@ -402,7 +436,11 @@ fn brand_shell(brand: Brand, back: String) -> AnyView {
             },
             (),
         )}
-        {theme_menu(theme, String::from(THEME_ROUTE), back)}
+        {ferrohealth_ui::widget::theme::theme_toggle(
+            String::from(THEME_ROUTE),
+            back,
+            Callback::new(keep_theme),
+        )}
     };
     let search = search_box(SearchBox {
         id: "gallery-search",

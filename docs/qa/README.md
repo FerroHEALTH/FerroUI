@@ -52,7 +52,7 @@ states under `../screenshots/states/`.
 | Upload | FerroEHR | drop, choose or paste, refused in words by type and size |
 | Charts | FerroEHR | the legend that hides a series, recolouring none; drawn as SVG with the figures as a table |
 | Toasts | FerroEHR | one per outcome, the tone's glyph beside the words, a dismiss button |
-| Theme control | FerroTERM | a compact menu in the top bar, the choice posted with no script |
+| Theme control | FerroEHR (owner's choice) | one 32 px icon button in the top bar, a moon in light and a sun in dark, one press flips the theme; FerroUI's form post and server cookie stay behind it, and the three-way choice lives in a settings form |
 | Search box | FerroTERM | one field and a Find button, its label read, centred in the top bar |
 | Help switch, picker, field kinds | FerroTERM | the help stays named while hidden; the picker never snaps a typed value back |
 | Checkbox chips, switch, action bar | FerroFED | the tick and the accent edge both say chosen; the knob's place says on |

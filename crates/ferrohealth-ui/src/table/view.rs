@@ -282,8 +282,9 @@ pub fn step_label(step: Step, available: bool) -> impl IntoView + use<> {
     let forward = matches!(step, Step::Next | Step::Last);
     view! {
         {(!forward).then(|| icon(step.glyph(), "14"))}
-        {step.label()}
-        {(!available).then_some(" (unavailable)")}
+        <span class="fui-step-words">
+            {step.label()} {(!available).then_some("(unavailable)")}
+        </span>
         {forward.then(|| icon(step.glyph(), "14"))}
     }
 }

@@ -200,6 +200,12 @@ fn facts() -> AnyView {
             ("Commit", view! { <code>"0123456789ab"</code> }.into_any()),
             ("Profile", or_none(String::new())),
             ("Licence", "Business Source License 1.1".into_any()),
+            ("Built", "2026-10-18".into_any()),
+            ("Locale", "en".into_any()),
+            (
+                "Target",
+                view! { <code>"wasm32-unknown-unknown"</code> }.into_any(),
+            ),
         ]),
     )
     .into_any();
@@ -227,8 +233,10 @@ fn facts() -> AnyView {
     );
     let pair = grid(view! {
         {grid_card}
-        {folded}
-        {linked}
+        {stack(view! {
+            {folded}
+            {linked}
+        })}
     })
     .into_any();
     stack(view! {
@@ -438,9 +446,11 @@ fn states() -> AnyView {
         }),
     )
     .into_any();
-    grid(view! {
-        {empty}
-        {quiet}
+    stack(view! {
+        {grid(view! {
+            {empty}
+            {quiet}
+        })}
         {loading}
     })
     .into_any()

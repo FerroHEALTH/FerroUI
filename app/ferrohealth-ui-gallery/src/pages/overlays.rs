@@ -13,7 +13,10 @@ use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::button::{Variant, label};
 use ferrohealth_ui::view::dialog::{Confirmation, confirm_dialog, confirm_trigger, danger_dialog};
 use ferrohealth_ui::view::form::{INPUT, field};
-use ferrohealth_ui::view::surface::{card, chip, cluster, definitions, grid, page_header, stack};
+use ferrohealth_ui::view::layout::divided_list;
+use ferrohealth_ui::view::surface::{
+    card, chip, cluster, definitions, grid, page_header, split, stack,
+};
 use ferrohealth_ui::widget::dialog::{Modal, Width, modal_dialog};
 use ferrohealth_ui::widget::side_panel::{SidePanel, side_panel, side_panel_trigger};
 use ferrohealth_ui::widget::toast::use_toasts;
@@ -92,9 +95,9 @@ fn modals() -> AnyView {
     let rows = ["synthetic-007.model.yml", "synthetic-011.extension.yml"]
         .into_iter()
         .map(|row| {
-            view! {
-                <li class="fui-split">
-                    <code>{row}</code>
+            split(
+                view! { <code>{row}</code> },
+                view! {
                     <button
                         type="button"
                         class=Variant::Danger.small()
@@ -104,10 +107,11 @@ fn modals() -> AnyView {
                         {icon(Glyph::TRASH, "14")}
                         "Delete"
                     </button>
-                </li>
-            }
+                },
+            )
+            .into_any()
         })
-        .collect_view();
+        .collect();
     let delete = modal_dialog(
         Modal {
             id: "delete-row",
@@ -146,7 +150,7 @@ fn modals() -> AnyView {
     card(
         "Modal dialogs a signal opens",
         view! {
-            <ul class="fui-issues">{rows}</ul>
+            {divided_list(Some("Files"), rows)}
             <button type="button" class=Variant::Secondary.class() id="open-rename" on:click=move |_| renaming.set(true)>
                 {label(Some(Glyph::PENCIL), "Rename a file")}
             </button>
@@ -264,7 +268,7 @@ fn hide(id: &str) {
         use leptos::wasm_bindgen::JsCast as _;
         let element = document()
             .get_element_by_id(id)
-            .and_then(|element| element.dyn_into::<leptos::web_sys::HtmlElement>().ok());
+            .and_then(|element| element.dyn_into::<web_sys::HtmlElement>().ok());
         if let Some(element) = element
             && element.hide_popover().is_err()
         {
@@ -297,12 +301,10 @@ pub fn OverlaysPage() -> impl IntoView {
         {stack(view! {
             {grid(view! {
                 {sections.0}
-                {sections.1}
-            })}
-            {grid(view! {
                 {sections.2}
-                {sections.3}
             })}
+            {sections.1}
+            {sections.3}
         })}
     }
 }

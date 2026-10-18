@@ -48,8 +48,11 @@ semantic versioning before 1.0 that would be a minor bump, and it ships as
   `view::surface::{cluster, split, stat_grid, wide_card, panel,
   titled_panel, link_card, facts_row, well, chip, page_meta}`.
 - The top bar's middle (`view::shell::topbar_with`) and
-  `view::search::search_box`; `view::shell::brand_mark`; the compact theme
-  menu `view::theme_switch::theme_menu` and `density_switch`, with `theme::Density::ALL`, `label`, `Display` and
+  `view::search::search_box`; `view::shell::brand_mark`; the theme toggle
+  `view::theme_switch::theme_toggle` and `widget::theme::theme_toggle`
+  (one 32 px icon button, a moon in the light theme and a sun in the dark,
+  a plain form post with no script that a hydrated console swaps in place
+  and persists through its callback) and `density_switch`, with `theme::Density::ALL`, `label`, `Display` and
   `FromStr`.
 - `view::surface::page_heading` with breadcrumbs (`Crumb`) and a title in
   the code face; `view::notice::notice`; `view::empty::{busy, Busy,
@@ -94,6 +97,17 @@ semantic versioning before 1.0 that would be a minor bump, and it ships as
 - `css/tailwind-theme.css` is an `@theme inline reference` block, so it no
   longer writes self-referencing variables that unset the type, radius and
   shadow tokens in a console's Tailwind build.
+- Charts keep the type scale at every width: the outer SVG has no
+  `viewBox`, the labels sit at percentages on a halo, and the lines are
+  drawn in a stretched inner SVG with strokes that do not scale.
+- On a phone (below 40 rem) a pager's steps are glyphs with their words
+  kept for assistive technology, the operator's name is visually hidden,
+  stat tiles take two to a row, an issue's head and text stack beside its
+  badge, and a row of fields keeps its actions at their own width.
+- A fact across a row takes its own width, so an identifier stays on one
+  line; an identifier in a table cell keeps its line and the table scrolls;
+  a card in a grid row that holds an empty state centres it in the row's
+  height.
 - The gallery's browser tests run at most four at once, and its bundle
   budget is 600 KiB of brotli-compressed WebAssembly: 0.1.1 measures 518566
   bytes with every component in it (0.1.0: 325387).

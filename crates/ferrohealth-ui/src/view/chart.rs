@@ -5,8 +5,12 @@
 //! an order axis, and the small activity line of a dashboard.
 //!
 //! The drawing measures nothing in the browser, so the server pass and
-//! hydration draw the same: the SVG has a fixed `viewBox` and the
-//! stylesheet scales it to its card's width. The lines take the chart
+//! hydration draw the same. The outer SVG has a fixed height and its card's
+//! width with no `viewBox`, so its labels keep the type scale at every
+//! width: the Y labels sit above their grid lines at the left edge and the
+//! X labels at percentages of the width. The lines are drawn in an inner SVG
+//! stretched to the plot (`preserveAspectRatio="none"`) with strokes that do
+//! not scale. The lines take the chart
 //! palette's roles, each 3:1 or more against the raised ground in both
 //! themes, and a series' colour is a class per palette index, never a
 //! `style`. Every chart carries its name and a summary as its `title` and
@@ -52,14 +56,14 @@ pub struct LineChart {
     pub y_range: Option<(f64, f64)>,
 }
 
-/// The drawing's width and height, in the units of its `viewBox`.
-const WIDTH: f64 = 640.0;
+/// The width of the inner drawing's `viewBox`, which is stretched to the
+/// plot's width; the X labels are placed at the same share of the width.
+const WIDTH: f64 = 1000.0;
 
-/// The room left of the plot for the Y labels, and around it.
-const LEFT: f64 = 44.0;
-const RIGHT: f64 = 12.0;
-const TOP: f64 = 12.0;
-const BOTTOM: f64 = 28.0;
+/// The room above the plot for the top Y label, and below it for the X
+/// labels, in CSS pixels.
+const TOP: f64 = 20.0;
+const BOTTOM: f64 = 26.0;
 
 /// A linear map from a data range onto a drawing range.
 #[derive(Debug, Clone, Copy)]
@@ -146,7 +150,7 @@ fn frame(
     put(
         &mut svg,
         format_args!(
-            "<svg class=\"fui-chart-svg\" viewBox=\"0 0 {WIDTH:.0} {height:.0}\" role=\"img\" aria-labelledby=\"{id}-title {id}-desc\"><title id=\"{id}-title\">"
+            "<svg class=\"fui-chart-svg\" width=\"100%\" height=\"{height:.0}\" role=\"img\" aria-labelledby=\"{id}-title {id}-desc\"><title id=\"{id}-title\">"
         ),
     );
     escape(label, &mut svg);
@@ -154,55 +158,73 @@ fn frame(
     escape(summary, &mut svg);
     svg.push_str("</desc>");
     let (low, high) = y.from;
+    let mut labels = String::new();
     for step in 0..=3_u8 {
         let value = low + (high - low) * f64::from(step) / 3.0;
         let at = y.at(value);
+        let class = if step == 0 {
+            "fui-chart-axis"
+        } else {
+            "fui-chart-grid"
+        };
         put(
             &mut svg,
             format_args!(
-                "<line class=\"fui-chart-grid\" x1=\"{LEFT:.0}\" x2=\"{:.0}\" y1=\"{at:.1}\" y2=\"{at:.1}\"/>",
-                WIDTH - RIGHT
+                "<line class=\"{class}\" x1=\"0\" x2=\"100%\" y1=\"{at:.1}\" y2=\"{at:.1}\"/>"
             ),
         );
         put(
-            &mut svg,
+            &mut labels,
             format_args!(
-                "<text class=\"fui-chart-label\" x=\"{:.0}\" y=\"{:.1}\" text-anchor=\"end\">",
-                LEFT - 6.0,
-                at + 4.0
+                "<text class=\"fui-chart-label\" x=\"0\" y=\"{:.1}\">",
+                at - 5.0
             ),
         );
-        escape(&tick_label(value), &mut svg);
-        svg.push_str("</text>");
+        escape(&tick_label(value), &mut labels);
+        labels.push_str("</text>");
     }
-    put(
-        &mut svg,
-        format_args!(
-            "<line class=\"fui-chart-axis\" x1=\"{LEFT:.0}\" x2=\"{:.0}\" y1=\"{:.1}\" y2=\"{:.1}\"/>",
-            WIDTH - RIGHT,
-            height - BOTTOM,
-            height - BOTTOM
-        ),
-    );
     for (value, text) in x_ticks {
-        let at = x.at(*value);
-        let anchor = if at <= LEFT + 1.0 {
+        let share = x.at(*value) / WIDTH;
+        let anchor = if share <= 0.01 {
             "start"
-        } else if at >= WIDTH - RIGHT - 1.0 {
+        } else if share >= 0.99 {
             "end"
         } else {
             "middle"
         };
         put(
-            &mut svg,
+            &mut labels,
             format_args!(
-                "<text class=\"fui-chart-label\" x=\"{at:.1}\" y=\"{:.1}\" text-anchor=\"{anchor}\">",
-                height - 8.0
+                "<text class=\"fui-chart-label\" x=\"{:.2}%\" y=\"{:.1}\" text-anchor=\"{anchor}\">",
+                share * 100.0,
+                height - 6.0
             ),
         );
-        escape(text, &mut svg);
-        svg.push_str("</text>");
+        escape(text, &mut labels);
+        labels.push_str("</text>");
     }
+    put(
+        &mut svg,
+        format_args!(
+            "<svg class=\"fui-chart-plot-lines\" width=\"100%\" height=\"{height:.0}\" viewBox=\"0 0 {WIDTH:.0} {height:.0}\" preserveAspectRatio=\"none\">"
+        ),
+    );
+    svg.push_str(PLOT_OPEN);
+    svg.push_str(&labels);
+    svg
+}
+
+/// The marker [`close`] finds to put the lines inside the stretched plot,
+/// under the labels.
+const PLOT_OPEN: &str = "<!--plot-->";
+
+/// Closes the SVG `svg` that [`frame`] opened, with `lines` inside the
+/// stretched plot and under the labels.
+fn close(mut svg: String, lines: &str) -> String {
+    if let Some(at) = svg.find(PLOT_OPEN) {
+        svg.replace_range(at..at + PLOT_OPEN.len(), &format!("{lines}</svg>"));
+    }
+    svg.push_str("</svg>");
     svg
 }
 
@@ -235,7 +257,7 @@ fn scales(chart: &LineChart, height: f64) -> (Scale, Scale) {
     (
         Scale {
             from: xs,
-            to: (LEFT, WIDTH - RIGHT),
+            to: (0.0, WIDTH),
         },
         Scale {
             from: ys,
@@ -258,12 +280,13 @@ pub fn line_svg(chart: &LineChart, shown: &[bool]) -> String {
         y,
         &chart.x_ticks,
     );
+    let mut lines = String::new();
     for (index, series) in chart.series.iter().enumerate() {
         if !shown.get(index).copied().unwrap_or(true) {
             continue;
         }
         put(
-            &mut svg,
+            &mut lines,
             format_args!(
                 "<path class=\"fui-chart-line fui-series-{}\" d=\"{}\"/>",
                 series.palette % PALETTE,
@@ -271,7 +294,7 @@ pub fn line_svg(chart: &LineChart, shown: &[bool]) -> String {
             ),
         );
     }
-    svg.push_str("</svg>");
+    svg = close(svg, &lines);
     svg
 }
 
@@ -377,7 +400,7 @@ pub fn activity_chart(chart: &ActivityChart) -> impl IntoView + use<> {
         y_range: None,
     };
     let (x, y) = scales(&line, HEIGHT);
-    let mut svg = frame(
+    let svg = frame(
         chart.name,
         &line.label,
         &line.summary,
@@ -386,16 +409,13 @@ pub fn activity_chart(chart: &ActivityChart) -> impl IntoView + use<> {
         y,
         &line.x_ticks,
     );
-    if let Some(series) = line.series.first() {
-        put(
-            &mut svg,
-            format_args!(
-                "<path class=\"fui-chart-line fui-chart-accent\" d=\"{}\"/>",
-                path(&series.points, x, y)
-            ),
-        );
-    }
-    svg.push_str("</svg>");
+    let lines = line.series.first().map_or_else(String::new, |series| {
+        format!(
+            "<path class=\"fui-chart-line fui-chart-accent\" d=\"{}\"/>",
+            path(&series.points, x, y)
+        )
+    });
+    let svg = close(svg, &lines);
     view! { <figure class="fui-chart fui-chart-activity" data-activity-chart=chart.name inner_html=svg></figure> }
 }
 

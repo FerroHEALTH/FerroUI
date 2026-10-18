@@ -23,53 +23,50 @@ const fn glyph(theme: Theme) -> Glyph {
     }
 }
 
-/// Returns the compact theme control of a top bar.
+/// The id of the toggle's button that switches to the dark theme.
+pub const TO_DARK: &str = "theme-to-dark";
+
+/// The id of the toggle's button that switches to the light theme.
+pub const TO_LIGHT: &str = "theme-to-light";
+
+/// Returns the theme toggle of a top bar: one 32 px icon button showing a
+/// moon in the light theme and a sun in the dark one, which posts the other
+/// theme to `action` with the page `back` to return to.
 ///
-/// It is a square button showing the theme in force, which opens a menu of the three themes as an HTML
-/// popover (opened, closed on Escape and the focus returned with no
-/// script); each is a button of one form posting to `action` with the page
-/// `back` to return to, the one in force pressed and checked.
+/// The form holds both buttons and the stylesheet shows the one that leads
+/// away from the theme on screen, read from `data-theme` on `<html>` and,
+/// for the system theme, from `prefers-color-scheme`, so the right glyph
+/// shows on the first paint with no script and no cookie. A hydrated console
+/// that swaps the theme in place uses [`crate::widget::theme::theme_toggle`]
+/// over the same markup.
 #[must_use]
-pub fn theme_menu(current: Theme, action: String, back: String) -> AnyView {
-    const ID: &str = "theme-menu";
-    let items = Theme::ALL
-        .into_iter()
-        .map(|choice| {
-            let pressed = current == choice;
-            view! {
-                <button
-                    type="submit"
-                    name="theme"
-                    value=choice.key()
-                    class="fui-menu-item"
-                    aria-pressed=pressed.to_string()
-                >
-                    {icon(glyph(choice), "16")}
-                    <span>{choice.label()}</span>
-                    {pressed.then(|| icon(Glyph::CHECK, "14"))}
-                </button>
-            }
-        })
-        .collect_view();
-    let label = format!("Theme: {}", current.label());
+pub fn theme_toggle(action: String, back: String) -> AnyView {
     view! {
-        <button
-            type="button"
-            class="fui-icon-button"
-            popovertarget=ID
-            aria-controls=ID
-            aria-label=label
-        >
-            {icon(glyph(current), "16")}
-        </button>
-        <div id=ID popover="auto" class="fui-menu fui-menu-compact">
-            <form method="post" action=action>
-                <input type="hidden" name="back" value=back />
-                <div role="group" aria-label="Theme" class="fui-menu-items">
-                    {items}
-                </div>
-            </form>
-        </div>
+        <form method="post" action=action class="fui-theme-toggle">
+            <input type="hidden" name="back" value=back />
+            <button
+                type="submit"
+                id=TO_DARK
+                name="theme"
+                value=Theme::Dark.key()
+                class="fui-icon-button fui-theme-to-dark"
+                aria-label="Switch to the dark theme"
+                title="Switch to the dark theme"
+            >
+                {icon(Glyph::MOON, "16")}
+            </button>
+            <button
+                type="submit"
+                id=TO_LIGHT
+                name="theme"
+                value=Theme::Light.key()
+                class="fui-icon-button fui-theme-to-light"
+                aria-label="Switch to the light theme"
+                title="Switch to the light theme"
+            >
+                {icon(Glyph::SUN, "16")}
+            </button>
+        </form>
     }
     .into_any()
 }

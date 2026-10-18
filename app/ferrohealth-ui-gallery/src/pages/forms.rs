@@ -9,8 +9,8 @@ use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::button::{Variant, label};
 use ferrohealth_ui::view::form::{
-    FORM, INPUT, SELECT, SWITCH, TEXTAREA, check, check_field, chip_choices, columns, field,
-    fieldset, help_id,
+    FORM, INPUT, MEDIUM, SELECT, SWITCH, TEXTAREA, check, check_field, chip_choices, columns,
+    field, fieldset, help_id,
 };
 use ferrohealth_ui::view::layout::action_bar;
 use ferrohealth_ui::view::notice::{Announce, notice};
@@ -89,6 +89,7 @@ fn fields() -> AnyView {
     };
     let bundle =
         view! { <textarea id="form-bundle" name="bundle" rows="4" class=TEXTAREA></textarea> };
+    let until = view! { <input id="form-until" name="until" type="date" class=format!("{INPUT} {MEDIUM}") /> };
     let confirm = view! { <input id="form-confirm" name="confirmed" type="checkbox" /> };
     card(
         "Fields",
@@ -97,6 +98,7 @@ fn fields() -> AnyView {
                 {field("form-reason", "Why you save it, one line", Some("Two hundred characters at most."), reason)}
                 {field("form-format", "Composition format", None, format)}
                 {field("form-bundle", "Bundle, JSON", None, bundle)}
+                {field("form-until", "Keep the draft until", None, until)}
                 {check(
                     "form-confirm",
                     "Save this draft and reload the set. The bridge refuses a draft that does not compile.",
@@ -283,7 +285,7 @@ fn filter() -> AnyView {
         "Filter",
         view! {
             {table_filter("gallery-filter", "Filter the files", words, count)}
-            <ul class="fui-issues">
+            <ul class="fui-divided" aria-label="Files">
                 <For each=move || kept.get() key=|name| name.clone() let:name>
                     <li>
                         <code>{name}</code>
@@ -312,10 +314,13 @@ pub fn FormsPage() -> impl IntoView {
     .into_any();
     let pair = grid(view! {
         {fields()}
-        {grouped()}
+        {stack(view! {
+            {grouped()}
+            {federated()}
+        })}
     })
     .into_any();
-    let sections = (pair, federated(), upload(), editor(), filter());
+    let sections = (pair, upload(), editor(), filter());
     view! {
         {super::title("Forms and editor")}
         {header}
@@ -324,7 +329,6 @@ pub fn FormsPage() -> impl IntoView {
             {sections.1}
             {sections.2}
             {sections.3}
-            {sections.4}
         })}
     }
 }

@@ -23,6 +23,7 @@ pub mod picker;
 pub mod segmented;
 pub mod side_panel;
 pub mod tabs;
+pub mod theme;
 pub mod toast;
 pub mod tree;
 pub mod upload;

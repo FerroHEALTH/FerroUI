@@ -142,7 +142,12 @@ entry, and a new role joins the contrast test in the change that adds it.
   `:root[data-theme="dark"]`, and the system's dark under
   `prefers-color-scheme`. Nothing else.
 - The theme is `data-theme` (`light`, `dark`, `system`) on `<html>`, written
-  by the console's server, so the first paint is right.
+  by the console's server from its cookie, so the first paint is right; with
+  no cookie it follows the system. Every top bar carries the one theme
+  toggle (`theme_toggle`), a moon in light and a sun in dark, which posts
+  with no script and, hydrated, swaps the theme in place while the console
+  persists it in the same cookie; never browser storage. The three-way
+  choice belongs in a settings form.
 - Six steps of type (`--text-display` to `--text-micro`), each written
   with its leading (`--leading-display` to `--leading-micro`), and four of
   space (`--space-tight` to `--space-section`), the compact density under

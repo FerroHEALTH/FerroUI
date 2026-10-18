@@ -47,7 +47,7 @@ pub fn operator_menu(menu: OperatorMenu, extra: impl IntoView + 'static) -> AnyV
             aria-controls=menu.id
         >
             {icon(Glyph::CIRCLE_USER, "16")}
-            <span>{menu.name.clone()}</span>
+            <span class="fui-operator-name">{menu.name.clone()}</span>
             {icon(Glyph::CHEVRON_DOWN, "14")}
         </button>
         <div id=menu.id popover="auto" class="fui-menu">
