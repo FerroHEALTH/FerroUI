@@ -23,9 +23,10 @@ use ferrohealth_ui::view::status::pill;
 use ferrohealth_ui::view::surface::{card, definitions, or_none, page_header, split};
 use ferrohealth_ui::widget::help::{explained_field, help_switch, provide_help};
 use ferrohealth_ui::widget::picker::{Picker, picker_field};
-use ferrohealth_ui::widget::tree::{Tree, TreeNode, tree_view};
+use ferrohealth_ui::widget::tree::{Tree, TreeNode, tree_view_collapsing};
 use leptos::prelude::*;
-use leptos_router::hooks::use_query_map;
+use leptos_router::NavigateOptions;
+use leptos_router::hooks::{use_navigate, use_query_map};
 
 /// The page of the brand in force, with `query`.
 fn here(query: &str) -> String {
@@ -67,23 +68,78 @@ fn read_children(nodes: &mut [TreeNode], key: &str) {
     }
 }
 
+/// The open items the address names (`?open=a,b`), the top item when it
+/// names none.
+fn open_in(query: Option<String>) -> BTreeSet<String> {
+    match query {
+        Some(list) => list
+            .split(',')
+            .filter(|key| !key.is_empty())
+            .map(str::to_owned)
+            .collect(),
+        None => BTreeSet::from([String::from("SYN-100")]),
+    }
+}
+
+/// The address of the layouts page with the open items `open` and the
+/// selected concept `selected`.
+fn address(open: &BTreeSet<String>, selected: Option<&str>) -> String {
+    let open = open
+        .iter()
+        .map(String::as_str)
+        .collect::<Vec<_>>()
+        .join(",");
+    match selected {
+        Some(code) => here(&format!("?open={open}&concept={code}")),
+        None => here(&format!("?open={open}")),
+    }
+}
+
 /// The concept browser: a search, the hierarchy and the concept.
+///
+/// The tree keeps its open items in the address, so a reload or a shared
+/// link opens the same items: opening adds an item, closing removes it.
 fn browser() -> AnyView {
     let query = use_query_map();
     let selected = Signal::derive(move || query.with(|query| query.get("concept")));
-    let nodes = RwSignal::new(hierarchy());
-    let expanded = RwSignal::new(BTreeSet::from([String::from("SYN-100")]));
-    let tree = tree_view(Tree {
-        id: "gallery-tree",
-        label: "Synthetic hierarchy",
-        nodes: nodes.into(),
-        expanded,
-        selected,
-        on_expand: Some(Callback::new(move |key: String| {
-            nodes.update(|nodes| read_children(nodes, &key));
-        })),
-        actions: None,
-    });
+    let opened = open_in(query.with_untracked(|query| query.get("open")));
+    let mut first = hierarchy();
+    for key in &opened {
+        read_children(&mut first, key);
+    }
+    let nodes = RwSignal::new(first);
+    let expanded = RwSignal::new(opened);
+    let navigate = use_navigate();
+    let remember = move || {
+        let url = address(
+            &expanded.get_untracked(),
+            selected.get_untracked().as_deref(),
+        );
+        navigate(
+            &url,
+            NavigateOptions {
+                replace: true,
+                scroll: false,
+                ..NavigateOptions::default()
+            },
+        );
+    };
+    let on_open = remember.clone();
+    let tree = tree_view_collapsing(
+        Tree {
+            id: "gallery-tree",
+            label: "Synthetic hierarchy",
+            nodes: nodes.into(),
+            expanded,
+            selected,
+            on_expand: Some(Callback::new(move |key: String| {
+                nodes.update(|nodes| read_children(nodes, &key));
+                on_open();
+            })),
+            actions: None,
+        },
+        Callback::new(move |_key: String| remember()),
+    );
     let found = ["SYN-110", "SYN-120", "SYN-300"]
         .into_iter()
         .map(|code| {

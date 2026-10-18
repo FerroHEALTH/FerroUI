@@ -209,7 +209,11 @@ async fn the_editor_keeps_every_byte_typed_and_a_diagnostic_leads_to_its_line()
         browser
             .text("p", &format!("{} bytes", expected.len()))
             .await?;
-        let layer = browser.element(By::Css(".fui-editor-layer")).await?;
+        let layer = browser
+            .element(By::XPath(
+                "//textarea[@id = 'gallery-draft']/preceding-sibling::pre[contains(@class, 'fui-editor-layer')]",
+            ))
+            .await?;
         assert!(
             layer.text().await?.contains("# typed: naïve ✓ <b>&"),
             "the layer draws what was typed"
@@ -493,17 +497,325 @@ async fn every_page_reflows_at_320_pixels_with_no_sideways_scroll() -> Result<()
                 "{path} scrolls sideways at 320 px: {metrics:?}"
             );
             if page == "/tables" {
-                // The table, wider than its card, scrolls sideways inside it.
-                let region = browser.element(By::Css(".fui-table-scroll")).await?;
-                let scroll = number(region.prop("scrollWidth").await?);
-                let client = number(region.prop("clientWidth").await?);
-                assert!(
-                    scroll > client,
-                    "the table box does not scroll sideways at 320 px ({scroll} in {client})"
-                );
+                // Every table reads whole at 320 px: a data table stacks its
+                // rows as cards, and the one that opts out fits its box.
+                let regions = browser
+                    .driver()
+                    .find_all(By::Css(".fui-table-scroll"))
+                    .await?;
+                assert!(regions.len() >= 6, "{} table boxes", regions.len());
+                for region in regions {
+                    let scroll = number(region.prop("scrollWidth").await?);
+                    let client = number(region.prop("clientWidth").await?);
+                    assert!(
+                        scroll <= client + 1.0,
+                        "a table box scrolls sideways at 320 px ({scroll} in {client})"
+                    );
+                }
+                let row = browser
+                    .element(By::XPath("(//table)[1]/tbody/tr[1]"))
+                    .await?;
+                assert_eq!("block", row.css_value("display").await?);
+                let named = browser
+                    .element(By::XPath(
+                        "(//table)[1]/tbody/tr[1]/td[@data-label = 'Lines']",
+                    ))
+                    .await?;
+                assert!(named.is_displayed().await?, "a stacked cell is hidden");
             }
         }
         browser.console_clean("the reflow").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_control_tabbed_to_above_the_fold_lands_below_the_sticky_top_bar()
+-> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        window(browser, 1440, 900).await?;
+        browser.goto(&gallery.url("/ferroehr/forms")).await?;
+        browser.element(By::Css("main h1")).await?;
+        // From the foot of the page, the focus goes to the control after one
+        // well above the fold without scrolling; Shift+Tab then moves to
+        // that control, which the browser scrolls into view at the top.
+        let marked = browser
+            .driver()
+            .execute(
+                r"window.scrollTo(0, document.documentElement.scrollHeight);
+                const all = [...document.querySelectorAll(
+                  'main a[href], main button:not([disabled]), main input:not([disabled]):not([type=hidden]), main select:not([disabled]), main textarea:not([disabled])'
+                )].filter((e) => e.offsetParent !== null && e.tabIndex >= 0);
+                const above = all.filter((e) => e.getBoundingClientRect().bottom < -200);
+                if (above.length === 0) { return false; }
+                const target = above[above.length - 1];
+                const after = all[all.indexOf(target) + 1];
+                target.setAttribute('data-journey', 'target');
+                after.focus({ preventScroll: true });
+                return document.activeElement === after;",
+                vec![],
+            )
+            .await?;
+        assert_eq!(
+            serde_json::Value::Bool(true),
+            *marked.json(),
+            "no control above the fold"
+        );
+        browser
+            .driver()
+            .active_element()
+            .await?
+            .send_keys(Key::Shift + Key::Tab)
+            .await?;
+        let landed = browser
+            .driver()
+            .execute(
+                r"const target = document.activeElement;
+                const bar = document.querySelector('.fui-topbar').getBoundingClientRect();
+                return [target.getAttribute('data-journey'), target.getBoundingClientRect().top, bar.bottom];",
+                vec![],
+            )
+            .await?;
+        let landed: (Option<String>, f64, f64) = serde_json::from_value(landed.json().clone())?;
+        assert_eq!(Some(String::from("target")), landed.0, "Shift+Tab missed the control");
+        assert!(
+            landed.1 >= landed.2,
+            "the focused control's top ({}) is under the top bar's foot ({})",
+            landed.1,
+            landed.2
+        );
+        browser.console_clean("the scroll padding").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_top_bar_status_shows_its_full_words_or_nothing_at_every_width()
+-> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        for width in [390, 640, 768, 900, 1024, 1100, 1280, 1440] {
+            window(browser, width, 900).await?;
+            browser.goto(&gallery.url("/ferroehr/forms")).await?;
+            browser.element(By::Css("main h1")).await?;
+            let measured = browser
+                .driver()
+                .execute(
+                    r"const pill = document.querySelector('.fui-topbar-end .fui-pill');
+                    const end = document.querySelector('.fui-topbar-end').getBoundingClientRect();
+                    const middle = document.querySelector('.fui-topbar-middle');
+                    const shown = pill !== null && pill.getClientRects().length > 0;
+                    if (!shown) { return [false, true, true, true]; }
+                    const box = pill.getBoundingClientRect();
+                    const search = middle.getBoundingClientRect();
+                    const clear = middle.offsetTop !== pill.offsetTop
+                      ? true
+                      : box.left >= search.right;
+                    return [true, pill.scrollWidth <= pill.clientWidth + 1, end.right <= window.innerWidth + 0.5, clear];",
+                    vec![],
+                )
+                .await?;
+            let (shown, whole, inside, clear): (bool, bool, bool, bool) =
+                serde_json::from_value(measured.json().clone())?;
+            assert!(whole, "the status pill is cut short at {width} px");
+            assert!(inside, "the top bar's end runs past the window at {width} px");
+            assert!(clear, "the status pill overlaps the search box at {width} px");
+            if width >= 1024 {
+                assert!(shown, "the status pill is hidden at {width} px");
+            } else {
+                assert!(!shown, "the status pill shows at {width} px");
+            }
+        }
+        browser.console_clean("the top bar status").await
+    })
+    .await
+}
+
+/// Runs `script` in the page and reads its answer as `T`.
+async fn measure<T: serde::de::DeserializeOwned>(
+    browser: &Browser,
+    script: &str,
+) -> Result<T, Box<dyn Error>> {
+    let answer = browser.driver().execute(script, vec![]).await?;
+    Ok(serde_json::from_value(answer.json().clone())?)
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_long_button_label_wraps_at_320_pixels_and_a_short_one_keeps_its_line()
+-> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        window(browser, 320, 800).await?;
+        browser.goto(&gallery.url("/ferrofed/forms")).await?;
+        browser.element(By::Id("long-label")).await?;
+        let (right, inner, height, short, page, view): (f64, f64, f64, f64, f64, f64) = measure(
+            browser,
+            r"const long = document.getElementById('long-label').getBoundingClientRect();
+            const short = document.getElementById('long-label').nextElementSibling.getBoundingClientRect();
+            return [long.right, window.innerWidth, long.height, short.height,
+              document.documentElement.scrollWidth, document.documentElement.clientWidth];",
+        )
+        .await?;
+        assert!(right <= inner + 0.5, "the long button runs past the window ({right} > {inner})");
+        assert!(page <= view + 0.5, "the page scrolls sideways ({page} > {view})");
+        assert!(height > short + 4.0, "the long label did not wrap ({height} vs {short})");
+        browser.console_clean("the long label").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_reveal_inside_a_reveal_answers_to_its_own_choice_alone() -> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/ferrobridge/forms")).await?;
+        let shown = async |id: &str| -> Result<bool, Box<dyn Error>> {
+            Ok(browser.element(By::Id(id)).await?.is_displayed().await?)
+        };
+        assert!(
+            shown("grant-client-id").await?,
+            "the client part opens chosen"
+        );
+        assert!(!shown("grant-token-value").await?);
+        assert!(!shown("grant-secret-value").await?);
+        // The inner choice shows its own part and leaves the outer one be.
+        browser
+            .element(By::Css("label[for='grant-secret-replace']"))
+            .await?
+            .click()
+            .await?;
+        until("the inner reveal shows its part", async || {
+            shown("grant-secret-value").await
+        })
+        .await?;
+        assert!(
+            shown("grant-client-id").await?,
+            "the inner choice hid the outer part"
+        );
+        assert!(
+            !shown("grant-token-value").await?,
+            "the inner choice showed the outer part"
+        );
+        // The outer choice swaps the outer parts alone.
+        browser
+            .element(By::Css("label[for='grant-token']"))
+            .await?
+            .click()
+            .await?;
+        until("the outer reveal shows its second part", async || {
+            shown("grant-token-value").await
+        })
+        .await?;
+        assert!(!shown("grant-client-id").await?);
+        browser.console_clean("the nested reveal").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_form_in_the_actions_cell_sits_on_the_row_beside_its_link() -> Result<(), Box<dyn Error>>
+{
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        window(browser, 1440, 900).await?;
+        browser.goto(&gallery.url("/ferroehr/tables")).await?;
+        browser.element(By::Css("a[href='#edit']")).await?;
+        let (link, button): (f64, f64) = measure(
+            browser,
+            r"const link = document.querySelector('a[href=\'#edit\']');
+            const button = link.closest('td').querySelector('form button');
+            return [link.getBoundingClientRect().top, button.getBoundingClientRect().top];",
+        )
+        .await?;
+        assert!(
+            (link - button).abs() <= 1.0,
+            "Edit at {link}, Remove at {button}"
+        );
+        browser.console_clean("the row actions").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn cards_in_a_start_grid_keep_their_own_heights() -> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        window(browser, 1440, 900).await?;
+        browser.goto(&gallery.url("/ferroterm/forms")).await?;
+        browser.element(By::Css(".fui-grid-start")).await?;
+        let heights: Vec<f64> = measure(
+            browser,
+            r"return [...document.querySelector('.fui-grid-start').children]
+              .map((card) => card.getBoundingClientRect().height);",
+        )
+        .await?;
+        let [short, tall] = heights.as_slice() else {
+            return Err(format!("two cards expected: {heights:?}").into());
+        };
+        assert!(tall - short > 20.0, "the short card stretched: {heights:?}");
+        browser.console_clean("the start grid").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn tabbing_through_a_long_form_never_leaves_the_focus_under_the_action_bar()
+-> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        window(browser, 1440, 700).await?;
+        browser.goto(&gallery.url("/ferroehr/forms")).await?;
+        let first = browser.element(By::Id("long-field-1")).await?;
+        browser
+            .driver()
+            .execute(
+                "arguments[0].scrollIntoView({block: 'start'}); window.scrollBy(0, -200); arguments[0].focus({preventScroll: true});",
+                vec![first.to_json()?],
+            )
+            .await?;
+        for step in 2..=14 {
+            browser
+                .driver()
+                .active_element()
+                .await?
+                .send_keys(Key::Tab)
+                .await?;
+            let (id, bottom, bar): (String, f64, f64) = measure(
+                browser,
+                r"const focused = document.activeElement;
+                const bar = document.querySelector('#long-form .fui-action-bar').getBoundingClientRect();
+                return [focused.id, focused.getBoundingClientRect().bottom, bar.top];",
+            )
+            .await?;
+            assert_eq!(format!("long-field-{step}"), id, "the focus left the form");
+            assert!(
+                bottom <= bar + 0.5,
+                "{id} ends at {bottom}, under the action bar from {bar}"
+            );
+        }
+        browser.console_clean("the action bar").await
     })
     .await
 }

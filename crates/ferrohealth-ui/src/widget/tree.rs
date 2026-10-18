@@ -397,7 +397,6 @@ fn item(tree: Tree, node: &TreeNode, level: u16, focused: RwSignal<Option<String
             id=id
             role="treeitem"
             class="fui-tree-item"
-            attr:aria-level=level.to_string()
             aria-expanded=expanded
             aria-selected=move || selected().to_string()
             tabindex=stop
@@ -410,7 +409,29 @@ fn item(tree: Tree, node: &TreeNode, level: u16, focused: RwSignal<Option<String
             {children}
         </li>
     }
+    // Leptos names no typed `aria-level` attribute, so it is set by name.
+    .attr("aria-level", level.to_string())
     .into_any()
+}
+
+/// Returns the tree [`tree_view`] draws, telling `on_collapse` what closes.
+///
+/// `on_collapse` receives an item's key whenever it closes, by the toggle,
+/// the keyboard or the console, so a console that keeps the open set in its
+/// address can remove it.
+#[must_use]
+pub fn tree_view_collapsing(tree: Tree, on_collapse: Callback<String>) -> AnyView {
+    let expanded = tree.expanded;
+    Effect::new(move |previous: Option<BTreeSet<String>>| {
+        let now = expanded.get();
+        if let Some(previous) = previous {
+            for key in previous.difference(&now) {
+                on_collapse.run(key.clone());
+            }
+        }
+        now
+    });
+    tree_view(tree)
 }
 
 /// Returns the tree `tree`.

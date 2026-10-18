@@ -11,6 +11,7 @@
 //! in its arguments, and none fetches.
 
 pub mod chart;
+pub mod combobox;
 pub mod copy;
 pub mod dialog;
 pub mod document;

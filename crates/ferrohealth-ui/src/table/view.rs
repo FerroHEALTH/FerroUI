@@ -4,8 +4,10 @@
 //! The data table and the pager, drawn as static views.
 //!
 //! The table shows every row of its page, holds its header below the top
-//! bar on a wide screen and scrolls sideways inside its card on a narrow
-//! one, right aligns its numeric columns, keeps row actions at the end, and draws
+//! bar on a wide screen and stacks each row as a card below 40rem, each cell
+//! named by its column, so a phone reads every column with no sideways
+//! scroll; a small table that fits a phone opts out and scrolls inside its
+//! box instead. It right aligns its numeric columns, keeps row actions at the end, and draws
 //! skeleton rows while it loads and the empty state when there is nothing.
 //! A sortable header is a link carrying `aria-sort`. The pager states the
 //! range, then First, Previous, the position, Next and Last, and the sizes;
@@ -162,9 +164,28 @@ fn header(column: &Column, sort: Option<&Sort>, sort_href: &dyn Fn(&Sort) -> Str
     .into_any()
 }
 
-/// Returns the data table `table`.
+/// Returns the data table `table`, its rows stacked as cards below 40rem.
+///
+/// Every body cell that carries `data-label` (its column's name) shows the
+/// name beside its value, and the cell with none (the row's name) heads the
+/// card, so a phone shows every column with no sideways scroll
+/// (WCAG 2.2 SC 1.4.10). A console writes `data-label` on every cell but
+/// the row's name.
 #[must_use]
 pub fn data_table(table: DataTable<'_>) -> impl IntoView + use<> {
+    drawn(table, true)
+}
+
+/// Returns the data table `table` as a grid at every width: the opt-out for
+/// a small table that fits a phone as it is (two short columns), which
+/// scrolls sideways inside its box if a value outgrows it.
+#[must_use]
+pub fn data_table_unstacked(table: DataTable<'_>) -> impl IntoView + use<> {
+    drawn(table, false)
+}
+
+/// The table [`data_table`] and [`data_table_unstacked`] draw.
+fn drawn(table: DataTable<'_>, stacked: bool) -> impl IntoView + use<> {
     let headers = table
         .columns
         .iter()
@@ -198,7 +219,12 @@ pub fn data_table(table: DataTable<'_>) -> impl IntoView + use<> {
     let label = table.caption.to_owned();
     let caption = label.clone();
     view! {
-        <div class="fui-table-scroll" role="region" aria-label=label tabindex="0">
+        <div
+            class=if stacked { "fui-table-scroll fui-table-stack" } else { "fui-table-scroll" }
+            role="region"
+            aria-label=label
+            tabindex="0"
+        >
             <table class="fui-table" aria-busy=busy.then_some("true")>
                 <caption>{caption}</caption>
                 <thead>
@@ -382,15 +408,22 @@ pub fn pager(
         None => window.range_of(listing.noun),
     };
     let sizes = size_choices(listing, window.size, size);
-    view! {
-        <nav class="fui-pager" aria-label=listing.label>
-            <p role="status">{range}</p>
+    // A listing of one page draws the range and the sizes alone: no step can
+    // be taken, so none needs saying.
+    let steps = (window.pages > 1).then(|| {
+        view! {
             <div class="fui-pager-steps">
                 {first} {previous}
                 <span class="fui-pager-position">
                     {format!("Page {} of {}", window.page, window.pages)}
                 </span> {next} {last}
             </div>
+        }
+    });
+    view! {
+        <nav class="fui-pager" aria-label=listing.label>
+            <p role="status">{range}</p>
+            {steps}
             {sizes}
         </nav>
     }

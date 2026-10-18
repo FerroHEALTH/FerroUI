@@ -47,11 +47,28 @@ pub struct DocumentPane {
     pub rendered: Option<AnyView>,
 }
 
-/// Returns the document pane `pane`; `on_format` receives the format a
-/// press on the selector chooses, which the console fetches.
+/// Returns the document pane `pane`, open on its highlighted view;
+/// `on_format` receives the format a press on the selector chooses, which
+/// the console fetches.
 #[must_use]
 pub fn document_pane(
     pane: DocumentPane,
+    on_format: impl Fn(&'static str) + Clone + Send + Sync + 'static,
+) -> AnyView {
+    document_pane_opening(pane, "highlighted", Signal::stored(true), on_format)
+}
+
+/// Returns the document pane `pane` open on the view `opening`.
+///
+/// `opening` is `highlighted`, `raw` or `rendered`, as a deep link names it.
+/// The rendered view is offered only while `rendered_available` holds, as a
+/// format with no rendered reading does not; a pane on a view it cannot show
+/// opens on the highlighted one.
+#[must_use]
+pub fn document_pane_opening(
+    pane: DocumentPane,
+    opening: &'static str,
+    rendered_available: Signal<bool>,
     on_format: impl Fn(&'static str) + Clone + Send + Sync + 'static,
 ) -> AnyView {
     let DocumentPane {
@@ -63,16 +80,31 @@ pub fn document_pane(
         language,
         rendered,
     } = pane;
-    let views = if rendered.is_some() {
-        VIEWS_RENDERED
-    } else {
-        VIEWS
+    let has_rendered = rendered.is_some();
+    let offers_rendered = move || has_rendered && rendered_available.get();
+    let opening = match opening {
+        "raw" => "raw",
+        "rendered" => "rendered",
+        _ => "highlighted",
     };
-    let view_in_force = RwSignal::new("highlighted");
-    let selector = (formats.len() > 1).then(|| segmented("Format", formats, format, on_format));
-    let switch = segmented("View", views, view_in_force.into(), move |key| {
-        view_in_force.set(key);
+    let chosen = RwSignal::new(opening);
+    // The view on screen: the one chosen, or the highlighted one while the
+    // chosen rendered view is not offered.
+    let view_in_force = Memo::new(move |_| match chosen.get() {
+        "rendered" if !offers_rendered() => "highlighted",
+        other => other,
     });
+    let selector = (formats.len() > 1).then(|| segmented("Format", formats, format, on_format));
+    let switch = move || {
+        let views = if offers_rendered() {
+            VIEWS_RENDERED
+        } else {
+            VIEWS
+        };
+        segmented("View", views, view_in_force.into(), move |key| {
+            chosen.set(key);
+        })
+    };
     let highlighted = move || {
         let language = language.get();
         text.with(|text| html(language, text, Lines::default(), |_| None))

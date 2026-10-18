@@ -90,6 +90,9 @@ const BOTTOM: f64 = 26.0;
 struct Scale {
     from: (f64, f64),
     to: (f64, f64),
+    /// The distance between two ticks, a round number; zero on an axis
+    /// whose ticks the chart names itself.
+    step: f64,
 }
 
 impl Scale {
@@ -122,6 +125,56 @@ fn extent(values: impl Iterator<Item = f64>) -> Option<(f64, f64)> {
             None => Some((value, value)),
             Some((low, high)) => Some((low.min(value), high.max(value))),
         })
+}
+
+/// The round step (1, 2 or 5 times a power of ten) nearest `raw`.
+fn nice_step(raw: f64) -> f64 {
+    if !raw.is_finite() || raw <= 0.0 {
+        return 1.0;
+    }
+    let power = 10_f64.powf(raw.log10().floor());
+    let fraction = raw / power;
+    let nice = if fraction < 1.5 {
+        1.0
+    } else if fraction < 3.0 {
+        2.0
+    } else if fraction < 7.0 {
+        5.0
+    } else {
+        10.0
+    };
+    nice * power
+}
+
+/// The range `(low, high)` widened to round ticks three to seven steps apart,
+/// and the step.
+fn nice_range((low, high): (f64, f64)) -> ((f64, f64), f64) {
+    let step = nice_step((high - low) / 3.0);
+    let low = (low / step).floor() * step;
+    let high = (high / step).ceil() * step;
+    let high = if high - low < step { low + step } else { high };
+    ((low, high), step)
+}
+
+/// The values of the round ticks over `scale`, the lowest first.
+fn ticks(scale: Scale) -> Vec<f64> {
+    let (low, high) = scale.from;
+    if scale.step <= 0.0 {
+        return vec![low, high];
+    }
+    let count = ((high - low) / scale.step).round();
+    let count = if (1.0..=20.0).contains(&count) {
+        count
+    } else {
+        1.0
+    };
+    let mut values = Vec::new();
+    let mut index = 0.0;
+    while index <= count {
+        values.push(low + scale.step * index);
+        index += 1.0;
+    }
+    values
 }
 
 /// `value` as a tick label: whole numbers without a fraction, others with
@@ -208,12 +261,11 @@ fn frame(
     y: Scale,
     x_ticks: &[(f64, String)],
 ) -> String {
-    let (low, high) = y.from;
+    let values = ticks(y);
     let mut svg = String::from(
         "<div class=\"fui-chart-frame\"><div class=\"fui-chart-y\" aria-hidden=\"true\">",
     );
-    for step in (0..=3_u8).rev() {
-        let value = low + (high - low) * f64::from(step) / 3.0;
+    for value in values.iter().rev().copied() {
         svg.push_str("<span>");
         escape(&tick_label(value), &mut svg);
         svg.push_str("</span>");
@@ -229,10 +281,9 @@ fn frame(
     put(&mut svg, format_args!("</title><desc id=\"{id}-desc\">"));
     escape(summary, &mut svg);
     svg.push_str("</desc>");
-    for step in 0..=3_u8 {
-        let value = low + (high - low) * f64::from(step) / 3.0;
+    for (index, value) in values.iter().copied().enumerate() {
         let at = y.at(value);
-        let class = if step == 0 {
+        let class = if index == 0 {
             "fui-chart-axis"
         } else {
             "fui-chart-grid"
@@ -317,14 +368,17 @@ fn scales(chart: &LineChart, height: f64) -> (Scale, Scale) {
     } else {
         ys
     };
+    let (ys, step) = nice_range(ys);
     (
         Scale {
             from: xs,
             to: (0.0, WIDTH),
+            step: 0.0,
         },
         Scale {
             from: ys,
             to: (height - BOTTOM, TOP),
+            step,
         },
     )
 }
@@ -498,7 +552,24 @@ pub fn activity_chart(chart: &ActivityChart) -> impl IntoView + use<> {
             path(&series.points, x, y)
         )
     });
-    let svg = close(svg, &lines, "");
+    // One day draws no line, so its point is marked instead.
+    let mut marks = String::new();
+    if let Some(&(px, py)) = line
+        .series
+        .first()
+        .filter(|series| series.points.len() == 1)
+        .and_then(|series| series.points.first())
+    {
+        put(
+            &mut marks,
+            format_args!(
+                "<circle class=\"fui-chart-point fui-chart-accent\" cx=\"{:.2}%\" cy=\"{:.1}\" r=\"3\"/>",
+                x.at(px) / WIDTH * 100.0,
+                y.at(py)
+            ),
+        );
+    }
+    let svg = close(svg, &lines, &marks);
     view! { <figure class="fui-chart fui-chart-activity" data-activity-chart=chart.name inner_html=svg></figure> }
 }
 
@@ -533,7 +604,7 @@ pub fn proportion(percent: u8, label: Option<String>) -> AnyView {
 
 #[cfg(test)]
 mod tests {
-    use super::{LineChart, Series, line_svg, tick_label};
+    use super::{LineChart, Scale, Series, line_svg, nice_range, tick_label, ticks};
 
     fn chart() -> LineChart {
         LineChart {
@@ -577,5 +648,42 @@ mod tests {
         assert!(svg.contains("fui-series-0") && !svg.contains("fui-series-1"));
         assert_eq!("3", tick_label(3.0));
         assert_eq!("2.5", tick_label(2.5));
+    }
+
+    #[test]
+    fn the_value_axis_ticks_are_round_steps_over_the_values() {
+        let cases = [
+            ((0.0, 58.0), (0.0, 60.0), 20.0),
+            ((0.0, 39.1), (0.0, 40.0), 10.0),
+            ((0.0, 7.0), (0.0, 8.0), 2.0),
+            ((0.0, 1.0), (0.0, 1.0), 0.5),
+            ((-12.0, 30.0), (-20.0, 30.0), 10.0),
+        ];
+        for (range, expected, step) in cases {
+            assert_eq!((expected, step), nice_range(range), "{range:?}");
+        }
+        let scale = Scale {
+            from: (0.0, 60.0),
+            to: (0.0, 1.0),
+            step: 20.0,
+        };
+        assert_eq!(vec![0.0, 20.0, 40.0, 60.0], ticks(scale));
+    }
+
+    #[test]
+    fn an_activity_chart_of_one_day_marks_its_point() {
+        let chart = super::ActivityChart {
+            name: "contributions",
+            label: String::from("Contributions per day"),
+            summary: String::from("5 contributions over 1 day."),
+            points: vec![(0, 5)],
+            ends: (String::from("2026-10-18"), String::from("2026-10-18")),
+        };
+        let owner = leptos::prelude::Owner::new();
+        let html = owner.with(|| {
+            use leptos::prelude::*;
+            super::activity_chart(&chart).to_html()
+        });
+        assert!(html.contains("fui-chart-point fui-chart-accent"), "{html}");
     }
 }

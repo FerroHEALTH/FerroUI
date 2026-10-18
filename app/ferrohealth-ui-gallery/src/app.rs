@@ -426,7 +426,7 @@ fn brand_shell(brand: Brand, back: String) -> AnyView {
     let switch = brand_switch(brand, &back).into_any();
     let end = view! {
         <span class="fui-wide-only">{switch}</span>
-        <span class="fui-wide-only">{pill(Tone::Ok, "Library v0.1.1")}</span>
+        <span class="fui-roomy-only">{pill(Tone::Ok, "Library v0.1.2")}</span>
         {operator_menu(
             OperatorMenu {
                 id: "operator-menu",

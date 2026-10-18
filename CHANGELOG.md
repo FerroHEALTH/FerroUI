@@ -11,6 +11,143 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-19
+
+The fixes the owner's review of the four consoles asked for: links, fields,
+selects, buttons, definition grids, empty states, tabs, the top bar, the
+pager and the charts, each fixed once here so every console gains it. No
+public signature changes; the additions are new functions and classes.
+
+### Added
+
+- `view::surface::grid_start`: cards side by side at their own heights, for
+  cards of unlike length (FerroHEALTH/FerroUI#81).
+- `view::shell::About`, `footer_about`, `shell_about` and `centred_about`:
+  the footer's About link can be a full page load (`rel="external"`) for an
+  About page the server renders once (FerroHEALTH/FerroUI#82).
+
+- `view::form::FIELD_FLOW` and `field_flow`: fields in one row share its
+  width, each growing from 10rem so a placeholder is not cut, and the row's
+  buttons keep their own (FerroHEALTH/FerroUI#59).
+- `widget::document::document_pane_opening`: a document pane open on the view
+  a deep link names, offering its rendered view only while the document has
+  one (FerroHEALTH/FerroUI#50).
+- `view::surface::page_heading_live`: a page heading whose title follows a
+  signal, so it stays true under client-side navigation
+  (FerroHEALTH/FerroUI#51).
+- `widget::combobox::combobox`: a long list to choose from, filtered as the
+  reader types, after the WAI-ARIA 1.2 combobox pattern over a listbox (Down,
+  Up, Home, End, Enter, Escape), each option its words over a muted second
+  line, the chosen one checked, a "No match" row, a bounded height that
+  scrolls; before hydration it is a native select a form posts
+  (FerroHEALTH/FerroUI#72).
+- `table::model::filled_columns`: the columns some row fills, so a table
+  draws no column that is empty in every row (FerroHEALTH/FerroUI#75).
+- `view::surface::link_card_glyph`, and a link card shows a chevron after its
+  title and the accent edge under the pointer and the keyboard
+  (FerroHEALTH/FerroUI#70).
+- `table::view::data_table` stacks its rows on a phone: below 40rem each
+  row is a card, every cell with a `data-label` named by its column, so a
+  phone shows every column with no sideways scroll; the change table names
+  its cells the same way. `table::view::data_table_unstacked` is the opt-out
+  for a small table that fits a phone as it is (FerroHEALTH/FerroUI#56).
+- `widget::tree::tree_view_collapsing`: the console is told the key of every
+  item that closes (FerroHEALTH/FerroUI#47). The gallery's tree keeps its
+  open items in its address, and a journey closes an item by the toggle and
+  by the keyboard and reloads.
+- A fieldset set apart as a well (`fui-fieldset fui-well`) keeps the well's
+  frame and padding, its legend inside (FerroHEALTH/FerroUI#68).
+- The `--control` and `--control-small` heights, shared by buttons, inputs
+  and selects, and a definition list's pair may sit in a `<div>` of its own.
+- The README's rule for what the top bar folds first.
+
+### Changed
+
+- The upload field's text area is the highlighted editor, numbered, its
+  grammar read from the text (XML for an OPT, JSON for a JSON document), its
+  placeholder in the muted ink. An ancestor with the new `fui-editor-short`
+  class makes an editor 6rem tall for a short value.
+- The minimum supported Rust is 1.97, checked on the host and the
+  `wasm32-unknown-unknown` target, so a console on Rust 1.97 builds the
+  crate (FerroEHR's minimum).
+- A link is the accent with an underline under the pointer; a link in running
+  prose keeps its underline, and every component that draws an anchor sets
+  its own decoration (FerroHEALTH/FerroUI#38). A link in a table cell keeps
+  that look whatever a console's own anchor style says.
+- The select draws FerroUI's chevron (Lucide's chevron-down, a 16 px box
+  inset 12 px) with its room reserved and the chosen words ending in an
+  ellipsis, at the text input's height and frame, with a disabled state; the
+  date and time inputs share the frame (FerroHEALTH/FerroUI#60,
+  FerroHEALTH/FerroUI#71).
+- A fieldset's legend is a step up from a field label, with a rule under it
+  (FerroHEALTH/FerroUI#73); a checkbox in a row of fields sits on the
+  controls' line (FerroHEALTH/FerroUI#74).
+- Stacked rows are cards with the row's name as their title; a long token in
+  a card title wraps inside the card (FerroHEALTH/FerroUI#66); the phone
+  drawer's Close stands apart from the navigation (FerroHEALTH/FerroUI#67).
+- The button docs say an inline remove takes the danger outline and a
+  disabled action names its reason through `aria-describedby`
+  (FerroHEALTH/FerroUI#76).
+- A disabled button keeps its variant's look, faded, so it is never read as
+  an enabled secondary action (FerroHEALTH/FerroUI#61); one label style for
+  every field.
+- The value axis of the line and activity charts steps in round numbers
+  (FerroHEALTH/FerroUI#62).
+- The line chart's last shown series cannot be hidden, and each legend chip
+  names its series in `data-series` (FerroHEALTH/FerroUI#49).
+- A definition grid breaks a value at its spaces and hyphens, and keeps the
+  card's gap after a title (FerroHEALTH/FerroUI#63, FerroHEALTH/FerroUI#52).
+- An empty state inside a card or a panel takes the quiet form
+  (FerroHEALTH/FerroUI#64).
+- Below 40rem the tab strip is one row that scrolls inside itself with a
+  shade at the edge that has more tabs (FerroHEALTH/FerroUI#65).
+- The top bar keeps one row at every width: the lockup's accent word folds
+  away, and a status pill in the end keeps its full words, shown from 64rem
+  with the new `fui-roomy-only` utility, never cut to its dot
+  (FerroHEALTH/FerroUI#41).
+- A pager over one page draws the range and the sizes alone
+  (FerroHEALTH/FerroUI#39).
+- A page header in a stack leaves the stack's gap and no more
+  (FerroHEALTH/FerroUI#57); fields side by side keep their labels and
+  controls on one line whatever help each carries (FerroHEALTH/FerroUI#58).
+- A button in a table's actions cell sits on the row's first line.
+- Below 30rem the stat grid holds one stat per row, so every label stays on
+  one line (FerroHEALTH/FerroUI#46).
+- A status's detail reads in the status's own tone, which holds 4.5:1 on its
+  ground in both themes (FerroHEALTH/FerroUI#43).
+
+### Fixed
+
+- A button's label breaks between words when it cannot fit its column, its
+  glyph beside the first line, so a long label never scrolls a phone page
+  sideways (FerroHEALTH/FerroUI#78).
+- A reveal nested in a part of another answers to its own choice alone
+  (FerroHEALTH/FerroUI#79).
+- A form in a table's actions cell sits on the row beside its links
+  (FerroHEALTH/FerroUI#80).
+- The scroll padding under the sticky action bar matches the bar's height,
+  so a control the browser scrolls into view lands clear of it (WCAG 2.2
+  SC 2.4.11), pinned by a gallery journey that tabs through a long form
+  (FerroHEALTH/FerroUI#83).
+
+- From 64rem up, an identifier longer than its column wraps inside the cell,
+  so a table never runs past its card (FerroHEALTH/FerroUI#53).
+- A bullet item with a long URL wraps inside its card on a phone
+  (FerroHEALTH/FerroUI#54).
+- An activity chart over one day marks its point, where it drew nothing.
+- A page heading in the body face writes no empty `class` attribute
+  (FerroHEALTH/FerroUI#55).
+- An unavailable pager step reads "First (unavailable)", pinned by a test
+  (FerroHEALTH/FerroUI#45).
+- A tree item carries `aria-level`, where it wrote a literal
+  `attr:aria-level` (FerroHEALTH/FerroUI#48).
+- The scroll padding beside the sticky top bar, which keeps a focused
+  control clear of it (WCAG 2.2 SC 2.4.11), is pinned by a test and by a
+  gallery journey that moves the focus back to a control above the fold
+  (FerroHEALTH/FerroUI#40).
+- A stacked card's loading bars and empty state span the card, and a
+  panel's stacked cards keep the panel's inset.
+
 ## [0.1.1] - 2026-10-18
 
 Every component the four FerroHEALTH consoles draw, compared across them and
@@ -166,6 +303,7 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/FerroHEALTH/FerroUI/releases/tag/v0.1.0

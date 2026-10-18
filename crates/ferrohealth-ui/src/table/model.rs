@@ -495,8 +495,47 @@ pub fn href(path: &str, query: &ParamsMap) -> String {
     format!("{path}{}", query.to_query_string())
 }
 
+/// The columns of `columns` that some row of `rows` fills, in their order.
+///
+/// A table then draws no column that shows nothing in every row. `filled`
+/// says whether a row has a value for a column, and a column whose key is in
+/// `keep` stays whatever the rows hold.
+#[must_use]
+pub fn filled_columns<R>(
+    columns: &[crate::table::view::Column],
+    rows: &[R],
+    keep: &[&str],
+    filled: impl Fn(&R, &str) -> bool,
+) -> Vec<crate::table::view::Column> {
+    columns
+        .iter()
+        .filter(|column| {
+            keep.contains(&column.key.as_ref()) || rows.iter().any(|row| filled(row, &column.key))
+        })
+        .cloned()
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_column_no_row_fills_is_left_out_unless_kept() {
+        use crate::table::view::Column;
+        let columns = [
+            Column::text("code", "Code"),
+            Column::text("flags", "Flags"),
+            Column::text("use", "Use"),
+        ];
+        let rows = [("a", ""), ("b", "")];
+        let shown = super::filled_columns(&columns, &rows, &["use"], |row, key| match key {
+            "code" => !row.0.is_empty(),
+            "flags" => !row.1.is_empty(),
+            _ => false,
+        });
+        let keys: Vec<&str> = shown.iter().map(|column| column.key.as_ref()).collect();
+        assert_eq!(keys, ["code", "use"]);
+    }
+
     use leptos_router::params::ParamsMap;
 
     use super::{

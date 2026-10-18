@@ -55,11 +55,31 @@ pub struct Header {
 /// pattern).
 #[must_use]
 pub fn page_heading(header: Header, actions: impl IntoView) -> impl IntoView {
+    let title = header.title.clone();
+    heading(header, Signal::stored(title), actions)
+}
+
+/// Returns the header [`page_heading`] draws, its title following `title`.
+///
+/// The title and the trail's current crumb follow the signal, so a page
+/// whose route names the thing it shows keeps its heading true when the
+/// route changes under client-side navigation; `header.title` is not read.
+#[must_use]
+pub fn page_heading_live(
+    header: Header,
+    title: Signal<String>,
+    actions: impl IntoView,
+) -> impl IntoView {
+    heading(header, title, actions)
+}
+
+/// The header both [`page_heading`] and [`page_heading_live`] draw.
+fn heading(header: Header, title: Signal<String>, actions: impl IntoView) -> impl IntoView {
     let Header {
-        title,
         subtitle,
         crumbs,
         mono,
+        ..
     } = header;
     let trail = (!crumbs.is_empty()).then(|| {
         let links = crumbs
@@ -75,18 +95,22 @@ pub fn page_heading(header: Header, actions: impl IntoView) -> impl IntoView {
                 }
             })
             .collect_view();
-        let current = title.clone();
         view! {
             <nav class="fui-crumbs" aria-label="Breadcrumb">
-                <ol>{links} <li aria-current="page">{current}</li></ol>
+                <ol>{links} <li aria-current="page">{move || title.get()}</li></ol>
             </nav>
         }
     });
-    let title_class = mono.then_some("fui-page-title-mono");
+    // Two arms, so a title in the body face writes no `class` attribute.
+    let h1 = if mono {
+        view! { <h1 class="fui-page-title-mono">{move || title.get()}</h1> }.into_any()
+    } else {
+        view! { <h1>{move || title.get()}</h1> }.into_any()
+    };
     view! {
         <header class="fui-page-header">
             {trail} <div class="fui-page-heading">
-                <h1 class=title_class>{title}</h1>
+                {h1}
                 <div class="fui-actions">{actions}</div>
             </div>
             {subtitle.map(|line| view! { <p class="fui-page-subtitle">{line}</p> })}
@@ -314,19 +338,38 @@ pub fn chip(text: impl Into<String>) -> impl IntoView {
 
 /// Returns a card that is one link to `href`: its title, then `body`.
 ///
-/// The whole card takes the accent's edge under the pointer and the focus
-/// ring from the keyboard. `body` holds no link or control of its own, since
-/// the card is one.
+/// A chevron after the title says the card leads somewhere; the whole card
+/// takes the accent's edge under the pointer and the focus ring from the
+/// keyboard. `body` holds no link or control of its own, since the card is
+/// one.
 #[must_use]
 pub fn link_card(
     href: impl Into<String>,
     title: impl Into<String>,
     body: impl IntoView + 'static,
 ) -> AnyView {
-    let body = body.into_any();
+    linked(href.into(), None, title.into(), body.into_any())
+}
+
+/// Returns the card [`link_card`] draws, with `glyph` before its title.
+#[must_use]
+pub fn link_card_glyph(
+    href: impl Into<String>,
+    glyph: Glyph,
+    title: impl Into<String>,
+    body: impl IntoView + 'static,
+) -> AnyView {
+    linked(href.into(), Some(glyph), title.into(), body.into_any())
+}
+
+/// The card both [`link_card`] and [`link_card_glyph`] draw.
+fn linked(href: String, glyph: Option<Glyph>, title: String, body: AnyView) -> AnyView {
     view! {
-        <a href=href.into() class="fui-card fui-card-link">
-            <h2 class="fui-card-title">{title.into()}</h2>
+        <a href=href class="fui-card fui-card-link">
+            <h2 class="fui-card-title">
+                {glyph.map(|glyph| icon(glyph, "16"))} <span>{title}</span>
+                <span class="fui-card-go">{icon(Glyph::CHEVRON_RIGHT, "16")}</span>
+            </h2>
             {body}
         </a>
     }
@@ -365,6 +408,15 @@ pub fn stack(children: impl IntoView + 'static) -> impl IntoView {
 pub fn grid(children: impl IntoView + 'static) -> impl IntoView {
     let children = children.into_any();
     view! { <div class="fui-grid">{children}</div> }
+}
+
+/// Returns `children` in the grid [`grid`] draws, each card at its own
+/// height rather than stretched to its row's tallest: for cards of unlike
+/// length side by side.
+#[must_use]
+pub fn grid_start(children: impl IntoView + 'static) -> impl IntoView {
+    let children = children.into_any();
+    view! { <div class="fui-grid fui-grid-start">{children}</div> }
 }
 
 /// Returns stat cards in the grid a dashboard opens with, closer together.

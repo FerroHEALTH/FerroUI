@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The upload field: a file dropped or chosen, or its text pasted, read in
-//! the browser into the text area, where it can be read and corrected
-//! before the console sends it.
+//! the browser into the highlighted editor, where it can be read and
+//! corrected before the console sends it.
 //!
 //! The drop zone takes a file dragged onto it and reads "Drop to read the
 //! file" while one is over it; the button beside its words opens the
@@ -17,8 +17,9 @@
 
 use leptos::prelude::*;
 
+use crate::highlight::Language;
 use crate::icon::{Glyph, icon};
-use crate::view::form::TEXTAREA;
+use crate::widget::editor::{Drawn, drawn};
 
 /// What an upload field accepts and says.
 #[derive(Debug, Clone, Copy)]
@@ -163,21 +164,26 @@ pub fn upload_field(
         ),
     };
     let zone = drop_zone(upload, source, picked);
+    // The text area is the highlighted editor, its grammar read from the
+    // text: a pasted or read OPT shows as XML, a JSON document as JSON.
+    let editor = drawn(
+        Drawn {
+            id: text_id,
+            language: Signal::derive(move || source.with(|text| Language::detect(text))),
+            text: source.into(),
+            marks: Signal::stored(Vec::new()),
+            editable: Signal::stored(true),
+            placeholder: Some(upload.placeholder),
+        },
+        move |text| source.set(text),
+    );
     view! {
         <div class="fui-upload">
             {zone} {state} <div class="fui-field">
                 <label for=label_for class="fui-label">
                     {upload.label}
                 </label>
-                <textarea
-                    id=text_id
-                    class=TEXTAREA
-                    rows="12"
-                    spellcheck="false"
-                    placeholder=upload.placeholder
-                    prop:value=move || source.get()
-                    on:input:target=move |event| source.set(event.target().value())
-                ></textarea>
+                {editor}
             </div>
             {move || {
                 busy.get()

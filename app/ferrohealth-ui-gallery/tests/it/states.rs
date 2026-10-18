@@ -28,7 +28,7 @@ use crate::journeys::window;
 use crate::stack::Gallery;
 
 /// Every state, by the name its images take.
-pub(crate) const STATES: [&str; 32] = [
+pub(crate) const STATES: [&str; 36] = [
     "hover-nav",
     "focus-nav",
     "hover-stat",
@@ -61,6 +61,10 @@ pub(crate) const STATES: [&str; 32] = [
     "tree-keyboard",
     "density-compact",
     "reveal-replace",
+    "combobox-open",
+    "combobox-hover",
+    "combobox-keyboard",
+    "combobox-narrow",
 ];
 
 /// The viewport the states are taken in.
@@ -325,6 +329,16 @@ async fn upload(
     shot_of(browser, brand, theme, "drop-chosen", &field).await?;
     input.send_keys(refused.to_string_lossy()).await?;
     browser.text("p", "notes.txt was not read").await?;
+    // The refusal replaces the read's state in place; two frames let the
+    // browser paint the new icon in the refusal's tone before the capture.
+    browser
+        .driver()
+        .execute_async(
+            "const done = arguments[arguments.length - 1];
+            requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(done, 150)));",
+            vec![],
+        )
+        .await?;
     shot_of(browser, brand, theme, "drop-refused", &field).await
 }
 
@@ -507,6 +521,72 @@ async fn layouts(
     shot_of(browser, brand, theme, "tree-keyboard", &pane).await
 }
 
+/// The combobox on the forms page: open, an option under the pointer, an
+/// option the keyboard highlights, and open at 390 px, each with the page
+/// around it.
+async fn combobox_states(
+    browser: &Browser,
+    gallery: &Gallery,
+    brand: Brand,
+    theme: &str,
+) -> Result<(), Box<dyn Error>> {
+    browser
+        .goto(&gallery.url(&format!("/{}/forms", brand.key())))
+        .await?;
+    let input = browser
+        .element(By::Css("#choose-system[role='combobox']"))
+        .await?;
+    let place = |input: &WebElement| {
+        let script = "arguments[0].scrollIntoView({block: 'start'}); window.scrollBy(0, -120);";
+        let json = input.to_json();
+        async move {
+            browser.driver().execute(script, vec![json?]).await?;
+            Ok::<(), Box<dyn Error>>(())
+        }
+    };
+    place(&input).await?;
+    input.click().await?;
+    until("the combobox opens", async || {
+        Ok(input.attr("aria-expanded").await?.as_deref() == Some("true"))
+    })
+    .await?;
+    let label = browser
+        .element(By::Css("label[for='choose-system']"))
+        .await?;
+    hover(browser, &label).await?;
+    shot_of_view(browser, brand, theme, "combobox-open").await?;
+    let third = browser
+        .element(By::Css("#choose-system-list [role='option']:nth-child(3)"))
+        .await?;
+    hover(browser, &third).await?;
+    shot_of_view(browser, brand, theme, "combobox-hover").await?;
+    escape(browser).await?;
+    focus(browser, &input).await?;
+    input.send_keys(Key::Down).await?;
+    input.send_keys(Key::Down).await?;
+    input.send_keys(Key::Down).await?;
+    hover(browser, &label).await?;
+    shot_of_view(browser, brand, theme, "combobox-keyboard").await?;
+    escape(browser).await?;
+    window(browser, 390, 844).await?;
+    let input = browser
+        .element(By::Css("#choose-system[role='combobox']"))
+        .await?;
+    place(&input).await?;
+    // A click that lands while the narrow layout settles opens nothing, so
+    // the input is clicked again until the list shows.
+    until("the combobox opens at 390 px", async || {
+        if input.attr("aria-expanded").await?.as_deref() != Some("true") {
+            input.click().await?;
+        }
+        Ok(input.attr("aria-expanded").await?.as_deref() == Some("true"))
+    })
+    .await?;
+    shot_of_view(browser, brand, theme, "combobox-narrow").await?;
+    escape(browser).await?;
+    window(browser, WIDTH, HEIGHT).await
+}
+
 /// The tables page in the compact density, its cookie set for the one shot.
 async fn compact(
     browser: &Browser,
@@ -554,6 +634,7 @@ async fn every_state_is_captured_in_every_brand_light_and_dark() -> Result<(), B
                 upload(browser, &gallery, brand, theme).await?;
                 overlays(browser, &gallery, brand, theme).await?;
                 layouts(browser, &gallery, brand, theme).await?;
+                combobox_states(browser, &gallery, brand, theme).await?;
                 compact(browser, &gallery, brand, theme).await?;
             }
         }

@@ -8,20 +8,28 @@
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::table::model::{Paging, Sort, Window};
-use ferrohealth_ui::table::view::{Body, Column, DataTable, data_table, link_pager};
+use ferrohealth_ui::table::view::{
+    Body, Column, DataTable, data_table, data_table_unstacked, link_pager,
+};
 use ferrohealth_ui::theme::Theme;
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::button::{Variant, link_button};
+use ferrohealth_ui::view::chart::{LineChart, Series};
 use ferrohealth_ui::view::code::{code_lines, code_panel};
 use ferrohealth_ui::view::dialog::{Confirmation, confirm_dialog, confirm_trigger};
 use ferrohealth_ui::view::empty::{empty_state, skeleton};
 use ferrohealth_ui::view::refusal::{Issue, Refusal, Severity, refusal};
-use ferrohealth_ui::view::shell::{Footer, footer, lockup, mark};
+use ferrohealth_ui::view::shell::{About, Footer, footer, footer_about, lockup, mark};
 use ferrohealth_ui::view::sign_in::{Basic, Notice, Provider, SignIn, sign_in};
 use ferrohealth_ui::view::status::{badge, banner, pill, status};
-use ferrohealth_ui::view::surface::{Stat, definitions, stat_card};
+use ferrohealth_ui::view::surface::{
+    Header, Stat, definitions, page_header, page_heading, stat_card,
+};
 use ferrohealth_ui::view::tabs::{Tab, link_tabs};
 use ferrohealth_ui::view::theme_switch::{theme_switch, theme_toggle};
+use ferrohealth_ui::widget::chart::line_chart;
+use ferrohealth_ui::widget::document::{DocumentPane, document_pane_opening};
+use ferrohealth_ui::widget::tree::{Tree, TreeNode, tree_view};
 use leptos::prelude::*;
 
 /// The HTML `view` renders to, under a reactive owner as a server render
@@ -281,6 +289,173 @@ fn the_data_table_marks_its_sort_and_the_pager_names_an_unavailable_step() {
 }
 
 #[test]
+fn a_pager_over_one_page_draws_the_range_and_the_sizes_alone() {
+    let window = Window::over(2, Paging::default());
+    let pager = html(|| {
+        link_pager("Pages", window, &|paging: Paging| {
+            format!("/files?page={}", paging.page)
+        })
+        .into_any()
+    });
+    assert!(pager.contains("1-2 of 2"), "{pager}");
+    assert!(pager.contains("Rows per page"), "{pager}");
+    assert!(!pager.contains("fui-pager-steps"), "{pager}");
+    assert!(!pager.contains("(unavailable)"), "{pager}");
+}
+
+#[test]
+fn an_unavailable_step_reads_its_words_and_the_suffix_apart() {
+    let window = Window::over(30, Paging::default());
+    let pager = html(|| {
+        link_pager("Pages", window, &|paging: Paging| {
+            format!("/files?page={}", paging.page)
+        })
+        .into_any()
+    });
+    assert!(
+        pager.contains(r#"First</span><span class="fui-sr-only"> (unavailable)</span>"#),
+        "{pager}"
+    );
+}
+
+#[test]
+fn a_page_heading_in_the_body_face_writes_no_class_on_its_title() {
+    let plain = html(|| page_header("Dashboard", None, ()).into_any());
+    assert!(plain.contains("<h1>Dashboard</h1>"), "{plain}");
+    let mono = html(|| {
+        page_heading(
+            Header {
+                title: String::from("vitals.v1"),
+                mono: true,
+                ..Header::default()
+            },
+            (),
+        )
+        .into_any()
+    });
+    assert!(
+        mono.contains(r#"<h1 class="fui-page-title-mono">vitals.v1</h1>"#),
+        "{mono}"
+    );
+}
+
+#[test]
+fn a_document_pane_opens_on_the_view_it_is_given_and_offers_rendered_only_when_available() {
+    let pane = |rendered_available: bool| {
+        html(move || {
+            document_pane_opening(
+                DocumentPane {
+                    id: "doc",
+                    label: "Composition",
+                    formats: &[],
+                    format: Signal::stored("json"),
+                    text: Signal::stored(String::from("{\"a\": 1}")),
+                    language: Signal::stored(Language::Json),
+                    rendered: Some(view! { <p>"A reading"</p> }.into_any()),
+                },
+                "raw",
+                Signal::stored(rendered_available),
+                |_| {},
+            )
+        })
+    };
+    let raw = pane(true);
+    assert!(raw.contains(r#"id="doc-highlighted""#), "{raw}");
+    assert!(
+        raw.contains(r#"data-choice="raw" aria-pressed="true""#),
+        "{raw}"
+    );
+    assert!(raw.contains(r#"data-choice="rendered""#), "{raw}");
+    let plain = pane(false);
+    assert!(!plain.contains(r#"data-choice="rendered""#), "{plain}");
+}
+
+#[test]
+fn the_last_series_shown_cannot_be_hidden_and_each_chip_names_its_series() {
+    let chart = || LineChart {
+        id: "trend",
+        label: String::from("Readings"),
+        summary: String::from("Two series."),
+        series: vec![
+            Series {
+                name: String::from("systolic"),
+                points: vec![(0.0, 120.0), (1.0, 130.0)],
+                palette: 0,
+            },
+            Series {
+                name: String::from("diastolic"),
+                points: vec![(0.0, 80.0), (1.0, 85.0)],
+                palette: 1,
+            },
+        ],
+        x_ticks: vec![(0.0, String::from("Mon")), (1.0, String::from("Tue"))],
+        y_range: None,
+    };
+    let both = html(move || line_chart(chart(), RwSignal::new(vec![true, true])));
+    assert!(both.contains(r#"data-series="systolic""#), "{both}");
+    assert!(!both.contains("disabled"), "{both}");
+    let one = html(move || line_chart(chart(), RwSignal::new(vec![false, true])));
+    assert_eq!(1, one.matches("disabled").count(), "{one}");
+    assert!(
+        one.contains(r#"data-series="diastolic" aria-pressed="true" disabled"#),
+        "{one}"
+    );
+}
+
+#[test]
+fn a_tree_item_states_its_level_by_name() {
+    let tree = html(|| {
+        let mut parent = TreeNode::new("a", "Parent");
+        parent.expandable = true;
+        parent.children = vec![TreeNode::new("b", "Child")];
+        tree_view(Tree {
+            id: "browse",
+            label: "Concepts",
+            nodes: Signal::stored(vec![parent]),
+            expanded: RwSignal::new(std::collections::BTreeSet::from([String::from("a")])),
+            selected: Signal::stored(None),
+            on_expand: None,
+            actions: None,
+        })
+    });
+    assert!(tree.contains(r#"aria-level="1""#), "{tree}");
+    assert!(tree.contains(r#"aria-level="2""#), "{tree}");
+    assert!(!tree.contains("attr:aria-level"), "{tree}");
+}
+
+#[test]
+fn a_data_table_stacks_on_a_phone_unless_it_opts_out() {
+    let columns = [Column::text("name", "Name"), Column::text("kind", "Kind")];
+    let rows = || view! { <tr><td>"a"</td><td data-label="Kind">"model"</td></tr> }.into_any();
+    let table = html(|| {
+        data_table(DataTable {
+            caption: "Files",
+            columns: &columns,
+            sort: None,
+            sort_href: &|_| String::new(),
+            body: Body::Rows(rows()),
+        })
+        .into_any()
+    });
+    assert!(
+        table.contains(r#"class="fui-table-scroll fui-table-stack""#),
+        "{table}"
+    );
+    let fitting = html(|| {
+        data_table_unstacked(DataTable {
+            caption: "Files",
+            columns: &columns,
+            sort: None,
+            sort_href: &|_| String::new(),
+            body: Body::Rows(rows()),
+        })
+        .into_any()
+    });
+    assert!(fitting.contains(r#"class="fui-table-scroll""#), "{fitting}");
+    assert!(!fitting.contains("fui-table-stack"), "{fitting}");
+}
+
+#[test]
 fn the_surfaces_render_and_none_writes_a_style_attribute() {
     let page = html(|| {
         view! {
@@ -311,4 +486,32 @@ fn the_surfaces_render_and_none_writes_a_style_attribute() {
         assert!(page.contains(expected), "{expected}: {page}");
     }
     assert!(!page.contains("style="), "{page}");
+}
+
+#[test]
+fn the_footer_marks_its_about_link_external_only_when_asked() {
+    let text = Footer {
+        product: "FerroUI Gallery",
+        version: "0.1.2",
+        about: "/about",
+    };
+    let routed = html(|| footer(text).into_any());
+    assert!(!routed.contains("rel="), "{routed}");
+    let full = html(|| footer_about(text, About::FullLoad).into_any());
+    assert!(full.contains(r#"rel="external""#), "{full}");
+    assert_eq!(
+        routed,
+        html(|| footer_about(text, About::Routed).into_any())
+    );
+}
+
+#[test]
+fn a_start_grid_writes_the_start_class_and_the_grid_does_not() {
+    let start = html(|| ferrohealth_ui::view::surface::grid_start(view! { <p>"a"</p> }).into_any());
+    assert!(
+        start.contains(r#"class="fui-grid fui-grid-start""#),
+        "{start}"
+    );
+    let plain = html(|| ferrohealth_ui::view::surface::grid(view! { <p>"a"</p> }).into_any());
+    assert!(plain.contains(r#"class="fui-grid""#), "{plain}");
 }
