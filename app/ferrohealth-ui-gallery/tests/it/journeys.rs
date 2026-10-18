@@ -16,7 +16,15 @@ use crate::journeys_enabled;
 use crate::stack::Gallery;
 
 /// The pages of a brand, after its key.
-pub(crate) const PAGES: [&str; 4] = ["", "/forms", "/tables", "/code"];
+pub(crate) const PAGES: [&str; 7] = [
+    "",
+    "/forms",
+    "/tables",
+    "/code",
+    "/overlays",
+    "/charts",
+    "/layouts",
+];
 
 /// The sign-in variants.
 pub(crate) const SIGN_INS: [&str; 3] = ["basic", "provider", "both"];
@@ -36,6 +44,23 @@ pub(crate) async fn window(
         )
         .await?;
     Ok(())
+}
+
+/// Waits until the overlays page has hydrated: its ok toast button raises a
+/// toast, which is then dismissed by its own timer.
+pub(crate) async fn hydrated_toasts(browser: &Browser) -> Result<(), Box<dyn Error>> {
+    let raise = browser.element(By::Css("button[data-toast='ok']")).await?;
+    until("the toasts answer a press", async || {
+        raise.click().await?;
+        Ok(!browser
+            .driver()
+            .find_all(By::XPath(
+                "//p[contains(., 'Saved, and the set reloaded.')]",
+            ))
+            .await?
+            .is_empty())
+    })
+    .await
 }
 
 /// Waits until the overview has hydrated: its keyboard tabs answer an
@@ -128,8 +153,8 @@ async fn the_dialog_confirms_and_a_toast_says_so() -> Result<(), Box<dyn Error>>
     }
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
-        browser.goto(&gallery.url("/ferroehr")).await?;
-        hydrated_tabs(browser).await?;
+        browser.goto(&gallery.url("/ferroehr/overlays")).await?;
+        hydrated_toasts(browser).await?;
         browser
             .element(By::XPath(
                 "//button[normalize-space(.) = 'Delete the file']",
@@ -143,7 +168,7 @@ async fn the_dialog_confirms_and_a_toast_says_so() -> Result<(), Box<dyn Error>>
         })
         .await?;
         dialog
-            .find(By::XPath(".//button[normalize-space(.) = 'Delete']"))
+            .find(By::Id("confirm-delete-file"))
             .await?
             .click()
             .await?;
@@ -282,10 +307,18 @@ async fn the_theme_switch_posts_and_the_page_returns_in_the_theme() -> Result<()
     with_browser(async |browser| {
         browser.goto(&gallery.url("/ferrofed/code")).await?;
         browser
-            .element(By::XPath("//button[@name = 'theme' and @value = 'dark']"))
+            .element(By::XPath("//button[starts-with(@aria-label, 'Theme')]"))
             .await?
             .click()
             .await?;
+        let dark = browser
+            .element(By::XPath("//button[@name = 'theme' and @value = 'dark']"))
+            .await?;
+        until("the theme menu opens", async || {
+            Ok(dark.is_displayed().await?)
+        })
+        .await?;
+        dark.click().await?;
         browser
             .element(By::Css(r#"html[data-theme="dark"]"#))
             .await?;
@@ -311,7 +344,7 @@ async fn the_drawer_opens_takes_the_focus_and_closes_on_a_link() -> Result<(), B
         browser.goto(&gallery.url("/ferrobridge")).await?;
         hydrated_tabs(browser).await?;
         browser
-            .element(By::XPath("//button[normalize-space(.) = 'Menu']"))
+            .element(By::XPath("//button[@aria-label = 'Menu']"))
             .await?
             .click()
             .await?;
@@ -322,7 +355,7 @@ async fn the_drawer_opens_takes_the_focus_and_closes_on_a_link() -> Result<(), B
             Ok(active.text().await? == "Overview")
         })
         .await?;
-        browser.follow("Code panels").await?;
+        browser.follow("Documents").await?;
         browser.at(&gallery.url("/ferrobridge/code")).await?;
         until("the drawer closes", async || {
             Ok(!browser

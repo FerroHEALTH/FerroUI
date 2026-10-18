@@ -457,16 +457,19 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-ui"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "leptos",
  "leptos_router",
  "serde",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
 ]
 
 [[package]]
 name = "ferrohealth-ui-gallery"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "axum",
  "console_error_panic_hook",

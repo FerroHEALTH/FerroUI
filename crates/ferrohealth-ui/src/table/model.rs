@@ -29,6 +29,77 @@ pub const SORT_KEY: &str = "sort";
 /// The query key of the sort's direction.
 pub const ORDER_KEY: &str = "order";
 
+/// The words a listing names its rows by, one and many: "value set" and
+/// "value sets".
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Noun {
+    /// The word for one row.
+    pub one: &'static str,
+    /// The word for several rows, or none.
+    pub many: &'static str,
+}
+
+impl Noun {
+    /// Rows, the noun of a listing that names nothing else.
+    pub const ROWS: Self = Self::new("row", "rows");
+
+    /// The noun `one`, `many`.
+    #[must_use]
+    pub const fn new(one: &'static str, many: &'static str) -> Self {
+        Self { one, many }
+    }
+
+    /// The word for `count` rows.
+    #[must_use]
+    pub const fn of(self, count: u32) -> &'static str {
+        if count == 1 { self.one } else { self.many }
+    }
+
+    /// The word for several rows with its first letter in upper case, as a
+    /// sentence opens with it.
+    #[must_use]
+    pub fn opening(self) -> String {
+        let mut letters = self.many.chars();
+        letters.next().map_or_else(String::new, |first| {
+            first.to_uppercase().chain(letters).collect()
+        })
+    }
+}
+
+impl Default for Noun {
+    fn default() -> Self {
+        Self::ROWS
+    }
+}
+
+/// The page sizes a listing offers, the one it starts at, and the largest a
+/// request may name.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Sizes {
+    /// The one-click choices; none when the size is a setting of the
+    /// console's.
+    pub choices: &'static [u32],
+    /// The size when the request names none.
+    pub default: u32,
+    /// The bound a request's size is clamped to.
+    pub max: u32,
+}
+
+impl Sizes {
+    /// 25, 50 and 100, starting at 25, clamped to 200.
+    pub const STANDARD: Self = Self {
+        choices: &SIZES,
+        default: DEFAULT_SIZE,
+        max: MAX_SIZE,
+    };
+}
+
+impl Default for Sizes {
+    fn default() -> Self {
+        Self::STANDARD
+    }
+}
+
 /// Where a listing keeps its page, size and sort.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum StateSource {
@@ -65,6 +136,14 @@ impl Paging {
     /// default, and a size is clamped to `1..=MAX_SIZE`.
     #[must_use]
     pub fn read(page: Option<&str>, size: Option<&str>) -> Self {
+        Self::read_within(page, size, Sizes::STANDARD)
+    }
+
+    /// The paging the query values `page` and `size` name under the
+    /// console's `sizes`: a missing or unreadable size is `sizes.default`,
+    /// and a size is clamped to `1..=sizes.max`.
+    #[must_use]
+    pub fn read_within(page: Option<&str>, size: Option<&str>, sizes: Sizes) -> Self {
         // NOTE: no specification governs this: our own design; a page or size that
         // is no number is the value not given, never an error page.
         let page = page
@@ -73,27 +152,39 @@ impl Paging {
             .max(1);
         let size = size
             .and_then(|size| size.trim().parse::<u32>().ok())
-            .unwrap_or(DEFAULT_SIZE)
-            .clamp(1, MAX_SIZE);
+            .unwrap_or(sizes.default)
+            .clamp(1, sizes.max.max(1));
         Self { page, size }
     }
 
     /// The paging the query `query` names.
     #[must_use]
     pub fn from_query(query: &ParamsMap) -> Self {
-        Self::read(query.get_str(PAGE_KEY), query.get_str(SIZE_KEY))
+        Self::from_query_within(query, Sizes::STANDARD)
+    }
+
+    /// The paging the query `query` names under the console's `sizes`.
+    #[must_use]
+    pub fn from_query_within(query: &ParamsMap, sizes: Sizes) -> Self {
+        Self::read_within(query.get_str(PAGE_KEY), query.get_str(SIZE_KEY), sizes)
     }
 
     /// This paging written into `query`: the first page and the default size
     /// are written as their absence, so the first page's URL is the plain
     /// path.
     pub fn write(self, query: &mut ParamsMap) {
+        self.write_within(query, Sizes::STANDARD);
+    }
+
+    /// This paging written into `query`, the size `sizes.default` written
+    /// as its absence.
+    pub fn write_within(self, query: &mut ParamsMap, sizes: Sizes) {
         if self.page <= 1 {
             drop(query.remove(PAGE_KEY));
         } else {
             query.replace(PAGE_KEY, self.page.to_string());
         }
-        if self.size == DEFAULT_SIZE {
+        if self.size == sizes.default {
             drop(query.remove(SIZE_KEY));
         } else {
             query.replace(SIZE_KEY, self.size.to_string());
@@ -138,7 +229,14 @@ impl Window {
     /// shows the last page, never nothing.
     #[must_use]
     pub fn over(total: u32, paging: Paging) -> Self {
-        let size = paging.size.clamp(1, MAX_SIZE);
+        Self::within(total, paging, MAX_SIZE)
+    }
+
+    /// The window `paging` asks for over `total` rows, the size clamped to
+    /// the console's bound `max`.
+    #[must_use]
+    pub fn within(total: u32, paging: Paging, max: u32) -> Self {
+        let size = paging.size.clamp(1, max.max(1));
         let pages = total.div_ceil(size).max(1);
         let page = paging.page.clamp(1, pages);
         let start = (page - 1).saturating_mul(size).min(total);
@@ -184,6 +282,22 @@ impl Window {
         )
     }
 
+    /// The range label naming the rows by `noun`: "1-25 of 312 value
+    /// sets", "1-1 of 1 value set", or "No value sets".
+    #[must_use]
+    pub fn range_of(self, noun: Noun) -> String {
+        if self.total == 0 {
+            return format!("No {}", noun.many);
+        }
+        format!(
+            "{}-{} of {} {}",
+            self.start.saturating_add(1),
+            self.end,
+            self.total,
+            noun.of(self.total)
+        )
+    }
+
     /// Whether the page before this one exists.
     #[must_use]
     pub const fn has_previous(self) -> bool {
@@ -194,6 +308,87 @@ impl Window {
     #[must_use]
     pub const fn has_next(self) -> bool {
         self.page < self.pages
+    }
+}
+
+/// The sentence a listing adds when the server counted more rows than it
+/// sent: `held` rows in hand, `stated` counted (a FHIR search's
+/// `Bundle.total`). `None` when the two agree or nothing was stated.
+#[must_use]
+pub fn partial_note(held: u32, stated: Option<u32>, noun: Noun) -> Option<String> {
+    let stated = stated.filter(|stated| *stated != held)?;
+    Some(format!(
+        "The server counted {stated} {}, and this listing holds {held}.",
+        noun.of(stated)
+    ))
+}
+
+/// The window of a listing whose total the server does not report: the
+/// page asked for, and the rows that page came back with.
+///
+/// A previous page exists past the first; a next one may exist when the
+/// page came back full, which is all a server that answers no total tells.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct OpenWindow {
+    /// The 1-based page shown.
+    pub page: u32,
+    /// The rows a page asks for.
+    pub size: u32,
+    /// The index of the page's first row: the offset the console asks the
+    /// server for.
+    pub start: u32,
+    /// The rows the page came back with.
+    pub held: u32,
+}
+
+impl OpenWindow {
+    /// The window of `paging`, whose page came back with `held` rows.
+    #[must_use]
+    pub fn of(paging: Paging, held: u32) -> Self {
+        let page = paging.page.max(1);
+        let size = paging.size.max(1);
+        Self {
+            page,
+            size,
+            start: (page - 1).saturating_mul(size),
+            held: held.min(size),
+        }
+    }
+
+    /// The paging of this window.
+    #[must_use]
+    pub const fn paging(self) -> Paging {
+        Paging {
+            page: self.page,
+            size: self.size,
+        }
+    }
+
+    /// Whether the page before this one exists.
+    #[must_use]
+    pub const fn has_previous(self) -> bool {
+        self.page > 1
+    }
+
+    /// Whether a page after this one may exist: this one came back full.
+    #[must_use]
+    pub const fn has_next(self) -> bool {
+        self.held >= self.size
+    }
+
+    /// The range label with no total: "Value sets 26 to 50", or "No value
+    /// sets" when the page came back empty.
+    #[must_use]
+    pub fn range_of(self, noun: Noun) -> String {
+        if self.held == 0 {
+            return format!("No {}", noun.many);
+        }
+        format!(
+            "{} {} to {}",
+            noun.opening(),
+            self.start.saturating_add(1),
+            self.start.saturating_add(self.held)
+        )
     }
 }
 
@@ -304,7 +499,74 @@ pub fn href(path: &str, query: &ParamsMap) -> String {
 mod tests {
     use leptos_router::params::ParamsMap;
 
-    use super::{DEFAULT_SIZE, Direction, MAX_SIZE, Paging, Sort, Window, href};
+    use super::{
+        DEFAULT_SIZE, Direction, MAX_SIZE, Noun, OpenWindow, Paging, Sizes, Sort, Window, href,
+        partial_note,
+    };
+
+    #[test]
+    fn the_range_names_its_noun_and_a_partial_answer_says_so() {
+        let sets = Noun::new("value set", "value sets");
+        let window = Window::over(312, Paging { page: 2, size: 25 });
+        assert_eq!("26-50 of 312 value sets", window.range_of(sets));
+        assert_eq!(
+            "1-1 of 1 value set",
+            Window::over(1, Paging::default()).range_of(sets)
+        );
+        assert_eq!(
+            "No value sets",
+            Window::over(0, Paging::default()).range_of(sets)
+        );
+        assert_eq!(None, partial_note(312, Some(312), sets));
+        assert_eq!(None, partial_note(312, None, sets));
+        assert_eq!(
+            Some(String::from(
+                "The server counted 340 value sets, and this listing holds 312."
+            )),
+            partial_note(312, Some(340), sets)
+        );
+    }
+
+    #[test]
+    fn a_console_chooses_its_sizes_and_its_bound() {
+        let sizes = Sizes {
+            choices: &[],
+            default: 100,
+            max: 1000,
+        };
+        assert_eq!(100, Paging::read_within(None, None, sizes).size);
+        assert_eq!(1000, Paging::read_within(None, Some("5000"), sizes).size);
+        let window = Window::within(
+            4000,
+            Paging {
+                page: 1,
+                size: 1000,
+            },
+            1000,
+        );
+        assert_eq!((0, 1000, 4), (window.start, window.end, window.pages));
+        let mut query = ParamsMap::new();
+        Paging { page: 1, size: 100 }.write_within(&mut query, sizes);
+        assert_eq!("/l", href("/l", &query), "the default is its absence");
+    }
+
+    #[test]
+    fn an_open_window_knows_a_previous_page_and_a_full_one() {
+        let rows = Noun::ROWS;
+        let first = OpenWindow::of(Paging { page: 1, size: 25 }, 25);
+        assert!(!first.has_previous() && first.has_next());
+        assert_eq!("Rows 1 to 25", first.range_of(rows));
+        let second = OpenWindow::of(Paging { page: 2, size: 25 }, 12);
+        assert_eq!(25, second.start, "the offset the console asks for");
+        assert!(
+            second.has_previous() && !second.has_next(),
+            "a short page ends it"
+        );
+        assert_eq!("Rows 26 to 37", second.range_of(rows));
+        let past = OpenWindow::of(Paging { page: 9, size: 25 }, 0);
+        assert_eq!("No rows", past.range_of(rows));
+        assert_eq!("EHRs", Noun::new("EHR", "EHRs").opening());
+    }
 
     #[test]
     fn a_request_is_read_defensively_and_clamped() {

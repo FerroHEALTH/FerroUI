@@ -46,17 +46,39 @@ pub fn confirm_trigger(
 /// Returns the dialog asking `confirmation`, with Cancel and `confirm`.
 #[must_use]
 pub fn confirm_dialog(confirmation: Confirmation, confirm: impl IntoView) -> impl IntoView {
+    frame(confirmation, false, confirm)
+}
+
+/// Returns the dialog asking `confirmation` about an action that cannot be
+/// undone, such as a delete: the bad tone's glyph beside its question, with
+/// Cancel and `confirm` (a danger button).
+#[must_use]
+pub fn danger_dialog(confirmation: Confirmation, confirm: impl IntoView) -> impl IntoView {
+    frame(confirmation, true, confirm)
+}
+
+/// Returns the dialog asking `confirmation`, in the danger form when
+/// `danger`, with Cancel and `confirm`.
+fn frame(confirmation: Confirmation, danger: bool, confirm: impl IntoView) -> impl IntoView {
     let title_id = format!("{}-title", confirmation.id);
     let labelled_by = title_id.clone();
+    let class = if danger {
+        "fui-dialog fui-dialog-danger"
+    } else {
+        "fui-dialog"
+    };
     view! {
         <div
             id=confirmation.id
             popover="auto"
             role="dialog"
             aria-labelledby=labelled_by
-            class="fui-dialog"
+            class=class
         >
-            <h2 id=title_id>{confirmation.title}</h2>
+            <h2 id=title_id class="fui-dialog-title">
+                {danger.then(|| icon(Glyph::TRIANGLE_ALERT, "18"))}
+                {confirmation.title}
+            </h2>
             <p>{confirmation.message}</p>
             <div class="fui-dialog-actions">
                 <button

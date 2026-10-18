@@ -28,7 +28,7 @@ use crate::stack::Gallery;
 const SCREENSHOTS_GATE: &str = "FERROUI_SCREENSHOTS";
 
 /// The folder of the screenshots, from the workspace root.
-const IMAGES: &str = "docs/screenshots";
+pub(crate) const IMAGES: &str = "docs/screenshots";
 
 /// The width every screenshot is taken at, in CSS pixels.
 const WIDTH: u32 = 1440;
@@ -93,7 +93,7 @@ fn shots() -> Vec<Shot> {
 }
 
 /// The workspace root.
-fn root() -> PathBuf {
+pub(crate) fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
 
@@ -216,6 +216,19 @@ fn every_shot_has_its_light_and_dark_image_and_no_other_image_is_kept() {
                 image.display()
             );
             expected.insert(image);
+        }
+    }
+    for brand in Brand::ALL {
+        for state in crate::states::STATES {
+            for theme in ["light", "dark"] {
+                let image = file(&format!("states/{}/{state}", brand.key()), theme);
+                assert!(
+                    image.is_file(),
+                    "{} is missing: run the capture with {SCREENSHOTS_GATE}=1",
+                    image.display()
+                );
+                expected.insert(image);
+            }
         }
     }
     let mut folders = vec![root().join(IMAGES)];

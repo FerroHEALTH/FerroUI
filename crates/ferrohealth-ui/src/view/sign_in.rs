@@ -46,20 +46,47 @@ pub struct Provider {
 /// A notice above the methods.
 #[derive(Debug, Clone)]
 pub struct Notice {
-    /// Its tone: `Warn` for a session that ended, `Accent` for a
-    /// deployment's own words.
+    /// Its tone: `Warn` for a session that ended or a method list that
+    /// could not be read, `Accent` for a deployment's own words.
     pub tone: Tone,
-    /// Its words.
+    /// Its words; a line break in them breaks the line.
     pub text: String,
+    /// A stable id, such as `session-expired`, for a journey to find it.
+    pub id: Option<&'static str>,
 }
+
+impl Notice {
+    /// A notice in `tone` saying `text`, with no id.
+    #[must_use]
+    pub fn new(tone: Tone, text: impl Into<String>) -> Self {
+        Self {
+            tone,
+            text: text.into(),
+            id: None,
+        }
+    }
+
+    /// This notice, with the id `id`.
+    #[must_use]
+    pub fn id(self, id: &'static str) -> Self {
+        Self {
+            id: Some(id),
+            ..self
+        }
+    }
+}
+
+/// The id of the refusal of the last attempt, for a journey to find it.
+pub const REFUSAL_ID: &str = "sign-in-refused";
 
 /// What the sign-in card shows.
 #[derive(Debug)]
 pub struct SignIn {
     /// The product's lockup, from [`crate::view::shell::lockup`].
     pub lockup: AnyView,
-    /// A notice, such as "Your session ended. Sign in again to continue.".
-    pub notice: Option<Notice>,
+    /// The notices, in order, such as "Your session ended. Sign in again to
+    /// continue." beside the deployment's own words.
+    pub notices: Vec<Notice>,
     /// The refusal of the last attempt, such as "Wrong username or
     /// password.".
     pub refusal: Option<String>,
@@ -68,8 +95,9 @@ pub struct SignIn {
     /// The provider's method, when the console has it.
     pub provider: Option<Provider>,
     /// Links under the methods, such as the documentation, as words and
-    /// href; each leaves the console's router alone.
-    pub links: Vec<(&'static str, String)>,
+    /// href, both of which a deployment may configure; each leaves the
+    /// console's router alone.
+    pub links: Vec<(String, String)>,
 }
 
 /// Returns the basic form posting to `basic.action`.
@@ -115,17 +143,21 @@ fn basic_form(basic: Basic) -> impl IntoView {
 /// Returns the sign-in card `sign_in`, centred by the page around it.
 #[must_use]
 pub fn sign_in(sign_in: SignIn) -> impl IntoView {
-    let notice = sign_in.notice.map(|notice| {
-        let class = format!("fui-sign-in-notice {}", notice.tone.class());
-        view! {
-            <div role="status" class=class>
-                {notice.text}
-            </div>
-        }
-    });
+    let notices = sign_in
+        .notices
+        .into_iter()
+        .map(|notice| {
+            let class = format!("fui-sign-in-notice {}", notice.tone.class());
+            view! {
+                <div role="status" class=class id=notice.id>
+                    {notice.text}
+                </div>
+            }
+        })
+        .collect_view();
     let refusal = sign_in.refusal.map(|refusal| {
         view! {
-            <div role="alert" class="fui-alert">
+            <div role="alert" class="fui-alert" id=REFUSAL_ID>
                 <p class="fui-alert-title">{icon(Glyph::CIRCLE_ALERT, "16")} {refusal}</p>
             </div>
         }
@@ -171,7 +203,7 @@ pub fn sign_in(sign_in: SignIn) -> impl IntoView {
     view! {
         <div class="fui-card fui-sign-in">
             <div class="fui-sign-in-lockup">{sign_in.lockup}</div>
-            {notice}
+            {notices}
             {refusal}
             {basic}
             {divider}

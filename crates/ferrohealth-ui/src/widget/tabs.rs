@@ -110,7 +110,7 @@ fn focus(id: &str) {
         use leptos::wasm_bindgen::JsCast as _;
         let element = document()
             .get_element_by_id(id)
-            .and_then(|element| element.dyn_into::<leptos::web_sys::HtmlElement>().ok());
+            .and_then(|element| element.dyn_into::<web_sys::HtmlElement>().ok());
         if let Some(element) = element
             && element.focus().is_err()
         {

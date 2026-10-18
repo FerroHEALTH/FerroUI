@@ -7,8 +7,11 @@
 //! tables and their paging, the code panels, and the sign-in cards. Each
 //! page is built from erased sections, so rustc sees a shallow tree.
 
+pub mod charts;
 pub mod code;
 pub mod forms;
+pub mod layouts;
+pub mod overlays;
 pub mod overview;
 pub mod sign_in;
 pub mod tables;

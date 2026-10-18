@@ -36,10 +36,11 @@ fn card(basic: bool, provider: bool, refusal: Option<&str>) -> String {
     html(|| {
         sign_in(SignIn {
             lockup: lockup("/", mark(Glyph::SERVER), "FerroBRIDGE", "Console").into_any(),
-            notice: Some(Notice {
-                tone: Tone::Warn,
-                text: String::from("Your session ended. Sign in again to continue."),
-            }),
+            notices: vec![
+                Notice::new(Tone::Warn, "Your session ended. Sign in again to continue.")
+                    .id("session-expired"),
+                Notice::new(Tone::Accent, "A sandbox.\nUse synthetic / synthetic."),
+            ],
             refusal: refusal.map(str::to_owned),
             basic: basic.then(|| Basic {
                 action: "/login",
@@ -49,7 +50,10 @@ fn card(basic: bool, provider: bool, refusal: Option<&str>) -> String {
                 href: String::from("/auth/oidc/login"),
                 label: String::from("Sign in with OIDC"),
             }),
-            links: vec![("Documentation", String::from("https://example.org/docs"))],
+            links: vec![(
+                String::from("API reference"),
+                String::from("https://example.org/docs"),
+            )],
         })
         .into_any()
     })
@@ -73,6 +77,10 @@ fn the_basic_sign_in_is_a_plain_post_form_a_password_manager_reads() {
         "the destination is escaped: {form}"
     );
     assert!(form.contains("Wrong username or password."), "{form}");
+    assert!(form.contains(r#"id="sign-in-refused""#), "{form}");
+    assert!(form.contains(r#"id="session-expired""#), "{form}");
+    assert!(form.contains("A sandbox."), "both notices show: {form}");
+    assert!(form.contains("API reference"), "{form}");
     assert!(form.contains("Your session ended."), "{form}");
     assert!(
         !form.contains("rel=\"external\" class=\"fui-button"),
@@ -152,19 +160,14 @@ fn a_refusal_lists_its_issues_with_their_text_and_counts_the_silent_ones() {
             status: Some(422),
             summary: String::from("the bridge refused the request."),
             issues: vec![
-                Issue {
-                    severity: Severity::Information,
-                    code: String::from("informational"),
-                    text: None,
-                    place: String::new(),
-                },
-                Issue {
-                    severity: Severity::Error,
-                    code: String::from("processing"),
-                    text: Some(String::from("no program maps <the> template")),
-                    place: String::from("Bundle.entry[0]"),
-                },
+                Issue::new(Severity::Information, "informational"),
+                Issue::new(Severity::Error, "processing")
+                    .text("no program maps <the> template")
+                    .place("Bundle.entry[0]")
+                    .details(vec![String::from("<b>MSG</b>")]),
             ],
+            request: Some(String::from("GET /fhir?q=<script>alert(1)</script>")),
+            evidence: Some(String::from("<img src=x onerror=alert(1)>")),
         })
         .into_any()
     });
@@ -181,6 +184,22 @@ fn a_refusal_lists_its_issues_with_their_text_and_counts_the_silent_ones() {
         "{shown}"
     );
     assert!(!shown.contains("informational"), "{shown}");
+    assert!(
+        shown.contains("&lt;b&gt;MSG&lt;/b&gt;"),
+        "a detail code is text: {shown}"
+    );
+    assert!(
+        shown.contains("GET /fhir?q=&lt;script&gt;alert(1)&lt;/script&gt;"),
+        "the request is text: {shown}"
+    );
+    assert!(
+        shown.contains("&lt;img src=x onerror=alert(1)&gt;"),
+        "the evidence is text: {shown}"
+    );
+    assert!(
+        !shown.contains("<script") && !shown.contains("<img"),
+        "{shown}"
+    );
 }
 
 #[test]
@@ -246,7 +265,7 @@ fn the_surfaces_render_and_none_writes_a_style_attribute() {
     let page = html(|| {
         view! {
             {lockup("/", mark(Glyph::LAYERS), "FerroUI", "Gallery")}
-            {stat_card(Stat { glyph: Glyph::USERS, value: String::from("12"), label: "Members", href: Some(String::from("/members")) })}
+            {stat_card(Stat { glyph: Glyph::USERS, value: String::from("12"), label: "Members".into(), href: Some(String::from("/members")) })}
             {definitions(vec![("Version", "0.1.0".into_any())])}
             {link_tabs("Views", &[Tab { href: "/a", label: "A" }, Tab { href: "/b", label: "B" }], "/b")}
             {empty_state(Glyph::INBOX, "Nothing here", "No file yet.", ())}

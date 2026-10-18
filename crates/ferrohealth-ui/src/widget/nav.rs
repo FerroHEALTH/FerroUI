@@ -122,7 +122,7 @@ mod drawer {
                 .query_selector("a")
                 .ok()
                 .flatten()
-                .and_then(|link| link.dyn_into::<leptos::web_sys::HtmlElement>().ok());
+                .and_then(|link| link.dyn_into::<web_sys::HtmlElement>().ok());
             if let Some(first) = first
                 && first.focus().is_err()
             {
@@ -143,7 +143,7 @@ mod drawer {
             };
             let on_link = event
                 .target()
-                .and_then(|target| target.dyn_into::<leptos::web_sys::Element>().ok())
+                .and_then(|target| target.dyn_into::<web_sys::Element>().ok())
                 .and_then(|target| target.closest("a").ok().flatten())
                 .is_some();
             if on_link

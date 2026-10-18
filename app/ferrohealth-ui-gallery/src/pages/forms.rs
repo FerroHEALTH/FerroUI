@@ -8,12 +8,63 @@ use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::button::{Variant, label};
-use ferrohealth_ui::view::form::{FORM, INPUT, SELECT, TEXTAREA, check, field, help_id};
+use ferrohealth_ui::view::form::{
+    FORM, INPUT, SELECT, SWITCH, TEXTAREA, check, check_field, chip_choices, columns, field,
+    fieldset, help_id,
+};
+use ferrohealth_ui::view::layout::action_bar;
+use ferrohealth_ui::view::notice::{Announce, notice};
+use ferrohealth_ui::view::segmented::choice_reveal;
 use ferrohealth_ui::view::status::badge;
-use ferrohealth_ui::view::surface::{card, page_header, stack};
+use ferrohealth_ui::view::surface::{card, grid, page_header, stack};
 use ferrohealth_ui::widget::editor::{Editor, LineMark, MarkKind, code_editor, line_id};
 use ferrohealth_ui::widget::filter::{keeps, table_filter};
+use ferrohealth_ui::widget::upload::{Upload, upload_field};
 use leptos::prelude::*;
+
+/// A query form: the nodes as checkbox chips, an option as a switch, and the
+/// actions in the bar at the card's foot.
+fn federated() -> AnyView {
+    let nodes = ["node-a", "node-b", "node-c", "node-d"]
+        .into_iter()
+        .map(|node| (String::from(node), format!("synthetic-{node}")))
+        .collect();
+    let checked = [String::from("node-a"), String::from("node-c")];
+    let partial = view! {
+        <input
+            id="query-partial"
+            name="partial"
+            type="checkbox"
+            role="switch"
+            class=SWITCH
+            checked=true
+            aria-describedby=help_id("query-partial")
+        />
+    };
+    card(
+        "A federated query",
+        view! {
+            <form method="post" action="#" class=FORM>
+                {chip_choices("nodes", "Ask these nodes", nodes, &checked)}
+                {check_field(
+                    "query-partial",
+                    "Accept a partial answer",
+                    "When a node does not answer, the rows of the others still show.",
+                    partial,
+                )}
+                {action_bar(view! {
+                    <button type="button" class=Variant::Primary.class()>
+                        {label(Some(Glyph::PLAY), "Run the query")}
+                    </button>
+                    <button type="button" class=Variant::Secondary.class()>
+                        {label(Some(Glyph::X), "Clear")}
+                    </button>
+                })}
+            </form>
+        },
+    )
+    .into_any()
+}
 
 /// The id of the editor's text area.
 pub const DRAFT: &str = "gallery-draft";
@@ -56,6 +107,69 @@ fn fields() -> AnyView {
                 </button>
             </form>
         },
+    )
+    .into_any()
+}
+
+/// Related fields under a legend, in pairs, and a choice drawn as
+/// segments.
+fn grouped() -> AnyView {
+    let pair = columns(view! {
+        {field("member-name", "Member", None, view! { <input id="member-name" type="text" class=INPUT value="synthetic-node-a" /> })}
+        {field("member-base", "Base URL", None, view! { <input id="member-base" type="text" class=INPUT value="https://node-a.example.org/" /> })}
+    });
+    card(
+        "Grouped fields",
+        view! {
+            <form method="post" action="#" class=FORM>
+                {fieldset("A federation member", pair)}
+                {choice_reveal(
+                    "secret",
+                    "Its client secret",
+                    &[("keep", "Keep"), ("replace", "Replace"), ("remove", "Remove")],
+                    "keep",
+                    vec![
+                        ().into_any(),
+                        field(
+                            "member-secret",
+                            "The new secret",
+                            None,
+                            view! { <input id="member-secret" name="secret-value" type="password" class=INPUT autocomplete="new-password" /> },
+                        )
+                        .into_any(),
+                        notice(
+                            Tone::Warn,
+                            Announce::Status,
+                            None,
+                            "The member signs in with no secret once this is saved.",
+                        )
+                        .into_any(),
+                    ],
+                )}
+            </form>
+        },
+    )
+    .into_any()
+}
+
+/// The upload field: a file dropped or chosen, read into the text area.
+fn upload() -> AnyView {
+    let source = RwSignal::new(String::new());
+    card(
+        "Upload",
+        upload_field(
+            Upload {
+                id: "gallery-upload",
+                label: "Operational template",
+                choose: "Choose OPT file",
+                accept: &[".opt", ".xml"],
+                max_bytes: 2 * 1024 * 1024,
+                placeholder: "<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
+            },
+            source,
+            Signal::derive(|| false),
+            Signal::derive(|| None),
+        ),
     )
     .into_any()
 }
@@ -115,9 +229,12 @@ fn editor() -> AnyView {
     .map(|(line, tone, word, text)| {
         view! {
             <li>
-                {badge(tone, word)} " "
-                <a href=format!("#{}", line_id(DRAFT, line))>{format!("line {line}")}</a>
-                ": " {text}
+                {badge(tone, word)}
+                <span class="fui-issue-head">
+                    <a href=format!("#{}", line_id(DRAFT, line))>{format!("line {line}")}</a>
+                    ":"
+                </span>
+                <span class="fui-issue-text">{text}</span>
             </li>
         }
     })
@@ -188,12 +305,17 @@ pub fn FormsPage() -> impl IntoView {
     let header = page_header(
         "Forms and editor",
         Some(String::from(
-            "Fields, the checkbox row, the highlighted editor and the filter.",
+            "Fields, grouped fields, the upload field, the highlighted editor and the filter.",
         )),
         (),
     )
     .into_any();
-    let sections = (fields(), editor(), filter());
+    let pair = grid(view! {
+        {fields()}
+        {grouped()}
+    })
+    .into_any();
+    let sections = (pair, federated(), upload(), editor(), filter());
     view! {
         {super::title("Forms and editor")}
         {header}
@@ -201,6 +323,8 @@ pub fn FormsPage() -> impl IntoView {
             {sections.0}
             {sections.1}
             {sections.2}
+            {sections.3}
+            {sections.4}
         })}
     }
 }
