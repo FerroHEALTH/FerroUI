@@ -1,0 +1,48 @@
+/* SPDX-FileCopyrightText: Cadasto B.V. */
+/* SPDX-License-Identifier: BUSL-1.1 */
+/* The FerroUI roles as Tailwind 4 theme variables, for a console whose own
+   views paint with Tailwind utilities: import this into the console's
+   Tailwind entry after `@import "tailwindcss"`, and `bg-surface-raised`,
+   `text-muted`, `border-edge` and the rest name the same roles the
+   components paint with. Nothing here sets a value; ferrohealth-ui.css and the
+   brand theme do. https://tailwindcss.com/docs/theme */
+@theme inline {
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-head: var(--surface-head);
+  --color-edge: var(--edge);
+  --color-edge-strong: var(--edge-strong);
+  --color-edge-control: var(--edge-control);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-tint: var(--accent-tint);
+  --color-focus: var(--focus);
+  --color-ok: var(--ok);
+  --color-ok-ground: var(--ok-ground);
+  --color-warn: var(--warn);
+  --color-warn-ground: var(--warn-ground);
+  --color-bad: var(--bad);
+  --color-bad-ground: var(--bad-ground);
+  --color-info: var(--info);
+  --color-info-ground: var(--info-ground);
+  --color-neutral: var(--neutral);
+  --color-neutral-ground: var(--neutral-ground);
+  --color-scrim: var(--scrim);
+  --text-display: var(--text-display);
+  --text-title: var(--text-title);
+  --text-heading: var(--text-heading);
+  --text-body: var(--text-body);
+  --text-small: var(--text-small);
+  --text-micro: var(--text-micro);
+  --spacing-tight: var(--space-tight);
+  --spacing-default: var(--space-default);
+  --spacing-loose: var(--space-loose);
+  --spacing-section: var(--space-section);
+  --radius-card: var(--radius-card);
+  --radius-control: var(--radius-control);
+  --shadow-card: var(--shadow-card);
+}

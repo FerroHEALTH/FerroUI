@@ -1,0 +1,1557 @@
+/* SPDX-FileCopyrightText: Cadasto B.V. */
+/* SPDX-License-Identifier: BUSL-1.1 */
+/* FerroUI: the role tokens and the component classes of the FerroHEALTH
+   consoles. Plain CSS with cascade layers, so a console loads it as it
+   stands, beside its own Tailwind build or imported into it, and needs no
+   scan of this crate: every class a FerroUI component writes is defined
+   here, prefixed `fui-`. A console sets its brand in a theme file of its own
+   (themes/*.css), a handful of custom properties per theme.
+
+   The layer order is Tailwind 4's, declared first, so whichever stylesheet
+   loads first the order is the same and a console's utilities still win.
+   https://developer.mozilla.org/en-US/docs/Web/CSS/@layer */
+@layer theme, base, components, utilities;
+
+/* The role layer. A component names a role and never a palette entry, so the
+   palette is measured once and a theme is one block. The neutrals are
+   Tailwind's slate, the status families emerald, amber, red and blue.
+   tests/it/contrast.rs holds every pairing to WCAG 2.2 AA in every theme of
+   every brand (https://www.w3.org/TR/WCAG22/#contrast-minimum). */
+@layer theme {
+  :root {
+    color-scheme: light;
+    /* The top bar's height from the first breakpoint up, where it is one row
+       and stays in view; the scroll padding keeps a focused control out from
+       under it (WCAG 2.2 SC 2.4.11). */
+    --bar: 3.5rem;
+    --surface: #f8fafc;
+    --surface-raised: #ffffff;
+    --surface-sunken: #f1f5f9;
+    --surface-head: #f8fafc;
+    --edge: #e2e8f0;
+    --edge-strong: #cbd5e1;
+    /* The edge of a control, held to 3:1 against its ground
+       (https://www.w3.org/TR/WCAG22/#non-text-contrast). */
+    --edge-control: #64748b;
+    --ink: #0f172a;
+    --muted: #526073;
+    /* The accent a brand overrides; the default is the FerroHEALTH steel. */
+    --accent: #3f6070;
+    --accent-hover: #2f4a57;
+    --accent-ink: #ffffff;
+    --accent-tint: rgb(63 96 112 / 0.1);
+    --focus: #3f6070;
+    --ok: #047857;
+    --ok-ground: #ecfdf5;
+    --ok-dot: #10b981;
+    --warn: #b45309;
+    --warn-ground: #fffbeb;
+    --warn-dot: #f59e0b;
+    --bad: #b91c1c;
+    --bad-ground: #fef2f2;
+    --bad-dot: #ef4444;
+    --info: #1d4ed8;
+    --info-ground: #eff6ff;
+    --info-dot: #3b82f6;
+    --neutral: #334155;
+    --neutral-ground: #f1f5f9;
+    --neutral-dot: #94a3b8;
+    --scrim: rgb(2 6 23 / 0.4);
+    --syntax-key: #1d4ed8;
+    --syntax-string: #065f46;
+    --syntax-number: #9a3412;
+    --syntax-keyword: #6d28d9;
+    --syntax-comment: #475569;
+    --syntax-tag: #9f1239;
+    --syntax-attribute: #92400e;
+    --syntax-path: #155e75;
+    --syntax-parameter: #a21caf;
+    --shadow-card: 0 1px 2px 0 rgb(15 23 42 / 0.06), 0 1px 3px 0 rgb(15 23 42 / 0.04);
+    --radius-card: 0.5rem;
+    --radius-control: 0.375rem;
+    /* The six steps of type and the four of space (FerroTERM's scale); a
+       component names a step, never a size. */
+    --text-display: 1.75rem;
+    --text-title: 1.25rem;
+    --text-heading: 1rem;
+    --text-body: 0.875rem;
+    --text-small: 0.8125rem;
+    --text-micro: 0.6875rem;
+    --leading-body: 1.25rem;
+    --leading-code: 1.375rem;
+    --space-tight: 0.25rem;
+    --space-default: 0.5rem;
+    --space-loose: 1rem;
+    --space-section: 2rem;
+    --row-y: 0.5rem;
+    --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    --motion-state: 120ms;
+  }
+
+  /* The compact density: the same steps, tighter, chosen by `data-density`
+     on <html>. */
+  :root[data-density="compact"] {
+    --space-tight: 0.125rem;
+    --space-default: 0.375rem;
+    --space-loose: 0.75rem;
+    --space-section: 1.5rem;
+    --row-y: 0.25rem;
+  }
+
+  /* The dark block, written twice: once for an operator who chose dark, and
+     once for one who follows a system that asks for it. */
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface: #0b1020;
+    --surface-raised: #0f172a;
+    --surface-sunken: #1e293b;
+    --surface-head: #131c31;
+    --edge: #1e293b;
+    --edge-strong: #334155;
+    --edge-control: #748297;
+    --ink: #f1f5f9;
+    --muted: #94a3b8;
+    --accent: #93b4c4;
+    --accent-hover: #b8cfda;
+    --accent-ink: #0f172a;
+    --accent-tint: rgb(147 180 196 / 0.12);
+    --focus: #93b4c4;
+    --ok: #6ee7b7;
+    --ok-ground: rgb(16 185 129 / 0.12);
+    --ok-dot: #34d399;
+    --warn: #fcd34d;
+    --warn-ground: rgb(245 158 11 / 0.12);
+    --warn-dot: #fbbf24;
+    --bad: #fca5a5;
+    --bad-ground: rgb(239 68 68 / 0.12);
+    --bad-dot: #f87171;
+    --info: #93c5fd;
+    --info-ground: rgb(59 130 246 / 0.14);
+    --info-dot: #60a5fa;
+    --neutral: #cbd5e1;
+    --neutral-ground: #1e293b;
+    --neutral-dot: #94a3b8;
+    --scrim: rgb(2 6 23 / 0.7);
+    --syntax-key: #93c5fd;
+    --syntax-string: #6ee7b7;
+    --syntax-number: #fdba74;
+    --syntax-keyword: #c4b5fd;
+    --syntax-comment: #94a3b8;
+    --syntax-tag: #fda4af;
+    --syntax-attribute: #fcd34d;
+    --syntax-path: #67e8f9;
+    --syntax-parameter: #f0abfc;
+    --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"], [data-theme="dark"]) {
+      color-scheme: dark;
+      --surface: #0b1020;
+      --surface-raised: #0f172a;
+      --surface-sunken: #1e293b;
+      --surface-head: #131c31;
+      --edge: #1e293b;
+      --edge-strong: #334155;
+      --edge-control: #748297;
+      --ink: #f1f5f9;
+      --muted: #94a3b8;
+      --accent: #93b4c4;
+      --accent-hover: #b8cfda;
+      --accent-ink: #0f172a;
+      --accent-tint: rgb(147 180 196 / 0.12);
+      --focus: #93b4c4;
+      --ok: #6ee7b7;
+      --ok-ground: rgb(16 185 129 / 0.12);
+      --ok-dot: #34d399;
+      --warn: #fcd34d;
+      --warn-ground: rgb(245 158 11 / 0.12);
+      --warn-dot: #fbbf24;
+      --bad: #fca5a5;
+      --bad-ground: rgb(239 68 68 / 0.12);
+      --bad-dot: #f87171;
+      --info: #93c5fd;
+      --info-ground: rgb(59 130 246 / 0.14);
+      --info-dot: #60a5fa;
+      --neutral: #cbd5e1;
+      --neutral-ground: #1e293b;
+      --neutral-dot: #94a3b8;
+      --scrim: rgb(2 6 23 / 0.7);
+      --syntax-key: #93c5fd;
+      --syntax-string: #6ee7b7;
+      --syntax-number: #fdba74;
+      --syntax-keyword: #c4b5fd;
+      --syntax-comment: #94a3b8;
+      --syntax-tag: #fda4af;
+      --syntax-attribute: #fcd34d;
+      --syntax-path: #67e8f9;
+      --syntax-parameter: #f0abfc;
+      --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+    }
+  }
+}
+
+/* The elements every console draws, and what server-rendered HTML relies on
+   as it stands. */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    background: var(--surface);
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  /* From the first breakpoint up the top bar stays in view, so a control the
+     keyboard moves to is scrolled clear of it (WCAG 2.2 SC 2.4.11). */
+  @media (width >= 48rem) {
+    html {
+      scroll-padding-top: calc(var(--bar) + var(--space-default));
+    }
+  }
+
+  body {
+    margin: 0;
+    background: var(--surface);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  h1 {
+    font-size: var(--text-display);
+    line-height: 2.25rem;
+  }
+
+  h2 {
+    font-size: var(--text-heading);
+    line-height: 1.5rem;
+  }
+
+  h3,
+  h4 {
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+  }
+
+  p {
+    margin: 0;
+  }
+
+  a {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  a:hover {
+    color: var(--accent-hover);
+  }
+
+  code,
+  kbd,
+  pre,
+  samp {
+    font-family: var(--font-mono);
+    font-size: var(--text-small);
+  }
+
+  code {
+    overflow-wrap: anywhere;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  /* A visible focus indicator on every control, at 3:1 or more against each
+     ground (https://www.w3.org/TR/WCAG22/#non-text-contrast). */
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  [hidden] {
+    display: none !important;
+  }
+
+  /* State changes only, and none for a reader who asks for less
+     (https://www.w3.org/TR/WCAG22/#animation-from-interactions). */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* Text that a screen reader reads and the page does not show. */
+  .fui-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .fui-muted {
+    color: var(--muted);
+  }
+
+  .fui-mono {
+    font-family: var(--font-mono);
+    font-size: var(--text-small);
+  }
+
+  .fui-num {
+    font-variant-numeric: tabular-nums;
+    text-align: end;
+  }
+
+  .fui-icon {
+    display: inline-block;
+    flex-shrink: 0;
+    vertical-align: -0.125em;
+  }
+
+  /* ---- The shell ---- */
+
+  .fui-page {
+    display: flex;
+    min-height: 100vh;
+    flex-direction: column;
+    background: var(--surface);
+    color: var(--ink);
+  }
+
+  .fui-skip {
+    position: absolute;
+    top: var(--space-default);
+    left: var(--space-default);
+    z-index: 60;
+    transform: translateY(-200%);
+    border-radius: var(--radius-control);
+    background: var(--surface-raised);
+    padding: var(--space-default) var(--space-loose);
+    color: var(--accent);
+  }
+
+  .fui-skip:focus {
+    transform: none;
+  }
+
+  .fui-topbar {
+    border-bottom: 1px solid var(--edge);
+    background: var(--surface-raised);
+  }
+
+  @media (width >= 48rem) {
+    .fui-topbar {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+    }
+  }
+
+  .fui-topbar-row {
+    display: flex;
+    min-height: 3.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-default) 0.75rem;
+    padding: var(--space-default) var(--space-loose);
+  }
+
+  @media (width >= 48rem) {
+    .fui-topbar-row {
+      height: calc(var(--bar) - 1px);
+      flex-wrap: nowrap;
+      padding-inline: 1.5rem;
+    }
+  }
+
+  .fui-topbar-end {
+    display: flex;
+    margin-inline-start: auto;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-default);
+  }
+
+  .fui-lockup {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-default);
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  .fui-lockup:hover {
+    color: var(--ink);
+  }
+
+  .fui-lockup-name {
+    font-size: var(--text-heading);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .fui-lockup-accent {
+    color: var(--accent);
+  }
+
+  .fui-mark {
+    display: inline-flex;
+    width: 1.75rem;
+    height: 1.75rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-control);
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  .fui-body {
+    display: flex;
+    flex: 1;
+  }
+
+  .fui-main {
+    min-width: 0;
+    flex: 1;
+    padding: 1.5rem var(--space-loose);
+  }
+
+  @media (width >= 48rem) {
+    .fui-main {
+      padding-inline: var(--space-section);
+    }
+  }
+
+  .fui-column {
+    max-width: 80rem;
+    margin-inline: auto;
+  }
+
+  .fui-stack {
+    display: grid;
+    gap: var(--space-loose);
+  }
+
+  .fui-grid {
+    display: grid;
+    gap: var(--space-loose);
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
+  }
+
+  .fui-footer {
+    border-top: 1px solid var(--edge);
+    background: var(--surface-raised);
+    padding: 0.75rem var(--space-loose);
+    color: var(--muted);
+    font-size: var(--text-micro);
+  }
+
+  .fui-centred {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem var(--space-loose);
+    text-align: center;
+  }
+
+  /* The navigation: a drawer the browser opens as a popover below the first
+     breakpoint, and the column beside the page from it. */
+  .fui-sidebar {
+    flex-shrink: 0;
+    background: var(--surface-raised);
+    padding: 0.75rem;
+    color: var(--ink);
+  }
+
+  .fui-sidebar:popover-open {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: min(18rem, 85vw);
+    height: 100dvh;
+    max-height: none;
+    margin: 0;
+    border: 0;
+    border-right: 1px solid var(--edge);
+    overflow-y: auto;
+  }
+
+  .fui-sidebar::backdrop {
+    background: var(--scrim);
+  }
+
+  @media (width >= 48rem) {
+    .fui-sidebar {
+      display: block;
+      position: sticky;
+      inset: var(--bar) auto auto auto;
+      align-self: stretch;
+      width: 15rem;
+      height: auto;
+      max-height: calc(100dvh - var(--bar));
+      margin: 0;
+      overflow-y: auto;
+      border: 0;
+      border-right: 1px solid var(--edge);
+    }
+  }
+
+  .fui-nav-group {
+    margin: 0;
+    padding: var(--space-loose) 0.75rem var(--space-tight);
+    color: var(--muted);
+    font-size: var(--text-micro);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .fui-nav-group:first-of-type {
+    padding-top: var(--space-tight);
+  }
+
+  .fui-nav-list {
+    display: flex;
+    margin: 0;
+    padding: 0;
+    flex-direction: column;
+    gap: 0.125rem;
+    list-style: none;
+  }
+
+  /* A navigation entry: while it is the page, tinted with the accent, set in
+     bold and marked by a bar at its start, so colour is never the only mark. */
+  .fui-nav-entry {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-radius: var(--radius-control);
+    padding: var(--space-default) 0.75rem;
+    color: var(--muted);
+    font-weight: 500;
+    text-decoration: none;
+    transition: color var(--motion-state) ease-out, background-color var(--motion-state) ease-out;
+  }
+
+  .fui-nav-entry:hover {
+    background: var(--surface-sunken);
+    color: var(--ink);
+  }
+
+  .fui-nav-entry[aria-current="page"] {
+    background: var(--accent-tint);
+    box-shadow: inset 3px 0 0 var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* ---- Buttons ---- */
+
+  .fui-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-default);
+    border: 1px solid transparent;
+    border-radius: var(--radius-control);
+    padding: var(--space-default) 0.875rem;
+    font-size: var(--text-body);
+    font-weight: 500;
+    line-height: var(--leading-body);
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color var(--motion-state) ease-out, background-color var(--motion-state) ease-out,
+      border-color var(--motion-state) ease-out;
+  }
+
+  .fui-button-primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  .fui-button-primary:hover {
+    background: var(--accent-hover);
+    color: var(--accent-ink);
+  }
+
+  .fui-button-secondary {
+    border-color: var(--edge-strong);
+    background: var(--surface-raised);
+    color: var(--ink);
+  }
+
+  .fui-button-secondary:hover {
+    background: var(--surface-sunken);
+    color: var(--ink);
+  }
+
+  .fui-button-danger {
+    border-color: var(--bad);
+    background: var(--surface-raised);
+    color: var(--bad);
+  }
+
+  .fui-button-danger:hover {
+    background: var(--bad-ground);
+    color: var(--bad);
+  }
+
+  .fui-button-ghost {
+    background: transparent;
+    color: var(--muted);
+  }
+
+  .fui-button-ghost:hover {
+    background: var(--surface-sunken);
+    color: var(--ink);
+  }
+
+  .fui-button:disabled,
+  .fui-button[aria-disabled="true"] {
+    border-color: var(--edge-strong);
+    background: var(--surface-sunken);
+    color: var(--muted);
+    cursor: not-allowed;
+  }
+
+  .fui-button-small {
+    padding: var(--space-tight) 0.625rem;
+    font-size: var(--text-small);
+  }
+
+  /* The segmented control the theme switch is: the pressed segment raised,
+     edged at 3:1, and checked, so colour is never the only mark. */
+  .fui-segmented {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.125rem;
+    border: 1px solid var(--edge);
+    border-radius: var(--radius-control);
+    background: var(--surface);
+    padding: 0.125rem;
+  }
+
+  .fui-segment {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    border: 1px solid transparent;
+    border-radius: 0.25rem;
+    background: transparent;
+    padding: var(--space-tight) var(--space-default);
+    color: var(--muted);
+    font-size: var(--text-micro);
+    font-weight: 500;
+  }
+
+  .fui-segment:hover {
+    background: var(--surface-sunken);
+    color: var(--ink);
+  }
+
+  .fui-segment[aria-pressed="true"],
+  .fui-segment[aria-current="true"] {
+    border-color: var(--edge-control);
+    background: var(--surface-raised);
+    box-shadow: var(--shadow-card);
+    color: var(--ink);
+  }
+
+  /* ---- Status ---- */
+
+  .fui-tone-ok {
+    --tone: var(--ok);
+    --tone-ground: var(--ok-ground);
+    --tone-dot: var(--ok-dot);
+  }
+
+  .fui-tone-warn {
+    --tone: var(--warn);
+    --tone-ground: var(--warn-ground);
+    --tone-dot: var(--warn-dot);
+  }
+
+  .fui-tone-bad {
+    --tone: var(--bad);
+    --tone-ground: var(--bad-ground);
+    --tone-dot: var(--bad-dot);
+  }
+
+  .fui-tone-info {
+    --tone: var(--info);
+    --tone-ground: var(--info-ground);
+    --tone-dot: var(--info-dot);
+  }
+
+  .fui-tone-neutral {
+    --tone: var(--neutral);
+    --tone-ground: var(--neutral-ground);
+    --tone-dot: var(--neutral-dot);
+  }
+
+  .fui-tone-accent {
+    --tone: var(--accent);
+    --tone-ground: var(--accent-tint);
+    --tone-dot: var(--accent);
+  }
+
+  /* A status pill: a dot and a word on the tone's ground. */
+  .fui-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    border: 1px solid color-mix(in srgb, var(--tone) 25%, transparent);
+    border-radius: 9999px;
+    background: var(--tone-ground);
+    padding: 0.125rem 0.625rem;
+    color: var(--tone);
+    font-size: var(--text-micro);
+    font-weight: 500;
+    line-height: 1.125rem;
+    white-space: nowrap;
+  }
+
+  .fui-pill::before {
+    content: "";
+    width: 0.4375rem;
+    height: 0.4375rem;
+    flex-shrink: 0;
+    border-radius: 9999px;
+    background: var(--tone-dot);
+  }
+
+  /* A badge: a word on the tone's ground, with no dot. */
+  .fui-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-tight);
+    border-radius: var(--radius-control);
+    background: var(--tone-ground);
+    padding: 0 0.375rem;
+    color: var(--tone);
+    font-size: var(--text-micro);
+    font-weight: 500;
+    line-height: var(--leading-body);
+    white-space: nowrap;
+  }
+
+  /* A status indicator: an icon and a word, with an optional detail. */
+  .fui-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    border-radius: var(--radius-control);
+    background: var(--tone-ground);
+    padding: var(--space-tight) var(--space-default);
+    color: var(--tone);
+    font-size: var(--text-small);
+    font-weight: 500;
+  }
+
+  .fui-status-detail {
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  /* A banner across the page: the sandbox or development notice. */
+  .fui-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-default);
+    border-bottom: 1px solid color-mix(in srgb, var(--tone) 30%, transparent);
+    background: var(--tone-ground);
+    padding: var(--space-default) var(--space-loose);
+    color: var(--tone);
+    font-size: var(--text-small);
+  }
+
+  /* ---- Surfaces ---- */
+
+  .fui-page-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-loose);
+    margin-block-end: 1.5rem;
+  }
+
+  .fui-page-subtitle {
+    margin-block-start: var(--space-tight);
+    color: var(--muted);
+  }
+
+  .fui-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-default);
+  }
+
+  .fui-card {
+    min-width: 0;
+    border: 1px solid var(--edge);
+    border-radius: var(--radius-card);
+    background: var(--surface-raised);
+    box-shadow: var(--shadow-card);
+    padding: var(--space-loose) 1.25rem;
+  }
+
+  .fui-card > * + * {
+    margin-block-start: 0.75rem;
+  }
+
+  .fui-card-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-default);
+  }
+
+  .fui-stat {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  a.fui-stat:hover .fui-stat-value {
+    color: var(--accent);
+  }
+
+  .fui-stat-glyph {
+    display: inline-flex;
+    width: 2.5rem;
+    height: 2.5rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-control);
+    background: var(--accent-tint);
+    color: var(--accent);
+  }
+
+  .fui-stat-value {
+    font-size: var(--text-title);
+    font-weight: 600;
+    line-height: 1.75rem;
+  }
+
+  .fui-stat-label {
+    color: var(--muted);
+    font-size: var(--text-small);
+  }
+
+  /* A definition grid: each label beside its value from 40 rem up, so a card
+     of facts reads in half the height of one label above each value. */
+  .fui-facts {
+    display: grid;
+    margin: 0;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-tight) 1.5rem;
+  }
+
+  .fui-facts > dt {
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  .fui-facts > dd {
+    min-width: 0;
+    margin: 0 0 0.375rem;
+  }
+
+  @media (width >= 40rem) {
+    .fui-facts {
+      grid-template-columns: max-content minmax(0, 1fr);
+    }
+
+    .fui-facts > dd {
+      margin: 0;
+    }
+  }
+
+  .fui-disclosure > summary {
+    cursor: pointer;
+    font-weight: 500;
+  }
+
+  .fui-disclosure > summary + * {
+    margin-block-start: var(--space-default);
+  }
+
+  /* ---- Tables ---- */
+
+  /* A wide table scrolls sideways inside its card, never the page (WCAG 2.2
+     SC 1.4.10). It is never bounded in height: every row of the page shows,
+     so the pager's range label names the rows a reader sees. */
+  .fui-table-scroll {
+    max-width: 100%;
+    overflow-x: auto;
+    border: 1px solid var(--edge);
+    border-radius: var(--radius-card);
+    background: var(--surface-raised);
+  }
+
+  .fui-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .fui-table caption {
+    padding: var(--space-default) 0.75rem;
+    color: var(--muted);
+    font-size: var(--text-small);
+    text-align: start;
+  }
+
+  .fui-table :is(th, td) {
+    border-bottom: 1px solid var(--edge);
+    padding: var(--row-y) 0.75rem;
+    text-align: start;
+    vertical-align: top;
+  }
+
+  .fui-table thead th {
+    background: var(--surface-head);
+    color: var(--muted);
+    font-size: var(--text-micro);
+    font-weight: 600;
+    letter-spacing: 0.025em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .fui-table tbody tr:last-child > * {
+    border-bottom: 0;
+  }
+
+  .fui-table tbody tr:hover > * {
+    background: color-mix(in srgb, var(--surface-sunken) 60%, transparent);
+  }
+
+  .fui-table .fui-num {
+    text-align: end;
+  }
+
+  .fui-table th.fui-num {
+    text-align: end;
+  }
+
+  .fui-sort {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-tight);
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .fui-sort:hover {
+    color: var(--ink);
+  }
+
+  .fui-table-actions {
+    width: 1%;
+    text-align: end;
+    white-space: nowrap;
+  }
+
+  .fui-table-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-default) var(--space-loose);
+  }
+
+  .fui-table-tools > .fui-field {
+    flex: 1 1 16rem;
+    max-width: 28rem;
+  }
+
+  .fui-pager {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-default) var(--space-loose);
+    font-size: var(--text-small);
+  }
+
+  .fui-pager-steps,
+  .fui-pager-sizes {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-tight);
+  }
+
+  .fui-pager-position {
+    padding-inline: var(--space-default);
+    color: var(--muted);
+  }
+
+  /* A skeleton bar standing in for content that is loading. */
+  .fui-skeleton {
+    display: block;
+    height: 0.875rem;
+    border-radius: var(--radius-control);
+    background: linear-gradient(90deg, var(--surface-sunken), var(--edge), var(--surface-sunken));
+    background-size: 200% 100%;
+    animation: fui-shimmer 1.4s ease-in-out infinite;
+  }
+
+  .fui-skeleton + .fui-skeleton {
+    margin-block-start: var(--space-default);
+  }
+
+  @keyframes fui-shimmer {
+    from {
+      background-position: 100% 0;
+    }
+
+    to {
+      background-position: -100% 0;
+    }
+  }
+
+  /* ---- Forms ---- */
+
+  .fui-form {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  /* A form's button keeps its own width at the start of the column. */
+  .fui-form > .fui-button {
+    justify-self: start;
+  }
+
+  .fui-field {
+    display: grid;
+    gap: var(--space-tight);
+  }
+
+  .fui-label {
+    font-weight: 500;
+  }
+
+  .fui-help {
+    color: var(--muted);
+    font-size: var(--text-small);
+  }
+
+  .fui-input,
+  .fui-select,
+  .fui-textarea {
+    width: 100%;
+    border: 1px solid var(--edge-control);
+    border-radius: var(--radius-control);
+    background: var(--surface-raised);
+    padding: 0.375rem 0.625rem;
+    color: var(--ink);
+  }
+
+  .fui-textarea {
+    font-family: var(--font-mono);
+    font-size: var(--text-small);
+    line-height: var(--leading-code);
+    tab-size: 2;
+  }
+
+  .fui-input::placeholder,
+  .fui-textarea::placeholder {
+    color: var(--muted);
+    opacity: 1;
+  }
+
+  /* A checkbox and its label on one row, the box clear of the words. */
+  .fui-check {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+  }
+
+  .fui-check > input {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+    margin: 0.1875rem 0 0;
+    accent-color: var(--accent);
+  }
+
+  /* ---- Tabs ---- */
+
+  .fui-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-tight);
+    border-bottom: 1px solid var(--edge);
+  }
+
+  .fui-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-block-end: -1px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    padding: var(--space-default) 0.75rem;
+    color: var(--muted);
+    font-weight: 500;
+    text-decoration: none;
+  }
+
+  .fui-tab:hover {
+    color: var(--ink);
+  }
+
+  .fui-tab[aria-current="page"],
+  .fui-tab[aria-selected="true"] {
+    border-bottom-color: var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .fui-tab-panel {
+    padding-block-start: var(--space-loose);
+  }
+
+  /* ---- Popovers: the menu and the dialog ---- */
+
+  .fui-menu {
+    min-width: 13rem;
+    max-width: calc(100vw - 2rem);
+    margin: 0;
+    border: 1px solid var(--edge);
+    border-radius: var(--radius-card);
+    background: var(--surface-raised);
+    box-shadow: var(--shadow-card);
+    padding: 0.75rem;
+    color: var(--ink);
+  }
+
+  .fui-menu:popover-open {
+    position: fixed;
+    inset: 6.5rem var(--space-loose) auto auto;
+  }
+
+  @media (width >= 48rem) {
+    .fui-menu:popover-open {
+      inset-block-start: calc(var(--bar) + var(--space-tight));
+    }
+  }
+
+  .fui-menu-title {
+    font-weight: 600;
+  }
+
+  .fui-sign-out {
+    width: 100%;
+  }
+
+  /* The sign-in card, after FerroEHR's: a compact column, the lockup centred
+     at its top, every method and notice at its full width. */
+  .fui-sign-in {
+    display: flex;
+    width: min(24rem, 100%);
+    flex-direction: column;
+    gap: var(--space-loose);
+    text-align: start;
+  }
+
+  .fui-sign-in > * + * {
+    margin-block-start: 0;
+  }
+
+  .fui-sign-in-lockup {
+    display: flex;
+    justify-content: center;
+  }
+
+  .fui-sign-in .fui-button {
+    width: 100%;
+  }
+
+  .fui-sign-in-notice {
+    border: 1px solid color-mix(in srgb, var(--tone) 40%, transparent);
+    border-radius: var(--radius-control);
+    background: var(--tone-ground);
+    padding: var(--space-default) 0.75rem;
+    color: var(--ink);
+    font-size: var(--text-small);
+    white-space: pre-line;
+  }
+
+  /* The "or" between two methods, a hairline either side. */
+  .fui-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--muted);
+    font-size: var(--text-micro);
+  }
+
+  .fui-divider::before,
+  .fui-divider::after {
+    content: "";
+    height: 1px;
+    flex: 1;
+    background: var(--edge);
+  }
+
+  .fui-sign-in-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-tight) var(--space-loose);
+    font-size: var(--text-micro);
+  }
+
+  .fui-menu > * + * {
+    margin-block-start: 0.75rem;
+  }
+
+  .fui-dialog {
+    width: min(28rem, calc(100vw - 2rem));
+    margin: auto;
+    border: 1px solid var(--edge);
+    border-radius: var(--radius-card);
+    background: var(--surface-raised);
+    box-shadow: var(--shadow-card);
+    padding: 1.25rem;
+    color: var(--ink);
+  }
+
+  .fui-dialog::backdrop {
+    background: var(--scrim);
+  }
+
+  .fui-dialog > * + * {
+    margin-block-start: 0.75rem;
+  }
+
+  .fui-dialog-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--space-default);
+  }
+
+  /* ---- Toasts ---- */
+
+  .fui-toasts {
+    position: fixed;
+    inset: auto var(--space-loose) var(--space-loose) auto;
+    z-index: 50;
+    display: grid;
+    width: min(24rem, calc(100vw - 2rem));
+    gap: var(--space-default);
+  }
+
+  .fui-toast {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-default);
+    border: 1px solid color-mix(in srgb, var(--tone) 30%, transparent);
+    border-radius: var(--radius-card);
+    background: var(--surface-raised);
+    box-shadow: var(--shadow-card);
+    padding: 0.75rem var(--space-loose);
+    color: var(--ink);
+  }
+
+  .fui-toast > .fui-icon {
+    color: var(--tone);
+  }
+
+  .fui-toast-text {
+    flex: 1;
+  }
+
+  /* ---- Empty states and refusals ---- */
+
+  .fui-empty {
+    display: grid;
+    justify-items: center;
+    gap: var(--space-default);
+    padding: var(--space-section) var(--space-loose);
+    text-align: center;
+  }
+
+  .fui-empty-glyph {
+    display: inline-flex;
+    width: 2.75rem;
+    height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    background: var(--accent-tint);
+    color: var(--accent);
+  }
+
+  .fui-empty-body {
+    max-width: 32rem;
+    color: var(--muted);
+  }
+
+  /* A refusal or a fault the page reports: a status and words in a box, the
+     upstream's issues listed with their text. */
+  .fui-alert {
+    border: 1px solid currentColor;
+    border-radius: var(--radius-card);
+    background: var(--bad-ground);
+    padding: 0.625rem var(--space-loose);
+    color: var(--bad);
+  }
+
+  .fui-alert > * + * {
+    margin-block-start: var(--space-default);
+  }
+
+  .fui-alert-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-default);
+    font-weight: 600;
+  }
+
+  .fui-issues {
+    margin: 0;
+    padding-inline-start: 1.25rem;
+    color: var(--ink);
+  }
+
+  .fui-issues > li + li {
+    margin-block-start: var(--space-tight);
+  }
+
+  /* ---- Code ---- */
+
+  /* A bounded code panel: highlighted text in a box that scrolls in both
+     directions, never at the page's full height. */
+  .fui-code-panel {
+    max-height: min(60vh, 28rem);
+    overflow: auto;
+    border: 1px solid var(--edge);
+    border-radius: var(--radius-card);
+    background: var(--surface-sunken);
+  }
+
+  .fui-code-panel > pre {
+    margin: 0;
+    padding: var(--space-default) 0.75rem;
+    color: var(--ink);
+    line-height: var(--leading-code);
+    tab-size: 2;
+  }
+
+  .fui-code-panel-numbered > pre {
+    counter-reset: fui-line;
+    padding-inline-start: 3.75rem;
+  }
+
+  .fui-code-line {
+    display: block;
+    min-height: var(--leading-code);
+  }
+
+  .fui-code-panel-numbered .fui-code-line,
+  .fui-editor-layer .fui-code-line {
+    position: relative;
+    counter-increment: fui-line;
+    scroll-margin-block: var(--space-section);
+  }
+
+  .fui-code-panel-numbered .fui-code-line::before,
+  .fui-editor-layer .fui-code-line::before {
+    content: counter(fui-line);
+    position: absolute;
+    inset-inline-start: -3.5rem;
+    width: 2.75rem;
+    color: var(--muted);
+    text-align: end;
+  }
+
+  .fui-code-line:target {
+    background: var(--accent-tint);
+    box-shadow: -3.75rem 0 0 var(--accent-tint), inset 3px 0 0 var(--accent);
+  }
+
+  /* A line a diagnostic names: its number in the tone's colour and bold,
+     and the line on the tone's ground; the diagnostic's words say why. */
+  .fui-code-line.fui-mark-error {
+    background: var(--bad-ground);
+  }
+
+  .fui-code-line.fui-mark-warning {
+    background: var(--warn-ground);
+  }
+
+  .fui-code-line.fui-mark-error::before {
+    color: var(--bad);
+    font-weight: 700;
+  }
+
+  .fui-code-line.fui-mark-warning::before {
+    color: var(--warn);
+    font-weight: 700;
+  }
+
+  .fui-tok-key {
+    color: var(--syntax-key);
+  }
+
+  .fui-tok-string {
+    color: var(--syntax-string);
+  }
+
+  .fui-tok-number {
+    color: var(--syntax-number);
+  }
+
+  .fui-tok-keyword {
+    color: var(--syntax-keyword);
+  }
+
+  .fui-tok-comment {
+    color: var(--syntax-comment);
+  }
+
+  .fui-tok-tag {
+    color: var(--syntax-tag);
+  }
+
+  .fui-tok-attribute {
+    color: var(--syntax-attribute);
+  }
+
+  .fui-tok-path {
+    color: var(--syntax-path);
+  }
+
+  .fui-tok-parameter {
+    color: var(--syntax-parameter);
+  }
+
+  /* The highlighted editor: a transparent text area over the highlighted
+     layer, in one grid cell of one scrolling box. Both draw the text with the
+     same face, size, padding and wrapping, so every character of the layer
+     sits under the one typed; the token classes change colour alone, never
+     the width of a glyph. */
+  .fui-editor {
+    max-height: min(70vh, 40rem);
+    overflow: auto;
+    border: 1px solid var(--edge-control);
+    border-radius: var(--radius-control);
+    background: var(--surface-sunken);
+  }
+
+  .fui-editor:focus-within {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .fui-editor-stack {
+    display: grid;
+    min-height: 16rem;
+  }
+
+  .fui-editor-stack > .fui-editor-layer,
+  .fui-editor-stack > .fui-editor-input {
+    grid-area: 1 / 1;
+    margin: 0;
+    border: 0;
+    padding: var(--space-default) 0.75rem var(--space-default) 3.75rem;
+    font-family: var(--font-mono);
+    font-size: var(--text-small);
+    font-style: normal;
+    font-weight: 400;
+    letter-spacing: normal;
+    line-height: var(--leading-code);
+    tab-size: 2;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+
+  .fui-editor-layer {
+    counter-reset: fui-line;
+    color: var(--ink);
+  }
+
+  /* The text area paints above the layer, whose numbered lines are
+     positioned, so every click and selection reaches the text area. */
+  .fui-editor-input {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    resize: none;
+    overflow: hidden;
+    border-radius: 0;
+    background: transparent;
+    color: transparent;
+    caret-color: var(--ink);
+    outline: none;
+  }
+
+  .fui-editor-input::selection {
+    background: var(--accent-tint);
+  }
+
+  .fui-editor-input:focus-visible {
+    outline: none;
+  }
+
+  /* A control for the narrow screen's drawer alone (its Menu and Close),
+     hidden from the first breakpoint up; last in the layer, so it outranks
+     the display of the button classes. */
+  @media (width >= 48rem) {
+    .fui-drawer-only {
+      display: none;
+    }
+  }
+}
