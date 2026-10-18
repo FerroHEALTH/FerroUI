@@ -92,6 +92,18 @@ pub enum Density {
 }
 
 impl Density {
+    /// Both densities, in the order a switch offers them.
+    pub const ALL: [Self; 2] = [Self::Comfortable, Self::Compact];
+
+    /// The density's name as a reader sees it.
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Comfortable => "Comfortable",
+            Self::Compact => "Compact",
+        }
+    }
+
     /// The density's key, as `data-density` carries it.
     #[must_use]
     pub const fn key(self) -> &'static str {
@@ -104,11 +116,35 @@ impl Density {
     /// The density `key` names, or `None` for a key that names none.
     #[must_use]
     pub fn parse(key: &str) -> Option<Self> {
-        [Self::Comfortable, Self::Compact]
-            .into_iter()
-            .find(|density| density.key() == key)
+        Self::ALL.into_iter().find(|density| density.key() == key)
     }
 }
+
+impl std::fmt::Display for Density {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.key())
+    }
+}
+
+impl std::str::FromStr for Density {
+    type Err = UnknownDensity;
+
+    fn from_str(key: &str) -> Result<Self, Self::Err> {
+        Self::parse(key).ok_or(UnknownDensity)
+    }
+}
+
+/// A key that names no [`Density`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct UnknownDensity;
+
+impl std::fmt::Display for UnknownDensity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("the key names no density: comfortable or compact")
+    }
+}
+
+impl std::error::Error for UnknownDensity {}
 
 #[cfg(test)]
 mod tests {

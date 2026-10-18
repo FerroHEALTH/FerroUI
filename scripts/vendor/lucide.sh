@@ -23,13 +23,17 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 dir="$root/crates/ferrohealth-ui/vendor/lucide"
 
 ICONS=(
-  arrow-down arrow-left arrow-right arrow-up arrow-up-down bell check
-  chevron-down chevron-left chevron-right chevrons-left chevrons-right
-  circle-alert circle-check circle-user circle-x compass copy database
-  download file-plus files flask-conical heart-pulse inbox info layers
-  layout-dashboard list-checks log-in log-out menu monitor moon pencil play
-  plus refresh-cw save search server server-crash settings shield-check
-  square-terminal sun trash triangle-alert users x
+  activity arrow-down arrow-left arrow-right arrow-up arrow-up-down bell
+  book-a book-x chart-line check chevron-down chevron-left chevron-right
+  chevrons-left chevrons-right circle-alert circle-check circle-user
+  circle-x clipboard-copy clock code compass copy database download eye
+  file-clock file-code file-plus file-text files flask-conical folder
+  folder-open folder-plus folder-search folder-x funnel gauge heart-pulse
+  inbox info layers layout-dashboard link list-checks log-in
+  log-out menu monitor moon network panel-right pencil play plus
+  radio-tower refresh-cw rotate-ccw rotate-ccw-clock route save search search-code search-x
+  server server-crash settings shield-check shield-off sliders-horizontal
+  square-terminal sun tags trash triangle-alert upload user-plus users x
 )
 
 die() {

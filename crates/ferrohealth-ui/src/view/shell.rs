@@ -11,7 +11,6 @@
 use leptos::prelude::*;
 
 use crate::icon::{Glyph, icon};
-use crate::view::button::Variant;
 
 /// The maker every FerroHEALTH console's footer names.
 pub const MAKER: &str = "Cadasto B.V.";
@@ -56,11 +55,26 @@ pub fn skip_link() -> impl IntoView {
     }
 }
 
-/// Returns a mark for a product that has no drawn one: `glyph` on the
-/// accent. A console with a brand mark passes its own to [`lockup`].
+/// Returns a mark for a product that has no drawn one: `glyph` in the
+/// accent. A console with a drawn mark passes [`brand_mark`] to [`lockup`].
 #[must_use]
 pub fn mark(glyph: Glyph) -> impl IntoView {
-    view! { <span class="fui-mark" aria-hidden="true">{icon(glyph, "16")}</span> }
+    view! { <span class="fui-mark" aria-hidden="true">{icon(glyph, "22")}</span> }
+}
+
+/// Returns a console's own drawn mark, light and dark.
+///
+/// The image at `light`, and the one at `dark` under the dark theme, both served from the console's own origin
+/// and chosen by the stylesheet before any script runs. It is decoration
+/// beside the product's name, so it carries no text.
+#[must_use]
+pub fn brand_mark(light: &str, dark: &str) -> impl IntoView + use<> {
+    view! {
+        <span class="fui-brand-mark" aria-hidden="true">
+            <img class="fui-brand-light" src=light.to_owned() alt="" width="24" height="24" />
+            <img class="fui-brand-dark" src=dark.to_owned() alt="" width="24" height="24" />
+        </span>
+    }
 }
 
 /// Returns the lockup that leads to `href`: the decorative `mark` beside the
@@ -87,11 +101,15 @@ pub fn lockup(
 /// below the first breakpoint alone.
 #[must_use]
 pub fn drawer_button(sidebar_id: &'static str) -> impl IntoView {
-    let class = format!("{} fui-drawer-only", Variant::Secondary.class());
     view! {
-        <button type="button" class=class popovertarget=sidebar_id aria-controls=sidebar_id>
-            {icon(Glyph::MENU, "16")}
-            "Menu"
+        <button
+            type="button"
+            class="fui-icon-button fui-drawer-only"
+            popovertarget=sidebar_id
+            aria-controls=sidebar_id
+            aria-label="Menu"
+        >
+            {icon(Glyph::MENU, "18")}
         </button>
     }
 }
@@ -99,7 +117,9 @@ pub fn drawer_button(sidebar_id: &'static str) -> impl IntoView {
 /// Returns the top bar: `start` (the drawer button and the lockup) and, at
 /// the far end, `end` (the status, the theme switch, the operator).
 #[must_use]
-pub fn topbar(start: impl IntoView, end: impl IntoView) -> impl IntoView {
+pub fn topbar(start: impl IntoView + 'static, end: impl IntoView + 'static) -> AnyView {
+    let start = start.into_any();
+    let end = end.into_any();
     view! {
         <header class="fui-topbar">
             <div class="fui-topbar-row">
@@ -107,6 +127,33 @@ pub fn topbar(start: impl IntoView, end: impl IntoView) -> impl IntoView {
             </div>
         </header>
     }
+    .into_any()
+}
+
+/// Returns the top bar as [`topbar`] draws it, with `middle` (a search box,
+/// from [`crate::view::search::search_box`]) in the free width between the
+/// two ends, centred.
+///
+/// Below 48 rem the middle wraps onto its own row under the lockup, so a
+/// 320 px screen never scrolls sideways (WCAG 2.2 SC 1.4.10).
+#[must_use]
+pub fn topbar_with(
+    start: impl IntoView + 'static,
+    middle: impl IntoView + 'static,
+    end: impl IntoView + 'static,
+) -> AnyView {
+    let start = start.into_any();
+    let middle = middle.into_any();
+    let end = end.into_any();
+    view! {
+        <header class="fui-topbar">
+            <div class="fui-topbar-row">
+                {start} <div class="fui-topbar-middle">{middle}</div>
+                <div class="fui-topbar-end">{end}</div>
+            </div>
+        </header>
+    }
+    .into_any()
 }
 
 /// Returns the one line at the foot of every page: the product, its

@@ -67,17 +67,26 @@
     --syntax-path: #155e75;
     --syntax-parameter: #a21caf;
     --shadow-card: 0 1px 2px 0 rgb(15 23 42 / 0.06), 0 1px 3px 0 rgb(15 23 42 / 0.04);
+    /* The elevation of a dialog, a menu or a panel over the page. */
+    --shadow-overlay: 0 12px 32px -4px rgb(15 23 42 / 0.22), 0 4px 12px -4px rgb(15 23 42 / 0.14);
     --radius-card: 0.5rem;
     --radius-control: 0.375rem;
-    /* The six steps of type and the four of space (FerroTERM's scale); a
-       component names a step, never a size. */
-    --text-display: 1.75rem;
+    /* The six steps of type, FerroEHR's scale: a measure's value, the page
+       title, a heading, the body, the code face and the micro step of table
+       heads and labels; and the four steps of space. A component names a
+       step, never a size. */
+    --text-display: 1.5rem;
     --text-title: 1.25rem;
     --text-heading: 1rem;
     --text-body: 0.875rem;
     --text-small: 0.8125rem;
-    --text-micro: 0.6875rem;
+    --text-micro: 0.75rem;
+    --leading-display: 2rem;
+    --leading-title: 1.75rem;
+    --leading-heading: 1.5rem;
     --leading-body: 1.25rem;
+    --leading-small: 1.125rem;
+    --leading-micro: 1rem;
     --leading-code: 1.375rem;
     --space-tight: 0.25rem;
     --space-default: 0.5rem;
@@ -94,8 +103,8 @@
   :root[data-density="compact"] {
     --space-tight: 0.125rem;
     --space-default: 0.375rem;
-    --space-loose: 0.75rem;
-    --space-section: 1.5rem;
+    --space-loose: 0.625rem;
+    --space-section: 1rem;
     --row-y: 0.25rem;
   }
 
@@ -143,6 +152,7 @@
     --syntax-path: #67e8f9;
     --syntax-parameter: #f0abfc;
     --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+    --shadow-overlay: 0 12px 32px -4px rgb(0 0 0 / 0.6), 0 4px 12px -4px rgb(0 0 0 / 0.4);
   }
 
   @media (prefers-color-scheme: dark) {
@@ -188,6 +198,7 @@
       --syntax-path: #67e8f9;
       --syntax-parameter: #f0abfc;
       --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+      --shadow-overlay: 0 12px 32px -4px rgb(0 0 0 / 0.6), 0 4px 12px -4px rgb(0 0 0 / 0.4);
     }
   }
 }
@@ -233,13 +244,13 @@
   }
 
   h1 {
-    font-size: var(--text-display);
-    line-height: 2.25rem;
+    font-size: var(--text-title);
+    line-height: var(--leading-title);
   }
 
   h2 {
     font-size: var(--text-heading);
-    line-height: 1.5rem;
+    line-height: var(--leading-heading);
   }
 
   h3,
@@ -268,6 +279,7 @@
   samp {
     font-family: var(--font-mono);
     font-size: var(--text-small);
+    line-height: var(--leading-small);
   }
 
   code {
@@ -325,6 +337,22 @@
     border: 0;
   }
 
+  /* The operator's name, visually hidden on a phone, where the icon and the
+     chevron name the menu and the name still names the button. */
+  @media (width < 40rem) {
+    .fui-operator-name {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      padding: 0;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+      border: 0;
+    }
+  }
+
   .fui-muted {
     color: var(--muted);
   }
@@ -332,6 +360,178 @@
   .fui-mono {
     font-family: var(--font-mono);
     font-size: var(--text-small);
+    line-height: var(--leading-small);
+  }
+
+  /* A long identifier or URL that breaks anywhere rather than widen the
+     page (WCAG 2.2 SC 1.4.10). */
+  .fui-break {
+    overflow-wrap: anywhere;
+  }
+
+  /* A bulleted list of prose. */
+  .fui-bullets {
+    margin: 0;
+    padding-inline-start: 1.25rem;
+    list-style: disc;
+  }
+
+  .fui-bullets > li + li {
+    margin-top: var(--space-tight);
+  }
+
+  /* Tiles in a row that wraps: a small bordered box per thing. */
+  .fui-tiles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-default);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .fui-tile {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-default);
+    border: 1px solid var(--edge);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    padding: 0.375rem 0.75rem;
+  }
+
+  /* A form's actions at the foot of its card, in view at the bottom of a
+     tall enough window. */
+  .fui-action-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    margin: var(--space-loose) calc(-1 * var(--space-loose)) calc(-1 * var(--space-loose));
+    border-top: 1px solid var(--edge);
+    border-end-start-radius: var(--radius-card);
+    border-end-end-radius: var(--radius-card);
+    background: var(--surface-raised);
+    padding: 0.75rem var(--space-loose);
+  }
+
+  @media (height >= 40rem) {
+    html:has(.fui-action-bar) {
+      scroll-padding-bottom: 4.5rem;
+    }
+
+    .fui-action-bar {
+      position: sticky;
+      bottom: 0;
+      z-index: 2;
+    }
+  }
+
+  /* A checkbox drawn as a switch: the knob's place says on or off as well
+     as its colour. */
+  .fui-check > input.fui-switch,
+  input.fui-switch {
+    appearance: none;
+    position: relative;
+    flex-shrink: 0;
+    width: 2.25rem;
+    height: 1.25rem;
+    margin: 0.125rem 0 0;
+    border: 1px solid var(--edge-control);
+    border-radius: 9999px;
+    background: var(--surface-sunken);
+    cursor: pointer;
+    transition: background-color var(--motion-state) ease-out;
+  }
+
+  .fui-check > input.fui-switch::before,
+  input.fui-switch::before {
+    content: "";
+    position: absolute;
+    top: 0.125rem;
+    left: 0.125rem;
+    width: 0.875rem;
+    height: 0.875rem;
+    border-radius: 9999px;
+    background: var(--edge-control);
+    transition: transform var(--motion-state) ease-out;
+  }
+
+  .fui-check > input.fui-switch:hover,
+  input.fui-switch:hover {
+    border-color: var(--ink);
+  }
+
+  .fui-check > input.fui-switch:checked,
+  input.fui-switch:checked {
+    border-color: var(--accent);
+    background: var(--accent);
+  }
+
+  .fui-check > input.fui-switch:checked::before,
+  input.fui-switch:checked::before {
+    transform: translateX(1rem);
+    background: var(--accent-ink);
+  }
+
+  .fui-check > input.fui-switch:disabled,
+  input.fui-switch:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  /* Checkbox chips: a real checkbox and its label in a round box, edged in
+     the accent once ticked. */
+  .fui-chip-checks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-default);
+  }
+
+  .fui-chip-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    border: 1px solid var(--edge-strong);
+    border-radius: 9999px;
+    background: var(--surface-raised);
+    padding: 0.25rem 0.75rem 0.25rem 0.5rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color var(--motion-state) ease-out;
+  }
+
+  .fui-chip-check:hover {
+    background: var(--surface-sunken);
+  }
+
+  .fui-chip-check:has(:checked) {
+    border-color: var(--accent);
+    background: var(--accent-tint);
+    color: var(--accent);
+  }
+
+  .fui-chip-check:has(:focus-visible) {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .fui-chip-check > input {
+    margin: 0;
+    accent-color: var(--accent);
+  }
+
+  /* The glyph and word before a segmented group's choices. */
+  .fui-segmented-prefix {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-tight);
+    padding-inline: var(--space-default);
+    color: var(--muted);
+    font-size: var(--text-micro);
+    line-height: var(--leading-micro);
+    font-weight: 600;
   }
 
   .fui-num {
@@ -343,6 +543,44 @@
     display: inline-block;
     flex-shrink: 0;
     vertical-align: -0.125em;
+  }
+
+  /* Text a step smaller, in the muted ink. */
+  .fui-small {
+    color: var(--muted);
+    font-size: var(--text-micro);
+    line-height: var(--leading-micro);
+  }
+
+  /* Children in a wrapping row, centred on the cross axis. */
+  .fui-cluster {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-default);
+  }
+
+  /* A wrapping row whose first child starts and whose last ends. */
+  .fui-split {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-default) var(--space-loose);
+  }
+
+  /* Shown from 40 rem up, and below it, so a top bar can move a control
+     into its menu on a narrow screen. */
+  @media (width < 40rem) {
+    .fui-wide-only {
+      display: none !important;
+    }
+  }
+
+  @media (width >= 40rem) {
+    .fui-narrow-only {
+      display: none !important;
+    }
   }
 
   /* ---- The shell ---- */
@@ -397,8 +635,43 @@
     .fui-topbar-row {
       height: calc(var(--bar) - 1px);
       flex-wrap: nowrap;
-      padding-inline: 1.5rem;
+      padding-block: 0;
     }
+  }
+
+  /* The middle of the top bar: a search box in the free width, capped and
+     centred; below 48rem it takes a row of its own under the lockup. */
+  .fui-topbar-middle {
+    display: flex;
+    order: 3;
+    width: 100%;
+    justify-content: center;
+  }
+
+  @media (width >= 48rem) {
+    .fui-topbar-middle {
+      order: 0;
+      width: auto;
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+
+    .fui-topbar-middle + .fui-topbar-end {
+      margin-inline-start: 0;
+    }
+  }
+
+  .fui-search {
+    display: flex;
+    width: 100%;
+    max-width: 28rem;
+    align-items: center;
+    gap: var(--space-default);
+  }
+
+  .fui-search .fui-input {
+    min-width: 0;
+    flex: 1 1 auto;
   }
 
   .fui-topbar-end {
@@ -424,7 +697,9 @@
 
   .fui-lockup-name {
     font-size: var(--text-heading);
+    line-height: var(--leading-heading);
     font-weight: 600;
+    letter-spacing: -0.01em;
     white-space: nowrap;
   }
 
@@ -432,16 +707,98 @@
     color: var(--accent);
   }
 
+  /* A product's mark when it has no drawn one: its glyph in the accent,
+     beside the wordmark, as FerroEHR's lockup draws its own. */
   .fui-mark {
     display: inline-flex;
-    width: 1.75rem;
-    height: 1.75rem;
     flex-shrink: 0;
     align-items: center;
     justify-content: center;
+    color: var(--accent);
+  }
+
+  /* A console's own drawn mark: the light image, and the dark one under the
+     dark theme, chosen by the stylesheet before any script runs. */
+  .fui-brand-mark {
+    display: inline-flex;
+    flex-shrink: 0;
+  }
+
+  .fui-brand-mark > img {
+    display: block;
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .fui-brand-mark > .fui-brand-dark {
+    display: none;
+  }
+
+  :root[data-theme="dark"] .fui-brand-mark > .fui-brand-light {
+    display: none;
+  }
+
+  :root[data-theme="dark"] .fui-brand-mark > .fui-brand-dark {
+    display: block;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"], [data-theme="dark"]) .fui-brand-mark > .fui-brand-light {
+      display: none;
+    }
+
+    :root:not([data-theme="light"], [data-theme="dark"]) .fui-brand-mark > .fui-brand-dark {
+      display: block;
+    }
+  }
+
+  /* A square button holding an icon alone, its name in `aria-label`: the
+     drawer's Menu, the theme menu, a copy. */
+  .fui-icon-button {
+    display: inline-flex;
+    width: 2rem;
+    height: 2rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border: 0;
     border-radius: var(--radius-control);
-    background: var(--accent);
-    color: var(--accent-ink);
+    background: transparent;
+    padding: 0;
+    color: var(--muted);
+    transition: color var(--motion-state) ease-out, background-color var(--motion-state) ease-out;
+  }
+
+  .fui-icon-button:hover,
+  .fui-icon-button[aria-expanded="true"] {
+    background: var(--surface-sunken);
+    color: var(--ink);
+  }
+
+  /* The theme toggle: of its two buttons, the one that leads away from the
+     theme on screen shows, read from data-theme and, for the system theme,
+     from the system's preference, so the first paint is right. */
+  .fui-theme-toggle {
+    display: inline-flex;
+  }
+
+  .fui-theme-to-light,
+  :root[data-theme="dark"] .fui-theme-to-dark {
+    display: none;
+  }
+
+  :root[data-theme="dark"] .fui-theme-to-light {
+    display: inline-flex;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"], [data-theme="dark"]) .fui-theme-to-dark {
+      display: none;
+    }
+
+    :root:not([data-theme="light"], [data-theme="dark"]) .fui-theme-to-light {
+      display: inline-flex;
+    }
   }
 
   .fui-body {
@@ -457,7 +814,7 @@
 
   @media (width >= 48rem) {
     .fui-main {
-      padding-inline: var(--space-section);
+      padding: 1.5rem;
     }
   }
 
@@ -471,18 +828,181 @@
     gap: var(--space-loose);
   }
 
+  /* A part of a stack or a grid never grows past its track for a long
+     unbroken line inside it (a URL, a scrolling code box): a grid item's
+     automatic minimum is its content, which would widen the page. */
+  .fui-stack > *,
+  .fui-grid > * {
+    min-width: 0;
+  }
+
+  .fui-stack.fui-gap-tight {
+    gap: var(--space-tight);
+  }
+
+  .fui-stack.fui-gap-default {
+    gap: var(--space-default);
+  }
+
+  .fui-stack.fui-gap-section {
+    gap: var(--space-section);
+  }
+
+  /* Three reading panes, a list beside its item, a form beside its answer:
+     side by side from 64rem, one above the other below it. */
+  .fui-panes,
+  .fui-master-detail,
+  .fui-main-aside {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-loose);
+    align-items: start;
+  }
+
+  .fui-pane {
+    min-width: 0;
+    border: 1px solid var(--edge);
+    border-radius: var(--radius-card);
+    background: var(--surface-raised);
+    padding: var(--space-loose);
+    box-shadow: var(--shadow-card);
+  }
+
+  .fui-master,
+  .fui-detail,
+  .fui-main-part,
+  .fui-aside-part {
+    min-width: 0;
+  }
+
+  @media (width >= 64rem) {
+    .fui-panes {
+      grid-template-columns: 20rem minmax(0, 1fr) 24rem;
+      align-items: stretch;
+    }
+
+    .fui-pane {
+      max-height: clamp(24rem, 100vh - 20rem, 48rem);
+      overflow: auto;
+      overscroll-behavior: contain;
+    }
+
+    .fui-master-detail {
+      grid-template-columns: 24rem minmax(0, 1fr);
+    }
+
+    .fui-main-aside {
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    }
+  }
+
+  /* Items one under the other, a hairline between and none after the
+     last. */
+  .fui-divided {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .fui-divided > li {
+    padding-block: var(--row-y);
+  }
+
+  .fui-divided > li + li {
+    border-top: 1px solid var(--edge);
+  }
+
+  /* A row of fields with columns of its own from 40rem; an action sits at
+     the foot of its column, level with the controls. */
+  .fui-field-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-default) 0.75rem;
+  }
+
+  /* An action in a row of fields keeps its own width when the row stacks. */
+  .fui-field-row > .fui-button {
+    justify-self: start;
+  }
+
+  @media (width >= 40rem) {
+    .fui-field-row {
+      align-items: end;
+    }
+
+    .fui-field-row-halves {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .fui-field-row-narrow-wide {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    }
+
+    .fui-field-row-actions {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .fui-field-row-code-display {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto auto;
+    }
+
+    .fui-field-row-definition {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr) auto;
+    }
+  }
+
+  /* A proportion as an SVG whose bar length is an attribute, so the strict
+     style policy holds; the bar is the accent on the sunken ground. */
+  .fui-proportion {
+    display: block;
+    width: 100%;
+    min-width: 4rem;
+    height: 0.375rem;
+  }
+
+  .fui-proportion-ground {
+    fill: var(--surface-sunken);
+  }
+
+  .fui-proportion-fill {
+    fill: var(--accent);
+  }
+
+  /* A grid whose columns, at least 16 rem wide, share the whole row: two
+     cards of four columns' room each take half, so no row is left half
+     empty. */
   .fui-grid {
     display: grid;
     gap: var(--space-loose);
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  }
+
+  /* The stat cards across the top of a dashboard, closer together. */
+  /* Stat tiles take two to a row on a phone: a tile holds a figure and a
+     short label, and one per row leaves most of each empty. */
+  .fui-grid-stats {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+    gap: 0.75rem;
   }
 
   .fui-footer {
+    display: flex;
+    min-height: 2.5rem;
+    align-items: center;
     border-top: 1px solid var(--edge);
     background: var(--surface-raised);
-    padding: 0.75rem var(--space-loose);
+    padding: var(--space-default) var(--space-loose);
     color: var(--muted);
     font-size: var(--text-micro);
+    line-height: var(--leading-micro);
+  }
+
+  .fui-footer a {
+    color: inherit;
+  }
+
+  .fui-footer a:hover {
+    color: var(--ink);
   }
 
   .fui-centred {
@@ -526,7 +1046,7 @@
       position: sticky;
       inset: var(--bar) auto auto auto;
       align-self: stretch;
-      width: 15rem;
+      width: 13rem;
       height: auto;
       max-height: calc(100dvh - var(--bar));
       margin: 0;
@@ -536,18 +1056,18 @@
     }
   }
 
+  /* A group's heading names its list for assistive technology; the eye
+     reads the groups by the hairline between them, as FerroEHR's
+     navigation draws them. */
   .fui-nav-group {
-    margin: 0;
-    padding: var(--space-loose) 0.75rem var(--space-tight);
-    color: var(--muted);
-    font-size: var(--text-micro);
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-  }
-
-  .fui-nav-group:first-of-type {
-    padding-top: var(--space-tight);
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 
   .fui-nav-list {
@@ -555,19 +1075,27 @@
     margin: 0;
     padding: 0;
     flex-direction: column;
-    gap: 0.125rem;
+    gap: var(--space-tight);
     list-style: none;
   }
 
-  /* A navigation entry: while it is the page, tinted with the accent, set in
-     bold and marked by a bar at its start, so colour is never the only mark. */
+  .fui-nav-list + .fui-nav-group + .fui-nav-list {
+    margin-block-start: 0.375rem;
+    border-top: 1px solid var(--edge);
+    padding-block-start: 0.375rem;
+  }
+
+  /* A navigation entry: muted until the pointer is on it, and while it is
+     the page, on the accent's tint in the accent and the heavier weight. */
   .fui-nav-entry {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.625rem;
     border-radius: var(--radius-control);
     padding: var(--space-default) 0.75rem;
     color: var(--muted);
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
     font-weight: 500;
     text-decoration: none;
     transition: color var(--motion-state) ease-out, background-color var(--motion-state) ease-out;
@@ -580,7 +1108,6 @@
 
   .fui-nav-entry[aria-current="page"] {
     background: var(--accent-tint);
-    box-shadow: inset 3px 0 0 var(--accent);
     color: var(--accent);
     font-weight: 600;
   }
@@ -591,10 +1118,10 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: var(--space-default);
+    gap: 0.375rem;
     border: 1px solid transparent;
     border-radius: var(--radius-control);
-    padding: var(--space-default) 0.875rem;
+    padding: 0.375rem 0.75rem;
     font-size: var(--text-body);
     font-weight: 500;
     line-height: var(--leading-body);
@@ -627,14 +1154,29 @@
   }
 
   .fui-button-danger {
-    border-color: var(--bad);
-    background: var(--surface-raised);
+    border-color: color-mix(in srgb, var(--bad) 40%, transparent);
+    background: transparent;
     color: var(--bad);
   }
 
   .fui-button-danger:hover {
     background: var(--bad-ground);
     color: var(--bad);
+  }
+
+  /* The confirming action of a danger dialog: solid in the bad tone. */
+  .fui-button-destructive,
+  .fui-dialog-danger .fui-dialog-actions .fui-button-danger {
+    border-color: var(--bad);
+    background: var(--bad);
+    color: var(--surface-raised);
+  }
+
+  .fui-button-destructive:hover,
+  .fui-dialog-danger .fui-dialog-actions .fui-button-danger:hover {
+    border-color: var(--bad);
+    background: color-mix(in srgb, var(--bad) 85%, var(--ink));
+    color: var(--surface-raised);
   }
 
   .fui-button-ghost {
@@ -647,42 +1189,59 @@
     color: var(--ink);
   }
 
+  /* A control that cannot be used: neutral, on the sunken ground in muted
+     text with no accent, whatever its variant, and no hover. */
   .fui-button:disabled,
   .fui-button[aria-disabled="true"] {
-    border-color: var(--edge-strong);
+    border-color: var(--edge);
     background: var(--surface-sunken);
     color: var(--muted);
     cursor: not-allowed;
+    pointer-events: none;
   }
 
   .fui-button-small {
     padding: var(--space-tight) 0.625rem;
     font-size: var(--text-small);
+    line-height: var(--leading-small);
   }
 
-  /* The segmented control the theme switch is: the pressed segment raised,
-     edged at 3:1, and checked, so colour is never the only mark. */
+  /* The segmented control, after FerroEHR's format selector: joined
+     segments in one edged box, the pressed one filled with the accent; a
+     pressed segment is also `aria-pressed` (or a checked radio), so a
+     reader is told which is chosen in words. */
   .fui-segmented {
     display: inline-flex;
-    align-items: center;
-    gap: 0.125rem;
-    border: 1px solid var(--edge);
+    max-width: 100%;
+    flex-wrap: wrap;
+    align-items: stretch;
+    overflow: hidden;
+    border: 1px solid var(--edge-strong);
     border-radius: var(--radius-control);
-    background: var(--surface);
-    padding: 0.125rem;
+    background: var(--surface-raised);
   }
 
   .fui-segment {
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
-    border: 1px solid transparent;
-    border-radius: 0.25rem;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
     background: transparent;
-    padding: var(--space-tight) var(--space-default);
+    padding: 0.375rem 0.75rem;
     color: var(--muted);
-    font-size: var(--text-micro);
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
     font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color var(--motion-state) ease-out, background-color var(--motion-state) ease-out;
+  }
+
+  .fui-segment + .fui-segment {
+    border-inline-start: 1px solid var(--edge-strong);
   }
 
   .fui-segment:hover {
@@ -691,11 +1250,15 @@
   }
 
   .fui-segment[aria-pressed="true"],
-  .fui-segment[aria-current="true"] {
-    border-color: var(--edge-control);
-    background: var(--surface-raised);
-    box-shadow: var(--shadow-card);
-    color: var(--ink);
+  .fui-segment[aria-current="true"],
+  .fui-segment:has(> input:checked) {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  .fui-segment:has(> input:focus-visible) {
+    outline: 2px solid var(--focus);
+    outline-offset: -2px;
   }
 
   /* ---- Status ---- */
@@ -736,29 +1299,45 @@
     --tone-dot: var(--accent);
   }
 
-  /* A status pill: a dot and a word on the tone's ground. */
+  /* A status pill: the tone's dot and the word in the tone, on the raised
+     ground inside a hairline, as FerroEHR's status chip reads. */
   .fui-pill {
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
-    border: 1px solid color-mix(in srgb, var(--tone) 25%, transparent);
+    border: 1px solid var(--edge);
     border-radius: 9999px;
-    background: var(--tone-ground);
-    padding: 0.125rem 0.625rem;
+    background: var(--surface-raised);
+    padding: var(--space-tight) 0.625rem;
     color: var(--tone);
     font-size: var(--text-micro);
     font-weight: 500;
-    line-height: 1.125rem;
+    line-height: var(--leading-micro);
     white-space: nowrap;
   }
 
   .fui-pill::before {
     content: "";
-    width: 0.4375rem;
-    height: 0.4375rem;
+    width: 0.375rem;
+    height: 0.375rem;
     flex-shrink: 0;
     border-radius: 9999px;
     background: var(--tone-dot);
+  }
+
+  /* A chip: a short code or name on the accent's tint, in the code face
+     (an API group, a tag, a scope). */
+  .fui-chip {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 9999px;
+    background: var(--accent-tint);
+    padding: 0.125rem var(--space-default);
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: var(--text-micro);
+    line-height: var(--leading-micro);
+    white-space: nowrap;
   }
 
   /* A badge: a word on the tone's ground, with no dot. */
@@ -768,11 +1347,11 @@
     gap: var(--space-tight);
     border-radius: var(--radius-control);
     background: var(--tone-ground);
-    padding: 0 0.375rem;
+    padding: 0.125rem var(--space-default);
     color: var(--tone);
     font-size: var(--text-micro);
     font-weight: 500;
-    line-height: var(--leading-body);
+    line-height: var(--leading-micro);
     white-space: nowrap;
   }
 
@@ -786,6 +1365,7 @@
     padding: var(--space-tight) var(--space-default);
     color: var(--tone);
     font-size: var(--text-small);
+    line-height: var(--leading-small);
     font-weight: 500;
   }
 
@@ -804,21 +1384,76 @@
     padding: var(--space-default) var(--space-loose);
     color: var(--tone);
     font-size: var(--text-small);
+    line-height: var(--leading-small);
   }
 
   /* ---- Surfaces ---- */
 
   .fui-page-header {
+    margin-block-end: 1.5rem;
+  }
+
+  .fui-page-heading {
     display: flex;
     flex-wrap: wrap;
-    align-items: flex-end;
+    align-items: center;
     justify-content: space-between;
-    gap: var(--space-loose);
-    margin-block-end: 1.5rem;
+    gap: 0.75rem;
+  }
+
+  .fui-page-title-mono {
+    font-family: var(--font-mono);
   }
 
   .fui-page-subtitle {
     margin-block-start: var(--space-tight);
+    color: var(--muted);
+  }
+
+  /* The line under the header that names who answered the page. */
+  .fui-page-meta {
+    margin-block: -1rem 1.25rem;
+    color: var(--muted);
+    font-size: var(--text-micro);
+    line-height: var(--leading-micro);
+  }
+
+  /* The trail of a page's ancestors above its title, the separators hidden
+     from assistive technology. */
+  .fui-crumbs {
+    margin-block-end: var(--space-tight);
+  }
+
+  .fui-crumbs > ol {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    color: var(--muted);
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+  }
+
+  .fui-crumbs li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .fui-crumbs a {
+    color: var(--muted);
+    text-decoration: none;
+  }
+
+  .fui-crumbs a:hover {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+
+  .fui-crumb-sep {
     color: var(--muted);
   }
 
@@ -835,29 +1470,93 @@
     border-radius: var(--radius-card);
     background: var(--surface-raised);
     box-shadow: var(--shadow-card);
-    padding: var(--space-loose) 1.25rem;
+    padding: var(--space-loose);
   }
 
   .fui-card > * + * {
     margin-block-start: 0.75rem;
   }
 
+  /* A card in a grid row is as tall as the row; an empty state inside it
+     fills what is left and centres its content, so no card ends in an
+     empty band. */
+  .fui-grid > .fui-card:has(> .fui-empty),
+  .fui-grid > .fui-card:has(> .fui-code-panel) {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .fui-grid > .fui-card > .fui-empty {
+    flex: 1 1 auto;
+    align-content: center;
+  }
+
+  .fui-grid > .fui-card > .fui-code-panel {
+    flex: 1 1 auto;
+  }
+
+  /* A card that spans the whole row of the grid it sits in. */
+  .fui-card-wide {
+    grid-column: 1 / -1;
+  }
+
   .fui-card-title {
     display: flex;
     align-items: center;
     gap: var(--space-default);
+    font-size: var(--text-body);
+    font-weight: 600;
+    line-height: var(--leading-body);
   }
 
+  /* A link that is a whole card (a stat, a namespace tile): its edge turns
+     to the accent under the pointer, and the focus ring draws round it. */
+  a.fui-card {
+    color: var(--ink);
+    text-decoration: none;
+    transition: border-color var(--motion-state) ease-out;
+  }
+
+  a.fui-card:hover {
+    border-color: var(--accent);
+    color: var(--ink);
+  }
+
+  .fui-card-link {
+    display: block;
+  }
+
+  /* A radio choice whose chosen option reveals the part at its place;
+     the parts follow the segments in order. */
+  .fui-reveal {
+    display: grid;
+    gap: var(--space-default);
+  }
+
+  .fui-reveal-parts {
+    display: grid;
+    gap: var(--space-default);
+  }
+
+  .fui-revealed {
+    display: none;
+  }
+
+  .fui-reveal:has(.fui-segment:nth-child(1) input:checked) .fui-revealed:nth-child(1),
+  .fui-reveal:has(.fui-segment:nth-child(2) input:checked) .fui-revealed:nth-child(2),
+  .fui-reveal:has(.fui-segment:nth-child(3) input:checked) .fui-revealed:nth-child(3),
+  .fui-reveal:has(.fui-segment:nth-child(4) input:checked) .fui-revealed:nth-child(4),
+  .fui-reveal:has(.fui-segment:nth-child(5) input:checked) .fui-revealed:nth-child(5) {
+    display: block;
+  }
+
+  /* A stat card, as FerroEHR draws its tiles: the glyph centred in a
+     2.5 rem square on the accent's tint, the value large in tabular
+     figures, the label under it, muted, cut short with an ellipsis. */
   .fui-stat {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 0.75rem;
-    color: inherit;
-    text-decoration: none;
-  }
-
-  a.fui-stat:hover .fui-stat-value {
-    color: var(--accent);
   }
 
   .fui-stat-glyph {
@@ -872,15 +1571,64 @@
     color: var(--accent);
   }
 
+  .fui-stat-text {
+    min-width: 0;
+  }
+
   .fui-stat-value {
-    font-size: var(--text-title);
+    color: var(--ink);
+    font-size: var(--text-display);
+    font-variant-numeric: tabular-nums;
     font-weight: 600;
-    line-height: 1.75rem;
+    line-height: var(--leading-display);
   }
 
   .fui-stat-label {
+    display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-tight) var(--space-default);
     color: var(--muted);
-    font-size: var(--text-small);
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+  }
+
+  /* A label wraps rather than be cut: a stat read as "With a war..." has
+     lost its meaning. */
+  .fui-stat-label > span:first-child {
+    min-width: 0;
+    overflow-wrap: break-word;
+  }
+
+  /* A panel: a card whose first row holds its title and actions over a
+     body that runs to its edges (a table, a list). */
+  .fui-panel {
+    padding: 0;
+  }
+
+  .fui-panel > * + * {
+    margin-block-start: 0;
+  }
+
+  .fui-panel-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-default);
+    border-bottom: 1px solid var(--edge);
+    padding: 0.75rem var(--space-loose);
+  }
+
+  .fui-panel > .fui-table-scroll {
+    border: 0;
+    border-radius: 0 0 var(--radius-card) var(--radius-card);
+    box-shadow: none;
+  }
+
+  .fui-panel-body {
+    padding: var(--space-loose);
   }
 
   /* A definition grid: each label beside its value from 40 rem up, so a card
@@ -895,11 +1643,13 @@
   .fui-facts > dt {
     color: var(--muted);
     font-weight: 500;
+    white-space: nowrap;
   }
 
   .fui-facts > dd {
     min-width: 0;
     margin: 0 0 0.375rem;
+    overflow-wrap: anywhere;
   }
 
   @media (width >= 40rem) {
@@ -912,13 +1662,68 @@
     }
   }
 
-  .fui-disclosure > summary {
-    cursor: pointer;
+  /* Facts across a row, as a detail page opens: each label small and upper
+     case over its value, the columns sharing the width. */
+  /* Facts across a row: each fact as wide as its value, so an identifier
+     stays on one line, the facts wrapping whole onto the next line. */
+  .fui-facts-row {
+    display: flex;
+    margin: 0;
+    flex-wrap: wrap;
+    gap: 0.75rem 2rem;
+  }
+
+  .fui-facts-row > div {
+    min-width: 0;
+    max-width: 100%;
+    flex: 0 1 auto;
+  }
+
+  .fui-facts-row dt {
+    color: var(--muted);
+    font-size: var(--text-small);
+    line-height: var(--leading-small);
     font-weight: 500;
   }
 
+  .fui-facts-row dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+
+  /* A well: a sunken box inside a card, for a passage set apart. */
+  .fui-well {
+    border: 1px solid var(--edge);
+    border-radius: var(--radius-card);
+    background: var(--surface-sunken);
+    padding: 0.75rem;
+  }
+
+  .fui-disclosure {
+    border: 1px solid var(--edge);
+    border-radius: var(--radius-card);
+    background: var(--surface-raised);
+  }
+
+  .fui-disclosure > summary {
+    border-radius: var(--radius-card);
+    padding: var(--space-default) 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color var(--motion-state) ease-out;
+  }
+
+  .fui-disclosure > summary:hover {
+    background: var(--surface-sunken);
+  }
+
+  .fui-disclosure[open] > summary {
+    border-bottom: 1px solid var(--edge);
+    border-radius: var(--radius-card) var(--radius-card) 0 0;
+  }
+
   .fui-disclosure > summary + * {
-    margin-block-start: var(--space-default);
+    padding: 0.75rem;
   }
 
   /* ---- Tables ---- */
@@ -927,12 +1732,21 @@
      pager's range label names the rows a reader sees. On a narrow screen a
      table wider than its card scrolls sideways inside it, never the page
      (WCAG 2.2 SC 1.4.10). */
+  /* Positioned, so a visually hidden part of the table (its caption, a
+     step's words) is clipped by the box and never widens the page. */
   .fui-table-scroll {
+    position: relative;
     max-width: 100%;
     overflow-x: auto;
     border: 1px solid var(--edge);
     border-radius: var(--radius-card);
     background: var(--surface-raised);
+    box-shadow: var(--shadow-card);
+  }
+
+  /* A table inside a card sits on the card's own ground and edge. */
+  .fui-card > .fui-table-scroll {
+    box-shadow: none;
   }
 
   /* From 64rem up a table fits its card beside the sidebar, so the box stops
@@ -956,11 +1770,17 @@
     border-collapse: collapse;
   }
 
+  /* The caption names the table for assistive technology; the card's title
+     or the page names it for the eye. */
   .fui-table caption {
-    padding: var(--space-default) 0.75rem;
-    color: var(--muted);
-    font-size: var(--text-small);
-    text-align: start;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 
   .fui-table :is(th, td) {
@@ -970,21 +1790,45 @@
     vertical-align: top;
   }
 
+  /* The header in the small step and sentence case, read as a word and
+     narrower than upper case in a table that may scroll sideways
+     (WCAG 2.2 SC 1.4.10). */
   .fui-table thead th {
-    background: var(--surface-head);
+    background: var(--surface-sunken);
     color: var(--muted);
-    font-size: var(--text-micro);
+    font-size: var(--text-small);
+    line-height: var(--leading-small);
     font-weight: 600;
-    letter-spacing: 0.025em;
-    text-transform: uppercase;
     white-space: nowrap;
+  }
+
+  .fui-table thead th.fui-th-mono {
+    font-family: var(--font-mono);
+    font-weight: 500;
   }
 
   .fui-table tbody tr:last-child > * {
     border-bottom: 0;
   }
 
-  .fui-table tbody tr:hover > * {
+  /* A row's header names the row in the body's weight; a name that opens
+     the row is a link. */
+  .fui-table tbody th {
+    font-weight: 400;
+  }
+
+  /* An identifier in a cell keeps its line: the table scrolls sideways in
+     its box rather than break a name into letters. */
+  .fui-table code {
+    overflow-wrap: normal;
+    white-space: nowrap;
+  }
+
+  .fui-table tbody tr {
+    transition: background-color var(--motion-state) ease-out;
+  }
+
+  .fui-table tbody tr:hover {
     background: color-mix(in srgb, var(--surface-sunken) 60%, transparent);
   }
 
@@ -1014,12 +1858,19 @@
     white-space: nowrap;
   }
 
+  /* The tools over a table: the filter and, beside it, how many rows it
+     keeps. */
   .fui-table-tools {
     display: flex;
     flex-wrap: wrap;
     align-items: flex-end;
-    justify-content: space-between;
-    gap: var(--space-default) var(--space-loose);
+    gap: var(--space-default) 0.75rem;
+  }
+
+  .fui-table-tools > p {
+    padding-block-end: 0.4375rem;
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
   }
 
   .fui-table-tools > .fui-field {
@@ -1027,13 +1878,38 @@
     max-width: 28rem;
   }
 
+  /* On a phone a pager step is its glyph, its words and "(unavailable)"
+     kept for assistive technology, so the steps and the position fit one
+     row; a step that cannot be taken also takes a dashed edge. */
+  @media (width < 40rem) {
+    .fui-pager .fui-step-words {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      padding: 0;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .fui-pager .fui-pager-steps {
+      flex-wrap: nowrap;
+    }
+  }
+
+  /* One pager layout: the range at the start, the steps in the centre and
+     the sizes at the end of one row; on a narrow screen one under another. */
   .fui-pager {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
-    justify-content: space-between;
     gap: var(--space-default) var(--space-loose);
-    font-size: var(--text-small);
+    margin-block-start: 0.75rem;
+    color: var(--muted);
+    font-size: var(--text-micro);
+    line-height: var(--leading-micro);
   }
 
   .fui-pager-steps,
@@ -1044,9 +1920,54 @@
     gap: var(--space-tight);
   }
 
+  .fui-pager > [role="status"] {
+    justify-self: start;
+  }
+
+  .fui-pager .fui-pager-steps {
+    justify-self: center;
+  }
+
+  .fui-pager .fui-pager-sizes {
+    justify-self: end;
+  }
+
+  @media (width < 48rem) {
+    .fui-pager {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .fui-pager .fui-pager-steps,
+    .fui-pager .fui-pager-sizes {
+      justify-self: start;
+    }
+  }
+
   .fui-pager-position {
     padding-inline: var(--space-default);
-    color: var(--muted);
+  }
+
+  /* A page size: the one in force on the accent's tint and marked current,
+     the others links in the accent. */
+  .fui-pager-size {
+    border: 0;
+    border-radius: var(--radius-control);
+    background: transparent;
+    padding: 0.125rem var(--space-default);
+    color: var(--accent);
+    font-weight: 500;
+    text-decoration: none;
+  }
+
+  .fui-pager-size:hover {
+    background: var(--surface-sunken);
+    text-decoration: underline;
+  }
+
+  .fui-pager-size[aria-current="true"],
+  .fui-pager-size[aria-pressed="true"] {
+    background: var(--accent-tint);
+    text-decoration: none;
   }
 
   /* A skeleton bar standing in for content that is loading. */
@@ -1061,6 +1982,45 @@
 
   .fui-skeleton + .fui-skeleton {
     margin-block-start: var(--space-default);
+  }
+
+  /* The busy indicator: a ring that turns beside its words. */
+  .fui-spinner {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-default);
+    color: var(--muted);
+  }
+
+  .fui-spinner-ring {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+    border: 2px solid var(--edge-strong);
+    border-top-color: var(--accent);
+    border-radius: 9999px;
+    animation: fui-turn 0.8s linear infinite;
+  }
+
+  .fui-spinner-text {
+    min-width: 0;
+  }
+
+  .fui-spinner-section {
+    padding-block: var(--space-default);
+    font-size: var(--text-heading);
+    line-height: var(--leading-heading);
+  }
+
+  .fui-spinner-section .fui-spinner-ring {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  @keyframes fui-turn {
+    to {
+      transform: rotate(1turn);
+    }
   }
 
   @keyframes fui-shimmer {
@@ -1097,6 +2057,7 @@
   .fui-help {
     color: var(--muted);
     font-size: var(--text-small);
+    line-height: var(--leading-small);
   }
 
   .fui-input,
@@ -1106,8 +2067,82 @@
     border: 1px solid var(--edge-control);
     border-radius: var(--radius-control);
     background: var(--surface-raised);
-    padding: 0.375rem 0.625rem;
+    padding: 0.375rem 0.75rem;
     color: var(--ink);
+    transition: border-color var(--motion-state) ease-out;
+  }
+
+  .fui-input:hover,
+  .fui-select:hover,
+  .fui-textarea:hover {
+    border-color: var(--ink);
+  }
+
+  .fui-input:focus-visible,
+  .fui-select:focus-visible,
+  .fui-textarea:focus-visible {
+    border-color: var(--focus);
+    outline: 2px solid var(--focus);
+    outline-offset: 0;
+  }
+
+  /* Related controls under a legend, the browser's fieldset frame reset to
+     the card's look. */
+  .fui-fieldset {
+    display: grid;
+    min-width: 0;
+    gap: 0.75rem;
+    margin: 0;
+    border: 0;
+    padding: 0;
+  }
+
+  .fui-fieldset > legend {
+    margin-block-end: var(--space-default);
+    padding: 0;
+    font-weight: 600;
+  }
+
+  .fui-choice > legend {
+    margin-block-end: var(--space-tight);
+    font-weight: 500;
+  }
+
+  /* One side of a change: the sign and the value in the removed or the
+     added tone, on its ground. */
+  .fui-change {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-tight);
+    border-radius: var(--radius-control);
+    padding: 0 var(--space-tight);
+  }
+
+  .fui-change-removed {
+    background: var(--bad-ground);
+    color: var(--bad);
+  }
+
+  .fui-change-added {
+    background: var(--ok-ground);
+    color: var(--ok);
+  }
+
+  .fui-change-sign {
+    font-weight: 700;
+  }
+
+  /* Fields in pairs from 40 rem up. */
+  .fui-columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem var(--space-loose);
+  }
+
+  @media (width >= 40rem) {
+    .fui-columns {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
 
   .fui-textarea {
@@ -1115,6 +2150,30 @@
     font-size: var(--text-small);
     line-height: var(--leading-code);
     tab-size: 2;
+  }
+
+  .fui-textarea.fui-textarea-prose {
+    min-height: calc(2 * var(--leading-body) + 0.75rem + 2px);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+  }
+
+  /* A control that holds a number or a short code, or a name or a version,
+     never takes the full row. */
+  .fui-control-narrow {
+    width: 100%;
+    max-width: 8rem;
+  }
+
+  .fui-control-medium {
+    width: 100%;
+    max-width: 20rem;
+  }
+
+  .fui-check-text {
+    display: grid;
+    gap: 0.125rem;
   }
 
   .fui-input::placeholder,
@@ -1138,38 +2197,148 @@
     accent-color: var(--accent);
   }
 
+  /* The picker's input, hidden once the page has hydrated and a listed
+     choice is chosen; before hydration both controls show. */
+  .fui-picker {
+    gap: var(--space-default);
+  }
+
+  .fui-picker-hidden {
+    display: none;
+  }
+
+  /* ---- Tree ---- */
+
+  /* The tree view: each child list indented by its nesting, one row per
+     item, the focus ring on the row of the focused item. */
+  .fui-tree,
+  .fui-tree-group {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .fui-tree-group {
+    padding-inline-start: 1.25rem;
+  }
+
+  .fui-tree-item {
+    outline: none;
+  }
+
+  .fui-tree-row {
+    display: flex;
+    min-height: 2rem;
+    align-items: center;
+    gap: var(--space-tight);
+    border-radius: var(--radius-control);
+    padding: 0.125rem var(--space-tight);
+    transition: background-color var(--motion-state) ease-out;
+  }
+
+  .fui-tree-row:hover {
+    background: var(--surface-sunken);
+  }
+
+  .fui-tree-item:focus-visible > .fui-tree-row {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .fui-tree-item[aria-selected="true"] > .fui-tree-row {
+    background: var(--accent-tint);
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .fui-tree-toggle,
+  .fui-tree-spacer {
+    display: inline-flex;
+    width: 1.5rem;
+    height: 1.5rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .fui-tree-toggle {
+    border: 0;
+    border-radius: var(--radius-control);
+    background: transparent;
+    padding: 0;
+    color: var(--muted);
+    cursor: pointer;
+  }
+
+  .fui-tree-toggle:hover {
+    color: var(--ink);
+  }
+
+  .fui-tree-label {
+    min-width: 0;
+    color: inherit;
+    overflow-wrap: anywhere;
+    text-decoration: none;
+  }
+
+  a.fui-tree-label:hover {
+    text-decoration: underline;
+  }
+
+  .fui-tree-code {
+    flex-shrink: 0;
+    white-space: nowrap;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-small);
+    font-weight: 400;
+    line-height: var(--leading-small);
+  }
+
+  .fui-tree-actions {
+    display: inline-flex;
+    margin-inline-start: auto;
+    gap: var(--space-tight);
+  }
+
   /* ---- Tabs ---- */
 
+  /* Tabs, as FerroEHR's tab bar draws them: rounded tabs in a row, muted
+     until the pointer is on one, the current one on the accent's tint in
+     the accent and named current or selected for assistive technology. */
   .fui-tabs {
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-tight);
-    border-bottom: 1px solid var(--edge);
   }
 
   .fui-tab {
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
-    margin-block-end: -1px;
     border: 0;
-    border-bottom: 2px solid transparent;
+    border-radius: var(--radius-control);
     background: transparent;
-    padding: var(--space-default) 0.75rem;
+    padding: 0.375rem 0.75rem;
     color: var(--muted);
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
     font-weight: 500;
     text-decoration: none;
+    white-space: nowrap;
+    transition: color var(--motion-state) ease-out, background-color var(--motion-state) ease-out;
   }
 
   .fui-tab:hover {
+    background: var(--surface-sunken);
     color: var(--ink);
   }
 
   .fui-tab[aria-current="page"],
+  .fui-tab[aria-current="true"],
   .fui-tab[aria-selected="true"] {
-    border-bottom-color: var(--accent);
+    background: var(--accent-tint);
     color: var(--accent);
-    font-weight: 600;
   }
 
   .fui-tab-panel {
@@ -1185,7 +2354,7 @@
     border: 1px solid var(--edge);
     border-radius: var(--radius-card);
     background: var(--surface-raised);
-    box-shadow: var(--shadow-card);
+    box-shadow: var(--shadow-overlay);
     padding: 0.75rem;
     color: var(--ink);
   }
@@ -1203,6 +2372,55 @@
 
   .fui-menu-title {
     font-weight: 600;
+  }
+
+  .fui-menu-compact {
+    min-width: 10rem;
+    padding: 0.375rem;
+  }
+
+  .fui-menu-items {
+    display: grid;
+    gap: 0.125rem;
+  }
+
+  /* One choice of a menu: a row the pointer tints, the chosen one on the
+     accent's tint and checked. */
+  .fui-menu-item {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: var(--space-default);
+    border: 0;
+    border-radius: var(--radius-control);
+    background: transparent;
+    padding: 0.375rem var(--space-default);
+    color: var(--ink);
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+    text-align: start;
+    text-decoration: none;
+    transition: background-color var(--motion-state) ease-out;
+  }
+
+  .fui-menu-item > span {
+    flex: 1;
+  }
+
+  .fui-menu-item:hover {
+    background: var(--surface-sunken);
+  }
+
+  .fui-menu-item[aria-pressed="true"],
+  .fui-menu-item[aria-current="true"] {
+    background: var(--accent-tint);
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  /* The operator's name in the top bar reads in the ink. */
+  .fui-topbar-end > .fui-button-ghost {
+    color: var(--ink);
   }
 
   .fui-sign-out {
@@ -1239,6 +2457,7 @@
     padding: var(--space-default) 0.75rem;
     color: var(--ink);
     font-size: var(--text-small);
+    line-height: var(--leading-small);
     white-space: pre-line;
   }
 
@@ -1249,6 +2468,7 @@
     gap: 0.75rem;
     color: var(--muted);
     font-size: var(--text-micro);
+    line-height: var(--leading-micro);
   }
 
   .fui-divider::before,
@@ -1265,6 +2485,7 @@
     justify-content: center;
     gap: var(--space-tight) var(--space-loose);
     font-size: var(--text-micro);
+    line-height: var(--leading-micro);
   }
 
   .fui-menu > * + * {
@@ -1277,13 +2498,29 @@
     border: 1px solid var(--edge);
     border-radius: var(--radius-card);
     background: var(--surface-raised);
-    box-shadow: var(--shadow-card);
+    box-shadow: var(--shadow-overlay);
     padding: 1.25rem;
     color: var(--ink);
   }
 
   .fui-dialog::backdrop {
     background: var(--scrim);
+  }
+
+  .fui-dialog-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-default);
+    font-size: var(--text-heading);
+    line-height: var(--leading-heading);
+  }
+
+  .fui-dialog-danger .fui-dialog-title > .fui-icon {
+    color: var(--bad);
+  }
+
+  .fui-dialog-wide {
+    width: min(48rem, calc(100vw - 2rem));
   }
 
   .fui-dialog > * + * {
@@ -1315,7 +2552,7 @@
     border: 1px solid color-mix(in srgb, var(--tone) 30%, transparent);
     border-radius: var(--radius-card);
     background: var(--surface-raised);
-    box-shadow: var(--shadow-card);
+    box-shadow: var(--shadow-overlay);
     padding: 0.75rem var(--space-loose);
     color: var(--ink);
   }
@@ -1330,23 +2567,37 @@
 
   /* ---- Empty states and refusals ---- */
 
+  /* An empty state, as FerroEHR draws one: a dashed frame, the glyph in a
+     sunken round, the title and the line under it, and the way forward. */
   .fui-empty {
     display: grid;
     justify-items: center;
     gap: var(--space-default);
-    padding: var(--space-section) var(--space-loose);
+    border: 1px dashed var(--edge-strong);
+    border-radius: var(--radius-card);
+    padding: 2.5rem 1.5rem;
     text-align: center;
+  }
+
+  .fui-empty > h2 {
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+    font-weight: 500;
+  }
+
+  .fui-empty > :last-child:not(.fui-empty-body) {
+    margin-block-start: var(--space-tight);
   }
 
   .fui-empty-glyph {
     display: inline-flex;
-    width: 2.75rem;
-    height: 2.75rem;
+    width: 2.5rem;
+    height: 2.5rem;
     align-items: center;
     justify-content: center;
     border-radius: 9999px;
-    background: var(--accent-tint);
-    color: var(--accent);
+    background: var(--surface-sunken);
+    color: var(--muted);
   }
 
   .fui-empty-body {
@@ -1354,14 +2605,21 @@
     color: var(--muted);
   }
 
+  /* The quiet form inside a card: no frame, less room. */
+  .fui-empty-quiet {
+    border: 0;
+    padding: 1.5rem var(--space-loose);
+  }
+
   /* A refusal or a fault the page reports: a status and words in a box, the
      upstream's issues listed with their text. */
   .fui-alert {
-    border: 1px solid currentColor;
+    border: 1px solid color-mix(in srgb, var(--bad) 40%, transparent);
     border-radius: var(--radius-card);
     background: var(--bad-ground);
     padding: 0.625rem var(--space-loose);
     color: var(--bad);
+    white-space: pre-line;
   }
 
   .fui-alert > * + * {
@@ -1375,14 +2633,110 @@
     font-weight: 600;
   }
 
+  /* A notice in a tone beside what it is about: a warning, an information,
+     a state; the tone's glyph beside the words. */
+  .fui-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-default);
+    border: 1px solid color-mix(in srgb, var(--tone) 40%, transparent);
+    border-radius: var(--radius-card);
+    background: var(--tone-ground);
+    padding: var(--space-default) 0.75rem;
+    color: var(--tone);
+    white-space: pre-line;
+  }
+
+  .fui-notice > .fui-icon {
+    margin-block-start: 0.125rem;
+  }
+
+  .fui-notice a {
+    color: inherit;
+    font-weight: 500;
+  }
+
+  /* A list of issues or matches: rows under a hairline, the badge, the
+     place and the words aligned, no bullets. */
   .fui-issues {
     margin: 0;
-    padding-inline-start: 1.25rem;
+    padding: 0;
+    list-style: none;
     color: var(--ink);
   }
 
+  .fui-issues > li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-tight) var(--space-default);
+    padding-block: 0.375rem;
+  }
+
   .fui-issues > li + li {
-    margin-block-start: var(--space-tight);
+    border-top: 1px solid var(--edge);
+  }
+
+  .fui-issue-head {
+    color: var(--muted);
+  }
+
+  .fui-issue-text {
+    flex: 1 1 16rem;
+    min-width: 0;
+  }
+
+  /* On a narrow screen the badge keeps its column and the head and the text
+     stack beside it, each breaking inside that column. */
+  @media (width < 40rem) {
+    .fui-issues > li {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: start;
+    }
+
+    .fui-issue-head,
+    .fui-issue-text {
+      grid-column: 2;
+      overflow-wrap: anywhere;
+    }
+  }
+
+  .fui-issue-detail {
+    display: inline-block;
+    margin-inline-start: var(--space-tight);
+    border: 1px solid var(--edge-strong);
+    border-radius: var(--radius-control);
+    padding: 0 var(--space-tight);
+    background: var(--surface-raised);
+    color: var(--ink);
+    font-family: var(--font-mono);
+    font-size: var(--text-micro);
+    line-height: var(--leading-micro);
+  }
+
+  /* The request a refusal answered, in the code face, breaking anywhere so
+     a long URL never widens the page (WCAG 2.2 SC 1.4.10). */
+  .fui-alert-request {
+    margin-top: var(--space-tight);
+    color: var(--ink);
+    overflow-wrap: anywhere;
+  }
+
+  .fui-alert-request code {
+    font-family: var(--font-mono);
+    font-size: var(--text-small);
+    line-height: var(--leading-small);
+  }
+
+  .fui-alert-evidence {
+    margin-top: var(--space-default);
+    max-height: 12rem;
+    color: var(--ink);
+  }
+
+  .fui-alert .fui-issues > li + li {
+    border-top-color: color-mix(in srgb, var(--bad) 20%, transparent);
   }
 
   /* ---- Code ---- */
@@ -1561,6 +2915,370 @@
 
   .fui-editor-input:focus-visible {
     outline: none;
+  }
+
+  /* ---- The copy button ---- */
+
+  .fui-copy {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-default);
+  }
+
+  .fui-copy-refused {
+    color: var(--bad);
+    font-size: var(--text-micro);
+    line-height: var(--leading-micro);
+  }
+
+  /* ---- The modal dialog ---- */
+
+  /* The modal: the dialog's box in the top layer over the dimmed page. */
+  .fui-modal {
+    max-height: calc(100dvh - 4rem);
+    overflow: auto;
+  }
+
+  .fui-modal:not([open]) {
+    display: none;
+  }
+
+  .fui-modal-body > * + * {
+    margin-block-start: 0.75rem;
+  }
+
+  /* ---- The side panel ---- */
+
+  /* A panel from the inline end, full height, the full width below 40 rem. */
+  .fui-side-panel {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: none;
+    margin: 0;
+    margin-inline-start: auto;
+    border: 0;
+    border-inline-start: 1px solid var(--edge);
+    background: var(--surface-raised);
+    box-shadow: var(--shadow-overlay);
+    padding: 0;
+    color: var(--ink);
+  }
+
+  .fui-side-panel:popover-open {
+    position: fixed;
+    inset: 0 0 0 auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  @media (width >= 40rem) {
+    .fui-side-panel {
+      width: 24rem;
+    }
+  }
+
+  .fui-side-panel::backdrop {
+    background: var(--scrim);
+  }
+
+  .fui-side-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-default);
+    border-bottom: 1px solid var(--edge);
+    padding: 0.75rem var(--space-loose);
+  }
+
+  .fui-side-panel-close {
+    margin-inline-start: auto;
+  }
+
+  .fui-side-panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-loose);
+  }
+
+  .fui-side-panel-body > * + * {
+    margin-block-start: 0.75rem;
+  }
+
+  /* ---- The upload field ---- */
+
+  .fui-upload {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  /* The drop zone: a dashed frame that takes the accent while a file is over
+     it, and the bad tone when it refused one. */
+  .fui-drop {
+    display: grid;
+    justify-items: center;
+    gap: var(--space-default);
+    border: 1px dashed var(--edge-control);
+    border-radius: var(--radius-card);
+    background: var(--surface-sunken);
+    padding: 1.5rem var(--space-loose);
+    text-align: center;
+    transition: border-color var(--motion-state) ease-out, background-color var(--motion-state) ease-out;
+  }
+
+  .fui-drop-over {
+    border-style: solid;
+    border-color: var(--accent);
+    background: var(--accent-tint);
+  }
+
+  .fui-drop-refused {
+    border-color: var(--bad);
+  }
+
+  .fui-drop-glyph {
+    display: inline-flex;
+    width: 2.5rem;
+    height: 2.5rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    background: var(--surface-raised);
+    color: var(--muted);
+  }
+
+  .fui-drop-over .fui-drop-glyph {
+    color: var(--accent);
+  }
+
+  .fui-drop-words {
+    font-weight: 500;
+  }
+
+  .fui-drop-state {
+    display: flex;
+    align-items: center;
+    gap: var(--space-default);
+    color: var(--ok);
+  }
+
+  .fui-drop-state-refused {
+    color: var(--bad);
+  }
+
+  /* ---- Charts ---- */
+
+  .fui-chart {
+    margin: 0;
+  }
+
+  .fui-chart-plot {
+    min-width: 0;
+  }
+
+  .fui-chart-activity {
+    max-width: 100%;
+  }
+
+  /* A chart's frame: the Y labels in a gutter left of the plot, spaced to
+     the grid lines (the plot's top and bottom margins less half a line). */
+  .fui-chart-frame {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: var(--space-default);
+  }
+
+  .fui-chart-y {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding-block: 0.125rem 1.125rem;
+    color: var(--muted);
+    font-size: var(--text-micro);
+    line-height: var(--leading-micro);
+    font-variant-numeric: tabular-nums;
+    text-align: end;
+  }
+
+  .fui-chart-svg {
+    display: block;
+    width: 100%;
+    overflow: visible;
+  }
+
+  .fui-chart-point {
+    fill: var(--surface-raised);
+    stroke: var(--series);
+    stroke-width: 2;
+  }
+
+  /* A run of missing values, bridged by a dashed line in the series'
+     colour so the gap reads as no value rather than as a break. */
+  .fui-chart-gap {
+    fill: none;
+    stroke: var(--series);
+    stroke-width: 1.5;
+    stroke-dasharray: 4 4;
+    opacity: 0.7;
+  }
+
+  .fui-legend-note {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-tight);
+    color: var(--muted);
+    font-size: var(--text-small);
+    line-height: var(--leading-small);
+  }
+
+  .fui-swatch-gap {
+    width: 1.25rem;
+    border-top: 2px dashed var(--muted);
+  }
+
+  .fui-chart-grid,
+  .fui-chart-axis,
+  .fui-chart-line,
+  .fui-chart-gap {
+    vector-effect: non-scaling-stroke;
+  }
+
+  .fui-chart-plot-lines {
+    overflow: visible;
+  }
+
+  .fui-chart-grid {
+    stroke: var(--edge);
+    stroke-width: 1;
+  }
+
+  .fui-chart-axis {
+    stroke: var(--edge-strong);
+    stroke-width: 1;
+  }
+
+  /* A label keeps the type scale at every width, on a halo of the card's
+     ground so a line passing under it never hides it. */
+  .fui-chart-label {
+    fill: var(--muted);
+    font-size: var(--text-micro);
+    line-height: var(--leading-micro);
+    paint-order: stroke;
+    stroke: var(--surface-raised);
+    stroke-width: 3px;
+    stroke-linejoin: round;
+  }
+
+  .fui-chart-line {
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .fui-chart-accent {
+    stroke: var(--accent);
+  }
+
+  .fui-series-0 {
+    --series: var(--accent);
+  }
+
+  .fui-series-1 {
+    --series: var(--info);
+  }
+
+  .fui-series-2 {
+    --series: var(--ok);
+  }
+
+  .fui-series-3 {
+    --series: var(--warn);
+  }
+
+  .fui-series-4 {
+    --series: var(--bad);
+  }
+
+  .fui-series-5 {
+    --series: var(--neutral);
+  }
+
+  .fui-chart-line[class*="fui-series-"] {
+    stroke: var(--series);
+  }
+
+  /* The legend: a chip per series, its swatch beside its name, pressed while
+     the series shows. */
+  .fui-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-tight);
+    margin-block-start: var(--space-default);
+  }
+
+  .fui-legend-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    border: 1px solid var(--edge);
+    border-radius: 9999px;
+    background: var(--surface-raised);
+    padding: var(--space-tight) 0.625rem;
+    color: var(--muted);
+    font-size: var(--text-micro);
+    line-height: var(--leading-micro);
+    text-decoration: line-through;
+    transition: background-color var(--motion-state) ease-out;
+  }
+
+  .fui-legend-chip:hover {
+    background: var(--surface-sunken);
+  }
+
+  .fui-legend-chip[aria-pressed="true"] {
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  .fui-swatch {
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 9999px;
+    background: var(--series);
+  }
+
+  .fui-legend-chip[aria-pressed="false"] .fui-swatch {
+    background: transparent;
+    box-shadow: inset 0 0 0 2px var(--series);
+  }
+
+  /* ---- The document pane ---- */
+
+  .fui-document {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .fui-document-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-default);
+  }
+
+  .fui-document-copy {
+    margin-inline-start: auto;
+  }
+
+  .fui-document-rendered {
+    border: 1px solid var(--edge);
+    border-radius: var(--radius-card);
+    padding: 0.75rem;
+  }
+
+  .fui-document-body > pre {
+    white-space: pre;
   }
 
   /* A control for the narrow screen's drawer alone (its Menu and Close),

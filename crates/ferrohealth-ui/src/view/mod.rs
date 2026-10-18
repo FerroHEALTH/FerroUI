@@ -17,12 +17,18 @@
 //! a form posts.
 
 pub mod button;
+pub mod change;
+pub mod chart;
 pub mod code;
 pub mod dialog;
 pub mod empty;
 pub mod form;
+pub mod layout;
 pub mod menu;
+pub mod notice;
 pub mod refusal;
+pub mod search;
+pub mod segmented;
 pub mod shell;
 pub mod sign_in;
 pub mod status;

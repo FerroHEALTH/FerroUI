@@ -63,17 +63,65 @@ pub struct Issue {
     pub text: Option<String>,
     /// Where it points, such as an expression or a line, empty for nowhere.
     pub place: String,
+    /// The codes that class it (an `OperationOutcome` issue's
+    /// `details.coding` codes), shown after its text.
+    pub details: Vec<String>,
+}
+
+impl Issue {
+    /// An issue of `severity` with `code`, carrying no text, pointing
+    /// nowhere, with no detail codes.
+    #[must_use]
+    pub fn new(severity: Severity, code: impl Into<String>) -> Self {
+        Self {
+            severity,
+            code: code.into(),
+            text: None,
+            place: String::new(),
+            details: Vec::new(),
+        }
+    }
+
+    /// This issue, carrying `text`.
+    #[must_use]
+    pub fn text(self, text: impl Into<String>) -> Self {
+        Self {
+            text: Some(text.into()),
+            ..self
+        }
+    }
+
+    /// This issue, pointing at `place`.
+    #[must_use]
+    pub fn place(self, place: impl Into<String>) -> Self {
+        Self {
+            place: place.into(),
+            ..self
+        }
+    }
+
+    /// This issue, classed by the codes `details`.
+    #[must_use]
+    pub fn details(self, details: Vec<String>) -> Self {
+        Self { details, ..self }
+    }
 }
 
 /// What a refusal shows.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Refusal {
-    /// The upstream's status, such as `422`, when it answered one.
+    /// The upstream's status, such as `422`, when it answered one; `None`
+    /// when no answer came, which the title says in words.
     pub status: Option<u16>,
     /// The sentence that says what was refused.
     pub summary: String,
     /// The issues it answered with.
     pub issues: Vec<Issue>,
+    /// The request the console made, so a reader can repeat it by hand.
+    pub request: Option<String>,
+    /// The start of a body that carried no readable issues, or the
+    /// transport's message, kept as evidence and shown as text.
+    pub evidence: Option<String>,
 }
 
 /// Returns the issues of `issues` a reader is shown, gravest first, and how
@@ -115,14 +163,20 @@ pub fn issue_list(issues: &[Issue]) -> impl IntoView + use<> {
                     <code>{issue.place.clone()}</code>
                 }
             });
+            let details = issue
+                .details
+                .iter()
+                .map(|code| view! { <code class="fui-issue-detail">{code.clone()}</code> })
+                .collect_view();
             view! {
                 <li>
                     <span class=issue.severity.tone().badge()>{issue.severity.word()}</span>
-                    " "
-                    <code>{issue.code.clone()}</code>
-                    {place}
-                    ": "
-                    {text}
+                    <span class="fui-issue-head">
+                        <code>{issue.code.clone()}</code>
+                        {place}
+                        ":"
+                    </span>
+                    <span class="fui-issue-text">{text} {details}</span>
                 </li>
             }
         })
@@ -141,18 +195,41 @@ pub fn issue_list(issues: &[Issue]) -> impl IntoView + use<> {
     }
 }
 
-/// Returns `refusal` as an alert: its status, its summary and its issues.
+/// The title of `refusal`: its status, or "No answer" when none came,
+/// before its summary.
+#[must_use]
+pub fn refusal_title(refusal: &Refusal) -> String {
+    match refusal.status {
+        Some(status) => format!("{status}: {}", refusal.summary),
+        None => format!("No answer: {}", refusal.summary),
+    }
+}
+
+/// Returns `refusal` as an alert: its status, its summary, the request it
+/// answered, its issues, and the evidence of a body that held none.
+///
+/// The request and the evidence are text, never markup.
 #[must_use]
 pub fn refusal(refusal: &Refusal) -> impl IntoView + use<> {
-    let title = match refusal.status {
-        Some(status) => format!("{status}: {}", refusal.summary),
-        None => refusal.summary.clone(),
-    };
+    let title = refusal_title(refusal);
+    let request = refusal
+        .request
+        .clone()
+        .map(|request| view! { <p class="fui-alert-request"><code>{request}</code></p> });
     let issues = (!refusal.issues.is_empty()).then(|| issue_list(&refusal.issues));
+    let evidence = refusal.evidence.clone().map(|evidence| {
+        view! {
+            <div class="fui-code-panel fui-alert-evidence" role="region" aria-label="What the server sent" tabindex="0">
+                <pre>{evidence}</pre>
+            </div>
+        }
+    });
     view! {
         <div role="alert" class="fui-alert">
             <p class="fui-alert-title">{icon(Glyph::CIRCLE_ALERT, "16")} {title}</p>
+            {request}
             {issues}
+            {evidence}
         </div>
     }
 }
@@ -169,16 +246,35 @@ pub fn fault(message: impl Into<String>) -> impl IntoView {
 
 #[cfg(test)]
 mod tests {
-    use super::{Issue, Severity, shown_issues};
+    use super::{Issue, Refusal, Severity, refusal_title, shown_issues};
 
     /// An issue of `severity`, carrying `text` when given.
     fn issue(severity: Severity, text: Option<&str>) -> Issue {
-        Issue {
-            severity,
-            code: String::from("processing"),
-            text: text.map(str::to_owned),
-            place: String::new(),
+        let issue = Issue::new(severity, "processing");
+        match text {
+            Some(text) => issue.text(text),
+            None => issue,
         }
+    }
+
+    #[test]
+    fn a_refusal_with_no_status_says_no_answer_came() {
+        let none = Refusal {
+            summary: String::from("the terminology server did not answer."),
+            ..Refusal::default()
+        };
+        assert_eq!(
+            "No answer: the terminology server did not answer.",
+            refusal_title(&none)
+        );
+        let answered = Refusal {
+            status: Some(404),
+            ..none
+        };
+        assert_eq!(
+            "404: the terminology server did not answer.",
+            refusal_title(&answered)
+        );
     }
 
     #[test]

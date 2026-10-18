@@ -19,9 +19,48 @@ pub struct Tab {
     pub label: &'static str,
 }
 
+/// One tab whose path is known only at run time, such as a detail screen's
+/// tab kept in its query.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KeyedTab {
+    /// The key that names the tab, which the current one is matched by.
+    pub key: &'static str,
+    /// The href the tab leads to.
+    pub href: String,
+    /// What the tab says.
+    pub label: &'static str,
+}
+
+/// Returns the link tabs `tabs` named `label`, marked by key.
+///
+/// The one whose key is `current` is marked as the page: the form of [`link_tabs`] whose hrefs
+/// differ only in their query, so the path cannot say which is current.
+#[must_use]
+pub fn keyed_tabs(
+    label: &'static str,
+    tabs: Vec<KeyedTab>,
+    current: &str,
+) -> impl IntoView + use<> {
+    let tabs = tabs
+        .into_iter()
+        .map(|tab| {
+            let here = (tab.key == current).then_some("page");
+            view! {
+                <a href=tab.href class="fui-tab" aria-current=here data-tab=tab.key>
+                    {tab.label}
+                </a>
+            }
+        })
+        .collect_view();
+    view! {
+        <nav class="fui-tabs" aria-label=label>
+            {tabs}
+        </nav>
+    }
+}
+
 /// Returns the link tabs `tabs` named `label`, the one whose path is
-/// `current` marked as the page, by its edge and weight as well as its
-/// colour.
+/// `current` marked as the page, on the accent's tint and named current.
 #[must_use]
 pub fn link_tabs(label: &'static str, tabs: &[Tab], current: &str) -> impl IntoView + use<> {
     let tabs = tabs

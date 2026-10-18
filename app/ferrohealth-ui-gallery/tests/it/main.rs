@@ -28,6 +28,8 @@ mod journeys;
 mod painted;
 mod screenshots;
 mod stack;
+mod states;
+mod widgets;
 
 /// The environment variable that opts in to the browser journeys.
 const JOURNEYS_GATE: &str = "FERROUI_JOURNEYS";

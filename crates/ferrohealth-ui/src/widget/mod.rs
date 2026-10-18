@@ -10,9 +10,20 @@
 //! paint is the server's. A widget is a plain function where its state fits
 //! in its arguments, and none fetches.
 
+pub mod chart;
+pub mod copy;
+pub mod dialog;
+pub mod document;
 pub mod editor;
 pub mod filter;
+pub mod help;
 pub mod nav;
 pub mod pager;
+pub mod picker;
+pub mod segmented;
+pub mod side_panel;
 pub mod tabs;
+pub mod theme;
 pub mod toast;
+pub mod tree;
+pub mod upload;

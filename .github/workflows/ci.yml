@@ -362,7 +362,7 @@ jobs:
           echo "$RUNNER_TEMP/gallery-tools/bin" >> "$GITHUB_PATH"
       - run: bash scripts/release/gallery-site.sh --release
       # The sizes go to the job summary; the step fails above the budget of
-      # .claude/rules/leptos-ui.md §11.
+      # .claude/rules/leptos-ui.md §12.
       - run: bash scripts/checks/gallery-bundle.sh
       - run: bash scripts/checks/gallery-paths.sh
 

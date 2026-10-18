@@ -92,7 +92,7 @@ pub struct Editor {
 /// Returns the editor over `editor`; `on_input` receives the text after
 /// every edit, exactly as typed.
 #[must_use]
-pub fn code_editor(editor: Editor, on_input: impl Fn(String) + 'static) -> impl IntoView {
+pub fn code_editor(editor: Editor, on_input: impl Fn(String) + 'static) -> AnyView {
     let Editor {
         id,
         language,
@@ -128,6 +128,7 @@ pub fn code_editor(editor: Editor, on_input: impl Fn(String) + 'static) -> impl 
             </div>
         </div>
     }
+    .into_any()
 }
 
 #[cfg(test)]

@@ -98,8 +98,12 @@ so a workspace `--all-features` build never enables both.
 pager, `widget::pager` the session pager. Page and size are read
 defensively (`?page=` 1-based, `?size=` with choices 25, 50, 100, clamped to
 200), the range label names the rows on the page ("1-25 of 312", a short
-last page "301-312 of 312"), a step that cannot be taken stays visible and
-says "(unavailable)" in text, a sortable header is a link with `aria-sort`,
+last page "301-312 of 312"), a step that cannot be taken stays visible as a
+disabled control and says "(unavailable)" in visually hidden text, one
+pager row holds the range, the steps and the sizes, the range names the listing's noun and says
+when the server counted more than it sent, a listing with no stated total
+pages with Previous and Next alone (`OpenWindow`), the header is the small
+step in sentence case, a sortable header is a link with `aria-sort`,
 numbers align right, and the table shows every row of its page, never in a
 box capped in height. From 64rem up the header sticks to the viewport just
 below the sticky top bar, inside the scroll padding (SC 2.4.11); below
@@ -127,16 +131,31 @@ entry, and a new role joins the contrast test in the change that adds it.
   `--edge`, `--edge-control`, `--ink`, `--muted`, `--accent`, `--accent-ink`,
   `--accent-tint`, `--focus`, the status families `--ok`, `--warn`, `--bad`,
   `--info`, `--neutral` with their grounds and dots, `--syntax-*`), neutrals
-  Tailwind slate, radii 0.5 rem and 0.375 rem.
+  Tailwind slate, radii 0.5 rem and 0.375 rem, a card shadow and an overlay
+  shadow. A chart series takes a role tone (`chart::ACCENT` to `NEUTRAL`),
+  so its colour means what the tone means elsewhere: refusals are `BAD`.
+- One hover and focus treatment: an interactive surface takes the sunken
+  ground under the pointer (a navigation entry, a ghost or secondary button, a
+  tab, a segment, a menu item, a table row at 60%), a filled control its
+  hover shade, a card that is a link its accent edge; every control shows the
+  2 px focus ring in `--focus`, 2 px out.
 - A brand's theme file sets `--accent`, `--accent-hover`, `--accent-ink`,
   `--accent-tint` and `--focus` in three blocks: `:root`,
   `:root[data-theme="dark"]`, and the system's dark under
   `prefers-color-scheme`. Nothing else.
 - The theme is `data-theme` (`light`, `dark`, `system`) on `<html>`, written
-  by the console's server, so the first paint is right.
-- Six steps of type (`--text-display` to `--text-micro`) and four of space
-  (`--space-tight` to `--space-section`), the compact density under
-  `data-density="compact"`; the system font stack, no web font.
+  by the console's server from its cookie, so the first paint is right; with
+  no cookie it follows the system. Every top bar carries the one theme
+  toggle (`theme_toggle`), a moon in light and a sun in dark, which posts
+  with no script and, hydrated, swaps the theme in place while the console
+  persists it in the same cookie; never browser storage. The three-way
+  choice belongs in a settings form.
+- Six steps of type (`--text-display` to `--text-micro`), each written
+  with its leading (`--leading-display` to `--leading-micro`), and four of
+  space (`--space-tight` to `--space-section`), the compact density under
+  `data-density="compact"`; the system font stack, no web font. The
+  Tailwind theme is a `reference` block, so it never writes a variable that
+  names itself.
 
 ## 9. Icons
 
@@ -155,7 +174,40 @@ carries meaning alone: it sits beside its word.
   where it is interactive, and the refreshed screenshots, which are looked at
   before the change merges.
 
-## 11. Bundle
+## 11. Quality control (owner rule, 2026-10-18)
+
+The library is held to the best console's quality, not to "it renders".
+
+- **Best of four, one language.** A component is compared across the four
+  consoles (FerroEHR, FerroFED, FerroTERM, FerroBRIDGE) and the best version
+  on its merits wins: looks, density, hover and focus states, accessibility,
+  keyboard path. It is then restyled to the library's one type scale, spacing
+  scale, radius and shadow set, hover and focus treatment, and role tokens,
+  so a piece taken from one console never looks like another app's.
+- **Every interactive state is captured.** The gallery's state capture
+  (`tests/it/states.rs`) moves the pointer onto a navigation entry, a table
+  row, each button variant, a linked card and a tab; gives the focus to a
+  control, a navigation entry and the keyboard tabs; opens every overlay
+  (dialogs, the modal a signal opens, the side panel, both menus, the
+  drawer); raises the toasts; and drives the upload field through empty, a
+  file over it, a file read and a file refused; turns the help switch on,
+  opens the picker on its input, walks the tree by the keyboard, focuses the
+  search box, reveals a choice's fields and draws the tables in the compact
+  density, in every brand, light and dark, with reduced motion so each
+  state is drawn at rest. A new interactive component adds its states
+  there.
+- **Side by side with the reference.** `docs/qa/` pairs the reference
+  consoles' screenshots with the gallery's, screen by screen; a component that
+  changes refreshes its pair.
+- **Looked at before a release.** The release pull request says, per screen
+  and per state, what was checked and what was fixed, and the owner reviews
+  the screenshots before the tag.
+- **One owner of the library.** Anything a console needs that the library
+  lacks is added here, generic, documented, in the gallery for every brand
+  light and dark, tested and contrast-checked; never a single-use component
+  inside a console.
+
+## 12. Bundle
 
 A library component reaches every console's bundle, so a new browser-side
 dependency or a heavy generic is justified against the bytes it adds. The
@@ -165,9 +217,13 @@ WebAssembly is over the number below, which the script reads from this table.
 
 | Measure | Budget |
 |---|---|
-| WebAssembly, brotli-compressed | 409600 bytes |
+| WebAssembly, brotli-compressed | 614400 bytes |
 
-The budget is 400 KiB, 26% over the 325387 bytes the first release measured
-(2026-10-18, cargo-leptos 0.3.11, wasm-bindgen 0.2.129, Rust 1.98.1). A change
+The budget is 600 KiB, 18% over the 518566 bytes 0.1.1 measured (2026-10-18,
+cargo-leptos 0.3.11, wasm-bindgen 0.2.129, Rust 1.98.1). 0.1.0 measured
+325387 bytes; 0.1.1 adds every component the four consoles draw (the tree,
+the picker, the dialogs, the side panel, the upload field, the charts, the
+document pane, the help switch), and a console's own bundle carries only the
+components it uses. A change
 that needs more raises it here, in its own pull request, with the measured
 size and the reason.

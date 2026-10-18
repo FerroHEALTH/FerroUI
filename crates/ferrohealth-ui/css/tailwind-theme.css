@@ -5,8 +5,12 @@
    Tailwind entry after `@import "tailwindcss"`, and `bg-surface-raised`,
    `text-muted`, `border-edge` and the rest name the same roles the
    components paint with. Nothing here sets a value; ferrohealth-ui.css and the
-   brand theme do. https://tailwindcss.com/docs/theme */
-@theme inline {
+   brand theme do. The block is `reference`: Tailwind writes no variable of
+   it into the console's theme layer, so `--text-display: var(--text-display)`
+   never becomes a dependency cycle that unsets the library's value (CSS
+   Custom Properties Level 1, section 2.3); each utility inlines the role.
+   https://tailwindcss.com/docs/theme */
+@theme inline reference {
   --color-surface: var(--surface);
   --color-surface-raised: var(--surface-raised);
   --color-surface-sunken: var(--surface-sunken);
@@ -33,11 +37,17 @@
   --color-neutral-ground: var(--neutral-ground);
   --color-scrim: var(--scrim);
   --text-display: var(--text-display);
+  --text-display--line-height: var(--leading-display);
   --text-title: var(--text-title);
+  --text-title--line-height: var(--leading-title);
   --text-heading: var(--text-heading);
+  --text-heading--line-height: var(--leading-heading);
   --text-body: var(--text-body);
+  --text-body--line-height: var(--leading-body);
   --text-small: var(--text-small);
+  --text-small--line-height: var(--leading-small);
   --text-micro: var(--text-micro);
+  --text-micro--line-height: var(--leading-micro);
   --spacing-tight: var(--space-tight);
   --spacing-default: var(--space-default);
   --spacing-loose: var(--space-loose);

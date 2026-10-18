@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+
+# Each browser journey starts its own Chrome and its own gallery, so at most
+# four run at once: more crash the browser on a laptop or a CI runner.
+# https://nexte.st/docs/configuration/test-groups/
+[test-groups]
+browser = { max-threads = 4 }
+
+[[profile.default.overrides]]
+filter = 'package(ferrohealth-ui-gallery) & (test(/^journeys::/) | test(/^widgets::/) | test(/^painted::/) | test(/^states::/) | test(/^screenshots::every_page/))'
+test-group = 'browser'

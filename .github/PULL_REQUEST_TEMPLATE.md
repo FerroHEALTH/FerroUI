@@ -16,6 +16,9 @@ Closes #NNN
 - [ ] Accessibility decisions cite WCAG 2.2, WAI-ARIA 1.2 or the Authoring Practices, not memory and not another library.
 - [ ] Rust gates pass: `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings`, the wasm32 clippy runs, `cargo nextest run --workspace --locked`, `cargo doc` with `RUSTDOCFLAGS=-D warnings`, and `cargo deny check`.
 - [ ] A visible change refreshed the gallery screenshots, and I looked at every image it changed.
+- [ ] A new or changed component was compared with the four consoles' versions (`docs/qa/`), and the best one on its merits was restyled to the library's tokens; the winner and the reason are stated below.
+- [ ] Its interactive states (pointer, focus, open, each tone) are captured by `tests/it/states.rs` in every brand, light and dark.
+- [ ] A release pull request says, per screen and per state, what was checked and what was fixed.
 - [ ] Shell and workflow files are clean: `shellcheck --severity=style`, `actionlint`, `zizmor --min-severity=low .github/`.
 - [ ] `CHANGELOG.md` has an `[Unreleased]` entry, if a console sees the change.
 - [ ] No patient data in a fixture, test, gallery row or example.

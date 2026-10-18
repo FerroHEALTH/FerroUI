@@ -6,7 +6,7 @@ resolver = "3"
 members = ["crates/*", "app/*"]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 rust-version = "1.98"
 license = "BUSL-1.1"
@@ -32,6 +32,11 @@ serde = { version = "1.0.229", features = ["derive"] }
 leptos_axum = "0.8.10"
 wasm-bindgen = "0.2.129"
 console_error_panic_hook = "0.1.7"
+# The browser APIs the widgets call that Leptos turns on no feature for (the
+# clipboard, a chosen or dropped file, the modal dialog), and the future of a
+# browser promise. Both are in the lock already under Leptos.
+web-sys = { version = "0.3.106", default-features = false }
+wasm-bindgen-futures = "0.4.79"
 axum = "0.8.9"
 http = "1.5.0"
 tokio = { version = "1.53.1", default-features = false }

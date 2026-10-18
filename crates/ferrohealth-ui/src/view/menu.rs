@@ -27,7 +27,7 @@ pub struct OperatorMenu {
 /// Returns the operator's menu button and its popover, with `extra` (such as
 /// the theme switch on a narrow screen) above the sign-out.
 #[must_use]
-pub fn operator_menu(menu: OperatorMenu, extra: impl IntoView) -> impl IntoView {
+pub fn operator_menu(menu: OperatorMenu, extra: impl IntoView + 'static) -> AnyView {
     let sign_out = menu.sign_out.map(|action| {
         let class = format!("{} fui-sign-out", Variant::Secondary.class());
         view! {
@@ -42,12 +42,12 @@ pub fn operator_menu(menu: OperatorMenu, extra: impl IntoView) -> impl IntoView 
     view! {
         <button
             type="button"
-            class=Variant::Secondary.class()
+            class=Variant::Ghost.class()
             popovertarget=menu.id
             aria-controls=menu.id
         >
             {icon(Glyph::CIRCLE_USER, "16")}
-            <span>{menu.name.clone()}</span>
+            <span class="fui-operator-name">{menu.name.clone()}</span>
             {icon(Glyph::CHEVRON_DOWN, "14")}
         </button>
         <div id=menu.id popover="auto" class="fui-menu">
@@ -59,4 +59,5 @@ pub fn operator_menu(menu: OperatorMenu, extra: impl IntoView) -> impl IntoView 
             {sign_out}
         </div>
     }
+    .into_any()
 }

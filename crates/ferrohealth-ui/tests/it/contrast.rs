@@ -105,6 +105,7 @@ const EDGE_PAIRS: &[(&str, &[&str])] = &[
     ),
     ("focus", ACCENT_GROUNDS),
     ("accent", &["surface", "surface-raised", "surface-sunken"]),
+    ("neutral", &["surface-raised"]),
 ];
 
 /// An sRGB colour with its alpha, each channel in 0 to 255.

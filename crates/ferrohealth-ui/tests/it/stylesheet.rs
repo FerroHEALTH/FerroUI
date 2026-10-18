@@ -8,7 +8,7 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
-use ferrohealth_ui::style::STYLESHEET;
+use ferrohealth_ui::style::{STYLESHEET, TAILWIND_THEME};
 
 /// Every `fui-` class name in `text`.
 fn classes(text: &str) -> BTreeSet<String> {
@@ -66,6 +66,43 @@ fn every_size_of_type_names_a_step_of_the_scale() {
         .filter(|line| !line.contains("var(--text-") && !line.contains("inherit"))
         .collect();
     assert!(off_scale.is_empty(), "sizes off the scale: {off_scale:?}");
+}
+
+#[test]
+fn every_step_of_type_is_written_with_its_leading() {
+    let mut unpaired = Vec::new();
+    for rule in STYLESHEET.split('}') {
+        let body = rule.rsplit('{').next().unwrap_or_default();
+        if body.contains("font-size: var(--text-") && !body.contains("line-height:") {
+            unpaired.push(body.trim().lines().next().unwrap_or_default().to_owned());
+        }
+    }
+    assert!(unpaired.is_empty(), "a step with no leading: {unpaired:?}");
+    for step in ["display", "title", "heading", "body", "small", "micro"] {
+        assert!(
+            STYLESHEET.contains(&format!("--leading-{step}:")),
+            "the step {step} has no leading token"
+        );
+    }
+}
+
+#[test]
+fn the_tailwind_theme_writes_no_variable_that_names_itself() {
+    // NOTE: CSS Custom Properties Level 1, section 2.3; a reference block is
+    // inlined into each utility, so a same-named entry is never written out.
+    let reference = TAILWIND_THEME.contains("@theme inline reference {");
+    let cycles: Vec<&str> = TAILWIND_THEME
+        .lines()
+        .map(str::trim)
+        .filter(|line| {
+            line.split_once(':')
+                .is_some_and(|(name, value)| value.trim() == format!("var({});", name.trim()))
+        })
+        .collect();
+    assert!(
+        reference || cycles.is_empty(),
+        "entries that would unset themselves: {cycles:?}"
+    );
 }
 
 #[test]

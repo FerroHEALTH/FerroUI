@@ -52,24 +52,31 @@ fn card(brand: Brand, variant: Variant) -> AnyView {
             "Sign in"
         }),
     });
-    let notice = match variant {
-        Variant::Basic => Notice {
-            tone: Tone::Warn,
-            text: String::from("Your session ended. Sign in again to continue."),
-        },
-        Variant::Provider | Variant::Both => Notice {
-            tone: Tone::Accent,
-            text: String::from("A synthetic deployment: sign in with the gallery's own account."),
-        },
+    let notices = match variant {
+        Variant::Basic => vec![
+            Notice::new(Tone::Warn, "Your session ended. Sign in again to continue.")
+                .id("session-expired"),
+            Notice::new(
+                Tone::Warn,
+                "Could not read the server's sign-in methods, so both are offered.",
+            ),
+        ],
+        Variant::Provider | Variant::Both => vec![Notice::new(
+            Tone::Accent,
+            "A synthetic deployment.\nSign in with the gallery's own account: synthetic / synthetic.",
+        )],
     };
     let refusal = (variant == Variant::Basic).then(|| String::from("Wrong username or password."));
     sign_in(SignIn {
         lockup: lockup("/", mark(brand_glyph(brand)), brand.product(), "Console").into_any(),
-        notice: Some(notice),
+        notices,
         refusal,
         basic,
         provider,
-        links: vec![("Documentation", String::from("/"))],
+        links: vec![
+            (String::from("Documentation"), String::from("/")),
+            (String::from("API reference"), String::from("/")),
+        ],
     })
     .into_any()
 }

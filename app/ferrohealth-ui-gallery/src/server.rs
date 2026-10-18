@@ -19,7 +19,7 @@ use axum::middleware::Next;
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
 use ferrohealth_ui::style::{Brand, STYLESHEET};
-use ferrohealth_ui::theme::Theme;
+use ferrohealth_ui::theme::{Density, Theme};
 use http::header::{
     CACHE_CONTROL, CONTENT_SECURITY_POLICY, CONTENT_TYPE, REFERRER_POLICY, SET_COOKIE,
     X_CONTENT_TYPE_OPTIONS, X_FRAME_OPTIONS,
@@ -30,7 +30,9 @@ use leptos::nonce::Nonce;
 use leptos_axum::LeptosRoutes as _;
 use tower_http::set_header::SetResponseHeaderLayer;
 
-use crate::app::{STYLESHEET as STYLESHEET_PATH, THEME_COOKIE, THEME_ROUTE};
+use crate::app::{
+    DENSITY_COOKIE, DENSITY_ROUTE, STYLESHEET as STYLESHEET_PATH, THEME_COOKIE, THEME_ROUTE,
+};
 
 /// The name cargo-leptos gives the site bundle's files under `pkg/`.
 pub const OUTPUT_NAME: &str = "ferrohealth-ui-gallery";
@@ -57,6 +59,7 @@ pub fn router(options: LeptosOptions) -> axum::Router {
         .route("/favicon.ico", get(favicon))
         .route("/themes/{file}", get(theme_file))
         .route(THEME_ROUTE, post(choose_theme))
+        .route(DENSITY_ROUTE, post(choose_density))
         .leptos_routes_with_context(&options, routes, provide_request_nonce, {
             let options = options.clone();
             move || crate::app::document(options.clone())
@@ -142,11 +145,35 @@ async fn choose_theme(Form(choice): Form<Choice>) -> Response {
         )
             .into_response();
     };
-    let cookie = format!(
-        "{THEME_COOKIE}={}; Path=/; SameSite=Lax; HttpOnly; Max-Age=31536000",
-        theme.key()
-    );
-    let mut response = Redirect::to(return_path(&choice.back)).into_response();
+    kept(THEME_COOKIE, theme.key(), &choice.back)
+}
+
+/// What a density choice posts.
+#[derive(Debug, serde::Deserialize)]
+struct DensityChoice {
+    /// The key of the density chosen.
+    density: String,
+    /// The page to return to.
+    back: String,
+}
+
+/// Keeps the density a plain form post chose in its cookie and sends the
+/// browser back to the page it came from.
+async fn choose_density(Form(choice): Form<DensityChoice>) -> Response {
+    let Some(density) = Density::parse(&choice.density) else {
+        return (
+            StatusCode::BAD_REQUEST,
+            "the density is not comfortable or compact",
+        )
+            .into_response();
+    };
+    kept(DENSITY_COOKIE, density.key(), &choice.back)
+}
+
+/// The redirect to `back` that keeps `value` in the cookie `name`.
+fn kept(name: &str, value: &str, back: &str) -> Response {
+    let cookie = format!("{name}={value}; Path=/; SameSite=Lax; HttpOnly; Max-Age=31536000");
+    let mut response = Redirect::to(return_path(back)).into_response();
     match HeaderValue::from_str(&cookie) {
         Ok(value) => {
             response.headers_mut().insert(SET_COOKIE, value);

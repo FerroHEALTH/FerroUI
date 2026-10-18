@@ -27,6 +27,29 @@ leptos.workspace = true
 leptos_router.workspace = true
 serde.workspace = true
 
+# The widgets' browser code, compiled for the browser alone.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen.workspace = true
+wasm-bindgen-futures.workspace = true
+web-sys = { workspace = true, features = [
+  "Blob",
+  "Clipboard",
+  "DataTransfer",
+  "DomRect",
+  "DragEvent",
+  "Element",
+  "Event",
+  "EventTarget",
+  "File",
+  "FileList",
+  "HtmlDialogElement",
+  "HtmlElement",
+  "HtmlInputElement",
+  "MouseEvent",
+  "Navigator",
+  "Window",
+] }
+
 # The tests render the views to HTML on the host, which the `ssr` feature
 # draws; a dev-dependency reaches the test build alone.
 [dev-dependencies]

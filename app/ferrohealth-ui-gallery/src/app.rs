@@ -7,19 +7,20 @@
 //! shell a console draws, and the sign-in cards under `/sign-in/…`. The
 //! document links the library's stylesheet and the brand's theme file, which
 //! the server serves from the library's constants, and carries the theme the
-//! request's cookie names as `data-theme`, so a page arrives in its theme
-//! before any script runs.
+//! request's cookie names as `data-theme` and the density as
+//! `data-density`, so a page arrives in its theme before any script runs.
 
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::style::Brand;
-use ferrohealth_ui::theme::Theme;
+use ferrohealth_ui::theme::{Density, Theme};
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::menu::{OperatorMenu, operator_menu};
+use ferrohealth_ui::view::search::{SearchBox, search_box};
+use ferrohealth_ui::view::segmented::segmented_links;
 use ferrohealth_ui::view::shell::{
-    Footer, Shell, centred, drawer_button, lockup, mark, shell, topbar,
+    Footer, Shell, centred, drawer_button, lockup, mark, shell, topbar_with,
 };
 use ferrohealth_ui::view::status::{banner, pill};
-use ferrohealth_ui::view::theme_switch::theme_switch;
 use ferrohealth_ui::widget::nav::{Entry, Group, sidebar};
 use ferrohealth_ui::widget::toast::{provide_toasts, toast_region};
 use leptos::prelude::*;
@@ -43,6 +44,12 @@ pub const THEME_ROUTE: &str = "/theme";
 /// The name of the cookie the theme choice is kept in.
 pub const THEME_COOKIE: &str = "gallery-theme";
 
+/// The path of the route a density choice posts to.
+pub const DENSITY_ROUTE: &str = "/density";
+
+/// The name of the cookie the density choice is kept in.
+pub const DENSITY_COOKIE: &str = "gallery-density";
+
 /// The id of the navigation, which the drawer button opens.
 const SIDEBAR_ID: &str = "sidebar";
 
@@ -65,14 +72,29 @@ pub fn brand_of(path: &str) -> Brand {
 /// none.
 #[must_use]
 pub fn theme_of(cookies: &str) -> Theme {
+    cookie(cookies, THEME_COOKIE)
+        .and_then(Theme::parse)
+        .unwrap_or_default()
+}
+
+/// The density the `Cookie` header value `cookies` names, the comfortable
+/// density for none.
+#[must_use]
+pub fn density_of(cookies: &str) -> Density {
+    cookie(cookies, DENSITY_COOKIE)
+        .and_then(Density::parse)
+        .unwrap_or_default()
+}
+
+/// The value of the cookie `name` in the `Cookie` header value `cookies`.
+fn cookie<'a>(cookies: &'a str, name: &str) -> Option<&'a str> {
     // NOTE: RFC 6265 §5.4: cookies arrive as `name=value` pairs joined by `; `, and
-    // a value that names no theme is the choice not made.
+    // a value that names no choice is the choice not made.
     cookies
         .split(';')
         .filter_map(|pair| pair.trim().split_once('='))
-        .find(|(name, _)| *name == THEME_COOKIE)
-        .and_then(|(_, value)| Theme::parse(value))
-        .unwrap_or_default()
+        .find(|(key, _)| *key == name)
+        .map(|(_, value)| value)
 }
 
 /// The whole HTML document the server renders around [`App`], in the theme
@@ -89,9 +111,10 @@ pub fn document(options: LeptosOptions) -> impl IntoView {
         .unwrap_or_default()
         .to_owned();
     let theme = theme_of(&cookies).key();
+    let density = density_of(&cookies).key();
     view! {
         <!DOCTYPE html>
-        <html lang="en" data-theme=theme>
+        <html lang="en" data-theme=theme data-density=density>
             <head>
                 <meta charset="utf-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -112,15 +135,7 @@ pub fn document(options: LeptosOptions) -> impl IntoView {
 fn theme_requested() -> Theme {
     #[cfg(not(target_arch = "wasm32"))]
     {
-        use_context::<http::request::Parts>()
-            .and_then(|parts| {
-                parts
-                    .headers
-                    .get(http::header::COOKIE)
-                    .and_then(|value| value.to_str().ok())
-                    .map(theme_of)
-            })
-            .unwrap_or_default()
+        theme_of(&request_cookies())
     }
     // NOTE: the browser reads the value the server decided; this runs only if
     // that value is missing, and then marks the theme that follows the system.
@@ -130,9 +145,39 @@ fn theme_requested() -> Theme {
     }
 }
 
+/// The density the request names, decided as the theme is.
+fn density_requested() -> Density {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        density_of(&request_cookies())
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        Density::default()
+    }
+}
+
+/// The request's `Cookie` header, empty for none.
+#[cfg(not(target_arch = "wasm32"))]
+fn request_cookies() -> String {
+    use_context::<http::request::Parts>()
+        .and_then(|parts| {
+            parts
+                .headers
+                .get(http::header::COOKIE)
+                .and_then(|value| value.to_str().ok())
+                .map(str::to_owned)
+        })
+        .unwrap_or_default()
+}
+
 /// The theme in force, shared with the pages.
 #[derive(Debug, Clone, Copy)]
 pub struct InForce(pub Theme);
+
+/// The density in force, shared with the pages.
+#[derive(Debug, Clone, Copy)]
+pub struct DensityInForce(pub Density);
 
 /// The root component: the routes, the toast region and the title.
 #[component]
@@ -142,6 +187,8 @@ pub fn App() -> impl IntoView {
     // the hydrating page serialized, so both halves draw the same page.
     let theme = *SharedValue::new_str(theme_requested);
     provide_context(InForce(theme));
+    let density = *SharedValue::new_str(density_requested);
+    provide_context(DensityInForce(density));
     let toasts = provide_toasts();
     view! {
         <Title text=PRODUCT />
@@ -154,6 +201,9 @@ pub fn App() -> impl IntoView {
                     <Route path=path!("forms") view=crate::pages::forms::FormsPage />
                     <Route path=path!("tables") view=crate::pages::tables::TablesPage />
                     <Route path=path!("code") view=crate::pages::code::CodePage />
+                    <Route path=path!("overlays") view=crate::pages::overlays::OverlaysPage />
+                    <Route path=path!("charts") view=crate::pages::charts::ChartsPage />
+                    <Route path=path!("layouts") view=crate::pages::layouts::LayoutsPage />
                 </ParentRoute>
             </Routes>
         </Router>
@@ -199,8 +249,26 @@ macro_rules! entries {
             },
             Entry {
                 href: concat!("/", $key, "/code"),
-                label: "Code panels",
+                label: "Documents",
                 glyph: Glyph::SQUARE_TERMINAL,
+                exact: true,
+            },
+            Entry {
+                href: concat!("/", $key, "/overlays"),
+                label: "Overlays",
+                glyph: Glyph::LAYERS,
+                exact: true,
+            },
+            Entry {
+                href: concat!("/", $key, "/charts"),
+                label: "Charts",
+                glyph: Glyph::CHART_LINE,
+                exact: true,
+            },
+            Entry {
+                href: concat!("/", $key, "/layouts"),
+                label: "Layouts",
+                glyph: Glyph::PANEL_RIGHT,
                 exact: true,
             },
         ]
@@ -233,8 +301,9 @@ macro_rules! sign_ins {
     };
 }
 
-/// The navigation groups of `brand`.
-fn navigation(brand: Brand) -> [Group; 3] {
+/// The navigation groups of `brand`: its pages and its sign-in cards. The
+/// brand itself is chosen in the top bar, so the navigation marks one page.
+fn navigation(brand: Brand) -> [Group; 2] {
     let (pages, signs): (&'static [Entry], &'static [Entry]) = match brand {
         Brand::Bridge => (entries!("ferrobridge"), sign_ins!("ferrobridge")),
         Brand::Fed => (entries!("ferrofed"), sign_ins!("ferrofed")),
@@ -252,37 +321,33 @@ fn navigation(brand: Brand) -> [Group; 3] {
             title: "Sign-in",
             entries: signs,
         },
-        Group {
-            id: "nav-brands",
-            title: "Brands",
-            entries: &[
-                Entry {
-                    href: "/ferrobridge",
-                    label: "FerroBRIDGE",
-                    glyph: Glyph::LAYERS,
-                    exact: true,
-                },
-                Entry {
-                    href: "/ferrofed",
-                    label: "FerroFED",
-                    glyph: Glyph::USERS,
-                    exact: true,
-                },
-                Entry {
-                    href: "/ferroehr",
-                    label: "FerroEHR",
-                    glyph: Glyph::HEART_PULSE,
-                    exact: true,
-                },
-                Entry {
-                    href: "/ferroterm",
-                    label: "FerroTERM",
-                    glyph: Glyph::LIST_CHECKS,
-                    exact: true,
-                },
-            ],
-        },
     ]
+}
+
+/// The brand switcher: the same page in each brand, the one in force marked
+/// current.
+fn brand_switch(brand: Brand, back: &str) -> impl IntoView + use<> {
+    let page = back
+        .strip_prefix('/')
+        .and_then(|rest| rest.split_once('/').map(|(_, page)| format!("/{page}")))
+        .unwrap_or_default();
+    let choices = Brand::ALL
+        .into_iter()
+        .map(|each| {
+            let words = match each {
+                Brand::Bridge => "BRIDGE",
+                Brand::Fed => "FED",
+                Brand::Ehr => "EHR",
+                Brand::Term => "TERM",
+            };
+            (format!("/{}{page}", each.key()), words)
+        })
+        .collect();
+    let current = Brand::ALL
+        .into_iter()
+        .position(|each| each == brand)
+        .unwrap_or(0);
+    segmented_links("Brand", choices, current)
 }
 
 /// The glyph a brand's mark draws in the gallery.
@@ -316,16 +381,52 @@ fn BrandShell() -> impl IntoView {
     }
 }
 
+/// Keeps `theme`, which the toggle has set in place, in the gallery's
+/// cookie by posting it to the theme route, as the toggle's form would.
+fn keep_theme(theme: Theme) {
+    #[cfg(target_arch = "wasm32")]
+    leptos::task::spawn_local(async move {
+        use wasm_bindgen::JsValue;
+        let init = web_sys::RequestInit::new();
+        init.set_method("POST");
+        init.set_body(&JsValue::from_str(&format!(
+            "theme={}&back=%2F",
+            theme.key()
+        )));
+        let Ok(headers) = web_sys::Headers::new() else {
+            leptos::logging::warn!("the browser refused the headers of the theme post");
+            return;
+        };
+        if headers
+            .set("content-type", "application/x-www-form-urlencoded")
+            .is_err()
+        {
+            leptos::logging::warn!("the browser refused the content type of the theme post");
+            return;
+        }
+        init.set_headers(&headers);
+        let Some(window) = web_sys::window() else {
+            return;
+        };
+        let sent = window.fetch_with_str_and_init(THEME_ROUTE, &init);
+        if wasm_bindgen_futures::JsFuture::from(sent).await.is_err() {
+            leptos::logging::warn!("the theme choice was not kept: the post failed");
+        }
+    });
+    #[cfg(not(target_arch = "wasm32"))]
+    let _: Theme = theme;
+}
+
 /// The shell of `brand`'s pages, whose theme switch returns to `back`.
 fn brand_shell(brand: Brand, back: String) -> AnyView {
-    let theme = use_context::<InForce>().map_or(Theme::System, |in_force| in_force.0);
     let start = view! {
         {drawer_button(SIDEBAR_ID)}
         {lockup("/", mark(brand_glyph(brand)), brand.product(), "Gallery")}
     };
+    let switch = brand_switch(brand, &back).into_any();
     let end = view! {
-        {pill(Tone::Ok, "Library v0.1.0")}
-        {theme_switch(theme, String::from(THEME_ROUTE), back)}
+        <span class="fui-wide-only">{switch}</span>
+        <span class="fui-wide-only">{pill(Tone::Ok, "Library v0.1.1")}</span>
         {operator_menu(
             OperatorMenu {
                 id: "operator-menu",
@@ -335,10 +436,23 @@ fn brand_shell(brand: Brand, back: String) -> AnyView {
             },
             (),
         )}
+        {ferrohealth_ui::widget::theme::theme_toggle(
+            String::from(THEME_ROUTE),
+            back,
+            Callback::new(keep_theme),
+        )}
     };
+    let search = search_box(SearchBox {
+        id: "gallery-search",
+        name: "q",
+        label: "Search the mapping files",
+        placeholder: "A file, a template or a path",
+        action: format!("/{}/tables", brand.key()),
+        value: String::new(),
+    });
     let groups = navigation(brand);
     let page = shell(Shell {
-        topbar: topbar(start, end).into_any(),
+        topbar: topbar_with(start, search, end).into_any(),
         banner: Some(
             banner(
                 Tone::Warn,
