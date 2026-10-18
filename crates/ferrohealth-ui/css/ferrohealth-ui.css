@@ -2034,6 +2034,8 @@
     .fui-table-stack .fui-table tbody [data-label]::before {
       content: attr(data-label);
       color: var(--muted);
+      font-family: var(--font-sans);
+      font-size: var(--text-body);
       font-weight: 500;
     }
 
