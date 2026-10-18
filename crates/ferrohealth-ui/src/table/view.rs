@@ -3,8 +3,9 @@
 
 //! The data table and the pager, drawn as static views.
 //!
-//! The table shows every row of its page and scrolls sideways inside its
-//! card, right aligns its numeric columns, keeps row actions at the end, and draws
+//! The table shows every row of its page, holds its header below the top
+//! bar on a wide screen and scrolls sideways inside its card on a narrow
+//! one, right aligns its numeric columns, keeps row actions at the end, and draws
 //! skeleton rows while it loads and the empty state when there is nothing.
 //! A sortable header is a link carrying `aria-sort`. The pager states the
 //! range, then First, Previous, the position, Next and Last, and the sizes;

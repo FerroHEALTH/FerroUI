@@ -1,0 +1,71 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+[package]
+name = "ferrohealth-ui-gallery"
+description = "The gallery of the FerroHEALTH UI components: every component in every product theme, light and dark, rendered on the server and hydrated"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+publish = false
+
+# One crate, two halves, chosen by target, never by Cargo feature, as every
+# FerroHEALTH console builds: the rlib feeds the server binary and the cdylib
+# is the WebAssembly bundle the browser hydrates with.
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[[bin]]
+name = "ferrohealth-ui-gallery"
+path = "src/main.rs"
+
+[dependencies]
+ferrohealth-ui = { path = "../../crates/ferrohealth-ui" }
+leptos.workspace = true
+leptos_meta.workspace = true
+leptos_router.workspace = true
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+leptos = { workspace = true, features = ["hydrate"] }
+wasm-bindgen.workspace = true
+console_error_panic_hook.workspace = true
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+# The per-request script nonce of the Content-Security-Policy rides `nonce`.
+leptos = { workspace = true, features = ["ssr", "nonce"] }
+leptos_meta = { workspace = true, features = ["ssr"] }
+leptos_router = { workspace = true, features = ["ssr"] }
+leptos_axum.workspace = true
+serde.workspace = true
+axum.workspace = true
+http.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "net", "signal"] }
+tower-http = { workspace = true, features = ["set-header"] }
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+serde_json.workspace = true
+thirtyfour.workspace = true
+rustix.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "net", "process", "io-util", "time", "fs"] }
+tower.workspace = true
+
+[lints]
+workspace = true
+
+# cargo-leptos: the site bundle (the WebAssembly and its JavaScript glue)
+# under target/site. The gallery has no stylesheet of its own: it serves the
+# library's stylesheet and the brand themes from the library's constants,
+# as a console does.
+[package.metadata.leptos]
+output-name = "ferrohealth-ui-gallery"
+site-root = "target/site"
+site-pkg-dir = "pkg"
+site-addr = "127.0.0.1:3000"
+reload-port = 3001
+lib-profile-release = "wasm-release"

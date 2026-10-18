@@ -1,0 +1,29 @@
+// SPDX-FileCopyrightText: Cadasto B.V.
+// SPDX-License-Identifier: BUSL-1.1
+
+//! The gallery of the FerroHEALTH UI components: every component in every
+//! product theme, light and dark, rendered on the server and hydrated in the
+//! browser, as the consoles render them.
+//!
+//! It is the library's visual review surface and its proof in CI: the
+//! journeys drive it in a browser and its screenshots show every page in
+//! every brand. [`app`] is the page tree, [`pages`] the pages, [`data`] the
+//! synthetic rows and texts they show, and [`server`] the HTTP service with
+//! the security headers a console sends. Nothing it shows is clinical data:
+//! every row is invented for the gallery. No specification governs the
+//! gallery: our own design.
+
+pub mod app;
+pub mod data;
+pub mod pages;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub mod server;
+
+/// Attaches the browser half to the page the server rendered.
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen::prelude::wasm_bindgen]
+pub fn hydrate() {
+    console_error_panic_hook::set_once();
+    leptos::mount::hydrate_body(app::App);
+}
