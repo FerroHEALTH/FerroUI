@@ -2036,6 +2036,7 @@
       color: var(--muted);
       font-family: var(--font-sans);
       font-size: var(--text-body);
+      line-height: var(--leading-body);
       font-weight: 500;
     }
 
