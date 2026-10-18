@@ -219,6 +219,17 @@ fn facts() -> AnyView {
         ]),
     )
     .into_any();
+    let operation = ferrohealth_ui::view::surface::link_card_glyph(
+        brand_page("layouts").unwrap_or_default(),
+        Glyph::PLAY,
+        "Expand a value set",
+        view! { <p class="fui-muted">"Run $expand over a value set this server holds."</p> },
+    );
+    let path = card(
+        "fhirconnect/ferrohealth_synthetic_journey_diagnose.context.yml",
+        view! { <p class="fui-muted">"A card titled with a file's path."</p> },
+    )
+    .into_any();
     let listed = card(
         "A bullet list",
         view! {
@@ -256,6 +267,8 @@ fn facts() -> AnyView {
         {stack(view! {
             {folded}
             {linked}
+            {operation}
+            {path}
             {listed}
         })}
     })

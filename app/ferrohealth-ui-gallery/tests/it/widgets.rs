@@ -317,3 +317,56 @@ async fn the_open_pager_steps_with_no_total() -> Result<(), Box<dyn Error>> {
     })
     .await
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_combobox_filters_as_typed_and_the_keys_choose() -> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/ferroterm/forms")).await?;
+        // Hydrated, the native select gives way to the combobox.
+        let input = browser
+            .element(By::Css("#choose-system[role='combobox']"))
+            .await?;
+        assert_eq!(
+            Some(String::from("SNOMED CT")),
+            input.prop("value").await?,
+            "the chosen option's words show"
+        );
+        input.click().await?;
+        until("the list opens", async || {
+            Ok(input.attr("aria-expanded").await?.as_deref() == Some("true"))
+        })
+        .await?;
+        input.send_keys("loinc").await?;
+        let options = browser
+            .driver()
+            .find_all(By::Css("#choose-system-list [role='option']"))
+            .await?;
+        assert_eq!(1, options.len(), "typing keeps the matching option alone");
+        input.send_keys(Key::Escape).await?;
+        until("Escape closes the list", async || {
+            Ok(input.attr("aria-expanded").await?.as_deref() == Some("false"))
+        })
+        .await?;
+        input.send_keys(Key::Down).await?;
+        input.send_keys(Key::End).await?;
+        let active = input.attr("aria-activedescendant").await?;
+        assert_eq!(Some(String::from("choose-system-option-11")), active);
+        input.send_keys(Key::Enter).await?;
+        let posted = browser
+            .element(By::Css("input[type='hidden'][name='system']"))
+            .await?;
+        until("Enter chooses the highlighted option", async || {
+            Ok(posted.prop("value").await?.as_deref() == Some("synthetic"))
+        })
+        .await?;
+        input.clear().await?;
+        input.send_keys("nothing like it").await?;
+        browser.element(By::Css(".fui-combobox-empty")).await?;
+        browser.console_clean("the combobox").await
+    })
+    .await
+}

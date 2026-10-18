@@ -17,6 +17,7 @@ use ferrohealth_ui::view::notice::{Announce, notice};
 use ferrohealth_ui::view::segmented::choice_reveal;
 use ferrohealth_ui::view::status::badge;
 use ferrohealth_ui::view::surface::{card, grid, page_header, stack};
+use ferrohealth_ui::widget::combobox::{ComboOption, Combobox, combobox};
 use ferrohealth_ui::widget::editor::{Editor, LineMark, MarkKind, code_editor, line_id};
 use ferrohealth_ui::widget::filter::{keeps, table_filter};
 use ferrohealth_ui::widget::upload::{Upload, upload_field};
@@ -159,6 +160,83 @@ fn inline() -> AnyView {
                     <button type="button" class=Variant::Secondary.class() disabled=true>"Secondary, disabled"</button>
                     <button type="button" class=Variant::Danger.class() disabled=true>"Danger, disabled"</button>
                 </div>
+            </div>
+        },
+    )
+    .into_any()
+}
+
+/// A long list to choose from, filtered as the reader types, beside a group
+/// with its heading, a checkbox on the controls' line, and a disabled save
+/// that names its reason.
+fn choosing() -> AnyView {
+    let systems = [
+        ("loinc", "LOINC", "http://loinc.org"),
+        ("snomed", "SNOMED CT", "http://snomed.info/sct"),
+        ("ucum", "UCUM", "http://unitsofmeasure.org"),
+        ("icd10", "ICD-10", "http://hl7.org/fhir/sid/icd-10"),
+        ("atc", "ATC", "http://www.whocc.no/atc"),
+        (
+            "rxnorm",
+            "RxNorm",
+            "http://www.nlm.nih.gov/research/umls/rxnorm",
+        ),
+        ("iso3166", "ISO 3166 countries", "urn:iso:std:iso:3166"),
+        ("bcp47", "BCP 47 languages", "urn:ietf:bcp:47"),
+        ("mime", "Media types", "urn:ietf:bcp:13"),
+        (
+            "gender",
+            "Administrative gender",
+            "http://hl7.org/fhir/administrative-gender",
+        ),
+        (
+            "status",
+            "Observation status",
+            "http://hl7.org/fhir/observation-status",
+        ),
+        (
+            "synthetic",
+            "Synthetic gallery codes",
+            "http://example.org/fhir/CodeSystem/gallery-synthetic",
+        ),
+    ];
+    let options = systems
+        .iter()
+        .map(|(value, label, url)| ComboOption::new(*value, *label).detail(*url))
+        .collect();
+    let chosen = RwSignal::new(Some(String::from("snomed")));
+    let code = view! { <input id="choose-code" name="code" type="text" class=INPUT placeholder="22298006" /> };
+    let active = view! { <input id="choose-active" name="active" type="checkbox" checked=true /> };
+    card(
+        "Combobox",
+        view! {
+            <div class=FORM>
+                {combobox(Combobox {
+                    id: "choose-system",
+                    name: "system",
+                    label: "Code system",
+                    placeholder: "Choose a code system",
+                    options,
+                    selected: chosen,
+                })}
+                <fieldset class="fui-fieldset">
+                    <legend>"The code"</legend>
+                    {field_flow(view! {
+                        {field("choose-code", "Code", None, code)}
+                        {check("choose-active", "Active concepts only", active)}
+                    })}
+                </fieldset>
+                <div class="fui-cluster">
+                    <button type="button" class=Variant::Primary.class() disabled=true aria-describedby="choose-save-why">
+                        {label(Some(Glyph::SAVE), "Save this value set")}
+                    </button>
+                    <button type="button" class=Variant::Danger.small()>
+                        {label(Some(Glyph::TRASH), "Remove this clause")}
+                    </button>
+                </div>
+                <p id="choose-save-why" class="fui-help">
+                    "A canonical and a clause are what a save needs."
+                </p>
             </div>
         },
     )
@@ -375,13 +453,14 @@ pub fn FormsPage() -> impl IntoView {
         })}
     })
     .into_any();
-    let sections = (pair, upload(), editor(), filter(), inline());
+    let sections = (pair, upload(), editor(), filter(), inline(), choosing());
     view! {
         {super::title("Forms and editor")}
         {header}
         {stack(view! {
             {sections.0}
             {sections.4}
+            {sections.5}
             {sections.1}
             {sections.2}
             {sections.3}

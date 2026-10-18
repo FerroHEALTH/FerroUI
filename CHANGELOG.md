@@ -29,6 +29,17 @@ public signature changes; the additions are new functions and classes.
 - `view::surface::page_heading_live`: a page heading whose title follows a
   signal, so it stays true under client-side navigation
   (FerroHEALTH/FerroUI#51).
+- `widget::combobox::combobox`: a long list to choose from, filtered as the
+  reader types, after the WAI-ARIA 1.2 combobox pattern over a listbox (Down,
+  Up, Home, End, Enter, Escape), each option its words over a muted second
+  line, the chosen one checked, a "No match" row, a bounded height that
+  scrolls; before hydration it is a native select a form posts
+  (FerroHEALTH/FerroUI#72).
+- `table::model::filled_columns`: the columns some row fills, so a table
+  draws no column that is empty in every row (FerroHEALTH/FerroUI#75).
+- `view::surface::link_card_glyph`, and a link card shows a chevron after its
+  title and the accent edge under the pointer and the keyboard
+  (FerroHEALTH/FerroUI#70).
 - `table::view::data_table_stacked`: below 40rem each row is a block, every
   cell with a `data-label` named by its column, so a phone shows every column
   (FerroHEALTH/FerroUI#56).
@@ -46,8 +57,20 @@ public signature changes; the additions are new functions and classes.
   prose keeps its underline, and every component that draws an anchor sets
   its own decoration (FerroHEALTH/FerroUI#38). A link in a table cell keeps
   that look whatever a console's own anchor style says.
-- The select draws FerroUI's chevron at the text input's height and frame,
-  and the date and time inputs share the frame (FerroHEALTH/FerroUI#60).
+- The select draws FerroUI's chevron (Lucide's chevron-down, a 16 px box
+  inset 12 px) with its room reserved and the chosen words ending in an
+  ellipsis, at the text input's height and frame, with a disabled state; the
+  date and time inputs share the frame (FerroHEALTH/FerroUI#60,
+  FerroHEALTH/FerroUI#71).
+- A fieldset's legend is a step up from a field label, with a rule under it
+  (FerroHEALTH/FerroUI#73); a checkbox in a row of fields sits on the
+  controls' line (FerroHEALTH/FerroUI#74).
+- Stacked rows are cards with the row's name as their title; a long token in
+  a card title wraps inside the card (FerroHEALTH/FerroUI#66); the phone
+  drawer's Close stands apart from the navigation (FerroHEALTH/FerroUI#67).
+- The button docs say an inline remove takes the danger outline and a
+  disabled action names its reason through `aria-describedby`
+  (FerroHEALTH/FerroUI#76).
 - A disabled button keeps its variant's look, faded, so it is never read as
   an enabled secondary action (FerroHEALTH/FerroUI#61); one label style for
   every field.

@@ -1,8 +1,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The buttons: four variants, as classes a `<button>` or an `<a>` takes,
+//! The buttons: the variants, as classes a `<button>` or an `<a>` takes,
 //! and the link that looks like a button.
+//!
+//! A disabled button keeps its variant's look, faded. When a reason keeps
+//! it disabled, say the reason in a help line under it and name that line
+//! with `aria-describedby`, so a reader who reaches the button hears why.
 
 use leptos::prelude::*;
 
@@ -16,10 +20,12 @@ pub enum Variant {
     /// An action beside the primary one.
     #[default]
     Secondary,
-    /// An action that removes or refuses something.
+    /// An action that removes or refuses something: the outline an inline
+    /// remove takes, such as "Remove this clause" in a form.
     Danger,
     /// The confirmation of an action that removes something, in a danger
-    /// dialog: solid, so the destructive step is unmistakable.
+    /// dialog alone: solid, so the destructive step is unmistakable. An
+    /// inline remove takes [`Variant::Danger`].
     Destructive,
     /// An action that does not stand out: a close, a dismiss.
     Ghost,

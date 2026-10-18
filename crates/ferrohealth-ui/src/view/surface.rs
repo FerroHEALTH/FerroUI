@@ -338,19 +338,38 @@ pub fn chip(text: impl Into<String>) -> impl IntoView {
 
 /// Returns a card that is one link to `href`: its title, then `body`.
 ///
-/// The whole card takes the accent's edge under the pointer and the focus
-/// ring from the keyboard. `body` holds no link or control of its own, since
-/// the card is one.
+/// A chevron after the title says the card leads somewhere; the whole card
+/// takes the accent's edge under the pointer and the focus ring from the
+/// keyboard. `body` holds no link or control of its own, since the card is
+/// one.
 #[must_use]
 pub fn link_card(
     href: impl Into<String>,
     title: impl Into<String>,
     body: impl IntoView + 'static,
 ) -> AnyView {
-    let body = body.into_any();
+    linked(href.into(), None, title.into(), body.into_any())
+}
+
+/// Returns the card [`link_card`] draws, with `glyph` before its title.
+#[must_use]
+pub fn link_card_glyph(
+    href: impl Into<String>,
+    glyph: Glyph,
+    title: impl Into<String>,
+    body: impl IntoView + 'static,
+) -> AnyView {
+    linked(href.into(), Some(glyph), title.into(), body.into_any())
+}
+
+/// The card both [`link_card`] and [`link_card_glyph`] draw.
+fn linked(href: String, glyph: Option<Glyph>, title: String, body: AnyView) -> AnyView {
     view! {
-        <a href=href.into() class="fui-card fui-card-link">
-            <h2 class="fui-card-title">{title.into()}</h2>
+        <a href=href class="fui-card fui-card-link">
+            <h2 class="fui-card-title">
+                {glyph.map(|glyph| icon(glyph, "16"))} <span>{title}</span>
+                <span class="fui-card-go">{icon(Glyph::CHEVRON_RIGHT, "16")}</span>
+            </h2>
             {body}
         </a>
     }
