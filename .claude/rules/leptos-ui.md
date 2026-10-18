@@ -98,8 +98,9 @@ so a workspace `--all-features` build never enables both.
 pager, `widget::pager` the session pager. Page and size are read
 defensively (`?page=` 1-based, `?size=` with choices 25, 50, 100, clamped to
 200), the range label names the rows on the page ("1-25 of 312", a short
-last page "301-312 of 312"), a step that cannot be taken stays visible and
-says "(unavailable)" in text, the range names the listing's noun and says
+last page "301-312 of 312"), a step that cannot be taken stays visible as a
+disabled control and says "(unavailable)" in visually hidden text, one
+pager row holds the range, the steps and the sizes, the range names the listing's noun and says
 when the server counted more than it sent, a listing with no stated total
 pages with Previous and Next alone (`OpenWindow`), the header is the small
 step in sentence case, a sortable header is a link with `aria-sort`,
@@ -129,9 +130,10 @@ entry, and a new role joins the contrast test in the change that adds it.
 - One role layer (`--surface`, `--surface-raised`, `--surface-sunken`,
   `--edge`, `--edge-control`, `--ink`, `--muted`, `--accent`, `--accent-ink`,
   `--accent-tint`, `--focus`, the status families `--ok`, `--warn`, `--bad`,
-  `--info`, `--neutral` with their grounds and dots, `--syntax-*`, the chart
-  palette `--chart-1` to `--chart-6`), neutrals Tailwind slate, radii 0.5 rem
-  and 0.375 rem, one card shadow.
+  `--info`, `--neutral` with their grounds and dots, `--syntax-*`), neutrals
+  Tailwind slate, radii 0.5 rem and 0.375 rem, a card shadow and an overlay
+  shadow. A chart series takes a role tone (`chart::ACCENT` to `NEUTRAL`),
+  so its colour means what the tone means elsewhere: refusals are `BAD`.
 - One hover and focus treatment: an interactive surface takes the sunken
   ground under the pointer (a navigation entry, a ghost or secondary button, a
   tab, a segment, a menu item, a table row at 60%), a filled control its

@@ -9,8 +9,9 @@
 //! skeleton rows while it loads and the empty state when there is nothing.
 //! A sortable header is a link carrying `aria-sort`. The pager states the
 //! range, then First, Previous, the position, Next and Last, and the sizes;
-//! a step that cannot be taken stays where it is and says "(unavailable)"
-//! in text, so colour never carries it (WCAG 2.2 SC 1.4.1).
+//! a step that cannot be taken stays where it is, drawn as a disabled
+//! control on the sunken ground, and says "(unavailable)" to assistive
+//! technology in visually hidden text (WCAG 2.2 SC 1.4.1, SC 4.1.2).
 
 use std::borrow::Cow;
 
@@ -275,16 +276,17 @@ impl Step {
 }
 
 /// Returns the inside of a pager step's control: the icon beside the words,
-/// the icon after them for a step forward, and "(unavailable)" in text when
-/// it cannot be taken.
+/// the icon after them for a step forward.
+///
+/// A step that cannot be taken adds "(unavailable)" as visually hidden
+/// text; the control's disabled look shows it to the eye.
 #[must_use]
 pub fn step_label(step: Step, available: bool) -> impl IntoView + use<> {
     let forward = matches!(step, Step::Next | Step::Last);
     view! {
         {(!forward).then(|| icon(step.glyph(), "14"))}
-        <span class="fui-step-words">
-            {step.label()} {(!available).then_some("(unavailable)")}
-        </span>
+        <span class="fui-step-words">{step.label()}</span>
+        {(!available).then(|| view! { <span class="fui-sr-only">" (unavailable)"</span> })}
         {forward.then(|| icon(step.glyph(), "14"))}
     }
 }

@@ -11,7 +11,7 @@
 
 use leptos::prelude::*;
 
-use crate::view::chart::{LineChart, PALETTE, figures, line_svg};
+use crate::view::chart::{LineChart, PALETTE, figures, has_gaps, line_svg};
 
 /// Returns the line chart `chart`, its legend toggling `shown`, one flag
 /// per series.
@@ -48,12 +48,21 @@ pub fn line_chart(chart: LineChart, shown: RwSignal<Vec<bool>>) -> AnyView {
             }
         })
         .collect_view();
+    let note = has_gaps(&chart).then(|| {
+        view! {
+            <span class="fui-legend-note">
+                <span class="fui-swatch-gap" aria-hidden="true"></span>
+                "No value"
+            </span>
+        }
+    });
     let drawn = move || shown.with(|flags| line_svg(&chart, flags));
     view! {
         <figure class="fui-chart">
             <div class="fui-chart-plot" inner_html=drawn></div>
             <figcaption class="fui-legend" aria-label="Series">
                 {chips}
+                {note}
             </figcaption>
             {table}
         </figure>

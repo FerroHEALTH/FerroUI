@@ -61,7 +61,9 @@ fn row(row: &Row) -> AnyView {
     view! {
         <tr>
             <th scope="row">
-                <code>{row.name.clone()}</code>
+                <a href="code">
+                    <code>{row.name.clone()}</code>
+                </a>
             </th>
             <td>{row.kind}</td>
             <td class=NUM>{row.lines.to_string()}</td>

@@ -50,8 +50,11 @@ pub fn confirm_dialog(confirmation: Confirmation, confirm: impl IntoView) -> imp
 }
 
 /// Returns the dialog asking `confirmation` about an action that cannot be
-/// undone, such as a delete: the bad tone's glyph beside its question, with
-/// Cancel and `confirm` (a danger button).
+/// undone, such as a delete.
+///
+/// The bad tone's glyph sits beside its question, over Cancel and
+/// `confirm`, a [`Variant::Destructive`] button: solid, so the destructive
+/// step is unmistakable.
 #[must_use]
 pub fn danger_dialog(confirmation: Confirmation, confirm: impl IntoView) -> impl IntoView {
     frame(confirmation, true, confirm)

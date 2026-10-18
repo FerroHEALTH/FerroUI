@@ -28,13 +28,14 @@ use crate::journeys::window;
 use crate::stack::Gallery;
 
 /// Every state, by the name its images take.
-pub(crate) const STATES: [&str; 31] = [
+pub(crate) const STATES: [&str; 32] = [
     "hover-nav",
     "focus-nav",
     "hover-stat",
     "hover-primary",
     "hover-secondary",
     "hover-danger",
+    "hover-destructive",
     "hover-ghost",
     "focus-button",
     "hover-tab",
@@ -210,6 +211,7 @@ async fn overview(
         ("Primary", "hover-primary"),
         ("Secondary", "hover-secondary"),
         ("Danger", "hover-danger"),
+        ("Destructive", "hover-destructive"),
         ("Ghost", "hover-ghost"),
     ] {
         let button = browser

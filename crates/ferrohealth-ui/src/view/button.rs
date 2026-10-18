@@ -18,13 +18,22 @@ pub enum Variant {
     Secondary,
     /// An action that removes or refuses something.
     Danger,
+    /// The confirmation of an action that removes something, in a danger
+    /// dialog: solid, so the destructive step is unmistakable.
+    Destructive,
     /// An action that does not stand out: a close, a dismiss.
     Ghost,
 }
 
 impl Variant {
     /// Every variant, in the order the gallery shows them.
-    pub const ALL: [Self; 4] = [Self::Primary, Self::Secondary, Self::Danger, Self::Ghost];
+    pub const ALL: [Self; 5] = [
+        Self::Primary,
+        Self::Secondary,
+        Self::Danger,
+        Self::Destructive,
+        Self::Ghost,
+    ];
 
     /// The classes a `<button>` or an `<a>` of this variant takes.
     #[must_use]
@@ -33,6 +42,7 @@ impl Variant {
             Self::Primary => "fui-button fui-button-primary",
             Self::Secondary => "fui-button fui-button-secondary",
             Self::Danger => "fui-button fui-button-danger",
+            Self::Destructive => "fui-button fui-button-destructive",
             Self::Ghost => "fui-button fui-button-ghost",
         }
     }
@@ -44,6 +54,7 @@ impl Variant {
             Self::Primary => "fui-button fui-button-primary fui-button-small",
             Self::Secondary => "fui-button fui-button-secondary fui-button-small",
             Self::Danger => "fui-button fui-button-danger fui-button-small",
+            Self::Destructive => "fui-button fui-button-destructive fui-button-small",
             Self::Ghost => "fui-button fui-button-ghost fui-button-small",
         }
     }
@@ -55,6 +66,7 @@ impl Variant {
             Self::Primary => "Primary",
             Self::Secondary => "Secondary",
             Self::Danger => "Danger",
+            Self::Destructive => "Destructive",
             Self::Ghost => "Ghost",
         }
     }

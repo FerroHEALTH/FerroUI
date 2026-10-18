@@ -58,7 +58,7 @@ fn confirmations() -> AnyView {
             <button
                 type="button"
                 id="confirm-delete-file"
-                class=Variant::Danger.class()
+                class=Variant::Destructive.class()
                 on:click=confirm("delete-file", "The synthetic file was deleted.")
             >
                 {icon(Glyph::TRASH, "16")}
@@ -128,7 +128,7 @@ fn modals() -> AnyView {
                 <button
                     type="button"
                     id="confirm-delete-row"
-                    class=Variant::Danger.class()
+                    class=Variant::Destructive.class()
                     on:click=move |_| {
                         if let (Some(toasts), Some(row)) = (toasts, pending.get_untracked()) {
                             toasts.push(Tone::Ok, format!("{row} was deleted."));
@@ -148,7 +148,7 @@ fn modals() -> AnyView {
     .into_any();
     let rename = rename_modal(renaming);
     card(
-        "Modal dialogs a signal opens",
+        "Modal dialogs",
         view! {
             {divided_list(Some("Files"), rows)}
             <button type="button" class=Variant::Secondary.class() id="open-rename" on:click=move |_| renaming.set(true)>

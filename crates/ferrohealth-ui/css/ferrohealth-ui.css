@@ -66,13 +66,9 @@
     --syntax-attribute: #92400e;
     --syntax-path: #155e75;
     --syntax-parameter: #a21caf;
-    --chart-1: #2563eb;
-    --chart-2: #c2410c;
-    --chart-3: #047857;
-    --chart-4: #7c3aed;
-    --chart-5: #be123c;
-    --chart-6: #0e7490;
     --shadow-card: 0 1px 2px 0 rgb(15 23 42 / 0.06), 0 1px 3px 0 rgb(15 23 42 / 0.04);
+    /* The elevation of a dialog, a menu or a panel over the page. */
+    --shadow-overlay: 0 12px 32px -4px rgb(15 23 42 / 0.22), 0 4px 12px -4px rgb(15 23 42 / 0.14);
     --radius-card: 0.5rem;
     --radius-control: 0.375rem;
     /* The six steps of type, FerroEHR's scale: a measure's value, the page
@@ -155,13 +151,8 @@
     --syntax-attribute: #fcd34d;
     --syntax-path: #67e8f9;
     --syntax-parameter: #f0abfc;
-    --chart-1: #60a5fa;
-    --chart-2: #fb923c;
-    --chart-3: #34d399;
-    --chart-4: #a78bfa;
-    --chart-5: #fb7185;
-    --chart-6: #22d3ee;
     --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+    --shadow-overlay: 0 12px 32px -4px rgb(0 0 0 / 0.6), 0 4px 12px -4px rgb(0 0 0 / 0.4);
   }
 
   @media (prefers-color-scheme: dark) {
@@ -206,13 +197,8 @@
       --syntax-attribute: #fcd34d;
       --syntax-path: #67e8f9;
       --syntax-parameter: #f0abfc;
-      --chart-1: #60a5fa;
-      --chart-2: #fb923c;
-      --chart-3: #34d399;
-      --chart-4: #a78bfa;
-      --chart-5: #fb7185;
-      --chart-6: #22d3ee;
       --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+      --shadow-overlay: 0 12px 32px -4px rgb(0 0 0 / 0.6), 0 4px 12px -4px rgb(0 0 0 / 0.4);
     }
   }
 }
@@ -1178,6 +1164,21 @@
     color: var(--bad);
   }
 
+  /* The confirming action of a danger dialog: solid in the bad tone. */
+  .fui-button-destructive,
+  .fui-dialog-danger .fui-dialog-actions .fui-button-danger {
+    border-color: var(--bad);
+    background: var(--bad);
+    color: var(--surface-raised);
+  }
+
+  .fui-button-destructive:hover,
+  .fui-dialog-danger .fui-dialog-actions .fui-button-danger:hover {
+    border-color: var(--bad);
+    background: color-mix(in srgb, var(--bad) 85%, var(--ink));
+    color: var(--surface-raised);
+  }
+
   .fui-button-ghost {
     background: transparent;
     color: var(--muted);
@@ -1188,9 +1189,13 @@
     color: var(--ink);
   }
 
+  /* A control that cannot be used: neutral, on the sunken ground in muted
+     text with no accent, whatever its variant, and no hover. */
   .fui-button:disabled,
   .fui-button[aria-disabled="true"] {
-    opacity: 0.5;
+    border-color: var(--edge);
+    background: var(--surface-sunken);
+    color: var(--muted);
     cursor: not-allowed;
     pointer-events: none;
   }
@@ -1806,6 +1811,12 @@
     border-bottom: 0;
   }
 
+  /* A row's header names the row in the body's weight; a name that opens
+     the row is a link. */
+  .fui-table tbody th {
+    font-weight: 400;
+  }
+
   /* An identifier in a cell keeps its line: the table scrolls sideways in
      its box rather than break a name into letters. */
   .fui-table code {
@@ -1888,16 +1899,12 @@
     }
   }
 
-  .fui-pager [aria-disabled="true"],
-  .fui-pager button:disabled {
-    border-style: dashed;
-  }
-
+  /* One pager layout: the range at the start, the steps in the centre and
+     the sizes at the end of one row; on a narrow screen one under another. */
   .fui-pager {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
-    justify-content: space-between;
     gap: var(--space-default) var(--space-loose);
     margin-block-start: 0.75rem;
     color: var(--muted);
@@ -1911,6 +1918,29 @@
     flex-wrap: wrap;
     align-items: center;
     gap: var(--space-tight);
+  }
+
+  .fui-pager > [role="status"] {
+    justify-self: start;
+  }
+
+  .fui-pager .fui-pager-steps {
+    justify-self: center;
+  }
+
+  .fui-pager .fui-pager-sizes {
+    justify-self: end;
+  }
+
+  @media (width < 48rem) {
+    .fui-pager {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .fui-pager .fui-pager-steps,
+    .fui-pager .fui-pager-sizes {
+      justify-self: start;
+    }
   }
 
   .fui-pager-position {
@@ -2324,7 +2354,7 @@
     border: 1px solid var(--edge);
     border-radius: var(--radius-card);
     background: var(--surface-raised);
-    box-shadow: var(--shadow-card);
+    box-shadow: var(--shadow-overlay);
     padding: 0.75rem;
     color: var(--ink);
   }
@@ -2468,7 +2498,7 @@
     border: 1px solid var(--edge);
     border-radius: var(--radius-card);
     background: var(--surface-raised);
-    box-shadow: var(--shadow-card);
+    box-shadow: var(--shadow-overlay);
     padding: 1.25rem;
     color: var(--ink);
   }
@@ -2522,7 +2552,7 @@
     border: 1px solid color-mix(in srgb, var(--tone) 30%, transparent);
     border-radius: var(--radius-card);
     background: var(--surface-raised);
-    box-shadow: var(--shadow-card);
+    box-shadow: var(--shadow-overlay);
     padding: 0.75rem var(--space-loose);
     color: var(--ink);
   }
@@ -2930,7 +2960,7 @@
     border: 0;
     border-inline-start: 1px solid var(--edge);
     background: var(--surface-raised);
-    box-shadow: var(--shadow-card);
+    box-shadow: var(--shadow-overlay);
     padding: 0;
     color: var(--ink);
   }
@@ -3050,15 +3080,66 @@
     max-width: 100%;
   }
 
+  /* A chart's frame: the Y labels in a gutter left of the plot, spaced to
+     the grid lines (the plot's top and bottom margins less half a line). */
+  .fui-chart-frame {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: var(--space-default);
+  }
+
+  .fui-chart-y {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding-block: 0.125rem 1.125rem;
+    color: var(--muted);
+    font-size: var(--text-micro);
+    line-height: var(--leading-micro);
+    font-variant-numeric: tabular-nums;
+    text-align: end;
+  }
+
   .fui-chart-svg {
     display: block;
     width: 100%;
     overflow: visible;
   }
 
+  .fui-chart-point {
+    fill: var(--surface-raised);
+    stroke: var(--series);
+    stroke-width: 2;
+  }
+
+  /* A run of missing values, bridged by a dashed line in the series'
+     colour so the gap reads as no value rather than as a break. */
+  .fui-chart-gap {
+    fill: none;
+    stroke: var(--series);
+    stroke-width: 1.5;
+    stroke-dasharray: 4 4;
+    opacity: 0.7;
+  }
+
+  .fui-legend-note {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-tight);
+    color: var(--muted);
+    font-size: var(--text-small);
+    line-height: var(--leading-small);
+  }
+
+  .fui-swatch-gap {
+    width: 1.25rem;
+    border-top: 2px dashed var(--muted);
+  }
+
   .fui-chart-grid,
   .fui-chart-axis,
-  .fui-chart-line {
+  .fui-chart-line,
+  .fui-chart-gap {
     vector-effect: non-scaling-stroke;
   }
 
@@ -3100,27 +3181,27 @@
   }
 
   .fui-series-0 {
-    --series: var(--chart-1);
+    --series: var(--accent);
   }
 
   .fui-series-1 {
-    --series: var(--chart-2);
+    --series: var(--info);
   }
 
   .fui-series-2 {
-    --series: var(--chart-3);
+    --series: var(--ok);
   }
 
   .fui-series-3 {
-    --series: var(--chart-4);
+    --series: var(--warn);
   }
 
   .fui-series-4 {
-    --series: var(--chart-5);
+    --series: var(--bad);
   }
 
   .fui-series-5 {
-    --series: var(--chart-6);
+    --series: var(--neutral);
   }
 
   .fui-chart-line[class*="fui-series-"] {

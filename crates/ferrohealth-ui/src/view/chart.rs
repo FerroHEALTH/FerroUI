@@ -23,8 +23,28 @@ use leptos::prelude::*;
 
 use crate::highlight::escape;
 
-/// The number of colours of the chart palette, `--chart-1` to `--chart-6`.
+/// The number of colours a series can take: the role tones below, so a
+/// colour means what it means elsewhere and follows the brand's accent.
 pub const PALETTE: u8 = 6;
+
+/// The palette index of a series in the brand's accent: the main measure.
+pub const ACCENT: u8 = 0;
+
+/// The palette index of a series in the information tone.
+pub const INFO: u8 = 1;
+
+/// The palette index of a series in the good tone, such as successes.
+pub const OK: u8 = 2;
+
+/// The palette index of a series in the warning tone.
+pub const WARN: u8 = 3;
+
+/// The palette index of a series in the bad tone, such as refusals.
+pub const BAD: u8 = 4;
+
+/// The palette index of a series in the neutral tone: a measure beside the
+/// main one.
+pub const NEUTRAL: u8 = 5;
 
 /// One line of a chart.
 #[derive(Debug, Clone, PartialEq)]
@@ -60,9 +80,9 @@ pub struct LineChart {
 /// plot's width; the X labels are placed at the same share of the width.
 const WIDTH: f64 = 1000.0;
 
-/// The room above the plot for the top Y label, and below it for the X
-/// labels, in CSS pixels.
-const TOP: f64 = 20.0;
+/// The room above the plot, and below it for the X labels, in CSS pixels;
+/// the Y gutter's padding in the stylesheet is each less half a line.
+const TOP: f64 = 10.0;
 const BOTTOM: f64 = 26.0;
 
 /// A linear map from a data range onto a drawing range.
@@ -135,6 +155,48 @@ fn path(points: &[(f64, f64)], x: Scale, y: Scale) -> String {
     out.trim_end().to_owned()
 }
 
+/// The SVG path that bridges each run of missing values in `points`: from
+/// the last value before the run to the first after it, drawn dashed.
+fn gaps(points: &[(f64, f64)], x: Scale, y: Scale) -> String {
+    let mut out = String::new();
+    let mut last: Option<(f64, f64)> = None;
+    let mut missing = false;
+    for &(px, py) in points {
+        if !px.is_finite() {
+            continue;
+        }
+        if !py.is_finite() {
+            missing = last.is_some();
+            continue;
+        }
+        if missing && let Some((lx, ly)) = last {
+            put(
+                &mut out,
+                format_args!(
+                    "M{:.1} {:.1} L{:.1} {:.1} ",
+                    x.at(lx),
+                    y.at(ly),
+                    x.at(px),
+                    y.at(py)
+                ),
+            );
+        }
+        missing = false;
+        last = Some((px, py));
+    }
+    out.trim_end().to_owned()
+}
+
+/// Whether `chart` has a missing value inside a series, which its legend
+/// then explains.
+#[must_use]
+pub fn has_gaps(chart: &LineChart) -> bool {
+    chart
+        .series
+        .iter()
+        .any(|series| series.points.iter().any(|point| !point.1.is_finite()))
+}
+
 /// The parts every chart's SVG shares: its opening tag with title and
 /// description, the grid lines and labels of four Y ticks, and the X ticks.
 fn frame(
@@ -146,7 +208,17 @@ fn frame(
     y: Scale,
     x_ticks: &[(f64, String)],
 ) -> String {
-    let mut svg = String::new();
+    let (low, high) = y.from;
+    let mut svg = String::from(
+        "<div class=\"fui-chart-frame\"><div class=\"fui-chart-y\" aria-hidden=\"true\">",
+    );
+    for step in (0..=3_u8).rev() {
+        let value = low + (high - low) * f64::from(step) / 3.0;
+        svg.push_str("<span>");
+        escape(&tick_label(value), &mut svg);
+        svg.push_str("</span>");
+    }
+    svg.push_str("</div>");
     put(
         &mut svg,
         format_args!(
@@ -157,8 +229,6 @@ fn frame(
     put(&mut svg, format_args!("</title><desc id=\"{id}-desc\">"));
     escape(summary, &mut svg);
     svg.push_str("</desc>");
-    let (low, high) = y.from;
-    let mut labels = String::new();
     for step in 0..=3_u8 {
         let value = low + (high - low) * f64::from(step) / 3.0;
         let at = y.at(value);
@@ -173,16 +243,8 @@ fn frame(
                 "<line class=\"{class}\" x1=\"0\" x2=\"100%\" y1=\"{at:.1}\" y2=\"{at:.1}\"/>"
             ),
         );
-        put(
-            &mut labels,
-            format_args!(
-                "<text class=\"fui-chart-label\" x=\"0\" y=\"{:.1}\">",
-                at - 5.0
-            ),
-        );
-        escape(&tick_label(value), &mut labels);
-        labels.push_str("</text>");
     }
+    let mut labels = String::new();
     for (value, text) in x_ticks {
         let share = x.at(*value) / WIDTH;
         let anchor = if share <= 0.01 {
@@ -218,13 +280,14 @@ fn frame(
 /// under the labels.
 const PLOT_OPEN: &str = "<!--plot-->";
 
-/// Closes the SVG `svg` that [`frame`] opened, with `lines` inside the
-/// stretched plot and under the labels.
-fn close(mut svg: String, lines: &str) -> String {
+/// Closes the frame `svg` that [`frame`] opened, with `lines` inside the
+/// stretched plot under the labels, and `marks` (the points) over them.
+fn close(mut svg: String, lines: &str, marks: &str) -> String {
     if let Some(at) = svg.find(PLOT_OPEN) {
         svg.replace_range(at..at + PLOT_OPEN.len(), &format!("{lines}</svg>"));
     }
-    svg.push_str("</svg>");
+    svg.push_str(marks);
+    svg.push_str("</svg></div>");
     svg
 }
 
@@ -281,20 +344,40 @@ pub fn line_svg(chart: &LineChart, shown: &[bool]) -> String {
         &chart.x_ticks,
     );
     let mut lines = String::new();
+    let mut marks = String::new();
     for (index, series) in chart.series.iter().enumerate() {
         if !shown.get(index).copied().unwrap_or(true) {
             continue;
         }
+        let tone = series.palette % PALETTE;
         put(
             &mut lines,
             format_args!(
-                "<path class=\"fui-chart-line fui-series-{}\" d=\"{}\"/>",
-                series.palette % PALETTE,
+                "<path class=\"fui-chart-line fui-series-{tone}\" d=\"{}\"/>",
                 path(&series.points, x, y)
             ),
         );
+        let bridge = gaps(&series.points, x, y);
+        if !bridge.is_empty() {
+            put(
+                &mut lines,
+                format_args!("<path class=\"fui-chart-gap fui-series-{tone}\" d=\"{bridge}\"/>"),
+            );
+        }
+        for &(px, py) in &series.points {
+            if px.is_finite() && py.is_finite() {
+                put(
+                    &mut marks,
+                    format_args!(
+                        "<circle class=\"fui-chart-point fui-series-{tone}\" cx=\"{:.2}%\" cy=\"{:.1}\" r=\"3\"/>",
+                        x.at(px) / WIDTH * 100.0,
+                        y.at(py)
+                    ),
+                );
+            }
+        }
     }
-    svg = close(svg, &lines);
+    svg = close(svg, &lines, &marks);
     svg
 }
 
@@ -415,7 +498,7 @@ pub fn activity_chart(chart: &ActivityChart) -> impl IntoView + use<> {
             path(&series.points, x, y)
         )
     });
-    let svg = close(svg, &lines);
+    let svg = close(svg, &lines, "");
     view! { <figure class="fui-chart fui-chart-activity" data-activity-chart=chart.name inner_html=svg></figure> }
 }
 

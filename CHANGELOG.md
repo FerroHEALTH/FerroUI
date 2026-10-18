@@ -108,6 +108,20 @@ semantic versioning before 1.0 that would be a minor bump, and it ships as
   line; an identifier in a table cell keeps its line and the table scrolls;
   a card in a grid row that holds an empty state centres it in the row's
   height.
+- `Variant::Destructive`, the solid danger button that confirms a danger
+  dialog (a danger button in a danger dialog's actions draws solid too);
+  dialogs, menus, toasts and the side panel take the `--shadow-overlay`
+  elevation.
+- A disabled control draws neutral, on the sunken ground in muted text with
+  no accent; a pager step that cannot be taken says "(unavailable)" in
+  visually hidden text; every pager is one row with the range, the steps and
+  the sizes.
+- Chart series take the role tones (`chart::ACCENT`, `INFO`, `OK`,
+  `WARN`, `BAD`, `NEUTRAL`) in place of the `--chart-1` to `--chart-6`
+  palette; the Y labels sit in a gutter left of the plot; a line chart marks
+  its points and bridges a missing value with a dashed line its legend
+  explains.
+- A table's row header is in the body's weight.
 - The gallery's browser tests run at most four at once, and its bundle
   budget is 600 KiB of brotli-compressed WebAssembly: 0.1.1 measures 518566
   bytes with every component in it (0.1.0: 325387).

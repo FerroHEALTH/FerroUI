@@ -5,7 +5,9 @@
 //! its legend showing and hiding each, and the activity line of a
 //! dashboard.
 
-use ferrohealth_ui::view::chart::{ActivityChart, LineChart, Series, activity_chart};
+use ferrohealth_ui::view::chart::{
+    ACCENT, ActivityChart, BAD, LineChart, NEUTRAL, Series, activity_chart,
+};
 use ferrohealth_ui::view::surface::{card, page_header, stack};
 use ferrohealth_ui::widget::chart::line_chart;
 use leptos::prelude::*;
@@ -30,9 +32,9 @@ fn lines() -> AnyView {
             "Three synthetic series over a week: reads rise to 48 on Friday, writes stay near 12, and refusals have no value on Wednesday.",
         ),
         series: vec![
-            series("Reads", 0, [22.0, 30.0, 27.0, 35.0, 48.0, 31.0, 26.0]),
-            series("Writes", 1, [10.0, 12.0, 14.0, 11.0, 13.0, 9.0, 12.0]),
-            series("Refusals", 2, [3.0, 5.0, f64::NAN, 4.0, 6.0, 2.0, 1.0]),
+            series("Reads", ACCENT, [22.0, 30.0, 27.0, 35.0, 48.0, 31.0, 26.0]),
+            series("Writes", NEUTRAL, [10.0, 12.0, 14.0, 11.0, 13.0, 9.0, 12.0]),
+            series("Refusals", BAD, [3.0, 5.0, f64::NAN, 4.0, 6.0, 2.0, 1.0]),
         ],
         x_ticks: (0_u8..7)
             .zip(DAYS)
