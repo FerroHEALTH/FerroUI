@@ -154,9 +154,11 @@ async fn capture(
         .await?;
     // A taller window can lay the page out taller (the footer follows the
     // viewport), so the height is measured again until it holds.
+    browser.settled().await?;
     let mut height = content_height(browser).await?;
     for _ in 0..4 {
         window(browser, width, height).await?;
+        browser.settled().await?;
         let measured = content_height(browser).await?;
         if measured <= height {
             break;

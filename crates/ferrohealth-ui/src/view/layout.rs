@@ -139,7 +139,7 @@ pub enum FieldRow {
     Halves,
     /// A narrow field and a wide one: `1fr 2fr`.
     NarrowWide,
-    /// A field and its actions: `1fr auto`.
+    /// A field and its actions: `1fr auto`, one row at every width.
     WithActions,
     /// A code, a display and two actions: `1fr 2fr auto auto`.
     CodeDisplay,

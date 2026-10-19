@@ -95,3 +95,38 @@ pub fn explained_field(
     }
     .into_any()
 }
+
+/// Returns the checkbox `checkbox`, whose id is `id`, beside its label
+/// `label` as [`crate::view::form::check_field`] draws it, its help line
+/// under the words and under the form's switch.
+///
+/// The checkbox names the help with `aria-describedby` set to [`help_id`].
+#[must_use]
+pub fn explained_check_field(
+    id: &'static str,
+    label: &'static str,
+    help: &'static str,
+    checkbox: impl IntoView + 'static,
+) -> AnyView {
+    let checkbox = checkbox.into_any();
+    let HelpShown(shown) = help_shown();
+    let class = move || {
+        if shown.get() {
+            "fui-help"
+        } else {
+            "fui-help fui-sr-only"
+        }
+    };
+    view! {
+        <div class="fui-check">
+            {checkbox}
+            <span class="fui-check-text">
+                <label for=id>{label}</label>
+                <span id=help_id(id) class=class>
+                    {help}
+                </span>
+            </span>
+        </div>
+    }
+    .into_any()
+}

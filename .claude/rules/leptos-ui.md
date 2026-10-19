@@ -223,9 +223,9 @@ WebAssembly is over the number below, which the script reads from this table.
 |---|---|
 | WebAssembly, brotli-compressed | 655360 bytes |
 
-The budget is 640 KiB, 6% over the 618838 bytes the 0.1.6 gallery
+The budget is 640 KiB, 6% over the 620282 bytes the 0.1.6 gallery
 measured (2026-10-19, cargo-leptos 0.3.11, wasm-bindgen 0.2.129,
-Rust 1.98.1), which was 12595 bytes over 0.1.5's 606243 and 4438 over the
+Rust 1.98.1), which was 14039 bytes over 0.1.5's 606243 and 5882 over the
 600 KiB budget before it. 0.1.6 adds the field shapes every console needs
 so none builds a field by hand (a label made at run time, a hidden label,
 an error line, an action with its error line, a field that switches

@@ -30,7 +30,7 @@ use crate::journeys::window;
 use crate::stack::Gallery;
 
 /// Every state, by the name its images take.
-pub(crate) const STATES: [&str; 41] = [
+pub(crate) const STATES: [&str; 44] = [
     "hover-nav",
     "focus-nav",
     "hover-stat",
@@ -71,6 +71,9 @@ pub(crate) const STATES: [&str; 41] = [
     "stats-compact-390",
     "timestamp-stacked-320",
     "disabled-well",
+    "field-shapes",
+    "pick-or-type-typed",
+    "pick-or-type-combobox-typed",
     "disabled-well-390",
 ];
 
@@ -171,6 +174,7 @@ async fn shot_of(
             vec![element.to_json()?],
         )
         .await?;
+    browser.settled().await?;
     let png = element.screenshot_as_png().await?;
     write(brand, state, theme, &png)
 }
@@ -182,6 +186,7 @@ async fn shot_of_view(
     theme: &str,
     state: &str,
 ) -> Result<(), Box<dyn Error>> {
+    browser.settled().await?;
     let png = browser.driver().screenshot_as_png().await?;
     write(brand, state, theme, &png)
 }
@@ -641,6 +646,60 @@ async fn phone(
     window(browser, WIDTH, HEIGHT).await
 }
 
+/// The field shapes card with its error lines showing, and the two
+/// pick-or-type fields switched to their typed inputs.
+async fn field_states(
+    browser: &Browser,
+    gallery: &Gallery,
+    brand: Brand,
+    theme: &str,
+) -> Result<(), Box<dyn Error>> {
+    browser
+        .goto(&gallery.url(&format!("/{}/forms", brand.key())))
+        .await?;
+    browser
+        .element(By::Css("#pick-canonical-choice[role='combobox']"))
+        .await?;
+    let shapes = browser.element(card("Field shapes")).await?;
+    shot_of(browser, brand, theme, "field-shapes", &shapes).await?;
+    let picks = browser.element(card("Pick or type")).await?;
+    let select = browser.element(By::Id("pick-version-choice")).await?;
+    select
+        .find(By::Css("option[value='another']"))
+        .await?
+        .click()
+        .await?;
+    let typed = browser.element(By::Id("pick-version")).await?;
+    until("the typed version shows", async || {
+        typed.is_displayed().await.map_err(Into::into)
+    })
+    .await?;
+    focus(browser, &typed).await?;
+    shot_of(browser, brand, theme, "pick-or-type-typed", &picks).await?;
+    browser
+        .element(By::Id("pick-version-back"))
+        .await?
+        .click()
+        .await?;
+    let combo = browser
+        .element(By::Css("#pick-canonical-choice[role='combobox']"))
+        .await?;
+    combo.click().await?;
+    browser
+        .element(By::Css(
+            "#pick-canonical-choice-list li[role='option']:last-child",
+        ))
+        .await?
+        .click()
+        .await?;
+    let canonical = browser.element(By::Id("pick-canonical")).await?;
+    until("the typed canonical shows", async || {
+        canonical.is_displayed().await.map_err(Into::into)
+    })
+    .await?;
+    shot_of(browser, brand, theme, "pick-or-type-combobox-typed", &picks).await
+}
+
 /// The tables page in the compact density, its cookie set for the one shot.
 async fn compact(
     browser: &Browser,
@@ -689,6 +748,7 @@ async fn every_state_is_captured_in_every_brand_light_and_dark() -> Result<(), B
                 overlays(browser, &gallery, brand, theme).await?;
                 layouts(browser, &gallery, brand, theme).await?;
                 combobox_states(browser, &gallery, brand, theme).await?;
+                field_states(browser, &gallery, brand, theme).await?;
                 compact(browser, &gallery, brand, theme).await?;
                 phone(browser, &gallery, brand, theme).await?;
             }

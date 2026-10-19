@@ -161,10 +161,11 @@ fn header(column: &Column, sort: Option<&Sort>, sort_href: &dyn Fn(&Sort) -> Str
     let title = column.title.as_deref().map(str::to_owned);
     if !column.sortable {
         return view! {
-            <th scope="col" class=class title=title>
+            <th scope="col" title=title>
                 {label}
             </th>
         }
+        .attr("class", class)
         .into_any();
     }
     let aria = Sort::aria(sort, &column.key);
@@ -175,13 +176,14 @@ fn header(column: &Column, sort: Option<&Sort>, sort_href: &dyn Fn(&Sort) -> Str
     };
     let href = sort_href(&Sort::toggled(sort, &column.key));
     view! {
-        <th scope="col" class=class title=title aria-sort=aria>
+        <th scope="col" title=title aria-sort=aria>
             <a href=href class="fui-sort">
                 {label}
                 {icon(glyph, "12")}
             </a>
         </th>
     }
+    .attr("class", class)
     .into_any()
 }
 

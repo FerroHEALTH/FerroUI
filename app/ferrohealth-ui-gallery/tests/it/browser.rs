@@ -256,6 +256,37 @@ impl Browser {
         .into())
     }
 
+    /// Waits until the page's layout holds still: its fonts loaded
+    /// (CSS Font Loading, `document.fonts.ready`) and its height the same
+    /// in two reads one frame apart, so a capture never measures a page
+    /// still settling.
+    pub(crate) async fn settled(&self) -> Result<(), Box<dyn Error>> {
+        self.driver
+            .execute_async(
+                "const done = arguments[arguments.length - 1]; document.fonts.ready.then(() => done(true));",
+                vec![],
+            )
+            .await?;
+        let height = async || -> Result<f64, Box<dyn Error>> {
+            self.driver
+                .execute_async(
+                    "const done = arguments[arguments.length - 1]; requestAnimationFrame(() => requestAnimationFrame(() => done(document.documentElement.scrollHeight)));",
+                    vec![],
+                )
+                .await?
+                .convert()
+                .map_err(Into::into)
+        };
+        let mut last = height().await?;
+        until("the page's height holds over two frames", async || {
+            let now = height().await?;
+            let held = (now - last).abs() < 0.5;
+            last = now;
+            Ok(held)
+        })
+        .await
+    }
+
     /// Waits for the element `by` names, and returns it.
     ///
     /// A wait that runs out names the page the browser is at and its text.
