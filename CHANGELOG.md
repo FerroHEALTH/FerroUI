@@ -11,6 +11,48 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-10-19
+
+A shared timestamp, a compact stat tile on a phone, a visible edge on a
+disabled field in a well, a field and its button stacked on a phone, and a
+data table of several bodies. The additions are a module with two
+functions, a class and a variant of `Body`; a console that matches on
+`Body` adds an arm for it.
+
+### Added
+
+- `view::time::timestamp` and `view::time::reading`: a date-time drawn for
+  reading on one line, an instant moved to UTC and cut to the second
+  ("2026-10-18 23:18:37 UTC"), a date-time without an offset as it stands,
+  in a `<time>` whose `datetime` is HTML's machine form and whose `title`
+  is the value as the server sent it; anything else is drawn verbatim
+  (FerroHEALTH/FerroUI#91).
+- `fui-time`: a value that never breaks, in a wide table, a stacked card on
+  a phone and a definition grid alike.
+- `table::view::Body::Bodies`: a data table of several `<tbody>` elements
+  the console draws, such as one per page of a query's answer, stacked
+  below 40rem like any other rows and keeping the edge between bodies on a
+  wide screen (FerroHEALTH/FerroUI#94).
+
+### Changed
+
+- Below 30rem a stat card is a compact tile: the glyph, the figure and the
+  label on one line, at most 64px tall, the label cut with an ellipsis and
+  named whole in its `title`, and a mark under the label. Wider screens
+  keep the tile as it was (FerroHEALTH/FerroUI#93).
+
+### Fixed
+
+- A disabled input, select or textarea keeps the control's edge, so inside
+  a well, whose sunken ground is its own, it still reads as a field in the
+  dark theme (FerroHEALTH/FerroUI#92).
+- Below 30rem every field and button of a `field_flow` takes the whole
+  row, the label above its control and the button on its own line after
+  the input, so a field with a trailing button, such as a code search,
+  stacks on a phone (FerroHEALTH/FerroUI#95).
+- A fieldset set apart as a well draws its heading's rule in the stronger
+  edge, which the dark theme's edge matched on the well's ground.
+
 ## [0.1.3] - 2026-10-19
 
 The top bar, combobox and stacked table fixes the FerroTERM console review
@@ -340,7 +382,8 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.3...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.4...HEAD
+[0.1.4]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.0...v0.1.1

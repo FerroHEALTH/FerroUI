@@ -20,6 +20,7 @@ use ferrohealth_ui::view::surface::{
 };
 use ferrohealth_ui::view::tabs::{KeyedTab, Tab, keyed_tabs, link_tabs};
 use ferrohealth_ui::view::theme_switch::{density_switch, theme_switch};
+use ferrohealth_ui::view::time::timestamp;
 use ferrohealth_ui::widget::segmented::segmented;
 use ferrohealth_ui::widget::tabs::{Panel, tabs};
 use leptos::prelude::*;
@@ -68,7 +69,7 @@ fn stats() -> AnyView {
         Stat {
             glyph: Glyph::SERVER,
             value: String::from("2"),
-            label: String::from("Running revision").into(),
+            label: String::from("Running revision on every federation node").into(),
             href: None,
         },
         pill(Tone::Warn, "revision 3 pending"),
@@ -186,9 +187,9 @@ fn notices_card() -> AnyView {
     .into_any()
 }
 
-/// The definition grids, a well and a disclosure.
-fn facts() -> AnyView {
-    let row = card(
+/// The facts across a row, one of them a timestamp.
+fn facts_across() -> AnyView {
+    card(
         "Facts across a row",
         facts_row(vec![
             ("Concept", "Synthetic evaluation".into_any()),
@@ -196,21 +197,30 @@ fn facts() -> AnyView {
             ("Default language", "en".into_any()),
             ("Languages", "en".into_any()),
             (
+                "Last changed",
+                timestamp("2026-10-19T01:18:37+02:00").into_any(),
+            ),
+            (
                 "Uid",
                 view! { <code>"711d7d49-0000-4a6a-a6b4-synthetic"</code> }.into_any(),
             ),
         ]),
     )
-    .into_any();
+    .into_any()
+}
+
+/// The definition grids, a well and a disclosure.
+fn facts() -> AnyView {
+    let row = facts_across();
     let grid_card = card(
         "Definition grid",
         definitions(vec![
             ("Product", "FerroHEALTH UI".into_any()),
-            ("Version", "0.1.3".into_any()),
+            ("Version", "0.1.4".into_any()),
             ("Commit", view! { <code>"0123456789ab"</code> }.into_any()),
             ("Profile", or_none(String::new())),
             ("Licence", "Business Source License 1.1".into_any()),
-            ("Built", "2026-10-18".into_any()),
+            ("Built", timestamp("2026-10-18T23:18:37.039437+00:00").into_any()),
             ("Locale", "en".into_any()),
             (
                 "Target",

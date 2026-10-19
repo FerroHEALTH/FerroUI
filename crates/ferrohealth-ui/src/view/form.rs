@@ -42,9 +42,11 @@ pub const SWITCH: &str = "fui-switch";
 /// The classes of a form laid out as one column of fields.
 pub const FORM: &str = "fui-form";
 
-/// The classes of a row of fields and their buttons: the fields share the
-/// row's width, each growing from 10rem so a placeholder is not cut, the
-/// buttons keep their own, and the row wraps on a phone.
+/// The classes of a row of fields and their buttons.
+///
+/// The fields share the row's width, each growing from 10rem so a
+/// placeholder is not cut, the buttons keep their own, and below 30rem each
+/// field and button takes the whole row.
 pub const FIELD_FLOW: &str = "fui-field-flow";
 
 /// The id of the help line of the control `id`, which the control names in

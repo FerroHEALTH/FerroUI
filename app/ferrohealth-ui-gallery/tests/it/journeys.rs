@@ -522,6 +522,14 @@ async fn every_page_reflows_at_320_pixels_with_no_sideways_scroll() -> Result<()
                     ))
                     .await?;
                 assert!(named.is_displayed().await?, "a stacked cell is hidden");
+                // A table of several bodies stacks each body's rows as cards,
+                // the bodies spaced as its rows are.
+                let paged = browser
+                    .element(By::Css("tbody[data-page='2'] > tr"))
+                    .await?;
+                assert_eq!("block", paged.css_value("display").await?);
+                let second = browser.element(By::Css("tbody[data-page='2']")).await?;
+                assert_eq!("8px", second.css_value("margin-top").await?);
             }
         }
         browser.console_clean("the reflow").await
@@ -1012,6 +1020,172 @@ async fn tabbing_through_a_long_form_never_leaves_the_focus_under_the_action_bar
             );
         }
         browser.console_clean("the action bar").await
+    })
+    .await
+}
+
+/// Sets the gallery's theme cookie to `theme` for every later page.
+async fn theme(browser: &Browser, gallery: &Gallery, theme: &str) -> Result<(), Box<dyn Error>> {
+    browser.goto(&gallery.url("/")).await?;
+    let mut cookie = Cookie::new("gallery-theme", theme.to_owned());
+    cookie.set_path("/");
+    browser.driver().add_cookie(cookie).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_timestamp_keeps_one_line_in_tables_cards_and_facts_in_every_brand()
+-> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        for width in [320, 390, 1440] {
+            window(browser, width, 900).await?;
+            for brand in Brand::ALL {
+                for page in ["/tables", ""] {
+                    let path = format!("/{}{page}", brand.key());
+                    browser.goto(&gallery.url(&path)).await?;
+                    browser.element(By::Css("time.fui-time")).await?;
+                    // A value broken over lines draws one box per line; each
+                    // must keep inside the card, row or definition it sits in.
+                    let (count, broken, outside, page, view): (usize, Vec<String>, Vec<String>, f64, f64) =
+                        measure(
+                            browser,
+                            r"const times = Array.from(document.querySelectorAll('time.fui-time'));
+                            const broken = times.filter((time) => time.getClientRects().length !== 1)
+                              .map((time) => time.textContent);
+                            const outside = times.filter((time) => {
+                              const box = time.closest('tr, .fui-facts, .fui-facts-row, .fui-card');
+                              return time.getBoundingClientRect().right > box.getBoundingClientRect().right + 0.5;
+                            }).map((time) => time.textContent);
+                            return [times.length, broken, outside,
+                              document.documentElement.scrollWidth, document.documentElement.clientWidth];",
+                        )
+                        .await?;
+                    assert!(count >= 2, "{path} at {width} px draws {count} timestamps");
+                    assert!(broken.is_empty(), "{path} at {width} px breaks {broken:?}");
+                    assert!(outside.is_empty(), "{path} at {width} px runs {outside:?} past its box");
+                    assert!(page <= view + 0.5, "{path} scrolls sideways at {width} px ({page} > {view})");
+                }
+            }
+        }
+        let time = browser.element(By::Css("time.fui-time")).await?;
+        let title = time.attr("title").await?.unwrap_or_default();
+        let datetime = time.attr("datetime").await?.unwrap_or_default();
+        assert!(title.ends_with("+00:00") || title.ends_with("+02:00"), "the title is the raw value: {title}");
+        assert!(datetime.ends_with('Z'), "the datetime is the instant in UTC: {datetime}");
+        assert!(time.text().await?.ends_with(" UTC"), "the text names UTC");
+        browser.console_clean("the timestamps").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_stat_tile_below_30rem_is_one_compact_line() -> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        for scheme in ["light", "dark"] {
+            theme(browser, &gallery, scheme).await?;
+            for width in [320, 390, 480] {
+                window(browser, width, 900).await?;
+                browser.goto(&gallery.url("/ferroterm")).await?;
+                browser.element(By::Css(".fui-grid-stats .fui-stat")).await?;
+                let tiles: Vec<(f64, bool, bool, bool, bool, bool, bool)> = measure(
+                    browser,
+                    r"const overlap = (a, b) => a.top < b.bottom && b.top < a.bottom;
+                    return Array.from(document.querySelectorAll('.fui-grid-stats .fui-stat')).map((tile) => {
+                      const box = (part) => tile.querySelector(part).getBoundingClientRect();
+                      const label = tile.querySelector('.fui-stat-label > span:first-child');
+                      const glyph = box('.fui-stat-glyph');
+                      const value = box('.fui-stat-value');
+                      const words = label.getBoundingClientRect();
+                      return [tile.getBoundingClientRect().height,
+                        overlap(glyph, value) && overlap(value, words),
+                        words.top >= value.bottom - 0.5,
+                        label.getClientRects().length === 1,
+                        label.title === label.textContent,
+                        tile.querySelector('.fui-stat-label > :nth-child(2)') !== null,
+                        label.scrollWidth > label.clientWidth
+                          && getComputedStyle(label).textOverflow === 'ellipsis'];
+                    });",
+                )
+                .await?;
+                assert_eq!(tiles.len(), 5, "five tiles at {width} px");
+                assert_eq!(
+                    tiles.iter().filter(|tile| tile.5).count(),
+                    2,
+                    "two tiles carry a mark at {width} px"
+                );
+                if width == 320 {
+                    assert!(
+                        tiles.iter().any(|tile| tile.6),
+                        "no label ends in an ellipsis at 320 px {scheme}"
+                    );
+                }
+                for (index, (height, one_line, stacked, single, titled, _, _)) in tiles.iter().enumerate() {
+                    assert!(*titled, "tile {index} names its whole label in its title");
+                    if width < 480 {
+                        assert!(*height <= 64.5, "tile {index} is {height} px tall at {width} px {scheme}");
+                        assert!(*one_line, "tile {index} is not one line at {width} px {scheme}");
+                        assert!(*single, "tile {index} wraps its label at {width} px {scheme}");
+                    } else {
+                        assert!(*stacked, "tile {index} lost its desktop layout at {width} px {scheme}");
+                    }
+                }
+                let (page, view): (f64, f64) = measure(
+                    browser,
+                    "return [document.documentElement.scrollWidth, document.documentElement.clientWidth];",
+                )
+                .await?;
+                assert!(page <= view + 0.5, "the dashboard scrolls sideways at {width} px ({page} > {view})");
+            }
+        }
+        browser.console_clean("the compact stat tiles").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_field_and_its_button_stack_below_30rem_and_share_a_line_above()
+-> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        for width in [320, 390, 480, 1440] {
+            window(browser, width, 900).await?;
+            browser.goto(&gallery.url("/ferroterm/forms")).await?;
+            browser.element(By::Id("member-code")).await?;
+            let (label, input, button, row): (Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>) = measure(
+                browser,
+                r"const box = (e) => { const r = e.getBoundingClientRect(); return [r.top, r.bottom, r.left, r.width]; };
+                const input = document.getElementById('member-code');
+                const row = input.closest('.fui-field-flow');
+                return [box(document.querySelector('label[for=member-code]')), box(input),
+                  box(row.querySelector(':scope > button')), box(row)];",
+            )
+            .await?;
+            assert!(label[1] <= input[0] + 0.5, "the label is not above the input at {width} px");
+            if width < 480 {
+                assert!(button[0] >= input[1] - 0.5, "the button is not below the input at {width} px");
+                assert!((button[3] - row[3]).abs() <= 1.0, "the button is not the row's width at {width} px");
+                assert!((input[3] - row[3]).abs() <= 1.0, "the input is not the row's width at {width} px");
+            } else if width == 1440 {
+                // At 480 px the row's select, input and button wrap as the
+                // flex row has room; only the wide row shares one line.
+                assert!(
+                    (button[1] - input[1]).abs() <= 1.0,
+                    "the button left the input's line at {width} px"
+                );
+            }
+        }
+        browser.console_clean("the field and its button").await
     })
     .await
 }

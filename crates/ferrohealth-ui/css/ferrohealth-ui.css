@@ -1086,10 +1086,12 @@
     gap: 0.75rem;
   }
 
-  /* One stat per row on a phone, so every label stays on one line. */
+  /* One compact stat per row on a phone, so every label stays on one
+     line. */
   @media (width < 30rem) {
     .fui-grid-stats {
       grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-default);
     }
   }
 
@@ -1775,6 +1777,54 @@
     overflow-wrap: break-word;
   }
 
+  /* Below 30rem a tile is one line: the glyph, the figure and the label
+     side by side in a smaller tile, the label cut with an ellipsis (its
+     title carries all of it) and a mark under it, so a dashboard's tiles
+     no longer fill a phone. */
+  @media (width < 30rem) {
+    .fui-stat {
+      gap: 0.625rem;
+      padding: 0.375rem 0.75rem;
+    }
+
+    .fui-stat > .fui-stat-text {
+      margin-block-start: 0;
+    }
+
+    .fui-stat > .fui-stat-glyph {
+      width: 1.75rem;
+      height: 1.75rem;
+      margin-block-start: calc((var(--leading-heading) - 1.75rem) / 2);
+    }
+
+    .fui-stat-text {
+      display: flex;
+      flex: 1 1 auto;
+      align-items: baseline;
+      gap: var(--space-default);
+    }
+
+    .fui-stat-value {
+      flex: none;
+      font-size: var(--text-heading);
+      line-height: var(--leading-heading);
+    }
+
+    .fui-stat-label {
+      display: grid;
+      flex: 1 1 auto;
+      justify-items: start;
+      gap: 0;
+    }
+
+    .fui-stat-label > span:first-child {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
   /* A panel: a card whose first row holds its title and actions over a
      body that runs to its edges (a table, a list). */
   .fui-panel {
@@ -1985,6 +2035,14 @@
     max-width: 28rem;
   }
 
+  /* A timestamp is one value on one line wherever it sits, a stacked card
+     that breaks anywhere included; its title holds the value as sent. */
+  .fui-time {
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: normal;
+    white-space: nowrap;
+  }
+
   /* The caption names the table for assistive technology; the card's title
      or the page names it for the eye. */
   .fui-table caption {
@@ -2022,7 +2080,9 @@
     font-weight: 500;
   }
 
-  .fui-table tbody tr:last-child > * {
+  /* Only the last row of the last body loses its edge, so a table of
+     several bodies keeps the edge between them. */
+  .fui-table tbody:last-of-type tr:last-child > * {
     border-bottom: 0;
   }
 
@@ -2099,7 +2159,8 @@
       padding: 0.625rem 0.75rem;
     }
 
-    .fui-table-stack .fui-table tbody tr + tr {
+    .fui-table-stack .fui-table tbody tr + tr,
+    .fui-table-stack .fui-table tbody + tbody {
       margin-block-start: 0.5rem;
     }
 
@@ -2142,6 +2203,20 @@
 
     .fui-table-stack .fui-table tbody :is(td, th) {
       overflow-wrap: anywhere;
+    }
+
+    /* A cell whose value is a timestamp keeps the label's column while the
+       value fits beside it, and moves the whole value under the label when
+       it does not, since a timestamp never breaks (WCAG 2.2 SC 1.4.10). */
+    .fui-table-stack .fui-table tbody [data-label]:has(> .fui-time) {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0 0.75rem;
+    }
+
+    .fui-table-stack .fui-table tbody [data-label]:has(> .fui-time)::before {
+      flex: 0 0 max(6rem, 35%);
     }
 
     .fui-table-stack .fui-table tbody [data-label]::before {
@@ -2463,6 +2538,15 @@
     flex: 0 0 auto;
   }
 
+  /* Below 30rem each field and button takes the whole row, the label above
+     its control and the button on its own line after it, so no field
+     narrows until its label wraps beside the controls. */
+  @media (width < 30rem) {
+    .fui-field-flow > :is(.fui-field, button, .fui-button) {
+      flex: 1 1 100%;
+    }
+  }
+
   /* A checkbox beside fields sits on their controls' line, not their
      labels'. */
   :is(.fui-field-flow, .fui-field-row, .fui-columns) > .fui-check {
@@ -2615,16 +2699,17 @@
   }
 
   /* A control that cannot be used: the sunken ground, muted words, no
-     pointer. */
+     pointer. It keeps the control's edge, so on a well's sunken ground, in
+     the dark theme as in the light, it still reads as a field. */
   :is(.fui-input, .fui-select, .fui-textarea):disabled {
-    border-color: var(--edge);
+    border-color: var(--edge-control);
     background-color: var(--surface-sunken);
     color: var(--muted);
     cursor: not-allowed;
   }
 
   :is(.fui-input, .fui-select, .fui-textarea):disabled:hover {
-    border-color: var(--edge);
+    border-color: var(--edge-control);
   }
 
   .fui-input:is([type="date"], [type="datetime-local"], [type="time"], [type="month"]) {
@@ -2682,9 +2767,12 @@
     padding: 0.75rem;
   }
 
+  /* On the well's sunken ground the heading's rule takes the stronger
+     edge, which the dark theme's edge would match. */
   .fui-fieldset.fui-well > legend {
     float: left;
     width: 100%;
+    border-bottom-color: var(--edge-strong);
   }
 
   /* A choice's legend is a field's label, not a group's heading. */

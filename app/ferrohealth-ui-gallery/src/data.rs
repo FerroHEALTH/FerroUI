@@ -18,6 +18,9 @@ pub struct Row {
     pub lines: u32,
     /// Whether it compiled.
     pub state: &'static str,
+    /// When it last changed, as a server writes an instant: RFC 3339 with
+    /// microseconds and an offset.
+    pub changed: String,
 }
 
 /// The number of synthetic rows.
@@ -45,9 +48,26 @@ pub fn rows() -> Vec<Row> {
                 kind,
                 lines: index.wrapping_mul(37) % 400 + 12,
                 state,
+                changed: changed(index),
             }
         })
         .collect()
+}
+
+/// The synthetic instant the row `index` last changed, most in UTC and every
+/// fourth two hours ahead of it, so the reading form moves it back.
+fn changed(index: u32) -> String {
+    let day = index % 28 + 1;
+    let hour = index * 7 % 24;
+    let minute = index * 13 % 60;
+    let second = index * 29 % 60;
+    let micros = index * 39_437 % 1_000_000;
+    let offset = if index.is_multiple_of(4) {
+        "+02:00"
+    } else {
+        "+00:00"
+    };
+    format!("2026-09-{day:02}T{hour:02}:{minute:02}:{second:02}.{micros:06}{offset}")
 }
 
 /// The keys of the columns the gallery's table sorts by.

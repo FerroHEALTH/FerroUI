@@ -30,6 +30,8 @@ states under `../screenshots/states/`.
 | `reference/ferrofed/configuration-member-form.png` | `screenshots/ferrofed/forms.png`, `states/ferrofed/reveal-replace.png` | fieldsets, the segmented radio and what it reveals, the change table |
 | `reference/ferrofed/query-complete.png` | `screenshots/ferrofed/forms.png`, `layouts.png` | checkbox chips, the switch, the action bar, node tiles |
 | `reference/ferroterm/overview.png` | `screenshots/ferroterm/overview.png`, `states/ferroterm/focus-search.png` | the search box in the top bar, the type scale |
+| `reference/ferroterm/overview.png` | `screenshots/states/ferroterm/stats-compact-320.png`, `stats-compact-390.png` | the compact stat tiles on a phone |
+| `reference/ferroehr/templates.png` | `screenshots/states/ferroehr/timestamp-stacked-320.png`, `screenshots/ferroehr/tables-narrow.png` | a timestamp in a stacked card, on one line |
 | `reference/ferroterm/expand.png` | `screenshots/ferroterm/layouts.png`, `states/ferroterm/help-on.png`, `picker-other.png` | a runner's form beside its answer, the help switch, the picker |
 
 ## Which version won
@@ -58,6 +60,8 @@ states under `../screenshots/states/`.
 | Checkbox chips, switch, action bar | FerroFED | the tick and the accent edge both say chosen; the knob's place says on |
 | Tree | FerroTERM and FerroEHR | FerroTERM's lazy links and keyboard path, FerroEHR's row actions; indentation by nesting |
 | Proportion bar | FerroTERM | the length as an SVG attribute, repeated beside its figure |
+| Timestamp | FerroEHR (viewer) | a `<time>` with the UTC reading form cut to the second and the value as sent in its title, never broken; FerroUI adds HTML's machine form in `datetime` |
+| Stat tile on a phone | FerroEHR's tile, made compact | below 30 rem the glyph, figure and label share one line in a tile at most 64 px tall, the label cut with an ellipsis and named in its title |
 
 FerroBRIDGE's console was compared for every row and won none: its
 components came from FerroUI 0.1.0, which this release replaces.
