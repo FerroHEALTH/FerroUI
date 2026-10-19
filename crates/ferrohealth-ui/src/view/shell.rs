@@ -10,7 +10,7 @@
 
 use leptos::prelude::*;
 
-use crate::i18n::{Text, tr, tr_with};
+use crate::i18n::{Text, tr};
 use crate::icon::{Glyph, icon};
 
 /// The maker every FerroHEALTH console's footer names.
@@ -183,11 +183,10 @@ pub fn footer_about(footer: Footer, about: About) -> impl IntoView {
     view! {
         <footer class="fui-footer">
             <p>
-                {format!(
-                    "{} {} · {MAKER} · ",
-                    footer.product,
-                    tr_with(Text::FooterVersion, &[("version", footer.version.into())]),
-                )} <a href=footer.about rel=rel>
+                // NOTE: no specification governs this: our own design; the product's
+                // name and its version are data, drawn as they stand in every locale.
+                {footer.product} " " {format!("v{}", footer.version)} {format!(" · {MAKER} · ")}
+                <a href=footer.about rel=rel>
                     {tr(Text::FooterAbout)}
                 </a>
             </p>

@@ -1117,9 +1117,11 @@
     line-height: var(--leading-micro);
   }
 
+  /* A short link label never breaks inside itself; the line wraps before it. */
   .fui-footer a {
     color: inherit;
     text-decoration: underline;
+    white-space: nowrap;
   }
 
   .fui-footer a:hover {
