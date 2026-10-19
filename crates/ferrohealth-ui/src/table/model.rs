@@ -7,7 +7,7 @@
 
 use leptos_router::params::ParamsMap;
 
-use crate::i18n::{Text, tr, tr_with};
+use crate::i18n::{Message, Text, tr, tr_with};
 
 /// The rows a page shows when the request names no size.
 pub const DEFAULT_SIZE: u32 = 25;
@@ -31,70 +31,71 @@ pub const SORT_KEY: &str = "sort";
 /// The query key of the sort's direction.
 pub const ORDER_KEY: &str = "order";
 
-/// The words a listing names its rows by, one and many: "value set" and
-/// "value sets".
+/// What a listing names its rows by: "value set", "value sets".
 ///
-/// A console names its rows in its own words, from its own catalog; the
-/// library's own noun, [`Noun::ROWS`], is drawn from the library's catalog
-/// in the page's locale (`crate::i18n`).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// A console names its rows in its own words: a message of its own catalog
+/// that selects the form by `$count` (a Fluent selector over the CLDR plural
+/// categories, so the library holds no plural rule of any language), with
+/// two attributes, each a whole sentence in the console's words: `.empty`
+/// for a listing with no row and `.opening` for the plural as a sentence
+/// opens with it.
+///
+/// ```ftl
+/// value-sets =
+///     { $count ->
+///         [one] value set
+///        *[other] value sets
+///     }
+///     .empty = No value sets
+///     .opening = Value sets
+/// ```
+///
+/// The library's own noun, [`Noun::ROWS`], is drawn from the library's
+/// catalog. A noun is `Copy`; it is made where the console's catalog is in
+/// reach rather than as a `const`, since a catalog is a lazily built static.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Noun {
-    /// The word for one row.
-    pub one: &'static str,
-    /// The word for several rows, or none.
-    pub many: &'static str,
+    message: Option<Message>,
 }
 
 impl Noun {
     /// Rows, the noun of a listing that names nothing else.
-    pub const ROWS: Self = Self::new("row", "rows");
+    pub const ROWS: Self = Self { message: None };
 
-    /// The noun `one`, `many`.
+    /// The noun the console's message `message` names.
     #[must_use]
-    pub const fn new(one: &'static str, many: &'static str) -> Self {
-        Self { one, many }
+    pub const fn new(message: Message) -> Self {
+        Self {
+            message: Some(message),
+        }
     }
 
-    /// The word for `count` rows.
+    /// The word for `count` rows in the page's locale.
     #[must_use]
-    pub const fn of(self, count: u32) -> &'static str {
-        if count == 1 { self.one } else { self.many }
+    pub fn word(self, count: u32) -> String {
+        let args = [("count", count.into())];
+        match self.message {
+            Some(message) => message.text_with(&args),
+            None => tr_with(Text::Rows, &args),
+        }
     }
 
-    /// The word for several rows with its first letter in upper case, as a
-    /// sentence opens with it.
+    /// The sentence for a listing with no row: "No value sets".
+    #[must_use]
+    pub fn empty(self) -> String {
+        match self.message {
+            Some(message) => message.attribute("empty", &[("count", 0.into())]),
+            None => tr(Text::RangeEmpty),
+        }
+    }
+
+    /// The word for several rows as a sentence opens with it: "Value sets".
     #[must_use]
     pub fn opening(self) -> String {
-        let mut letters = self.many.chars();
-        letters.next().map_or_else(String::new, |first| {
-            first.to_uppercase().chain(letters).collect()
-        })
-    }
-
-    /// The word for `count` rows as a range draws it: the catalog's for the
-    /// rows noun, the console's own for any other.
-    fn word(self, count: u32) -> String {
-        if self == Self::ROWS {
-            tr_with(Text::Rows, &[("count", count.into())])
-        } else {
-            self.of(count).to_owned()
+        match self.message {
+            Some(message) => message.attribute("opening", &[("count", 2.into())]),
+            None => tr(Text::RowsOpening),
         }
-    }
-
-    /// [`Noun::opening`] as a range draws it, the catalog's for the rows
-    /// noun.
-    fn opening_word(self) -> String {
-        if self == Self::ROWS {
-            tr(Text::RowsOpening)
-        } else {
-            self.opening()
-        }
-    }
-}
-
-impl Default for Noun {
-    fn default() -> Self {
-        Self::ROWS
     }
 }
 
@@ -315,7 +316,7 @@ impl Window {
     #[must_use]
     pub fn range_of(self, noun: Noun) -> String {
         if self.total == 0 {
-            return tr_with(Text::RangeOfEmpty, &[("nouns", noun.word(0).into())]);
+            return noun.empty();
         }
         tr_with(
             Text::RangeOf,
@@ -415,12 +416,12 @@ impl OpenWindow {
     #[must_use]
     pub fn range_of(self, noun: Noun) -> String {
         if self.held == 0 {
-            return tr_with(Text::RangeOfEmpty, &[("nouns", noun.word(0).into())]);
+            return noun.empty();
         }
         tr_with(
             Text::OpenRangeOf,
             &[
-                ("nouns", noun.opening_word().into()),
+                ("nouns", noun.opening().into()),
                 ("first", self.start.saturating_add(1).into()),
                 ("last", self.start.saturating_add(self.held).into()),
             ],
@@ -578,10 +579,24 @@ mod tests {
         DEFAULT_SIZE, Direction, MAX_SIZE, Noun, OpenWindow, Paging, Sizes, Sort, Window, href,
         partial_note,
     };
+    use crate::i18n::Message;
+
+    fluent_templates::static_loader! {
+        static CONSOLE = {
+            locales: "./tests/it/console",
+            fallback_language: "en",
+            customise: |bundle| bundle.set_use_isolating(false),
+        };
+    }
+
+    /// The noun `id` of the test's catalog.
+    fn noun(id: &'static str) -> Noun {
+        Noun::new(Message::new(&*CONSOLE, id))
+    }
 
     #[test]
     fn the_range_names_its_noun_and_a_partial_answer_says_so() {
-        let sets = Noun::new("value set", "value sets");
+        let sets = noun("value-sets");
         let window = Window::over(312, Paging { page: 2, size: 25 });
         assert_eq!("26-50 of 312 value sets", window.range_of(sets));
         assert_eq!(
@@ -640,7 +655,9 @@ mod tests {
         assert_eq!("Rows 26 to 37", second.range_of(rows));
         let past = OpenWindow::of(Paging { page: 9, size: 25 }, 0);
         assert_eq!("No rows", past.range_of(rows));
-        assert_eq!("EHRs", Noun::new("EHR", "EHRs").opening());
+        assert_eq!("EHRs", noun("ehrs").opening());
+        assert_eq!("EHRs 1 to 25", first.range_of(noun("ehrs")));
+        assert_eq!("No EHRs", past.range_of(noun("ehrs")));
     }
 
     #[test]

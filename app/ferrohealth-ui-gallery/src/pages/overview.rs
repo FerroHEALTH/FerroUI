@@ -5,18 +5,20 @@
 //! the facts, the tabs and segmented controls, the refusal, the empty and
 //! loading states, and every icon.
 
+use crate::locale::{Msg, tr, tr_with};
 use ferrohealth_ui::icon::{Glyph, icon};
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::button::{Variant, label, link_button};
 use ferrohealth_ui::view::empty::{Busy, busy, empty_quiet, empty_state, skeleton, spinner};
 use ferrohealth_ui::view::form::field;
+use ferrohealth_ui::view::layout::divided_list;
 use ferrohealth_ui::view::notice::{Announce, notice};
 use ferrohealth_ui::view::refusal::{Issue, Refusal, Severity, fault, refusal};
 use ferrohealth_ui::view::segmented::{SegmentedForm, segmented_form, segmented_links};
 use ferrohealth_ui::view::status::{badge, pill, status};
 use ferrohealth_ui::view::surface::{
-    Stat, card, chip, cluster, definitions, disclosure, facts_row, grid, or_none, page_header,
-    stack, stat_card, stat_card_marked, stat_grid, well,
+    Stat, card, card_action, chip, cluster, definitions, disclosure, facts_row, grid, or_none,
+    page_header, stack, stat_card, stat_card_marked, stat_grid, titled_panel, well,
 };
 use ferrohealth_ui::view::tabs::{KeyedTab, Tab, keyed_tabs, link_tabs};
 use ferrohealth_ui::view::theme_switch::{density_switch, locale_switch, theme_switch};
@@ -25,13 +27,35 @@ use ferrohealth_ui::widget::segmented::segmented;
 use ferrohealth_ui::widget::tabs::{Panel, tabs};
 use leptos::prelude::*;
 
-/// The formats the segmented control offers.
-const FORMATS: &[(&str, &str)] = &[
-    ("json", "JSON"),
-    ("xml", "XML"),
-    ("flat", "FLAT"),
-    ("structured", "STRUCTURED"),
-];
+/// The formats the segmented control offers, in the page's locale.
+fn formats() -> [(&'static str, String); 4] {
+    [
+        ("json", tr(Msg::Json)),
+        ("xml", tr(Msg::Xml)),
+        ("flat", tr(Msg::FlatUpper)),
+        ("structured", tr(Msg::Structured)),
+    ]
+}
+
+/// A panel that previews the newest files, its header action leading to
+/// all of them.
+fn preview() -> AnyView {
+    let all = brand_page("tables").unwrap_or_else(|| String::from("/"));
+    let files = [
+        "synthetic-001.model.yml",
+        "synthetic-002.extension.yml",
+        "synthetic-003.context.yml",
+    ]
+    .into_iter()
+    .map(|file| view! { <code>{file}</code> }.into_any())
+    .collect();
+    titled_panel(
+        tr(Msg::RecentFiles),
+        card_action(all, tr(Msg::AllFiles)),
+        divided_list(None, files),
+    )
+    .into_any()
+}
 
 /// The path of the page `page` of the brand the route names.
 fn brand_page(page: &str) -> Option<String> {
@@ -42,9 +66,14 @@ fn brand_page(page: &str) -> Option<String> {
 /// label, whose glyphs and figures stay in line with the others.
 fn stats() -> AnyView {
     let plain = [
-        (Glyph::FILES, "137", "Mapping files", Some("tables")),
-        (Glyph::CIRCLE_CHECK, "112", "Compiled", Some("tables")),
-        (Glyph::TRIANGLE_ALERT, "13", "With a warning", None),
+        (Glyph::FILES, "137", tr(Msg::MappingFiles), Some("tables")),
+        (
+            Glyph::CIRCLE_CHECK,
+            "112",
+            tr(Msg::Compiled),
+            Some("tables"),
+        ),
+        (Glyph::TRIANGLE_ALERT, "13", tr(Msg::WithAWarning), None),
     ]
     .into_iter()
     .map(|(glyph, value, label, page)| {
@@ -60,19 +89,19 @@ fn stats() -> AnyView {
         Stat {
             glyph: Glyph::NETWORK,
             value: String::from("4"),
-            label: String::from("Members").into(),
+            label: tr(Msg::Members).into(),
             href: brand_page("tables"),
         },
-        badge(Tone::Bad, "1 failing"),
+        badge(Tone::Bad, &tr(Msg::N1Failing)),
     );
     let pending = stat_card_marked(
         Stat {
             glyph: Glyph::SERVER,
             value: String::from("2"),
-            label: String::from("Running revision on every federation node").into(),
+            label: tr(Msg::RunningRevisionEveryFederationNode).into(),
             href: None,
         },
-        pill(Tone::Warn, "revision 3 pending"),
+        pill(Tone::Warn, &tr(Msg::Revision3Pending)),
     );
     stat_grid(view! {
         {plain}
@@ -109,20 +138,20 @@ fn buttons() -> AnyView {
         String::from("#buttons"),
         Variant::Secondary,
         Some(Glyph::ARROW_RIGHT),
-        "A link as a button",
+        tr(Msg::LinkButton),
     );
     card(
-        "Buttons",
+        tr(Msg::Buttons),
         view! {
             {cluster(full)}
             {cluster(
                 view! {
                     {small}
                     <button type="button" class=Variant::Primary.class() disabled=true>
-                        {label(Some(Glyph::SAVE), "Disabled")}
+                        {label(Some(Glyph::SAVE), tr(Msg::Disabled))}
                     </button>
                     {link}
-                    <button type="button" class="fui-icon-button" aria-label="Settings">
+                    <button type="button" class="fui-icon-button" aria-label=tr(Msg::Settings)>
                         {icon(Glyph::SETTINGS, "16")}
                     </button>
                 },
@@ -147,12 +176,12 @@ fn marks_card() -> AnyView {
         .map(chip)
         .collect_view();
     let statuses = view! {
-        {status(Tone::Ok, Glyph::CIRCLE_CHECK, "Serving", Some(String::from("R4")))}
-        {status(Tone::Warn, Glyph::TRIANGLE_ALERT, "Degraded", Some(String::from("1 of 3 lanes down")))}
-        {status(Tone::Bad, Glyph::SERVER_CRASH, "Down", None)}
+        {status(Tone::Ok, Glyph::CIRCLE_CHECK, &tr(Msg::Serving), Some(tr(Msg::R4)))}
+        {status(Tone::Warn, Glyph::TRIANGLE_ALERT, &tr(Msg::Degraded), Some(tr(Msg::N13LanesDown)))}
+        {status(Tone::Bad, Glyph::SERVER_CRASH, &tr(Msg::Down), None)}
     };
     card(
-        "Status",
+        tr(Msg::Status),
         view! {
             {cluster(pills)}
             {cluster(badges)}
@@ -166,21 +195,21 @@ fn marks_card() -> AnyView {
 /// A notice in every tone.
 fn notices_card() -> AnyView {
     let deleted = view! {
-        "This synthetic version is deleted. "
-        <a href="#marks">"Back to the files"</a>
+        {tr(Msg::SyntheticVersionDeleted)}
+        <a href="#marks">{tr(Msg::BackFiles)}</a>
     };
     card(
-        "Notices",
+        tr(Msg::Notices),
         stack(view! {
-            {notice(Tone::Warn, Announce::Status, None, "SMART configuration returned, but it is not valid JSON.")}
-            {notice(Tone::Info, Announce::Status, None, "SMART is not enabled on this synthetic server.")}
-            {notice(Tone::Ok, Announce::Status, None, "The set compiled and replaced the running one.")}
+            {notice(Tone::Warn, Announce::Status, None, tr(Msg::SmartConfigurationReturnedButNot))}
+            {notice(Tone::Info, Announce::Status, None, tr(Msg::SmartNotEnabledSyntheticServer))}
+            {notice(Tone::Ok, Announce::Status, None, tr(Msg::SetCompiledReplacedRunningOne))}
             {notice(Tone::Neutral, Announce::Status, None, deleted)}
             {notice(
                 Tone::Bad,
                 Announce::Alert,
                 None,
-                "The save was refused:\nline 4: a key is missing\nline 13: the template is not loaded",
+                tr(Msg::SaveRefusedIssues),
             )}
         }),
     )
@@ -190,18 +219,18 @@ fn notices_card() -> AnyView {
 /// The facts across a row, one of them a timestamp.
 fn facts_across() -> AnyView {
     card(
-        "Facts across a row",
+        tr(Msg::FactsAcrossRow),
         facts_row(vec![
-            ("Concept", "Synthetic evaluation".into_any()),
-            ("Version", "2.3".into_any()),
-            ("Default language", "en".into_any()),
-            ("Languages", "en".into_any()),
+            (tr(Msg::Concept), tr(Msg::SyntheticEvaluation).into_any()),
+            (tr(Msg::Version), "2.3".into_any()),
+            (tr(Msg::DefaultLanguage), "en".into_any()),
+            (tr(Msg::Languages), "en".into_any()),
             (
-                "Last changed",
+                tr(Msg::LastChanged),
                 timestamp("2026-10-19T01:18:37+02:00").into_any(),
             ),
             (
-                "Uid",
+                tr(Msg::Uid),
                 view! { <code>"711d7d49-0000-4a6a-a6b4-synthetic"</code> }.into_any(),
             ),
         ]),
@@ -212,65 +241,66 @@ fn facts_across() -> AnyView {
 /// The definition grids, a well and a disclosure.
 fn facts() -> AnyView {
     let row = facts_across();
-    let grid_card = card(
-        "Definition grid",
-        definitions(vec![
-            ("Product", "FerroHEALTH UI".into_any()),
-            ("Version", "0.1.7".into_any()),
-            ("Commit", view! { <code>"0123456789ab"</code> }.into_any()),
-            ("Profile", or_none(String::new())),
-            ("Licence", "Business Source License 1.1".into_any()),
-            ("Built", timestamp("2026-10-18T23:18:37.039437+00:00").into_any()),
-            ("Locale", "en".into_any()),
+    let grid_card =
+        card(
+            tr(Msg::DefinitionGrid),
+            definitions(vec![
+            (tr(Msg::ProductColumn), tr(Msg::FerrohealthUi).into_any()),
+            (tr(Msg::Version), "0.1.7".into_any()),
+            (tr(Msg::Commit), view! { <code>"0123456789ab"</code> }.into_any()),
+            (tr(Msg::Profile), or_none(String::new())),
+            (tr(Msg::Licence), tr(Msg::BusinessSourceLicense11).into_any()),
+            (tr(Msg::Built), timestamp("2026-10-18T23:18:37.039437+00:00").into_any()),
+            (tr(Msg::Locale), "en".into_any()),
             (
-                "Target",
-                view! { <code>"wasm32-unknown-unknown"</code> }.into_any(),
+                tr(Msg::Target),
+                view! { <code>{tr(Msg::Wasm32UnknownUnknown)}</code> }.into_any(),
             ),
             (
-                "Version uid",
+                tr(Msg::VersionUid),
                 view! { <code>"01a15050-e772-7541-b5d5-0f5ec26781d6::synthetic.local::1"</code> }
                     .into_any(),
             ),
             (
-                "Subject",
-                "self, with no external subject reference, so the record names no person outside the server"
+                tr(Msg::Subject),
+                {tr(Msg::SelfNoExternalSubjectReference)}
                     .into_any(),
             ),
         ]),
-    )
-    .into_any();
+        )
+        .into_any();
     let operation = ferrohealth_ui::view::surface::link_card_glyph(
         brand_page("layouts").unwrap_or_default(),
         Glyph::PLAY,
-        "Expand a value set",
-        view! { <p class="fui-muted">"Run $expand over a value set this server holds."</p> },
+        tr(Msg::ExpandValueSet),
+        view! { <p class="fui-muted">{tr(Msg::RunExpandOverValueSet)}</p> },
     );
     let path = card(
         "fhirconnect/ferrohealth_synthetic_journey_diagnose.context.yml",
-        view! { <p class="fui-muted">"A card titled with a file's path."</p> },
+        view! { <p class="fui-muted">{tr(Msg::CardTitledFileSPath)}</p> },
     )
     .into_any();
     let listed = card(
-        "A bullet list",
+        tr(Msg::BulletList),
         view! {
             <ul class="fui-bullets">
-                <li>"$validate-code on the value sets the server loaded"</li>
-                <li>"$tofhir http://fhirconnect.org/fhir/OperationDefinition/ToFhirSynthetic"</li>
+                <li>{tr(Msg::ValidateCodeValueSetsServer)}</li>
+                <li>{tr(Msg::TofhirHttpFhirconnectOrgFhir)}</li>
             </ul>
         },
     )
     .into_any();
     let folded = card(
-        "Disclosure and well",
+        tr(Msg::DisclosureWell),
         view! {
             {disclosure(
-                "What the bridge answered, as JSON",
-                view! { <p class="fui-muted">"The raw document, folded until it is asked for."</p> },
+                tr(Msg::WhatBridgeAnsweredJson),
+                view! { <p class="fui-muted">{tr(Msg::RawDocumentFoldedUntilAsked)}</p> },
             )}
             {well(
                 view! {
                     <p class="fui-small">
-                        "A well sets a passage apart inside a card, such as a note on what the figures mean."
+                        {tr(Msg::WellSetsPassageApartInside)}
                     </p>
                 },
             )}
@@ -279,8 +309,8 @@ fn facts() -> AnyView {
     .into_any();
     let linked = ferrohealth_ui::view::surface::link_card(
         brand_page("tables").unwrap_or_default(),
-        "Staged changes",
-        view! { <p class="fui-muted">"Three changes wait to be applied to the running set."</p> },
+        tr(Msg::StagedChanges),
+        view! { <p class="fui-muted">{tr(Msg::ThreeChangesWaitAppliedRunning)}</p> },
     );
     let pair = grid(view! {
         {grid_card}
@@ -303,91 +333,91 @@ fn facts() -> AnyView {
 /// The link tabs, the keyed tabs and the keyboard tabs.
 fn tab_sets() -> AnyView {
     let links = link_tabs(
-        "Views of a file",
+        tr(Msg::ViewsFile),
         &[
             Tab {
                 href: "#tabs",
-                label: "Source",
+                label: tr(Msg::Source).into(),
             },
             Tab {
                 href: "#tabs-diagnostics",
-                label: "Diagnostics",
+                label: tr(Msg::Diagnostics).into(),
             },
             Tab {
                 href: "#tabs-history",
-                label: "History",
+                label: tr(Msg::History).into(),
             },
         ],
         "#tabs",
     )
     .into_any();
     let keyed = keyed_tabs(
-        "Record",
+        tr(Msg::Record),
         vec![
             KeyedTab {
                 key: "compositions",
                 href: String::from("?tab=compositions"),
-                label: "Compositions",
+                label: tr(Msg::Compositions).into(),
             },
             KeyedTab {
                 key: "status",
                 href: String::from("?tab=status"),
-                label: "Status",
+                label: tr(Msg::Status).into(),
             },
             KeyedTab {
                 key: "contributions",
                 href: String::from("?tab=contributions"),
-                label: "Contributions",
+                label: tr(Msg::Contributions).into(),
             },
             KeyedTab {
                 key: "directory",
                 href: String::from("?tab=directory"),
-                label: "Directory",
+                label: tr(Msg::Directory).into(),
             },
             KeyedTab {
                 key: "history",
                 href: String::from("?tab=history"),
-                label: "Status history",
+                label: tr(Msg::StatusHistory).into(),
             },
             KeyedTab {
                 key: "commit",
                 href: String::from("?tab=commit"),
-                label: "Commit",
+                label: tr(Msg::Commit).into(),
             },
             KeyedTab {
                 key: "tags",
                 href: String::from("?tab=tags"),
-                label: "Tags",
+                label: tr(Msg::Tags).into(),
             },
         ],
         "status",
     )
     .into_any();
     let keyboard = tabs(
-        "Answer",
+        tr(Msg::Answer),
         "answer",
         vec![
             Panel {
-                label: "Table",
-                body: view! { <p>"The rows of the answer, as a table."</p> }.into_any(),
+                label: tr(Msg::Table).into(),
+                body: view! { <p>{tr(Msg::RowsAnswerTable)}</p> }.into_any(),
             },
             Panel {
-                label: "Raw",
-                body: view! { <p>"The answer as the server sent it."</p> }.into_any(),
+                label: tr(Msg::Raw).into(),
+                body: view! { <p>{tr(Msg::AnswerServerSent)}</p> }.into_any(),
             },
             Panel {
-                label: "Request",
-                body: view! { <p>"What the console asked."</p> }.into_any(),
+                label: tr(Msg::Request).into(),
+                body: view! { <p>{tr(Msg::WhatConsoleAsked)}</p> }.into_any(),
             },
         ],
     )
     .into_any();
     card(
-        "Tabs",
+        tr(Msg::Tabs),
         view! {
             {links}
             {keyed}
-            <p class="fui-muted">"Keyboard tabs: Left, Right, Home and End move between them."</p>
+            <p class="fui-muted">{tr(Msg::KeyboardTabsLeftRightHome)}</p>
             {keyboard}
         },
     )
@@ -397,30 +427,33 @@ fn tab_sets() -> AnyView {
 /// The segmented controls: bound to state, and as links.
 fn segments() -> AnyView {
     let format = RwSignal::new("json");
-    let chosen = segmented("Format", FORMATS, format.into(), move |key| format.set(key)).into_any();
+    let chosen = segmented(tr(Msg::Format), &formats(), format.into(), move |key| {
+        format.set(key);
+    })
+    .into_any();
     let as_links = segmented_links(
-        "Detail",
+        tr(Msg::Detail),
         vec![
-            (String::from("#segments-minimal"), "Minimal"),
-            (String::from("#segments-full"), "Full"),
+            (String::from("#segments-minimal"), tr(Msg::Minimal)),
+            (String::from("#segments-full"), tr(Msg::Full)),
         ],
         0,
     )
     .into_any();
     let posted = segmented_form(SegmentedForm {
         name: "fhir",
-        label: "FHIR version",
-        prefix: Some((Glyph::LAYERS, "FHIR")),
-        choices: ["R4", "R4B", "R5", "R6"]
+        label: tr(Msg::FhirVersion).into(),
+        prefix: Some((Glyph::LAYERS, tr(Msg::Fhir).into())),
+        choices: [tr(Msg::R4), tr(Msg::R4b), tr(Msg::R5), tr(Msg::R6)]
             .into_iter()
-            .map(|version| (version.to_lowercase(), String::from(version)))
+            .map(|version| (version.to_lowercase(), version))
             .collect(),
         current: String::from("r4"),
         action: String::from("#segments"),
         back: String::from("/"),
     });
     card(
-        "Segmented controls",
+        tr(Msg::SegmentedControls),
         view! {
             {cluster(
                 view! {
@@ -430,7 +463,7 @@ fn segments() -> AnyView {
                 },
             )}
             <p class="fui-muted">
-                {move || format!("The document is shown as {}.", format.get().to_uppercase())}
+                {move || tr_with(Msg::ShownAs, &[("format", format.get().to_uppercase().into())])}
             </p>
         },
     )
@@ -441,42 +474,38 @@ fn segments() -> AnyView {
 fn refusals() -> AnyView {
     let answered = Refusal {
         status: Some(422),
-        summary: String::from("the bridge refused the request."),
+        summary: tr(Msg::BridgeRefusedRequest),
         issues: vec![
             Issue::new(Severity::Error, "processing")
-                .text("No program maps the template gallery.template.v1.")
-                .place("Bundle.entry[0].resource")
-                .details(vec![String::from("MSG_UNKNOWN_TYPE")]),
+                .text(tr(Msg::NoProgramMapsTemplateGallery))
+                .place(tr(Msg::BundleEntry0Resource))
+                .details(vec![tr(Msg::UnknownTypeCode)]),
             Issue::new(Severity::Warning, "informational"),
             Issue::new(Severity::Information, "informational"),
         ],
-        request: Some(String::from(
-            "POST https://bridge.example.org/fhir/Bundle?_format=json",
-        )),
+        request: Some(tr(Msg::PostHttpsBridgeExampleOrg)),
         evidence: None,
     };
     let unreadable = Refusal {
         status: Some(502),
-        summary: String::from("the terminology server answered with no readable outcome."),
-        request: Some(String::from(
-            "GET https://term.example.org/fhir/ValueSet/$expand?url=http://example.org/vs",
-        )),
+        summary: tr(Msg::TerminologyServerAnsweredNoReadable),
+        request: Some(tr(Msg::GetHttpsTermExampleOrg)),
         evidence: Some(String::from(
             "<html><head><title>502 Bad Gateway</title></head>\n<body>upstream timed out</body></html>",
         )),
         ..Refusal::default()
     };
     let silent = Refusal {
-        summary: String::from("the CDR did not answer within 30 seconds."),
+        summary: tr(Msg::CdrDidNotAnswerWithin),
         ..Refusal::default()
     };
     card(
-        "Refusal and fault",
+        tr(Msg::RefusalFault),
         stack(view! {
             {refusal(&answered)}
             {refusal(&unreadable)}
             {refusal(&silent)}
-            {fault("The console cannot reach the bridge.")}
+            {fault(tr(Msg::ConsoleCannotReachBridge))}
         }),
     )
     .into_any()
@@ -488,35 +517,39 @@ fn states() -> AnyView {
         String::from("#states"),
         Variant::Primary,
         Some(Glyph::PLUS),
-        "New file",
+        tr(Msg::NewFile),
     );
     let empty = card(
-        "Empty state",
+        tr(Msg::EmptyState),
         empty_state(
             Glyph::INBOX,
-            "No mapping file",
-            "The bridge serves no mapping file yet.",
+            tr(Msg::NoMappingFile),
+            tr(Msg::BridgeServesNoMappingFile),
             action,
         ),
     )
     .into_any();
     let quiet = card(
-        "A quiet empty section",
-        empty_quiet(Glyph::SEARCH_X, "No match", "No file matches the filter."),
+        tr(Msg::QuietEmptySection),
+        empty_quiet(
+            Glyph::SEARCH_X,
+            tr(Msg::NoMatch),
+            tr(Msg::NoFileMatchesFilter),
+        ),
     )
     .into_any();
     let loading = card(
-        "Loading",
+        tr(Msg::Loading),
         stack(view! {
-            {busy("Reading the capability statement", Busy::Section)}
-            {spinner("Asking the bridge…")}
+            {busy(tr(Msg::ReadingCapabilityStatement), Busy::Section)}
+            {spinner(tr(Msg::AskingBridge))}
             <p class="fui-cluster">
                 <button type="button" class=Variant::Primary.class() disabled=true>
-                    {label(Some(Glyph::LOG_IN), "Sign in")}
+                    {label(Some(Glyph::LOG_IN), tr(Msg::SignIn))}
                 </button>
-                {busy("Signing in", Busy::Control)}
+                {busy(tr(Msg::Signing), Busy::Control)}
             </p>
-            {skeleton(4, "Loading the files.")}
+            {skeleton(4, tr(Msg::LoadingFiles))}
         }),
     )
     .into_any();
@@ -541,24 +574,24 @@ fn settings() -> AnyView {
     let back = brand_page("").unwrap_or_else(|| String::from("/"));
     let back = back.trim_end_matches('/').to_owned();
     card(
-        "Settings",
+        tr(Msg::Settings),
         ferrohealth_ui::view::form::columns(view! {
             {field(
                 "settings-theme",
-                "Theme",
+                tr(Msg::Theme),
                 None,
                 theme_switch(theme, String::from(crate::app::THEME_ROUTE), back.clone()),
             )}
             {field(
                 "settings-density",
-                "Density",
+                tr(Msg::Density),
                 None,
                 density_switch(density, String::from(crate::app::DENSITY_ROUTE), back.clone()),
             )}
             {field(
                 "settings-language",
-                "Language",
-                Some("The pseudo-locale draws every library string accented and longer, to check the layout."),
+                tr(Msg::Language),
+                Some(tr(Msg::PseudoLocaleDrawsEveryLibrary).clone()),
                 locale_switch(&crate::locale::choices(), String::from(crate::app::LOCALE_ROUTE), back),
             )}
         }),
@@ -579,7 +612,7 @@ fn icons() -> AnyView {
             }
         })
         .collect_view();
-    card("Icons", cluster(all)).into_any()
+    card(tr(Msg::Icons), cluster(all)).into_any()
 }
 
 /// The overview page.
@@ -590,16 +623,14 @@ fn icons() -> AnyView {
 )]
 pub fn OverviewPage() -> impl IntoView {
     let header = page_header(
-        "Overview",
-        Some(String::from(
-            "Every static view of the library, in this brand's theme.",
-        )),
+        tr(Msg::Overview),
+        Some(tr(Msg::EveryStaticViewLibraryBrand)),
         view! {
             <button type="button" class=Variant::Secondary.class()>
-                {label(Some(Glyph::REFRESH_CW), "Reload")}
+                {label(Some(Glyph::REFRESH_CW), tr(Msg::Reload))}
             </button>
             <button type="button" class=Variant::Primary.class()>
-                {label(Some(Glyph::PLUS), "New file")}
+                {label(Some(Glyph::PLUS), tr(Msg::NewFile))}
             </button>
         },
     )
@@ -609,8 +640,13 @@ pub fn OverviewPage() -> impl IntoView {
         {notices_card()}
     })
     .into_any();
+    let leading = stack(view! {
+        {stats()}
+        {preview()}
+    })
+    .into_any();
     let sections = (
-        stats(),
+        leading,
         buttons(),
         marks,
         facts(),
@@ -622,7 +658,7 @@ pub fn OverviewPage() -> impl IntoView {
         icons(),
     );
     view! {
-        {super::title("Overview")}
+        {super::title(tr(Msg::Overview))}
         {header}
         {stack(
             view! {

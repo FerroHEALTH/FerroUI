@@ -9,6 +9,8 @@
 //! label and never the placeholder. The component knows nothing of what is
 //! searched: the console's route reads the query.
 
+use std::borrow::Cow;
+
 use leptos::prelude::*;
 
 use crate::i18n::{Text, tr};
@@ -24,10 +26,10 @@ pub struct SearchBox {
     /// The query key the field submits as, such as `q`.
     pub name: &'static str,
     /// The field's label, read by a screen reader.
-    pub label: &'static str,
+    pub label: Cow<'static, str>,
     /// The hint inside the empty field, such as "A code, a canonical, or a
     /// phrase".
-    pub placeholder: &'static str,
+    pub placeholder: Cow<'static, str>,
     /// The console's route the form submits to.
     pub action: String,
     /// The text already searched for, on a result page.

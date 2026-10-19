@@ -11,6 +11,8 @@
 //! moves the focus to its Close button as it opens. Its body is built once
 //! and kept, so a field in it keeps what was typed while it is closed.
 
+use std::borrow::Cow;
+
 use leptos::prelude::*;
 
 use crate::i18n::{Text, tr};
@@ -25,7 +27,7 @@ pub struct SidePanel {
     /// The id of its scrolling body, which a journey reads.
     pub body_id: &'static str,
     /// The heading.
-    pub title: &'static str,
+    pub title: Cow<'static, str>,
     /// The body.
     pub body: AnyView,
 }
@@ -37,14 +39,16 @@ pub fn side_panel_trigger(
     id: &'static str,
     class: &'static str,
     glyph: Glyph,
-    label: &'static str,
-) -> impl IntoView + use<> {
+    label: impl Into<String>,
+) -> AnyView {
+    let label = label.into();
     view! {
         <button type="button" class=class popovertarget=id aria-controls=id>
             {icon(glyph, "16")}
             {label}
         </button>
     }
+    .into_any()
 }
 
 /// Returns the side panel `panel`.

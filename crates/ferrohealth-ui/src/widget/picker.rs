@@ -12,6 +12,8 @@
 //! after the value select it once they do. Before the page hydrates both
 //! controls show and the form posts the input, so nothing depends on script.
 
+use std::borrow::Cow;
+
 use leptos::prelude::*;
 
 use crate::view::form::{INPUT, SELECT, help_id};
@@ -20,28 +22,28 @@ use crate::view::form::{INPUT, SELECT, help_id};
 const OTHER: &str = "\u{0}another";
 
 /// What a picker field shows.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Picker {
     /// The text input's id; the select's is this with `-choice`.
     pub id: &'static str,
     /// The name the input submits as.
     pub name: &'static str,
     /// The input's label, such as "Value set".
-    pub label: &'static str,
+    pub label: Cow<'static, str>,
     /// The select's label, read by a screen reader, such as "Choose a value
     /// set this server holds".
-    pub choose_label: &'static str,
+    pub choose_label: Cow<'static, str>,
     /// The help line under both, which both name.
-    pub help: Option<&'static str>,
+    pub help: Option<Cow<'static, str>>,
     /// The choices, value and words, which may arrive after the value.
     pub choices: Signal<Vec<(String, String)>>,
     /// The value the input holds.
     pub value: RwSignal<String>,
     /// The empty choice's words, such as "Choose one this server holds".
-    pub empty_word: &'static str,
+    pub empty_word: Cow<'static, str>,
     /// The words of the choice that opens the input, such as "Another
     /// canonical".
-    pub other_word: &'static str,
+    pub other_word: Cow<'static, str>,
 }
 
 /// The select's value for `value` among `choices`: the value itself when it
@@ -81,7 +83,7 @@ pub fn picker_field(picker: Picker) -> AnyView {
         }
     };
     let input_hidden = move || hydrated.get() && selected() != OTHER;
-    let described = help.map(|_| help_id(id));
+    let described = help.as_ref().map(|_| help_id(id));
     let select_id = format!("{id}-choice");
     let options = move || {
         choices
@@ -149,7 +151,7 @@ pub fn picker_field(picker: Picker) -> AnyView {
 
 /// Returns the picker's help line: under the form's help switch when the
 /// form has one, always shown when it has none.
-fn picker_help(id: &'static str, help: &'static str) -> AnyView {
+fn picker_help(id: &'static str, help: Cow<'static, str>) -> AnyView {
     if use_context::<crate::widget::help::HelpShown>().is_some() {
         crate::widget::help::help_line(id, help)
     } else {

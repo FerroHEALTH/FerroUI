@@ -12,6 +12,8 @@
 //! keyboard moves through it as through any radio group (WAI-ARIA Authoring
 //! Practices, the radio group pattern, with native radios).
 
+use std::borrow::Cow;
+
 use leptos::prelude::*;
 
 use crate::icon::{Glyph, icon};
@@ -20,15 +22,17 @@ use crate::icon::{Glyph, icon};
 /// links named `label`, the one at index `current` marked current.
 #[must_use]
 pub fn segmented_links(
-    label: &'static str,
-    choices: Vec<(String, &'static str)>,
+    label: impl Into<String>,
+    choices: Vec<(String, impl Into<String>)>,
     current: usize,
-) -> impl IntoView + use<> {
+) -> AnyView {
+    let label = label.into();
     let links = choices
         .into_iter()
         .enumerate()
         .map(|(index, (href, words))| {
             let here = (index == current).then_some("true");
+            let words = words.into();
             view! {
                 <a href=href class="fui-segment" aria-current=here>
                     {words}
@@ -41,6 +45,7 @@ pub fn segmented_links(
             {links}
         </nav>
     }
+    .into_any()
 }
 
 /// Returns the radio group `name` under `legend`, drawn as joined segments.
@@ -50,10 +55,11 @@ pub fn segmented_links(
 #[must_use]
 pub fn choice_group(
     name: &'static str,
-    legend: &'static str,
-    options: &[(&'static str, &'static str)],
+    legend: impl Into<String>,
+    options: &[(&'static str, impl AsRef<str>)],
     checked: &str,
-) -> impl IntoView + use<> {
+) -> AnyView {
+    let legend = legend.into();
     let segments = options
         .iter()
         .map(|(value, words)| {
@@ -70,7 +76,7 @@ pub fn choice_group(
                         checked=on
                         class="fui-sr-only"
                     />
-                    {*words}
+                    {words.as_ref().to_owned()}
                 </label>
             }
         })
@@ -81,6 +87,7 @@ pub fn choice_group(
             <div class="fui-segmented">{segments}</div>
         </fieldset>
     }
+    .into_any()
 }
 
 /// A choice each segment posts at once, such as the FHIR version a console
@@ -90,9 +97,9 @@ pub struct SegmentedForm {
     /// The name each segment posts its value as.
     pub name: &'static str,
     /// The group's accessible name.
-    pub label: &'static str,
+    pub label: Cow<'static, str>,
     /// A glyph and a word shown before the segments, such as "FHIR".
-    pub prefix: Option<(Glyph, &'static str)>,
+    pub prefix: Option<(Glyph, Cow<'static, str>)>,
     /// The choices, value and words.
     pub choices: Vec<(String, String)>,
     /// The value in force.
@@ -157,8 +164,8 @@ pub const REVEAL_MAX: usize = 5;
 #[must_use]
 pub fn choice_reveal(
     name: &'static str,
-    legend: &'static str,
-    options: &[(&'static str, &'static str)],
+    legend: impl Into<String>,
+    options: &[(&'static str, impl AsRef<str>)],
     checked: &str,
     parts: Vec<AnyView>,
 ) -> AnyView {

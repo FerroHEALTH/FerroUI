@@ -10,13 +10,15 @@
 //! the page hydrates the first panel shows and the others are hidden; the
 //! link tabs of [`crate::view::tabs`] keep their state in the URL instead.
 
+use std::borrow::Cow;
+
 use leptos::prelude::*;
 
 /// One tab and its panel.
 #[derive(Debug)]
 pub struct Panel {
     /// The tab's words.
-    pub label: &'static str,
+    pub label: Cow<'static, str>,
     /// The panel.
     pub body: AnyView,
 }
@@ -48,7 +50,8 @@ pub fn moved(key: &str, current: usize, count: usize) -> Option<usize> {
 /// Returns the keyboard tabs named `label`, whose ids start with `prefix`,
 /// over `panels`.
 #[must_use]
-pub fn tabs(label: &'static str, prefix: &'static str, panels: Vec<Panel>) -> impl IntoView {
+pub fn tabs(label: impl Into<String>, prefix: &'static str, panels: Vec<Panel>) -> impl IntoView {
+    let label = label.into();
     let selected = RwSignal::new(0_usize);
     let count = panels.len();
     let on_key = move |event: leptos::ev::KeyboardEvent| {

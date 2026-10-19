@@ -3,7 +3,8 @@
 
 //! The surfaces a page is built from.
 //!
-//! They are the page header with its trail and meta line, the card and the panel, the stat card, the table card, the
+//! They are the page header with its trail and meta line, the editor's
+//! header, the card and the panel with its header action, the stat card, the table card, the
 //! definition grids, the well, the chip, the disclosure, and the stack,
 //! grid, cluster and split that lay them out.
 
@@ -11,7 +12,7 @@ use std::borrow::Cow;
 
 use leptos::prelude::*;
 
-use crate::i18n::{Text, tr};
+use crate::i18n::{Message, Text, tr};
 
 use crate::icon::{Glyph, icon};
 
@@ -138,6 +139,79 @@ pub fn page_header(
     )
 }
 
+/// What an editor does: create a new thing, or change the one named.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Mode {
+    /// It creates a new thing.
+    Creating,
+    /// It changes the thing named, by its name, title or path.
+    Editing(String),
+}
+
+impl Mode {
+    /// The mode's `$mode` value: `new` or `edit`.
+    #[must_use]
+    pub const fn key(&self) -> &'static str {
+        match self {
+            Self::Creating => "new",
+            Self::Editing(_) => "edit",
+        }
+    }
+}
+
+/// The title of an editor in `mode`, such as "New code system" or "Edit
+/// Vital signs".
+///
+/// It is the console's `message` with `$mode` set to `new` or `edit` and
+/// `$name` to the name of the thing changed (empty while creating).
+///
+/// The message is the console's, so its catalog words both titles whole:
+///
+/// ```ftl
+/// code-system-editor =
+///     { $mode ->
+///         [new] New code system
+///        *[edit] Edit { $name }
+///     }
+/// ```
+///
+/// A console writes the same words as the document's title.
+#[must_use]
+pub fn editor_title(message: Message, mode: &Mode) -> String {
+    let name = match mode {
+        Mode::Creating => String::new(),
+        Mode::Editing(name) => name.clone(),
+    };
+    message.text_with(&[("mode", mode.key().into()), ("name", name.into())])
+}
+
+/// Returns the header that opens an editor in `mode`, so a reader tells from
+/// the heading whether the form creates or changes.
+///
+/// It is [`page_heading`] with its title and the trail's current crumb from
+/// [`editor_title`].
+///
+/// `header.title` and `header.mono` are not read: the title is a sentence,
+/// so it is drawn in the body face even around an identifier.
+#[must_use]
+pub fn editor_heading(
+    message: Message,
+    mode: &Mode,
+    header: Header,
+    actions: impl IntoView + 'static,
+) -> AnyView {
+    let title = editor_title(message, mode);
+    page_heading(
+        Header {
+            title,
+            mono: false,
+            ..header
+        },
+        actions,
+    )
+    .into_any()
+}
+
 /// Returns the small muted line under a page's header that says who
 /// answered the page (a replica, a server); nothing for no line.
 #[must_use]
@@ -199,6 +273,25 @@ pub fn titled_panel(
             {body}
         </section>
     }
+}
+
+/// Returns the action at the far end of a card's or a panel's header, such
+/// as "All members" leading to the members.
+///
+/// It is a link to `href`, the whole of what the card previews: its words
+/// `label`, then an arrow.
+///
+/// Pass it as a [`titled_panel`]'s actions. The arrow is decoration beside
+/// the words, hidden from assistive technology.
+#[must_use]
+pub fn card_action(href: impl Into<String>, label: impl Into<String>) -> AnyView {
+    view! {
+        <a href=href.into() class="fui-card-action">
+            <span>{label.into()}</span>
+            {icon(Glyph::ARROW_RIGHT, "14")}
+        </a>
+    }
+    .into_any()
 }
 
 /// Returns `body` with the card's padding, for a panel's prose.
@@ -295,10 +388,11 @@ pub fn table_card(label: impl Into<String>, table: impl IntoView) -> impl IntoVi
 /// Returns a compact definition grid: each label beside its value from
 /// 40 rem up, one above the other below it.
 #[must_use]
-pub fn definitions(rows: Vec<(&'static str, AnyView)>) -> impl IntoView {
+pub fn definitions(rows: Vec<(impl Into<String>, AnyView)>) -> impl IntoView {
     let rows = rows
         .into_iter()
         .map(|(label, value)| {
+            let label = label.into();
             view! {
                 <dt>{label}</dt>
                 <dd>{value}</dd>
@@ -311,10 +405,11 @@ pub fn definitions(rows: Vec<(&'static str, AnyView)>) -> impl IntoView {
 /// Returns facts across a row, as a detail page opens: each label small and
 /// upper case over its value, the columns sharing the width.
 #[must_use]
-pub fn facts_row(rows: Vec<(&'static str, AnyView)>) -> impl IntoView {
+pub fn facts_row(rows: Vec<(impl Into<String>, AnyView)>) -> impl IntoView {
     let rows = rows
         .into_iter()
         .map(|(label, value)| {
+            let label = label.into();
             view! {
                 <div>
                     <dt>{label}</dt>

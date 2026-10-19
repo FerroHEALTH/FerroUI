@@ -17,12 +17,15 @@ use ferrohealth_ui::widget::document::{DocumentPane, document_pane};
 use leptos::prelude::*;
 
 use crate::data::{AQL, JSON, XML, YAML};
+use crate::locale::{Msg, tr};
 
 /// The id prefix of the numbered panel's lines.
 const LINES: &str = "file-L";
 
-/// The formats the document pane offers.
-const FORMATS: &[(&str, &str)] = &[("json", "JSON"), ("xml", "XML")];
+/// The formats the document pane offers, in the page's locale.
+fn formats() -> Vec<(&'static str, std::borrow::Cow<'static, str>)> {
+    vec![("json", tr(Msg::Json).into()), ("xml", tr(Msg::Xml).into())]
+}
 
 /// The document pane over the JSON and XML samples, with a rendered view.
 fn document() -> AnyView {
@@ -36,19 +39,19 @@ fn document() -> AnyView {
         }
     });
     let rendered = definitions(vec![
-        ("Resource", "Observation".into_any()),
-        ("Status", "final".into_any()),
-        ("Code", "A synthetic measurement".into_any()),
-        ("Value", "72.5 beats/min".into_any()),
+        (tr(Msg::Resource), tr(Msg::Observation).into_any()),
+        (tr(Msg::Status), "final".into_any()),
+        (tr(Msg::Code), tr(Msg::SyntheticMeasurement).into_any()),
+        (tr(Msg::Value), tr(Msg::N725BeatsMin).into_any()),
     ])
     .into_any();
     card(
-        "Document pane",
+        tr(Msg::DocumentPane),
         document_pane(
             DocumentPane {
                 id: "document",
-                label: "Observation",
-                formats: FORMATS,
+                label: tr(Msg::Observation).into(),
+                formats: formats(),
                 format: format.into(),
                 text,
                 language,
@@ -64,12 +67,12 @@ fn document() -> AnyView {
 fn panels() -> AnyView {
     stack(view! {
         {grid(view! {
-            {card("YAML", code_panel("A mapping file, YAML", Language::Yaml, YAML))}
-            {card("JSON", code_panel("A resource, JSON", Language::Json, JSON))}
+            {card(tr(Msg::Yaml), code_panel(&tr(Msg::MappingFileYaml), Language::Yaml, YAML))}
+            {card(tr(Msg::Json), code_panel(&tr(Msg::ResourceJson), Language::Json, JSON))}
         })}
         {grid(view! {
-            {card("XML", code_panel("A composition, XML", Language::Xml, XML))}
-            {card("AQL", code_panel("A query, AQL", Language::Aql, AQL))}
+            {card(tr(Msg::Xml), code_panel(&tr(Msg::CompositionXml), Language::Xml, XML))}
+            {card(tr(Msg::Aql), code_panel(&tr(Msg::QueryAql), Language::Aql, AQL))}
         })}
     })
     .into_any()
@@ -78,12 +81,12 @@ fn panels() -> AnyView {
 /// The numbered panel, and a link to one of its lines.
 fn numbered() -> AnyView {
     card(
-        "Numbered lines",
+        tr(Msg::NumberedLines),
         view! {
             <p>
-                "A diagnostic links to its line: " <a href=format!("#{LINES}13")>"line 13"</a> "."
+                {tr(Msg::DiagnosticLinksLine)} <a href=format!("#{LINES}13")>{tr(Msg::Line13)}</a> "."
             </p>
-            {code_lines("The mapping file, numbered", Language::Yaml, YAML, LINES)}
+            {code_lines(&tr(Msg::MappingFileNumbered), Language::Yaml, YAML, LINES)}
         },
     )
     .into_any()
@@ -97,25 +100,20 @@ pub fn CodePage() -> impl IntoView {
     let header = page_heading(
         Header {
             title: String::from("gallery.context.v1"),
-            subtitle: Some(String::from(
-                "Bounded, scrollable and highlighted, never at the page's full height.",
-            )),
+            subtitle: Some(tr(Msg::BoundedScrollableHighlightedNeverPage)),
             crumbs: vec![
-                Crumb::new("Gallery", root.clone()),
-                Crumb::new("Code and documents", format!("{root}/code")),
+                Crumb::new(tr(Msg::Gallery), root.clone()),
+                Crumb::new(tr(Msg::CodeDocuments), format!("{root}/code")),
             ],
             mono: true,
         },
         (),
     )
     .into_any();
-    let meta = page_meta(Some(String::from(
-        "Answered by the synthetic replica gallery-1.",
-    )))
-    .into_any();
+    let meta = page_meta(Some(tr(Msg::AnsweredSyntheticReplicaGallery1))).into_any();
     let sections = (document(), panels(), numbered());
     view! {
-        {super::title("Code and documents")}
+        {super::title(tr(Msg::CodeDocuments))}
         {header}
         {meta}
         {stack(

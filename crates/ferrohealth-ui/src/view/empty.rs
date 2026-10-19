@@ -48,8 +48,8 @@ pub fn empty_quiet(
 /// turning ring beside the words `label`, announced politely; the ring
 /// stands still for a reader who asks for less motion.
 #[must_use]
-pub fn spinner(label: &'static str) -> impl IntoView + use<> {
-    busy(label, Busy::Inline)
+pub fn spinner(label: impl Into<String>) -> AnyView {
+    busy(label, Busy::Inline).into_any()
 }
 
 /// Where a busy mark sits, which sets its size and whether its words show.
@@ -90,7 +90,8 @@ pub fn busy(label: impl Into<String>, at: Busy) -> AnyView {
 /// Returns `lines` skeleton bars standing in for content that is loading,
 /// announced as busy, with the sentence `label` for a screen reader.
 #[must_use]
-pub fn skeleton(lines: u8, label: &'static str) -> impl IntoView + use<> {
+pub fn skeleton(lines: u8, label: impl Into<String>) -> AnyView {
+    let label = label.into();
     let bars = (0..lines)
         .map(|_| view! { <span class="fui-skeleton"></span> })
         .collect_view();
@@ -102,4 +103,5 @@ pub fn skeleton(lines: u8, label: &'static str) -> impl IntoView + use<> {
             {bars}
         </div>
     }
+    .into_any()
 }

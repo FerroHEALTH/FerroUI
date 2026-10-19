@@ -925,7 +925,8 @@
   }
 
   /* A page header in a stack leaves the stack's gap below it and no more. */
-  .fui-stack > .fui-page-header {
+  .fui-stack > .fui-page-header,
+  .fui-well > .fui-page-header {
     margin-block-end: 0;
   }
 
@@ -1011,6 +1012,12 @@
 
   .fui-divided > li + li {
     border-top: 1px solid var(--edge);
+  }
+
+  /* A list that runs to a panel's edges keeps its words off them, in line
+     with the panel's title. */
+  .fui-panel > .fui-divided > li {
+    padding-inline: var(--space-loose);
   }
 
   /* A row of fields with columns of its own from 40rem; an action sits at
@@ -1861,6 +1868,35 @@
     border: 0;
     border-radius: 0 0 var(--radius-card) var(--radius-card);
     box-shadow: none;
+  }
+
+  /* The action at the far end of a card's or a panel's header that leads to
+     the whole of what the card previews ("All members"): the accent's words,
+     the arrow after them a tight space apart, and the sunken ground under the
+     pointer like every other interactive surface. */
+  .fui-card-action {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-tight);
+    border-radius: var(--radius-control);
+    padding: var(--space-tight) var(--space-default);
+    color: var(--accent);
+    font-size: var(--text-small);
+    font-weight: 500;
+    line-height: var(--leading-small);
+    white-space: nowrap;
+    text-decoration: none;
+    transition: background-color var(--motion-state) ease-out;
+  }
+
+  .fui-card-action:hover {
+    background: var(--surface-sunken);
+    color: var(--accent-hover);
+    text-decoration: none;
+  }
+
+  .fui-card-action > svg {
+    flex: none;
   }
 
   .fui-panel-body {

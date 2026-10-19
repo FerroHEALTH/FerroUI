@@ -153,7 +153,7 @@ pub(crate) struct Drawn {
     /// False until the text area may be edited.
     pub(crate) editable: Signal<bool>,
     /// The text area's placeholder, shown while the text is empty.
-    pub(crate) placeholder: Option<&'static str>,
+    pub(crate) placeholder: Option<std::borrow::Cow<'static, str>>,
 }
 
 /// Returns the editor `drawn`, as [`code_editor`] and the upload field draw

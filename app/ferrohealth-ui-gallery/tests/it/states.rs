@@ -222,6 +222,13 @@ async fn overview(
     let first = browser.element(By::Css("a.fui-stat")).await?;
     hover(browser, &first).await?;
     shot_of(browser, brand, theme, "hover-stat", &stats).await?;
+    let preview = browser.element(card("Recent files")).await?;
+    let action = browser.element(By::Css("a.fui-card-action")).await?;
+    hover(browser, &action).await?;
+    shot_of(browser, brand, theme, "hover-card-action", &preview).await?;
+    away(browser).await?;
+    focus(browser, &action).await?;
+    shot_of(browser, brand, theme, "focus-card-action", &preview).await?;
     let buttons = browser.element(card("Buttons")).await?;
     for (variant, state) in [
         ("Primary", "hover-primary"),

@@ -5,6 +5,7 @@
 //! its legend showing and hiding each, and the activity line of a
 //! dashboard.
 
+use crate::locale::{Msg, tr};
 use ferrohealth_ui::view::chart::{
     ACCENT, ActivityChart, BAD, LineChart, NEUTRAL, Series, activity_chart,
 };
@@ -13,7 +14,18 @@ use ferrohealth_ui::widget::chart::line_chart;
 use leptos::prelude::*;
 
 /// The days of the synthetic week, as the X axis labels them.
-const DAYS: [&str; 7] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+fn days() -> [String; 7] {
+    [
+        Msg::Mon,
+        Msg::Tue,
+        Msg::Wed,
+        Msg::Thu,
+        Msg::Fri,
+        Msg::Sat,
+        Msg::Sun,
+    ]
+    .map(tr)
+}
 
 /// The line chart of three synthetic series, one with a gap.
 fn lines() -> AnyView {
@@ -27,23 +39,33 @@ fn lines() -> AnyView {
     };
     let chart = LineChart {
         id: "requests",
-        label: String::from("Requests per day"),
-        summary: String::from(
-            "Three synthetic series over a week: reads rise to 48 on Friday, writes stay near 12, and refusals have no value on Wednesday.",
-        ),
+        label: tr(Msg::RequestsPerDay),
+        summary: tr(Msg::ThreeSyntheticSeriesOverWeek),
         series: vec![
-            series("Reads", ACCENT, [22.0, 30.0, 27.0, 35.0, 48.0, 31.0, 26.0]),
-            series("Writes", NEUTRAL, [10.0, 12.0, 14.0, 11.0, 13.0, 9.0, 12.0]),
-            series("Refusals", BAD, [3.0, 5.0, f64::NAN, 4.0, 6.0, 2.0, 1.0]),
+            series(
+                &tr(Msg::Reads),
+                ACCENT,
+                [22.0, 30.0, 27.0, 35.0, 48.0, 31.0, 26.0],
+            ),
+            series(
+                &tr(Msg::Writes),
+                NEUTRAL,
+                [10.0, 12.0, 14.0, 11.0, 13.0, 9.0, 12.0],
+            ),
+            series(
+                &tr(Msg::Refusals),
+                BAD,
+                [3.0, 5.0, f64::NAN, 4.0, 6.0, 2.0, 1.0],
+            ),
         ],
         x_ticks: (0_u8..7)
-            .zip(DAYS)
-            .map(|(day, label)| (f64::from(day), label.to_owned()))
+            .zip(days())
+            .map(|(day, label)| (f64::from(day), label))
             .collect(),
         y_range: None,
     };
     let shown = RwSignal::new(vec![true, true, true]);
-    card("Line chart", line_chart(chart, shown)).into_any()
+    card(tr(Msg::LineChart), line_chart(chart, shown)).into_any()
 }
 
 /// The activity line of thirty synthetic days.
@@ -53,13 +75,13 @@ fn activity() -> AnyView {
     ];
     let points = (0_u32..).zip(counts).collect();
     card(
-        "Activity",
+        tr(Msg::Activity),
         activity_chart(&ActivityChart {
             name: "commits",
-            label: String::from("Commits per day"),
-            summary: String::from("48 synthetic commits over 30 days, most on day 21."),
+            label: tr(Msg::CommitsPerDay),
+            summary: tr(Msg::N48SyntheticCommitsOver30),
             points,
-            ends: (String::from("Sep 19"), String::from("Oct 18")),
+            ends: (tr(Msg::Sep19), tr(Msg::Oct18)),
         }),
     )
     .into_any()
@@ -72,17 +94,11 @@ fn activity() -> AnyView {
     reason = "the #[component] macro drops a #[must_use] from the function it writes"
 )]
 pub fn ChartsPage() -> impl IntoView {
-    let header = page_header(
-        "Charts",
-        Some(String::from(
-            "Drawn as SVG on the server, scaled to the card, each with its figures for assistive technology.",
-        )),
-        (),
-    )
-    .into_any();
+    let header =
+        page_header(tr(Msg::Charts), Some(tr(Msg::DrawnSvgServerScaledCard)), ()).into_any();
     let sections = (lines(), activity());
     view! {
-        {super::title("Charts")}
+        {super::title(tr(Msg::Charts))}
         {header}
         {stack(
             view! {

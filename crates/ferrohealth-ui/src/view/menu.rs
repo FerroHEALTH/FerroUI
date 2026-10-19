@@ -5,6 +5,8 @@
 //! popover the browser opens, closes on Escape and returns the focus from,
 //! with no script (HTML, the `popover` attribute).
 
+use std::borrow::Cow;
+
 use leptos::prelude::*;
 
 use crate::i18n::{Text, tr};
@@ -19,7 +21,7 @@ pub struct OperatorMenu {
     /// The operator's name.
     pub name: String,
     /// The line under the name, such as "Signed in to this console".
-    pub subtitle: &'static str,
+    pub subtitle: Cow<'static, str>,
     /// The console's sign-out route, a plain form post it answers with a
     /// redirect, or `None` for a console with no sign-in.
     pub sign_out: Option<String>,

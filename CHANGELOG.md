@@ -11,7 +11,76 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- `i18n::Message`: a message of a console's catalog, named by its id, that
+  a component looks up as it draws, so the words follow the page's locale
+  (FerroHEALTH/FerroUI#114).
+- `view::surface::card_action`: the one action at the far end of a card's
+  or a panel's header, a link with its words and an arrow after them a
+  tight space apart, in the accent with the sunken ground under the pointer
+  (FerroHEALTH/FerroUI#122).
+- `view::surface::{Mode, editor_title, editor_heading}`: an editor's header
+  says "New <thing>" while it creates and "Edit <name>" while it edits, the
+  title and the trail's last crumb from one console message that selects
+  by `$mode`, in the body face (FerroHEALTH/FerroUI#123).
+- A list that runs to a panel's edges keeps its words off them, and a page
+  header inside a well leaves no space under it.
+- The gallery draws its own page strings from its catalog
+  (`app/ferrohealth-ui-gallery/locales/en/ferrohealth-ui-gallery.ftl`), so
+  the pseudo-locale stretches every string on a page, and the stray-literal
+  check covers the gallery (FerroHEALTH/FerroUI#114).
+- The gallery shows the card-header action on the overview, with its hover
+  and focus states captured, and both editor headers on the forms page.
+
 ### Changed
+
+- Every text a console hands a component accepts a string made at run time,
+  so a console draws every label from its catalog (FerroHEALTH/FerroUI#114).
+  A console changes:
+  - `table::model::Noun` is a console message chosen by count, with no
+    English plural rule in the library: `Noun::new(Message::new(catalog,
+    "value-sets"))` over a message that selects by `$count` and carries
+    `.empty` ("No value sets") and `.opening` ("Value sets"). `Noun::of` and
+    the `one`/`many` fields are gone; `Noun::word`, `Noun::empty` and
+    `Noun::opening` draw the forms. A noun is still `Copy` and is made where
+    the catalog is in reach rather than as a `const`.
+  - `table::view::Column::text` takes its header as
+    `impl Into<Cow<'static, str>>` and is no longer `const`: keep a table's
+    columns in a function.
+  - `table::view::Listing` holds its label as a `Cow<'static, str>` and is
+    `Clone`, no longer `Copy`; `Listing::new` takes `impl Into<Cow<'static,
+    str>>`, and a `String` converts into a listing as a `&'static str` does.
+  - `widget::nav::{Entry, Group}` hold their words as `Cow<'static, str>`, a
+    group its entries as a `Vec<Entry>`, and `sidebar` takes its label as
+    `impl Into<String>` and its groups as a `Vec<Group>`: build the
+    navigation where it is drawn.
+  - The fields of `view::dialog::Confirmation`, `view::search::SearchBox`,
+    `view::menu::OperatorMenu::subtitle`, `view::shell::Footer::product`,
+    `view::layout::Pane`, `view::tabs::{Tab, KeyedTab}`,
+    `view::segmented::SegmentedForm`, `widget::upload::Upload`,
+    `widget::picker::Picker`, `widget::combobox::Combobox`,
+    `widget::tree::Tree`, `widget::tabs::Panel`,
+    `widget::side_panel::SidePanel` and `widget::document::DocumentPane`
+    (whose formats are a `Vec`) that a reader sees are `Cow<'static, str>`;
+    a struct that was `Copy` (`Confirmation`, `Footer`, `Tab`, `Upload`,
+    `Picker`, `Tree`) is `Clone`. Write `"words".into()` or the catalog's
+    `String` with `.into()`.
+  - The functions that took a label as `&'static str` take
+    `impl Into<String>` (or `impl Into<Oco<'static, str>>` beside
+    `form::Field`): `spinner`, `skeleton`, `banner`, `fieldset`, `check`,
+    `keyed_check`, `check_field`, `keyed_check_field`, `chip_choices`,
+    `choice_group`, `choice_reveal`, `segmented_links`, `link_tabs`,
+    `keyed_tabs`, `tile_list`, `change_table`, `confirm_trigger`,
+    `link_button`, `lockup`, `help_line`, `explained_field`,
+    `explained_check_field`, `side_panel_trigger`, `table_filter`,
+    `widget::tabs::tabs` and `widget::segmented::segmented`. The option
+    lists of `choice_group`, `choice_reveal` and `segmented` take any
+    `AsRef<str>` words, and `definitions` and `facts_row` any
+    `Into<String>` label. `form::field` and `keyed_field` take their help
+    as `Option<String>`, `divided_list` its label as
+    `Option<Cow<'static, str>>`. Those that returned
+    `impl IntoView + use<>` return `AnyView`.
 
 - Only the newest release is supported (#119). `SECURITY.md` says that every
   earlier release stops receiving fixes when a new one is published, with no

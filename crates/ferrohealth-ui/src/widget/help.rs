@@ -60,7 +60,8 @@ pub fn help_switch() -> AnyView {
 /// Returns the help line `text` of the control `id`, its id [`help_id`],
 /// shown while the form's switch is on and visually hidden while it is off.
 #[must_use]
-pub fn help_line(id: &'static str, text: &'static str) -> AnyView {
+pub fn help_line(id: &'static str, text: impl Into<String>) -> AnyView {
+    let text = text.into();
     let HelpShown(shown) = help_shown();
     let class = move || {
         if shown.get() {
@@ -82,10 +83,11 @@ pub fn help_line(id: &'static str, text: &'static str) -> AnyView {
 #[must_use]
 pub fn explained_field(
     id: &'static str,
-    label: &'static str,
-    help: &'static str,
+    label: impl Into<String>,
+    help: impl Into<String>,
     control: impl IntoView + 'static,
 ) -> AnyView {
+    let (label, help) = (label.into(), help.into());
     let control = control.into_any();
     view! {
         <div class="fui-field">
@@ -107,10 +109,11 @@ pub fn explained_field(
 #[must_use]
 pub fn explained_check_field(
     id: &'static str,
-    label: &'static str,
-    help: &'static str,
+    label: impl Into<String>,
+    help: impl Into<String>,
     checkbox: impl IntoView + 'static,
 ) -> AnyView {
+    let (label, help) = (label.into(), help.into());
     let checkbox = checkbox.into_any();
     let HelpShown(shown) = help_shown();
     let class = move || {

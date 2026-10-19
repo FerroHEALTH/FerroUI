@@ -97,11 +97,13 @@ pub fn link_button(
     href: String,
     variant: Variant,
     glyph: Option<Glyph>,
-    text: &'static str,
-) -> impl IntoView + use<> {
+    text: impl Into<String>,
+) -> AnyView {
+    let text = text.into();
     view! {
         <a href=href class=variant.class()>
             {label(glyph, text)}
         </a>
     }
+    .into_any()
 }

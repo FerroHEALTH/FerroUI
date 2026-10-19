@@ -8,15 +8,17 @@
 //! URL. The keyboard tabs that switch panels in place are
 //! [`crate::widget::tabs`].
 
+use std::borrow::Cow;
+
 use leptos::prelude::*;
 
 /// One tab: where it leads and what it says.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Tab {
     /// The path the tab leads to.
     pub href: &'static str,
     /// What the tab says.
-    pub label: &'static str,
+    pub label: Cow<'static, str>,
 }
 
 /// One tab whose path is known only at run time, such as a detail screen's
@@ -28,7 +30,7 @@ pub struct KeyedTab {
     /// The href the tab leads to.
     pub href: String,
     /// What the tab says.
-    pub label: &'static str,
+    pub label: Cow<'static, str>,
 }
 
 /// Returns the link tabs `tabs` named `label`, marked by key.
@@ -36,11 +38,8 @@ pub struct KeyedTab {
 /// The one whose key is `current` is marked as the page: the form of [`link_tabs`] whose hrefs
 /// differ only in their query, so the path cannot say which is current.
 #[must_use]
-pub fn keyed_tabs(
-    label: &'static str,
-    tabs: Vec<KeyedTab>,
-    current: &str,
-) -> impl IntoView + use<> {
+pub fn keyed_tabs(label: impl Into<String>, tabs: Vec<KeyedTab>, current: &str) -> AnyView {
+    let label = label.into();
     let tabs = tabs
         .into_iter()
         .map(|tab| {
@@ -57,19 +56,21 @@ pub fn keyed_tabs(
             {tabs}
         </nav>
     }
+    .into_any()
 }
 
 /// Returns the link tabs `tabs` named `label`, the one whose path is
 /// `current` marked as the page, on the accent's tint and named current.
 #[must_use]
-pub fn link_tabs(label: &'static str, tabs: &[Tab], current: &str) -> impl IntoView + use<> {
+pub fn link_tabs(label: impl Into<String>, tabs: &[Tab], current: &str) -> AnyView {
+    let label = label.into();
     let tabs = tabs
         .iter()
         .map(|tab| {
             let here = (tab.href == current).then_some("page");
             view! {
                 <a href=tab.href class="fui-tab" aria-current=here>
-                    {tab.label}
+                    {tab.label.clone()}
                 </a>
             }
         })
@@ -79,4 +80,5 @@ pub fn link_tabs(label: &'static str, tabs: &[Tab], current: &str) -> impl IntoV
             {tabs}
         </nav>
     }
+    .into_any()
 }

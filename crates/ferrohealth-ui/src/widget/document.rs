@@ -12,6 +12,8 @@
 //! not chosen are hidden, so a rendered view keeps its state. The body is a
 //! bounded box the keyboard scrolls, its lines not wrapped.
 
+use std::borrow::Cow;
+
 use leptos::prelude::*;
 
 use crate::highlight::{Language, Lines, html};
@@ -39,10 +41,10 @@ pub struct DocumentPane {
     /// `-rendered`, its copy button `id` and `-copy`.
     pub id: &'static str,
     /// The pane's name, such as "Composition".
-    pub label: &'static str,
+    pub label: Cow<'static, str>,
     /// The formats the console can fetch the document in, each its key and
     /// its words; one or none draws no selector.
-    pub formats: &'static [(&'static str, &'static str)],
+    pub formats: Vec<(&'static str, Cow<'static, str>)>,
     /// The format in force.
     pub format: Signal<&'static str>,
     /// The document's text, in the format in force.
@@ -104,7 +106,7 @@ pub fn document_pane_opening(
     let selector = (formats.len() > 1).then(|| {
         let formats = formats
             .iter()
-            .map(|(key, words)| (*key, String::from(*words)))
+            .map(|(key, words)| (*key, words.to_string()))
             .collect();
         segmented_words(format_label, formats, format, on_format)
     });
@@ -142,7 +144,7 @@ pub fn document_pane_opening(
         }
     });
     view! {
-        <section class="fui-document" id=id aria-label=label>
+        <section class="fui-document" id=id aria-label=label.clone()>
             <div class="fui-document-tools">
                 {selector} {switch} <span class="fui-document-copy">
                     {copy_button(copy_id, tr(Text::DocumentCopy), source)}
@@ -152,7 +154,10 @@ pub fn document_pane_opening(
                 id=format!("{id}-highlighted")
                 class="fui-code-panel fui-document-body"
                 role="region"
-                aria-label=tr_with(Text::DocumentHighlightedRegion, &[("document", label.into())])
+                aria-label=tr_with(
+                    Text::DocumentHighlightedRegion,
+                    &[("document", label.to_string().into())],
+                )
                 tabindex="0"
                 hidden=move || view_in_force.get() != "highlighted"
             >
@@ -162,7 +167,7 @@ pub fn document_pane_opening(
                 id=format!("{id}-raw")
                 class="fui-code-panel fui-document-body"
                 role="region"
-                aria-label=tr_with(Text::DocumentRawRegion, &[("document", label.into())])
+                aria-label=tr_with(Text::DocumentRawRegion, &[("document", label.to_string().into())])
                 tabindex="0"
                 hidden=move || view_in_force.get() != "raw"
             >
