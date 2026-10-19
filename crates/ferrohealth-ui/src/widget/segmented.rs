@@ -22,10 +22,24 @@ pub fn segmented(
     current: Signal<&'static str>,
     on_select: impl Fn(&'static str) + Clone + Send + Sync + 'static,
 ) -> impl IntoView {
-    let buttons = choices
+    let choices = choices
         .iter()
+        .map(|(key, words)| (*key, String::from(*words)))
+        .collect();
+    segmented_words(String::from(label), choices, current, on_select)
+}
+
+/// Returns [`segmented`] over words made at run time, such as the words of
+/// the page's locale.
+pub(crate) fn segmented_words(
+    label: String,
+    choices: Vec<(&'static str, String)>,
+    current: Signal<&'static str>,
+    on_select: impl Fn(&'static str) + Clone + Send + Sync + 'static,
+) -> impl IntoView {
+    let buttons = choices
+        .into_iter()
         .map(|(key, words)| {
-            let key = *key;
             let on_select = on_select.clone();
             view! {
                 <button
@@ -35,7 +49,7 @@ pub fn segmented(
                     aria-pressed=move || (current.get() == key).to_string()
                     on:click=move |_| on_select(key)
                 >
-                    {*words}
+                    {words}
                 </button>
             }
         })

@@ -15,6 +15,7 @@
 
 use leptos::prelude::*;
 
+use crate::i18n::{Text, tr};
 use crate::icon::{Glyph, icon};
 use crate::tone::Tone;
 
@@ -104,8 +105,9 @@ const fn glyph(tone: Tone) -> Glyph {
 /// Returns the region that draws `toasts`.
 #[must_use]
 pub fn toast_region(toasts: Toasts) -> impl IntoView {
+    let dismiss = tr(Text::ToastDismiss);
     view! {
-        <div class="fui-toasts" role="status" aria-live="polite" aria-label="Notices">
+        <div class="fui-toasts" role="status" aria-live="polite" aria-label=tr(Text::ToastRegion)>
             <For each=move || toasts.list.get() key=|toast| toast.id let:toast>
                 {
                     let class = format!("fui-toast {}", toast.tone.class());
@@ -120,7 +122,7 @@ pub fn toast_region(toasts: Toasts) -> impl IntoView {
                                 on:click=move |_| toasts.dismiss(id)
                             >
                                 {icon(Glyph::X, "14")}
-                                <span class="fui-sr-only">"Dismiss"</span>
+                                <span class="fui-sr-only">{dismiss.clone()}</span>
                             </button>
                         </div>
                     }

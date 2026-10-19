@@ -30,6 +30,10 @@ the Authoring Practices (`spec-adherence.md`).
 - **No patient identifier in a URL.** A listing that can show patient data
   keeps its page, size and sort in the page (`StateSource::Session`,
   `widget::pager::session_pager`).
+- **No user-visible string outside the catalogs** (owner, 2026-10-19). Every
+  word a component draws itself is a message of the library's Fluent
+  catalog, every word a console draws is a message of the console's, and a
+  new language is a catalog file with no code change (§13).
 
 ## 1. Two tiers
 
@@ -237,3 +241,48 @@ bytes, 0.1.1 518566 and 0.1.0 325387; a console's own bundle
 carries only the components it uses. A change
 that needs more raises it here, in its own pull request, with the measured
 size and the reason.
+
+## 13. Strings and locales
+
+The owner's ruling (2026-10-19): English is the one language that ships,
+and the family is ready for more, so adding a language later is a catalog
+file and no code change. No specification governs the catalog layout or
+the lookup order: our own design; the message syntax is Project Fluent's.
+
+- **One crate, one format.** `fluent-templates` (pinned in the workspace
+  table) embeds every catalog under a crate's `locales/` directory at build
+  time with `static_loader!`, one directory per BCP 47 tag
+  (`locales/en/ferrohealth-ui.ftl`), on both halves, with no script and no
+  runtime file reader. No hand-rolled catalog format, no second crate.
+- **`en` is the reference.** It is complete, every lookup falls back to it,
+  and a test holds every catalog under `locales/` to the full message set
+  (`i18n::tests`), so a new catalog file is checked with no code change.
+  Only `en` ships; readiness is shown by a throwaway catalog in the tests
+  (`tests/it/locales/qaa/`), never by a shipped translation.
+- **The locale is chosen once per render.** The console builds an
+  `i18n::Locale` from its configuration or the request
+  (`Locale::negotiate` reads `Accept-Language`), hands it to
+  `i18n::provide_locale` at the root of its page tree on the server and in
+  the hydrating browser alike (a value the server decided reaches the
+  browser serialized, `SharedValue`), and writes `Locale::tag` as
+  `<html lang>` (WCAG 2.2 SC 3.1.1). A page that provides none draws
+  English.
+- **A component reads its words while the page tree is in reach.** A view
+  function calls the crate's lookup as it builds its view; a widget reads
+  every word it may draw at setup and moves the strings into its handlers
+  and tasks, where no owner is in reach.
+- **A console catalogs its own strings the same way**: its own
+  `static_loader!` over its own `locales/`, looked up through
+  `Locale::lookup` so its words follow the same choice, and the language
+  switch is `view::theme_switch::locale_switch`.
+- **The stray-literal check fails a string outside the catalogs.**
+  `scripts/checks/stray-literals.sh` reads the components for literals that
+  read as words (an attribute a reader sees or hears, a text node, any
+  literal holding words) and fails on each; a literal no reader sees as text
+  (a key name, a product name, SVG markup) is allowed with its reason in
+  `scripts/checks/stray-literals.allow`. A console runs the same script over
+  its own crate with a baseline that only shrinks while its strings move.
+- **The layout leaves room for longer words.** No text sits in a fixed
+  width; the gallery's pseudo-locale (`qps`) draws every library string
+  accented and two fifths longer, and a change that moves a component's
+  layout is captured in it at 1440 and 390 px, light and dark.

@@ -11,6 +11,7 @@
 
 use leptos::prelude::*;
 
+use crate::i18n::{Text, tr};
 use crate::view::chart::{LineChart, PALETTE, figures, has_gaps, line_svg};
 
 /// How many of `count` series `shown` keeps, a missing flag counting as
@@ -71,7 +72,7 @@ pub fn line_chart(chart: LineChart, shown: RwSignal<Vec<bool>>) -> AnyView {
         view! {
             <span class="fui-legend-note">
                 <span class="fui-swatch-gap" aria-hidden="true"></span>
-                "No value"
+                {tr(Text::ChartNoValue)}
             </span>
         }
     });
@@ -79,7 +80,7 @@ pub fn line_chart(chart: LineChart, shown: RwSignal<Vec<bool>>) -> AnyView {
     view! {
         <figure class="fui-chart">
             <div class="fui-chart-plot" inner_html=drawn></div>
-            <figcaption class="fui-legend" aria-label="Series">
+            <figcaption class="fui-legend" aria-label=tr(Text::ChartSeries)>
                 {chips}
                 {note}
             </figcaption>

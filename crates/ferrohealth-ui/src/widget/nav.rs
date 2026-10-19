@@ -16,6 +16,7 @@
 use leptos::prelude::*;
 use leptos_router::components::A;
 
+use crate::i18n::{Text, tr};
 use crate::icon::{Glyph, icon};
 use crate::view::button::Variant;
 
@@ -94,7 +95,7 @@ pub fn sidebar(id: &'static str, label: &'static str, groups: &[Group]) -> AnyVi
         >
             <button type="button" class=close popovertarget=id popovertargetaction="hide">
                 {icon(Glyph::X, "16")}
-                "Close"
+                {tr(Text::Close)}
             </button>
             {groups}
         </nav>

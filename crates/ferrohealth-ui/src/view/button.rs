@@ -10,6 +10,7 @@
 
 use leptos::prelude::*;
 
+use crate::i18n::{Text, tr};
 use crate::icon::{Glyph, icon};
 
 /// What a button is for, which sets how much it stands out.
@@ -65,23 +66,24 @@ impl Variant {
         }
     }
 
-    /// The variant's name, as the gallery labels it.
+    /// The variant's name in the page's locale, as the gallery labels it.
     #[must_use]
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Primary => "Primary",
-            Self::Secondary => "Secondary",
-            Self::Danger => "Danger",
-            Self::Destructive => "Destructive",
-            Self::Ghost => "Ghost",
-        }
+    pub fn name(self) -> String {
+        tr(match self {
+            Self::Primary => Text::VariantPrimary,
+            Self::Secondary => Text::VariantSecondary,
+            Self::Danger => Text::VariantDanger,
+            Self::Destructive => Text::VariantDestructive,
+            Self::Ghost => Text::VariantGhost,
+        })
     }
 }
 
 /// Returns the inside of a button: the icon `glyph`, when there is one,
 /// beside the word `label`.
 #[must_use]
-pub fn label(glyph: Option<Glyph>, label: &'static str) -> impl IntoView + use<> {
+pub fn label<L: Into<Oco<'static, str>>>(glyph: Option<Glyph>, label: L) -> impl IntoView + use<L> {
+    let label = label.into();
     view! {
         {glyph.map(|glyph| icon(glyph, "16"))}
         {label}

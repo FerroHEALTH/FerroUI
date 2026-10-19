@@ -13,7 +13,8 @@
 //! filter and the highlighted editor. [`table`] is the one paging and
 //! sorting model every listing shares, [`highlight`] the tokenizers of YAML,
 //! JSON, XML and AQL, [`icon`] the vendored Lucide outlines, [`tone`] and
-//! [`theme`] the status tones and the theme choice, and [`style`] the
+//! [`theme`] the status tones and the theme choice, [`i18n`] the locale and
+//! the catalogs of every word the components draw, and [`style`] the
 //! stylesheet and the brand themes as text a console serves.
 //!
 //! Every component works in both halves of a console and under client-side
@@ -26,6 +27,7 @@
 #![doc(test(attr(deny(warnings))))]
 
 pub mod highlight;
+pub mod i18n;
 pub mod icon;
 pub mod style;
 pub mod table;

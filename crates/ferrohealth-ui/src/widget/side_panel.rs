@@ -13,6 +13,7 @@
 
 use leptos::prelude::*;
 
+use crate::i18n::{Text, tr};
 use crate::icon::{Glyph, icon};
 
 /// What a side panel shows.
@@ -77,7 +78,7 @@ pub fn side_panel(panel: SidePanel) -> AnyView {
                     class="fui-icon-button fui-side-panel-close"
                     popovertarget=id
                     popovertargetaction="hide"
-                    aria-label="Close"
+                    aria-label=tr(Text::Close)
                 >
                     {icon(Glyph::X, "16")}
                 </button>

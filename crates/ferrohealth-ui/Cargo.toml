@@ -14,10 +14,10 @@ publish = true
 readme = "README.md"
 keywords = ["leptos", "ui", "components", "design-system", "accessibility"]
 categories = ["gui", "wasm", "web-programming"]
-# The stylesheet, the brand themes and the vendored icon outlines travel with
+# The stylesheet, the brand themes, the string catalogs and the vendored icon outlines travel with
 # the crate, so a console reads them from the registry checkout or from the
 # constants of `ferrohealth_ui::style`.
-include = ["src/**", "css/**", "themes/**", "vendor/**", "tests/**", "README.md"]
+include = ["src/**", "css/**", "themes/**", "locales/**", "vendor/**", "tests/**", "README.md"]
 
 # No render-mode feature: the library compiles under `csr`, `ssr` and
 # `hydrate` alike, whichever the console's own leptos dependency turns on
@@ -26,6 +26,7 @@ include = ["src/**", "css/**", "themes/**", "vendor/**", "tests/**", "README.md"
 leptos.workspace = true
 leptos_router.workspace = true
 serde.workspace = true
+fluent-templates.workspace = true
 
 # The widgets' browser code, compiled for the browser alone. Each asks for
 # the lowest release leptos 0.8.22 resolves with (web-sys 0.3.85 pins

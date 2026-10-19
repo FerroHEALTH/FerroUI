@@ -11,6 +11,7 @@
 
 use leptos::prelude::*;
 
+use crate::i18n::{Text, tr};
 use crate::icon::{Glyph, icon};
 use crate::view::button::Variant;
 use crate::view::form::INPUT;
@@ -53,7 +54,7 @@ pub fn search_box(search: SearchBox) -> AnyView {
             />
             <button type="submit" class=Variant::Secondary.class()>
                 {icon(Glyph::SEARCH, "16")}
-                "Find"
+                {tr(Text::Find)}
             </button>
         </form>
     }

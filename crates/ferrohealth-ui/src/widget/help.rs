@@ -12,6 +12,7 @@
 
 use leptos::prelude::*;
 
+use crate::i18n::{Text, tr};
 use crate::icon::{Glyph, icon};
 use crate::view::button::Variant;
 use crate::view::form::help_id;
@@ -40,6 +41,8 @@ fn help_shown() -> HelpShown {
 #[must_use]
 pub fn help_switch() -> AnyView {
     let HelpShown(shown) = help_shown();
+    let hide = tr(Text::HelpHide);
+    let explain = tr(Text::HelpShow);
     view! {
         <button
             type="button"
@@ -48,7 +51,7 @@ pub fn help_switch() -> AnyView {
             on:click=move |_| shown.update(|shown| *shown = !*shown)
         >
             {icon(Glyph::INFO, "14")}
-            {move || if shown.get() { "Hide help" } else { "Explain these parameters" }}
+            {move || if shown.get() { hide.clone() } else { explain.clone() }}
         </button>
     }
     .into_any()

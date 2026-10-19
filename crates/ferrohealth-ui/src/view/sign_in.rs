@@ -19,6 +19,7 @@
 
 use leptos::prelude::*;
 
+use crate::i18n::{Text, tr};
 use crate::icon::{Glyph, icon};
 use crate::tone::Tone;
 use crate::view::button::Variant;
@@ -102,17 +103,19 @@ pub struct SignIn {
 
 /// Returns the basic form posting to `basic.action`.
 fn basic_form(basic: Basic) -> impl IntoView {
+    let username = tr(Text::SignInUsername);
+    let password = tr(Text::SignInPassword);
     view! {
         <form method="post" action=basic.action class="fui-form">
             <div class="fui-field">
                 <label for="sign-in-username" class="fui-label">
-                    "Username"
+                    {username.clone()}
                 </label>
                 <input
                     id="sign-in-username"
                     name="username"
                     class=INPUT
-                    placeholder="Username"
+                    placeholder=username
                     autocomplete="username"
                     autocapitalize="off"
                     spellcheck="false"
@@ -120,21 +123,21 @@ fn basic_form(basic: Basic) -> impl IntoView {
             </div>
             <div class="fui-field">
                 <label for="sign-in-password" class="fui-label">
-                    "Password"
+                    {password.clone()}
                 </label>
                 <input
                     id="sign-in-password"
                     name="password"
                     type="password"
                     class=INPUT
-                    placeholder="Password"
+                    placeholder=password
                     autocomplete="current-password"
                 />
             </div>
             <input type="hidden" name="next" value=basic.next />
             <button type="submit" class=Variant::Primary.class()>
                 {icon(Glyph::LOG_IN, "16")}
-                "Sign in"
+                {tr(Text::SignInSubmit)}
             </button>
         </form>
     }
@@ -165,7 +168,7 @@ pub fn sign_in(sign_in: SignIn) -> impl IntoView {
     let both = sign_in.basic.is_some() && sign_in.provider.is_some();
     let none = sign_in.basic.is_none() && sign_in.provider.is_none();
     let basic = sign_in.basic.map(basic_form);
-    let divider = both.then(|| view! { <div class="fui-divider">"or"</div> });
+    let divider = both.then(|| view! { <div class="fui-divider">{tr(Text::SignInOr)}</div> });
     let provider = sign_in.provider.map(|provider| {
         let variant = if both {
             Variant::Secondary
@@ -182,7 +185,7 @@ pub fn sign_in(sign_in: SignIn) -> impl IntoView {
     let unavailable = none.then(|| {
         view! {
             <div role="alert" class="fui-alert">
-                <p>"No sign-in method is available: the console has none configured."</p>
+                <p>{tr(Text::SignInNone)}</p>
             </div>
         }
     });

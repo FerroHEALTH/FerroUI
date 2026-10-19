@@ -12,6 +12,7 @@
 
 use leptos::prelude::*;
 
+use crate::i18n::{Text, tr};
 use crate::icon::{Glyph, icon};
 use crate::view::button::Variant;
 
@@ -91,7 +92,7 @@ fn frame(confirmation: Confirmation, danger: bool, confirm: impl IntoView) -> im
                     popovertargetaction="hide"
                 >
                     {icon(Glyph::X, "16")}
-                    "Cancel"
+                    {tr(Text::Cancel)}
                 </button>
                 {confirm}
             </div>

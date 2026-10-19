@@ -15,6 +15,7 @@
 
 use leptos::prelude::*;
 
+use crate::i18n::{Text, tr};
 use crate::icon::{Glyph, icon};
 
 /// How wide a modal dialog is.
@@ -96,7 +97,7 @@ pub fn modal_dialog(modal: Modal, open: Signal<bool>, on_dismiss: Callback<()>) 
                     on:click=move |_| on_dismiss.run(())
                 >
                     {icon(Glyph::X, "16")}
-                    "Cancel"
+                    {tr(Text::Cancel)}
                 </button>
                 {actions}
             </div>

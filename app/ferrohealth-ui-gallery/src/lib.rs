@@ -8,13 +8,15 @@
 //! It is the library's visual review surface and its proof in CI: the
 //! journeys drive it in a browser and its screenshots show every page in
 //! every brand. [`app`] is the page tree, [`pages`] the pages, [`data`] the
-//! synthetic rows and texts they show, and [`server`] the HTTP service with
+//! synthetic rows and texts they show, [`locale`] English and the
+//! pseudo-locale, and [`server`] the HTTP service with
 //! the security headers a console sends. Nothing it shows is clinical data:
 //! every row is invented for the gallery. No specification governs the
 //! gallery: our own design.
 
 pub mod app;
 pub mod data;
+pub mod locale;
 pub mod pages;
 
 #[cfg(not(target_arch = "wasm32"))]

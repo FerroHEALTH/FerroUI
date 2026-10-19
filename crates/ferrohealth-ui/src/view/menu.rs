@@ -7,6 +7,7 @@
 
 use leptos::prelude::*;
 
+use crate::i18n::{Text, tr};
 use crate::icon::{Glyph, icon};
 use crate::view::button::Variant;
 
@@ -34,7 +35,7 @@ pub fn operator_menu(menu: OperatorMenu, extra: impl IntoView + 'static) -> AnyV
             <form method="post" action=action>
                 <button type="submit" class=class>
                     {icon(Glyph::LOG_OUT, "16")}
-                    "Sign out"
+                    {tr(Text::SignOut)}
                 </button>
             </form>
         }

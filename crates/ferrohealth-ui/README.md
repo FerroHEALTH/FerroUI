@@ -11,7 +11,7 @@ Every pairing of every theme is held to WCAG 2.2 AA by the crate's tests.
 
 ```toml
 [dependencies]
-ferrohealth-ui = "=0.1.6"
+ferrohealth-ui = "=0.1.7"
 ```
 
 Pin the version exactly: a console moves its pin after looking at its own
@@ -77,6 +77,34 @@ the operator menu's `extra`.
 
 No component writes a `style` attribute or a `<style>` element, defines a
 server function, fetches, or touches browser storage.
+
+## Locales
+
+Every word a component draws itself (a pager step, a dialog's Cancel, the
+theme toggle's name, an empty listing's range) comes from a Fluent catalog
+under `locales/`, one directory per language. English is the one catalog
+that ships, and every lookup falls back to it; a language joins as one
+catalog file, with no code change. Choose the locale once per render, at the
+root of the page tree, on the server and in the hydrating browser alike, and
+write it as `<html lang>`:
+
+```rust
+use ferrohealth_ui::i18n::{Locale, locale, provide_locale};
+use leptos::prelude::*;
+
+let lang = Owner::new().with(|| {
+    // From the configuration, or `Locale::negotiate` over `Accept-Language`.
+    provide_locale(Locale::parse("en-GB").unwrap_or_default());
+    locale().tag()
+});
+assert_eq!(lang, "en-GB");
+```
+
+A page that provides no locale draws English. Catalog the console's own
+strings the same way: a `fluent_templates::static_loader!` over the
+console's own `locales/`, looked up with `Locale::lookup`, so the console's
+words follow the same choice. `view::theme_switch::locale_switch` is the
+language switch, each choice named in its own language.
 
 ## Licence
 

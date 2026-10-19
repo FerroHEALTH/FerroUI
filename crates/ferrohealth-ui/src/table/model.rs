@@ -7,6 +7,8 @@
 
 use leptos_router::params::ParamsMap;
 
+use crate::i18n::{Text, tr, tr_with};
+
 /// The rows a page shows when the request names no size.
 pub const DEFAULT_SIZE: u32 = 25;
 
@@ -31,6 +33,10 @@ pub const ORDER_KEY: &str = "order";
 
 /// The words a listing names its rows by, one and many: "value set" and
 /// "value sets".
+///
+/// A console names its rows in its own words, from its own catalog; the
+/// library's own noun, [`Noun::ROWS`], is drawn from the library's catalog
+/// in the page's locale (`crate::i18n`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Noun {
     /// The word for one row.
@@ -63,6 +69,26 @@ impl Noun {
         letters.next().map_or_else(String::new, |first| {
             first.to_uppercase().chain(letters).collect()
         })
+    }
+
+    /// The word for `count` rows as a range draws it: the catalog's for the
+    /// rows noun, the console's own for any other.
+    fn word(self, count: u32) -> String {
+        if self == Self::ROWS {
+            tr_with(Text::Rows, &[("count", count.into())])
+        } else {
+            self.of(count).to_owned()
+        }
+    }
+
+    /// [`Noun::opening`] as a range draws it, the catalog's for the rows
+    /// noun.
+    fn opening_word(self) -> String {
+        if self == Self::ROWS {
+            tr(Text::RowsOpening)
+        } else {
+            self.opening()
+        }
     }
 }
 
@@ -272,13 +298,15 @@ impl Window {
     #[must_use]
     pub fn range_label(self) -> String {
         if self.total == 0 {
-            return String::from("No rows");
+            return tr(Text::RangeEmpty);
         }
-        format!(
-            "{}-{} of {}",
-            self.start.saturating_add(1),
-            self.end,
-            self.total
+        tr_with(
+            Text::Range,
+            &[
+                ("first", self.start.saturating_add(1).into()),
+                ("last", self.end.into()),
+                ("total", self.total.into()),
+            ],
         )
     }
 
@@ -287,14 +315,16 @@ impl Window {
     #[must_use]
     pub fn range_of(self, noun: Noun) -> String {
         if self.total == 0 {
-            return format!("No {}", noun.many);
+            return tr_with(Text::RangeOfEmpty, &[("nouns", noun.word(0).into())]);
         }
-        format!(
-            "{}-{} of {} {}",
-            self.start.saturating_add(1),
-            self.end,
-            self.total,
-            noun.of(self.total)
+        tr_with(
+            Text::RangeOf,
+            &[
+                ("first", self.start.saturating_add(1).into()),
+                ("last", self.end.into()),
+                ("total", self.total.into()),
+                ("noun", noun.word(self.total).into()),
+            ],
         )
     }
 
@@ -317,9 +347,13 @@ impl Window {
 #[must_use]
 pub fn partial_note(held: u32, stated: Option<u32>, noun: Noun) -> Option<String> {
     let stated = stated.filter(|stated| *stated != held)?;
-    Some(format!(
-        "The server counted {stated} {}, and this listing holds {held}.",
-        noun.of(stated)
+    Some(tr_with(
+        Text::PartialNote,
+        &[
+            ("stated", stated.into()),
+            ("noun", noun.word(stated).into()),
+            ("held", held.into()),
+        ],
     ))
 }
 
@@ -381,13 +415,15 @@ impl OpenWindow {
     #[must_use]
     pub fn range_of(self, noun: Noun) -> String {
         if self.held == 0 {
-            return format!("No {}", noun.many);
+            return tr_with(Text::RangeOfEmpty, &[("nouns", noun.word(0).into())]);
         }
-        format!(
-            "{} {} to {}",
-            noun.opening(),
-            self.start.saturating_add(1),
-            self.start.saturating_add(self.held)
+        tr_with(
+            Text::OpenRangeOf,
+            &[
+                ("nouns", noun.opening_word().into()),
+                ("first", self.start.saturating_add(1).into()),
+                ("last", self.start.saturating_add(self.held).into()),
+            ],
         )
     }
 }

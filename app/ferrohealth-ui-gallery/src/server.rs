@@ -31,7 +31,8 @@ use leptos_axum::LeptosRoutes as _;
 use tower_http::set_header::SetResponseHeaderLayer;
 
 use crate::app::{
-    DENSITY_COOKIE, DENSITY_ROUTE, STYLESHEET as STYLESHEET_PATH, THEME_COOKIE, THEME_ROUTE,
+    DENSITY_COOKIE, DENSITY_ROUTE, LOCALE_COOKIE, LOCALE_ROUTE, STYLESHEET as STYLESHEET_PATH,
+    THEME_COOKIE, THEME_ROUTE,
 };
 
 /// The name cargo-leptos gives the site bundle's files under `pkg/`.
@@ -60,6 +61,7 @@ pub fn router(options: LeptosOptions) -> axum::Router {
         .route("/themes/{file}", get(theme_file))
         .route(THEME_ROUTE, post(choose_theme))
         .route(DENSITY_ROUTE, post(choose_density))
+        .route(LOCALE_ROUTE, post(choose_locale))
         .leptos_routes_with_context(&options, routes, provide_request_nonce, {
             let options = options.clone();
             move || crate::app::document(options.clone())
@@ -168,6 +170,31 @@ async fn choose_density(Form(choice): Form<DensityChoice>) -> Response {
             .into_response();
     };
     kept(DENSITY_COOKIE, density.key(), &choice.back)
+}
+
+/// What a language choice posts.
+#[derive(Debug, serde::Deserialize)]
+struct LocaleChoice {
+    /// The tag of the locale chosen.
+    locale: String,
+    /// The page to return to.
+    back: String,
+}
+
+/// Keeps the locale a plain form post chose in its cookie and sends the
+/// browser back to the page it came from.
+async fn choose_locale(Form(choice): Form<LocaleChoice>) -> Response {
+    let known = crate::locale::choices()
+        .iter()
+        .any(|locale| locale.tag() == choice.locale);
+    if !known {
+        return (
+            StatusCode::BAD_REQUEST,
+            "the locale is not one the gallery offers",
+        )
+            .into_response();
+    }
+    kept(LOCALE_COOKIE, &choice.locale, &choice.back)
 }
 
 /// The redirect to `back` that keeps `value` in the cookie `name`.

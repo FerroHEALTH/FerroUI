@@ -28,6 +28,13 @@ use crate::stack::Gallery;
 /// The environment variable that opts in to the capture.
 const SCREENSHOTS_GATE: &str = "FERROUI_SCREENSHOTS";
 
+/// The environment variable that opts in to the pseudo-locale capture,
+/// which checks the layout of longer words once and is never committed.
+const PSEUDO_GATE: &str = "FERROUI_PSEUDO";
+
+/// The folder of the pseudo-locale capture, from the workspace root.
+const PSEUDO_IMAGES: &str = "target/pseudo-screenshots";
+
 /// The folder of the screenshots, from the workspace root.
 pub(crate) const IMAGES: &str = "docs/screenshots";
 
@@ -104,8 +111,13 @@ pub(crate) fn root() -> PathBuf {
 
 /// The file of `image` in the theme `theme`.
 fn file(image: &str, theme: &str) -> PathBuf {
+    file_in(IMAGES, image, theme)
+}
+
+/// The file of `image` in the theme `theme` under `folder`.
+fn file_in(folder: &str, image: &str, theme: &str) -> PathBuf {
     let suffix = if theme == "dark" { "-dark" } else { "" };
-    root().join(IMAGES).join(format!("{image}{suffix}.png"))
+    root().join(folder).join(format!("{image}{suffix}.png"))
 }
 
 /// The part of `Page.getLayoutMetrics` the capture reads.
@@ -138,13 +150,15 @@ async fn content_height(browser: &Browser) -> Result<u32, Box<dyn Error>> {
         .unwrap_or(TALLEST))
 }
 
-/// Loads `shot` in `theme` and writes it at the page's full height.
+/// Loads `shot` in `theme` and writes it at the page's full height under
+/// `folder`.
 async fn capture(
     browser: &Browser,
     gallery: &Gallery,
     shot: &Shot,
     theme: &str,
     (width, suffix): (u32, &str),
+    folder: &str,
 ) -> Result<(), Box<dyn Error>> {
     window(browser, width, HEIGHT).await?;
     browser.goto(&gallery.url(&shot.path)).await?;
@@ -167,7 +181,7 @@ async fn capture(
     }
     let png = browser.driver().screenshot_as_png().await?;
     window(browser, WIDTH, HEIGHT).await?;
-    let path = file(&format!("{}{suffix}", shot.image), theme);
+    let path = file_in(folder, &format!("{}{suffix}", shot.image), theme);
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }
@@ -206,7 +220,48 @@ async fn every_page_is_captured_in_every_brand_light_and_dark() -> Result<(), Bo
                 .await?;
             for shot in shots() {
                 for width in WIDTHS {
-                    capture(browser, &gallery, &shot, theme, width).await?;
+                    capture(browser, &gallery, &shot, theme, width, IMAGES).await?;
+                }
+            }
+        }
+        Ok(())
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn one_brand_is_captured_in_the_pseudo_locale_light_and_dark() -> Result<(), Box<dyn Error>> {
+    if !std::env::var(PSEUDO_GATE).is_ok_and(|value| value == "1") {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        window(browser, WIDTH, HEIGHT).await?;
+        for theme in ["light", "dark"] {
+            browser.goto(&gallery.url("/")).await?;
+            browser.driver().delete_all_cookies().await?;
+            for (name, value) in [
+                ("gallery-theme", theme),
+                ("gallery-locale", ferrohealth_ui_gallery::locale::PSEUDO_TAG),
+            ] {
+                let mut cookie = Cookie::new(name, value);
+                cookie.set_path("/");
+                browser.driver().add_cookie(cookie).await?;
+            }
+            browser
+                .driver()
+                .cdp()
+                .send_raw(
+                    "Emulation.setEmulatedMedia",
+                    json!({ "features": [{ "name": "prefers-color-scheme", "value": theme }] }),
+                )
+                .await?;
+            for shot in shots()
+                .into_iter()
+                .filter(|shot| shot.image.starts_with(Brand::Bridge.key()))
+            {
+                for width in WIDTHS {
+                    capture(browser, &gallery, &shot, theme, width, PSEUDO_IMAGES).await?;
                 }
             }
         }

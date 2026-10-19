@@ -22,6 +22,7 @@
 use leptos::prelude::*;
 
 use crate::highlight::escape;
+use crate::i18n::{Text, tr, tr_with};
 
 /// The number of colours a series can take: the role tones below, so a
 /// colour means what it means elsewhere and follows the brand's accent.
@@ -447,6 +448,7 @@ pub fn figures(chart: &LineChart) -> impl IntoView + use<> {
         .collect();
     xs.sort_by(f64::total_cmp);
     xs.dedup();
+    let no_value = tr(Text::ChartNoValueCell);
     let heads = chart
         .series
         .iter()
@@ -468,7 +470,7 @@ pub fn figures(chart: &LineChart) -> impl IntoView + use<> {
                         .points
                         .iter()
                         .find(|point| (point.0 - at).abs() < 1e-9 && point.1.is_finite())
-                        .map_or_else(|| String::from("no value"), |point| tick_label(point.1));
+                        .map_or_else(|| no_value.clone(), |point| tick_label(point.1));
                     view! { <td>{value}</td> }
                 })
                 .collect_view();
@@ -480,13 +482,13 @@ pub fn figures(chart: &LineChart) -> impl IntoView + use<> {
             }
         })
         .collect_view();
-    let caption = format!("{}, as a table", chart.label);
+    let caption = tr_with(Text::ChartAsTable, &[("chart", chart.label.clone().into())]);
     view! {
         <table class="fui-sr-only">
             <caption>{caption}</caption>
             <thead>
                 <tr>
-                    <th scope="col">"X"</th>
+                    <th scope="col">{tr(Text::ChartX)}</th>
                     {heads}
                 </tr>
             </thead>

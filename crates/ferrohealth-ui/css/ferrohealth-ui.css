@@ -725,6 +725,12 @@
     flex: 1 1 auto;
   }
 
+  /* The button keeps its word on one line; the input gives way. */
+  .fui-search .fui-button {
+    flex: none;
+    white-space: nowrap;
+  }
+
   .fui-topbar-end {
     display: flex;
     min-width: 0;
@@ -2374,6 +2380,14 @@
   .fui-pager-sizes {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-tight);
+  }
+
+  /* The size choices wrap together, never one alone under the others. */
+  .fui-pager-size-choices {
+    display: inline-flex;
+    flex-wrap: nowrap;
     align-items: center;
     gap: var(--space-tight);
   }

@@ -14,6 +14,8 @@
 
 use leptos::prelude::*;
 
+use crate::i18n::{Text, tr_with};
+
 /// A date, `YYYY-MM-DD`, its parts checked against the calendar.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Date {
@@ -271,7 +273,13 @@ impl Parsed {
         match self {
             Self::Date(date) => day(*date),
             Self::Local(date, clock) => format!("{} {}", day(*date), time(clock, false)),
-            Self::Instant(date, clock) => format!("{} {} UTC", day(*date), time(clock, false)),
+            Self::Instant(date, clock) => tr_with(
+                Text::TimestampUtc,
+                &[
+                    ("date", day(*date).into()),
+                    ("time", time(clock, false).into()),
+                ],
+            ),
         }
     }
 

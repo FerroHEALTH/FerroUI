@@ -18,6 +18,7 @@
 use leptos::prelude::*;
 
 use crate::highlight::Language;
+use crate::i18n::{Locale, Text, locale};
 use crate::icon::{Glyph, icon};
 use crate::widget::editor::{Drawn, Grammar, drawn};
 
@@ -57,36 +58,54 @@ pub enum Refused {
 }
 
 impl Refused {
-    /// The sentence the field shows for the refusal, naming `accept` and the
-    /// limit `max_bytes`.
+    /// The sentence the field shows for the refusal in the page's locale,
+    /// naming `accept` and the limit `max_bytes`.
     #[must_use]
     pub fn sentence(&self, accept: &[&str], max_bytes: u64) -> String {
+        self.sentence_in(&locale(), accept, max_bytes)
+    }
+
+    /// [`Refused::sentence`] in `locale`.
+    fn sentence_in(&self, locale: &Locale, accept: &[&str], max_bytes: u64) -> String {
         match self {
-            Self::Kind { name } => format!(
-                "{name} was not read: the field takes {} files.",
-                accept.join(", ")
+            Self::Kind { name } => locale.text_with(
+                Text::UploadRefusedKind,
+                &[
+                    ("file", name.clone().into()),
+                    ("kinds", accept.join(", ").into()),
+                ],
             ),
-            Self::Size { name, bytes } => format!(
-                "{name} was not read: it is {} and the field takes up to {}.",
-                size(*bytes),
-                size(max_bytes)
+            Self::Size { name, bytes } => locale.text_with(
+                Text::UploadRefusedSize,
+                &[
+                    ("file", name.clone().into()),
+                    ("size", size_in(locale, *bytes).into()),
+                    ("limit", size_in(locale, max_bytes).into()),
+                ],
             ),
         }
     }
 }
 
-/// `bytes` in the largest unit that keeps it above one, in words.
+/// `bytes` in the largest unit that keeps it above one, in words of the
+/// page's locale.
 #[must_use]
 pub fn size(bytes: u64) -> String {
+    size_in(&locale(), bytes)
+}
+
+/// [`size`] in `locale`.
+fn size_in(locale: &Locale, bytes: u64) -> String {
     const KIB: u64 = 1024;
     const MIB: u64 = 1024 * 1024;
-    if bytes >= MIB {
-        format!("{} MiB", bytes.div_ceil(MIB))
+    let (unit, count) = if bytes >= MIB {
+        (Text::SizeMib, bytes.div_ceil(MIB))
     } else if bytes >= KIB {
-        format!("{} KiB", bytes.div_ceil(KIB))
+        (Text::SizeKib, bytes.div_ceil(KIB))
     } else {
-        format!("{bytes} bytes")
-    }
+        (Text::SizeBytes, bytes)
+    };
+    locale.text_with(unit, &[("count", count.into())])
 }
 
 /// Whether a file `name` of `bytes` may be read under `upload`, or why not.
@@ -140,6 +159,11 @@ pub fn upload_field(
     refusal: Signal<Option<String>>,
 ) -> AnyView {
     let picked = RwSignal::new(Picked::None);
+    // The page's locale is read once here: the file is read in a handler
+    // and a task, where no page tree is in reach.
+    let locale = locale();
+    let uploading = locale.text(Text::UploadBusy);
+    let read_locale = locale.clone();
     let text_id = format!("{}-text", upload.id);
     let label_for = text_id.clone();
     let state = move || match picked.get() {
@@ -148,7 +172,7 @@ pub fn upload_field(
             view! {
                 <p class="fui-drop-state" role="status">
                     {icon(Glyph::FILE_TEXT, "14")}
-                    {format!("{name} read; check the text below before you send it.")}
+                    {read_locale.text_with(Text::UploadRead, &[("file", name.into())])}
                 </p>
             }
             .into_any(),
@@ -163,7 +187,7 @@ pub fn upload_field(
             .into_any(),
         ),
     };
-    let zone = drop_zone(upload, source, picked);
+    let zone = drop_zone(upload, &locale, source, picked);
     // The text area is the highlighted editor, its grammar read from the
     // text: a pasted or read OPT shows as XML, a JSON document as JSON.
     let editor = drawn(
@@ -193,7 +217,7 @@ pub fn upload_field(
                         view! {
                             <p class="fui-spinner" role="status">
                                 <span class="fui-spinner-ring" aria-hidden="true"></span>
-                                "Uploading…"
+                                {uploading.clone()}
                             </p>
                         }
                     })
@@ -217,8 +241,23 @@ pub fn upload_field(
 /// Returns the drop zone of `upload`: the words, the chooser and the rule,
 /// reading a file dropped or chosen into `source` and saying so in
 /// `picked`.
-fn drop_zone(upload: Upload, source: RwSignal<String>, picked: RwSignal<Picked>) -> impl IntoView {
+fn drop_zone(
+    upload: Upload,
+    locale: &Locale,
+    source: RwSignal<String>,
+    picked: RwSignal<Picked>,
+) -> impl IntoView {
     let over = RwSignal::new(false);
+    let release = locale.text(Text::UploadDropOver);
+    let invite = locale.text(Text::UploadDropInvite);
+    let rule = locale.text_with(
+        Text::UploadRule,
+        &[
+            ("kinds", upload.accept.join(", ").into()),
+            ("limit", size_in(locale, upload.max_bytes).into()),
+        ],
+    );
+    let (on_drop, on_choose) = (locale.clone(), locale.clone());
     let file_id = format!("{}-file", upload.id);
     let drop_id = format!("{}-drop", upload.id);
     let accept = upload.accept.join(",");
@@ -245,18 +284,12 @@ fn drop_zone(upload: Upload, source: RwSignal<String>, picked: RwSignal<Picked>)
                 on:drop=move |event| {
                     event.prevent_default();
                     over.set(false);
-                    dropped(upload, &event, source, picked);
+                    dropped(upload, &on_drop, &event, source, picked);
                 }
             >
                 <span class="fui-drop-glyph">{icon(Glyph::UPLOAD, "20")}</span>
                 <p class="fui-drop-words">
-                    {move || {
-                        if over.get() {
-                            "Drop to read the file"
-                        } else {
-                            "Drop a file here, or"
-                        }
-                    }}
+                    {move || if over.get() { release.clone() } else { invite.clone() }}
                 </p>
                 <label for=input_for class="fui-button fui-button-secondary fui-button-small">
                     {icon(Glyph::FOLDER_OPEN, "14")}
@@ -267,15 +300,9 @@ fn drop_zone(upload: Upload, source: RwSignal<String>, picked: RwSignal<Picked>)
                     type="file"
                     class="fui-sr-only"
                     accept=accept
-                    on:change=move |event| chosen(upload, &event, source, picked)
+                    on:change=move |event| chosen(upload, &on_choose, &event, source, picked)
                 />
-                <p class="fui-small">
-                    {format!(
-                        "{} files, up to {}.",
-                        upload.accept.join(", "),
-                        size(upload.max_bytes),
-                    )}
-                </p>
+                <p class="fui-small">{rule}</p>
             </div>
     }
 }
@@ -283,6 +310,7 @@ fn drop_zone(upload: Upload, source: RwSignal<String>, picked: RwSignal<Picked>)
 /// Reads the file `event` chose into `source`, or refuses it.
 fn chosen(
     upload: Upload,
+    locale: &Locale,
     event: &leptos::ev::Event,
     source: RwSignal<String>,
     picked: RwSignal<Picked>,
@@ -296,21 +324,23 @@ fn chosen(
             .and_then(|input| input.files())
             .and_then(|files| files.get(0));
         if let Some(file) = file {
-            read(upload, &file, source, picked);
+            read(upload, locale, &file, source, picked);
         }
     }
     #[cfg(not(target_arch = "wasm32"))]
     let _: (
         Upload,
+        &Locale,
         &leptos::ev::Event,
         RwSignal<String>,
         RwSignal<Picked>,
-    ) = (upload, event, source, picked);
+    ) = (upload, locale, event, source, picked);
 }
 
 /// Reads the file `event` dropped into `source`, or refuses it.
 fn dropped(
     upload: Upload,
+    locale: &Locale,
     event: &leptos::ev::DragEvent,
     source: RwSignal<String>,
     picked: RwSignal<Picked>,
@@ -322,29 +352,39 @@ fn dropped(
             .and_then(|transfer| transfer.files())
             .and_then(|files| files.get(0));
         if let Some(file) = file {
-            read(upload, &file, source, picked);
+            read(upload, locale, &file, source, picked);
         }
     }
     #[cfg(not(target_arch = "wasm32"))]
     let _: (
         Upload,
+        &Locale,
         &leptos::ev::DragEvent,
         RwSignal<String>,
         RwSignal<Picked>,
-    ) = (upload, event, source, picked);
+    ) = (upload, locale, event, source, picked);
 }
 
 /// Reads `file` into `source` when [`admit`] lets it, and says so in
 /// `picked`.
 #[cfg(target_arch = "wasm32")]
-fn read(upload: Upload, file: &web_sys::File, source: RwSignal<String>, picked: RwSignal<Picked>) {
+fn read(
+    upload: Upload,
+    locale: &Locale,
+    file: &web_sys::File,
+    source: RwSignal<String>,
+    picked: RwSignal<Picked>,
+) {
     let name = file.name();
     if let Err(refused) = admit(&upload, &name, whole_bytes(file.size())) {
-        picked.set(Picked::Refused(
-            refused.sentence(upload.accept, upload.max_bytes),
-        ));
+        picked.set(Picked::Refused(refused.sentence_in(
+            locale,
+            upload.accept,
+            upload.max_bytes,
+        )));
         return;
     }
+    let unreadable = locale.text_with(Text::UploadUnreadable, &[("file", name.clone().into())]);
     let promise = file.text();
     wasm_bindgen_futures::spawn_local(async move {
         let read = wasm_bindgen_futures::JsFuture::from(promise)
@@ -356,9 +396,7 @@ fn read(upload: Upload, file: &web_sys::File, source: RwSignal<String>, picked: 
                 source.set(text);
                 picked.set(Picked::Read(name));
             }
-            None => picked.set(Picked::Refused(format!(
-                "{name} was not read: the browser could not read it."
-            ))),
+            None => picked.set(Picked::Refused(unreadable)),
         }
     });
 }

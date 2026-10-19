@@ -8,8 +8,10 @@
 //! document links the library's stylesheet and the brand's theme file, which
 //! the server serves from the library's constants, and carries the theme the
 //! request's cookie names as `data-theme` and the density as
-//! `data-density`, so a page arrives in its theme before any script runs.
+//! `data-density`, so a page arrives in its theme before any script runs,
+//! and its locale as `lang`, the locale every component draws its words in.
 
+use ferrohealth_ui::i18n::{Locale, provide_locale};
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::style::Brand;
 use ferrohealth_ui::theme::{Density, Theme};
@@ -28,6 +30,8 @@ use leptos_meta::{Stylesheet, Title, provide_meta_context};
 use leptos_router::components::{Outlet, ParentRoute, Route, Router, Routes};
 use leptos_router::hooks::{use_location, use_params_map};
 use leptos_router::path;
+
+use crate::locale::gallery_locale;
 
 /// The gallery's name, as its footer and titles name it.
 pub const PRODUCT: &str = "FerroHEALTH UI Gallery";
@@ -49,6 +53,12 @@ pub const DENSITY_ROUTE: &str = "/density";
 
 /// The name of the cookie the density choice is kept in.
 pub const DENSITY_COOKIE: &str = "gallery-density";
+
+/// The path of the route a language choice posts to.
+pub const LOCALE_ROUTE: &str = "/locale";
+
+/// The name of the cookie the language choice is kept in.
+pub const LOCALE_COOKIE: &str = "gallery-locale";
 
 /// The id of the navigation, which the drawer button opens.
 const SIDEBAR_ID: &str = "sidebar";
@@ -86,6 +96,12 @@ pub fn density_of(cookies: &str) -> Density {
         .unwrap_or_default()
 }
 
+/// The locale the `Cookie` header value `cookies` names, English for none.
+#[must_use]
+pub fn locale_of(cookies: &str) -> Locale {
+    gallery_locale(cookie(cookies, LOCALE_COOKIE).unwrap_or_default())
+}
+
 /// The value of the cookie `name` in the `Cookie` header value `cookies`.
 fn cookie<'a>(cookies: &'a str, name: &str) -> Option<&'a str> {
     // NOTE: RFC 6265 §5.4: cookies arrive as `name=value` pairs joined by `; `, and
@@ -112,9 +128,10 @@ pub fn document(options: LeptosOptions) -> impl IntoView {
         .to_owned();
     let theme = theme_of(&cookies).key();
     let density = density_of(&cookies).key();
+    let lang = locale_of(&cookies).tag();
     view! {
         <!DOCTYPE html>
-        <html lang="en" data-theme=theme data-density=density>
+        <html lang=lang data-theme=theme data-density=density>
             <head>
                 <meta charset="utf-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -157,6 +174,18 @@ fn density_requested() -> Density {
     }
 }
 
+/// The tag of the locale the request names, decided as the theme is.
+fn locale_requested() -> String {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        locale_of(&request_cookies()).tag()
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        Locale::english().tag()
+    }
+}
+
 /// The request's `Cookie` header, empty for none.
 #[cfg(not(target_arch = "wasm32"))]
 fn request_cookies() -> String {
@@ -189,6 +218,8 @@ pub fn App() -> impl IntoView {
     provide_context(InForce(theme));
     let density = *SharedValue::new_str(density_requested);
     provide_context(DensityInForce(density));
+    let tag = SharedValue::new_str(locale_requested);
+    provide_locale(gallery_locale(&tag));
     let toasts = provide_toasts();
     view! {
         <Title text=PRODUCT />
@@ -429,7 +460,7 @@ fn brand_shell(brand: Brand, back: String) -> AnyView {
     let switch = brand_switch(brand, &back).into_any();
     let end = view! {
         <span class="fui-wide-only">{switch}</span>
-        <span class="fui-roomy-only">{pill(Tone::Ok, "Library v0.1.6")}</span>
+        <span class="fui-roomy-only">{pill(Tone::Ok, "Library v0.1.7")}</span>
         {operator_menu(
             OperatorMenu {
                 id: "operator-menu",
