@@ -11,6 +11,12 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- The footer draws the product's version as data in every locale, never
+  through the catalog, and its About link keeps its words on one line
+  (FerroHEALTH/FerroUI#116).
+
 ## [0.1.7] - 2026-10-19
 
 The family is ready for more languages, with English the one that ships:
