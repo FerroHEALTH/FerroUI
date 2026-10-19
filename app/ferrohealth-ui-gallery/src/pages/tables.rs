@@ -5,9 +5,9 @@
 //!
 //! It shows the data table, stacked as cards on a phone, with its page, size
 //! and sort in the URL, the same rows paged in the page's own state, a result
-//! set whose headers arrive at run time, the pagers of a listing with no
-//! stated total, the loading and empty tables, and a small table that fits a
-//! phone unstacked.
+//! set whose headers arrive at run time, a result whose pages are bodies of
+//! their own, the pagers of a listing with no stated total, the loading and
+//! empty tables, and a small table that fits a phone unstacked.
 
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::table::model::{Noun, OpenWindow, Paging, Sort, Window, href};
@@ -21,6 +21,7 @@ use ferrohealth_ui::view::change::{Change, change_table};
 use ferrohealth_ui::view::empty::empty_quiet;
 use ferrohealth_ui::view::status::badge;
 use ferrohealth_ui::view::surface::{card, page_header, stack, titled_panel};
+use ferrohealth_ui::view::time::timestamp;
 use ferrohealth_ui::widget::pager::{session_open_pager, session_pager};
 use leptos::prelude::*;
 use leptos_router::hooks::{use_location, use_query_map};
@@ -35,20 +36,22 @@ const FILES: Noun = Noun::new("mapping file", "mapping files");
 const COUNTED: u32 = 165;
 
 /// The columns of the gallery's table.
-const COLUMNS: [Column; 5] = [
+const COLUMNS: [Column; 6] = [
     Column::text("name", "File").sortable(),
     Column::text("kind", "Kind"),
     Column::text("lines", "Lines").numeric().sortable(),
+    Column::text("changed", "Changed"),
     Column::text("state", "State"),
     Column::text("actions", "Actions"),
 ];
 
 /// The same columns, none sorting: a table that does not sort draws no
 /// sort links.
-const PLAIN: [Column; 5] = [
+const PLAIN: [Column; 6] = [
     Column::text("name", "File"),
     Column::text("kind", "Kind"),
     Column::text("lines", "Lines").numeric(),
+    Column::text("changed", "Changed"),
     Column::text("state", "State"),
     Column::text("actions", "Actions"),
 ];
@@ -76,6 +79,7 @@ fn row(row: &Row) -> AnyView {
             </th>
             <td data-label="Kind">{row.kind}</td>
             <td data-label="Lines" class=NUM>{row.lines.to_string()}</td>
+            <td data-label="Changed">{timestamp(&row.changed)}</td>
             <td data-label="State">{badge(tone, row.state)}</td>
             <td data-label="Actions" class=ACTIONS>
                 <button type="button" class=Variant::Secondary.small()>
@@ -211,6 +215,49 @@ fn result_set() -> AnyView {
             sort: None,
             sort_href: &|_| String::new(),
             body: Body::Rows(body),
+        }),
+    )
+    .into_any()
+}
+
+/// The columns of a result that arrives in pages.
+const PAGED: [Column; 3] = [
+    Column::text("uid", "Composition").mono(),
+    Column::text("committed", "Committed"),
+    Column::text("rate", "Rate").numeric(),
+];
+
+/// A result whose rows arrive a page at a time, each page its own body,
+/// stacked on a phone like any other rows.
+fn result_pages() -> AnyView {
+    let bodies = (1..=2_u32)
+        .map(|page| {
+            let rows = (1..=2_u32)
+                .map(|row| {
+                    let index = (page - 1) * 2 + row;
+                    view! {
+                        <tr>
+                            <td><code>{format!("{index:08}-synthetic::node-b::1")}</code></td>
+                            <td data-label="Committed">
+                                {timestamp(&format!("2026-10-1{index}T08:{index:02}:00.250+00:00"))}
+                            </td>
+                            <td data-label="Rate" class=NUM>{(60 + index * 4).to_string()}</td>
+                        </tr>
+                    }
+                })
+                .collect_view();
+            view! { <tbody data-page=page.to_string()>{rows}</tbody> }
+        })
+        .collect_view()
+        .into_any();
+    card(
+        "A result in pages",
+        data_table(DataTable {
+            caption: "The synthetic query's rows, a body per page",
+            columns: &PAGED,
+            sort: None,
+            sort_href: &|_| String::new(),
+            body: Body::Bodies(bodies),
         }),
     )
     .into_any()
@@ -423,6 +470,7 @@ pub fn TablesPage() -> impl IntoView {
         url_table(),
         session_table(),
         result_set(),
+        result_pages(),
         open_listing(),
         states(),
         changes(),
@@ -438,9 +486,10 @@ pub fn TablesPage() -> impl IntoView {
             {sections.2}
             {sections.3}
             {sections.4}
-            {sections.6}
-            {sections.7}
             {sections.5}
+            {sections.7}
+            {sections.8}
+            {sections.6}
         })}
     }
 }

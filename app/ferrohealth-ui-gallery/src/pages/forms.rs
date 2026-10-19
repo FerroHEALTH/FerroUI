@@ -282,8 +282,8 @@ fn choosing() -> AnyView {
     .into_any()
 }
 
-/// Related fields under a legend, in pairs, and a choice drawn as
-/// segments.
+/// Related fields under a legend, in pairs, a disabled select and search
+/// field inside the well, and a choice drawn as segments.
 fn grouped() -> AnyView {
     let pair = columns(view! {
         {field("member-name", "Member", None, view! { <input id="member-name" type="text" class=INPUT value="synthetic-node-a" /> })}
@@ -296,6 +296,19 @@ fn grouped() -> AnyView {
                 <fieldset class="fui-fieldset fui-well">
                     <legend>"A federation member"</legend>
                     {pair}
+                    {field_flow(view! {
+                        {field("member-system", "Code system", None, view! {
+                            <select id="member-system" name="system" class=SELECT disabled=true>
+                                <option value="">"Choose a member first"</option>
+                            </select>
+                        })}
+                        {field("member-code", "Find a code in that code system", None, view! {
+                            <input id="member-code" name="code" type="search" class=INPUT disabled=true placeholder="Choose a code system" />
+                        })}
+                        <button type="button" class=Variant::Secondary.class() disabled=true>
+                            "Search"
+                        </button>
+                    })}
                 </fieldset>
                 {choice_reveal(
                     "secret",

@@ -515,3 +515,72 @@ fn a_start_grid_writes_the_start_class_and_the_grid_does_not() {
     let plain = html(|| ferrohealth_ui::view::surface::grid(view! { <p>"a"</p> }).into_any());
     assert!(plain.contains(r#"class="fui-grid""#), "{plain}");
 }
+
+#[test]
+fn a_timestamp_is_a_time_element_with_the_reading_form_and_the_raw_title() {
+    let raw = "2026-10-18T23:18:37.039437+00:00";
+    let drawn = html(|| ferrohealth_ui::view::time::timestamp(raw).into_any());
+    for expected in [
+        "<time datetime=",
+        r#"class="fui-time""#,
+        r#"datetime="2026-10-18T23:18:37.039Z""#,
+        r#"title="2026-10-18T23:18:37.039437+00:00""#,
+        ">2026-10-18 23:18:37 UTC</time>",
+    ] {
+        assert!(drawn.contains(expected), "{expected}: {drawn}");
+    }
+}
+
+#[test]
+fn a_timestamp_that_is_no_date_time_is_drawn_verbatim_and_escaped() {
+    let drawn = html(|| ferrohealth_ui::view::time::timestamp("<not a date>").into_any());
+    assert!(drawn.contains(r#"<span class="fui-time">"#), "{drawn}");
+    assert!(drawn.contains("&lt;not a date&gt;"), "{drawn}");
+    assert!(!drawn.contains("<time"), "{drawn}");
+    assert!(!drawn.contains("datetime="), "{drawn}");
+}
+
+#[test]
+fn a_stat_label_carries_its_whole_text_as_its_title() {
+    let label = "Code systems with a long synthetic name";
+    let drawn = html(|| {
+        stat_card(Stat {
+            glyph: Glyph::USERS,
+            value: String::from("12"),
+            label: label.into(),
+            href: None,
+        })
+        .into_any()
+    });
+    assert!(
+        drawn.contains(&format!(r#"<span title="{label}">{label}</span>"#)),
+        "{drawn}"
+    );
+}
+
+#[test]
+fn a_table_of_several_bodies_writes_them_as_they_are_under_its_header() {
+    let columns = [Column::text("uid", "Uid"), Column::text("rate", "Rate")];
+    let table = html(|| {
+        data_table(DataTable {
+            caption: "Pages",
+            columns: &columns,
+            sort: None,
+            sort_href: &|_| String::new(),
+            body: Body::Bodies(
+                view! {
+                    <tbody data-page="1"><tr><td>"a"</td><td data-label="Rate">"1"</td></tr></tbody>
+                    <tbody data-page="2"><tr><td>"b"</td><td data-label="Rate">"2"</td></tr></tbody>
+                }
+                .into_any(),
+            ),
+        })
+        .into_any()
+    });
+    assert_eq!(table.matches("<tbody").count(), 2, "{table}");
+    assert!(
+        table.contains(r#"</thead><tbody data-page="1">"#),
+        "{table}"
+    );
+    assert!(table.contains("fui-table-stack"), "{table}");
+}

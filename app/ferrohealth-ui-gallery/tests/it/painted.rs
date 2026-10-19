@@ -174,3 +174,52 @@ fn a_computed_colour_reads_and_composites() {
     assert!((ratio(Rgba(0.0, 0.0, 0.0, 1.0), white) - 21.0).abs() < 1e-9);
     assert!(Rgba::parse("transparent").is_none());
 }
+
+/// The disabled controls inside the forms page's well.
+const DISABLED: [&str; 2] = ["#member-system", "#member-code"];
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_disabled_control_in_a_well_keeps_a_visible_edge_in_every_brand_light_and_dark()
+-> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        let mut failures = Vec::new();
+        for theme in ["light", "dark"] {
+            browser.goto(&gallery.url("/")).await?;
+            let mut cookie = Cookie::new("gallery-theme", theme);
+            cookie.set_path("/");
+            browser.driver().add_cookie(cookie).await?;
+            for brand in Brand::ALL {
+                browser
+                    .goto(&gallery.url(&format!("/{}/forms", brand.key())))
+                    .await?;
+                browser.element(thirtyfour::By::Css("#member-code")).await?;
+                let page = computed(browser, "body", "background-color").await?;
+                let card = computed(browser, ".fui-card", "background-color")
+                    .await?
+                    .over(page);
+                let well = computed(browser, ".fui-fieldset.fui-well", "background-color")
+                    .await?
+                    .over(card);
+                for control in DISABLED {
+                    let edge = computed(browser, control, "border-top-color").await?;
+                    let measured = ratio(edge.over(well), well);
+                    // The field must read as a field on the well's ground, though
+                    // WCAG 2.2 SC 1.4.11 exempts a disabled control.
+                    if measured < 3.0 {
+                        failures.push(format!(
+                            "{} {theme}: {control} edge on the well paints {measured:.2}:1",
+                            brand.product()
+                        ));
+                    }
+                }
+            }
+        }
+        assert!(failures.is_empty(), "{}", failures.join("\n"));
+        browser.console_clean("the disabled controls").await
+    })
+    .await
+}

@@ -237,14 +237,19 @@ fn stat_frame(href: Option<String>, inner: AnyView) -> AnyView {
 /// Returns a stat card: the glyph in a square on the accent's tint, the
 /// value large in tabular figures, the label under it, the whole card a
 /// link when the stat leads to a page.
+///
+/// Below 30 rem the card is a compact tile, the glyph, the value and the
+/// label on one line, the label cut with an ellipsis and named whole in its
+/// `title`.
 #[must_use]
 pub fn stat_card(stat: Stat) -> impl IntoView {
+    let title = stat.label.to_string();
     let inner = view! {
         <span class="fui-stat-glyph">{icon(stat.glyph, "20")}</span>
         <div class="fui-stat-text">
             <div class="fui-stat-value">{stat.value}</div>
             <div class="fui-stat-label">
-                <span>{stat.label}</span>
+                <span title=title>{stat.label}</span>
             </div>
         </div>
     }
@@ -256,12 +261,13 @@ pub fn stat_card(stat: Stat) -> impl IntoView {
 /// badge that says more, such as "2 failing") after the label.
 #[must_use]
 pub fn stat_card_marked(stat: Stat, mark: impl IntoView + 'static) -> impl IntoView {
+    let title = stat.label.to_string();
     let inner = view! {
         <span class="fui-stat-glyph">{icon(stat.glyph, "20")}</span>
         <div class="fui-stat-text">
             <div class="fui-stat-value">{stat.value}</div>
             <div class="fui-stat-label">
-                <span>{stat.label}</span>
+                <span title=title>{stat.label}</span>
                 {mark}
             </div>
         </div>

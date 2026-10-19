@@ -147,3 +147,56 @@ fn a_fieldset_well_keeps_its_frame_after_the_fieldset_reset() {
         .expect("the fieldset well");
     assert!(well > reset, "the well rule must follow the reset to win");
 }
+
+#[test]
+fn a_disabled_control_keeps_the_control_edge_on_a_sunken_ground() {
+    // WCAG 2.2 SC 1.4.11 exempts a disabled control, but the field must still read as one on a
+    // well, whose ground is the disabled control's own.
+    let rule = "  :is(.fui-input, .fui-select, .fui-textarea):disabled {\n    border-color: var(--edge-control);";
+    assert!(
+        STYLESHEET.contains(rule),
+        "a disabled control loses its edge"
+    );
+    let hover = "  :is(.fui-input, .fui-select, .fui-textarea):disabled:hover {\n    border-color: var(--edge-control);";
+    assert!(
+        STYLESHEET.contains(hover),
+        "a disabled control loses its edge under the pointer"
+    );
+}
+
+#[test]
+fn a_timestamp_never_breaks_and_the_compact_stat_cuts_its_label() {
+    let time = "  .fui-time {\n    font-variant-numeric: tabular-nums;\n    overflow-wrap: normal;\n    white-space: nowrap;";
+    assert!(STYLESHEET.contains(time), "a timestamp can break");
+    let compact = STYLESHEET
+        .find("  @media (width < 30rem) {\n    .fui-stat {")
+        .expect("the compact stat tile");
+    let label = STYLESHEET
+        .get(compact..)
+        .and_then(|rest| rest.find("text-overflow: ellipsis;"))
+        .expect("the compact label's ellipsis");
+    assert!(label < 1200, "the ellipsis belongs to the compact tile");
+}
+
+#[test]
+fn a_table_of_several_bodies_keeps_the_edges_and_spacing_between_them() {
+    assert!(
+        STYLESHEET.contains("  .fui-table tbody:last-of-type tr:last-child > * {"),
+        "a body's last row loses its edge before the next body"
+    );
+    assert!(
+        STYLESHEET.contains(
+            "    .fui-table-stack .fui-table tbody tr + tr,\n    .fui-table-stack .fui-table tbody + tbody {"
+        ),
+        "the stacked bodies touch"
+    );
+}
+
+#[test]
+fn a_field_and_its_button_take_the_whole_row_below_30rem() {
+    let rule = "  @media (width < 30rem) {\n    .fui-field-flow > :is(.fui-field, button, .fui-button) {\n      flex: 1 1 100%;";
+    assert!(
+        STYLESHEET.contains(rule),
+        "a field flow keeps its row on a phone"
+    );
+}

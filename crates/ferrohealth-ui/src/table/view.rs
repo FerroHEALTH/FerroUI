@@ -102,6 +102,10 @@ pub enum Body {
     Loading(u8),
     /// The empty state, when there is no row.
     Empty(AnyView),
+    /// Several bodies, each a `<tbody>` of `<tr>` rows the console draws,
+    /// such as one per page of an answer, written as they are under the
+    /// header and stacked below 40rem like any other rows.
+    Bodies(AnyView),
 }
 
 /// What a data table shows.
@@ -193,7 +197,8 @@ fn drawn(table: DataTable<'_>, stacked: bool) -> impl IntoView + use<> {
         .collect_view();
     let width = u8::try_from(table.columns.len()).unwrap_or(u8::MAX);
     let (body, busy) = match table.body {
-        Body::Rows(rows) => (rows, false),
+        Body::Bodies(bodies) => (bodies, false),
+        Body::Rows(rows) => (view! { <tbody>{rows}</tbody> }.into_any(), false),
         Body::Loading(count) => {
             let rows = (0..count)
                 .map(|_| {
@@ -202,15 +207,16 @@ fn drawn(table: DataTable<'_>, stacked: bool) -> impl IntoView + use<> {
                         .collect_view();
                     view! { <tr>{cells}</tr> }
                 })
-                .collect_view()
-                .into_any();
-            (rows, true)
+                .collect_view();
+            (view! { <tbody>{rows}</tbody> }.into_any(), true)
         }
         Body::Empty(empty) => (
             view! {
-                <tr>
-                    <td colspan=width.to_string()>{empty}</td>
-                </tr>
+                <tbody>
+                    <tr>
+                        <td colspan=width.to_string()>{empty}</td>
+                    </tr>
+                </tbody>
             }
             .into_any(),
             false,
@@ -230,7 +236,7 @@ fn drawn(table: DataTable<'_>, stacked: bool) -> impl IntoView + use<> {
                 <thead>
                     <tr>{headers}</tr>
                 </thead>
-                <tbody>{body}</tbody>
+                {body}
             </table>
         </div>
     }
