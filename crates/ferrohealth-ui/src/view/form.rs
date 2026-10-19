@@ -99,14 +99,20 @@ pub const ERROR: &str = "fui-help fui-error";
 /// use ferrohealth_ui::view::form::{ERROR, Field, INPUT, described_by, error_id};
 /// use leptos::prelude::*;
 ///
-/// let id = String::from("member-base");
-/// let input = view! {
-///     <input id=id.clone() name="base" class=INPUT aria-describedby=described_by(&id, true, true) />
-/// };
-/// let field = Field::new(id.clone(), format!("Base URL of {}", "node-a"))
-///     .help("Where the gateway reaches the member.")
-///     .after(view! { <p id=error_id(&id) class=ERROR aria-live="polite"></p> })
-///     .view(input);
+/// /// The base URL field of the member `member`.
+/// fn base_url(member: &str) -> AnyView {
+///     let id = String::from("member-base");
+///     let input = view! {
+///         <input id=id.clone() name="base" class=INPUT aria-describedby=described_by(&id, true, true) />
+///     };
+///     Field::new(id.clone(), format!("Base URL of {member}"))
+///         .help("Where the gateway reaches the member.")
+///         .after(view! { <p id=error_id(&id) class=ERROR aria-live="polite"></p> })
+///         .view(input)
+/// }
+///
+/// let html = Owner::new().with(|| base_url("node-a").to_html());
+/// assert!(html.contains("Base URL of node-a"));
 /// ```
 #[derive(Debug)]
 #[must_use]
