@@ -697,12 +697,14 @@
     justify-content: center;
   }
 
+  /* From 48rem the search gives up its width first: it shrinks to 11rem
+     before the end does, and the end then shortens the operator's name. */
   @media (width >= 48rem) {
     .fui-topbar-middle {
       order: 0;
       width: auto;
-      min-width: 0;
-      flex: 1 1 auto;
+      min-width: 11rem;
+      flex: 1 1000 auto;
     }
 
     .fui-topbar-middle + .fui-topbar-end {
@@ -736,6 +738,30 @@
 
   .fui-topbar-end > * {
     flex-shrink: 0;
+  }
+
+  /* The operator's button is the one part of the end that gives way: its
+     name ends in an ellipsis, and the button's title carries all of it. */
+  .fui-topbar-end > .fui-operator {
+    min-width: 0;
+    flex-shrink: 1;
+  }
+
+  /* From 48rem the end takes its own width, so the search, not the end, is
+     what gives way; on a phone the search has a row of its own and the end
+     shares the lockup's row. */
+  @media (width >= 48rem) {
+    .fui-topbar-end {
+      flex: 0 1 auto;
+    }
+  }
+
+  .fui-operator-name {
+    min-width: 0;
+    max-width: 16rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   /* A status pill in the end keeps its full words: a pill cut to its dot
@@ -1694,10 +1720,17 @@
   /* A stat card, as FerroEHR draws its tiles: the glyph centred in a
      2.5 rem square on the accent's tint, the value large in tabular
      figures, the label under it, muted, cut short with an ellipsis. */
+  /* The glyph and the value keep to the card's top, the glyph centred on
+     the value and label of a card with no mark, so a mark under the label
+     (a pill, a badge) moves neither and a row's figures stay in line. */
   .fui-stat {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 0.75rem;
+  }
+
+  .fui-stat > .fui-stat-glyph {
+    margin-block-start: calc((var(--leading-display) + var(--leading-body) - 2.5rem) / 2);
   }
 
   .fui-stat-glyph {
@@ -1935,6 +1968,23 @@
     border-collapse: collapse;
   }
 
+  /* One line that ends in an ellipsis when its box is narrower than it,
+     such as a canonical under a name; the title carries all of it. */
+  .fui-truncate {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* In a table the line keeps to 28rem, since a table cell grows to its
+     content and would otherwise never cut it. */
+  .fui-table .fui-truncate {
+    max-width: 28rem;
+  }
+
   /* The caption names the table for assistive technology; the card's title
      or the page names it for the eye. */
   .fui-table caption {
@@ -2003,6 +2053,19 @@
   @media (width < 40rem) {
     .fui-table-stack {
       overflow: visible;
+    }
+
+    /* The table takes its container's width, never its widest cell's: a
+       table box sizes itself to its content's min-content, so one cell that
+       keeps its line would carry every card past a phone's edge. */
+    .fui-table-stack .fui-table {
+      display: block;
+      width: 100%;
+    }
+
+    .fui-table-stack .fui-table .fui-truncate {
+      max-width: 100%;
+      font-weight: 400;
     }
 
     .fui-table-stack .fui-table thead {
@@ -2368,6 +2431,8 @@
      carries. */
   .fui-field {
     display: grid;
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr);
     align-content: start;
     gap: var(--space-tight);
   }
@@ -2416,10 +2481,13 @@
     line-height: var(--leading-small);
   }
 
+  /* A control keeps to its field: a date and time input's own minimum,
+     which differs from one platform's fonts to another's, never widens it. */
   .fui-input,
   .fui-select,
   .fui-textarea {
     width: 100%;
+    min-width: 0;
     border: 1px solid var(--edge-control);
     border-radius: var(--radius-control);
     background: var(--surface-raised);
@@ -2595,7 +2663,9 @@
 
   /* A group's heading outranks the labels of its fields: a step up in size
      and weight, and a rule under it. */
-  .fui-fieldset > legend {
+  /* A visually hidden legend keeps the hidden box: the heading's width and
+     padding would carry it past the page's edge. */
+  .fui-fieldset > legend:not(.fui-sr-only) {
     width: 100%;
     margin-block-end: var(--space-default);
     border-bottom: 1px solid var(--edge);

@@ -638,6 +638,202 @@ async fn the_top_bar_status_shows_its_full_words_or_nothing_at_every_width()
     .await
 }
 
+#[tokio::test(flavor = "multi_thread")]
+async fn the_top_bar_never_covers_the_search_at_any_width() -> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        for width in [390, 480, 640, 700, 768, 900, 1024, 1100, 1280, 1440, 1920] {
+            window(browser, width, 900).await?;
+            browser.goto(&gallery.url("/ferroterm/forms")).await?;
+            browser.element(By::Css("main h1")).await?;
+            let (covered, outside, sideways, name, title, searched, shared): (
+                bool,
+                bool,
+                bool,
+                String,
+                String,
+                f64,
+                bool,
+            ) = measure(
+                browser,
+                r"const search = document.querySelector('.fui-topbar .fui-search').getBoundingClientRect();
+                const overlaps = (a, b) => a.left < b.right - 0.5 && b.left < a.right - 0.5
+                  && a.top < b.bottom - 0.5 && b.top < a.bottom - 0.5;
+                const parts = Array.from(document.querySelectorAll('.fui-topbar-end > *, .fui-topbar-row > .fui-lockup'))
+                  .filter((el) => el.getClientRects().length > 0)
+                  .map((el) => el.getBoundingClientRect());
+                const end = document.querySelector('.fui-topbar-end').getBoundingClientRect();
+                const operator = document.querySelector('.fui-topbar .fui-operator');
+                const label = operator.querySelector('.fui-operator-name');
+                return [parts.some((part) => overlaps(part, search)),
+                  end.right > window.innerWidth + 0.5,
+                  document.documentElement.scrollWidth > document.documentElement.clientWidth + 0.5,
+                  label.textContent, operator.getAttribute('title') || '',
+                  search.width,
+                  Math.abs(document.querySelector('.fui-topbar-row > .fui-lockup').getBoundingClientRect().top - end.top) < 12];",
+            )
+            .await?;
+            assert!(!covered, "the top bar covers the search at {width} px");
+            assert!(!outside, "the top bar's end runs past the window at {width} px");
+            if sideways {
+                let wide: String = measure(
+                    browser,
+                    r"const w = document.documentElement.clientWidth;
+                    return Array.from(document.querySelectorAll('body *'))
+                      .filter((el) => el.getBoundingClientRect().right > w + 0.5)
+                      .slice(0, 8)
+                      .map((el) => el.tagName + '.' + el.className + ' ' + Math.round(el.getBoundingClientRect().right))
+                      .join(' | ');",
+                )
+                .await?;
+                panic!("the page scrolls sideways at {width} px: {wide}");
+            }
+            assert_eq!(
+                title, name,
+                "the operator's button carries the whole name as its title at {width} px"
+            );
+            // NOTE: no specification governs this: our own design; the search
+            // keeps 11rem (176 px) on one row with the end, and its 28rem cap
+            // at 1920 px, where every brand's end leaves room for it.
+            assert!(shared, "the lockup and the end do not share a row at {width} px");
+            if width >= 768 {
+                assert!(searched >= 175.5, "the search is {searched} px wide at {width} px");
+            }
+            if width >= 1920 {
+                assert!(searched >= 447.5, "the search gave way with room at {width} px");
+            }
+        }
+        browser.console_clean("the top bar at every width").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_keyed_combobox_names_its_help_and_keeps_its_own_choice() -> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/ferroterm/forms")).await?;
+        let second = browser
+            .element(By::Css("#clause-2-system[role='combobox']"))
+            .await?;
+        let described = second.attr("aria-describedby").await?.unwrap_or_default();
+        assert_eq!(
+            described, "clause-2-system-help",
+            "the input names its help line"
+        );
+        browser.element(By::Id("clause-2-system-help")).await?;
+        second.click().await?;
+        browser
+            .element(By::Css(
+                "#clause-2-system-list li[role='option']:nth-child(2)",
+            ))
+            .await?
+            .click()
+            .await?;
+        let (first, chosen): (String, String) = measure(
+            browser,
+            r"return [document.querySelector('input[name=clause1]').value,
+              document.querySelector('input[name=clause2]').value];",
+        )
+        .await?;
+        assert!(
+            first.is_empty(),
+            "the first clause keeps its own empty choice, not `{first}`"
+        );
+        assert!(
+            !chosen.is_empty(),
+            "the second clause posts the option chosen in it"
+        );
+        browser.console_clean("the keyed combobox").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn an_editor_inside_a_reloading_transition_keeps_taking_keys() -> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/ferroterm/forms")).await?;
+        let draft = browser.element(By::Id("reloading-draft")).await?;
+        until("the editor may be edited", async || {
+            Ok(draft.attr("readonly").await?.is_none())
+        })
+        .await?;
+        draft.send_keys("x").await?;
+        for round in 1..=2 {
+            browser
+                .element(By::Id("reload-draft"))
+                .await?
+                .click()
+                .await?;
+            // The old editor stays on screen while the read is pending, and a
+            // key typed into it then reached a disposed signal.
+            browser
+                .element(By::Id("reloading-draft"))
+                .await?
+                .send_keys("y")
+                .await?;
+            browser
+                .text("p[@id='reloaded']", &format!("Read {round} times again."))
+                .await?;
+        }
+        let typed: String = measure(
+            browser,
+            "return document.getElementById('reloading-draft').value;",
+        )
+        .await?;
+        assert!(
+            typed.trim_end().ends_with("xyy"),
+            "the editor kept `{typed}`"
+        );
+        browser.console_clean("the reloading editor").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn stat_cards_keep_their_glyphs_and_figures_in_line() -> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        for width in [390, 1440] {
+            window(browser, width, 900).await?;
+            browser.goto(&gallery.url("/ferrofed")).await?;
+            browser.element(By::Css(".fui-stat")).await?;
+            let (glyphs, values, marked): (Vec<f64>, Vec<f64>, usize) = measure(
+                browser,
+                r"const cards = Array.from(document.querySelectorAll('.fui-grid-stats .fui-stat'));
+                const offset = (card, part) => card.querySelector(part).getBoundingClientRect().top
+                  - card.getBoundingClientRect().top;
+                return [cards.map((card) => offset(card, '.fui-stat-glyph')),
+                  cards.map((card) => offset(card, '.fui-stat-value')),
+                  cards.filter((card) => card.querySelector('.fui-stat-label > :nth-child(2)')).length];",
+            )
+            .await?;
+            assert_eq!(marked, 2, "the row holds two marked cards at {width} px");
+            let spread = |offsets: &[f64]| {
+                offsets.iter().copied().fold(f64::MIN, f64::max)
+                    - offsets.iter().copied().fold(f64::MAX, f64::min)
+            };
+            assert!(spread(&glyphs) < 0.5, "the glyphs are out of line at {width} px: {glyphs:?}");
+            assert!(spread(&values) < 0.5, "the figures are out of line at {width} px: {values:?}");
+        }
+        browser.console_clean("the stat cards").await
+    })
+    .await
+}
+
 /// Runs `script` in the page and reads its answer as `T`.
 async fn measure<T: serde::de::DeserializeOwned>(
     browser: &Browser,

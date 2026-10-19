@@ -17,7 +17,9 @@ use ferrohealth_ui::view::notice::{Announce, notice};
 use ferrohealth_ui::view::segmented::choice_reveal;
 use ferrohealth_ui::view::status::badge;
 use ferrohealth_ui::view::surface::{card, grid, grid_start, page_header, stack};
-use ferrohealth_ui::widget::combobox::{ComboOption, Combobox, combobox};
+use ferrohealth_ui::widget::combobox::{
+    ComboOption, Combobox, KeyedCombobox, combobox, keyed_combobox,
+};
 use ferrohealth_ui::widget::editor::{Editor, LineMark, MarkKind, code_editor, line_id};
 use ferrohealth_ui::widget::filter::{keeps, table_filter};
 use ferrohealth_ui::widget::upload::{Upload, upload_field};
@@ -166,6 +168,38 @@ fn inline() -> AnyView {
     .into_any()
 }
 
+/// One combobox per clause, its id made from the clause's place, each
+/// described by its own help line.
+fn clause_pickers(systems: &[(&'static str, &'static str, &'static str)]) -> AnyView {
+    (1..=2)
+        .map(|place| {
+            let id = format!("clause-{place}-system");
+            let help = format!("{id}-help");
+            let offered = systems
+                .iter()
+                .map(|(value, label, url)| ComboOption::new(*value, *label).detail(*url))
+                .collect();
+            view! {
+                <div class="fui-field">
+                    {keyed_combobox(KeyedCombobox {
+                        id: id.clone(),
+                        name: format!("clause{place}"),
+                        label: format!("Clause {place}: code system"),
+                        placeholder: String::from("Choose a code system"),
+                        options: offered,
+                        selected: RwSignal::new(None),
+                        described_by: Some(help.clone()),
+                    })}
+                    <p id=help class="fui-help">
+                        "The system this clause draws its codes from."
+                    </p>
+                </div>
+            }
+        })
+        .collect_view()
+        .into_any()
+}
+
 /// A long list to choose from, filtered as the reader types, beside a group
 /// with its heading, a checkbox on the controls' line, and a disabled save
 /// that names its reason.
@@ -205,6 +239,7 @@ fn choosing() -> AnyView {
         .map(|(value, label, url)| ComboOption::new(*value, *label).detail(*url))
         .collect();
     let chosen = RwSignal::new(Some(String::from("snomed")));
+    let clauses = clause_pickers(&systems);
     let code = view! { <input id="choose-code" name="code" type="text" class=INPUT placeholder="22298006" /> };
     let active = view! { <input id="choose-active" name="active" type="checkbox" checked=true /> };
     card(
@@ -219,6 +254,10 @@ fn choosing() -> AnyView {
                     options,
                     selected: chosen,
                 })}
+                <fieldset class="fui-fieldset">
+                    <legend class="fui-sr-only">"The clauses"</legend>
+                    {clauses}
+                </fieldset>
                 <fieldset class="fui-fieldset">
                     <legend>"The code"</legend>
                     {field_flow(view! {
@@ -493,6 +532,91 @@ fn editor() -> AnyView {
 }
 
 /// The filter over a list of synthetic file names.
+/// Waits most of a second in the browser, so a reload keeps its old view on
+/// screen long enough to type into; on the server it waits not at all.
+#[cfg_attr(
+    not(target_arch = "wasm32"),
+    expect(
+        clippy::unused_async,
+        reason = "the pause awaits only in the browser half; the server half has nothing to wait for"
+    )
+)]
+async fn pause() {
+    #[cfg(target_arch = "wasm32")]
+    {
+        let promise = web_sys::js_sys::Promise::new(&mut |resolve, _reject| {
+            let Some(window) = web_sys::window() else {
+                return;
+            };
+            if window
+                .set_timeout_with_callback_and_timeout_and_arguments_0(&resolve, 800)
+                .is_err()
+            {
+                leptos::logging::warn!("the browser refused the pause's timer");
+            }
+        });
+        if wasm_bindgen_futures::JsFuture::from(promise).await.is_err() {
+            leptos::logging::warn!("the pause's timer failed");
+        }
+    }
+}
+
+/// An editor drawn inside a `Transition` whose resource reloads: the old
+/// editor stays mounted while the new run's owner replaces the old one, so
+/// the editor must hold no reactive value of its own. Its text, marks and
+/// editable state are the page's.
+fn reloading_editor() -> AnyView {
+    let reloads = RwSignal::new(0_u32);
+    let text = RwSignal::new(String::from("{\n  \"synthetic\": true\n}\n"));
+    let marks = Signal::stored(Vec::<LineMark>::new());
+    let ready = RwSignal::new(false);
+    Effect::new(move |_| ready.set(true));
+    // A local resource: the browser's timer is not Send, and the screen
+    // this stands for reads in the browser after hydration.
+    let read = LocalResource::new(move || {
+        let count = reloads.get();
+        async move {
+            pause().await;
+            count
+        }
+    });
+    let drawn = move || {
+        Suspend::new(async move {
+            let count = read.await;
+            view! {
+                <p id="reloaded" class="fui-help">{format!("Read {count} times again.")}</p>
+                {code_editor(
+                    Editor {
+                        id: "reloading-draft",
+                        language: Language::Json,
+                        text: text.into(),
+                        marks,
+                        editable: ready.into(),
+                    },
+                    move |typed| text.set(typed),
+                )}
+            }
+        })
+    };
+    card(
+        "An editor that reloads",
+        view! {
+            <div class="fui-cluster">
+                <button
+                    id="reload-draft"
+                    type="button"
+                    class=Variant::Secondary.class()
+                    on:click=move |_| reloads.update(|count| *count = count.saturating_add(1))
+                >
+                    "Read it again"
+                </button>
+            </div>
+            <Transition fallback=|| ()>{drawn}</Transition>
+        },
+    )
+    .into_any()
+}
+
 fn filter() -> AnyView {
     let words = RwSignal::new(String::new());
     let names: Vec<String> = crate::data::rows()
@@ -560,6 +684,7 @@ pub fn FormsPage() -> impl IntoView {
         {nested_reveal()}
     })
     .into_any();
+    let reloading = reloading_editor();
     let long = long_form();
     view! {
         {super::title("Forms and editor")}
@@ -571,6 +696,7 @@ pub fn FormsPage() -> impl IntoView {
             {unlike}
             {sections.1}
             {sections.2}
+            {reloading}
             {sections.3}
             {long}
         })}

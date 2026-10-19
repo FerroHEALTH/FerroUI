@@ -37,8 +37,8 @@ fn brand_page(page: &str) -> Option<String> {
     crate::app::route_brand().map(|brand| format!("/{}/{page}", brand.key()))
 }
 
-/// The stat cards: three that lead to a page, one with a mark after its
-/// label.
+/// The stat cards: three that lead to a page, two with a mark after their
+/// label, whose glyphs and figures stay in line with the others.
 fn stats() -> AnyView {
     let plain = [
         (Glyph::FILES, "137", "Mapping files", Some("tables")),
@@ -64,9 +64,19 @@ fn stats() -> AnyView {
         },
         badge(Tone::Bad, "1 failing"),
     );
+    let pending = stat_card_marked(
+        Stat {
+            glyph: Glyph::SERVER,
+            value: String::from("2"),
+            label: String::from("Running revision").into(),
+            href: None,
+        },
+        pill(Tone::Warn, "revision 3 pending"),
+    );
     stat_grid(view! {
         {plain}
         {marked}
+        {pending}
     })
     .into_any()
 }
@@ -196,7 +206,7 @@ fn facts() -> AnyView {
         "Definition grid",
         definitions(vec![
             ("Product", "FerroHEALTH UI".into_any()),
-            ("Version", "0.1.2".into_any()),
+            ("Version", "0.1.3".into_any()),
             ("Commit", view! { <code>"0123456789ab"</code> }.into_any()),
             ("Profile", or_none(String::new())),
             ("Licence", "Business Source License 1.1".into_any()),

@@ -107,7 +107,7 @@ pub fn code_editor(editor: Editor, on_input: impl Fn(String) + 'static) -> AnyVi
     drawn(
         Drawn {
             id: id.to_owned(),
-            language: Signal::stored(language),
+            language: Grammar::Fixed(language),
             text,
             marks,
             editable,
@@ -117,13 +117,35 @@ pub fn code_editor(editor: Editor, on_input: impl Fn(String) + 'static) -> AnyVi
     )
 }
 
+/// The grammar an editor highlights its text as: one the caller fixed, or
+/// one that follows a signal the caller owns. Neither allocates a reactive
+/// value, so an editor drawn inside a reloading `Transition` holds nothing
+/// its caller's owner can dispose under it.
+#[derive(Clone, Copy)]
+pub(crate) enum Grammar {
+    /// A grammar the caller fixed.
+    Fixed(Language),
+    /// A grammar that follows the caller's signal.
+    Following(Signal<Language>),
+}
+
+impl Grammar {
+    /// The grammar now, tracked when it follows a signal.
+    fn get(self) -> Language {
+        match self {
+            Self::Fixed(language) => language,
+            Self::Following(language) => language.get(),
+        }
+    }
+}
+
 /// What [`drawn`] draws: an [`Editor`] whose id is known at run time, whose
 /// grammar may follow the text, and whose text area may say what goes in it.
 pub(crate) struct Drawn {
     /// The text area's id and name.
     pub(crate) id: String,
     /// The grammar the text is highlighted as.
-    pub(crate) language: Signal<Language>,
+    pub(crate) language: Grammar,
     /// The text, which the editor reads and never writes.
     pub(crate) text: Signal<String>,
     /// The lines a diagnostic names.
