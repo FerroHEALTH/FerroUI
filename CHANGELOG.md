@@ -11,6 +11,64 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-10-19
+
+The shared form fields every console needs so no field is built by hand: a
+label made at run time, a visually hidden label for a list row, a line
+after the help for a field's refusal, an action with its error line, a
+field that switches between a picker and a typed value, and a checkbox
+whose help follows the form's help switch. The additions are a type, four
+functions, a class constant and a widget module; `field` and `keyed_field`
+take their label as a `&'static str` or a `String` alike, so no call site
+changes.
+
+### Added
+
+- `view::form::Field`: a field drawn piece by piece, its label above the
+  control or visually hidden (`label_hidden`, for a row of a list of values
+  with its remove button), its help, and a trailing slot after the help
+  (`after`) for the line a refusal shows in. `field` and `keyed_field` draw
+  through it (FerroHEALTH/FerroUI#104, FerroHEALTH/FerroUI#105,
+  FerroHEALTH/FerroUI#106).
+- `view::form::error_id`, `described_by` and `ERROR`: the id of a field's
+  error line, the `aria-describedby` value that names the help and then the
+  error line, and the error line's classes, the help's size in the
+  refusal's colour (FerroHEALTH/FerroUI#106).
+- `view::form::action_field`: a button and the line its refusal shows in,
+  one field with no label, such as the button that adds a row to a list
+  (FerroHEALTH/FerroUI#108).
+- `widget::pick_or_type`: one value picked from a select or a combobox, or
+  typed in the input behind its last option, each control with its own
+  label hidden and shown with it, the help after both
+  (FerroHEALTH/FerroUI#107).
+- `widget::help::explained_check_field`: the checkbox row of
+  `check_field` with its help line under the form's help switch, hidden
+  from sight and still read while the switch is off
+  (FerroHEALTH/FerroUI#110).
+
+### Changed
+
+- `view::form::field` and `keyed_field` take their label as anything that
+  converts into `Oco<'static, str>`: a `&'static str` as before, or a
+  `String` made at run time (FerroHEALTH/FerroUI#104).
+- The render tests read a start tag's attributes by name, so none depends
+  on the order Leptos writes them in, and a sortable header's `aria-sort` is
+  tested beside its scope, class and title (FerroHEALTH/FerroUI#103).
+- The screenshot capture waits until the page's fonts have loaded and its
+  height holds over two frames before it measures or shoots, so a capture
+  no longer catches a page still laying out (FerroHEALTH/FerroUI#101).
+
+### Fixed
+
+- A `FieldRow::WithActions` row keeps its field and its actions on one row
+  at every width, where a phone stacked each remove button alone under its
+  value.
+- A button among a field's parts, such as one that returns from a typed
+  value to the list, keeps its own width at the start of the field, where
+  it stretched across it.
+- A plain data table header writes no `class` attribute, where it wrote an
+  empty one (FerroHEALTH/FerroUI#102).
+
 ## [0.1.5] - 2026-10-19
 
 A form field whose id is made per row, a title on a data table header, a
@@ -423,7 +481,8 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.5...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.6...HEAD
+[0.1.6]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.2...v0.1.3

@@ -56,15 +56,154 @@ pub fn help_id(id: &str) -> String {
     format!("{id}-help")
 }
 
+/// The id of the error line of the control `id`, which the control names in
+/// `aria-describedby` after its help.
+#[must_use]
+pub fn error_id(id: &str) -> String {
+    format!("{id}-error")
+}
+
+/// The value of the `aria-describedby` of the control `id`: its help line
+/// ([`help_id`]) when `help`, then its error line ([`error_id`]) when
+/// `error`, or nothing when it has neither.
+///
+/// The order is the reading order, the help before the refusal
+/// (WAI-ARIA 1.2, `aria-describedby`).
+#[must_use]
+pub fn described_by(id: &str, help: bool, error: bool) -> Option<String> {
+    match (help, error) {
+        (true, true) => Some(format!("{} {}", help_id(id), error_id(id))),
+        (true, false) => Some(help_id(id)),
+        (false, true) => Some(error_id(id)),
+        (false, false) => None,
+    }
+}
+
+/// The classes of a field's error line: the help's size in the refusal's
+/// colour.
+///
+/// The line is the console's, because what fills it and when are: give it
+/// the id [`error_id`], put it in the field's trailing slot
+/// ([`Field::after`]), and name it in the control's `aria-describedby`
+/// ([`described_by`]).
+pub const ERROR: &str = "fui-help fui-error";
+
+/// A field drawn piece by piece: its label above the control or visually
+/// hidden, the control, its help line, and a trailing line after the help,
+/// such as the line a refusal shows in.
+///
+/// [`field`] and [`keyed_field`] draw the common case; this is the shape
+/// they share.
+///
+/// ```
+/// use ferrohealth_ui::view::form::{ERROR, Field, INPUT, described_by, error_id};
+/// use leptos::prelude::*;
+///
+/// /// The base URL field of the member `member`.
+/// fn base_url(member: &str) -> AnyView {
+///     let id = String::from("member-base");
+///     let input = view! {
+///         <input id=id.clone() name="base" class=INPUT aria-describedby=described_by(&id, true, true) />
+///     };
+///     Field::new(id.clone(), format!("Base URL of {member}"))
+///         .help("Where the gateway reaches the member.")
+///         .after(view! { <p id=error_id(&id) class=ERROR aria-live="polite"></p> })
+///         .view(input)
+/// }
+///
+/// let html = Owner::new().with(|| base_url("node-a").to_html());
+/// assert!(html.contains("Base URL of node-a"));
+/// ```
+#[derive(Debug)]
+#[must_use]
+pub struct Field {
+    id: String,
+    label: Oco<'static, str>,
+    label_hidden: bool,
+    help: Option<Oco<'static, str>>,
+    after: Option<AnyView>,
+}
+
+impl Field {
+    /// The field of the control `id`, labelled `label`, with no help.
+    pub fn new(id: impl Into<String>, label: impl Into<Oco<'static, str>>) -> Self {
+        Self {
+            id: id.into(),
+            label: label.into(),
+            label_hidden: false,
+            help: None,
+            after: None,
+        }
+    }
+
+    /// Adds the help line `help` under the control, its id [`help_id`].
+    pub fn help(mut self, help: impl Into<Oco<'static, str>>) -> Self {
+        self.help = Some(help.into());
+        self
+    }
+
+    /// Adds the help line `help` when there is one.
+    pub fn help_if(mut self, help: Option<impl Into<Oco<'static, str>>>) -> Self {
+        self.help = help.map(Into::into);
+        self
+    }
+
+    /// Hides the label from sight and keeps it for assistive technology,
+    /// still bound to the control with `for` (WCAG 2.2 SC 1.3.1 and
+    /// SC 4.1.2, technique C7): a row of a list of values, each an input
+    /// and its remove button, where a visible label over every row is noise.
+    pub fn label_hidden(mut self) -> Self {
+        self.label_hidden = true;
+        self
+    }
+
+    /// Adds `line` after the help, such as the control's error line
+    /// ([`ERROR`]).
+    pub fn after(mut self, line: impl IntoView + 'static) -> Self {
+        self.after = Some(line.into_any());
+        self
+    }
+
+    /// Returns the field around `control`.
+    pub fn view(self, control: impl IntoView + 'static) -> AnyView {
+        let Self {
+            id,
+            label,
+            label_hidden,
+            help,
+            after,
+        } = self;
+        let control = control.into_any();
+        let help = help.map(|help| view! { <p id=help_id(&id) class="fui-help">{help}</p> });
+        let class = if label_hidden {
+            "fui-sr-only"
+        } else {
+            "fui-label"
+        };
+        view! {
+            <div class="fui-field">
+                <label for=id class=class>
+                    {label}
+                </label>
+                {control}
+                {help}
+                {after}
+            </div>
+        }
+        .into_any()
+    }
+}
+
 /// Returns the field of the control `id`: the label `label` above
 /// `control`, and the line `help` under it when there is one.
 ///
-/// A field drawn once per row of a list takes its id from
-/// [`keyed_field`].
+/// The label is a `&'static str` or a `String` made at run time alike. A
+/// field drawn once per row of a list takes its id from [`keyed_field`];
+/// a hidden label or a trailing line is [`Field`]'s.
 #[must_use]
 pub fn field(
     id: &'static str,
-    label: &'static str,
+    label: impl Into<Oco<'static, str>>,
     help: Option<&'static str>,
     control: impl IntoView + 'static,
 ) -> impl IntoView {
@@ -77,21 +216,30 @@ pub fn field(
 #[must_use]
 pub fn keyed_field(
     id: String,
-    label: &'static str,
+    label: impl Into<Oco<'static, str>>,
     help: Option<&'static str>,
     control: impl IntoView + 'static,
 ) -> impl IntoView {
-    let control = control.into_any();
-    let help = help.map(|help| view! { <p id=help_id(&id) class="fui-help">{help}</p> });
+    Field::new(id, label).help_if(help).view(control)
+}
+
+/// Returns the action `button` with the line `error` under it where its
+/// refusal shows: a field with no label, such as the button that adds a
+/// row to a list.
+///
+/// The button names the line in `aria-describedby` ([`error_id`]), and the
+/// line takes [`ERROR`].
+#[must_use]
+pub fn action_field(button: impl IntoView + 'static, error: impl IntoView + 'static) -> AnyView {
+    let button = button.into_any();
+    let error = error.into_any();
     view! {
         <div class="fui-field">
-            <label for=id class="fui-label">
-                {label}
-            </label>
-            {control}
-            {help}
+            <div class="fui-cluster">{button}</div>
+            {error}
         </div>
     }
+    .into_any()
 }
 
 /// Returns the related controls `body` under the legend `legend`, the

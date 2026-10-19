@@ -18,7 +18,10 @@ use ferrohealth_ui::view::chart::{LineChart, Series};
 use ferrohealth_ui::view::code::{code_lines, code_panel};
 use ferrohealth_ui::view::dialog::{Confirmation, confirm_dialog, confirm_trigger};
 use ferrohealth_ui::view::empty::{empty_state, skeleton};
-use ferrohealth_ui::view::form::{INPUT, help_id, keyed_check, keyed_check_field, keyed_field};
+use ferrohealth_ui::view::form::{
+    ERROR, Field, INPUT, SELECT, action_field, described_by, error_id, field, help_id, keyed_check,
+    keyed_check_field, keyed_field,
+};
 use ferrohealth_ui::view::refusal::{Issue, Refusal, Severity, refusal};
 use ferrohealth_ui::view::shell::{About, Footer, footer, footer_about, lockup, mark};
 use ferrohealth_ui::view::sign_in::{Basic, Notice, Provider, SignIn, sign_in};
@@ -30,8 +33,12 @@ use ferrohealth_ui::view::tabs::{Tab, link_tabs};
 use ferrohealth_ui::view::theme_switch::{theme_switch, theme_toggle};
 use ferrohealth_ui::widget::chart::line_chart;
 use ferrohealth_ui::widget::document::{DocumentPane, document_pane_opening};
+use ferrohealth_ui::widget::help::explained_check_field;
+use ferrohealth_ui::widget::pick_or_type::{PickOrType, Picker, pick_or_type};
 use ferrohealth_ui::widget::tree::{Tree, TreeNode, tree_view};
 use leptos::prelude::*;
+
+use crate::markup::{has, tags};
 
 /// The HTML `view` renders to, under a reactive owner as a server render
 /// runs.
@@ -167,7 +174,10 @@ fn the_theme_toggle_is_one_form_that_posts_the_other_theme() {
     let toggle = html(|| theme_toggle(String::from("/theme"), String::from("/files")).into_any());
     assert!(toggle.contains(r#"method="post""#), "{toggle}");
     assert!(toggle.contains(r#"action="/theme""#), "{toggle}");
-    assert!(toggle.contains(r#"name="back" value="/files""#), "{toggle}");
+    assert!(
+        has(&toggle, "input", &[("name", "back"), ("value", "/files")]),
+        "{toggle}"
+    );
     assert!(
         toggle.contains(r#"value="dark""#) && toggle.contains(r#"value="light""#),
         "{toggle}"
@@ -363,7 +373,11 @@ fn a_document_pane_opens_on_the_view_it_is_given_and_offers_rendered_only_when_a
     let raw = pane(true);
     assert!(raw.contains(r#"id="doc-highlighted""#), "{raw}");
     assert!(
-        raw.contains(r#"data-choice="raw" aria-pressed="true""#),
+        has(
+            &raw,
+            "button",
+            &[("data-choice", "raw"), ("aria-pressed", "true")]
+        ),
         "{raw}"
     );
     assert!(raw.contains(r#"data-choice="rendered""#), "{raw}");
@@ -398,7 +412,15 @@ fn the_last_series_shown_cannot_be_hidden_and_each_chip_names_its_series() {
     let one = html(move || line_chart(chart(), RwSignal::new(vec![false, true])));
     assert_eq!(1, one.matches("disabled").count(), "{one}");
     assert!(
-        one.contains(r#"data-series="diastolic" aria-pressed="true" disabled"#),
+        has(
+            &one,
+            "button",
+            &[
+                ("data-series", "diastolic"),
+                ("aria-pressed", "true"),
+                ("disabled", "")
+            ]
+        ),
         "{one}"
     );
 }
@@ -608,11 +630,23 @@ fn a_header_title_rides_its_header_alone_sortable_or_not() {
         .into_any()
     });
     assert!(
-        table.contains(r#"<th scope="col" title="e/ehr_status/subject" class="fui-th-mono">"#),
+        has(
+            &table,
+            "th",
+            &[
+                ("scope", "col"),
+                ("title", "e/ehr_status/subject"),
+                ("class", "fui-th-mono")
+            ]
+        ),
         "{table}"
     );
     assert!(
-        table.contains(r#"title="c/uid/value" aria-sort="none""#),
+        has(
+            &table,
+            "th",
+            &[("title", "c/uid/value"), ("aria-sort", "none")]
+        ),
         "a sortable header carries its title beside its sort: {table}"
     );
     assert_eq!(
@@ -670,7 +704,286 @@ fn a_field_with_an_id_made_per_row_names_its_own_control_and_help() {
     assert!(checks.contains(r#"<label for="keep-2">"#), "{checks}");
     assert!(checks.contains(r#"<label for="inactive-2">"#), "{checks}");
     assert!(
-        checks.contains(r#"<span id="inactive-2-help" class="fui-help">"#),
+        has(
+            &checks,
+            "span",
+            &[("id", "inactive-2-help"), ("class", "fui-help")]
+        ),
         "{checks}"
     );
+}
+
+#[test]
+fn a_plain_header_writes_no_class_and_a_sortable_one_carries_its_sort_beside_the_rest() {
+    let columns = [
+        Column::text("name", "Name"),
+        Column::text("rows", "Rows")
+            .numeric()
+            .sortable()
+            .titled("rows read"),
+    ];
+    let sort = Sort::read(Some("rows"), Some("desc"), &["rows"]);
+    let table = html(|| {
+        data_table(DataTable {
+            caption: "Files",
+            columns: &columns,
+            sort: sort.as_ref(),
+            sort_href: &|sort: &Sort| format!("/files?sort={}", sort.column),
+            body: Body::Rows(view! { <tr><td>"a"</td><td>"1"</td></tr> }.into_any()),
+        })
+        .into_any()
+    });
+    let headers = tags(&table, "th");
+    assert_eq!(2, headers.len(), "{table}");
+    assert!(
+        !headers[0].contains_key("class"),
+        "a plain header writes no class, not an empty one: {table}"
+    );
+    assert!(!table.contains(r#"class="""#), "{table}");
+    // WAI-ARIA 1.2, aria-sort: on the column header the sort applies to.
+    assert!(
+        has(
+            &table,
+            "th",
+            &[
+                ("scope", "col"),
+                ("class", "fui-num"),
+                ("title", "rows read"),
+                ("aria-sort", "descending")
+            ]
+        ),
+        "{table}"
+    );
+}
+
+#[test]
+fn a_field_label_is_a_static_word_or_a_string_made_at_run_time() {
+    let member = String::from("node-a");
+    let fields = html(move || {
+        view! {
+            {field("static-label", "Base URL", None, view! { <input id="static-label" class=INPUT /> })}
+            {keyed_field(
+                format!("base-{member}"),
+                format!("Base URL of {member}"),
+                None,
+                view! { <input id="base-node-a" class=INPUT /> },
+            )}
+        }
+        .into_any()
+    });
+    assert!(
+        has(
+            &fields,
+            "label",
+            &[("for", "static-label"), ("class", "fui-label")]
+        ),
+        "{fields}"
+    );
+    assert!(
+        has(
+            &fields,
+            "label",
+            &[("for", "base-node-a"), ("class", "fui-label")]
+        ),
+        "{fields}"
+    );
+    assert!(fields.contains(">Base URL of node-a</label>"), "{fields}");
+}
+
+#[test]
+fn a_field_with_a_hidden_label_keeps_it_bound_to_its_control() {
+    let row = html(|| {
+        Field::new("value-3", "Value")
+            .label_hidden()
+            .view(view! { <input id="value-3" class=INPUT /> })
+    });
+    // WCAG 2.2 SC 1.3.1 and SC 4.1.2: the name stays programmatic.
+    assert!(
+        has(
+            &row,
+            "label",
+            &[("for", "value-3"), ("class", "fui-sr-only")]
+        ),
+        "{row}"
+    );
+    assert!(!row.contains("fui-label"), "{row}");
+}
+
+#[test]
+fn a_field_draws_its_trailing_line_after_its_help_and_the_control_names_both() {
+    let id = "member-base";
+    let drawn = html(move || {
+        let described = described_by(id, true, true);
+        Field::new(id, "Base URL")
+            .help("Where the gateway reaches the member.")
+            .after(view! {
+                <p id=error_id(id) class=ERROR aria-live="polite">
+                    "The address must be absolute."
+                </p>
+            })
+            .view(view! { <input id=id class=INPUT aria-describedby=described /> })
+    });
+    assert!(
+        has(
+            &drawn,
+            "input",
+            &[
+                ("id", id),
+                ("aria-describedby", "member-base-help member-base-error")
+            ]
+        ),
+        "{drawn}"
+    );
+    let help = drawn
+        .find(r#"id="member-base-help""#)
+        .expect("the help line");
+    let error = drawn
+        .find(r#"id="member-base-error""#)
+        .expect("the error line");
+    assert!(help < error, "the help reads before the refusal: {drawn}");
+    assert!(
+        has(
+            &drawn,
+            "p",
+            &[("id", "member-base-error"), ("class", "fui-help fui-error")]
+        ),
+        "{drawn}"
+    );
+    assert_eq!(None, described_by(id, false, false));
+    assert_eq!(
+        Some(String::from("member-base-error")),
+        described_by(id, false, true)
+    );
+    assert_eq!(
+        Some(String::from("member-base-help")),
+        described_by(id, true, false)
+    );
+}
+
+#[test]
+fn an_action_field_holds_its_button_and_error_line_with_no_label() {
+    let drawn = html(|| {
+        action_field(
+            view! {
+                <button type="button" id="add-value" aria-describedby=error_id("add-value")>
+                    "Add value"
+                </button>
+            },
+            view! { <p id=error_id("add-value") class=ERROR hidden></p> },
+        )
+    });
+    assert!(!drawn.contains("<label"), "{drawn}");
+    assert!(
+        has(
+            &drawn,
+            "button",
+            &[("id", "add-value"), ("aria-describedby", "add-value-error")]
+        ),
+        "{drawn}"
+    );
+    assert!(has(&drawn, "div", &[("class", "fui-cluster")]), "{drawn}");
+    assert!(has(&drawn, "p", &[("id", "add-value-error")]), "{drawn}");
+}
+
+/// A picker over two versions or a typed one, `typing` saying which shows.
+fn version_field(typing: bool, labelled: bool) -> String {
+    html(move || {
+        let select = view! {
+            <select id="version-pick" class=SELECT aria-describedby=help_id("version")>
+                <option value="">"The one this server resolves to"</option>
+                <option value="other">"Another version"</option>
+            </select>
+        }
+        .into_any();
+        let picker = if labelled {
+            Picker::Labelled(
+                view! {
+                    <div class="fui-field">
+                        <label for="version-pick" class="fui-label">"Version"</label>
+                        {select}
+                    </div>
+                }
+                .into_any(),
+            )
+        } else {
+            Picker::Control {
+                id: String::from("version-pick"),
+                control: select,
+            }
+        };
+        pick_or_type(PickOrType {
+            label: String::from("Version"),
+            picker,
+            typed_id: String::from("version"),
+            typed: view! { <input id="version" name="version" class=INPUT aria-describedby=help_id("version") /> }
+                .into_any(),
+            typing: Signal::stored(typing),
+            after: Some(view! { <p id=help_id("version") class="fui-help">"Its version."</p> }.into_any()),
+        })
+    })
+}
+
+#[test]
+fn a_pick_or_type_field_shows_one_control_with_its_own_label() {
+    for labelled in [false, true] {
+        let picking = version_field(false, labelled);
+        assert!(
+            has(&picking, "label", &[("for", "version-pick")]),
+            "{picking}"
+        );
+        assert!(has(&picking, "label", &[("for", "version")]), "{picking}");
+        assert_eq!(
+            1,
+            picking.matches(r#"for="version-pick""#).count(),
+            "the picker has one label: {picking}"
+        );
+        assert!(
+            has(&picking, "div", &[("data-side", "type"), ("hidden", "")]),
+            "the typed side is hidden with its label: {picking}"
+        );
+        assert!(
+            !has(&picking, "div", &[("data-side", "pick"), ("hidden", "")]),
+            "{picking}"
+        );
+    }
+    let typing = version_field(true, false);
+    assert!(
+        has(&typing, "div", &[("data-side", "pick"), ("hidden", "")]),
+        "{typing}"
+    );
+    assert!(
+        !has(&typing, "div", &[("data-side", "type"), ("hidden", "")]),
+        "{typing}"
+    );
+    let help = typing
+        .find(r#"<p id="version-help""#)
+        .expect("the help line");
+    let typed = typing.find(r#"name="version""#).expect("the typed input");
+    assert!(typed < help, "the help follows both controls: {typing}");
+}
+
+#[test]
+fn an_explained_checkbox_keeps_its_help_named_and_hidden_from_sight_until_the_switch() {
+    let drawn = html(|| {
+        explained_check_field(
+            "run-inactive",
+            "Include inactive concepts",
+            "An inactive concept is listed and marked.",
+            view! { <input type="checkbox" id="run-inactive" aria-describedby=help_id("run-inactive") /> },
+        )
+    });
+    assert!(has(&drawn, "label", &[("for", "run-inactive")]), "{drawn}");
+    // WCAG 2.2 technique C7: hidden from sight, still in the tree.
+    assert!(
+        has(
+            &drawn,
+            "span",
+            &[
+                ("id", "run-inactive-help"),
+                ("class", "fui-help fui-sr-only")
+            ]
+        ),
+        "{drawn}"
+    );
+    assert!(has(&drawn, "div", &[("class", "fui-check")]), "{drawn}");
 }

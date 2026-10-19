@@ -12,16 +12,16 @@ use std::collections::BTreeSet;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::view::button::{Variant, label};
 use ferrohealth_ui::view::chart::proportion;
-use ferrohealth_ui::view::form::{
-    FORM, INPUT, MEDIUM, NARROW, PROSE, SELECT, check_field, field, help_id,
-};
+use ferrohealth_ui::view::form::{FORM, INPUT, MEDIUM, NARROW, PROSE, SELECT, field, help_id};
 use ferrohealth_ui::view::layout::{
     FieldRow, Gap, Pane, bullet_list, divided_list, field_row, main_aside, master_detail, stack_at,
     three_panes, tile_list,
 };
 use ferrohealth_ui::view::status::pill;
 use ferrohealth_ui::view::surface::{card, definitions, or_none, page_header, split};
-use ferrohealth_ui::widget::help::{explained_field, help_switch, provide_help};
+use ferrohealth_ui::widget::help::{
+    explained_check_field, explained_field, help_switch, provide_help,
+};
 use ferrohealth_ui::widget::picker::{Picker, picker_field};
 use ferrohealth_ui::widget::tree::{Tree, TreeNode, tree_view_collapsing};
 use leptos::prelude::*;
@@ -273,7 +273,7 @@ fn runner_form() -> AnyView {
             {explained_field("run-count", "Page size", "How many concepts one page lists, 1 to 1000.", count)}
             {explained_field("run-language", "Display language", "The language of the displays.", language)}
             {explained_field("run-note", "Why you run it", "A note kept beside the run.", note)}
-            {check_field("run-inactive", "Include inactive concepts", "An inactive concept is listed and marked.", inactive)}
+            {explained_check_field("run-inactive", "Include inactive concepts", "An inactive concept is listed and marked.", inactive)}
             <button type="submit" class=Variant::Primary.class()>
                 {label(Some(Glyph::PLAY), "List")}
             </button>

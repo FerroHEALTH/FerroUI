@@ -879,6 +879,80 @@ async fn a_long_button_label_wraps_at_320_pixels_and_a_short_one_keeps_its_line(
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn a_pick_or_type_field_shows_one_control_and_its_own_label_at_a_time()
+-> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/ferroterm/forms")).await?;
+        // The combobox replaces its select once the page hydrates, which is
+        // when the select's change listener is there too.
+        browser
+            .element(By::Css("#pick-canonical-choice[role='combobox']"))
+            .await?;
+        let shown = async |css: &str| -> Result<bool, Box<dyn Error>> {
+            Ok(browser.element(By::Css(css)).await?.is_displayed().await?)
+        };
+        assert!(shown("#pick-version-choice").await?, "the list shows first");
+        assert!(shown("label[for='pick-version-choice']").await?);
+        assert!(!shown("#pick-version").await?);
+        assert!(
+            !shown("label[for='pick-version']").await?,
+            "a hidden control's label hides with it"
+        );
+        browser
+            .element(By::Css("#pick-version-choice option[value='another']"))
+            .await?
+            .click()
+            .await?;
+        until("the typed input shows", async || {
+            shown("#pick-version").await
+        })
+        .await?;
+        assert!(shown("label[for='pick-version']").await?);
+        assert!(!shown("#pick-version-choice").await?);
+        assert!(!shown("label[for='pick-version-choice']").await?);
+        let described = browser
+            .element(By::Id("pick-version"))
+            .await?
+            .attr("aria-describedby")
+            .await?;
+        assert_eq!(described.as_deref(), Some("pick-version-help"));
+        browser
+            .element(By::Id("pick-version-back"))
+            .await?
+            .click()
+            .await?;
+        until("the list shows again", async || {
+            shown("#pick-version-choice").await
+        })
+        .await?;
+        assert!(!shown("label[for='pick-version']").await?);
+        // The combobox labels itself, and its last option opens the input.
+        let combo = browser
+            .element(By::Css("#pick-canonical-choice[role='combobox']"))
+            .await?;
+        combo.click().await?;
+        browser
+            .element(By::Css(
+                "#pick-canonical-choice-list li[role='option']:last-child",
+            ))
+            .await?
+            .click()
+            .await?;
+        until("the typed canonical shows", async || {
+            shown("#pick-canonical").await
+        })
+        .await?;
+        assert!(!shown("label[for='pick-canonical-choice']").await?);
+        browser.console_clean("the pick-or-type field").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn a_reveal_inside_a_reveal_answers_to_its_own_choice_alone() -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
         return Ok(());

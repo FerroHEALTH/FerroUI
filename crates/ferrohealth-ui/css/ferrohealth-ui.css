@@ -1015,6 +1015,14 @@
     gap: var(--space-default) 0.75rem;
   }
 
+  /* A field and its actions, such as a value and its remove button, keep
+     one row at every width: the actions are short, and stacked on a phone
+     each would sit alone under its field. */
+  .fui-field-row-actions {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+  }
+
   /* An action in a row of fields keeps its own width when the row stacks. */
   .fui-field-row > .fui-button {
     justify-self: start;
@@ -1031,10 +1039,6 @@
 
     .fui-field-row-narrow-wide {
       grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
-    }
-
-    .fui-field-row-actions {
-      grid-template-columns: minmax(0, 1fr) auto;
     }
 
     .fui-field-row-code-display {
@@ -2512,6 +2516,12 @@
     gap: var(--space-tight);
   }
 
+  /* A button among a field's parts keeps its own width at the start of
+     the field, as one in a form does. */
+  .fui-field > :is(button, .fui-button) {
+    justify-self: start;
+  }
+
   /* The one label style of every field. */
   .fui-label {
     color: var(--ink);
@@ -2577,6 +2587,11 @@
     color: var(--muted);
     font-size: var(--text-small);
     line-height: var(--leading-small);
+  }
+
+  /* A field's error line: the help's size in the refusal's colour. */
+  .fui-error {
+    color: var(--bad);
   }
 
   /* A control keeps to its field: a date and time input's own minimum,

@@ -51,6 +51,11 @@ async fn the_help_switch_shows_the_help_and_keeps_it_named() -> Result<(), Box<d
         };
         assert!(hidden().await?, "visually hidden at first, still read");
         assert_eq!(
+            Some(String::from("fui-help fui-sr-only")),
+            attr(browser, "run-inactive-help", "class").await?,
+            "the checkbox's help hides with the others"
+        );
+        assert_eq!(
             Some(String::from("run-count-help")),
             attr(browser, "run-count", "aria-describedby").await?
         );
@@ -68,6 +73,15 @@ async fn the_help_switch_shows_the_help_and_keeps_it_named() -> Result<(), Box<d
             Some(String::from("run-count-help")),
             attr(browser, "run-count", "aria-describedby").await?,
             "the control names its help on every render"
+        );
+        assert_eq!(
+            Some(String::from("fui-help")),
+            attr(browser, "run-inactive-help", "class").await?,
+            "the checkbox's help shows with the others"
+        );
+        assert_eq!(
+            Some(String::from("run-inactive-help")),
+            attr(browser, "run-inactive", "aria-describedby").await?
         );
         browser.console_clean("the help switch").await
     })

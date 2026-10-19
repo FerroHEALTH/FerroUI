@@ -200,3 +200,11 @@ fn a_field_and_its_button_take_the_whole_row_below_30rem() {
         "a field flow keeps its row on a phone"
     );
 }
+
+#[test]
+fn a_button_inside_a_field_keeps_its_own_width_at_the_start() {
+    assert!(
+        STYLESHEET.contains("  .fui-field > :is(button, .fui-button) {\n    justify-self: start;"),
+        "a button in a field's grid would stretch across it"
+    );
+}
