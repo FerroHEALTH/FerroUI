@@ -12,6 +12,7 @@
 
 use leptos::prelude::*;
 
+use crate::i18n::{Text, tr};
 use crate::icon::{Glyph, icon};
 use crate::theme::Theme;
 use crate::view::theme_switch::{TO_DARK, TO_LIGHT};
@@ -45,6 +46,8 @@ fn swap(theme: Theme, then: &str) {
 /// `on_choose`.
 #[must_use]
 pub fn theme_toggle(action: String, back: String, on_choose: Callback<Theme>) -> AnyView {
+    let to_dark = tr(Text::ThemeToDark);
+    let to_light = tr(Text::ThemeToLight);
     let choose = move |theme: Theme, then: &'static str| {
         move |event: leptos::ev::MouseEvent| {
             event.prevent_default();
@@ -61,8 +64,8 @@ pub fn theme_toggle(action: String, back: String, on_choose: Callback<Theme>) ->
                 name="theme"
                 value=Theme::Dark.key()
                 class="fui-icon-button fui-theme-to-dark"
-                aria-label="Switch to the dark theme"
-                title="Switch to the dark theme"
+                aria-label=to_dark.clone()
+                title=to_dark
                 on:click=choose(Theme::Dark, TO_LIGHT)
             >
                 {icon(Glyph::MOON, "16")}
@@ -73,8 +76,8 @@ pub fn theme_toggle(action: String, back: String, on_choose: Callback<Theme>) ->
                 name="theme"
                 value=Theme::Light.key()
                 class="fui-icon-button fui-theme-to-light"
-                aria-label="Switch to the light theme"
-                title="Switch to the light theme"
+                aria-label=to_light.clone()
+                title=to_light
                 on:click=choose(Theme::Light, TO_DARK)
             >
                 {icon(Glyph::SUN, "16")}

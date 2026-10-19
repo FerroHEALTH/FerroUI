@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+# The literals scripts/checks/stray-literals.sh reads as words that no
+# reader sees as the library's text, each with the reason, and the files it
+# does not cover.
+
+skip crates/ferrohealth-ui/src/highlight/   # tokenizers: grammar keywords and the markup they write
+skip crates/ferrohealth-ui/src/icon.rs      # the vendored Lucide outlines and their names
+skip crates/ferrohealth-ui/src/i18n.rs      # the catalog mechanism: message ids and diagnostics
+
+allow ^(ArrowUp|ArrowDown|ArrowLeft|ArrowRight|Home|End|Enter|Escape)$   # UI Events KeyboardEvent.key values
+allow ^Ferro(BRIDGE|FED|EHR|TERM)$     # product names, the same in every language
+allow ^Cadasto B\.V\.$                  # the maker's legal name
+allow ^(start|middle|end)$              # SVG text-anchor keywords
+allow ^<                                # SVG markup a chart writes as a string
+allow ^M\{                              # SVG path data
+allow ^(Zz|Tt )$                        # the bytes a timestamp parser accepts
+allow ^\{\}T\{\}Z?$                     # the HTML machine form of a date-time
+allow ^\{id\}-L                         # an editor line's id

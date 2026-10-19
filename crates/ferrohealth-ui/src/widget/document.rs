@@ -15,16 +15,22 @@
 use leptos::prelude::*;
 
 use crate::highlight::{Language, Lines, html};
+use crate::i18n::{Text, tr, tr_with};
 use crate::widget::copy::copy_button;
-use crate::widget::segmented::segmented;
+use crate::widget::segmented::segmented_words;
 
-/// The views a pane offers, with and without a rendered one.
-const VIEWS: &[(&str, &str)] = &[("highlighted", "Highlighted"), ("raw", "Raw")];
-const VIEWS_RENDERED: &[(&str, &str)] = &[
-    ("highlighted", "Highlighted"),
-    ("raw", "Raw"),
-    ("rendered", "Rendered"),
-];
+/// The views a pane offers, each its key and its words in the page's
+/// locale; the rendered view when `rendered`.
+fn views(rendered: bool) -> Vec<(&'static str, String)> {
+    let mut views = vec![
+        ("highlighted", tr(Text::DocumentHighlighted)),
+        ("raw", tr(Text::DocumentRaw)),
+    ];
+    if rendered {
+        views.push(("rendered", tr(Text::DocumentRendered)));
+    }
+    views
+}
 
 /// What a document pane shows.
 #[derive(Debug)]
@@ -76,7 +82,7 @@ pub fn document_pane_opening(
         label,
         formats,
         format,
-        text,
+        text: source,
         language,
         rendered,
     } = pane;
@@ -94,20 +100,34 @@ pub fn document_pane_opening(
         "rendered" if !offers_rendered() => "highlighted",
         other => other,
     });
-    let selector = (formats.len() > 1).then(|| segmented("Format", formats, format, on_format));
+    let format_label = tr(Text::DocumentFormat);
+    let selector = (formats.len() > 1).then(|| {
+        let formats = formats
+            .iter()
+            .map(|(key, words)| (*key, String::from(*words)))
+            .collect();
+        segmented_words(format_label, formats, format, on_format)
+    });
+    let view_label = tr(Text::DocumentView);
+    let (plain, with_rendered) = (views(false), views(true));
     let switch = move || {
         let views = if offers_rendered() {
-            VIEWS_RENDERED
+            with_rendered.clone()
         } else {
-            VIEWS
+            plain.clone()
         };
-        segmented("View", views, view_in_force.into(), move |key| {
-            chosen.set(key);
-        })
+        segmented_words(
+            view_label.clone(),
+            views,
+            view_in_force.into(),
+            move |key| {
+                chosen.set(key);
+            },
+        )
     };
     let highlighted = move || {
         let language = language.get();
-        text.with(|text| html(language, text, Lines::default(), |_| None))
+        source.with(|text| html(language, text, Lines::default(), |_| None))
     };
     let copy_id = format!("{id}-copy");
     let rendered = rendered.map(|body| {
@@ -125,14 +145,14 @@ pub fn document_pane_opening(
         <section class="fui-document" id=id aria-label=label>
             <div class="fui-document-tools">
                 {selector} {switch} <span class="fui-document-copy">
-                    {copy_button(copy_id, "Copy", text)}
+                    {copy_button(copy_id, tr(Text::DocumentCopy), source)}
                 </span>
             </div>
             <div
                 id=format!("{id}-highlighted")
                 class="fui-code-panel fui-document-body"
                 role="region"
-                aria-label=format!("{label}, highlighted")
+                aria-label=tr_with(Text::DocumentHighlightedRegion, &[("document", label.into())])
                 tabindex="0"
                 hidden=move || view_in_force.get() != "highlighted"
             >
@@ -142,11 +162,11 @@ pub fn document_pane_opening(
                 id=format!("{id}-raw")
                 class="fui-code-panel fui-document-body"
                 role="region"
-                aria-label=format!("{label}, raw")
+                aria-label=tr_with(Text::DocumentRawRegion, &[("document", label.into())])
                 tabindex="0"
                 hidden=move || view_in_force.get() != "raw"
             >
-                <pre>{move || text.get()}</pre>
+                <pre>{move || source.get()}</pre>
             </div>
             {rendered}
         </section>

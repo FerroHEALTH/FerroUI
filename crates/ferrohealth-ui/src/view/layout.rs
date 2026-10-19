@@ -169,6 +169,19 @@ pub fn field_row(row: FieldRow, body: impl IntoView + 'static) -> AnyView {
     view! { <div class=row.class()>{body}</div> }.into_any()
 }
 
+/// Returns [`field_row`] with the id `id`, for a row a console adds,
+/// removes or finds by its id, such as one value of a list.
+#[must_use]
+pub fn keyed_field_row(id: String, row: FieldRow, body: impl IntoView + 'static) -> AnyView {
+    let body = body.into_any();
+    view! {
+        <div id=id class=row.class()>
+            {body}
+        </div>
+    }
+    .into_any()
+}
+
 /// Returns the actions `body` of a form in a bar at the foot of its card.
 ///
 /// On a window tall enough the bar stays in view at the bottom while the

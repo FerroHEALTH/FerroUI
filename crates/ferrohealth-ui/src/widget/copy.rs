@@ -12,6 +12,7 @@
 
 use leptos::prelude::*;
 
+use crate::i18n::{Text, tr};
 use crate::icon::{Glyph, icon};
 use crate::view::button::Variant;
 
@@ -38,10 +39,11 @@ enum State {
 #[must_use]
 pub fn copy_button(
     id: impl Into<String>,
-    label: &'static str,
+    label: impl Into<Oco<'static, str>>,
     text: Signal<String>,
 ) -> impl IntoView {
     let id = id.into();
+    let label = label.into();
     let state = RwSignal::new(State::Ready);
     let hydrated = RwSignal::new(false);
     Effect::new(move |_| hydrated.set(true));
@@ -49,10 +51,16 @@ pub fn copy_button(
         let value = text.get_untracked();
         write(&value, state);
     };
+    // The words are read once, while the page's locale is in reach, and
+    // drawn as the state moves.
+    let said_copied = tr(Text::CopySaidCopied);
+    let said_refused = tr(Text::CopySaidRefused);
+    let copied = tr(Text::CopyCopied);
+    let refused = tr(Text::CopyRefused);
     let said = move || match state.get() {
         State::Ready => String::new(),
-        State::Copied => String::from("Copied to the clipboard."),
-        State::Refused => String::from("Copy failed: the browser refused the clipboard."),
+        State::Copied => said_copied.clone(),
+        State::Refused => said_refused.clone(),
     };
     view! {
         <span class="fui-copy">
@@ -67,14 +75,14 @@ pub fn copy_button(
                     State::Copied => {
                         view! {
                             {icon(Glyph::CHECK, "14")}
-                            "Copied"
+                            {copied.clone()}
                         }
                             .into_any()
                     }
                     State::Ready | State::Refused => {
                         view! {
                             {icon(Glyph::COPY, "14")}
-                            {label}
+                            {label.clone()}
                         }
                             .into_any()
                     }
@@ -88,7 +96,7 @@ pub fn copy_button(
                     .then(|| {
                         view! {
                             <span class="fui-copy-refused" aria-hidden="true">
-                                "The browser refused the clipboard."
+                                {refused.clone()}
                             </span>
                         }
                     })

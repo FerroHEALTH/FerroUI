@@ -6,7 +6,7 @@ resolver = "3"
 members = ["crates/*", "app/*"]
 
 [workspace.package]
-version = "0.1.6"
+version = "0.1.7"
 edition = "2024"
 rust-version = "1.97"
 license = "BUSL-1.1"
@@ -26,6 +26,11 @@ leptos = { version = "0.8.22", default-features = false }
 leptos_router = { version = "0.8.17", default-features = false }
 leptos_meta = { version = "0.8.7", default-features = false }
 serde = { version = "1.0.229", features = ["derive"] }
+# The catalogs of the strings the components draw: Project Fluent's message
+# format, the catalogs embedded at build time from the `locales/` directory
+# (the `walkdir` reader of its macro), no runtime file reader. Verified
+# against crates.io on 2026-10-19.
+fluent-templates = { version = "0.15.1", default-features = false, features = ["macros", "walkdir"] }
 # The gallery app alone: its server half and its browser half. The
 # wasm-bindgen CLI of the gallery build equals the wasm-bindgen crate version
 # (scripts/release/gallery-tools.sh); the library itself never pins it, and

@@ -1,6 +1,6 @@
 ---
 name: ferroui
-description: "Every console draws in FerroUI, pinned exactly; one uniform design, shared components, all four consoles move in lockstep with every FerroUI release, screenshots read and reviewed; owner 2026-10-18"
+description: "Every console draws in FerroUI, pinned exactly; one uniform design, shared components, all four consoles move in lockstep with every FerroUI release, screenshots read and reviewed, no user-visible string outside the catalogs; owner 2026-10-18 and 2026-10-19"
 metadata:
   type: project
 ---
@@ -33,3 +33,12 @@ submodule or a path dependency (owner, 2026-10-18).
   orchestrator reviews the screenshots before a merge or tag.
 - **Theme switch:** FerroEHR's moon and sun icon button in the top bar, the
   choice kept in the server cookie written as `data-theme`.
+- **No user-visible component string outside the catalogs** (owner,
+  2026-10-19). English is the one language that ships and the family is
+  ready for more: a new language is a catalog file and no code change. Every
+  word a FerroUI component draws is a message of its Fluent catalog
+  (`locales/en/ferrohealth-ui.ftl`), the locale is chosen once per render
+  through `i18n::provide_locale` and written as `<html lang>`, and a
+  console catalogs its own page strings the same way, held by the
+  stray-literal check (`leptos-ui.md` §13). No Dutch or German catalog is
+  added.

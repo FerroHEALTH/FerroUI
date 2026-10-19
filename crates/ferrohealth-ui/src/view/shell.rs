@@ -10,6 +10,7 @@
 
 use leptos::prelude::*;
 
+use crate::i18n::{Text, tr, tr_with};
 use crate::icon::{Glyph, icon};
 
 /// The maker every FerroHEALTH console's footer names.
@@ -50,7 +51,7 @@ pub struct Shell {
 pub fn skip_link() -> impl IntoView {
     view! {
         <a href=format!("#{MAIN_ID}") class="fui-skip">
-            "Skip to the page"
+            {tr(Text::SkipToPage)}
         </a>
     }
 }
@@ -107,7 +108,7 @@ pub fn drawer_button(sidebar_id: &'static str) -> impl IntoView {
             class="fui-icon-button fui-drawer-only"
             popovertarget=sidebar_id
             aria-controls=sidebar_id
-            aria-label="Menu"
+            aria-label=tr(Text::OpenMenu)
         >
             {icon(Glyph::MENU, "18")}
         </button>
@@ -182,8 +183,13 @@ pub fn footer_about(footer: Footer, about: About) -> impl IntoView {
     view! {
         <footer class="fui-footer">
             <p>
-                {footer.product} " v" {footer.version} " · " {MAKER} " · "
-                <a href=footer.about rel=rel>"About"</a>
+                {format!(
+                    "{} {} · {MAKER} · ",
+                    footer.product,
+                    tr_with(Text::FooterVersion, &[("version", footer.version.into())]),
+                )} <a href=footer.about rel=rel>
+                    {tr(Text::FooterAbout)}
+                </a>
             </p>
         </footer>
     }

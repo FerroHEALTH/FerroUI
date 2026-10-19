@@ -987,3 +987,20 @@ fn an_explained_checkbox_keeps_its_help_named_and_hidden_from_sight_until_the_sw
     );
     assert!(has(&drawn, "div", &[("class", "fui-check")]), "{drawn}");
 }
+
+#[test]
+fn a_keyed_field_row_carries_its_id_and_its_columns() {
+    use ferrohealth_ui::view::layout::{FieldRow, field_row, keyed_field_row};
+    let keyed = html(|| keyed_field_row(String::from("values-2-row"), FieldRow::WithActions, "x"));
+    assert!(
+        keyed.contains(
+            r#"<div id="values-2-row" class="fui-field-row fui-field-row-actions">x</div>"#
+        ),
+        "{keyed}"
+    );
+    let plain = html(|| field_row(FieldRow::Halves, "y"));
+    assert!(
+        plain.contains(r#"<div class="fui-field-row fui-field-row-halves">y</div>"#),
+        "{plain}"
+    );
+}

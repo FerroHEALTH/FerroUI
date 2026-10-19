@@ -12,6 +12,8 @@
 //! the consoles that forbid it), so the library holds the vocabulary alone.
 //! No specification governs this: our own design.
 
+use crate::i18n::{Text, tr};
+
 /// A theme the operator can choose.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Theme {
@@ -38,14 +40,14 @@ impl Theme {
         }
     }
 
-    /// The theme's name, as the switch shows it.
+    /// The theme's name in the page's locale, as the switch shows it.
     #[must_use]
-    pub const fn label(self) -> &'static str {
-        match self {
-            Self::Light => "Light",
-            Self::Dark => "Dark",
-            Self::System => "System",
-        }
+    pub fn label(self) -> String {
+        tr(match self {
+            Self::Light => Text::ThemeLight,
+            Self::Dark => Text::ThemeDark,
+            Self::System => Text::ThemeSystem,
+        })
     }
 
     /// The theme `key` names, or `None` for a key that names none.
@@ -95,13 +97,13 @@ impl Density {
     /// Both densities, in the order a switch offers them.
     pub const ALL: [Self; 2] = [Self::Comfortable, Self::Compact];
 
-    /// The density's name as a reader sees it.
+    /// The density's name in the page's locale, as a reader sees it.
     #[must_use]
-    pub const fn label(self) -> &'static str {
-        match self {
-            Self::Comfortable => "Comfortable",
-            Self::Compact => "Compact",
-        }
+    pub fn label(self) -> String {
+        tr(match self {
+            Self::Comfortable => Text::DensityComfortable,
+            Self::Compact => Text::DensityCompact,
+        })
     }
 
     /// The density's key, as `data-density` carries it.

@@ -11,6 +11,8 @@ use std::borrow::Cow;
 
 use leptos::prelude::*;
 
+use crate::i18n::{Text, tr};
+
 use crate::icon::{Glyph, icon};
 
 /// One ancestor of a page in its breadcrumb trail.
@@ -96,7 +98,7 @@ fn heading(header: Header, title: Signal<String>, actions: impl IntoView) -> imp
             })
             .collect_view();
         view! {
-            <nav class="fui-crumbs" aria-label="Breadcrumb">
+            <nav class="fui-crumbs" aria-label=tr(Text::Breadcrumb)>
                 <ol>{links} <li aria-current="page">{move || title.get()}</li></ol>
             </nav>
         }
@@ -329,7 +331,7 @@ pub fn facts_row(rows: Vec<(&'static str, AnyView)>) -> impl IntoView {
 #[must_use]
 pub fn or_none(value: String) -> AnyView {
     if value.is_empty() {
-        view! { <span class="fui-muted">"none"</span> }.into_any()
+        view! { <span class="fui-muted">{tr(Text::NoneValue)}</span> }.into_any()
     } else {
         value.into_any()
     }

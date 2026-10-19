@@ -11,6 +11,7 @@
 
 use leptos::prelude::*;
 
+use crate::i18n::{Text, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::tone::Tone;
 
@@ -29,15 +30,15 @@ pub enum Severity {
 }
 
 impl Severity {
-    /// The word a reader sees.
+    /// The word a reader sees, in the page's locale.
     #[must_use]
-    pub const fn word(self) -> &'static str {
-        match self {
-            Self::Fatal => "fatal",
-            Self::Error => "error",
-            Self::Warning => "warning",
-            Self::Information => "information",
-        }
+    pub fn word(self) -> String {
+        tr(match self {
+            Self::Fatal => Text::SeverityFatal,
+            Self::Error => Text::SeverityError,
+            Self::Warning => Text::SeverityWarning,
+            Self::Information => Text::SeverityInformation,
+        })
     }
 
     /// The tone the word is drawn in.
@@ -153,13 +154,13 @@ pub fn issue_list(issues: &[Issue]) -> impl IntoView + use<> {
             let text = match &issue.text {
                 Some(text) => text.clone().into_any(),
                 None => view! {
-                    <span class="fui-muted">"The issue carries no text."</span>
+                    <span class="fui-muted">{tr(Text::IssueBlank)}</span>
                 }
                 .into_any(),
             };
             let place = (!issue.place.is_empty()).then(|| {
                 view! {
-                    " at "
+                    {format!(" {} ", tr(Text::IssuePlace))}
                     <code>{issue.place.clone()}</code>
                 }
             });
@@ -181,11 +182,10 @@ pub fn issue_list(issues: &[Issue]) -> impl IntoView + use<> {
             }
         })
         .collect_view();
-    let noun = if left_out == 1 { "issue" } else { "issues" };
     let left = (left_out > 0).then(|| {
         view! {
             <p class="fui-muted">
-                {format!("{left_out} information {noun} with no text left out.")}
+                {tr_with(Text::IssuesLeftOut, &[("count", left_out.into())])}
             </p>
         }
     });
@@ -200,8 +200,17 @@ pub fn issue_list(issues: &[Issue]) -> impl IntoView + use<> {
 #[must_use]
 pub fn refusal_title(refusal: &Refusal) -> String {
     match refusal.status {
-        Some(status) => format!("{status}: {}", refusal.summary),
-        None => format!("No answer: {}", refusal.summary),
+        Some(status) => tr_with(
+            Text::RefusalStatus,
+            &[
+                ("status", status.to_string().into()),
+                ("summary", refusal.summary.clone().into()),
+            ],
+        ),
+        None => tr_with(
+            Text::RefusalNoAnswer,
+            &[("summary", refusal.summary.clone().into())],
+        ),
     }
 }
 
@@ -219,7 +228,12 @@ pub fn refusal(refusal: &Refusal) -> impl IntoView + use<> {
     let issues = (!refusal.issues.is_empty()).then(|| issue_list(&refusal.issues));
     let evidence = refusal.evidence.clone().map(|evidence| {
         view! {
-            <div class="fui-code-panel fui-alert-evidence" role="region" aria-label="What the server sent" tabindex="0">
+            <div
+                class="fui-code-panel fui-alert-evidence"
+                role="region"
+                aria-label=tr(Text::RefusalEvidence)
+                tabindex="0"
+            >
                 <pre>{evidence}</pre>
             </div>
         }

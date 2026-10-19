@@ -11,6 +11,50 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.1.7] - 2026-10-19
+
+The family is ready for more languages, with English the one that ships:
+every word a component draws itself comes from a Fluent catalog, a new
+language is a catalog file with no code change, and the locale is chosen
+once per render and reachable by a console for `<html lang>`. The
+English words and the markup they draw in are unchanged.
+
+### Added
+
+- `i18n`: the locale and the catalogs. `Locale` (from a BCP 47 tag, or
+  negotiated from `Accept-Language` among the languages the library ships
+  or, with `negotiate_with`, a console's catalog holds, falling back to the
+  console's configured locale),
+  `provide_locale` and `locale` to choose it once per render and read it,
+  `Locale::tag` for `<html lang>`, `Locale::lookup` for a console's own
+  catalog, and `Locale::with_catalog` for a catalog the library does not
+  ship. The catalogs are embedded at build time from `locales/` by
+  `fluent-templates` 0.15.1, on both halves and with no script; `en` is the
+  reference catalog every lookup falls back to (FerroHEALTH/FerroUI#112).
+- `view::theme_switch::locale_switch`: the language switch, a plain form
+  whose choices are each named in their own language and marked with it in
+  `lang` (FerroHEALTH/FerroUI#112).
+- `view::layout::keyed_field_row`: a row of fields with an id, for a row a
+  console adds, removes or finds, such as one value of a list.
+- `scripts/checks/stray-literals.sh`, in CI: fails on a string a reader
+  sees in a component outside the catalogs (FerroHEALTH/FerroUI#112).
+- The gallery's language switch on the overview's settings, and its
+  pseudo-locale, which draws every library string accented and two fifths
+  longer to check the layout (FerroHEALTH/FerroUI#112).
+
+### Changed
+
+- Every string a component draws itself is a message of
+  `locales/en/ferrohealth-ui.ftl`, looked up in the page's locale. The
+  words that were `&'static str` return values are `String` now:
+  `theme::Theme::label`, `theme::Density::label`,
+  `table::view::Step::label`, `view::refusal::Severity::word` and
+  `view::button::Variant::name` (FerroHEALTH/FerroUI#112).
+- `view::button::label` and `widget::copy::copy_button` take their label as
+  anything that converts into `Oco<'static, str>`, a `&'static str` as
+  before or a `String` from a catalog.
+- The gallery writes the locale its cookie names as `<html lang>`.
+
 ## [0.1.6] - 2026-10-19
 
 The shared form fields every console needs so no field is built by hand: a
@@ -481,7 +525,8 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.6...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.7...HEAD
+[0.1.7]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.3...v0.1.4

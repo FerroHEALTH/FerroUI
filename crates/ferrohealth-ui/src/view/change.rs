@@ -11,6 +11,7 @@
 
 use leptos::prelude::*;
 
+use crate::i18n::{Text, tr};
 use crate::table::view::{Body, Column, DataTable, data_table};
 
 /// One setting's change.
@@ -24,12 +25,14 @@ pub struct Change {
     pub to: Option<String>,
 }
 
-/// The columns of a change table.
-const COLUMNS: [Column; 3] = [
-    Column::text("key", "Setting"),
-    Column::text("from", "Before"),
-    Column::text("to", "After"),
-];
+/// The columns of a change table, named in the page's locale.
+fn columns() -> [Column; 3] {
+    [
+        Column::owned("key", tr(Text::ChangeSetting)),
+        Column::owned("from", tr(Text::ChangeBefore)),
+        Column::owned("to", tr(Text::ChangeAfter)),
+    ]
+}
 
 /// Returns one side of a change: `value` marked with `sign` in the removed
 /// or the added tone, or "not set".
@@ -45,12 +48,14 @@ fn side(value: Option<&String>, sign: &'static str, removed: bool) -> AnyView {
                 <span class="fui-change-sign" aria-hidden="true">
                     {sign}
                 </span>
-                <span class="fui-sr-only">{if removed { "removed " } else { "added " }}</span>
+                <span class="fui-sr-only">
+                    {format!("{} ", tr(if removed { Text::ChangeRemoved } else { Text::ChangeAdded }))}
+                </span>
                 <code>{value.clone()}</code>
             </span>
         }
         .into_any(),
-        None => view! { <span class="fui-muted">"not set"</span> }.into_any(),
+        None => view! { <span class="fui-muted">{tr(Text::ChangeNotSet)}</span> }.into_any(),
     }
 }
 
@@ -59,8 +64,10 @@ fn side(value: Option<&String>, sign: &'static str, removed: bool) -> AnyView {
 #[must_use]
 pub fn change_table(caption: &'static str, changes: &[Change]) -> impl IntoView + use<> {
     if changes.is_empty() {
-        return view! { <p class="fui-muted">"Nothing changes."</p> }.into_any();
+        return view! { <p class="fui-muted">{tr(Text::ChangeNone)}</p> }.into_any();
     }
+    let before = tr(Text::ChangeBefore);
+    let after = tr(Text::ChangeAfter);
     let rows = changes
         .iter()
         .map(|change| {
@@ -69,8 +76,8 @@ pub fn change_table(caption: &'static str, changes: &[Change]) -> impl IntoView 
                     <th scope="row">
                         <code>{change.key.clone()}</code>
                     </th>
-                    <td data-label="Before">{side(change.from.as_ref(), "−", true)}</td>
-                    <td data-label="After">{side(change.to.as_ref(), "+", false)}</td>
+                    <td data-label=before.clone()>{side(change.from.as_ref(), "−", true)}</td>
+                    <td data-label=after.clone()>{side(change.to.as_ref(), "+", false)}</td>
                 </tr>
             }
         })
@@ -78,7 +85,7 @@ pub fn change_table(caption: &'static str, changes: &[Change]) -> impl IntoView 
         .into_any();
     data_table(DataTable {
         caption,
-        columns: &COLUMNS,
+        columns: &columns(),
         sort: None,
         sort_href: &|_| String::new(),
         body: Body::Rows(rows),

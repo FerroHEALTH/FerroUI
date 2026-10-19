@@ -17,6 +17,7 @@
 
 use leptos::prelude::*;
 
+use crate::i18n::{Text, tr};
 use crate::icon::{Glyph, icon};
 use crate::view::form::SELECT;
 
@@ -358,12 +359,12 @@ impl State {
 }
 
 /// The rows of the list: the options kept, or "No match".
-fn rows(state: State) -> AnyView {
+fn rows(state: State, no_match: String) -> AnyView {
     let list = state.shown.get();
     if list.is_empty() {
         return view! {
             <li class="fui-combobox-empty" role="option" aria-disabled="true" aria-selected="false">
-                "No match"
+                {no_match}
             </li>
         }
         .into_any();
@@ -426,6 +427,7 @@ fn enhanced_view(combo: KeyedCombobox) -> AnyView {
     } = combo;
     let list_id = format!("{id}-list");
     let state = State::new(id.clone(), options, selected);
+    let no_match = tr(Text::ComboboxNoMatch);
     let revealed = list_id.clone();
     Effect::new(move |_| {
         if let Some(option) = state.active_id() {
@@ -472,7 +474,7 @@ fn enhanced_view(combo: KeyedCombobox) -> AnyView {
                 class="fui-combobox-list"
                 hidden=move || !state.open.get()
             >
-                {move || rows(state)}
+                {move || rows(state, no_match.clone())}
             </ul>
         </div>
     }

@@ -19,7 +19,7 @@ use ferrohealth_ui::view::surface::{
     stack, stat_card, stat_card_marked, stat_grid, well,
 };
 use ferrohealth_ui::view::tabs::{KeyedTab, Tab, keyed_tabs, link_tabs};
-use ferrohealth_ui::view::theme_switch::{density_switch, theme_switch};
+use ferrohealth_ui::view::theme_switch::{density_switch, locale_switch, theme_switch};
 use ferrohealth_ui::view::time::timestamp;
 use ferrohealth_ui::widget::segmented::segmented;
 use ferrohealth_ui::widget::tabs::{Panel, tabs};
@@ -216,7 +216,7 @@ fn facts() -> AnyView {
         "Definition grid",
         definitions(vec![
             ("Product", "FerroHEALTH UI".into_any()),
-            ("Version", "0.1.6".into_any()),
+            ("Version", "0.1.7".into_any()),
             ("Commit", view! { <code>"0123456789ab"</code> }.into_any()),
             ("Profile", or_none(String::new())),
             ("Licence", "Business Source License 1.1".into_any()),
@@ -530,7 +530,7 @@ fn states() -> AnyView {
     .into_any()
 }
 
-/// The theme and density switches, each a plain form that posts.
+/// The theme, density and language switches, each a plain form that posts.
 fn settings() -> AnyView {
     let theme = use_context::<crate::app::InForce>()
         .map_or(ferrohealth_ui::theme::Theme::System, |in_force| in_force.0);
@@ -553,7 +553,13 @@ fn settings() -> AnyView {
                 "settings-density",
                 "Density",
                 None,
-                density_switch(density, String::from(crate::app::DENSITY_ROUTE), back),
+                density_switch(density, String::from(crate::app::DENSITY_ROUTE), back.clone()),
+            )}
+            {field(
+                "settings-language",
+                "Language",
+                Some("The pseudo-locale draws every library string accented and longer, to check the layout."),
+                locale_switch(&crate::locale::choices(), String::from(crate::app::LOCALE_ROUTE), back),
             )}
         }),
     )

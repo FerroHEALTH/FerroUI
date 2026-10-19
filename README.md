@@ -25,7 +25,7 @@ FerroFED, FerroEHR and FerroTERM. It is published on crates.io as
 
 ```toml
 [dependencies]
-ferrohealth-ui = "=0.1.6"
+ferrohealth-ui = "=0.1.7"
 ```
 
 Serve `ferrohealth_ui::style::STYLESHEET` and your brand's `Brand::theme()`

@@ -103,6 +103,20 @@ jobs:
           persist-credentials: false
       - run: bash scripts/checks/comment-style.sh --all
 
+  # No string a reader sees in a component outside the catalogs
+  # (.claude/rules/leptos-ui.md §13).
+  stray-literals:
+    name: stray-literals
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: bash scripts/checks/stray-literals.sh crates/ferrohealth-ui/src
+
   # Every TODO(#N) names an open issue.
   todo-issues:
     name: todo-issues
@@ -430,6 +444,7 @@ jobs:
       - workflow-lint
       - shellcheck
       - comment-style
+      - stray-literals
       - todo-issues
       - contribution-licence
       - detect

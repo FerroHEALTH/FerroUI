@@ -17,6 +17,7 @@
 )]
 
 mod contrast;
+mod locale;
 mod markup;
 mod render;
 mod stylesheet;

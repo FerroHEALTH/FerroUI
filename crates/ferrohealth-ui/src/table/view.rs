@@ -19,6 +19,7 @@ use std::borrow::Cow;
 
 use leptos::prelude::*;
 
+use crate::i18n::{Text, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::table::model::{Noun, OpenWindow, Paging, SIZES, Sort, Window, partial_note};
 use crate::view::button::Variant;
@@ -289,15 +290,15 @@ impl Step {
         }
     }
 
-    /// The step's words.
+    /// The step's words in the page's locale.
     #[must_use]
-    pub const fn label(self) -> &'static str {
-        match self {
-            Self::First => "First",
-            Self::Previous => "Previous",
-            Self::Next => "Next",
-            Self::Last => "Last",
-        }
+    pub fn label(self) -> String {
+        tr(match self {
+            Self::First => Text::StepFirst,
+            Self::Previous => Text::StepPrevious,
+            Self::Next => Text::StepNext,
+            Self::Last => Text::StepLast,
+        })
     }
 
     /// The step's icon.
@@ -337,7 +338,8 @@ pub fn step_label(step: Step, available: bool) -> impl IntoView + use<> {
     view! {
         {(!forward).then(|| icon(step.glyph(), "14"))}
         <span class="fui-step-words">{step.label()}</span>
-        {(!available).then(|| view! { <span class="fui-sr-only">" (unavailable)"</span> })}
+        {(!available)
+            .then(|| view! { <span class="fui-sr-only">{format!(" {}", tr(Text::StepUnavailable))}</span> })}
         {forward.then(|| icon(step.glyph(), "14"))}
     }
 }
@@ -407,8 +409,8 @@ fn size_choices(listing: Listing, current: u32, size: &dyn Fn(u32, bool) -> AnyV
         .collect_view();
     view! {
         <div class="fui-pager-sizes">
-            <span class="fui-muted">"Rows per page"</span>
-            {sizes}
+            <span class="fui-muted">{tr(Text::RowsPerPage)}</span>
+            <span class="fui-pager-size-choices">{sizes}</span>
         </div>
     }
     .into_any()
@@ -429,7 +431,13 @@ pub fn pager(
     let listing = listing.into();
     let [first, previous, next, last] = Step::ALL.map(|each| step(each, each.target(window)));
     let range = match partial_note(window.total, listing.stated, listing.noun) {
-        Some(note) => format!("{}. {note}", window.range_of(listing.noun)),
+        Some(note) => tr_with(
+            Text::RangeWithNote,
+            &[
+                ("range", window.range_of(listing.noun).into()),
+                ("note", note.into()),
+            ],
+        ),
         None => window.range_of(listing.noun),
     };
     let sizes = size_choices(listing, window.size, size);
@@ -440,7 +448,10 @@ pub fn pager(
             <div class="fui-pager-steps">
                 {first} {previous}
                 <span class="fui-pager-position">
-                    {format!("Page {} of {}", window.page, window.pages)}
+                    {tr_with(
+                        Text::PageOf,
+                        &[("page", window.page.into()), ("pages", window.pages.into())],
+                    )}
                 </span> {next} {last}
             </div>
         }
