@@ -17,7 +17,6 @@ language-switch = Language
 skip-to-page = Skip to the page
 open-menu = Menu
 close = Close
-footer-version = v{ $version }
 footer-about = About
 sign-out = Sign out
 find = Find

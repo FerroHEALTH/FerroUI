@@ -19,6 +19,11 @@ and this project adheres to
   upgrading is free. Cadasto B.V. commits to keep publishing security fixes
   for at least five years after each release (Regulation (EU) 2024/2847
   Art 13(8)) and ships them only in the newest release (Art 13(10)).
+### Fixed
+
+- The footer draws the product's version as data in every locale, never
+  through the catalog, and its About link keeps its words on one line
+  (FerroHEALTH/FerroUI#116).
 
 ## [0.1.7] - 2026-10-19
 

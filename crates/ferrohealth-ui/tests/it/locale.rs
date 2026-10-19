@@ -125,3 +125,25 @@ fn the_language_switch_names_each_choice_in_its_own_language() {
     );
     assert!(switch.contains(">Qaa<"), "{switch}");
 }
+
+#[test]
+fn the_footer_draws_its_version_as_data_in_every_locale() {
+    use ferrohealth_ui::view::shell::{Footer, footer};
+    let text = Footer {
+        product: "FerroUI Gallery",
+        version: "0.1.8",
+        about: "/about",
+    };
+    for locale in [Locale::english(), throwaway()] {
+        let page = render(Some(locale), || footer(text).into_any());
+        assert!(page.contains("FerroUI Gallery"), "{page}");
+        assert!(
+            page.contains(">v0.1.8<") || page.contains("v0.1.8"),
+            "{page}"
+        );
+        assert!(
+            !page.contains("[v0.1.8"),
+            "the version never goes through a catalog: {page}"
+        );
+    }
+}

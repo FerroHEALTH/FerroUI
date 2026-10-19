@@ -431,8 +431,6 @@ texts! {
     OpenMenu = "open-menu",
     /// A button that closes the drawer or a side panel.
     Close = "close",
-    /// The product's version in the footer: `$version`.
-    FooterVersion = "footer-version",
     /// The footer's link to the About page.
     FooterAbout = "footer-about",
     /// The operator menu's sign-out button.
@@ -657,7 +655,7 @@ mod tests {
     const PLACEABLES: &[&str] = &[
         "chart", "count", "date", "document", "file", "first", "held", "kinds", "last", "limit",
         "note", "noun", "nouns", "page", "pages", "range", "size", "stated", "status", "summary",
-        "time", "total", "version",
+        "time", "total",
     ];
 
     /// The ids of the messages the catalog file at `path` defines.
