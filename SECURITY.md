@@ -10,13 +10,19 @@ one page of the family book, written by the manufacturer, Cadasto B.V.:
 
 ## Supported versions
 
-Security fixes apply to the latest released version only.
+Only the newest release is supported. When a new release is published, every
+earlier release stops receiving fixes: there are no maintenance branches, no
+long-term-support line and no backports. If you are not on the newest
+release, upgrade; upgrading is free. Under the Cyber Resilience Act, Cadasto
+B.V. commits to keep publishing security fixes for at least five years after
+each release (Regulation (EU) 2024/2847 Art 13(8)) and ships them only in the
+newest release (Art 13(10)).
 
-| Version             | Supported          |
-| ------------------- | ------------------ |
-| Latest release      | :white_check_mark: |
-| Older releases      | :x:                |
-| `main` (unreleased) | best effort        |
+| Artifact | Supported version | Where fixes ship |
+| --- | --- | --- |
+| The `ferrohealth-ui` crate on crates.io | the newest published release | the newest release |
+
+`main` is unreleased and best effort.
 
 ## Reporting a vulnerability
 
