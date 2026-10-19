@@ -221,13 +221,16 @@ WebAssembly is over the number below, which the script reads from this table.
 
 | Measure | Budget |
 |---|---|
-| WebAssembly, brotli-compressed | 614400 bytes |
+| WebAssembly, brotli-compressed | 655360 bytes |
 
-The budget is 600 KiB, 18% over the 518566 bytes 0.1.1 measured (2026-10-18,
-cargo-leptos 0.3.11, wasm-bindgen 0.2.129, Rust 1.98.1). 0.1.0 measured
-325387 bytes; 0.1.1 adds every component the four consoles draw (the tree,
-the picker, the dialogs, the side panel, the upload field, the charts, the
-document pane, the help switch), and a console's own bundle carries only the
-components it uses. A change
+The budget is 640 KiB, 6% over the 618838 bytes the 0.1.6 gallery
+measured (2026-10-19, cargo-leptos 0.3.11, wasm-bindgen 0.2.129,
+Rust 1.98.1), which was 12595 bytes over 0.1.5's 606243 and 4438 over the
+600 KiB budget before it. 0.1.6 adds the field shapes every console needs
+so none builds a field by hand (a label made at run time, a hidden label,
+an error line, an action with its error line, a field that switches
+between a picker and a typed value), and the gallery draws each of them.
+0.1.1 measured 518566 bytes and 0.1.0 325387; a console's own bundle
+carries only the components it uses. A change
 that needs more raises it here, in its own pull request, with the measured
 size and the reason.
