@@ -42,9 +42,10 @@ pub fn operator_menu(menu: OperatorMenu, extra: impl IntoView + 'static) -> AnyV
     view! {
         <button
             type="button"
-            class=Variant::Ghost.class()
+            class=format!("{} fui-operator", Variant::Ghost.class())
             popovertarget=menu.id
             aria-controls=menu.id
+            title=menu.name.clone()
         >
             {icon(Glyph::CIRCLE_USER, "16")}
             <span class="fui-operator-name">{menu.name.clone()}</span>

@@ -11,6 +11,43 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-10-19
+
+The top bar, combobox and stacked table fixes the FerroTERM console review
+asked for, the stat card alignment FerroFED reported and the editor's owner
+FerroEHR reported. No public signature changes; the additions are a new function, a
+new struct and a new class.
+
+### Added
+
+- `widget::combobox::keyed_combobox` and `KeyedCombobox`: a combobox whose
+  id, name, label and placeholder a console makes at run time, such as one
+  per clause of a list, and whose input names its help line in
+  `aria-describedby`; `combobox` keeps its signature and draws through it
+  (FerroHEALTH/FerroUI#85).
+- `fui-truncate`: one line that ends in an ellipsis when its box is
+  narrower, kept to 28rem in a table cell and to the card in a stacked row.
+
+### Fixed
+
+- The top bar never covers its search: from 48rem the search shrinks first,
+  to 11rem, and the operator's name then ends in an ellipsis (at most 16rem)
+  with the whole name as the button's title, at every width from 390 to
+  1920 px (FerroHEALTH/FerroUI#87).
+- A stacked table takes its container's width, so a cell that keeps its line
+  no longer carries every card past a phone's edge
+  (FerroHEALTH/FerroUI#86).
+- A visually hidden legend in a `fui-fieldset` keeps the hidden box rather
+  than the group heading's width (FerroHEALTH/FerroUI#89).
+- Stat cards keep their glyphs and figures in line whether or not a card
+  carries a mark under its label (FerroHEALTH/FerroUI#84).
+- `code_editor` allocates no reactive value of its own: its grammar is a
+  plain value, so an editor drawn inside a reloading `Transition` holds
+  nothing its caller's owner disposes under it (FerroHEALTH/FerroUI#88).
+- A field's control keeps to its field: a date and time input, whose own
+  minimum width follows the platform's fonts, no longer widens a row of
+  fields past a narrow screen.
+
 ## [0.1.2] - 2026-10-19
 
 The fixes the owner's review of the four consoles asked for: links, fields,
@@ -303,7 +340,8 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/FerroHEALTH/FerroUI/releases/tag/v0.1.0

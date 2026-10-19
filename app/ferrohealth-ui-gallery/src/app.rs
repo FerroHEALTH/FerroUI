@@ -417,6 +417,9 @@ fn keep_theme(theme: Theme) {
     let _: Theme = theme;
 }
 
+/// The synthetic operator the gallery is signed in as.
+const OPERATOR: &str = "Practitioner/synthetic-terminologist-on-call";
+
 /// The shell of `brand`'s pages, whose theme switch returns to `back`.
 fn brand_shell(brand: Brand, back: String) -> AnyView {
     let start = view! {
@@ -426,11 +429,13 @@ fn brand_shell(brand: Brand, back: String) -> AnyView {
     let switch = brand_switch(brand, &back).into_any();
     let end = view! {
         <span class="fui-wide-only">{switch}</span>
-        <span class="fui-roomy-only">{pill(Tone::Ok, "Library v0.1.2")}</span>
+        <span class="fui-roomy-only">{pill(Tone::Ok, "Library v0.1.3")}</span>
         {operator_menu(
             OperatorMenu {
                 id: "operator-menu",
-                name: String::from("Synthetic operator"),
+                // A name as long as a FHIR user reference gets, so the top
+                // bar shows how it gives way.
+                name: String::from(OPERATOR),
                 subtitle: "Signed in to the gallery",
                 sign_out: None,
             },

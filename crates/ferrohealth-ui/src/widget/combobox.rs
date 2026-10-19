@@ -80,15 +80,57 @@ pub struct Combobox {
     pub selected: RwSignal<Option<String>>,
 }
 
+/// What a combobox shows, with ids a console makes at run time, such as one
+/// per row of a list, and the help line that describes it.
+#[derive(Debug, Clone)]
+pub struct KeyedCombobox {
+    /// The control's id; the list's is this with `-list`, an option's this
+    /// with `-option-` and its place.
+    pub id: String,
+    /// The name the form posts the value as.
+    pub name: String,
+    /// The label, such as "Code system".
+    pub label: String,
+    /// The words shown while nothing is chosen.
+    pub placeholder: String,
+    /// The choices, in their order.
+    pub options: Vec<ComboOption>,
+    /// The value chosen, if any.
+    pub selected: RwSignal<Option<String>>,
+    /// The id of the element that describes the control, such as its help
+    /// line, which the input names in `aria-describedby`.
+    pub described_by: Option<String>,
+}
+
+impl From<Combobox> for KeyedCombobox {
+    fn from(combo: Combobox) -> Self {
+        Self {
+            id: combo.id.to_owned(),
+            name: combo.name.to_owned(),
+            label: combo.label.to_owned(),
+            placeholder: combo.placeholder.to_owned(),
+            options: combo.options,
+            selected: combo.selected,
+            described_by: None,
+        }
+    }
+}
+
 /// Returns the combobox `combo`.
 #[must_use]
 pub fn combobox(combo: Combobox) -> AnyView {
+    keyed_combobox(KeyedCombobox::from(combo))
+}
+
+/// Returns the combobox `combo`, whose ids are made at run time.
+#[must_use]
+pub fn keyed_combobox(combo: KeyedCombobox) -> AnyView {
     let enhanced = RwSignal::new(false);
     // An effect runs in the browser alone, after hydration, so the server's
     // native select is what hydrates, and the combobox replaces it.
     Effect::new(move |_| enhanced.set(true));
-    let label = combo.label;
-    let id = combo.id;
+    let label = combo.label.clone();
+    let id = combo.id.clone();
     let body = move || {
         if enhanced.get() {
             enhanced_view(combo.clone())
@@ -108,7 +150,7 @@ pub fn combobox(combo: Combobox) -> AnyView {
 }
 
 /// The native select a page shows before it hydrates.
-fn native_view(combo: &Combobox) -> AnyView {
+fn native_view(combo: &KeyedCombobox) -> AnyView {
     let selected = combo.selected;
     let chosen = selected.get_untracked();
     let options = combo
@@ -125,13 +167,14 @@ fn native_view(combo: &Combobox) -> AnyView {
         .collect_view();
     view! {
         <select
-            id=combo.id
-            name=combo.name
+            id=combo.id.clone()
+            name=combo.name.clone()
             class=SELECT
+            aria-describedby=combo.described_by.clone()
             on:change:target=move |event| selected.set(Some(event.target().value()))
         >
             <option value="" selected=chosen.is_none()>
-                {combo.placeholder}
+                {combo.placeholder.clone()}
             </option>
             {options}
         </select>
@@ -148,7 +191,7 @@ fn option_id(id: &str, place: usize) -> String {
 #[derive(Clone, Copy)]
 struct State {
     /// The control's id.
-    id: &'static str,
+    id: StoredValue<String>,
     /// The choices.
     options: StoredValue<Vec<ComboOption>>,
     /// The value chosen.
@@ -167,11 +210,7 @@ struct State {
 
 impl State {
     /// The state of a combobox over `options`, choosing into `selected`.
-    fn new(
-        id: &'static str,
-        options: Vec<ComboOption>,
-        selected: RwSignal<Option<String>>,
-    ) -> Self {
+    fn new(id: String, options: Vec<ComboOption>, selected: RwSignal<Option<String>>) -> Self {
         let options = StoredValue::new(options);
         let typing = RwSignal::new(false);
         let query = RwSignal::new(String::new());
@@ -188,7 +227,7 @@ impl State {
             })
         });
         Self {
-            id,
+            id: StoredValue::new(id),
             options,
             selected,
             open: RwSignal::new(false),
@@ -270,7 +309,9 @@ impl State {
     fn active_id(self) -> Option<String> {
         let at = self.active.get()?;
         let place = self.shown.with(|list| list.get(at).copied())?;
-        self.open.get().then(|| option_id(self.id, place))
+        self.open
+            .get()
+            .then(|| self.id.with_value(|id| option_id(id, place)))
     }
 
     /// Answers a key the reader pressed in the input.
@@ -351,7 +392,7 @@ fn row(state: State, at: usize, place: usize) -> AnyView {
     let check = is_chosen.clone();
     view! {
         <li
-            id=option_id(state.id, place)
+            id=state.id.with_value(|id| option_id(id, place))
             role="option"
             class="fui-combobox-option"
             aria-selected=move || is_chosen().to_string()
@@ -373,20 +414,22 @@ fn row(state: State, at: usize, place: usize) -> AnyView {
 }
 
 /// The combobox a hydrated page shows.
-fn enhanced_view(combo: Combobox) -> AnyView {
-    let Combobox {
+fn enhanced_view(combo: KeyedCombobox) -> AnyView {
+    let KeyedCombobox {
         id,
         name,
         label,
         placeholder,
         options,
         selected,
+        described_by,
     } = combo;
-    let state = State::new(id, options, selected);
     let list_id = format!("{id}-list");
+    let state = State::new(id.clone(), options, selected);
+    let revealed = list_id.clone();
     Effect::new(move |_| {
         if let Some(option) = state.active_id() {
-            reveal(&format!("{id}-list"), &option);
+            reveal(&revealed, &option);
         }
     });
     let controls = list_id.clone();
@@ -402,6 +445,7 @@ fn enhanced_view(combo: Combobox) -> AnyView {
                 aria-expanded=move || state.open.get().to_string()
                 aria-controls=controls
                 aria-activedescendant=move || state.active_id()
+                aria-describedby=described_by
                 placeholder=placeholder
                 prop:value=move || state.words()
                 on:click=move |_| {

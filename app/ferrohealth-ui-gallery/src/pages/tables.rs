@@ -53,8 +53,12 @@ const PLAIN: [Column; 5] = [
     Column::text("actions", "Actions"),
 ];
 
-/// The table row of `row`.
+/// The table row of `row`, its name over a canonical too long for a phone.
 fn row(row: &Row) -> AnyView {
+    let canonical = format!(
+        "https://mappings.example/fhirconnect/{}/synthetic-model-with-a-long-path",
+        row.name
+    );
     let tone = match row.state {
         "refused" => Tone::Bad,
         "warning" => Tone::Warn,
@@ -66,6 +70,9 @@ fn row(row: &Row) -> AnyView {
                 <a href="code">
                     <code>{row.name.clone()}</code>
                 </a>
+                <span class="fui-truncate fui-small fui-muted" title=canonical.clone()>
+                    {canonical.clone()}
+                </span>
             </th>
             <td data-label="Kind">{row.kind}</td>
             <td data-label="Lines" class=NUM>{row.lines.to_string()}</td>

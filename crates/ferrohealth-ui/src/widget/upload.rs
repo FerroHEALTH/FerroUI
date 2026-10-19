@@ -19,7 +19,7 @@ use leptos::prelude::*;
 
 use crate::highlight::Language;
 use crate::icon::{Glyph, icon};
-use crate::widget::editor::{Drawn, drawn};
+use crate::widget::editor::{Drawn, Grammar, drawn};
 
 /// What an upload field accepts and says.
 #[derive(Debug, Clone, Copy)]
@@ -169,7 +169,9 @@ pub fn upload_field(
     let editor = drawn(
         Drawn {
             id: text_id,
-            language: Signal::derive(move || source.with(|text| Language::detect(text))),
+            language: Grammar::Following(Signal::derive(move || {
+                source.with(|text| Language::detect(text))
+            })),
             text: source.into(),
             marks: Signal::stored(Vec::new()),
             editable: Signal::stored(true),
