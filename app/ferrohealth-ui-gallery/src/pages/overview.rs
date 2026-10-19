@@ -216,7 +216,7 @@ fn facts() -> AnyView {
         "Definition grid",
         definitions(vec![
             ("Product", "FerroHEALTH UI".into_any()),
-            ("Version", "0.1.4".into_any()),
+            ("Version", "0.1.5".into_any()),
             ("Commit", view! { <code>"0123456789ab"</code> }.into_any()),
             ("Profile", or_none(String::new())),
             ("Licence", "Business Source License 1.1".into_any()),

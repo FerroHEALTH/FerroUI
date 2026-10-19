@@ -56,7 +56,11 @@ The library compiles under `csr`, `ssr` and `hydrate` alike, with
 `leptos = { default-features = false }`; the console's own Leptos
 dependency turns the mode on and features unify. A console chooses its
 halves by compilation target, never by a Cargo `ssr`/`hydrate` feature pair,
-so a workspace `--all-features` build never enables both.
+so a workspace `--all-features` build never enables both. The browser half
+asks for the lowest `web-sys` and `wasm-bindgen-futures` the library's
+Leptos resolves with and for no `wasm-bindgen` of its own, so a console's
+lock picks its wasm-bindgen and the CLI that must equal it
+(`scripts/checks/browser-floor.sh` builds the library at those floors).
 
 ## 3. Reactivity and props
 

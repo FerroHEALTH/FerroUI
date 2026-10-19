@@ -37,6 +37,9 @@ pub struct Column {
     /// Whether the header is code (a path, an alias), drawn in the code
     /// face and in its own case.
     pub mono: bool,
+    /// The header's title, such as the path a query column reads, which the
+    /// header carries once so no cell repeats it.
+    pub title: Option<Cow<'static, str>>,
 }
 
 impl Column {
@@ -49,6 +52,7 @@ impl Column {
             numeric: false,
             sortable: false,
             mono: false,
+            title: None,
         }
     }
 
@@ -62,6 +66,7 @@ impl Column {
             numeric: false,
             sortable: false,
             mono: false,
+            title: None,
         }
     }
 
@@ -83,6 +88,17 @@ impl Column {
     #[must_use]
     pub const fn numeric(mut self) -> Self {
         self.numeric = true;
+        self
+    }
+
+    /// This column, its header carrying the title `title`.
+    ///
+    /// A title is extra detail a pointer shows and a keyboard does not, so
+    /// the header's words still name the column on their own (HTML Living
+    /// Standard, the `title` attribute).
+    #[must_use]
+    pub fn titled(mut self, title: impl Into<Cow<'static, str>>) -> Self {
+        self.title = Some(title.into());
         self
     }
 }
@@ -142,9 +158,10 @@ fn header(column: &Column, sort: Option<&Sort>, sort_href: &dyn Fn(&Sort) -> Str
         (false, false) => None,
     };
     let label = column.label.to_string();
+    let title = column.title.as_deref().map(str::to_owned);
     if !column.sortable {
         return view! {
-            <th scope="col" class=class>
+            <th scope="col" class=class title=title>
                 {label}
             </th>
         }
@@ -158,7 +175,7 @@ fn header(column: &Column, sort: Option<&Sort>, sort_href: &dyn Fn(&Sort) -> Str
     };
     let href = sort_href(&Sort::toggled(sort, &column.key));
     view! {
-        <th scope="col" class=class aria-sort=aria>
+        <th scope="col" class=class title=title aria-sort=aria>
             <a href=href class="fui-sort">
                 {label}
                 {icon(glyph, "12")}

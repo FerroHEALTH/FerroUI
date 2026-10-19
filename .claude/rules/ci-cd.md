@@ -18,7 +18,8 @@ Actions Security Cheat Sheet, SLSA v1.0, OpenSSF Scorecard, and Sigstore.
   and push to `main`. The workflow tier (zizmor, actionlint, shellcheck, the
   comment-style guard, the Lucide vendor check), the Rust tier (`cargo fmt
   --all --check`; `cargo clippy --workspace --all-targets --locked -- -D
-  warnings`; the two wasm32 clippy runs of `leptos-ui.md` §10; `cargo nextest
+  warnings`; the two wasm32 clippy runs of `leptos-ui.md` §10 and the
+  browser-floor build of `scripts/checks/browser-floor.sh`; `cargo nextest
   run --workspace --locked` plus `cargo test --doc --locked`; `cargo doc` with
   `RUSTDOCFLAGS=-D warnings`; `cargo deny check`; `cargo publish -p
   ferrohealth-ui --dry-run --locked`; the crate-version guard and

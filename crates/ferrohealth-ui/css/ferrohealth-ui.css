@@ -2559,6 +2559,20 @@
     margin-block-start: 0;
   }
 
+  /* A row whose field carries a help line under its control aligns the
+     fields by their tops, and its buttons and checkboxes sit one label
+     down, so each stays on the controls' line, not the help's. */
+  @media (width >= 30rem) {
+    .fui-field-flow:has(> .fui-field > .fui-help) {
+      align-items: flex-start;
+    }
+
+    .fui-field-flow:has(> .fui-field > .fui-help) > :is(button, .fui-button, .fui-check) {
+      align-self: flex-start;
+      margin-block-start: calc(var(--leading-body) + var(--space-tight));
+    }
+  }
+
   .fui-help {
     color: var(--muted);
     font-size: var(--text-small);

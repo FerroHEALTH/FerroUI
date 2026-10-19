@@ -27,11 +27,14 @@ leptos.workspace = true
 leptos_router.workspace = true
 serde.workspace = true
 
-# The widgets' browser code, compiled for the browser alone.
+# The widgets' browser code, compiled for the browser alone. Each asks for
+# the lowest release leptos 0.8.22 resolves with (web-sys 0.3.85 pins
+# wasm-bindgen 0.2.108), not the workspace pin, so a console's own lock picks
+# its wasm-bindgen and its CLI; `scripts/checks/browser-floor.sh` builds the
+# library at these floors. The wasm-bindgen crate is reached through leptos.
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-wasm-bindgen.workspace = true
-wasm-bindgen-futures.workspace = true
-web-sys = { workspace = true, features = [
+wasm-bindgen-futures = "0.4.58"
+web-sys = { version = "0.3.85", default-features = false, features = [
   "Blob",
   "Clipboard",
   "DataTransfer",

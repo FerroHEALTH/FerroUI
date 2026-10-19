@@ -5,7 +5,10 @@
 # and fails when its brotli-compressed WebAssembly is over its byte budget
 # (no specification governs this: our own design).
 #
-# It reads the bundle scripts/release/gallery-site.sh --release writes, prints
+# It reads the bundle scripts/release/gallery-site.sh --release writes, and
+# refuses one whose digests differ from the stamp that build leaves in
+# target/gallery-site.sha256 on success, so a failed or a debug build never
+# measures a stale bundle as within the budget. It prints
 # the WebAssembly and its JavaScript glue raw, gzip-compressed (gzip -9) and
 # brotli-compressed (brotli -q 11) as a Markdown table, and appends the table
 # to $GITHUB_STEP_SUMMARY when that is set. The budget is read from the budget
@@ -16,7 +19,8 @@
 #   pkg-dir defaults to target/site/pkg.
 #
 # Exit 0 = within the budget. Exit 1 = over the budget, a bundle file missing,
-# a compressor missing, or the budget unreadable. Exit 2 = a usage error.
+# a bundle the last release build did not write, a compressor missing, or the
+# budget unreadable. Exit 2 = a usage error.
 set -Eeuo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -45,6 +49,17 @@ for file in "$name.wasm" "$name.js"; do
     exit 1
   fi
 done
+
+stamp="$root/target/gallery-site.sha256"
+if [ ! -s "$stamp" ]; then
+  echo "gallery-bundle: $stamp is missing: the last site build failed or was not a release build; run scripts/release/gallery-site.sh --release first." >&2
+  exit 1
+fi
+if command -v sha256sum > /dev/null; then sum=(sha256sum); else sum=(shasum -a 256); fi
+if ! (cd "$pkg" && "${sum[@]}" -c --status "$stamp"); then
+  echo "gallery-bundle: $pkg is not the bundle the last release build wrote ($stamp); run scripts/release/gallery-site.sh --release first." >&2
+  exit 1
+fi
 
 # The one row of the budget table whose first cell names the gating measure.
 budgets="$(awk -F'|' '

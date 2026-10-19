@@ -18,6 +18,7 @@ use ferrohealth_ui::view::chart::{LineChart, Series};
 use ferrohealth_ui::view::code::{code_lines, code_panel};
 use ferrohealth_ui::view::dialog::{Confirmation, confirm_dialog, confirm_trigger};
 use ferrohealth_ui::view::empty::{empty_state, skeleton};
+use ferrohealth_ui::view::form::{INPUT, help_id, keyed_check, keyed_check_field, keyed_field};
 use ferrohealth_ui::view::refusal::{Issue, Refusal, Severity, refusal};
 use ferrohealth_ui::view::shell::{About, Footer, footer, footer_about, lockup, mark};
 use ferrohealth_ui::view::sign_in::{Basic, Notice, Provider, SignIn, sign_in};
@@ -583,4 +584,93 @@ fn a_table_of_several_bodies_writes_them_as_they_are_under_its_header() {
         "{table}"
     );
     assert!(table.contains("fui-table-stack"), "{table}");
+}
+
+#[test]
+fn a_header_title_rides_its_header_alone_sortable_or_not() {
+    let columns = [
+        Column::owned("patient", "patient")
+            .mono()
+            .titled("e/ehr_status/subject"),
+        Column::text("uid", "Uid")
+            .sortable()
+            .titled(String::from("c/uid/value")),
+        Column::text("rate", "Rate"),
+    ];
+    let table = html(|| {
+        data_table(DataTable {
+            caption: "Results",
+            columns: &columns,
+            sort: None,
+            sort_href: &|sort: &Sort| format!("/q?sort={}", sort.column),
+            body: Body::Rows(view! { <tr><td>"a"</td><td>"b"</td><td>"1"</td></tr> }.into_any()),
+        })
+        .into_any()
+    });
+    assert!(
+        table.contains(r#"<th scope="col" title="e/ehr_status/subject" class="fui-th-mono">"#),
+        "{table}"
+    );
+    assert!(
+        table.contains(r#"title="c/uid/value" aria-sort="none""#),
+        "a sortable header carries its title beside its sort: {table}"
+    );
+    assert_eq!(
+        2,
+        table.matches("title=").count(),
+        "only the titled headers carry one: {table}"
+    );
+}
+
+#[test]
+fn a_field_with_an_id_made_per_row_names_its_own_control_and_help() {
+    let rows = ["include-0", "exclude-1"];
+    let fields = html(|| {
+        rows.iter()
+            .map(|key| {
+                let id = format!("compose-search-{key}");
+                let help = help_id(&id);
+                keyed_field(
+                    id.clone(),
+                    "Find a code",
+                    Some("Type two letters or more."),
+                    view! { <input id=id name="q" class=INPUT aria-describedby=help /> },
+                )
+            })
+            .collect_view()
+            .into_any()
+    });
+    for key in rows {
+        let id = format!("compose-search-{key}");
+        assert!(
+            fields.contains(&format!(r#"<label for="{id}""#)),
+            "{fields}"
+        );
+        assert!(
+            fields.contains(&format!(r#"<p id="{id}-help""#)),
+            "{fields}"
+        );
+        assert!(
+            fields.contains(&format!(r#"aria-describedby="{id}-help""#)),
+            "{fields}"
+        );
+    }
+    let checks = html(|| {
+        view! {
+            {keyed_check(String::from("keep-2"), "Keep", view! { <input type="checkbox" id="keep-2" /> })}
+            {keyed_check_field(
+                String::from("inactive-2"),
+                "Inactive codes",
+                "Codes a system retired.",
+                view! { <input type="checkbox" id="inactive-2" aria-describedby="inactive-2-help" /> },
+            )}
+        }
+        .into_any()
+    });
+    assert!(checks.contains(r#"<label for="keep-2">"#), "{checks}");
+    assert!(checks.contains(r#"<label for="inactive-2">"#), "{checks}");
+    assert!(
+        checks.contains(r#"<span id="inactive-2-help" class="fui-help">"#),
+        "{checks}"
+    );
 }

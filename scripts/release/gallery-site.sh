@@ -14,7 +14,10 @@
 # The bundle is target/site: pkg/ferrohealth-ui-gallery.wasm and its
 # JavaScript glue. The gallery has no stylesheet of its own: its server serves
 # the library's stylesheet and the brand themes from the library's constants,
-# as a console does.
+# as a console does. A release build that succeeds writes the digests of the
+# two files to target/gallery-site.sha256, which
+# scripts/checks/gallery-bundle.sh reads; the build removes it first, so a
+# failed build leaves no stamp and a stale bundle is never measured.
 #
 # Usage: scripts/release/gallery-site.sh [--release]
 set -Eeuo pipefail
@@ -29,6 +32,9 @@ case "${1:-}" in
     exit 2
     ;;
 esac
+
+stamp="$root/target/gallery-site.sha256"
+rm -f -- "$stamp"
 
 if ! cargo metadata --locked --format-version 1 \
   --manifest-path "$gallery/Cargo.toml" > /dev/null; then
@@ -57,7 +63,13 @@ export CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS="--remap-path-prefix=$cargo
 # cargo-leptos runs a wasm-opt it finds on PATH and downloads one unchecked
 # when it finds none, so the build refuses to start until PATH holds the
 # pinned, verified release (scripts/release/gallery-tools.sh installs it; no
-# specification governs this: our own design).
+# specification governs this: our own design). The tools installed into the
+# workspace's target/gallery-tools go first on PATH when they are there.
+tools="$root/target/gallery-tools/bin"
+if [ -d "$tools" ]; then
+  PATH="$tools:$PATH"
+  export PATH
+fi
 bash "$root/scripts/release/gallery-tools.sh" --check
 
 # cargo-leptos reads its configuration from the crate's own manifest
@@ -73,4 +85,8 @@ for file in pkg/ferrohealth-ui-gallery.wasm pkg/ferrohealth-ui-gallery.js; do
   fi
 done
 [ "$missing" -eq 0 ] || exit 1
+if [ "${1:-}" = --release ]; then
+  if command -v sha256sum > /dev/null; then sum=(sha256sum); else sum=(shasum -a 256); fi
+  (cd "$root/target/site/pkg" && "${sum[@]}" ferrohealth-ui-gallery.wasm ferrohealth-ui-gallery.js) > "$stamp"
+fi
 echo "gallery-site: the bundle is in target/site"

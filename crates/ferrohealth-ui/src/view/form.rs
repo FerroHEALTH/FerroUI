@@ -58,6 +58,9 @@ pub fn help_id(id: &str) -> String {
 
 /// Returns the field of the control `id`: the label `label` above
 /// `control`, and the line `help` under it when there is one.
+///
+/// A field drawn once per row of a list takes its id from
+/// [`keyed_field`].
 #[must_use]
 pub fn field(
     id: &'static str,
@@ -65,14 +68,28 @@ pub fn field(
     help: Option<&'static str>,
     control: impl IntoView + 'static,
 ) -> impl IntoView {
+    keyed_field(id.to_owned(), label, help, control)
+}
+
+/// Returns [`field`] for a control whose id is made at run time, such as one
+/// per row of a list, so each label names its own control and the help id
+/// stays in step with it.
+#[must_use]
+pub fn keyed_field(
+    id: String,
+    label: &'static str,
+    help: Option<&'static str>,
+    control: impl IntoView + 'static,
+) -> impl IntoView {
     let control = control.into_any();
+    let help = help.map(|help| view! { <p id=help_id(&id) class="fui-help">{help}</p> });
     view! {
         <div class="fui-field">
             <label for=id class="fui-label">
                 {label}
             </label>
             {control}
-            {help.map(|help| view! { <p id=help_id(id) class="fui-help">{help}</p> })}
+            {help}
         </div>
     }
 }
@@ -111,6 +128,13 @@ pub fn field_flow(body: impl IntoView + 'static) -> impl IntoView {
 /// `label` on one row, the box clear of the words.
 #[must_use]
 pub fn check(id: &'static str, label: &'static str, checkbox: impl IntoView) -> impl IntoView {
+    keyed_check(id.to_owned(), label, checkbox)
+}
+
+/// Returns [`check`] for a checkbox whose id is made at run time, such as
+/// one per row of a list.
+#[must_use]
+pub fn keyed_check(id: String, label: &'static str, checkbox: impl IntoView) -> impl IntoView {
     view! {
         <div class="fui-check">
             {checkbox} <label for=id>{label}</label>
@@ -130,13 +154,26 @@ pub fn check_field(
     help: &'static str,
     checkbox: impl IntoView + 'static,
 ) -> AnyView {
+    keyed_check_field(id.to_owned(), label, help, checkbox)
+}
+
+/// Returns [`check_field`] for a checkbox whose id is made at run time, such
+/// as one per row of a list, the help id kept in step with it.
+#[must_use]
+pub fn keyed_check_field(
+    id: String,
+    label: &'static str,
+    help: &'static str,
+    checkbox: impl IntoView + 'static,
+) -> AnyView {
     let checkbox = checkbox.into_any();
+    let help_id = help_id(&id);
     view! {
         <div class="fui-check">
             {checkbox}
             <span class="fui-check-text">
                 <label for=id>{label}</label>
-                <span id=help_id(id) class="fui-help">
+                <span id=help_id class="fui-help">
                     {help}
                 </span>
             </span>
