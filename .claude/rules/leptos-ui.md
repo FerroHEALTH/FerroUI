@@ -225,16 +225,19 @@ WebAssembly is over the number below, which the script reads from this table.
 
 | Measure | Budget |
 |---|---|
-| WebAssembly, brotli-compressed | 655360 bytes |
+| WebAssembly, brotli-compressed | 716800 bytes |
 
-The budget is 640 KiB, 6% over the 620282 bytes the 0.1.6 gallery
+The budget is 700 KiB, 6% over the 673607 bytes the 0.1.7 gallery
 measured (2026-10-19, cargo-leptos 0.3.11, wasm-bindgen 0.2.129,
-Rust 1.98.1), which was 14039 bytes over 0.1.5's 606243 and 5882 over the
-600 KiB budget before it. 0.1.6 adds the field shapes every console needs
-so none builds a field by hand (a label made at run time, a hidden label,
-an error line, an action with its error line, a field that switches
-between a picker and a typed value), and the gallery draws each of them.
-0.1.1 measured 518566 bytes and 0.1.0 325387; a console's own bundle
+Rust 1.98.1), which was 53325 bytes over 0.1.6's 620282 and 18247 over the
+640 KiB budget before it. 0.1.7 draws every word a component draws itself
+from a Fluent catalog (`fluent-templates` 0.15.1): the bundle carries the
+Fluent parser, which reads the embedded catalogs once, the CLDR plural
+rules a catalog selects a form by, the language identifiers, and the
+English catalog, and the gallery adds its pseudo-locale. The plural rules
+are what lets a new language be a catalog file with no code change, so
+the bytes buy the readiness the owner asked for. 0.1.5 measured 606243
+bytes, 0.1.1 518566 and 0.1.0 325387; a console's own bundle
 carries only the components it uses. A change
 that needs more raises it here, in its own pull request, with the measured
 size and the reason.
