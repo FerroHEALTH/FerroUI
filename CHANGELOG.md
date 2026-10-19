@@ -11,6 +11,15 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-19
+
+Every console can draw every label from its own catalog: each text a
+console hands a component accepts a string made at run time, and a
+listing's noun is a console message chosen by count. One card-header
+action serves every console, and an editor's header says whether it
+creates or changes. This breaks the public API: the entries below name
+what a console changes.
+
 ### Added
 
 - `i18n::Message`: a message of a console's catalog, named by its id, that
@@ -608,7 +617,8 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.7...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.7...v0.2.0
 [0.1.7]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.4...v0.1.5
