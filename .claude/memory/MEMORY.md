@@ -22,3 +22,6 @@
   crates-io environment waits for the owner's approval
 - [All consoles in lockstep](ferroui.md): every release rolls out to all four
   consoles at once, one uniform design, screenshots read before a tag
+- [Release closes milestone](release-closes-milestone.md): release.yml refuses
+  a tag whose milestone is missing or not empty and closes it after every
+  leg; check it after a manual or recovery release; owner 2026-10-19 (#124)
