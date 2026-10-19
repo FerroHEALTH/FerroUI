@@ -20,7 +20,7 @@
 # A single lower-case word in code (`=> "fatal"`) reads as a key and is
 # passed over, so a word drawn that way is review's to catch. Lines that
 # speak to a developer are passed over: `expect(`, log macros,
-# `write!(f`, `f.write_str(`, `debug_struct(`, `.field(`, assertions and
+# `write!(f`, `f.write_str(`, `debug_struct(`, `.field(`, a lint's `reason`, assertions and
 # attributes. A literal the check reads wrong is allowed by a line of the
 # allow file, and a file the check does not cover is skipped there:
 #
@@ -75,70 +75,98 @@ if [ "${#files[@]}" -eq 0 ]; then
 fi
 
 found="$(
-  ALLOW_FILE="$allow" perl -e '
-    use strict;
-    use warnings;
-
-    my (@allow, @skip);
-    if (open(my $fh, "<", $ENV{ALLOW_FILE})) {
-      while (my $line = <$fh>) {
-        chomp $line;
-        $line =~ s/\s+#.*$//;
-        next if $line =~ /^\s*(#|$)/;
-        if ($line =~ /^allow\s+(.+?)\s*$/) { push @allow, qr/$1/; }
-        elsif ($line =~ /^skip\s+(\S+)\s*$/) { push @skip, $1; }
-        else { die "stray-literals: $ENV{ALLOW_FILE}: unreadable line: $line\n"; }
-      }
+  awk -v allowfile="$allow" '
+    function wordy(t,    bare, n, i, toks, plain) {
+      bare = t
+      gsub(/\{[^{}]*\}/, "", bare)
+      if (bare !~ /[A-Za-z]/) return 0
+      n = split(bare, toks, /[ \t]+/)
+      plain = 1
+      for (i = 1; i <= n; i++) if (toks[i] != "" && toks[i] !~ /^fui-[a-z0-9-]+$/) plain = 0
+      if (plain) return 0
+      if (bare ~ /[A-Z]/) return 1
+      if (bare ~ /[A-Za-z][ \t]/ || bare ~ /[ \t][A-Za-z]/) return 1
+      return 0
     }
-
-    my $visible = qr/(?:aria-label|title|placeholder|alt|data-label|aria-description|aria-roledescription|aria-valuetext|label)/;
-
-    # Whether the literal text $t reads as words outside its placeables.
-    sub wordy {
-      my ($t) = @_;
-      (my $bare = $t) =~ s/\{[^{}]*\}//g;
-      return 0 unless $bare =~ /[A-Za-z]/;
-      my @tokens = grep { length } split /\s+/, $bare;
-      return 0 if @tokens && !grep { $_ !~ /^fui-[a-z0-9-]+$/ } @tokens;
-      return 1 if $bare =~ /[A-Z]/;
-      return 1 if $bare =~ /[A-Za-z]\s|\s[A-Za-z]/;
-      return 0;
+    function classes(t,    n, i, toks) {
+      n = split(t, toks, /[ \t]+/)
+      for (i = 1; i <= n; i++) if (toks[i] != "" && toks[i] !~ /^fui-[a-z0-9-]+$/) return 0
+      return 1
     }
-
-    FILE: for my $file (@ARGV) {
-      next FILE if grep { index($file, $_) == 0 } @skip;
-      open(my $fh, "<", $file) or die "stray-literals: cannot read $file\n";
-      my $n = 0;
-      while (my $line = <$fh>) {
-        $n++;
-        next FILE if $n == 1 && $line =~ /\@generated/;
-        last if $line =~ /^#\[cfg\(test\)\]/;
-        next if $line =~ m{^\s*//};
-        next if $line =~ /^\s*#!?\[/;
-        next if $line =~ /expect\(|logging::|warn!\(|error!\(|debug!\(|log!\(|write!\(f|write_str\(|debug_struct\(|\.field\(|assert|panic!\(|unreachable!\(|include_str!\(/;
-        my $code = $line;
-        $code =~ s/r#+".*?"#+//g;
-        while ($code =~ /(?<pre>(?:[A-Za-z_:-]+\s*=\s*)?)"(?<lit>(?:[^"\\]|\\.)*)"/g) {
-          my ($pre, $lit) = ($+{pre}, $+{lit});
-          my $before = substr($code, 0, $-[0]);
-          my $after = substr($code, $+[0]);
-          my $hit = 0;
-          if ($pre =~ /^($visible)\s*=/) {
-            $hit = $lit =~ /[A-Za-z]/;
-          } elsif ($pre =~ /=\s*$/ && $pre =~ /^[a-z-:]+/) {
-            $hit = 0;
-          } elsif ($before =~ />\s*$/ && $after =~ /^\s*</) {
-            $hit = $lit =~ /[A-Za-z]/;
-          } elsif ($before =~ /^\s*$/ && $after =~ /^\s*$/) {
-            my @tokens = grep { length } split /\s+/, $lit;
-            $hit = $lit =~ /[A-Za-z]/ && grep { $_ !~ /^fui-[a-z0-9-]+$/ } @tokens;
-          } else {
-            $hit = wordy($lit);
-          }
-          next unless $hit;
-          next if grep { $lit =~ $_ } @allow;
-          print "$file:$n: \"$lit\"\n";
+    BEGIN {
+      nallow = 0
+      nskip = 0
+      while ((getline line < allowfile) > 0) {
+        sub(/[ \t]+#.*$/, "", line)
+        if (line ~ /^[ \t]*(#|$)/) continue
+        if (line ~ /^allow[ \t]+/) {
+          sub(/^allow[ \t]+/, "", line)
+          sub(/[ \t]+$/, "", line)
+          allow[++nallow] = line
+        } else if (line ~ /^skip[ \t]+/) {
+          sub(/^skip[ \t]+/, "", line)
+          sub(/[ \t]+$/, "", line)
+          skip[++nskip] = line
+        } else {
+          print "stray-literals: " allowfile ": unreadable line: " line > "/dev/stderr"
+          exit 2
         }
+      }
+      visible = "(^|[^A-Za-z-])(aria-label|title|placeholder|alt|data-label|aria-description|aria-roledescription|aria-valuetext|label)[ \t]*=[ \t]*$"
+    }
+    FNR == 1 {
+      off = 0
+      for (i = 1; i <= nskip; i++) if (index(FILENAME, skip[i]) == 1) off = 1
+      if ($0 ~ /@generated/) off = 1
+    }
+    off { next }
+    /^#\[cfg\(test\)\]/ { off = 1; next }
+    /^[ \t]*\/\// { next }
+    /^[ \t]*#!?\[/ { next }
+    /reason = "|expect\(|logging::|warn!\(|error!\(|debug!\(|log!\(|write!\(f|write_str\(|debug_struct\(|\.field\(|assert|panic!\(|unreachable!\(|include_str!\(/ { next }
+    {
+      code = $0
+      while ((s = index(code, "r#\"")) > 0) {
+        rest = substr(code, s + 3)
+        e = index(rest, "\"#")
+        if (e == 0) { code = substr(code, 1, s - 1); break }
+        code = substr(code, 1, s - 1) substr(rest, e + 2)
+      }
+      n = length(code)
+      i = 1
+      while (i <= n) {
+        c = substr(code, i, 1)
+        if (c == "'"'"'" && substr(code, i + 2, 1) == "'"'"'") { i += 3; continue }
+        if (c != "\"") { i++; continue }
+        start = i
+        lit = ""
+        i++
+        while (i <= n) {
+          c = substr(code, i, 1)
+          if (c == "\\") { lit = lit substr(code, i, 2); i += 2; continue }
+          if (c == "\"") break
+          lit = lit c
+          i++
+        }
+        pre = substr(code, 1, start - 1)
+        after = substr(code, i + 1)
+        i++
+        hit = 0
+        if (pre ~ visible) {
+          hit = lit ~ /[A-Za-z]/
+        } else if (pre ~ /[A-Za-z:-]=$/) {
+          hit = 0
+        } else if (pre ~ />[ \t]*$/ && after ~ /^[ \t]*</) {
+          hit = lit ~ /[A-Za-z]/
+        } else if (pre ~ /^[ \t]*$/ && after ~ /^[ \t]*$/) {
+          hit = lit ~ /[A-Za-z]/ && !classes(lit)
+        } else {
+          hit = wordy(lit)
+        }
+        if (!hit) continue
+        allowed = 0
+        for (a = 1; a <= nallow; a++) if (lit ~ allow[a]) allowed = 1
+        if (!allowed) print FILENAME ":" FNR ": \"" lit "\""
       }
     }
   ' "${files[@]}"
