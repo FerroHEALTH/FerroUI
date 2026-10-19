@@ -91,9 +91,9 @@ check() {
     *) die "no pinned digest for $(uname -s) $(uname -m), so the tools on PATH cannot be checked" ;;
   esac
   tailwind="$(command -v tailwindcss)" ||
-    die "no tailwindcss on PATH; run scripts/release/gallery-tools.sh DIR and put DIR/bin on PATH"
+    die "no tailwindcss on PATH; run scripts/release/gallery-tools.sh target/gallery-tools, which the gallery build finds, or install into DIR and put DIR/bin on PATH"
   wasm_opt="$(command -v wasm-opt)" ||
-    die "no wasm-opt on PATH; run scripts/release/gallery-tools.sh DIR and put DIR/bin on PATH"
+    die "no wasm-opt on PATH; run scripts/release/gallery-tools.sh target/gallery-tools, which the gallery build finds, or install into DIR and put DIR/bin on PATH"
   said="$(first_line tailwindcss --help)"
   case "$said" in
     *"tailwindcss v$tailwind_version"*) ;;

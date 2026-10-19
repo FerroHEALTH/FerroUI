@@ -11,6 +11,47 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-10-19
+
+A form field whose id is made per row, a title on a data table header, a
+gallery build that finds its own tools and a bundle check that never
+measures a stale bundle, and a browser half that no longer moves a
+console's wasm-bindgen. The additions are five functions and a field of
+`table::view::Column`; a console that builds a `Column` with a struct
+literal names `title` (none of the four does; they use the constructors).
+
+### Added
+
+- `view::form::keyed_field`, `keyed_check` and `keyed_check_field`: the
+  field, the checkbox row and the checkbox with help for a control whose id
+  is made at run time, such as one per clause of a list, the label's `for`
+  and the help id kept in step with it. `field`, `check` and `check_field`
+  draw through them (FerroHEALTH/FerroUI#98).
+- `table::view::Column::titled` and the field `title`: a header cell that
+  carries a `title`, such as the path a query column reads, so no cell has
+  to repeat it (FerroHEALTH/FerroUI#99).
+
+### Changed
+
+- The browser half asks for web-sys 0.3.85 and wasm-bindgen-futures 0.4.58,
+  the lowest releases its Leptos resolves with, and no longer depends on the
+  wasm-bindgen crate itself, so a console's own lock picks its wasm-bindgen
+  and the CLI that must equal it. `scripts/checks/browser-floor.sh` builds
+  the library at those floors in CI (FerroHEALTH/FerroUI#44).
+- `scripts/release/gallery-site.sh` puts the tools `gallery-tools.sh`
+  installed under `target/gallery-tools` on `PATH` itself, and with none
+  installed names the command that installs them (FerroHEALTH/FerroUI#97).
+
+### Fixed
+
+- A button or checkbox in a `field_flow` row whose field has a help line
+  stays on the controls' line from 30rem up, where it sat on the help's
+  line before.
+- `scripts/checks/gallery-bundle.sh` refuses a bundle the last release site
+  build did not write: the build removes its stamp first and writes the
+  bundle's digests on success, so a failed build no longer measures the
+  previous bundle as within the budget (FerroHEALTH/FerroUI#97).
+
 ## [0.1.4] - 2026-10-19
 
 A shared timestamp, a compact stat tile on a phone, a visible edge on a
@@ -382,7 +423,8 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.4...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.5...HEAD
+[0.1.5]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.1...v0.1.2

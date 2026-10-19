@@ -172,12 +172,17 @@ fn session_table() -> AnyView {
     card("Paged in the page", drawn).into_any()
 }
 
-/// A result set whose columns are the query's own paths, known only once
-/// the server answers, drawn in the code face.
+/// A result set whose columns are the query's own aliases, known only once
+/// the server answers, drawn in the code face, each header titled with the
+/// path it reads so no cell repeats it.
 fn result_set() -> AnyView {
-    let columns: Vec<Column> = ["c/uid/value", "c/name/value", "count(*)"]
+    let columns: Vec<Column> = [("uid", "c/uid/value"), ("name", "c/name/value")]
         .into_iter()
-        .map(|path| Column::owned(path, path).mono())
+        .map(|(alias, path)| Column::owned(alias, alias).mono().titled(path))
+        .chain([Column::owned("count", "count")
+            .mono()
+            .numeric()
+            .titled("count(*)")])
         .collect();
     let rows = (1..=3_u32)
         .map(|index| {
@@ -188,8 +193,8 @@ fn result_set() -> AnyView {
                             <code>{format!("{index:08}-synthetic::node-a::1")}</code>
                         </a>
                     </td>
-                    <td data-label="c/name/value">"Synthetic vital signs"</td>
-                    <td data-label="count(*)" class=NUM>{(index * 7).to_string()}</td>
+                    <td data-label="name">"Synthetic vital signs"</td>
+                    <td data-label="count" class=NUM>{(index * 7).to_string()}</td>
                 </tr>
             }
         })
@@ -198,8 +203,8 @@ fn result_set() -> AnyView {
     let long = view! {
         <tr>
             <td><code>"http://example.org/fhir/StructureDefinition/ferrohealth-synthetic-journey-diagnose"</code></td>
-            <td data-label="c/name/value">"Synthetic profile"</td>
-            <td data-label="count(*)" class=NUM>"1"</td>
+            <td data-label="name">"Synthetic profile"</td>
+            <td data-label="count" class=NUM>"1"</td>
         </tr>
     };
     let body = view! {

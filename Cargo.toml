@@ -6,7 +6,7 @@ resolver = "3"
 members = ["crates/*", "app/*"]
 
 [workspace.package]
-version = "0.1.4"
+version = "0.1.5"
 edition = "2024"
 rust-version = "1.97"
 license = "BUSL-1.1"
@@ -28,13 +28,14 @@ leptos_meta = { version = "0.8.7", default-features = false }
 serde = { version = "1.0.229", features = ["derive"] }
 # The gallery app alone: its server half and its browser half. The
 # wasm-bindgen CLI of the gallery build equals the wasm-bindgen crate version
-# (scripts/release/gallery-tools.sh); the library itself never pins it.
+# (scripts/release/gallery-tools.sh); the library itself never pins it, and
+# asks for its own floors of web-sys and wasm-bindgen-futures.
 leptos_axum = "0.8.10"
 wasm-bindgen = "0.2.129"
 console_error_panic_hook = "0.1.7"
-# The browser APIs the widgets call that Leptos turns on no feature for (the
-# clipboard, a chosen or dropped file, the modal dialog), and the future of a
-# browser promise. Both are in the lock already under Leptos.
+# The gallery's browser APIs that Leptos turns on no feature for (the theme
+# toggle's post in place), and the future of a browser promise. Both are in
+# the lock already under Leptos.
 web-sys = { version = "0.3.106", default-features = false }
 wasm-bindgen-futures = "0.4.79"
 axum = "0.8.9"

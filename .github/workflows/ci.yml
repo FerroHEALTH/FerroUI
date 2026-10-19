@@ -201,6 +201,9 @@ jobs:
       # under hydrate and under csr.
       - run: cargo clippy -p ferrohealth-ui --lib --locked --target wasm32-unknown-unknown --features leptos/hydrate -- -D warnings
       - run: cargo clippy -p ferrohealth-ui --lib --locked --target wasm32-unknown-unknown --features leptos/csr -- -D warnings
+      # The browser half builds at the lowest web-sys its manifest asks for,
+      # so the library never moves a console's wasm-bindgen.
+      - run: bash scripts/checks/browser-floor.sh
       - if: needs.detect.outputs.gallery == 'true'
         run: cargo clippy -p ferrohealth-ui-gallery --lib --locked --target wasm32-unknown-unknown -- -D warnings
 

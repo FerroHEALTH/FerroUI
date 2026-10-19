@@ -1189,3 +1189,90 @@ async fn a_field_and_its_button_stack_below_30rem_and_share_a_line_above()
     })
     .await
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_field_drawn_per_row_names_its_own_control_and_help() -> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/ferroterm/forms")).await?;
+        browser.element(By::Id("compose-search-exclude-2")).await?;
+        // HTML Living Standard, the label element: `control` is the element
+        // its `for` names, so each label of a row reaches that row's input.
+        let named: Vec<(String, String, bool)> = measure(
+            browser,
+            r"return [...document.querySelectorAll('label[for^=compose-]')].map((label) => {
+                const control = label.control;
+                const help = control && control.getAttribute('aria-describedby');
+                return [label.htmlFor, control ? control.id : '', !!(help && document.getElementById(help))];
+              });",
+        )
+        .await?;
+        assert_eq!(4, named.len(), "two rows of a search and a switch: {named:?}");
+        for (target, control, described) in &named {
+            assert_eq!(target, control, "the label names its own row's control");
+            assert!(*described, "{control} names a help line that is on the page");
+        }
+        browser.console_clean("the fields per row").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_result_header_carries_its_path_as_its_title_and_no_cell_repeats_it()
+-> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/ferrofed/tables")).await?;
+        let (titles, cells): (Vec<String>, usize) = measure(
+            browser,
+            r"const table = [...document.querySelectorAll('table')].find((t) =>
+                t.caption && t.caption.textContent.startsWith('The rows the synthetic query'));
+              return [[...table.querySelectorAll('thead th')].map((th) => th.title),
+                table.querySelectorAll('tbody [title]').length];",
+        )
+        .await?;
+        assert_eq!(
+            vec!["c/uid/value", "c/name/value", "count(*)"],
+            titles,
+            "each header is titled with the path it reads"
+        );
+        assert_eq!(0, cells, "no cell repeats a header's title");
+        browser.console_clean("the titled result headers").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_button_beside_a_field_with_help_stays_on_the_controls_line() -> Result<(), Box<dyn Error>>
+{
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        for width in [480, 768, 1440] {
+            window(browser, width, 900).await?;
+            browser.goto(&gallery.url("/ferroterm/forms")).await?;
+            browser.element(By::Id("compose-search-include-1")).await?;
+            let (input, button): (Vec<f64>, Vec<f64>) = measure(
+                browser,
+                r"const box = (e) => { const r = e.getBoundingClientRect(); return [r.top, r.bottom]; };
+                const input = document.getElementById('compose-search-include-1');
+                return [box(input), box(input.closest('.fui-field-flow').querySelector(':scope > button'))];",
+            )
+            .await?;
+            assert!(
+                (button[0] - input[0]).abs() <= 1.0 && (button[1] - input[1]).abs() <= 1.0,
+                "the button {button:?} left the input's line {input:?} at {width} px"
+            );
+        }
+        browser.console_clean("the button beside a field with help").await
+    })
+    .await
+}

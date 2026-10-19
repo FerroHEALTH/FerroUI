@@ -10,7 +10,7 @@ use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::button::{Variant, label};
 use ferrohealth_ui::view::form::{
     FORM, INPUT, MEDIUM, SELECT, SWITCH, TEXTAREA, check, check_field, chip_choices, columns,
-    field, field_flow, help_id,
+    field, field_flow, help_id, keyed_check_field, keyed_field,
 };
 use ferrohealth_ui::view::layout::action_bar;
 use ferrohealth_ui::view::notice::{Announce, notice};
@@ -166,6 +166,47 @@ fn inline() -> AnyView {
         },
     )
     .into_any()
+}
+
+/// A field and a switch drawn once per clause, each id made from the
+/// clause's key, so every label names its own control and every help line
+/// its own.
+fn per_row() -> AnyView {
+    let clauses = [("include-1", "Include"), ("exclude-2", "Exclude")];
+    let rows = clauses
+        .into_iter()
+        .map(|(key, verb)| {
+            let search = format!("compose-search-{key}");
+            let search_help = help_id(&search);
+            let inactive = format!("compose-inactive-{key}");
+            let inactive_help = help_id(&inactive);
+            view! {
+                <fieldset class="fui-fieldset">
+                    <legend>{verb} " codes"</legend>
+                    {field_flow(view! {
+                        {keyed_field(
+                            search.clone(),
+                            "Find a code in that code system",
+                            Some("Two letters or more."),
+                            view! {
+                                <input id=search name=format!("search-{key}") type="search" class=INPUT placeholder="blood pressure" aria-describedby=search_help />
+                            },
+                        )}
+                        <button type="button" class=Variant::Secondary.class()>"Add"</button>
+                    })}
+                    {keyed_check_field(
+                        inactive.clone(),
+                        "Include inactive codes",
+                        "Codes the system retired still match.",
+                        view! {
+                            <input type="checkbox" role="switch" id=inactive name=format!("inactive-{key}") class=SWITCH aria-describedby=inactive_help />
+                        },
+                    )}
+                </fieldset>
+            }
+        })
+        .collect_view();
+    card("Fields per row", view! { <div class=FORM>{rows}</div> }).into_any()
 }
 
 /// One combobox per clause, its id made from the clause's place, each
@@ -690,7 +731,15 @@ pub fn FormsPage() -> impl IntoView {
         })}
     })
     .into_any();
-    let sections = (pair, upload(), editor(), filter(), inline(), choosing());
+    let sections = (
+        pair,
+        upload(),
+        editor(),
+        filter(),
+        inline(),
+        choosing(),
+        per_row(),
+    );
     // Cards of unlike length side by side, each at its own height.
     let unlike = grid_start(view! {
         {long_label()}
@@ -705,6 +754,7 @@ pub fn FormsPage() -> impl IntoView {
         {stack(view! {
             {sections.0}
             {sections.4}
+            {sections.6}
             {sections.5}
             {unlike}
             {sections.1}
