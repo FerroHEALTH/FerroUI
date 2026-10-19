@@ -8,6 +8,8 @@
 //! operator menu and the theme menu are in the top bar, the drawer is the
 //! navigation on a narrow screen.
 
+use crate::locale::{Msg, tr, tr_in, tr_with};
+use ferrohealth_ui::i18n::locale;
 use ferrohealth_ui::icon::{Glyph, icon};
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::button::{Variant, label};
@@ -26,10 +28,10 @@ use leptos::prelude::*;
 /// and the danger one, whose confirm raises a toast.
 fn confirmations() -> AnyView {
     let toasts = use_toasts();
-    let confirm = move |id: &'static str, text: &'static str| {
+    let confirm = move |id: &'static str, text: String| {
         move |_| {
             if let Some(toasts) = toasts {
-                toasts.push(Tone::Ok, text);
+                toasts.push(Tone::Ok, text.clone());
             }
             hide(id);
         }
@@ -37,13 +39,13 @@ fn confirmations() -> AnyView {
     let plain = confirm_dialog(
         Confirmation {
             id: "reload-set",
-            title: "Reload the set?",
-            message: "The files on disk compile and replace the running set when they compile.",
+            title: tr(Msg::ReloadTheSet).into(),
+            message: tr(Msg::FilesDiskCompileReplaceRunning).into(),
         },
         view! {
-            <button type="button" class=Variant::Primary.class() on:click=confirm("reload-set", "The set reloaded.")>
+            <button type="button" class=Variant::Primary.class() on:click=confirm("reload-set", tr(Msg::SetReloaded))>
                 {icon(Glyph::REFRESH_CW, "16")}
-                "Reload"
+                {tr(Msg::Reload)}
             </button>
         },
     )
@@ -51,32 +53,32 @@ fn confirmations() -> AnyView {
     let danger = danger_dialog(
         Confirmation {
             id: "delete-file",
-            title: "Delete the file?",
-            message: "The synthetic file goes for good; the running set reloads without it.",
+            title: tr(Msg::DeleteTheFile).into(),
+            message: tr(Msg::SyntheticFileGoesGoodRunning).into(),
         },
         view! {
             <button
                 type="button"
                 id="confirm-delete-file"
                 class=Variant::Destructive.class()
-                on:click=confirm("delete-file", "The synthetic file was deleted.")
+                on:click=confirm("delete-file", tr(Msg::SyntheticFileWasDeleted))
             >
                 {icon(Glyph::TRASH, "16")}
-                "Delete"
+                {tr(Msg::Delete)}
             </button>
         },
     )
     .into_any();
     card(
-        "Confirmation dialogs",
+        tr(Msg::ConfirmationDialogs),
         view! {
             <p class="fui-muted">
-                "Opened by their trigger with no script; Escape and Cancel close them and the focus returns."
+                {tr(Msg::OpenedTheirTriggerNoScript)}
             </p>
             {cluster(
                 view! {
-                    {confirm_trigger("reload-set", Variant::Secondary, Glyph::REFRESH_CW, "Reload the set")}
-                    {confirm_trigger("delete-file", Variant::Danger, Glyph::TRASH, "Delete the file")}
+                    {confirm_trigger("reload-set", Variant::Secondary, Glyph::REFRESH_CW, tr(Msg::ReloadSet))}
+                    {confirm_trigger("delete-file", Variant::Danger, Glyph::TRASH, tr(Msg::DeleteFile))}
                 },
             )}
             {plain}
@@ -90,6 +92,9 @@ fn confirmations() -> AnyView {
 /// wide form.
 fn modals() -> AnyView {
     let toasts = use_toasts();
+    // The page's locale is read here: the toast is raised in a handler,
+    // where no page tree is in reach.
+    let locale = locale();
     let pending = RwSignal::new(None::<&'static str>);
     let renaming = RwSignal::new(false);
     let rows = ["synthetic-007.model.yml", "synthetic-011.extension.yml"]
@@ -105,7 +110,7 @@ fn modals() -> AnyView {
                         on:click=move |_| pending.set(Some(row))
                     >
                         {icon(Glyph::TRASH, "14")}
-                        "Delete"
+                        {tr(Msg::Delete)}
                     </button>
                 },
             )
@@ -116,12 +121,13 @@ fn modals() -> AnyView {
         Modal {
             id: "delete-row",
             title: Signal::derive(move || {
-                format!("Delete {}?", pending.get().unwrap_or("the file"))
+                let row = pending.get().map_or_else(|| tr(Msg::TheFile), str::to_owned);
+                tr_with(Msg::DeleteRow, &[("row", row.into())])
             }),
             danger: true,
             width: Width::Narrow,
             body: view! {
-                <p>"The file goes for good, and the running set reloads without it."</p>
+                <p>{tr(Msg::FileGoesGoodRunningSet)}</p>
             }
             .into_any(),
             actions: view! {
@@ -131,13 +137,13 @@ fn modals() -> AnyView {
                     class=Variant::Destructive.class()
                     on:click=move |_| {
                         if let (Some(toasts), Some(row)) = (toasts, pending.get_untracked()) {
-                            toasts.push(Tone::Ok, format!("{row} was deleted."));
+                            toasts.push(Tone::Ok, tr_in(&locale, Msg::RowDeleted, &[("row", row.into())]));
                         }
                         pending.set(None);
                     }
                 >
                     {icon(Glyph::TRASH, "16")}
-                    "Delete"
+                    {tr(Msg::Delete)}
                 </button>
             }
             .into_any(),
@@ -148,11 +154,11 @@ fn modals() -> AnyView {
     .into_any();
     let rename = rename_modal(renaming);
     card(
-        "Modal dialogs",
+        tr(Msg::ModalDialogs),
         view! {
-            {divided_list(Some("Files"), rows)}
+            {divided_list(Some(tr(Msg::Files).into()), rows)}
             <button type="button" class=Variant::Secondary.class() id="open-rename" on:click=move |_| renaming.set(true)>
-                {label(Some(Glyph::PENCIL), "Rename a file")}
+                {label(Some(Glyph::PENCIL), tr(Msg::RenameTheFile))}
             </button>
             {delete}
             {rename}
@@ -167,13 +173,13 @@ fn rename_modal(renaming: RwSignal<bool>) -> AnyView {
     modal_dialog(
         Modal {
             id: "rename-file",
-            title: Signal::derive(|| String::from("Rename the file")),
+            title: Signal::derive(|| tr(Msg::RenameFile)),
             danger: false,
             width: Width::Wide,
             body: field(
                 "rename-name",
-                "New name",
-                Some("A path below fhirconnect/ or omocl/."),
+                tr(Msg::NewName),
+                Some(tr(Msg::PathBelowFhirconnectOmocl).clone()),
                 view! {
                     <input
                         id="rename-name"
@@ -188,7 +194,7 @@ fn rename_modal(renaming: RwSignal<bool>) -> AnyView {
             actions: view! {
                 <button type="button" class=Variant::Primary.class() on:click=move |_| renaming.set(false)>
                     {icon(Glyph::SAVE, "16")}
-                    "Rename"
+                    {tr(Msg::Rename)}
                 </button>
             }
             .into_any(),
@@ -203,11 +209,11 @@ fn rename_modal(renaming: RwSignal<bool>) -> AnyView {
 fn panel() -> AnyView {
     let body = stack(view! {
         {definitions(vec![
-            ("Signed in as", "Synthetic operator".into_any()),
-            ("Method", "OpenID Connect".into_any()),
-            ("Policy", "The operator scope decides what the console may do.".into_any()),
+            (tr(Msg::Signed), tr(Msg::SyntheticOperator).into_any()),
+            (tr(Msg::Method), tr(Msg::OpenidConnect).into_any()),
+            (tr(Msg::Policy), tr(Msg::OperatorScopeDecidesWhatConsole).into_any()),
         ])}
-        <h3>"Scopes"</h3>
+        <h3>{tr(Msg::Scopes)}</h3>
         {cluster(
             view! {
                 {chip("ferrobridge.operator")}
@@ -218,14 +224,14 @@ fn panel() -> AnyView {
     })
     .into_any();
     card(
-        "Side panel",
+        tr(Msg::SidePanel),
         view! {
-            <p class="fui-muted">"Content that is no navigation, from the end of the page."</p>
-            {side_panel_trigger("access", Variant::Secondary.class(), Glyph::SHIELD_CHECK, "View access")}
+            <p class="fui-muted">{tr(Msg::ContentNoNavigationFromEnd)}</p>
+            {side_panel_trigger("access", Variant::Secondary.class(), Glyph::SHIELD_CHECK, tr(Msg::ViewAccess))}
             {side_panel(SidePanel {
                 id: "access",
                 body_id: "access-drawer",
-                title: "Access",
+                title: tr(Msg::Access).into(),
                 body,
             })}
         },
@@ -236,18 +242,18 @@ fn panel() -> AnyView {
 /// A button per tone that raises a toast in it.
 fn toasts() -> AnyView {
     let toasts = use_toasts();
-    let raise = move |tone: Tone, text: &'static str| {
+    let raise = move |tone: Tone, text: String| {
         move |_| {
             if let Some(toasts) = toasts {
-                toasts.push(tone, text);
+                toasts.push(tone, text.clone());
             }
         }
     };
     let buttons = [
-        (Tone::Ok, "Success", "Saved, and the set reloaded."),
-        (Tone::Info, "Information", "The set reloads in the background."),
-        (Tone::Warn, "Warning", "The set compiled with 2 warnings."),
-        (Tone::Bad, "Refusal", "The save was refused: 412."),
+        (Tone::Ok, tr(Msg::Success), tr(Msg::SavedSetReloaded)),
+        (Tone::Info, tr(Msg::Information), tr(Msg::SetReloadsBackground)),
+        (Tone::Warn, tr(Msg::Warning), tr(Msg::SetCompiled2Warnings)),
+        (Tone::Bad, tr(Msg::Refusal), tr(Msg::SaveWasRefused412)),
     ]
     .into_iter()
     .map(|(tone, words, text)| {
@@ -258,7 +264,7 @@ fn toasts() -> AnyView {
         }
     })
     .collect_view();
-    card("Toasts", cluster(buttons)).into_any()
+    card(tr(Msg::Toasts), cluster(buttons)).into_any()
 }
 
 /// Closes the popover `id`.
@@ -287,14 +293,14 @@ fn hide(id: &str) {
 )]
 pub fn OverlaysPage() -> impl IntoView {
     let header = page_header(
-        "Overlays and feedback",
-        Some(String::from("Dialogs, modals, the side panel and toasts.")),
+        tr(Msg::OverlaysFeedback),
+        Some(tr(Msg::DialogsModalsSidePanelToasts)),
         (),
     )
     .into_any();
     let sections = (confirmations(), modals(), panel(), toasts());
     view! {
-        {super::title("Overlays and feedback")}
+        {super::title(tr(Msg::OverlaysFeedback))}
         {header}
         {stack(view! {
             {grid(view! {

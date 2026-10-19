@@ -62,7 +62,8 @@ fn side(value: Option<&String>, sign: &'static str, removed: bool) -> AnyView {
 /// Returns the table of `changes` captioned `caption`; an empty list reads
 /// as a sentence.
 #[must_use]
-pub fn change_table(caption: &'static str, changes: &[Change]) -> impl IntoView + use<> {
+pub fn change_table(caption: impl Into<String>, changes: &[Change]) -> AnyView {
+    let caption = caption.into();
     if changes.is_empty() {
         return view! { <p class="fui-muted">{tr(Text::ChangeNone)}</p> }.into_any();
     }
@@ -84,11 +85,12 @@ pub fn change_table(caption: &'static str, changes: &[Change]) -> impl IntoView 
         .collect_view()
         .into_any();
     data_table(DataTable {
-        caption,
+        caption: &caption,
         columns: &columns(),
         sort: None,
         sort_href: &|_| String::new(),
         body: Body::Rows(rows),
     })
+    .into_any()
     .into_any()
 }

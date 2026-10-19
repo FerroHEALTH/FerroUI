@@ -9,6 +9,7 @@
 
 use std::collections::BTreeSet;
 
+use crate::locale::{Msg, tr};
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::view::button::{Variant, label};
 use ferrohealth_ui::view::chart::proportion;
@@ -45,12 +46,12 @@ fn concept(code: &str, words: &str) -> TreeNode {
 /// opens.
 fn hierarchy() -> Vec<TreeNode> {
     vec![
-        concept("SYN-100", "Synthetic finding").children(vec![
-            concept("SYN-110", "Synthetic finding of the arm"),
-            concept("SYN-120", "Synthetic finding of the leg").expandable(),
+        concept("SYN-100", &tr(Msg::SyntheticFinding)).children(vec![
+            concept("SYN-110", &tr(Msg::SyntheticFindingArm)),
+            concept("SYN-120", &tr(Msg::SyntheticFindingLeg)).expandable(),
         ]),
-        concept("SYN-200", "Synthetic procedure").expandable(),
-        concept("SYN-300", "Synthetic body site"),
+        concept("SYN-200", &tr(Msg::SyntheticProcedure)).expandable(),
+        concept("SYN-300", &tr(Msg::SyntheticBodySite)),
     ]
 }
 
@@ -59,8 +60,8 @@ fn read_children(nodes: &mut [TreeNode], key: &str) {
     for node in nodes.iter_mut() {
         if node.key == key && node.children.is_empty() {
             node.children = vec![
-                concept(&format!("{key}-1"), "Synthetic child, read on opening"),
-                concept(&format!("{key}-2"), "Another synthetic child"),
+                concept(&format!("{key}-1"), &tr(Msg::SyntheticChildReadOpening)),
+                concept(&format!("{key}-2"), &tr(Msg::AnotherSyntheticChild)),
             ];
         } else {
             read_children(&mut node.children, key);
@@ -128,7 +129,7 @@ fn browser() -> AnyView {
     let tree = tree_view_collapsing(
         Tree {
             id: "gallery-tree",
-            label: "Synthetic hierarchy",
+            label: tr(Msg::SyntheticHierarchy).into(),
             nodes: nodes.into(),
             expanded,
             selected,
@@ -154,30 +155,30 @@ fn browser() -> AnyView {
     let search = view! {
         {field(
             "browse-find",
-            "Find a concept",
+            tr(Msg::FindConcept),
             None,
             view! { <input id="browse-find" name="find" type="search" class=INPUT /> },
         )}
-        {divided_list(Some("Matches"), found)}
+        {divided_list(Some(tr(Msg::Matches).into()), found)}
     };
     let detail = move || {
         let code = selected.get().unwrap_or_else(|| String::from("SYN-100"));
         view! {
             <h2 class="fui-card-title">{code.clone()}</h2>
             {definitions(vec![
-                ("Code", view! { <code>{code}</code> }.into_any()),
-                ("System", String::from("http://example.org/synthetic").into_any()),
-                ("Status", String::from("active").into_any()),
-                ("Parent", or_none(String::new()).into_any()),
+                (tr(Msg::Code), view! { <code>{code}</code> }.into_any()),
+                (tr(Msg::System), String::from("http://example.org/synthetic").into_any()),
+                (tr(Msg::Status), String::from("active").into_any()),
+                (tr(Msg::Parent), or_none(String::new()).into_any()),
             ])}
         }
     };
     card(
-        "Three panes and the tree",
+        tr(Msg::ThreePanesTree),
         three_panes(
-            Pane::new("Search", search),
-            Pane::new("Hierarchy", tree),
-            Pane::new("Concept", detail),
+            Pane::new(tr(Msg::Search), search),
+            Pane::new(tr(Msg::Hierarchy), tree),
+            Pane::new(tr(Msg::Concept), detail),
         ),
     )
     .into_any()
@@ -185,25 +186,29 @@ fn browser() -> AnyView {
 
 /// A list of value sets beside the one it opens.
 fn listing() -> AnyView {
-    let items = ["Synthetic signs", "Synthetic sites", "Synthetic units"]
-        .into_iter()
-        .map(|name| view! { <a href=here("")>{name}</a> }.into_any())
-        .collect();
+    let items = [
+        tr(Msg::SyntheticSigns),
+        tr(Msg::SyntheticSites),
+        tr(Msg::SyntheticUnits),
+    ]
+    .into_iter()
+    .map(|name| view! { <a href=here("")>{name}</a> }.into_any())
+    .collect();
     card(
-        "Master and detail",
+        tr(Msg::MasterDetail),
         master_detail(
-            divided_list(Some("Value sets"), items),
+            divided_list(Some(tr(Msg::ValueSets).into()), items),
             stack_at(
                 Gap::Default,
                 view! {
                     {definitions(vec![
-                        ("Name", String::from("Synthetic signs").into_any()),
-                        ("Version", String::from("1.0.0").into_any()),
-                        ("Concepts", String::from("12").into_any()),
+                        (tr(Msg::Name), tr(Msg::SyntheticSigns).into_any()),
+                        (tr(Msg::Version), String::from("1.0.0").into_any()),
+                        (tr(Msg::Concepts), String::from("12").into_any()),
                     ])}
                     {bullet_list(vec![
-                        String::from("Composed of two synthetic code systems.").into_any(),
-                        String::from("Excludes the inactive concepts.").into_any(),
+                        tr(Msg::ComposedTwoSyntheticCodeSystems).into_any(),
+                        tr(Msg::ExcludesInactiveConcepts).into_any(),
                     ])}
                 },
             ),
@@ -220,15 +225,15 @@ fn runner_form() -> AnyView {
         vec![
             (
                 String::from("http://example.org/vs/signs"),
-                String::from("Synthetic signs"),
+                tr(Msg::SyntheticSigns),
             ),
             (
                 String::from("http://example.org/vs/sites"),
-                String::from("Synthetic sites"),
+                tr(Msg::SyntheticSites),
             ),
             (
                 String::from("http://example.org/vs/units"),
-                String::from("Synthetic units"),
+                tr(Msg::SyntheticUnits),
             ),
         ]
     });
@@ -236,13 +241,13 @@ fn runner_form() -> AnyView {
     let picker = picker_field(Picker {
         id: "run-value-set",
         name: "url",
-        label: "Value set",
-        choose_label: "Choose a value set this server holds",
-        help: Some("The canonical of the value set to list."),
+        label: tr(Msg::ValueSet).into(),
+        choose_label: tr(Msg::ChooseValueSetServerHolds).into(),
+        help: Some(tr(Msg::CanonicalValueSetList).into()),
         choices,
         value,
-        empty_word: "Choose one this server holds",
-        other_word: "Another canonical",
+        empty_word: tr(Msg::ChooseOneServerHolds).into(),
+        other_word: tr(Msg::AnotherCanonical).into(),
     });
     let count = view! {
         <input
@@ -256,8 +261,8 @@ fn runner_form() -> AnyView {
     };
     let language = view! {
         <select id="run-language" name="language" class=format!("{SELECT} {MEDIUM}") aria-describedby=help_id("run-language")>
-            <option value="en">"English"</option>
-            <option value="nl">"Dutch"</option>
+            <option value="en">{tr(Msg::English)}</option>
+            <option value="nl">{tr(Msg::Dutch)}</option>
         </select>
     };
     let note = view! {
@@ -268,14 +273,14 @@ fn runner_form() -> AnyView {
     };
     view! {
         <form method="get" action=here("") class=FORM>
-            {split(view! { <h2 class="fui-card-title">"List a value set"</h2> }, help_switch())}
+            {split(view! { <h2 class="fui-card-title">{tr(Msg::ListValueSet)}</h2> }, help_switch())}
             {picker}
-            {explained_field("run-count", "Page size", "How many concepts one page lists, 1 to 1000.", count)}
-            {explained_field("run-language", "Display language", "The language of the displays.", language)}
-            {explained_field("run-note", "Why you run it", "A note kept beside the run.", note)}
-            {explained_check_field("run-inactive", "Include inactive concepts", "An inactive concept is listed and marked.", inactive)}
+            {explained_field("run-count", tr(Msg::PageSize), tr(Msg::HowManyConceptsOnePage), count)}
+            {explained_field("run-language", tr(Msg::DisplayLanguage), tr(Msg::LanguageDisplays), language)}
+            {explained_field("run-note", tr(Msg::WhyYouRun), tr(Msg::NoteKeptBesideRun), note)}
+            {explained_check_field("run-inactive", tr(Msg::IncludeInactiveConcepts), tr(Msg::InactiveConceptListedMarked), inactive)}
             <button type="submit" class=Variant::Primary.class()>
-                {label(Some(Glyph::PLAY), "List")}
+                {label(Some(Glyph::PLAY), tr(Msg::List))}
             </button>
         </form>
     }
@@ -285,9 +290,9 @@ fn runner_form() -> AnyView {
 /// The runner's answer: latencies with their proportion bars.
 fn runner_answer() -> AnyView {
     let rows = [
-        ("lookup", 12_u8, "12 ms"),
-        ("expand", 100, "96 ms"),
-        ("translate", 33, "31 ms"),
+        ("lookup", 12_u8, tr(Msg::N12Ms)),
+        ("expand", 100, tr(Msg::N96Ms)),
+        ("translate", 33, tr(Msg::N31Ms)),
     ]
     .into_iter()
     .map(|(name, share, figure)| {
@@ -299,23 +304,23 @@ fn runner_answer() -> AnyView {
     })
     .collect();
     view! {
-        <h2 class="fui-card-title">"Latency"</h2>
-        {divided_list(Some("Latency per operation"), rows)}
-        {proportion(0, Some(String::from("No time spent, 0 percent")))}
-        <h2 class="fui-card-title">"Nodes"</h2>
+        <h2 class="fui-card-title">{tr(Msg::Latency)}</h2>
+        {divided_list(Some(tr(Msg::LatencyPerOperation).into()), rows)}
+        {proportion(0, Some(tr(Msg::NoTimeSpent0Percent)))}
+        <h2 class="fui-card-title">{tr(Msg::Nodes)}</h2>
         {tile_list(
-            "The nodes that answered",
+            tr(Msg::NodesAnswered),
             vec![
                 view! {
                     <code class="fui-break">"synthetic-node-a"</code>
                     {pill(ferrohealth_ui::tone::Tone::Ok, "answered")}
-                    <span class="fui-muted fui-num">"12 ms"</span>
+                    <span class="fui-muted fui-num">{tr(Msg::N12Ms)}</span>
                 }
                 .into_any(),
                 view! {
                     <code class="fui-break">"synthetic-node-c"</code>
-                    {pill(ferrohealth_ui::tone::Tone::Warn, "timed out")}
-                    <span class="fui-muted fui-num">"30 s"</span>
+                    {pill(ferrohealth_ui::tone::Tone::Warn, &tr(Msg::TimedOut))}
+                    <span class="fui-muted fui-num">{tr(Msg::N30S)}</span>
                 }
                 .into_any(),
             ],
@@ -326,33 +331,34 @@ fn runner_answer() -> AnyView {
 
 /// Rows of fields with columns of their own, as an editor draws them.
 fn rows() -> AnyView {
-    let input = |id: &'static str, value: &'static str| {
+    let input = |id: &'static str, value: &str| {
+        let value = value.to_owned();
         view! { <input id=id name=id class=INPUT value=value /> }
     };
     let remove = || {
         view! {
             <button type="button" class=Variant::Danger.class()>
-                {label(Some(Glyph::TRASH), "Remove")}
+                {label(Some(Glyph::TRASH), tr(Msg::Remove))}
             </button>
         }
     };
     let up = || {
         view! {
             <button type="button" class=Variant::Secondary.class()>
-                {label(Some(Glyph::ARROW_UP), "Up")}
+                {label(Some(Glyph::ARROW_UP), tr(Msg::Up))}
             </button>
         }
     };
     card(
-        "Rows of fields",
+        tr(Msg::RowsFields),
         stack_at(
             Gap::Default,
             view! {
                 {field_row(
                     FieldRow::CodeDisplay,
                     view! {
-                        {field("row-code", "Code", None, input("row-code", "SYN-110"))}
-                        {field("row-display", "Display", None, input("row-display", "Synthetic finding of the arm"))}
+                        {field("row-code", tr(Msg::Code), None, input("row-code", "SYN-110"))}
+                        {field("row-display", tr(Msg::Display), None, input("row-display", &tr(Msg::SyntheticFindingArm)))}
                         {up()}
                         {remove()}
                     },
@@ -360,17 +366,17 @@ fn rows() -> AnyView {
                 {field_row(
                     FieldRow::CodeDisplayDefinition,
                     view! {
-                        {field("row-code-2", "Code", None, input("row-code-2", "SYN-120"))}
-                        {field("row-display-2", "Display", None, input("row-display-2", "Synthetic finding of the leg"))}
-                        {field("row-definition-2", "Definition", None, input("row-definition-2", "A finding invented for the gallery."))}
+                        {field("row-code-2", tr(Msg::Code), None, input("row-code-2", "SYN-120"))}
+                        {field("row-display-2", tr(Msg::Display), None, input("row-display-2", &tr(Msg::SyntheticFindingLeg)))}
+                        {field("row-definition-2", tr(Msg::Definition), None, input("row-definition-2", &tr(Msg::FindingInventedGallery)))}
                         {remove()}
                     },
                 )}
                 {field_row(
                     FieldRow::Halves,
                     view! {
-                        {field("row-system", "System", None, input("row-system", "http://example.org/synthetic"))}
-                        {field("row-version", "Version", None, input("row-version", "1.0.0"))}
+                        {field("row-system", tr(Msg::System), None, input("row-system", "http://example.org/synthetic"))}
+                        {field("row-version", tr(Msg::Version), None, input("row-version", "1.0.0"))}
                     },
                 )}
             },
@@ -381,26 +387,26 @@ fn rows() -> AnyView {
 
 /// The stacks at each step of space.
 fn stacks() -> AnyView {
-    let lines = |gap: Gap, name: &'static str| {
+    let lines = |gap: Gap, name: String| {
         view! {
             <div class="fui-well">
                 {stack_at(gap, view! {
                     <p>{name}</p>
-                    <p class="fui-muted">"A second line."</p>
-                    <p class="fui-muted">"A third line."</p>
+                    <p class="fui-muted">{tr(Msg::SecondLine)}</p>
+                    <p class="fui-muted">{tr(Msg::ThirdLine)}</p>
                 })}
             </div>
         }
     };
     card(
-        "Stacks",
+        tr(Msg::Stacks),
         stack_at(
             Gap::Default,
             view! {
-                {lines(Gap::Tight, "Tight")}
-                {lines(Gap::Default, "Default")}
-                {lines(Gap::Loose, "Loose")}
-                {lines(Gap::Section, "Section")}
+                {lines(Gap::Tight, tr(Msg::Tight))}
+                {lines(Gap::Default, tr(Msg::Default))}
+                {lines(Gap::Loose, tr(Msg::Loose))}
+                {lines(Gap::Section, tr(Msg::Section))}
             },
         ),
     )
@@ -415,22 +421,24 @@ fn stacks() -> AnyView {
 )]
 pub fn LayoutsPage() -> impl IntoView {
     let header = page_header(
-        "Layouts",
-        Some(String::from(
-            "Three panes and the tree, a list beside its item, a form beside its answer, rows of fields and stacks.",
-        )),
+        tr(Msg::Layouts),
+        Some(tr(Msg::ThreePanesTreeListBeside)),
         (),
     )
     .into_any();
     let sections = (
         browser(),
         listing(),
-        card("Main and aside", main_aside(runner_form(), runner_answer())).into_any(),
+        card(
+            tr(Msg::MainAside),
+            main_aside(runner_form(), runner_answer()),
+        )
+        .into_any(),
         rows(),
         stacks(),
     );
     view! {
-        {super::title("Layouts")}
+        {super::title(tr(Msg::Layouts))}
         {header}
         {stack_at(
             Gap::Loose,

@@ -4,6 +4,7 @@
 //! The forms page: the fields, the checkbox row, the highlighted editor with
 //! diagnostics that link to its lines, and the filter over a list.
 
+use crate::locale::{Msg, message, tr, tr_with};
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::tone::Tone;
@@ -18,7 +19,9 @@ use ferrohealth_ui::view::layout::{FieldRow, field_row};
 use ferrohealth_ui::view::notice::{Announce, notice};
 use ferrohealth_ui::view::segmented::choice_reveal;
 use ferrohealth_ui::view::status::badge;
-use ferrohealth_ui::view::surface::{card, grid, grid_start, page_header, stack};
+use ferrohealth_ui::view::surface::{
+    Crumb, Header, Mode, card, editor_heading, grid, grid_start, page_header, stack, well,
+};
 use ferrohealth_ui::widget::combobox::{
     ComboOption, Combobox, KeyedCombobox, combobox, keyed_combobox,
 };
@@ -48,22 +51,22 @@ fn federated() -> AnyView {
         />
     };
     card(
-        "A federated query",
+        tr(Msg::FederatedQuery),
         view! {
             <form method="post" action="#" class=FORM>
-                {chip_choices("nodes", "Ask these nodes", nodes, &checked)}
+                {chip_choices("nodes", tr(Msg::AskTheseNodes), nodes, &checked)}
                 {check_field(
                     "query-partial",
-                    "Accept a partial answer",
-                    "When a node does not answer, the rows of the others still show.",
+                    tr(Msg::AcceptPartialAnswer),
+                    tr(Msg::WhenNodeDoesNotAnswer),
                     partial,
                 )}
                 {action_bar(view! {
                     <button type="button" class=Variant::Primary.class()>
-                        {label(Some(Glyph::PLAY), "Run the query")}
+                        {label(Some(Glyph::PLAY), tr(Msg::RunQuery))}
                     </button>
                     <button type="button" class=Variant::Secondary.class()>
-                        {label(Some(Glyph::X), "Clear")}
+                        {label(Some(Glyph::X), tr(Msg::Clear))}
                     </button>
                 })}
             </form>
@@ -89,11 +92,11 @@ fn shapes() -> AnyView {
             aria-describedby=described_by(base, true, true)
         />
     };
-    let base_field = Field::new(base, format!("Base URL of {member}"))
-        .help("Where the gateway reaches the member.")
+    let base_field = Field::new(base, tr_with(Msg::BaseUrlOf, &[("member", member.into())]))
+        .help(tr(Msg::WhereGatewayReachesMember))
         .after(view! {
             <p id=error_id(base) class=ERROR aria-live="polite">
-                "The address must be absolute, starting https://."
+                {tr(Msg::AddressMustAbsoluteStartingHttps)}
             </p>
         })
         .view(base_input);
@@ -108,9 +111,9 @@ fn shapes() -> AnyView {
             field_row(
                 FieldRow::WithActions,
                 view! {
-                    {Field::new(id, "Value").label_hidden().view(input)}
-                    <button type="button" class=Variant::Ghost.class() aria-label=format!("Remove {value}")>
-                        {label(Some(Glyph::TRASH), "Remove")}
+                    {Field::new(id, tr(Msg::Value)).label_hidden().view(input)}
+                    <button type="button" class=Variant::Ghost.class() aria-label=tr_with(Msg::RemoveValue, &[("value", value.into())])>
+                        {label(Some(Glyph::TRASH), tr(Msg::Remove))}
                     </button>
                 },
             )
@@ -118,22 +121,22 @@ fn shapes() -> AnyView {
         .collect_view();
     let add = "shape-add";
     card(
-        "Field shapes",
+        tr(Msg::FieldShapes),
         view! {
             <form method="post" action="#" class=FORM>
                 {base_field}
                 <fieldset class="fui-fieldset">
-                    <legend class="fui-label">"Allowed audiences"</legend>
+                    <legend class="fui-label">{tr(Msg::AllowedAudiences)}</legend>
                     <div class="fui-stack">{rows}</div>
                     {action_field(
                         view! {
                             <button type="button" id=add class=Variant::Secondary.class() aria-describedby=error_id(add)>
-                                {label(Some(Glyph::PLUS), "Add value")}
+                                {label(Some(Glyph::PLUS), tr(Msg::AddValue))}
                             </button>
                         },
                         view! {
                             <p id=error_id(add) class=ERROR aria-live="polite">
-                                "Ten values at most."
+                                {tr(Msg::TenValuesMost)}
                             </p>
                         },
                     )}
@@ -160,14 +163,14 @@ fn pick_or_typed() -> AnyView {
             prop:value=move || if version_typing.get() { ANOTHER } else { "" }
             on:change=move |event| version_typing.set(event_target_value(&event) == ANOTHER)
         >
-            <option value="">"The one this server resolves to"</option>
+            <option value="">{tr(Msg::OneServerResolves)}</option>
             <option value="2.81">"2.81"</option>
             <option value="2.80">"2.80"</option>
-            <option value=ANOTHER>"Another version"</option>
+            <option value=ANOTHER>{tr(Msg::AnotherVersion)}</option>
         </select>
     };
     let version = pick_or_type(PickOrType {
-        label: String::from("Version"),
+        label: tr(Msg::Version),
         picker: Picker::Control {
             id: String::from("pick-version-choice"),
             control: select.into_any(),
@@ -181,7 +184,7 @@ fn pick_or_typed() -> AnyView {
         after: Some(
             view! {
                 <p id=help_id("pick-version") class="fui-help">
-                    "A version this server holds, or another one you type."
+                    {tr(Msg::VersionServerHoldsAnotherOne)}
                 </p>
                 <button
                     type="button"
@@ -190,7 +193,7 @@ fn pick_or_typed() -> AnyView {
                     hidden=move || !version_typing.get()
                     on:click=move |_| version_typing.set(false)
                 >
-                    {label(Some(Glyph::ARROW_LEFT), "Choose from the list")}
+                    {label(Some(Glyph::ARROW_LEFT), tr(Msg::ChooseFromList))}
                 </button>
             }
             .into_any(),
@@ -204,17 +207,18 @@ fn pick_or_typed() -> AnyView {
         }
     });
     let offered = vec![
-        ComboOption::new("http://loinc.org", "LOINC").detail("http://loinc.org"),
-        ComboOption::new("http://snomed.info/sct", "SNOMED CT").detail("http://snomed.info/sct"),
-        ComboOption::new(ANOTHER, "Another canonical"),
+        ComboOption::new("http://loinc.org", tr(Msg::Loinc)).detail("http://loinc.org"),
+        ComboOption::new("http://snomed.info/sct", tr(Msg::SnomedCt))
+            .detail("http://snomed.info/sct"),
+        ComboOption::new(ANOTHER, tr(Msg::AnotherCanonical)),
     ];
     let canonical = pick_or_type(PickOrType {
-        label: String::from("Code system"),
+        label: tr(Msg::CodeSystem),
         picker: Picker::Labelled(keyed_combobox(KeyedCombobox {
             id: String::from("pick-canonical-choice"),
             name: String::from("picked"),
-            label: String::from("Code system"),
-            placeholder: String::from("Choose one this server holds"),
+            label: tr(Msg::CodeSystem),
+            placeholder: tr(Msg::ChooseOneServerHolds),
             options: offered,
             selected: picked,
             described_by: Some(help_id("pick-canonical")),
@@ -228,14 +232,14 @@ fn pick_or_typed() -> AnyView {
         after: Some(
             view! {
                 <p id=help_id("pick-canonical") class="fui-help">
-                    "A code system this server holds, or the canonical of another."
+                    {tr(Msg::CodeSystemServerHoldsCanonical)}
                 </p>
             }
             .into_any(),
         ),
     });
     card(
-        "Pick or type",
+        tr(Msg::PickType),
         view! { <form method="post" action="#" class=FORM>{version} {canonical}</form> },
     )
     .into_any()
@@ -258,8 +262,8 @@ fn fields() -> AnyView {
     };
     let format = view! {
         <select id="form-format" name="format" class=SELECT>
-            <option value="canonical">"canonical"</option>
-            <option value="flat">"flat"</option>
+            <option value="canonical">{tr(Msg::Canonical)}</option>
+            <option value="flat">{tr(Msg::Flat)}</option>
         </select>
     };
     let bundle =
@@ -267,20 +271,20 @@ fn fields() -> AnyView {
     let until = view! { <input id="form-until" name="until" type="date" class=format!("{INPUT} {MEDIUM}") /> };
     let confirm = view! { <input id="form-confirm" name="confirmed" type="checkbox" /> };
     card(
-        "Fields",
+        tr(Msg::Fields),
         view! {
             <form method="post" action="#" class=FORM>
-                {field("form-reason", "Why you save it, one line", Some("Two hundred characters at most."), reason)}
-                {field("form-format", "Composition format", None, format)}
-                {field("form-bundle", "Bundle, JSON", None, bundle)}
-                {field("form-until", "Keep the draft until", None, until)}
+                {field("form-reason", tr(Msg::WhyYouSaveOneLine), Some(tr(Msg::TwoHundredCharactersMost).clone()), reason)}
+                {field("form-format", tr(Msg::CompositionFormat), None, format)}
+                {field("form-bundle", tr(Msg::BundleJson), None, bundle)}
+                {field("form-until", tr(Msg::KeepDraftUntil), None, until)}
                 {check(
                     "form-confirm",
-                    "Save this draft and reload the set. The bridge refuses a draft that does not compile.",
+                    tr(Msg::SaveDraftReloadSetBridge),
                     confirm,
                 )}
                 <button type="button" class=Variant::Primary.class()>
-                    {label(Some(Glyph::SAVE), "Save")}
+                    {label(Some(Glyph::SAVE), tr(Msg::Save))}
                 </button>
             </form>
         },
@@ -291,48 +295,48 @@ fn fields() -> AnyView {
 /// Fields in one row that share its width, a select and a date-time input
 /// beside text inputs, and the button variants enabled and disabled.
 fn inline() -> AnyView {
-    let ehr = view! { <input id="row-ehr" name="ehr" type="text" class=INPUT placeholder="ehr_id (UUID), blank lets the server mint one" /> };
-    let subject = view! { <input id="row-subject" name="subject" type="text" class=INPUT placeholder="external subject id" /> };
-    let namespace = view! { <input id="row-namespace" name="namespace" type="text" class=INPUT placeholder="namespace" /> };
+    let ehr = view! { <input id="row-ehr" name="ehr" type="text" class=INPUT placeholder=tr(Msg::EhrIdUuidBlankLets) /> };
+    let subject = view! { <input id="row-subject" name="subject" type="text" class=INPUT placeholder=tr(Msg::ExternalSubjectId) /> };
+    let namespace = view! { <input id="row-namespace" name="namespace" type="text" class=INPUT placeholder=tr(Msg::Namespace) /> };
     let path = view! { <input id="row-path" name="path" type="text" class=INPUT placeholder="/context/start_time/value" /> };
     let version = view! {
         <select id="row-version" name="version" class=SELECT>
-            <option value="latest">"Latest"</option>
-            <option value="1">"Version 1"</option>
+            <option value="latest">{tr(Msg::Latest)}</option>
+            <option value="1">{tr(Msg::Version1)}</option>
         </select>
     };
     let at = view! { <input id="row-at" name="at" type="datetime-local" class=INPUT /> };
     card(
-        "Fields in a row",
+        tr(Msg::FieldsRow),
         view! {
             <div class=FORM>
                 {field_flow(view! {
-                    {field("row-ehr", "EHR id (optional)", None, ehr)}
-                    {field("row-subject", "Subject id (optional)", None, subject)}
-                    {field("row-namespace", "Subject namespace (optional)", None, namespace)}
+                    {field("row-ehr", tr(Msg::EhrIdOptional), None, ehr)}
+                    {field("row-subject", tr(Msg::SubjectIdOptional), None, subject)}
+                    {field("row-namespace", tr(Msg::SubjectNamespaceOptional), None, namespace)}
                     <button type="button" class=Variant::Primary.class()>
-                        "Create"
+                        {tr(Msg::Create)}
                     </button>
                 })}
                 {field_flow(view! {
-                    {field("row-version", "Version", None, version)}
-                    {field("row-at", "Time travel (UTC)", None, at)}
-                    {field("row-path", "Target path (optional)", None, path)}
+                    {field("row-version", tr(Msg::Version), None, version)}
+                    {field("row-at", tr(Msg::TimeTravelUtc), None, at)}
+                    {field("row-path", tr(Msg::TargetPathOptional), None, path)}
                     <button type="button" class=Variant::Secondary.class()>
-                        "At time"
+                        {tr(Msg::Time)}
                     </button>
                 })}
                 <div class="fui-cluster">
-                    <button type="button" class=Variant::Primary.class()>"Primary"</button>
-                    <button type="button" class=Variant::Secondary.class()>"Secondary"</button>
-                    <button type="button" class=Variant::Danger.class()>"Danger"</button>
-                    <button type="button" class=Variant::Ghost.class()>"Ghost"</button>
-                    <button type="button" class=Variant::Secondary.small()>"Small"</button>
+                    <button type="button" class=Variant::Primary.class()>{tr(Msg::Primary)}</button>
+                    <button type="button" class=Variant::Secondary.class()>{tr(Msg::Secondary)}</button>
+                    <button type="button" class=Variant::Danger.class()>{tr(Msg::Danger)}</button>
+                    <button type="button" class=Variant::Ghost.class()>{tr(Msg::Ghost)}</button>
+                    <button type="button" class=Variant::Secondary.small()>{tr(Msg::Small)}</button>
                 </div>
                 <div class="fui-cluster">
-                    <button type="button" class=Variant::Primary.class() disabled=true>"Primary, disabled"</button>
-                    <button type="button" class=Variant::Secondary.class() disabled=true>"Secondary, disabled"</button>
-                    <button type="button" class=Variant::Danger.class() disabled=true>"Danger, disabled"</button>
+                    <button type="button" class=Variant::Primary.class() disabled=true>{tr(Msg::PrimaryDisabled)}</button>
+                    <button type="button" class=Variant::Secondary.class() disabled=true>{tr(Msg::SecondaryDisabled)}</button>
+                    <button type="button" class=Variant::Danger.class() disabled=true>{tr(Msg::DangerDisabled)}</button>
                 </div>
             </div>
         },
@@ -344,7 +348,10 @@ fn inline() -> AnyView {
 /// clause's key, so every label names its own control and every help line
 /// its own.
 fn per_row() -> AnyView {
-    let clauses = [("include-1", "Include"), ("exclude-2", "Exclude")];
+    let clauses = [
+        ("include-1", tr(Msg::Include)),
+        ("exclude-2", tr(Msg::Exclude)),
+    ];
     let rows = clauses
         .into_iter()
         .map(|(key, verb)| {
@@ -354,22 +361,22 @@ fn per_row() -> AnyView {
             let inactive_help = help_id(&inactive);
             view! {
                 <fieldset class="fui-fieldset">
-                    <legend>{verb} " codes"</legend>
+                    <legend>{verb} tr(Msg::Codes)</legend>
                     {field_flow(view! {
                         {keyed_field(
                             search.clone(),
-                            "Find a code in that code system",
-                            Some("Two letters or more."),
+                            tr(Msg::FindCodeCodeSystem),
+                            Some(tr(Msg::TwoLettersMore).clone()),
                             view! {
-                                <input id=search name=format!("search-{key}") type="search" class=INPUT placeholder="blood pressure" aria-describedby=search_help />
+                                <input id=search name=format!("search-{key}") type="search" class=INPUT placeholder=tr(Msg::BloodPressure) aria-describedby=search_help />
                             },
                         )}
-                        <button type="button" class=Variant::Secondary.class()>"Add"</button>
+                        <button type="button" class=Variant::Secondary.class()>{tr(Msg::Add)}</button>
                     })}
                     {keyed_check_field(
                         inactive.clone(),
-                        "Include inactive codes",
-                        "Codes the system retired still match.",
+                        tr(Msg::IncludeInactiveCodes),
+                        tr(Msg::CodesSystemRetiredStillMatch),
                         view! {
                             <input type="checkbox" role="switch" id=inactive name=format!("inactive-{key}") class=SWITCH aria-describedby=inactive_help />
                         },
@@ -378,33 +385,37 @@ fn per_row() -> AnyView {
             }
         })
         .collect_view();
-    card("Fields per row", view! { <div class=FORM>{rows}</div> }).into_any()
+    card(
+        tr(Msg::FieldsPerRow),
+        view! { <div class=FORM>{rows}</div> },
+    )
+    .into_any()
 }
 
 /// One combobox per clause, its id made from the clause's place, each
 /// described by its own help line.
-fn clause_pickers(systems: &[(&'static str, &'static str, &'static str)]) -> AnyView {
+fn clause_pickers(systems: &[(&'static str, String, &'static str)]) -> AnyView {
     (1..=2)
         .map(|place| {
             let id = format!("clause-{place}-system");
             let help = format!("{id}-help");
             let offered = systems
                 .iter()
-                .map(|(value, label, url)| ComboOption::new(*value, *label).detail(*url))
+                .map(|(value, label, url)| ComboOption::new(*value, label.clone()).detail(*url))
                 .collect();
             view! {
                 <div class="fui-field">
                     {keyed_combobox(KeyedCombobox {
                         id: id.clone(),
                         name: format!("clause{place}"),
-                        label: format!("Clause {place}: code system"),
-                        placeholder: String::from("Choose a code system"),
+                        label: tr_with(Msg::ClauseCodeSystem, &[("place", place.into())]),
+                        placeholder: tr(Msg::ChooseCodeSystem),
                         options: offered,
                         selected: RwSignal::new(None),
                         described_by: Some(help.clone()),
                     })}
                     <p id=help class="fui-help">
-                        "The system this clause draws its codes from."
+                        {tr(Msg::SystemClauseDrawsCodesFrom)}
                     </p>
                 </div>
             }
@@ -418,76 +429,76 @@ fn clause_pickers(systems: &[(&'static str, &'static str, &'static str)]) -> Any
 /// that names its reason.
 fn choosing() -> AnyView {
     let systems = [
-        ("loinc", "LOINC", "http://loinc.org"),
-        ("snomed", "SNOMED CT", "http://snomed.info/sct"),
-        ("ucum", "UCUM", "http://unitsofmeasure.org"),
-        ("icd10", "ICD-10", "http://hl7.org/fhir/sid/icd-10"),
-        ("atc", "ATC", "http://www.whocc.no/atc"),
+        ("loinc", tr(Msg::Loinc), "http://loinc.org"),
+        ("snomed", tr(Msg::SnomedCt), "http://snomed.info/sct"),
+        ("ucum", tr(Msg::Ucum), "http://unitsofmeasure.org"),
+        ("icd10", tr(Msg::Icd10), "http://hl7.org/fhir/sid/icd-10"),
+        ("atc", tr(Msg::Atc), "http://www.whocc.no/atc"),
         (
             "rxnorm",
-            "RxNorm",
+            tr(Msg::Rxnorm),
             "http://www.nlm.nih.gov/research/umls/rxnorm",
         ),
-        ("iso3166", "ISO 3166 countries", "urn:iso:std:iso:3166"),
-        ("bcp47", "BCP 47 languages", "urn:ietf:bcp:47"),
-        ("mime", "Media types", "urn:ietf:bcp:13"),
+        ("iso3166", tr(Msg::Iso3166Countries), "urn:iso:std:iso:3166"),
+        ("bcp47", tr(Msg::Bcp47Languages), "urn:ietf:bcp:47"),
+        ("mime", tr(Msg::MediaTypes), "urn:ietf:bcp:13"),
         (
             "gender",
-            "Administrative gender",
+            tr(Msg::AdministrativeGender),
             "http://hl7.org/fhir/administrative-gender",
         ),
         (
             "status",
-            "Observation status",
+            tr(Msg::ObservationStatus),
             "http://hl7.org/fhir/observation-status",
         ),
         (
             "synthetic",
-            "Synthetic gallery codes",
+            tr(Msg::SyntheticGalleryCodes),
             "http://example.org/fhir/CodeSystem/gallery-synthetic",
         ),
     ];
     let options = systems
         .iter()
-        .map(|(value, label, url)| ComboOption::new(*value, *label).detail(*url))
+        .map(|(value, label, url)| ComboOption::new(*value, label.clone()).detail(*url))
         .collect();
     let chosen = RwSignal::new(Some(String::from("snomed")));
     let clauses = clause_pickers(&systems);
     let code = view! { <input id="choose-code" name="code" type="text" class=INPUT placeholder="22298006" /> };
     let active = view! { <input id="choose-active" name="active" type="checkbox" checked=true /> };
     card(
-        "Combobox",
+        tr(Msg::Combobox),
         view! {
             <div class=FORM>
                 {combobox(Combobox {
                     id: "choose-system",
                     name: "system",
-                    label: "Code system",
-                    placeholder: "Choose a code system",
+                    label: tr(Msg::CodeSystem).into(),
+                    placeholder: tr(Msg::ChooseCodeSystem).into(),
                     options,
                     selected: chosen,
                 })}
                 <fieldset class="fui-fieldset">
-                    <legend class="fui-sr-only">"The clauses"</legend>
+                    <legend class="fui-sr-only">{tr(Msg::Clauses)}</legend>
                     {clauses}
                 </fieldset>
                 <fieldset class="fui-fieldset">
-                    <legend>"The code"</legend>
+                    <legend>{tr(Msg::TheCode)}</legend>
                     {field_flow(view! {
-                        {field("choose-code", "Code", None, code)}
-                        {check("choose-active", "Active concepts only", active)}
+                        {field("choose-code", tr(Msg::Code), None, code)}
+                        {check("choose-active", tr(Msg::ActiveConceptsOnly), active)}
                     })}
                 </fieldset>
                 <div class="fui-cluster">
                     <button type="button" class=Variant::Primary.class() disabled=true aria-describedby="choose-save-why">
-                        {label(Some(Glyph::SAVE), "Save this value set")}
+                        {label(Some(Glyph::SAVE), tr(Msg::SaveValueSet))}
                     </button>
                     <button type="button" class=Variant::Danger.small()>
-                        {label(Some(Glyph::TRASH), "Remove this clause")}
+                        {label(Some(Glyph::TRASH), tr(Msg::RemoveClause))}
                     </button>
                 </div>
                 <p id="choose-save-why" class="fui-help">
-                    "A canonical and a clause are what a save needs."
+                    {tr(Msg::CanonicalClauseWhatSaveNeeds)}
                 </p>
             </div>
         },
@@ -499,40 +510,40 @@ fn choosing() -> AnyView {
 /// field inside the well, and a choice drawn as segments.
 fn grouped() -> AnyView {
     let pair = columns(view! {
-        {field("member-name", "Member", None, view! { <input id="member-name" type="text" class=INPUT value="synthetic-node-a" /> })}
-        {field("member-base", "Base URL", None, view! { <input id="member-base" type="text" class=INPUT value="https://node-a.example.org/" /> })}
+        {field("member-name", tr(Msg::Member), None, view! { <input id="member-name" type="text" class=INPUT value="synthetic-node-a" /> })}
+        {field("member-base", tr(Msg::BaseUrl), None, view! { <input id="member-base" type="text" class=INPUT value="https://node-a.example.org/" /> })}
     });
     card(
-        "Grouped fields",
+        tr(Msg::GroupedFields),
         view! {
             <form method="post" action="#" class=FORM>
                 <fieldset class="fui-fieldset fui-well">
-                    <legend>"A federation member"</legend>
+                    <legend>{tr(Msg::FederationMember)}</legend>
                     {pair}
                     {field_flow(view! {
-                        {field("member-system", "Code system", None, view! {
+                        {field("member-system", tr(Msg::CodeSystem), None, view! {
                             <select id="member-system" name="system" class=SELECT disabled=true>
-                                <option value="">"Choose a member first"</option>
+                                <option value="">{tr(Msg::ChooseMemberFirst)}</option>
                             </select>
                         })}
-                        {field("member-code", "Find a code in that code system", None, view! {
-                            <input id="member-code" name="code" type="search" class=INPUT disabled=true placeholder="Choose a code system" />
+                        {field("member-code", tr(Msg::FindCodeCodeSystem), None, view! {
+                            <input id="member-code" name="code" type="search" class=INPUT disabled=true placeholder=tr(Msg::ChooseCodeSystem) />
                         })}
                         <button type="button" class=Variant::Secondary.class() disabled=true>
-                            "Search"
+                            {tr(Msg::Search)}
                         </button>
                     })}
                 </fieldset>
                 {choice_reveal(
                     "secret",
-                    "Its client secret",
-                    &[("keep", "Keep"), ("replace", "Replace"), ("remove", "Remove")],
+                    tr(Msg::ClientSecret),
+                    &[("keep", tr(Msg::Keep)), ("replace", tr(Msg::Replace)), ("remove", tr(Msg::Remove))],
                     "keep",
                     vec![
                         ().into_any(),
                         field(
                             "member-secret",
-                            "The new secret",
+                            tr(Msg::NewSecret),
                             None,
                             view! { <input id="member-secret" name="secret-value" type="password" class=INPUT autocomplete="new-password" /> },
                         )
@@ -541,7 +552,7 @@ fn grouped() -> AnyView {
                             Tone::Warn,
                             Announce::Status,
                             None,
-                            "The member signs in with no secret once this is saved.",
+                            tr(Msg::MemberSignsNoSecretOnce),
                         )
                         .into_any(),
                     ],
@@ -557,14 +568,14 @@ fn grouped() -> AnyView {
 fn nested_reveal() -> AnyView {
     let secret = choice_reveal(
         "grant-secret",
-        "Its client secret",
-        &[("keep", "Keep"), ("replace", "Replace")],
+        tr(Msg::ClientSecret),
+        &[("keep", tr(Msg::Keep)), ("replace", tr(Msg::Replace))],
         "keep",
         vec![
             ().into_any(),
             field(
                 "grant-secret-value",
-                "The new secret",
+                tr(Msg::NewSecret),
                 None,
                 view! { <input id="grant-secret-value" type="password" class=INPUT autocomplete="new-password" /> },
             )
@@ -573,26 +584,26 @@ fn nested_reveal() -> AnyView {
     );
     let client = view! {
         <div class="fui-stack">
-            {field("grant-client-id", "Client id", None, view! { <input id="grant-client-id" type="text" class=INPUT value="synthetic-client" /> })}
+            {field("grant-client-id", tr(Msg::ClientId), None, view! { <input id="grant-client-id" type="text" class=INPUT value="synthetic-client" /> })}
             {secret}
         </div>
     }
     .into_any();
     let token = field(
         "grant-token-value",
-        "Token",
+        tr(Msg::TokenLabel),
         None,
         view! { <input id="grant-token-value" type="password" class=INPUT autocomplete="off" /> },
     )
     .into_any();
     card(
-        "A reveal inside a reveal",
+        tr(Msg::RevealInsideReveal),
         view! {
             <form method="post" action="#" class=FORM>
                 {choice_reveal(
                     "grant",
-                    "The grant",
-                    &[("client", "Client credentials"), ("token", "A token")],
+                    tr(Msg::Grant),
+                    &[("client", tr(Msg::ClientCredentials)), ("token", tr(Msg::Token))],
                     "client",
                     vec![client, token],
                 )}
@@ -611,20 +622,20 @@ fn long_form() -> AnyView {
             let input_id = id.clone();
             keyed_field(
                 id,
-                format!("Synthetic setting {index}"),
+                tr_with(Msg::SyntheticSetting, &[("index", index.into())]),
                 None,
                 view! { <input id=input_id type="text" class=INPUT value=format!("value-{index}") /> },
             )
         })
         .collect_view();
     card(
-        "A long form",
+        tr(Msg::LongForm),
         view! {
             <form method="post" action="#" class=FORM id="long-form">
                 {fields}
                 {action_bar(view! {
                     <button type="button" class=Variant::Primary.class()>
-                        {label(Some(Glyph::CHECK), "Save the settings")}
+                        {label(Some(Glyph::CHECK), tr(Msg::SaveSettings))}
                     </button>
                 })}
             </form>
@@ -637,14 +648,14 @@ fn long_form() -> AnyView {
 /// between words rather than push the page sideways, beside a short one.
 fn long_label() -> AnyView {
     card(
-        "A long button label",
+        tr(Msg::LongButtonLabel),
         view! {
             <div class="fui-cluster">
                 <button type="button" id="long-label" class=Variant::Primary.class()>
-                    {label(Some(Glyph::DOWNLOAD), "Download the whole configuration as TOML")}
+                    {label(Some(Glyph::DOWNLOAD), tr(Msg::DownloadWholeConfigurationToml))}
                 </button>
                 <button type="button" class=Variant::Secondary.class()>
-                    {label(Some(Glyph::X), "Clear")}
+                    {label(Some(Glyph::X), tr(Msg::Clear))}
                 </button>
             </div>
         },
@@ -656,15 +667,15 @@ fn long_label() -> AnyView {
 fn upload() -> AnyView {
     let source = RwSignal::new(String::new());
     card(
-        "Upload",
+        tr(Msg::Upload),
         upload_field(
             Upload {
                 id: "gallery-upload",
-                label: "Operational template",
-                choose: "Choose OPT file",
+                label: tr(Msg::OperationalTemplate).into(),
+                choose: tr(Msg::ChooseOptFile).into(),
                 accept: &[".opt", ".xml"],
                 max_bytes: 2 * 1024 * 1024,
-                placeholder: "<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
+                placeholder: "<?xml version=\"1.0\" encoding=\"UTF-8\"?>".into(),
             },
             source,
             Signal::derive(|| false),
@@ -704,10 +715,12 @@ fn editor() -> AnyView {
     );
     let size = move || {
         text.with(|text| {
-            format!(
-                "{} bytes in {} lines.",
-                text.len(),
-                text.split('\n').count()
+            tr_with(
+                Msg::SizeLines,
+                &[
+                    ("bytes", text.len().into()),
+                    ("lines", text.split('\n').count().into()),
+                ],
             )
         })
     };
@@ -716,13 +729,13 @@ fn editor() -> AnyView {
             4,
             Tone::Warn,
             "warning",
-            "a comment after a value is kept but not read",
+            tr(Msg::CommentAfterValueKeptBut),
         ),
         (
             13,
             Tone::Bad,
             "error",
-            "the template gallery.template.v1 is not loaded",
+            tr(Msg::TemplateGalleryTemplateV1Not),
         ),
     ]
     .into_iter()
@@ -731,7 +744,7 @@ fn editor() -> AnyView {
             <li>
                 {badge(tone, word)}
                 <span class="fui-issue-head">
-                    <a href=format!("#{}", line_id(DRAFT, line))>{format!("line {line}")}</a>
+                    <a href=format!("#{}", line_id(DRAFT, line))>{tr_with(Msg::IssueLine, &[("line", line.into())])}</a>
                     ":"
                 </span>
                 <span class="fui-issue-text">{text}</span>
@@ -740,9 +753,9 @@ fn editor() -> AnyView {
     })
     .collect_view();
     card(
-        "Highlighted editor",
+        tr(Msg::HighlightedEditor),
         view! {
-            {Field::new(DRAFT, "The file")
+            {Field::new(DRAFT, tr(Msg::File))
                 .after(view! {
                     <p class="fui-help" role="status">
                         {size}
@@ -808,7 +821,7 @@ fn reloading_editor() -> AnyView {
         Suspend::new(async move {
             let count = read.await;
             view! {
-                <p id="reloaded" class="fui-help">{format!("Read {count} times again.")}</p>
+                <p id="reloaded" class="fui-help">{tr_with(Msg::ReadTimesAgain, &[("count", count.into())])}</p>
                 {code_editor(
                     Editor {
                         id: "reloading-draft",
@@ -823,7 +836,7 @@ fn reloading_editor() -> AnyView {
         })
     };
     card(
-        "An editor that reloads",
+        tr(Msg::EditorReloads),
         view! {
             <div class="fui-cluster">
                 <button
@@ -832,7 +845,7 @@ fn reloading_editor() -> AnyView {
                     class=Variant::Secondary.class()
                     on:click=move |_| reloads.update(|count| *count = count.saturating_add(1))
                 >
-                    "Read it again"
+                    {tr(Msg::ReadAgain)}
                 </button>
             </div>
             <Transition fallback=|| ()>{drawn}</Transition>
@@ -860,13 +873,20 @@ fn filter() -> AnyView {
                 .collect::<Vec<_>>()
         })
     });
-    let count =
-        Signal::derive(move || format!("{} of {total} files on this page.", kept.with(Vec::len)));
+    let count = Signal::derive(move || {
+        tr_with(
+            Msg::FilesOnPage,
+            &[
+                ("kept", kept.with(Vec::len).into()),
+                ("total", total.into()),
+            ],
+        )
+    });
     card(
-        "Filter",
+        tr(Msg::Filter),
         view! {
-            {table_filter("gallery-filter", "Filter the files", words, count)}
-            <ul class="fui-divided" aria-label="Files">
+            {table_filter("gallery-filter", tr(Msg::FilterFiles), words, count)}
+            <ul class="fui-divided" aria-label=tr(Msg::Files)>
                 <For each=move || kept.get() key=|name| name.clone() let:name>
                     <li>
                         <code>{name}</code>
@@ -874,6 +894,34 @@ fn filter() -> AnyView {
                 </For>
             </ul>
         },
+    )
+    .into_any()
+}
+
+/// The header of an editor that creates a file and of one that edits a
+/// file: the title and the trail's last crumb say which.
+fn editor_headers() -> AnyView {
+    let crumbs = || vec![Crumb::new(tr(Msg::MappingFilesCrumb), String::from("#"))];
+    let header = |mode: Mode| {
+        well(editor_heading(
+            message(Msg::FileEditor),
+            &mode,
+            Header {
+                crumbs: crumbs(),
+                mono: true,
+                ..Header::default()
+            },
+            (),
+        ))
+    };
+    card(
+        tr(Msg::EditorHeaders),
+        stack(view! {
+            <div data-editor-mode="new">{header(Mode::Creating)}</div>
+            <div data-editor-mode="edit">
+                {header(Mode::Editing(String::from("synthetic-007.model.yml")))}
+            </div>
+        }),
     )
     .into_any()
 }
@@ -886,10 +934,8 @@ fn filter() -> AnyView {
 )]
 pub fn FormsPage() -> impl IntoView {
     let header = page_header(
-        "Forms and editor",
-        Some(String::from(
-            "Fields, grouped fields, the upload field, the highlighted editor and the filter.",
-        )),
+        tr(Msg::FormsEditor),
+        Some(tr(Msg::FieldsGroupedFieldsUploadField)),
         (),
     )
     .into_any();
@@ -921,13 +967,15 @@ pub fn FormsPage() -> impl IntoView {
         {nested_reveal()}
     })
     .into_any();
+    let headers = editor_headers();
     let reloading = reloading_editor();
     let long = long_form();
     view! {
-        {super::title("Forms and editor")}
+        {super::title(tr(Msg::FormsEditor))}
         {header}
         {stack(view! {
             {sections.0}
+            {headers}
             {sections.4}
             {sections.6}
             {sections.5}

@@ -13,6 +13,8 @@
 //! are the router's links, which mark themselves `aria-current="page"`, so
 //! the mark follows a client-side navigation.
 
+use std::borrow::Cow;
+
 use leptos::prelude::*;
 use leptos_router::components::A;
 
@@ -21,12 +23,12 @@ use crate::icon::{Glyph, icon};
 use crate::view::button::Variant;
 
 /// One entry of the navigation.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Entry {
     /// Where it leads.
     pub href: &'static str,
     /// What it says.
-    pub label: &'static str,
+    pub label: Cow<'static, str>,
     /// The icon beside it.
     pub glyph: Glyph,
     /// Whether it is marked on its own path alone, rather than on every
@@ -35,14 +37,17 @@ pub struct Entry {
 }
 
 /// One group of the navigation, under its heading.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+///
+/// A group and its entries are built where the navigation is drawn, so
+/// their words can come from the console's catalog in the page's locale.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Group {
     /// The id its heading carries, which names its list.
     pub id: &'static str,
     /// Its heading.
-    pub title: &'static str,
+    pub title: Cow<'static, str>,
     /// Its entries, in order; a group with none is not drawn.
-    pub entries: &'static [Entry],
+    pub entries: Vec<Entry>,
 }
 
 /// Returns the entry `entry`, marked while it is the page, or a page under
@@ -65,7 +70,7 @@ fn group(group: Group) -> Option<impl IntoView> {
     if group.entries.is_empty() {
         return None;
     }
-    let entries = group.entries.iter().copied().map(entry).collect_view();
+    let entries = group.entries.into_iter().map(entry).collect_view();
     Some(view! {
         <p id=group.id class="fui-nav-group">
             {group.title}
@@ -79,9 +84,10 @@ fn group(group: Group) -> Option<impl IntoView> {
 /// Returns the navigation `id`, named `label`, of `groups`, which the
 /// button of [`crate::view::shell::drawer_button`] opens as a drawer.
 #[must_use]
-pub fn sidebar(id: &'static str, label: &'static str, groups: &[Group]) -> AnyView {
+pub fn sidebar(id: &'static str, label: impl Into<String>, groups: Vec<Group>) -> AnyView {
+    let label = label.into();
     let nav = NodeRef::<leptos::html::Nav>::new();
-    let groups = groups.iter().copied().map(group).collect_view();
+    let groups = groups.into_iter().map(group).collect_view();
     let close = format!("{} fui-drawer-only", Variant::Ghost.class());
     view! {
         <nav

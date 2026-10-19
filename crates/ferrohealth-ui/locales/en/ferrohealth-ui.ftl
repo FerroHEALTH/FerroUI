@@ -69,7 +69,6 @@ page-of = Page { $page } of { $pages }
 range = { $first }-{ $last } of { $total }
 range-empty = No rows
 range-of = { $first }-{ $last } of { $total } { $noun }
-range-of-empty = No { $nouns }
 open-range-of = { $nouns } { $first } to { $last }
 partial-note = The server counted { $stated } { $noun }, and this listing holds { $held }.
 range-with-note = { $range }. { $note }

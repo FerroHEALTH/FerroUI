@@ -16,6 +16,7 @@
     reason = "test assertions"
 )]
 
+mod console;
 mod contrast;
 mod locale;
 mod markup;

@@ -15,6 +15,8 @@
 //! same value either way. A short fixed list keeps the plain styled select
 //! (`view::form::SELECT`).
 
+use std::borrow::Cow;
+
 use leptos::prelude::*;
 
 use crate::i18n::{Text, tr};
@@ -72,9 +74,9 @@ pub struct Combobox {
     /// The name the form posts the value as.
     pub name: &'static str,
     /// The label, such as "Code system".
-    pub label: &'static str,
+    pub label: Cow<'static, str>,
     /// The words shown while nothing is chosen.
-    pub placeholder: &'static str,
+    pub placeholder: Cow<'static, str>,
     /// The choices, in their order.
     pub options: Vec<ComboOption>,
     /// The value chosen, if any.
@@ -108,8 +110,8 @@ impl From<Combobox> for KeyedCombobox {
         Self {
             id: combo.id.to_owned(),
             name: combo.name.to_owned(),
-            label: combo.label.to_owned(),
-            placeholder: combo.placeholder.to_owned(),
+            label: combo.label.into_owned(),
+            placeholder: combo.placeholder.into_owned(),
             options: combo.options,
             selected: combo.selected,
             described_by: None,

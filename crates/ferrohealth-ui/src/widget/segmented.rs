@@ -17,16 +17,16 @@ use leptos::prelude::*;
 /// `on_select` with the key a press chooses.
 #[must_use]
 pub fn segmented(
-    label: &'static str,
-    choices: &'static [(&'static str, &'static str)],
+    label: impl Into<String>,
+    choices: &[(&'static str, impl AsRef<str>)],
     current: Signal<&'static str>,
     on_select: impl Fn(&'static str) + Clone + Send + Sync + 'static,
 ) -> impl IntoView {
     let choices = choices
         .iter()
-        .map(|(key, words)| (*key, String::from(*words)))
+        .map(|(key, words)| (*key, words.as_ref().to_owned()))
         .collect();
-    segmented_words(String::from(label), choices, current, on_select)
+    segmented_words(label.into(), choices, current, on_select)
 }
 
 /// Returns [`segmented`] over words made at run time, such as the words of

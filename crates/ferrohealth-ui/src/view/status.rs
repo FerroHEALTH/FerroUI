@@ -44,15 +44,18 @@ pub fn status(
 /// and the sentence `body`, such as the notice that a deployment is a
 /// sandbox that must hold no real patient data.
 #[must_use]
-pub fn banner(tone: Tone, glyph: Glyph, title: &'static str, body: &str) -> impl IntoView + use<> {
+pub fn banner(tone: Tone, glyph: Glyph, title: impl Into<String>, body: &str) -> AnyView {
+    let title = title.into();
+    let words = title.clone();
     let class = format!("fui-banner {}", tone.class());
     view! {
         <div role="note" aria-label=title class=class>
             {icon(glyph, "16")}
             <p>
-                <strong>{title} ": "</strong>
+                <strong>{words} ": "</strong>
                 {body.to_owned()}
             </p>
         </div>
     }
+    .into_any()
 }

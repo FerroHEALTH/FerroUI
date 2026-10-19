@@ -32,9 +32,14 @@ use leptos_router::hooks::{use_location, use_params_map};
 use leptos_router::path;
 
 use crate::locale::gallery_locale;
+use crate::locale::{Msg, tr};
 
-/// The gallery's name, as its footer and titles name it.
-pub const PRODUCT: &str = "FerroHEALTH UI Gallery";
+/// The gallery's name, as its footer and titles name it, in the page's
+/// locale.
+#[must_use]
+pub fn product() -> String {
+    tr(Msg::Product)
+}
 
 /// The gallery's version.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -222,7 +227,7 @@ pub fn App() -> impl IntoView {
     provide_locale(gallery_locale(&tag));
     let toasts = provide_toasts();
     view! {
-        <Title text=PRODUCT />
+        <Title text=product() />
         <Router>
             <Routes fallback=|| view! { <NotFound /> }>
                 <Route path=path!("/") view=Index />
@@ -243,11 +248,14 @@ pub fn App() -> impl IntoView {
 }
 
 /// The footer every gallery page carries.
-pub const FOOTER: Footer = Footer {
-    product: PRODUCT,
-    version: VERSION,
-    about: "/",
-};
+#[must_use]
+pub fn footer() -> Footer {
+    Footer {
+        product: product().into(),
+        version: VERSION,
+        about: "/",
+    }
+}
 
 /// The brand the route's `:brand` names, when it names one.
 #[must_use]
@@ -259,46 +267,46 @@ pub fn route_brand() -> Option<Brand> {
 /// The entries of the navigation of the brand `key`.
 macro_rules! entries {
     ($key:literal) => {
-        &[
+        vec![
             Entry {
                 href: concat!("/", $key),
-                label: "Overview",
+                label: tr(Msg::Overview).into(),
                 glyph: Glyph::LAYOUT_DASHBOARD,
                 exact: true,
             },
             Entry {
                 href: concat!("/", $key, "/forms"),
-                label: "Forms and editor",
+                label: tr(Msg::FormsEditor).into(),
                 glyph: Glyph::PENCIL,
                 exact: true,
             },
             Entry {
                 href: concat!("/", $key, "/tables"),
-                label: "Tables and paging",
+                label: tr(Msg::TablesPaging).into(),
                 glyph: Glyph::DATABASE,
                 exact: true,
             },
             Entry {
                 href: concat!("/", $key, "/code"),
-                label: "Documents",
+                label: tr(Msg::Documents).into(),
                 glyph: Glyph::SQUARE_TERMINAL,
                 exact: true,
             },
             Entry {
                 href: concat!("/", $key, "/overlays"),
-                label: "Overlays",
+                label: tr(Msg::Overlays).into(),
                 glyph: Glyph::LAYERS,
                 exact: true,
             },
             Entry {
                 href: concat!("/", $key, "/charts"),
-                label: "Charts",
+                label: tr(Msg::Charts).into(),
                 glyph: Glyph::CHART_LINE,
                 exact: true,
             },
             Entry {
                 href: concat!("/", $key, "/layouts"),
-                label: "Layouts",
+                label: tr(Msg::Layouts).into(),
                 glyph: Glyph::PANEL_RIGHT,
                 exact: true,
             },
@@ -309,22 +317,22 @@ macro_rules! entries {
 /// The sign-in entries of the brand `key`.
 macro_rules! sign_ins {
     ($key:literal) => {
-        &[
+        vec![
             Entry {
                 href: concat!("/sign-in/", $key, "/basic"),
-                label: "Basic sign-in",
+                label: tr(Msg::BasicSign).into(),
                 glyph: Glyph::LOG_IN,
                 exact: true,
             },
             Entry {
                 href: concat!("/sign-in/", $key, "/provider"),
-                label: "Provider sign-in",
+                label: tr(Msg::ProviderSign).into(),
                 glyph: Glyph::SHIELD_CHECK,
                 exact: true,
             },
             Entry {
                 href: concat!("/sign-in/", $key, "/both"),
-                label: "Both methods",
+                label: tr(Msg::BothMethods).into(),
                 glyph: Glyph::USERS,
                 exact: true,
             },
@@ -335,7 +343,7 @@ macro_rules! sign_ins {
 /// The navigation groups of `brand`: its pages and its sign-in cards. The
 /// brand itself is chosen in the top bar, so the navigation marks one page.
 fn navigation(brand: Brand) -> [Group; 2] {
-    let (pages, signs): (&'static [Entry], &'static [Entry]) = match brand {
+    let (pages, signs): (Vec<Entry>, Vec<Entry>) = match brand {
         Brand::Bridge => (entries!("ferrobridge"), sign_ins!("ferrobridge")),
         Brand::Fed => (entries!("ferrofed"), sign_ins!("ferrofed")),
         Brand::Ehr => (entries!("ferroehr"), sign_ins!("ferroehr")),
@@ -344,12 +352,12 @@ fn navigation(brand: Brand) -> [Group; 2] {
     [
         Group {
             id: "nav-components",
-            title: "Components",
+            title: tr(Msg::Components).into(),
             entries: pages,
         },
         Group {
             id: "nav-sign-in",
-            title: "Sign-in",
+            title: tr(Msg::SignInGroup).into(),
             entries: signs,
         },
     ]
@@ -366,10 +374,10 @@ fn brand_switch(brand: Brand, back: &str) -> impl IntoView + use<> {
         .into_iter()
         .map(|each| {
             let words = match each {
-                Brand::Bridge => "BRIDGE",
-                Brand::Fed => "FED",
-                Brand::Ehr => "EHR",
-                Brand::Term => "TERM",
+                Brand::Bridge => tr(Msg::Bridge),
+                Brand::Fed => tr(Msg::Fed),
+                Brand::Ehr => tr(Msg::Ehr),
+                Brand::Term => tr(Msg::Term),
             };
             (format!("/{}{page}", each.key()), words)
         })
@@ -378,7 +386,7 @@ fn brand_switch(brand: Brand, back: &str) -> impl IntoView + use<> {
         .into_iter()
         .position(|each| each == brand)
         .unwrap_or(0);
-    segmented_links("Brand", choices, current)
+    segmented_links(tr(Msg::Brand), choices, current)
 }
 
 /// The glyph a brand's mark draws in the gallery.
@@ -448,26 +456,24 @@ fn keep_theme(theme: Theme) {
     let _: Theme = theme;
 }
 
-/// The synthetic operator the gallery is signed in as.
-const OPERATOR: &str = "Practitioner/synthetic-terminologist-on-call";
-
 /// The shell of `brand`'s pages, whose theme switch returns to `back`.
 fn brand_shell(brand: Brand, back: String) -> AnyView {
     let start = view! {
         {drawer_button(SIDEBAR_ID)}
-        {lockup("/", mark(brand_glyph(brand)), brand.product(), "Gallery")}
+        {lockup("/", mark(brand_glyph(brand)), brand.product(), tr(Msg::Gallery))}
     };
     let switch = brand_switch(brand, &back).into_any();
     let end = view! {
         <span class="fui-wide-only">{switch}</span>
-        <span class="fui-roomy-only">{pill(Tone::Ok, "Library v0.1.7")}</span>
+        <span class="fui-roomy-only">{pill(Tone::Ok, &tr(Msg::LibraryV017))}</span>
         {operator_menu(
             OperatorMenu {
                 id: "operator-menu",
                 // A name as long as a FHIR user reference gets, so the top
                 // bar shows how it gives way.
-                name: String::from(OPERATOR),
-                subtitle: "Signed in to the gallery",
+                // The synthetic operator the gallery is signed in as.
+                name: String::from("Practitioner/synthetic-terminologist-on-call"),
+                subtitle: tr(Msg::SignedGallery).into(),
                 sign_out: None,
             },
             (),
@@ -481,8 +487,8 @@ fn brand_shell(brand: Brand, back: String) -> AnyView {
     let search = search_box(SearchBox {
         id: "gallery-search",
         name: "q",
-        label: "Search the mapping files",
-        placeholder: "A file, a template or a path",
+        label: tr(Msg::SearchMappingFiles).into(),
+        placeholder: tr(Msg::FileTemplatePath).into(),
         action: format!("/{}/tables", brand.key()),
         value: String::new(),
     });
@@ -493,14 +499,14 @@ fn brand_shell(brand: Brand, back: String) -> AnyView {
             banner(
                 Tone::Warn,
                 Glyph::TRIANGLE_ALERT,
-                "Gallery",
-                "every row and text on these pages is invented for the gallery; none is patient data.",
+                tr(Msg::Gallery),
+                &tr(Msg::EveryRowTextThesePages),
             )
             .into_any(),
         ),
-        sidebar: sidebar(SIDEBAR_ID, "Pages", &groups),
+        sidebar: sidebar(SIDEBAR_ID, tr(Msg::Pages), groups.into()),
         content: view! { <Outlet /> }.into_any(),
-        footer: FOOTER,
+        footer: footer(),
     });
     view! {
         <Stylesheet id="brand-theme" href=theme_path(brand) />
@@ -529,18 +535,18 @@ fn Index() -> impl IntoView {
     let content = view! {
         <div class="fui-card fui-sign-in">
             <div class="fui-sign-in-lockup">
-                {lockup("/", mark(Glyph::LAYERS), "FerroHEALTH UI", "Gallery")}
+                {lockup("/", mark(Glyph::LAYERS), tr(Msg::FerrohealthUi), tr(Msg::Gallery))}
             </div>
             <p class="fui-muted">
-                "Every component of the library in every product theme. Choose a brand."
+                {tr(Msg::EveryComponentLibraryEveryProduct)}
             </p>
             <div class="fui-stack">{brands}</div>
         </div>
     }
     .into_any();
     view! {
-        <Title text=PRODUCT />
-        {centred(content, FOOTER)}
+        <Title text=product() />
+        {centred(content, footer())}
     }
 }
 
@@ -553,18 +559,18 @@ fn NotFound() -> impl IntoView {
     }
     let content = ferrohealth_ui::view::empty::empty_state(
         Glyph::COMPASS,
-        "Not found",
-        "404: the gallery has no page at this address.",
+        tr(Msg::NotFound),
+        tr(Msg::NotFoundBody),
         view! {
             <a href="/" class="fui-button fui-button-primary">
                 {ferrohealth_ui::icon::icon(Glyph::ARROW_LEFT, "16")}
-                "Back to the gallery"
+                {tr(Msg::BackGallery)}
             </a>
         },
     );
     view! {
-        <Title text=format!("Not found · {PRODUCT}") />
-        {centred(view! { <div class="fui-card">{content}</div> }.into_any(), FOOTER)}
+        <Title text=format!("{} · {}", tr(Msg::NotFound), product()) />
+        {centred(view! { <div class="fui-card">{content}</div> }.into_any(), footer())}
     }
 }
 

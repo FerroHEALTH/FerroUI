@@ -13,7 +13,8 @@ use leptos::prelude::*;
 use leptos_meta::{Stylesheet, Title};
 use leptos_router::hooks::use_params_map;
 
-use crate::app::{FOOTER, PRODUCT, brand_glyph, theme_path};
+use crate::app::{brand_glyph, footer, product, theme_path};
+use crate::locale::{Msg, tr};
 
 /// Which methods a sign-in card shows.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -46,36 +47,37 @@ fn card(brand: Brand, variant: Variant) -> AnyView {
     });
     let provider = matches!(variant, Variant::Provider | Variant::Both).then(|| Provider {
         href: format!("/{}", brand.key()),
-        label: String::from(if variant == Variant::Both {
-            "Sign in with OIDC"
+        label: if variant == Variant::Both {
+            tr(Msg::SignOidc)
         } else {
-            "Sign in"
-        }),
+            tr(Msg::SignIn)
+        },
     });
     let notices = match variant {
         Variant::Basic => vec![
-            Notice::new(Tone::Warn, "Your session ended. Sign in again to continue.")
-                .id("session-expired"),
-            Notice::new(
-                Tone::Warn,
-                "Could not read the server's sign-in methods, so both are offered.",
-            ),
+            Notice::new(Tone::Warn, tr(Msg::YourSessionEndedSignAgain)).id("session-expired"),
+            Notice::new(Tone::Warn, tr(Msg::CouldNotReadServerS)),
         ],
-        Variant::Provider | Variant::Both => vec![Notice::new(
-            Tone::Accent,
-            "A synthetic deployment.\nSign in with the gallery's own account: synthetic / synthetic.",
-        )],
+        Variant::Provider | Variant::Both => {
+            vec![Notice::new(Tone::Accent, tr(Msg::SyntheticDeployment))]
+        }
     };
-    let refusal = (variant == Variant::Basic).then(|| String::from("Wrong username or password."));
+    let refusal = (variant == Variant::Basic).then(|| tr(Msg::WrongUsernamePassword));
     sign_in(SignIn {
-        lockup: lockup("/", mark(brand_glyph(brand)), brand.product(), "Console").into_any(),
+        lockup: lockup(
+            "/",
+            mark(brand_glyph(brand)),
+            brand.product(),
+            tr(Msg::Console),
+        )
+        .into_any(),
         notices,
         refusal,
         basic,
         provider,
         links: vec![
-            (String::from("Documentation"), String::from("/")),
-            (String::from("API reference"), String::from("/")),
+            (tr(Msg::Documentation), String::from("/")),
+            (tr(Msg::ApiReference), String::from("/")),
         ],
     })
     .into_any()
@@ -96,8 +98,8 @@ pub fn SignInPage() -> impl IntoView {
     });
     let (brand, variant) = named.unwrap_or((Brand::Bridge, Variant::Both));
     view! {
-        <Title text=format!("Sign in · {} · {PRODUCT}", brand.product()) />
+        <Title text=format!("{} · {} · {}", tr(Msg::SignIn), brand.product(), product()) />
         <Stylesheet id="brand-theme" href=theme_path(brand) />
-        {centred(card(brand, variant), FOOTER)}
+        {centred(card(brand, variant), footer())}
     }
 }

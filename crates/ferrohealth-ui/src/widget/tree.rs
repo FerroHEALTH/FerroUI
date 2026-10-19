@@ -19,6 +19,8 @@
 
 use std::collections::BTreeSet;
 
+use std::borrow::Cow;
+
 use leptos::prelude::*;
 
 use crate::icon::{Glyph, icon};
@@ -93,12 +95,12 @@ impl TreeNode {
 }
 
 /// What a tree shows and the state it shares with its console.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Tree {
     /// The tree's id; each item's id is built from it.
     pub id: &'static str,
     /// The tree's accessible name.
-    pub label: &'static str,
+    pub label: Cow<'static, str>,
     /// The items at the top.
     pub nodes: Signal<Vec<TreeNode>>,
     /// The keys of the open items; the server draws the tree as given.
@@ -110,6 +112,44 @@ pub struct Tree {
     pub on_expand: Option<Callback<String>>,
     /// The actions at the end of an item's row, such as rename and delete.
     pub actions: Option<Callback<TreeNode, AnyView>>,
+}
+
+/// The part of a [`Tree`] its items and handlers share: all of it but the
+/// accessible name, so it is `Copy`.
+#[derive(Debug, Clone, Copy)]
+struct State {
+    id: &'static str,
+    nodes: Signal<Vec<TreeNode>>,
+    expanded: RwSignal<BTreeSet<String>>,
+    selected: Signal<Option<String>>,
+    on_expand: Option<Callback<String>>,
+    actions: Option<Callback<TreeNode, AnyView>>,
+}
+
+impl State {
+    /// The state of `tree`, and its accessible name.
+    fn of(tree: Tree) -> (Self, Cow<'static, str>) {
+        let Tree {
+            id,
+            label,
+            nodes,
+            expanded,
+            selected,
+            on_expand,
+            actions,
+        } = tree;
+        (
+            Self {
+                id,
+                nodes,
+                expanded,
+                selected,
+                on_expand,
+                actions,
+            },
+            label,
+        )
+    }
 }
 
 /// One item in sight, in the order the keyboard walks them.
@@ -230,7 +270,7 @@ fn item_id(tree: &str, key: &str) -> String {
 }
 
 /// Opens the item `key` of `tree` and tells the console.
-fn open(tree: Tree, key: &str) {
+fn open(tree: State, key: &str) {
     tree.expanded.update(|open| {
         open.insert(key.to_owned());
     });
@@ -276,7 +316,7 @@ fn follow(id: &str) {
 
 /// Returns the items under `parent` (the top for `None`) at `level`.
 fn items(
-    tree: Tree,
+    tree: State,
     parent: Option<String>,
     level: u16,
     focused: RwSignal<Option<String>>,
@@ -298,7 +338,7 @@ fn items(
 /// order (the arrow keys fold an item), or a spacer for an item that cannot
 /// open.
 fn toggle(
-    tree: Tree,
+    tree: State,
     key: String,
     open: Option<impl Fn() -> bool + Clone + Send + Sync + 'static>,
 ) -> AnyView {
@@ -329,7 +369,7 @@ fn toggle(
 }
 
 /// Returns the item `node` at `level` and, while it is open, its children.
-fn item(tree: Tree, node: &TreeNode, level: u16, focused: RwSignal<Option<String>>) -> AnyView {
+fn item(tree: State, node: &TreeNode, level: u16, focused: RwSignal<Option<String>>) -> AnyView {
     let key = node.key.clone();
     let id = item_id(tree.id, &key);
     let expandable = node.expandable;
@@ -437,6 +477,7 @@ pub fn tree_view_collapsing(tree: Tree, on_collapse: Callback<String>) -> AnyVie
 /// Returns the tree `tree`.
 #[must_use]
 pub fn tree_view(tree: Tree) -> AnyView {
+    let (tree, label) = State::of(tree);
     let focused = RwSignal::new(None::<String>);
     let on_key = move |event: leptos::ev::KeyboardEvent| {
         let Some(at) = focused
@@ -465,7 +506,7 @@ pub fn tree_view(tree: Tree) -> AnyView {
         }
     };
     view! {
-        <ul id=tree.id role="tree" aria-label=tree.label class="fui-tree" on:keydown=on_key>
+        <ul id=tree.id role="tree" aria-label=label class="fui-tree" on:keydown=on_key>
             {items(tree, None, 1, focused)}
         </ul>
     }

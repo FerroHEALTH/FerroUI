@@ -356,6 +356,69 @@ impl Locale {
     }
 }
 
+/// A message of a console's catalog, named by its id: words a console hands
+/// a component to draw in the page's locale, such as a listing's noun or an
+/// editor's title.
+///
+/// The component looks the message up as it draws, so the words follow the
+/// locale the page provides. The catalog is the console's own
+/// `static_loader!`; the message may select a form by the arguments the
+/// component fills in (a plural by `$count`, a mode by `$mode`) and carry
+/// attributes (`.empty`), each a whole sentence in the console's words.
+#[derive(Clone, Copy)]
+pub struct Message {
+    catalog: &'static (dyn Loader + Send + Sync),
+    id: &'static str,
+}
+
+impl fmt::Debug for Message {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("Message").field(&self.id).finish()
+    }
+}
+
+impl PartialEq for Message {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl Eq for Message {}
+
+impl Message {
+    /// The message `id` of the console's `catalog`.
+    #[must_use]
+    pub const fn new(catalog: &'static (dyn Loader + Send + Sync), id: &'static str) -> Self {
+        Self { catalog, id }
+    }
+
+    /// The message's id in its catalog.
+    #[must_use]
+    pub const fn id(self) -> &'static str {
+        self.id
+    }
+
+    /// The message in the page's locale.
+    #[must_use]
+    pub fn text(self) -> String {
+        locale().lookup(self.catalog, self.id)
+    }
+
+    /// The message in the page's locale, with the placeables `args` filled
+    /// in.
+    #[must_use]
+    pub fn text_with(self, args: &[(&'static str, Arg)]) -> String {
+        locale().lookup_with(self.catalog, self.id, args)
+    }
+
+    /// The message's attribute `name` (`.empty`) in the page's locale, with
+    /// the placeables `args` filled in.
+    #[must_use]
+    pub fn attribute(self, name: &str, args: &[(&'static str, Arg)]) -> String {
+        locale().lookup_with(self.catalog, &format!("{}.{name}", self.id), args)
+    }
+}
+
 /// The text drawn for the message `id` no catalog holds: the id itself,
 /// never nothing, with a warning in the log.
 fn missing(id: &str) -> String {
@@ -511,8 +574,6 @@ texts! {
     RangeEmpty = "range-empty",
     /// The range naming the rows: `$noun` is the word for `$total` rows.
     RangeOf = "range-of",
-    /// The range of an empty listing: `$nouns` is the word for none.
-    RangeOfEmpty = "range-of-empty",
     /// The range of a listing with no total: `$nouns` opens it.
     OpenRangeOf = "open-range-of",
     /// The note when the server counted `$stated` rows and the listing holds `$held`.

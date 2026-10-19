@@ -27,34 +27,41 @@ use leptos::prelude::*;
 use leptos_router::hooks::{use_location, use_query_map};
 
 use crate::data::{Row, SORTABLE, rows, sorted};
+use crate::locale::{Msg, message, tr};
 
-/// What the gallery's rows are.
-const FILES: Noun = Noun::new("mapping file", "mapping files");
+/// What the gallery's rows are, named from its catalog.
+fn files() -> Noun {
+    Noun::new(message(Msg::NounMappingFiles))
+}
 
 /// The rows the synthetic server says it counted, more than it sent, so the
 /// pager says the listing is part of the answer.
 const COUNTED: u32 = 165;
 
 /// The columns of the gallery's table.
-const COLUMNS: [Column; 6] = [
-    Column::text("name", "File").sortable(),
-    Column::text("kind", "Kind"),
-    Column::text("lines", "Lines").numeric().sortable(),
-    Column::text("changed", "Changed"),
-    Column::text("state", "State"),
-    Column::text("actions", "Actions"),
-];
+fn listing_columns() -> [Column; 6] {
+    [
+        Column::text("name", tr(Msg::FileColumn)).sortable(),
+        Column::text("kind", tr(Msg::Kind)),
+        Column::text("lines", tr(Msg::Lines)).numeric().sortable(),
+        Column::text("changed", tr(Msg::Changed)),
+        Column::text("state", tr(Msg::State)),
+        Column::text("actions", tr(Msg::Actions)),
+    ]
+}
 
 /// The same columns, none sorting: a table that does not sort draws no
 /// sort links.
-const PLAIN: [Column; 6] = [
-    Column::text("name", "File"),
-    Column::text("kind", "Kind"),
-    Column::text("lines", "Lines").numeric(),
-    Column::text("changed", "Changed"),
-    Column::text("state", "State"),
-    Column::text("actions", "Actions"),
-];
+fn plain_columns() -> [Column; 6] {
+    [
+        Column::text("name", tr(Msg::FileColumn)),
+        Column::text("kind", tr(Msg::Kind)),
+        Column::text("lines", tr(Msg::Lines)).numeric(),
+        Column::text("changed", tr(Msg::Changed)),
+        Column::text("state", tr(Msg::State)),
+        Column::text("actions", tr(Msg::Actions)),
+    ]
+}
 
 /// The table row of `row`, its name over a canonical too long for a phone.
 fn row(row: &Row) -> AnyView {
@@ -77,13 +84,13 @@ fn row(row: &Row) -> AnyView {
                     {canonical.clone()}
                 </span>
             </th>
-            <td data-label="Kind">{row.kind}</td>
-            <td data-label="Lines" class=NUM>{row.lines.to_string()}</td>
-            <td data-label="Changed">{timestamp(&row.changed)}</td>
-            <td data-label="State">{badge(tone, row.state)}</td>
-            <td data-label="Actions" class=ACTIONS>
+            <td data-label=tr(Msg::Kind)>{row.kind}</td>
+            <td data-label=tr(Msg::Lines) class=NUM>{row.lines.to_string()}</td>
+            <td data-label=tr(Msg::Changed)>{timestamp(&row.changed)}</td>
+            <td data-label=tr(Msg::State)>{badge(tone, row.state)}</td>
+            <td data-label=tr(Msg::Actions) class=ACTIONS>
                 <button type="button" class=Variant::Secondary.small()>
-                    "Open"
+                    {tr(Msg::Open)}
                 </button>
             </td>
         </tr>
@@ -128,20 +135,20 @@ fn url_table() -> AnyView {
         };
         view! {
             {data_table(DataTable {
-                caption: "Mapping files, paged in the URL",
-                columns: &COLUMNS,
+                caption: &tr(Msg::MappingFilesPagedUrl),
+                columns: &listing_columns(),
                 sort: sort.as_ref(),
                 sort_href: &sort_href,
                 body: Body::Rows(body),
             })}
             {link_pager(
-                Listing::new("Pages of the mapping files").noun(FILES).stated(Some(COUNTED)),
+                Listing::new(tr(Msg::PagesMappingFiles)).noun(files()).stated(Some(COUNTED)),
                 window,
                 &page_href,
             )}
         }
     };
-    card("Paged in the URL", drawn).into_any()
+    card(tr(Msg::PagedUrl), drawn).into_any()
 }
 
 /// The same rows paged in the page's own state, never in the URL, as a
@@ -156,20 +163,20 @@ fn session_table() -> AnyView {
             .into_any();
         view! {
             {data_table(DataTable {
-                caption: "Mapping files, paged in the page",
-                columns: &PLAIN,
+                caption: &tr(Msg::MappingFilesPagedPage),
+                columns: &plain_columns(),
                 sort: None,
                 sort_href: &|_| String::new(),
                 body: Body::Rows(body),
             })}
             {session_pager(
-                Listing::new("Pages of the mapping files, in the page").noun(FILES),
+                Listing::new(tr(Msg::PagesMappingFilesPage)).noun(files()),
                 window,
                 paging,
             )}
         }
     };
-    card("Paged in the page", drawn).into_any()
+    card(tr(Msg::PagedPage), drawn).into_any()
 }
 
 /// A result set whose columns are the query's own aliases, known only once
@@ -193,8 +200,8 @@ fn result_set() -> AnyView {
                             <code>{format!("{index:08}-synthetic::node-a::1")}</code>
                         </a>
                     </td>
-                    <td data-label="name">"Synthetic vital signs"</td>
-                    <td data-label="count" class=NUM>{(index * 7).to_string()}</td>
+                    <td data-label=tr(Msg::NameLower)>{tr(Msg::SyntheticVitalSigns)}</td>
+                    <td data-label=tr(Msg::Count) class=NUM>{(index * 7).to_string()}</td>
                 </tr>
             }
         })
@@ -202,9 +209,9 @@ fn result_set() -> AnyView {
     // A cell holding an identifier longer than its column can hold.
     let long = view! {
         <tr>
-            <td><code>"http://example.org/fhir/StructureDefinition/ferrohealth-synthetic-journey-diagnose"</code></td>
-            <td data-label="name">"Synthetic profile"</td>
-            <td data-label="count" class=NUM>"1"</td>
+            <td><code>{tr(Msg::HttpExampleOrgFhirStructuredefinition)}</code></td>
+            <td data-label=tr(Msg::NameLower)>{tr(Msg::SyntheticProfile)}</td>
+            <td data-label=tr(Msg::Count) class=NUM>"1"</td>
         </tr>
     };
     let body = view! {
@@ -213,9 +220,9 @@ fn result_set() -> AnyView {
     }
     .into_any();
     card(
-        "A result set",
+        tr(Msg::ResultSet),
         data_table(DataTable {
-            caption: "The rows the synthetic query answered",
+            caption: &tr(Msg::RowsSyntheticQueryAnswered),
             columns: &columns,
             sort: None,
             sort_href: &|_| String::new(),
@@ -226,11 +233,13 @@ fn result_set() -> AnyView {
 }
 
 /// The columns of a result that arrives in pages.
-const PAGED: [Column; 3] = [
-    Column::text("uid", "Composition").mono(),
-    Column::text("committed", "Committed"),
-    Column::text("rate", "Rate").numeric(),
-];
+fn paged_columns() -> [Column; 3] {
+    [
+        Column::text("uid", tr(Msg::Composition)).mono(),
+        Column::text("committed", tr(Msg::Committed)),
+        Column::text("rate", tr(Msg::Rate)).numeric(),
+    ]
+}
 
 /// A result whose rows arrive a page at a time, each page its own body,
 /// stacked on a phone like any other rows.
@@ -243,10 +252,10 @@ fn result_pages() -> AnyView {
                     view! {
                         <tr>
                             <td><code>{format!("{index:08}-synthetic::node-b::1")}</code></td>
-                            <td data-label="Committed">
+                            <td data-label=tr(Msg::Committed)>
                                 {timestamp(&format!("2026-10-1{index}T08:{index:02}:00.250+00:00"))}
                             </td>
-                            <td data-label="Rate" class=NUM>{(60 + index * 4).to_string()}</td>
+                            <td data-label=tr(Msg::Rate) class=NUM>{(60 + index * 4).to_string()}</td>
                         </tr>
                     }
                 })
@@ -256,10 +265,10 @@ fn result_pages() -> AnyView {
         .collect_view()
         .into_any();
     card(
-        "A result in pages",
+        tr(Msg::ResultPages),
         data_table(DataTable {
-            caption: "The synthetic query's rows, a body per page",
-            columns: &PAGED,
+            caption: &tr(Msg::SyntheticQuerySRowsBody),
+            columns: &paged_columns(),
             sort: None,
             sort_href: &|_| String::new(),
             body: Body::Bodies(bodies),
@@ -269,10 +278,12 @@ fn result_pages() -> AnyView {
 }
 
 /// The columns of a small table that fits a phone as it is.
-const FITTING: [Column; 2] = [
-    Column::text("indicator", "Indicator"),
-    Column::text("status", "Status"),
-];
+fn fitting_columns() -> [Column; 2] {
+    [
+        Column::text("indicator", tr(Msg::Indicator)),
+        Column::text("status", tr(Msg::Status)),
+    ]
+}
 
 /// A small table of two short columns, which fits a phone as it is and so
 /// opts out of the stacked rows.
@@ -294,10 +305,10 @@ fn fitting() -> AnyView {
     .collect_view()
     .into_any();
     card(
-        "Fits a phone as it is",
+        tr(Msg::FitsPhone),
         data_table_unstacked(DataTable {
-            caption: "Health indicators, unstacked at every width",
-            columns: &FITTING,
+            caption: &tr(Msg::HealthIndicatorsUnstackedEveryWidth),
+            columns: &fitting_columns(),
             sort: None,
             sort_href: &|_| String::new(),
             body: Body::Rows(rows),
@@ -307,11 +318,13 @@ fn fitting() -> AnyView {
 }
 
 /// The columns of the table whose rows end in a link and a form.
-const ACTED: [Column; 3] = [
-    Column::text("member", "Member"),
-    Column::text("base", "Base URL"),
-    Column::text("actions", "Actions"),
-];
+fn acted_columns() -> [Column; 3] {
+    [
+        Column::text("member", tr(Msg::Member)),
+        Column::text("base", tr(Msg::BaseUrl)),
+        Column::text("actions", tr(Msg::Actions)),
+    ]
+}
 
 /// Rows whose actions are an Edit link and a Remove form, side by side on
 /// the row's first line.
@@ -322,12 +335,12 @@ fn row_actions() -> AnyView {
             view! {
                 <tr>
                     <th scope="row"><code>{format!("synthetic-{member}")}</code></th>
-                    <td data-label="Base URL"><code>{format!("https://{member}.example.org/")}</code></td>
-                    <td data-label="Actions" class=ACTIONS>
-                        <a href="#edit" class=Variant::Secondary.small()>"Edit"</a>
+                    <td data-label=tr(Msg::BaseUrl)><code>{format!("https://{member}.example.org/")}</code></td>
+                    <td data-label=tr(Msg::Actions) class=ACTIONS>
+                        <a href="#edit" class=Variant::Secondary.small()>{tr(Msg::Edit)}</a>
                         " "
                         <form method="post" action="#remove">
-                            <button type="submit" class=Variant::Danger.small()>"Remove"</button>
+                            <button type="submit" class=Variant::Danger.small()>{tr(Msg::Remove)}</button>
                         </form>
                     </td>
                 </tr>
@@ -336,10 +349,10 @@ fn row_actions() -> AnyView {
         .collect_view()
         .into_any();
     card(
-        "Row actions",
+        tr(Msg::RowActions),
         data_table(DataTable {
-            caption: "Members, each with an Edit link and a Remove form",
-            columns: &ACTED,
+            caption: &tr(Msg::MembersEachEditLinkRemove),
+            columns: &acted_columns(),
             sort: None,
             sort_href: &|_| String::new(),
             body: Body::Rows(rows),
@@ -360,7 +373,7 @@ fn open_rows(paging: Paging) -> u32 {
 fn open_listing() -> AnyView {
     let query = use_query_map();
     let location = use_location();
-    let ehrs = Noun::new("EHR", "EHRs");
+    let ehrs = Noun::new(message(Msg::NounEhrs));
     let linked = move || {
         let paging = query
             .with(|query| Paging::read(query.get_str("open-page"), query.get_str("open-size")));
@@ -370,7 +383,7 @@ fn open_listing() -> AnyView {
             format!("{path}?open-page={}&open-size={}", paging.page, paging.size)
         };
         link_open_pager(
-            Listing::new("Pages of the EHRs, as links").noun(ehrs),
+            Listing::new(tr(Msg::PagesEhrsLinks)).noun(ehrs),
             window,
             &page_href,
         )
@@ -379,13 +392,13 @@ fn open_listing() -> AnyView {
     let kept = move || {
         let window = OpenWindow::of(paging.get(), open_rows(paging.get()));
         session_open_pager(
-            Listing::new("Pages of the EHRs, in the page").noun(ehrs),
+            Listing::new(tr(Msg::PagesEhrsPage)).noun(ehrs),
             window,
             paging,
         )
     };
     card(
-        "No stated total",
+        tr(Msg::NoStatedTotal),
         view! {
             {linked}
             {kept}
@@ -397,28 +410,28 @@ fn open_listing() -> AnyView {
 /// The table while it loads, and the table with no row.
 fn states() -> AnyView {
     let loading = data_table(DataTable {
-        caption: "Loading",
-        columns: &PLAIN,
+        caption: &tr(Msg::Loading),
+        columns: &plain_columns(),
         sort: None,
         sort_href: &|_| String::new(),
         body: Body::Loading(3),
     });
     let empty = data_table(DataTable {
-        caption: "No rows",
-        columns: &PLAIN,
+        caption: &tr(Msg::NoRows),
+        columns: &plain_columns(),
         sort: None,
         sort_href: &|_| String::new(),
         body: Body::Empty(
             empty_quiet(
                 Glyph::INBOX,
-                "No mapping file",
-                "The bridge serves no mapping file yet.",
+                tr(Msg::NoMappingFile),
+                tr(Msg::BridgeServesNoMappingFile),
             )
             .into_any(),
         ),
     });
     card(
-        "Loading and empty",
+        tr(Msg::LoadingEmpty),
         view! {
             {loading}
             {empty}
@@ -447,13 +460,13 @@ fn changes() -> AnyView {
         },
     ];
     titled_panel(
-        "Staged changes",
+        tr(Msg::StagedChanges),
         view! {
             <button type="button" class=Variant::Primary.small()>
-                "Apply"
+                {tr(Msg::Apply)}
             </button>
         },
-        change_table("The staged configuration against the running one", &staged),
+        change_table(tr(Msg::StagedConfigurationAgainstRunningOne), &staged),
     )
     .into_any()
 }
@@ -466,8 +479,8 @@ fn changes() -> AnyView {
 )]
 pub fn TablesPage() -> impl IntoView {
     let header = page_header(
-        "Tables and paging",
-        Some(String::from("One table and pager model: in the URL, or in the page for a screen that can show patient data.")),
+        tr(Msg::TablesPaging),
+        Some(tr(Msg::OneTablePagerModelUrl)),
         (),
     )
     .into_any();
@@ -483,7 +496,7 @@ pub fn TablesPage() -> impl IntoView {
         row_actions(),
     );
     view! {
-        {super::title("Tables and paging")}
+        {super::title(tr(Msg::TablesPaging))}
         {header}
         {stack(view! {
             {sections.0}

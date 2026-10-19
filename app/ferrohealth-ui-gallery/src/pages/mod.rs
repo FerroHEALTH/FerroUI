@@ -16,18 +16,21 @@ pub mod overview;
 pub mod sign_in;
 pub mod tables;
 
+use crate::locale::{Msg, tr};
 use leptos::prelude::*;
 use leptos_meta::Title;
 
 /// The title of a page named `name` in the brand the route names.
 #[must_use]
 pub fn titled(name: &str) -> String {
-    let brand = crate::app::route_brand().map_or("Gallery", |brand| brand.product());
-    format!("{name} · {brand} · {}", crate::app::PRODUCT)
+    let brand =
+        crate::app::route_brand().map_or(tr(Msg::Gallery), |brand| brand.product().to_owned());
+    format!("{name} · {brand} · {}", crate::app::product())
 }
 
 /// The document title of the page `name`.
 #[must_use]
-pub fn title(name: &'static str) -> impl IntoView {
-    view! { <Title text=titled(name) /> }
+pub fn title(name: impl Into<String>) -> impl IntoView {
+    let name = name.into();
+    view! { <Title text=titled(&name) /> }
 }

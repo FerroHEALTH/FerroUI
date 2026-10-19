@@ -214,6 +214,14 @@ The library is held to the best console's quality, not to "it renders".
   lacks is added here, generic, documented, in the gallery for every brand
   light and dark, tested and contrast-checked; never a single-use component
   inside a console.
+- **One card-header action.** A card or a panel that previews part of a
+  listing leads to the rest through `card_action` ("All members", the
+  words then an arrow a tight space apart), never a console's own link or
+  outlined button.
+- **An editor's header says what it does.** A form that creates titles
+  itself "New <thing>" and one that changes "Edit <name>", through
+  `editor_heading`, in the heading, the trail's last crumb and the
+  document's title alike.
 
 ## 12. Bundle
 
@@ -275,6 +283,19 @@ the lookup order: our own design; the message syntax is Project Fluent's.
   `static_loader!` over its own `locales/`, looked up through
   `Locale::lookup` so its words follow the same choice, and the language
   switch is `view::theme_switch::locale_switch`.
+- **A console hands a component its words made at run time.** Every
+  label, title, legend, placeholder and noun a component takes accepts a
+  `String` from the console's catalog. Words a component must look up as
+  it draws are an `i18n::Message` of the console's catalog: a listing's
+  noun selects its form by `$count` (CLDR plural categories, so the library
+  holds no plural rule) and carries `.empty` and `.opening` as whole
+  sentences; an editor's title selects by `$mode` (`new`, `edit`). A
+  column, a listing or a navigation group is built where it is drawn,
+  never a `const`.
+- **The gallery is held to the same rule.** Its page strings are messages
+  of its own catalog (`app/ferrohealth-ui-gallery/locales/`), the
+  pseudo-locale stretches them with the library's, and the stray-literal
+  check covers it.
 - **The stray-literal check fails a string outside the catalogs.**
   `scripts/checks/stray-literals.sh` reads the components for literals that
   read as words (an attribute a reader sees or hears, a text node, any

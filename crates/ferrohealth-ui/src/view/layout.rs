@@ -13,6 +13,8 @@
 //! style attribute. The simpler layouts (the stack, the grid, the cluster,
 //! the split) are in [`crate::view::surface`].
 
+use std::borrow::Cow;
+
 use leptos::prelude::*;
 
 /// A step of space between the parts of a stack.
@@ -51,7 +53,7 @@ pub fn stack_at(gap: Gap, body: impl IntoView + 'static) -> AnyView {
 #[derive(Debug)]
 pub struct Pane {
     /// The pane's name, read when the keyboard reaches it.
-    pub label: &'static str,
+    pub label: Cow<'static, str>,
     /// What it shows.
     pub body: AnyView,
 }
@@ -59,9 +61,9 @@ pub struct Pane {
 impl Pane {
     /// The pane `label` showing `body`.
     #[must_use]
-    pub fn new(label: &'static str, body: impl IntoView + 'static) -> Self {
+    pub fn new(label: impl Into<Cow<'static, str>>, body: impl IntoView + 'static) -> Self {
         Self {
-            label,
+            label: label.into(),
             body: body.into_any(),
         }
     }
@@ -124,7 +126,7 @@ pub fn main_aside(main: impl IntoView + 'static, aside: impl IntoView + 'static)
 /// Returns `items` one under the other as a list, a hairline between two
 /// items and none after the last, with list semantics kept.
 #[must_use]
-pub fn divided_list(label: Option<&'static str>, items: Vec<AnyView>) -> AnyView {
+pub fn divided_list(label: Option<Cow<'static, str>>, items: Vec<AnyView>) -> AnyView {
     let items = items
         .into_iter()
         .map(|item| view! { <li>{item}</li> })
@@ -198,7 +200,8 @@ pub fn action_bar(body: impl IntoView + 'static) -> AnyView {
 /// Each tile is a small bordered box holding a few facts of one thing, such
 /// as a node's name, state and latency.
 #[must_use]
-pub fn tile_list(label: &'static str, items: Vec<AnyView>) -> AnyView {
+pub fn tile_list(label: impl Into<Cow<'static, str>>, items: Vec<AnyView>) -> AnyView {
+    let label = label.into();
     let items = items
         .into_iter()
         .map(|item| view! { <li class="fui-tile">{item}</li> })

@@ -197,14 +197,15 @@ impl Field {
 /// Returns the field of the control `id`: the label `label` above
 /// `control`, and the line `help` under it when there is one.
 ///
-/// The label is a `&'static str` or a `String` made at run time alike. A
+/// The label and the help are a `&'static str` or a `String` made at run
+/// time alike. A
 /// field drawn once per row of a list takes its id from [`keyed_field`];
 /// a hidden label or a trailing line is [`Field`]'s.
 #[must_use]
 pub fn field(
     id: &'static str,
     label: impl Into<Oco<'static, str>>,
-    help: Option<&'static str>,
+    help: Option<String>,
     control: impl IntoView + 'static,
 ) -> impl IntoView {
     keyed_field(id.to_owned(), label, help, control)
@@ -217,7 +218,7 @@ pub fn field(
 pub fn keyed_field(
     id: String,
     label: impl Into<Oco<'static, str>>,
-    help: Option<&'static str>,
+    help: Option<String>,
     control: impl IntoView + 'static,
 ) -> impl IntoView {
     Field::new(id, label).help_if(help).view(control)
@@ -246,7 +247,8 @@ pub fn action_field(button: impl IntoView + 'static, error: impl IntoView + 'sta
 /// browser's fieldset frame reset to the card's look (HTML Living Standard,
 /// the `fieldset` element; WCAG 2.2 SC 1.3.1).
 #[must_use]
-pub fn fieldset(legend: &'static str, body: impl IntoView + 'static) -> impl IntoView {
+pub fn fieldset(legend: impl Into<String>, body: impl IntoView + 'static) -> impl IntoView {
+    let legend = legend.into();
     let body = body.into_any();
     view! {
         <fieldset class="fui-fieldset">
@@ -275,14 +277,23 @@ pub fn field_flow(body: impl IntoView + 'static) -> impl IntoView {
 /// Returns the checkbox `checkbox`, whose id is `id`, beside its label
 /// `label` on one row, the box clear of the words.
 #[must_use]
-pub fn check(id: &'static str, label: &'static str, checkbox: impl IntoView) -> impl IntoView {
+pub fn check(
+    id: &'static str,
+    label: impl Into<Oco<'static, str>>,
+    checkbox: impl IntoView,
+) -> impl IntoView {
     keyed_check(id.to_owned(), label, checkbox)
 }
 
 /// Returns [`check`] for a checkbox whose id is made at run time, such as
 /// one per row of a list.
 #[must_use]
-pub fn keyed_check(id: String, label: &'static str, checkbox: impl IntoView) -> impl IntoView {
+pub fn keyed_check(
+    id: String,
+    label: impl Into<Oco<'static, str>>,
+    checkbox: impl IntoView,
+) -> impl IntoView {
+    let label = label.into();
     view! {
         <div class="fui-check">
             {checkbox} <label for=id>{label}</label>
@@ -298,8 +309,8 @@ pub fn keyed_check(id: String, label: &'static str, checkbox: impl IntoView) -> 
 #[must_use]
 pub fn check_field(
     id: &'static str,
-    label: &'static str,
-    help: &'static str,
+    label: impl Into<Oco<'static, str>>,
+    help: impl Into<Oco<'static, str>>,
     checkbox: impl IntoView + 'static,
 ) -> AnyView {
     keyed_check_field(id.to_owned(), label, help, checkbox)
@@ -310,10 +321,11 @@ pub fn check_field(
 #[must_use]
 pub fn keyed_check_field(
     id: String,
-    label: &'static str,
-    help: &'static str,
+    label: impl Into<Oco<'static, str>>,
+    help: impl Into<Oco<'static, str>>,
     checkbox: impl IntoView + 'static,
 ) -> AnyView {
+    let (label, help) = (label.into(), help.into());
     let checkbox = checkbox.into_any();
     let help_id = help_id(&id);
     view! {
@@ -338,10 +350,11 @@ pub fn keyed_check_field(
 #[must_use]
 pub fn chip_choices(
     name: &'static str,
-    legend: &'static str,
+    legend: impl Into<String>,
     options: Vec<(String, String)>,
     checked: &[String],
 ) -> AnyView {
+    let legend = legend.into();
     let chips = options
         .into_iter()
         .map(|(value, words)| {

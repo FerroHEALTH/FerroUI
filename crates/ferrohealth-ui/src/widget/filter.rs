@@ -27,10 +27,11 @@ pub fn keeps(words: &str, texts: &[&str]) -> bool {
 #[must_use]
 pub fn table_filter(
     id: &'static str,
-    label: &'static str,
+    label: impl Into<String>,
     words: RwSignal<String>,
     count: Signal<String>,
 ) -> impl IntoView {
+    let label = label.into();
     view! {
         <div class="fui-table-tools">
             <div class="fui-field">

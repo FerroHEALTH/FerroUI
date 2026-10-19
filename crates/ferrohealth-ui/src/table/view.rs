@@ -44,12 +44,17 @@ pub struct Column {
 }
 
 impl Column {
-    /// A text column that does not sort.
+    /// A text column that does not sort, its header `label` a fixed word or
+    /// one the console looks up at run time.
+    ///
+    /// A column is built where its table is drawn, so its header follows the
+    /// page's locale; a console keeps its columns in a function rather than
+    /// a `const`.
     #[must_use]
-    pub const fn text(key: &'static str, label: &'static str) -> Self {
+    pub fn text(key: &'static str, label: impl Into<Cow<'static, str>>) -> Self {
         Self {
             key: Cow::Borrowed(key),
-            label: Cow::Borrowed(label),
+            label: label.into(),
             numeric: false,
             sortable: false,
             mono: false,
@@ -345,11 +350,14 @@ pub fn step_label(step: Step, available: bool) -> impl IntoView + use<> {
 }
 
 /// What a pager says about the listing it pages.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+///
+/// The label is a fixed word or one the console looks up at run time; a
+/// listing is `Clone`, and built where it is drawn.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Listing {
     /// The pager's accessible name, which tells two pagers on one screen
     /// apart.
-    pub label: &'static str,
+    pub label: Cow<'static, str>,
     /// What the rows are, named in the range: "1-25 of 312 value sets".
     pub noun: Noun,
     /// The one-click page sizes; none when the size is a setting.
@@ -362,9 +370,9 @@ pub struct Listing {
 impl Listing {
     /// A listing named `label` of rows, offering 25, 50 and 100.
     #[must_use]
-    pub const fn new(label: &'static str) -> Self {
+    pub fn new(label: impl Into<Cow<'static, str>>) -> Self {
         Self {
-            label,
+            label: label.into(),
             noun: Noun::ROWS,
             sizes: &SIZES,
             stated: None,
@@ -373,19 +381,19 @@ impl Listing {
 
     /// This listing, its rows named `noun`.
     #[must_use]
-    pub const fn noun(self, noun: Noun) -> Self {
+    pub fn noun(self, noun: Noun) -> Self {
         Self { noun, ..self }
     }
 
     /// This listing, offering `sizes` (none when the size is a setting).
     #[must_use]
-    pub const fn sizes(self, sizes: &'static [u32]) -> Self {
+    pub fn sizes(self, sizes: &'static [u32]) -> Self {
         Self { sizes, ..self }
     }
 
     /// This listing, its server having counted `stated` rows.
     #[must_use]
-    pub const fn stated(self, stated: Option<u32>) -> Self {
+    pub fn stated(self, stated: Option<u32>) -> Self {
         Self { stated, ..self }
     }
 }
@@ -396,9 +404,15 @@ impl From<&'static str> for Listing {
     }
 }
 
+impl From<String> for Listing {
+    fn from(label: String) -> Self {
+        Self::new(label)
+    }
+}
+
 /// Returns the size choices of `listing` around `current`, or nothing when
 /// it offers none.
-fn size_choices(listing: Listing, current: u32, size: &dyn Fn(u32, bool) -> AnyView) -> AnyView {
+fn size_choices(listing: &Listing, current: u32, size: &dyn Fn(u32, bool) -> AnyView) -> AnyView {
     if listing.sizes.is_empty() {
         return ().into_any();
     }
@@ -440,7 +454,7 @@ pub fn pager(
         ),
         None => window.range_of(listing.noun),
     };
-    let sizes = size_choices(listing, window.size, size);
+    let sizes = size_choices(&listing, window.size, size);
     // A listing of one page draws the range and the sizes alone: no step can
     // be taken, so none needs saying.
     let steps = (window.pages > 1).then(|| {
@@ -485,7 +499,7 @@ pub fn open_pager(
         Step::Next,
         window.has_next().then(|| window.page.saturating_add(1)),
     );
-    let sizes = size_choices(listing, window.size, size);
+    let sizes = size_choices(&listing, window.size, size);
     view! {
         <nav class="fui-pager" aria-label=listing.label>
             <p role="status">{window.range_of(listing.noun)}</p>

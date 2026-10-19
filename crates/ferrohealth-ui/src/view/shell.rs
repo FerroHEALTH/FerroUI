@@ -8,6 +8,8 @@
 //! The navigation itself, which marks the current page and behaves as a
 //! drawer below the first breakpoint, is [`crate::widget::nav`].
 
+use std::borrow::Cow;
+
 use leptos::prelude::*;
 
 use crate::i18n::{Text, tr};
@@ -20,10 +22,11 @@ pub const MAKER: &str = "Cadasto B.V.";
 pub const MAIN_ID: &str = "main";
 
 /// What the footer names.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Footer {
-    /// The product, such as "FerroBRIDGE Console".
-    pub product: &'static str,
+    /// The product, such as "FerroBRIDGE Console", a word of which the
+    /// console may look up at run time.
+    pub product: Cow<'static, str>,
     /// Its version.
     pub version: &'static str,
     /// The About page every footer links to.
@@ -85,9 +88,10 @@ pub fn brand_mark(light: &str, dark: &str) -> impl IntoView + use<> {
 pub fn lockup(
     href: &'static str,
     mark: impl IntoView,
-    name: &'static str,
-    word: &'static str,
+    name: impl Into<String>,
+    word: impl Into<String>,
 ) -> impl IntoView {
+    let (name, word) = (name.into(), word.into());
     view! {
         <a href=href class="fui-lockup">
             {mark}

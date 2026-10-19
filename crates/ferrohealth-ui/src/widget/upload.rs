@@ -15,6 +15,8 @@
 //! is read with `Blob.text()` in a handler (W3C File API), so the server
 //! draws the field ready and nothing runs before hydration.
 
+use std::borrow::Cow;
+
 use leptos::prelude::*;
 
 use crate::highlight::Language;
@@ -23,21 +25,21 @@ use crate::icon::{Glyph, icon};
 use crate::widget::editor::{Drawn, Grammar, drawn};
 
 /// What an upload field accepts and says.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Upload {
     /// The field's id: the file input is `id` and `-file`, the text area
     /// `id` and `-text`, the drop zone `id` and `-drop`.
     pub id: &'static str,
     /// The field's label, such as "Operational template".
-    pub label: &'static str,
+    pub label: Cow<'static, str>,
     /// The chooser's words, such as "Choose OPT file".
-    pub choose: &'static str,
+    pub choose: Cow<'static, str>,
     /// The extensions accepted, with their dots, such as `[".opt", ".xml"]`.
     pub accept: &'static [&'static str],
     /// The largest file read, in bytes.
     pub max_bytes: u64,
     /// The text area's placeholder: the format's first line.
-    pub placeholder: &'static str,
+    pub placeholder: Cow<'static, str>,
 }
 
 /// Why a file was refused.
@@ -113,23 +115,49 @@ fn size_in(locale: &Locale, bytes: u64) -> String {
 /// # Errors
 /// Returns the [`Refused`] reason of a file of another kind or too large.
 pub fn admit(upload: &Upload, name: &str, bytes: u64) -> Result<(), Refused> {
-    let lower = name.to_ascii_lowercase();
-    if !upload
-        .accept
-        .iter()
-        .any(|extension| lower.ends_with(extension))
-    {
-        return Err(Refused::Kind {
-            name: name.to_owned(),
-        });
+    Rule::of(upload).admit(name, bytes)
+}
+
+/// The kinds of file and the limit of an upload field: the part of it the
+/// handlers that read a file take with them.
+#[derive(Debug, Clone, Copy)]
+struct Rule {
+    /// The extensions accepted, with their dots.
+    accept: &'static [&'static str],
+    /// The largest file read, in bytes.
+    max_bytes: u64,
+}
+
+impl Rule {
+    /// The rule of `upload`.
+    const fn of(upload: &Upload) -> Self {
+        Self {
+            accept: upload.accept,
+            max_bytes: upload.max_bytes,
+        }
     }
-    if bytes > upload.max_bytes {
-        return Err(Refused::Size {
-            name: name.to_owned(),
-            bytes,
-        });
+
+    /// Whether a file `name` of `bytes` may be read, or why not.
+    fn admit(self, name: &str, bytes: u64) -> Result<(), Refused> {
+        let upload = self;
+        let lower = name.to_ascii_lowercase();
+        if !upload
+            .accept
+            .iter()
+            .any(|extension| lower.ends_with(extension))
+        {
+            return Err(Refused::Kind {
+                name: name.to_owned(),
+            });
+        }
+        if bytes > upload.max_bytes {
+            return Err(Refused::Size {
+                name: name.to_owned(),
+                bytes,
+            });
+        }
+        Ok(())
     }
-    Ok(())
 }
 
 /// What the field is doing.
@@ -187,7 +215,7 @@ pub fn upload_field(
             .into_any(),
         ),
     };
-    let zone = drop_zone(upload, &locale, source, picked);
+    let zone = drop_zone(&upload, &locale, source, picked);
     // The text area is the highlighted editor, its grammar read from the
     // text: a pasted or read OPT shows as XML, a JSON document as JSON.
     let editor = drawn(
@@ -199,7 +227,7 @@ pub fn upload_field(
             text: source.into(),
             marks: Signal::stored(Vec::new()),
             editable: Signal::stored(true),
-            placeholder: Some(upload.placeholder),
+            placeholder: Some(upload.placeholder.clone()),
         },
         move |text| source.set(text),
     );
@@ -242,11 +270,11 @@ pub fn upload_field(
 /// reading a file dropped or chosen into `source` and saying so in
 /// `picked`.
 fn drop_zone(
-    upload: Upload,
+    upload: &Upload,
     locale: &Locale,
     source: RwSignal<String>,
     picked: RwSignal<Picked>,
-) -> impl IntoView {
+) -> impl IntoView + use<> {
     let over = RwSignal::new(false);
     let release = locale.text(Text::UploadDropOver);
     let invite = locale.text(Text::UploadDropInvite);
@@ -261,6 +289,8 @@ fn drop_zone(
     let file_id = format!("{}-file", upload.id);
     let drop_id = format!("{}-drop", upload.id);
     let accept = upload.accept.join(",");
+    let kinds = Rule::of(upload);
+    let choose = upload.choose.clone();
     let input_for = file_id.clone();
     let zone_class = move || {
         let mut class = String::from("fui-drop");
@@ -284,7 +314,7 @@ fn drop_zone(
                 on:drop=move |event| {
                     event.prevent_default();
                     over.set(false);
-                    dropped(upload, &on_drop, &event, source, picked);
+                    dropped(kinds, &on_drop, &event, source, picked);
                 }
             >
                 <span class="fui-drop-glyph">{icon(Glyph::UPLOAD, "20")}</span>
@@ -293,14 +323,14 @@ fn drop_zone(
                 </p>
                 <label for=input_for class="fui-button fui-button-secondary fui-button-small">
                     {icon(Glyph::FOLDER_OPEN, "14")}
-                    {upload.choose}
+                    {choose}
                 </label>
                 <input
                     id=file_id
                     type="file"
                     class="fui-sr-only"
                     accept=accept
-                    on:change=move |event| chosen(upload, &on_choose, &event, source, picked)
+                    on:change=move |event| chosen(kinds, &on_choose, &event, source, picked)
                 />
                 <p class="fui-small">{rule}</p>
             </div>
@@ -309,7 +339,7 @@ fn drop_zone(
 
 /// Reads the file `event` chose into `source`, or refuses it.
 fn chosen(
-    upload: Upload,
+    upload: Rule,
     locale: &Locale,
     event: &leptos::ev::Event,
     source: RwSignal<String>,
@@ -329,7 +359,7 @@ fn chosen(
     }
     #[cfg(not(target_arch = "wasm32"))]
     let _: (
-        Upload,
+        Rule,
         &Locale,
         &leptos::ev::Event,
         RwSignal<String>,
@@ -339,7 +369,7 @@ fn chosen(
 
 /// Reads the file `event` dropped into `source`, or refuses it.
 fn dropped(
-    upload: Upload,
+    upload: Rule,
     locale: &Locale,
     event: &leptos::ev::DragEvent,
     source: RwSignal<String>,
@@ -357,7 +387,7 @@ fn dropped(
     }
     #[cfg(not(target_arch = "wasm32"))]
     let _: (
-        Upload,
+        Rule,
         &Locale,
         &leptos::ev::DragEvent,
         RwSignal<String>,
@@ -369,14 +399,14 @@ fn dropped(
 /// `picked`.
 #[cfg(target_arch = "wasm32")]
 fn read(
-    upload: Upload,
+    upload: Rule,
     locale: &Locale,
     file: &web_sys::File,
     source: RwSignal<String>,
     picked: RwSignal<Picked>,
 ) {
     let name = file.name();
-    if let Err(refused) = admit(&upload, &name, whole_bytes(file.size())) {
+    if let Err(refused) = upload.admit(&name, whole_bytes(file.size())) {
         picked.set(Picked::Refused(refused.sentence_in(
             locale,
             upload.accept,
@@ -423,15 +453,17 @@ fn whole_bytes(size: f64) -> u64 {
 
 #[cfg(test)]
 mod tests {
+    use std::borrow::Cow;
+
     use super::{Refused, Upload, admit, size};
 
     const UPLOAD: Upload = Upload {
         id: "opt",
-        label: "Operational template",
-        choose: "Choose OPT file",
+        label: Cow::Borrowed("Operational template"),
+        choose: Cow::Borrowed("Choose OPT file"),
         accept: &[".opt", ".xml"],
         max_bytes: 2 * 1024 * 1024,
-        placeholder: "<?xml version=\"1.0\"?>",
+        placeholder: Cow::Borrowed("<?xml version=\"1.0\"?>"),
     };
 
     #[test]

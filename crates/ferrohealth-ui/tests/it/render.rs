@@ -357,8 +357,8 @@ fn a_document_pane_opens_on_the_view_it_is_given_and_offers_rendered_only_when_a
             document_pane_opening(
                 DocumentPane {
                     id: "doc",
-                    label: "Composition",
-                    formats: &[],
+                    label: "Composition".into(),
+                    formats: Vec::new(),
                     format: Signal::stored("json"),
                     text: Signal::stored(String::from("{\"a\": 1}")),
                     language: Signal::stored(Language::Json),
@@ -433,7 +433,7 @@ fn a_tree_item_states_its_level_by_name() {
         parent.children = vec![TreeNode::new("b", "Child")];
         tree_view(Tree {
             id: "browse",
-            label: "Concepts",
+            label: "Concepts".into(),
             nodes: Signal::stored(vec![parent]),
             expanded: RwSignal::new(std::collections::BTreeSet::from([String::from("a")])),
             selected: Signal::stored(None),
@@ -485,13 +485,13 @@ fn the_surfaces_render_and_none_writes_a_style_attribute() {
             {lockup("/", mark(Glyph::LAYERS), "FerroUI", "Gallery")}
             {stat_card(Stat { glyph: Glyph::USERS, value: String::from("12"), label: "Members".into(), href: Some(String::from("/members")) })}
             {definitions(vec![("Version", "0.1.0".into_any())])}
-            {link_tabs("Views", &[Tab { href: "/a", label: "A" }, Tab { href: "/b", label: "B" }], "/b")}
+            {link_tabs("Views", &[Tab { href: "/a", label: "A".into() }, Tab { href: "/b", label: "B".into() }], "/b")}
             {empty_state(Glyph::INBOX, "Nothing here", "No file yet.", ())}
             {skeleton(3, "Loading the files.")}
             {link_button(String::from("/new"), Variant::Primary, Some(Glyph::PLUS), "New")}
             {confirm_trigger("delete", Variant::Danger, Glyph::TRASH, "Delete")}
-            {confirm_dialog(Confirmation { id: "delete", title: "Delete it?", message: "It goes for good." }, ())}
-            {footer(Footer { product: "FerroUI Gallery", version: "0.1.0", about: "/about" })}
+            {confirm_dialog(Confirmation { id: "delete", title: "Delete it?".into(), message: "It goes for good.".into() }, ())}
+            {footer(Footer { product: "FerroUI Gallery".into(), version: "0.1.0", about: "/about" })}
         }
         .into_any()
     });
@@ -514,17 +514,17 @@ fn the_surfaces_render_and_none_writes_a_style_attribute() {
 #[test]
 fn the_footer_marks_its_about_link_external_only_when_asked() {
     let text = Footer {
-        product: "FerroUI Gallery",
+        product: "FerroUI Gallery".into(),
         version: "0.1.2",
         about: "/about",
     };
-    let routed = html(|| footer(text).into_any());
+    let routed = html(|| footer(text.clone()).into_any());
     assert!(!routed.contains("rel="), "{routed}");
-    let full = html(|| footer_about(text, About::FullLoad).into_any());
+    let full = html(|| footer_about(text.clone(), About::FullLoad).into_any());
     assert!(full.contains(r#"rel="external""#), "{full}");
     assert_eq!(
         routed,
-        html(|| footer_about(text, About::Routed).into_any())
+        html(|| footer_about(text.clone(), About::Routed).into_any())
     );
 }
 
@@ -667,7 +667,7 @@ fn a_field_with_an_id_made_per_row_names_its_own_control_and_help() {
                 keyed_field(
                     id.clone(),
                     "Find a code",
-                    Some("Type two letters or more."),
+                    Some("Type two letters or more.".to_owned()),
                     view! { <input id=id name="q" class=INPUT aria-describedby=help /> },
                 )
             })

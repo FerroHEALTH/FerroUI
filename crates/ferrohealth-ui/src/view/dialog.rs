@@ -10,6 +10,8 @@
 //! confirming control is the console's: a submit button of a form that
 //! posts, or a button whose listener acts and closes the dialog.
 
+use std::borrow::Cow;
+
 use leptos::prelude::*;
 
 use crate::i18n::{Text, tr};
@@ -17,14 +19,14 @@ use crate::icon::{Glyph, icon};
 use crate::view::button::Variant;
 
 /// What a confirmation dialog asks.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Confirmation {
     /// The dialog's id, which its trigger opens.
     pub id: &'static str,
     /// The question, such as "Delete the stored query?".
-    pub title: &'static str,
+    pub title: Cow<'static, str>,
     /// The sentence that says what confirming does.
-    pub message: &'static str,
+    pub message: Cow<'static, str>,
 }
 
 /// Returns the button that opens the dialog `id`, of `variant`, with
@@ -34,14 +36,16 @@ pub fn confirm_trigger(
     id: &'static str,
     variant: Variant,
     glyph: Glyph,
-    label: &'static str,
-) -> impl IntoView + use<> {
+    label: impl Into<String>,
+) -> AnyView {
+    let label = label.into();
     view! {
         <button type="button" class=variant.class() popovertarget=id aria-controls=id>
             {icon(glyph, "16")}
             {label}
         </button>
     }
+    .into_any()
 }
 
 /// Returns the dialog asking `confirmation`, with Cancel and `confirm`.
