@@ -361,7 +361,7 @@ fn per_row() -> AnyView {
             let inactive_help = help_id(&inactive);
             view! {
                 <fieldset class="fui-fieldset">
-                    <legend>{verb} tr(Msg::Codes)</legend>
+                    <legend>{verb} {tr(Msg::Codes)}</legend>
                     {field_flow(view! {
                         {keyed_field(
                             search.clone(),
@@ -908,7 +908,6 @@ fn editor_headers() -> AnyView {
             &mode,
             Header {
                 crumbs: crumbs(),
-                mono: true,
                 ..Header::default()
             },
             (),

@@ -191,8 +191,8 @@ pub fn editor_title(message: Message, mode: &Mode) -> String {
 /// It is [`page_heading`] with its title and the trail's current crumb from
 /// [`editor_title`].
 ///
-/// `header.title` is not read. The name of a thing changed is drawn in the
-/// code face when `header.mono` holds; a new thing's title never is.
+/// `header.title` and `header.mono` are not read: the title is a sentence,
+/// so it is drawn in the body face even around an identifier.
 #[must_use]
 pub fn editor_heading(
     message: Message,
@@ -201,11 +201,10 @@ pub fn editor_heading(
     actions: impl IntoView + 'static,
 ) -> AnyView {
     let title = editor_title(message, mode);
-    let mono = header.mono && matches!(mode, Mode::Editing(_));
     page_heading(
         Header {
             title,
-            mono,
+            mono: false,
             ..header
         },
         actions,

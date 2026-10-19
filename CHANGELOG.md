@@ -23,7 +23,9 @@ and this project adheres to
 - `view::surface::{Mode, editor_title, editor_heading}`: an editor's header
   says "New <thing>" while it creates and "Edit <name>" while it edits, the
   title and the trail's last crumb from one console message that selects
-  by `$mode` (FerroHEALTH/FerroUI#123).
+  by `$mode`, in the body face (FerroHEALTH/FerroUI#123).
+- A list that runs to a panel's edges keeps its words off them, and a page
+  header inside a well leaves no space under it.
 - The gallery draws its own page strings from its catalog
   (`app/ferrohealth-ui-gallery/locales/en/ferrohealth-ui-gallery.ftl`), so
   the pseudo-locale stretches every string on a page, and the stray-literal

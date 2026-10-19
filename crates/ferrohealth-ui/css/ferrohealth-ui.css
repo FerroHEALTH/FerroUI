@@ -925,7 +925,8 @@
   }
 
   /* A page header in a stack leaves the stack's gap below it and no more. */
-  .fui-stack > .fui-page-header {
+  .fui-stack > .fui-page-header,
+  .fui-well > .fui-page-header {
     margin-block-end: 0;
   }
 
@@ -1011,6 +1012,12 @@
 
   .fui-divided > li + li {
     border-top: 1px solid var(--edge);
+  }
+
+  /* A list that runs to a panel's edges keeps its words off them, in line
+     with the panel's title. */
+  .fui-panel > .fui-divided > li {
+    padding-inline: var(--space-loose);
   }
 
   /* A row of fields with columns of its own from 40rem; an action sits at

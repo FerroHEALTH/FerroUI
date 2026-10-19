@@ -84,7 +84,7 @@ fn numbered() -> AnyView {
         tr(Msg::NumberedLines),
         view! {
             <p>
-                tr(Msg::DiagnosticLinksLine) <a href=format!("#{LINES}13")>{tr(Msg::Line13)}</a> "."
+                {tr(Msg::DiagnosticLinksLine)} <a href=format!("#{LINES}13")>{tr(Msg::Line13)}</a> "."
             </p>
             {code_lines(&tr(Msg::MappingFileNumbered), Language::Yaml, YAML, LINES)}
         },

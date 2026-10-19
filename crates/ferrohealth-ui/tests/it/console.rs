@@ -88,8 +88,8 @@ fn an_editor_says_new_when_it_creates_and_edit_when_it_edits() {
     let editing = Mode::Editing(String::from("vitals.model.yml"));
     let changing = html(|| editor_heading(editor, &editing, header(), ()));
     assert!(
-        changing.contains(r#"<h1 class="fui-page-title-mono">Edit vitals.model.yml</h1>"#),
-        "the name in the code face: {changing}"
+        changing.contains("<h1>Edit vitals.model.yml</h1>"),
+        "a sentence in the body face: {changing}"
     );
     assert!(
         changing.contains(r#"<li aria-current="page">Edit vitals.model.yml</li>"#),
