@@ -2111,6 +2111,44 @@
     vertical-align: top;
   }
 
+  /* A hierarchy row's leading cell steps in one loose space per level, so a
+     concept reads under its parent while the other cells keep their column;
+     level 0 keeps the cell's own inset. */
+  .fui-table :is(th, td).fui-depth-0 {
+    padding-inline-start: 0.75rem;
+  }
+  .fui-table :is(th, td).fui-depth-1 {
+    padding-inline-start: calc(0.75rem + 1 * var(--space-loose));
+  }
+
+  .fui-table :is(th, td).fui-depth-2 {
+    padding-inline-start: calc(0.75rem + 2 * var(--space-loose));
+  }
+
+  .fui-table :is(th, td).fui-depth-3 {
+    padding-inline-start: calc(0.75rem + 3 * var(--space-loose));
+  }
+
+  .fui-table :is(th, td).fui-depth-4 {
+    padding-inline-start: calc(0.75rem + 4 * var(--space-loose));
+  }
+
+  .fui-table :is(th, td).fui-depth-5 {
+    padding-inline-start: calc(0.75rem + 5 * var(--space-loose));
+  }
+
+  .fui-table :is(th, td).fui-depth-6 {
+    padding-inline-start: calc(0.75rem + 6 * var(--space-loose));
+  }
+
+  .fui-table :is(th, td).fui-depth-7 {
+    padding-inline-start: calc(0.75rem + 7 * var(--space-loose));
+  }
+
+  .fui-table :is(th, td).fui-depth-8 {
+    padding-inline-start: calc(0.75rem + 8 * var(--space-loose));
+  }
+
   /* The header in the small step and sentence case, read as a word and
      narrower than upper case in a table that may scroll sideways
      (WCAG 2.2 SC 1.4.10). */
@@ -2240,6 +2278,40 @@
 
     .fui-table-stack .fui-table tbody [data-label] {
       padding-inline: 0;
+    }
+
+    /* A stacked row keeps its level in the card's heading, a default step
+       per level, narrower than the wide table's loose one. */
+    .fui-table-stack .fui-table tbody :is(td, th).fui-depth-1 {
+      padding-inline-start: calc(1 * var(--space-default));
+    }
+
+    .fui-table-stack .fui-table tbody :is(td, th).fui-depth-2 {
+      padding-inline-start: calc(2 * var(--space-default));
+    }
+
+    .fui-table-stack .fui-table tbody :is(td, th).fui-depth-3 {
+      padding-inline-start: calc(3 * var(--space-default));
+    }
+
+    .fui-table-stack .fui-table tbody :is(td, th).fui-depth-4 {
+      padding-inline-start: calc(4 * var(--space-default));
+    }
+
+    .fui-table-stack .fui-table tbody :is(td, th).fui-depth-5 {
+      padding-inline-start: calc(5 * var(--space-default));
+    }
+
+    .fui-table-stack .fui-table tbody :is(td, th).fui-depth-6 {
+      padding-inline-start: calc(6 * var(--space-default));
+    }
+
+    .fui-table-stack .fui-table tbody :is(td, th).fui-depth-7 {
+      padding-inline-start: calc(7 * var(--space-default));
+    }
+
+    .fui-table-stack .fui-table tbody :is(td, th).fui-depth-8 {
+      padding-inline-start: calc(8 * var(--space-default));
     }
 
     /* A card has no sideways scroll, so an identifier wraps inside it,

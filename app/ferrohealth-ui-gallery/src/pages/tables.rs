@@ -12,7 +12,7 @@
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::table::model::{Noun, OpenWindow, Paging, Sort, Window, href};
 use ferrohealth_ui::table::view::{
-    ACTIONS, Body, Column, DataTable, Listing, NUM, data_table, data_table_unstacked,
+    ACTIONS, Body, Column, DataTable, Listing, NUM, data_table, data_table_unstacked, depth,
     link_open_pager, link_pager,
 };
 use ferrohealth_ui::tone::Tone;
@@ -317,6 +317,51 @@ fn fitting() -> AnyView {
     .into_any()
 }
 
+/// The columns of the hierarchy table.
+fn hierarchy_columns() -> [Column; 2] {
+    [
+        Column::text("code", tr(Msg::Code)).mono(),
+        Column::text("display", tr(Msg::Display)),
+    ]
+}
+
+/// A synthetic hierarchy, each concept's code cell stepped in by its level,
+/// one row past the deepest step to show that deeper levels hold it.
+fn hierarchy() -> AnyView {
+    let rows = [
+        (0, "root", Msg::HierarchyRoot),
+        (1, "branch-a", Msg::HierarchyBranchA),
+        (2, "leaf-a1", Msg::HierarchyLeafA1),
+        (2, "leaf-a2", Msg::HierarchyLeafA2),
+        (1, "branch-b", Msg::HierarchyBranchB),
+        (2, "twig-b1", Msg::HierarchyTwigB1),
+        (3, "leaf-b1x", Msg::HierarchyLeafB1x),
+        (9, "deep", Msg::HierarchyDeep),
+    ]
+    .into_iter()
+    .map(|(level, code, display)| {
+        view! {
+            <tr>
+                <th scope="row" class=depth(level)><code>{code}</code></th>
+                <td data-label=tr(Msg::Display)>{tr(display)}</td>
+            </tr>
+        }
+    })
+    .collect_view()
+    .into_any();
+    card(
+        tr(Msg::HierarchyInTable),
+        data_table(DataTable {
+            caption: &tr(Msg::ConceptsSyntheticHierarchy),
+            columns: &hierarchy_columns(),
+            sort: None,
+            sort_href: &|_| String::new(),
+            body: Body::Rows(rows),
+        }),
+    )
+    .into_any()
+}
+
 /// The columns of the table whose rows end in a link and a form.
 fn acted_columns() -> [Column; 3] {
     [
@@ -494,6 +539,7 @@ pub fn TablesPage() -> impl IntoView {
         changes(),
         fitting(),
         row_actions(),
+        hierarchy(),
     );
     view! {
         {super::title(tr(Msg::TablesPaging))}
@@ -507,6 +553,7 @@ pub fn TablesPage() -> impl IntoView {
             {sections.5}
             {sections.7}
             {sections.8}
+            {sections.9}
             {sections.6}
         })}
     }

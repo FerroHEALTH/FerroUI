@@ -115,6 +115,37 @@ pub const NUM: &str = "fui-num";
 /// The classes of the cell that holds a row's actions.
 pub const ACTIONS: &str = "fui-table-actions";
 
+/// The indentation classes of a hierarchy row's leading cell, one per level.
+///
+/// A class per level rather than a `style` attribute, so a console keeps
+/// `style-src 'self'`; the last step stands for every deeper level.
+const DEPTHS: [&str; 9] = [
+    "fui-depth-0",
+    "fui-depth-1",
+    "fui-depth-2",
+    "fui-depth-3",
+    "fui-depth-4",
+    "fui-depth-5",
+    "fui-depth-6",
+    "fui-depth-7",
+    "fui-depth-8",
+];
+
+/// The class that indents the leading cell of a table row `depth` levels down
+/// a hierarchy, such as a concept under its parents in an expansion.
+///
+/// Every level past the eighth takes the eighth's indentation. Put the class
+/// on the one cell that names the row; the other cells keep their column.
+#[must_use]
+pub fn depth(depth: u32) -> &'static str {
+    let index = usize::try_from(depth).unwrap_or(usize::MAX);
+    DEPTHS
+        .get(index)
+        .or(DEPTHS.last())
+        .copied()
+        .unwrap_or_default()
+}
+
 /// What the body of a data table holds.
 #[derive(Debug)]
 pub enum Body {
