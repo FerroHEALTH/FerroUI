@@ -50,6 +50,13 @@ never publish under it.
   by target (never by Cargo feature), with its browser journeys and
   screenshots under `tests/it/` (`FERROUI_JOURNEYS=1`,
   `FERROUI_SCREENSHOTS=1`) and the images under `docs/screenshots/`.
+- `design/`: the approved console design and the source of truth for
+  0.3.0 (`design/README.md`): `COMPONENTS.md` (the family rules, the
+  templates and every component spec), the console stylesheet, the five
+  brand themes, the reference templates and each console's page sources
+  under `consoles/<console>/`, with the shared tools in `tools/` (build,
+  render, the overflow, hover, contrast and selects checks, and the sync
+  from the design folders). Renders go to the ignored `design/out/`.
 - `scripts/`: `vendor/lucide.sh`, `release/` (journey tools, the gallery
   site build, the crate publish), `checks/` (the committed guards), `gh/`
   (the tracker helpers).
@@ -59,6 +66,9 @@ never publish under it.
 
 ## IMPORTANT hard rules
 
+- **A component follows the design in `design/`** (`.claude/rules/console-design.md`):
+  a change lands in `design/COMPONENTS.md` and the stylesheet first, then
+  every console is re-rendered and checked, then the Rust follows.
 - **The component rules are `.claude/rules/leptos-ui.md`.** Each product's
   own `leptos-ui.md` keeps only what is particular to it and points here.
 - **The authorities are the specifications**: WCAG 2.2, WAI-ARIA 1.2 and the
@@ -91,7 +101,7 @@ ISC License, recorded beside them.
 
 - Rules: `writing-style`, `rust-style`, `reliability`, `comments`, `testing`,
   `ci-cd`, `crates-publishing`, `issue-workflow`, `issue-relationships`,
-  `project-board`, `vendored-inputs`, and `leptos-ui` (the component rule
-  set).
+  `project-board`, `vendored-inputs`, `leptos-ui` (the component rule
+  set), and `console-design` (the design library and the family rules).
 - Agents: `implementer`, `spec-researcher`. Skills: `next-task`,
   `phase-done`, `phase-status`.

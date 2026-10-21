@@ -27,7 +27,11 @@ Actions Security Cheat Sheet, SLSA v1.0, OpenSSF Scorecard, and Sigstore.
   release bundle with the path and size checks of
   `scripts/checks/gallery-bundle.sh`, then the journeys and the screenshot
   capture in Chrome for Testing, the screenshots uploaded as an artifact).
-  The contrast test runs inside nextest. The `conclusion` job is the single
+  The design tier builds the pages of `design/` and runs `design/tools/check.sh`
+  per design set on macOS with Chrome at the gallery's release, and
+  `design-licence` holds every design file to the SPDX lines
+  (`scripts/checks/spdx.sh`). The contrast test runs inside nextest. The
+  `conclusion` job is the single
   required status check on `main`.
 - `.github/workflows/codeql.yml`: CodeQL over the `actions` language and Rust.
 - `.github/workflows/scorecard.yml`: OpenSSF Scorecard, published to the

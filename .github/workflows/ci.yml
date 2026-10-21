@@ -12,6 +12,8 @@
 #   3. The gallery tier runs when the gallery exists: the release site bundle
 #      with its size budget and path check, then the browser journeys and the
 #      screenshot capture in Chrome for Testing.
+#   4. The design tier builds the console design library's pages (design/)
+#      and runs its checks in headless Chrome, one job per design set.
 #
 # The `conclusion` job is the single required status check on main.
 name: CI
@@ -436,6 +438,54 @@ jobs:
           path: docs/screenshots/
           retention-days: 14
 
+  # ---- Tier 4 ---------------------------------------------------------------
+  # Every first-party file of the design library carries the SPDX lines.
+  design-licence:
+    name: design-licence
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: bash scripts/checks/spdx.sh design scripts/checks/spdx.sh
+
+  # The design pages of each set, built and checked: links, the BSN
+  # eleven-proof, plurals and one-sentence intros, then overflow and broken
+  # words, hover stability, contrast, selects and popups in headless Chrome at the
+  # gallery's pinned release. macOS, because the approved renders and every
+  # baseline.tsv were drawn with its system font, which the overflow and
+  # broken-word checks measure.
+  design:
+    name: design (${{ matrix.set }})
+    runs-on: macos-15
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        set: [templates, ferrobridge, ferroehr, ferrofed, ferropix, ferroterm]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14.8"
+      - name: Install Chrome
+        id: chrome
+        uses: browser-actions/setup-chrome@48ad923757ca74d66703209fe939badbdf80f2f4 # v2.2.0
+        with:
+          chrome-version: 155.0.8059.79
+      - name: Build the pages and run every check
+        env:
+          FERROUI_CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          DESIGN_SET: ${{ matrix.set }}
+        run: bash design/tools/check.sh "$DESIGN_SET"
+
   # ---- The single required check --------------------------------------------
   # It needs every other job and runs on always(), so it reports even when a
   # gated tier is skipped; it fails when a needed job failed or was cancelled.
@@ -461,6 +511,8 @@ jobs:
       - dependency-review
       - gallery-bundle
       - gallery-browser
+      - design-licence
+      - design
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

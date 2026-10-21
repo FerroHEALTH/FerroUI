@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+# The findings this set carried when its design was approved: a check
+# fails on any finding not listed here and on a listed one that no longer
+# occurs, so the list only shrinks. One finding per line, tab-separated:
+# the check, the page, then what the check reports. Rewrite it with
+# FERROUI_DESIGN_BASELINE=write design/tools/check.sh <set>.
+build	preferences-account	a button-looking link leads nowhere: <a href="#" class="fui-button fui-button-ghost fui-button-small" >
+overflow	mappings-files-filtered	1440	wider-than-box	span.fui-anchor	Owner · console provisioned 22 console 5
+overflow	mappings-files-filtered	390	wider-than-box	span.fui-anchor	Owner · console provisioned 22 console 5
+overflow	sidebar-rail	1440	wider-than-box	a.fui-nav-entry	Mapping set Mapping set
+overflow	sidebar-rail	1440	wider-than-box	li	Mapping set Mapping set
+overflow	sidebar-rail	1440	wider-than-box	nav#sidebar.fui-sidebar.fui-sidebar-rail	Overview  Dashboard  Mappings  Mapping set Mapping
+overflow	sidebar-rail	1440	wider-than-box	ul.fui-nav-list	Mapping set Mapping set Playground
+selects	focus-rings	1440	no-label	select#f2	
+selects	focus-rings	390	no-label	select#f2	

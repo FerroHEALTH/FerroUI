@@ -1,0 +1,42 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+# The findings this set carried when its design was approved: a check
+# fails on any finding not listed here and on a listed one that no longer
+# occurs, so the list only shrinks. One finding per line, tab-separated:
+# the check, the page, then what the check reports. Rewrite it with
+# FERROUI_DESIGN_BASELINE=write design/tools/check.sh <set>.
+overflow	audit-store-off	390	forced-wrap	a	Records settings
+overflow	ehr-new-conflict	390	wider-than-box	li	error 409 Conflict: An EHR with id 0199c2a4-7e1b-7
+overflow	ehr-new-conflict	390	wider-than-box	span.fui-issue-text	An EHR with id 0199c2a4-7e1b-7c3e-9a51-4f2d8b6e1a0
+overflow	ehr-new-conflict	390	wider-than-box	ul.fui-issues	error 409 Conflict: An EHR with id 0199c2a4-7e1b-7
+overflow	party	390	forced-wrap	code.fui-archetype.fui-reading-node	..
+overflow	party-delete	390	forced-wrap	code.fui-archetype.fui-reading-node	..
+overflow	sidebar-rail	1440	wider-than-box	a.fui-nav-entry	EHRs EHRs
+overflow	sidebar-rail	1440	wider-than-box	li	EHRs EHRs
+overflow	sidebar-rail	1440	wider-than-box	nav#sidebar.fui-sidebar.fui-sidebar-rail	Overview  Dashboard  Records  EHRs EHRs Parties  D
+overflow	sidebar-rail	1440	wider-than-box	ul.fui-nav-list	EHRs EHRs Parties
+overflow	template-adl2	390	forced-wrap	code.fui-archetype	....
+overflow	template-adl2-aom	390	forced-wrap	code.fui-archetype	....
+overflow	template-adl2-example	390	forced-wrap	code.fui-archetype	....
+overflow	template-adl2-paths	390	forced-wrap	code.fui-archetype	....
+overflow	template-adl2-source	390	forced-wrap	code.fui-archetype	....
+overflow	template-adl2-versions	390	forced-wrap	code.fui-archetype	....
+selects	configuration	390	no-id-or-name	select#tabs-sel	
+selects	configuration-access	390	no-id-or-name	select#tabs-sel	
+selects	configuration-dialog	390	no-id-or-name	select#tabs-sel	
+selects	configuration-integrations	390	no-id-or-name	select#tabs-sel	
+selects	configuration-key-hint	390	no-id-or-name	select#tabs-sel	
+selects	configuration-operations	390	no-id-or-name	select#tabs-sel	
+selects	configuration-records	390	no-id-or-name	select#tabs-sel	
+selects	configuration-server	390	no-id-or-name	select#tabs-sel	
+selects	configuration-viewer	390	no-id-or-name	select#tabs-sel	
+selects	focus-rings	1440	no-label	select#f2	
+selects	focus-rings	390	no-label	select#f2	
+selects	server	390	no-id-or-name	select#tabs-sel	
+selects	server-api	390	no-id-or-name	select#tabs-sel	
+selects	server-health	390	no-id-or-name	select#tabs-sel	
+selects	server-logging	390	no-id-or-name	select#tabs-sel	
+selects	server-logging-apply	390	no-id-or-name	select#tabs-sel	
+selects	server-metrics	390	no-id-or-name	select#tabs-sel	
+selects	server-sandbox	390	no-id-or-name	select#tabs-sel	
+selects	server-smart	390	no-id-or-name	select#tabs-sel	

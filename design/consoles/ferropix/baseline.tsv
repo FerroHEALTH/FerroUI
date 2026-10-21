@@ -1,0 +1,72 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+# The findings this set carried when its design was approved: a check
+# fails on any finding not listed here and on a listed one that no longer
+# occurs, so the list only shrinks. One finding per line, tab-separated:
+# the check, the page, then what the check reports. Rewrite it with
+# FERROUI_DESIGN_BASELINE=write design/tools/check.sh <set>.
+build	audit	intro of 2 sentences: Every steward action: who made it, when and why. An export is itself an action.
+build	audit-detail	intro of 2 sentences: Every steward action: who made it, when and why. An export is itself an action.
+build	audit-export-busy	intro of 2 sentences: Every steward action: who made it, when and why. An export is itself an action.
+build	audit-export-done	intro of 2 sentences: Every steward action: who made it, when and why. An export is itself an action.
+build	audit-filtered	intro of 2 sentences: Every steward action: who made it, when and why. An export is itself an action.
+build	audit-loading	intro of 2 sentences: Every steward action: who made it, when and why. An export is itself an action.
+build	audit-no-match	intro of 2 sentences: Every steward action: who made it, when and why. An export is itself an action.
+build	audit-range-picker	intro of 2 sentences: Every steward action: who made it, when and why. An export is itself an action.
+build	configuration-blocking	a button-looking link leads nowhere: <a href="#" class="fui-button fui-button-secondary fui-button-small" >
+build	configuration-compare	intro of 2 sentences: Each setting that differs, with how it took effect. Every other setting is the same.
+build	configuration-weights	a button-looking link leads nowhere: <a href="#" class="fui-button fui-button-secondary fui-button-small" >
+build	date-picker-sheet	intro of 2 sentences: Every steward action: who made it, when and why. An export is itself an action.
+build	date-picker-states	intro of 2 sentences: One year-first field, one picker: audit From and To, Defer until, the history filter, ever
+build	decision-bar-states	intro of 2 sentences: FerroUI #145: docked to the foot of the main area (the window's foot on a phone), one top 
+build	domain-edit	intro of 2 sentences: Your changes are a draft until you save them with a reason. A domain change is live at onc
+build	domain-new	intro of 2 sentences: A domain is a database record: created here, recorded in the audit trail, and live at once
+build	domains	intro of 2 sentences: The assigning authorities, each with its one Source and its feed activity. A sensitive dom
+build	matching-restart	a button-looking link leads nowhere: <a href="#" class="fui-button fui-button-secondary fui-button-small" >
+build	merge-confirm	intro of 2 sentences: Nothing is written until you confirm. The table is the server's answer for this preview.
+build	merge-failure	intro of 2 sentences: Nothing is written until you confirm. The table is the server's answer for this preview.
+build	merge-preview	intro of 2 sentences: Nothing is written until you confirm. The table is the server's answer for this preview.
+build	patient-unmerge	intro of 2 sentences: This is the latest merge of this patient, so it can be reverted. Nothing is written until 
+build	patient-unmerge-confirm	intro of 2 sentences: This is the latest merge of this patient, so it can be reverted. Nothing is written until 
+build	preferences	intro of 2 sentences: Only for you, in this browser. Deployment settings are in Configuration.
+build	preferences-account	a button-looking link leads nowhere: <a href="#" class="fui-button fui-button-ghost fui-button-small" >
+build	preferences-account	intro of 2 sentences: Only for you, in this browser. Deployment settings are in Configuration.
+build	preferences-dark	intro of 2 sentences: Only for you, in this browser. Deployment settings are in Configuration.
+build	preferences-keyboard	intro of 2 sentences: Only for you, in this browser. Deployment settings are in Configuration.
+build	preferences-language-open	intro of 2 sentences: Only for you, in this browser. Deployment settings are in Configuration.
+build	preferences-reset	intro of 2 sentences: Only for you, in this browser. Deployment settings are in Configuration.
+build	preferences-saved	intro of 2 sentences: Only for you, in this browser. Deployment settings are in Configuration.
+build	pseudonym-domains	intro of 2 sentences: The namespaces a pseudonym is minted in, and their counts. A resolution is a disclosure.
+build	queue	intro of 2 sentences: Pairs of records the matcher could not decide. A row is one pair; open it to compare and d
+build	queue-bulk-defer	intro of 2 sentences: Pairs of records the matcher could not decide. A row is one pair; open it to compare and d
+build	queue-deferred	intro of 2 sentences: Pairs of records the matcher could not decide. A row is one pair; open it to compare and d
+build	queue-empty	intro of 2 sentences: Pairs of records the matcher could not decide. A row is one pair; open it to compare and d
+build	queue-filtered	intro of 2 sentences: Pairs of records the matcher could not decide. A row is one pair; open it to compare and d
+build	queue-loading	intro of 2 sentences: Pairs of records the matcher could not decide. A row is one pair; open it to compare and d
+build	queue-no-match	intro of 2 sentences: Pairs of records the matcher could not decide. A row is one pair; open it to compare and d
+build	queue-row-focus	intro of 2 sentences: Pairs of records the matcher could not decide. A row is one pair; open it to compare and d
+build	queue-row-hover	intro of 2 sentences: Pairs of records the matcher could not decide. A row is one pair; open it to compare and d
+build	queue-row-menu	intro of 2 sentences: Pairs of records the matcher could not decide. A row is one pair; open it to compare and d
+build	queue-selected	intro of 2 sentences: Pairs of records the matcher could not decide. A row is one pair; open it to compare and d
+build	queue-side-panel	intro of 2 sentences: Pairs of records the matcher could not decide. A row is one pair; open it to compare and d
+build	search	'1 days'
+build	search	intro of 2 sentences: Find a patient by one identifier, or by the demographics the matcher scores. Results live 
+build	search-demographics	'1 days'
+build	search-demographics	intro of 2 sentences: Find a patient by one identifier, or by the demographics the matcher scores. Results live 
+build	search-loading	intro of 2 sentences: Find a patient by one identifier, or by the demographics the matcher scores. Results live 
+build	search-no-match	intro of 2 sentences: Find a patient by one identifier, or by the demographics the matcher scores. Results live 
+build	search-refused	intro of 2 sentences: Find a patient by one identifier, or by the demographics the matcher scores. Results live 
+build	search-states	intro of 2 sentences: FerroUI #144: one joined control with the icon, the field, the / hint and the submit. Belo
+build	source-new	intro of 2 sentences: Who the source is and how it connects. Saved with a reason and live at once; a domain name
+build	toast-error	intro of 2 sentences: Pairs of records the matcher could not decide. A row is one pair; open it to compare and d
+build	toast-success	intro of 2 sentences: Pairs of records the matcher could not decide. A row is one pair; open it to compare and d
+build	toast-warning	intro of 2 sentences: Pairs of records the matcher could not decide. A row is one pair; open it to compare and d
+overflow	merge-confirm	390	forced-wrap	ins.fui-change.fui-change-added	Mohr, Alice ·
+overflow	merge-failure	390	forced-wrap	ins.fui-change.fui-change-added	Mohr, Alice ·
+overflow	merge-preview	390	forced-wrap	ins.fui-change.fui-change-added	Mohr, Alice ·
+overflow	sidebar-rail	1440	wider-than-box	a.fui-nav-entry	Review queue 38 Review queue
+overflow	sidebar-rail	1440	wider-than-box	li	Review queue 38 Review queue
+overflow	sidebar-rail	1440	wider-than-box	nav#sidebar.fui-sidebar.fui-sidebar-rail	Work  Dashboard Review queue 38 Review queue  Pati
+overflow	sidebar-rail	1440	wider-than-box	ul.fui-nav-list	Dashboard Review queue 38 Review queue
+selects	focus-rings	1440	no-label	select#f2	
+selects	focus-rings	390	no-label	select#f2	
