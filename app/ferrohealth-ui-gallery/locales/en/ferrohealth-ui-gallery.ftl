@@ -515,3 +515,5 @@ hierarchy-branch-b = B branch
 hierarchy-twig-b1 = A twig of branch B
 hierarchy-leaf-b1x = A leaf of that twig
 hierarchy-deep = Nine levels down, at the deepest step
+lists-laid-out = Lists laid out by a layout class
+fieldset-under-title = A fieldset under a card's title

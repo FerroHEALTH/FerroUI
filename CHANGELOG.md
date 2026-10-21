@@ -11,6 +11,11 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-10-21
+
+The row depth of a hierarchy table, and two fixes FerroTERM's move onto
+FerroUI found. A console pins `=0.2.2` in place of `=0.2.1`; no API breaks.
+
 ### Added
 
 - `table::view::depth(level)` and the classes `fui-depth-0` to `fui-depth-8`:
@@ -18,6 +23,14 @@ and this project adheres to
   step per level in the wide table and one default step in the stacked one,
   every level past the eighth at the eighth step (#132). The gallery's tables
   page shows a hierarchy in a table.
+
+### Fixed
+
+- A `fui-fieldset` that is a card's own child keeps the card's spacing above
+  it: its margin reset no longer outweighs `.fui-card > * + *` (#134).
+- A `ul` or `ol` laid out by `fui-grid`, `fui-stack`, `fui-cluster`,
+  `fui-split` or `fui-columns` draws no list marker and keeps no indent
+  (#135). The gallery's layouts page shows both.
 
 ## [0.2.1] - 2026-10-21
 
@@ -638,7 +651,8 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/FerroHEALTH/FerroUI/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/FerroHEALTH/FerroUI/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.7...v0.2.0
 [0.1.7]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.6...v0.1.7
