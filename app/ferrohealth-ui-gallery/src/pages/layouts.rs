@@ -413,6 +413,53 @@ fn stacks() -> AnyView {
     .into_any()
 }
 
+/// Lists whose items a layout class sets apart, a grid and a stack, which
+/// draw no marker and keep no indent.
+fn laid_out_lists() -> AnyView {
+    let steps = [
+        tr(Msg::Tight),
+        tr(Msg::Default),
+        tr(Msg::Loose),
+        tr(Msg::Section),
+    ];
+    let tiles = steps
+        .iter()
+        .map(|step| view! { <li class="fui-well">{step.clone()}</li> })
+        .collect_view();
+    let lines = steps
+        .iter()
+        .map(|step| view! { <li>{step.clone()}</li> })
+        .collect_view();
+    card(
+        tr(Msg::ListsLaidOut),
+        view! {
+            <ul class="fui-grid">{tiles}</ul>
+            <ul class="fui-stack fui-gap-tight">{lines}</ul>
+        },
+    )
+    .into_any()
+}
+
+/// A fieldset that is a card's own child, right under the card's title,
+/// which keeps the card's rhythm above it.
+fn fieldset_in_card() -> AnyView {
+    card(
+        tr(Msg::FieldsetUnderTitle),
+        view! {
+            <fieldset class="fui-fieldset">
+                <legend>{tr(Msg::TheCode)}</legend>
+                {field(
+                    "fieldset-code",
+                    tr(Msg::Code),
+                    None,
+                    view! { <input id="fieldset-code" name="code" class=INPUT /> },
+                )}
+            </fieldset>
+        },
+    )
+    .into_any()
+}
+
 /// The layouts page.
 #[component]
 #[expect(
@@ -436,6 +483,8 @@ pub fn LayoutsPage() -> impl IntoView {
         .into_any(),
         rows(),
         stacks(),
+        laid_out_lists(),
+        fieldset_in_card(),
     );
     view! {
         {super::title(tr(Msg::Layouts))}
@@ -448,6 +497,8 @@ pub fn LayoutsPage() -> impl IntoView {
                 {sections.2}
                 {sections.3}
                 {sections.4}
+                {sections.5}
+                {sections.6}
             },
         )}
     }

@@ -1123,6 +1123,10 @@ messages! {
     HierarchyInTable = "hierarchy-in-table",
     /// `The concepts of a synthetic hierarchy, each a level under its parent`
     ConceptsSyntheticHierarchy = "concepts-synthetic-hierarchy",
+    /// `Lists laid out by a layout class`
+    ListsLaidOut = "lists-laid-out",
+    /// `A fieldset under a card's title`
+    FieldsetUnderTitle = "fieldset-under-title",
     /// `Root of the hierarchy`
     HierarchyRoot = "hierarchy-root",
     /// `A branch`

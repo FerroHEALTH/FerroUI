@@ -1638,6 +1638,15 @@
     margin-block-start: 0.75rem;
   }
 
+  /* A list laid out by a layout class draws no marker and keeps no indent: the
+     layout, not the bullet, shows its items apart. At no weight of its own,
+     so a container's rhythm still sets its outer margin. */
+  :where(ul, ol):where(.fui-stack, .fui-grid, .fui-cluster, .fui-split, .fui-columns) {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
   /* A card in a grid row is as tall as the row; an empty state inside it
      fills what is left and centres its content, so no card ends in an
      empty band. */
@@ -2894,9 +2903,14 @@
     display: grid;
     min-width: 0;
     gap: 0.75rem;
-    margin: 0;
     border: 0;
     padding: 0;
+  }
+
+  /* The browser's margin goes at no weight of its own, so a fieldset that is
+     a card's child keeps the card's rhythm above it (`.fui-card > * + *`). */
+  :where(.fui-fieldset) {
+    margin: 0;
   }
 
   /* A group's heading outranks the labels of its fields: a step up in size
