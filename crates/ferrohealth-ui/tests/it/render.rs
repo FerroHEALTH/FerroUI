@@ -1004,3 +1004,22 @@ fn a_keyed_field_row_carries_its_id_and_its_columns() {
         "{plain}"
     );
 }
+
+// A hierarchy row's leading cell steps in by its level through a class, never
+// a `style` attribute, and every level past the last step keeps that step.
+#[test]
+fn a_row_depth_names_its_level_and_holds_at_the_deepest_step() {
+    use ferrohealth_ui::table::view::depth;
+    assert_eq!(depth(0), "fui-depth-0");
+    assert_eq!(depth(3), "fui-depth-3");
+    assert_eq!(depth(8), "fui-depth-8");
+    assert_eq!(depth(9), "fui-depth-8");
+    assert_eq!(depth(u32::MAX), "fui-depth-8");
+    for level in 1..=8 {
+        let class = depth(level);
+        assert!(
+            ferrohealth_ui::style::STYLESHEET.contains(&format!(".{class} {{")),
+            "{class} is defined"
+        );
+    }
+}

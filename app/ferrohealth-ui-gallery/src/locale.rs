@@ -1119,6 +1119,26 @@ messages! {
     FileEditor = "file-editor",
     /// The crumb of the files listing above the file editor.
     MappingFilesCrumb = "mapping-files-crumb",
+    /// `A hierarchy in a table`
+    HierarchyInTable = "hierarchy-in-table",
+    /// `The concepts of a synthetic hierarchy, each a level under its parent`
+    ConceptsSyntheticHierarchy = "concepts-synthetic-hierarchy",
+    /// `Root of the hierarchy`
+    HierarchyRoot = "hierarchy-root",
+    /// `A branch`
+    HierarchyBranchA = "hierarchy-branch-a",
+    /// `A leaf of branch A`
+    HierarchyLeafA1 = "hierarchy-leaf-a1",
+    /// `Another leaf of branch A`
+    HierarchyLeafA2 = "hierarchy-leaf-a2",
+    /// `B branch`
+    HierarchyBranchB = "hierarchy-branch-b",
+    /// `A twig of branch B`
+    HierarchyTwigB1 = "hierarchy-twig-b1",
+    /// `A leaf of that twig`
+    HierarchyLeafB1x = "hierarchy-leaf-b1x",
+    /// `Nine levels down, at the deepest step`
+    HierarchyDeep = "hierarchy-deep",
 }
 
 /// The gallery's message `msg` in the page's locale.

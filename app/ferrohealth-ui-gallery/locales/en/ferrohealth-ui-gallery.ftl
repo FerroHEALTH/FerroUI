@@ -505,3 +505,13 @@ file-editor = { $mode ->
        *[edit] Edit { $name }
     }
 mapping-files-crumb = Mapping files
+hierarchy-in-table = A hierarchy in a table
+concepts-synthetic-hierarchy = The concepts of a synthetic hierarchy, each a level under its parent
+hierarchy-root = Root of the hierarchy
+hierarchy-branch-a = A branch
+hierarchy-leaf-a1 = A leaf of branch A
+hierarchy-leaf-a2 = Another leaf of branch A
+hierarchy-branch-b = B branch
+hierarchy-twig-b1 = A twig of branch B
+hierarchy-leaf-b1x = A leaf of that twig
+hierarchy-deep = Nine levels down, at the deepest step

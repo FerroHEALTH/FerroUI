@@ -11,6 +11,14 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- `table::view::depth(level)` and the classes `fui-depth-0` to `fui-depth-8`:
+  the indentation of a hierarchy row's leading cell in a table, one loose
+  step per level in the wide table and one default step in the stacked one,
+  every level past the eighth at the eighth step (#132). The gallery's tables
+  page shows a hierarchy in a table.
+
 ## [0.2.1] - 2026-10-21
 
 A patch release with no API change: a console pins `=0.2.1` in place of
