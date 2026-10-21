@@ -62,7 +62,7 @@ def worker(site, chrome, session, slugs):
     found = []
     for slug in slugs:
         for theme in ("light", "dark"):
-            browser.load(chrome, session, site.page_url(slug), 1440, theme=theme, reduced_motion=True)
+            browser.load(chrome, session, site.page_url(slug), 1440, theme=theme, reduced_motion=True, still=True)
             time.sleep(0.3)
             for tag, ratio, need, text in browser.evaluate(chrome, session, PROBE) or []:
                 found.append((slug, theme, tag, f"{ratio} < {need}", text))

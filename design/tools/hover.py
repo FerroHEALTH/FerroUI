@@ -10,7 +10,6 @@ finding. Paint-only effects (tints, opacity, outlines) pass.
 Usage: hover.py <set> [slug ...]   (run build.py first)"""
 import os
 import sys
-import time
 
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -52,10 +51,10 @@ def worker(site, chrome, session, slugs):
     found = []
     for slug in slugs:
         for width in (1440, 390):
-            browser.load(chrome, session, site.page_url(slug), width)
+            browser.load(chrome, session, site.page_url(slug), width, still=True)
             h = browser.evaluate(chrome, session, "document.documentElement.scrollHeight")
             chrome.send("Emulation.setDeviceMetricsOverride", {"width": width, "height": int(h), "deviceScaleFactor": 1, "mobile": width < 600}, session)
-            time.sleep(0.05)
+            browser.settle(chrome, session)
             pts = browser.evaluate(chrome, session, SNAP)
             for i, (x, y) in enumerate(pts):
                 chrome.send("Input.dispatchMouseEvent", {"type": "mouseMoved", "x": x, "y": y}, session)

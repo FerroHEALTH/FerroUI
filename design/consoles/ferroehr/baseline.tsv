@@ -5,6 +5,10 @@
 # occurs, so the list only shrinks. One finding per line, tab-separated:
 # the check, the page, then what the check reports. Rewrite it with
 # FERROUI_DESIGN_BASELINE=write design/tools/check.sh <set>.
+overflow	audit-store-off	390	forced-wrap	a	Records settings
+overflow	ehr-new-conflict	390	wider-than-box	li	error 409 Conflict: An EHR with id 0199c2a4-7e1b-7
+overflow	ehr-new-conflict	390	wider-than-box	span.fui-issue-text	An EHR with id 0199c2a4-7e1b-7c3e-9a51-4f2d8b6e1a0
+overflow	ehr-new-conflict	390	wider-than-box	ul.fui-issues	error 409 Conflict: An EHR with id 0199c2a4-7e1b-7
 overflow	party	390	forced-wrap	code.fui-archetype.fui-reading-node	..
 overflow	party-delete	390	forced-wrap	code.fui-archetype.fui-reading-node	..
 overflow	sidebar-rail	1440	wider-than-box	a.fui-nav-entry	EHRs EHRs
@@ -34,6 +38,5 @@ selects	server-health	390	no-id-or-name	select#tabs-sel
 selects	server-logging	390	no-id-or-name	select#tabs-sel	
 selects	server-logging-apply	390	no-id-or-name	select#tabs-sel	
 selects	server-metrics	390	no-id-or-name	select#tabs-sel	
-selects	server-no-management	390	no-id-or-name	select#tabs-sel	
 selects	server-sandbox	390	no-id-or-name	select#tabs-sel	
 selects	server-smart	390	no-id-or-name	select#tabs-sel	

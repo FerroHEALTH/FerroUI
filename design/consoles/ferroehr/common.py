@@ -190,7 +190,7 @@ def key_cap(k):
 
 
 def kbd(keys):
-    return f'<kbd class="fui-kbd">{e(key_cap(keys))}</kbd>'
+    return f'<kbd class="fui-kbd">{e(" ".join(key_cap(k) for k in keys.split(" ")))}</kbd>'
 
 
 # ---- time: one rule on every screen (review item 15) ----
@@ -584,7 +584,7 @@ def pager(label, total, size, page=1, sizes=(10, 25, 50)):
     steps = (
         step("first", "chevrons-left", "First", prev)
         + step("previous", "chevron-left", "Previous", prev)
-        + f'<span class="fui-pager-position">Page {page} of {pages}</span>'
+        + f'<span class="fui-pager-position">Page {page:,} of {pages:,}</span>'
         + step("next", "chevron-right", "Next", next_, first_=False)
         + step("last", "chevrons-right", "Last", next_, first_=False)
     )
@@ -593,7 +593,7 @@ def pager(label, total, size, page=1, sizes=(10, 25, 50)):
         for s in sizes
     )
     return (
-        f'<nav class="fui-pager" aria-label="{label}"><p role="status">{first}–{last} of {total}</p>'
+        f'<nav class="fui-pager" aria-label="{label}"><p role="status">{first:,}–{last:,} of {total:,}</p>'
         f'<div class="fui-pager-steps">{steps}</div>'
         f'<div class="fui-pager-sizes"><span class="fui-muted">Rows per page</span>{sz}</div></nav>'
     )
@@ -889,7 +889,7 @@ NAV = [
     ]),
     ("definitions", "Definitions", [
         ("templates", "Templates", "file-code", "templates.html", None),
-        ("terminology", "Terminology", "book-open", "terminology.html", None),
+        ("terminology", "Terminology", "book-open", "terminology.html", "probe"),
     ]),
     ("queries", "Queries", [
         ("stored", "Stored queries", "scroll-text", "stored-queries.html", None),
@@ -1034,17 +1034,17 @@ def topbar(status="up", search_value="", search_state=None, results=None, menu_o
     )
 
 
-def sandbox_band():
+def sandbox_band(here=False):
     """The sandbox deployment's one-line band under the top bar: the count of
     open separations, and details on Server › Overview."""
     return (
         f'<div class="fui-banner fui-tone-warn" role="note">{icon("triangle-alert", "16")}'
-        '<p><strong>Sandbox:</strong> 3 separations open · <a href="server-sandbox.html">details</a></p></div>'
+        '<p><strong>Sandbox:</strong> 3 production safeguards are off · <a href="server-sandbox.html">Details</a></p></div>'
     )
 
 
 def footer():
-    return f'<footer class="fui-footer"><p>FerroEHR Viewer v{VIEWER_VERSION} · Cadasto B.V. · <a href="about.html">About</a></p></footer>'
+    return f'<footer class="fui-footer"><p>FerroEHR Viewer {VIEWER_VERSION} · Cadasto B.V. · <a href="about.html">About</a></p></footer>'
 
 
 def head(title, density="comfortable"):
@@ -1072,7 +1072,7 @@ def shell(title, current, content, density="comfortable", status="up", overlay=N
         head(title, density)
         + f'<body><div class="{cls}"><a href="#main" class="fui-skip">Skip to the page</a>'
         + topbar(status, search_value, search_state, results, menu_open, menu_theme, menu_focus, reader, "sandbox" if sandbox else "production")
-        + (sandbox_band() if sandbox else "")
+        + ((sandbox_band().replace(' · <a href="server-sandbox.html">Details</a>', "") if current == "server" else sandbox_band()) if sandbox else "")
         + f'<div class="fui-body">{sidebar(current, rail, rail_tip, drawer, probes)}{dr}<main id="main" class="fui-main"><div class="fui-column">{content}</div>{dock_html}</main></div>'
         + footer()
         + toast_html

@@ -17,7 +17,7 @@ match it.
 | `themes/` | One brand file per console: its accents and the two preview accents Your preferences draws. |
 | `templates/` | The reference templates' page table (`catalog.py`), manifest and the library's helpers (`common.py`, `data.py`). |
 | `consoles/<console>/` | One console's page modules, its manifest (`pages.py`), its page table (`catalog.py`), the words of its contact sheet (`console.py`), its brand icons (`assets/`) and its `baseline.tsv`. |
-| `tools/` | The shared tools: the build with its markup checks, the renderer, the browser checks, the contact sheet, and the sync. |
+| `tools/` | The shared tools: the build with its markup checks, the renderer, the browser checks (overflow, hover, contrast, selects, popups), the contact sheet, and the sync. |
 
 The mockups draw with the crate's own base stylesheet, copied beside the
 pages at build time, so a mockup shows what a console ships. The library's
@@ -69,6 +69,10 @@ The checks are the ones CI runs, one job per set:
 - **Selects** (`selects.py`): every select and R29 listbox button has an
   accessible name, shows its chosen value unclipped, is at least 24 px, and
   keeps `aria-expanded` in step with its listbox.
+- **Popups** (`popups.py`): every open listbox, menu, popover, search
+  results panel and date picker, at 1440 light and dark and 390 light, is
+  inside the screen, shows its items unclipped, is solid (ground, border
+  and shadow) and stands out from what it opens over.
 
 Each set's `baseline.tsv` lists the findings it carried when its design was
 approved. A check fails on a finding the baseline does not hold, and on a

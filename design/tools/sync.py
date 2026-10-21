@@ -14,8 +14,8 @@ brand icons in src/). The sync:
   design/tools/ and its common.py, data.py and pages.py into
   design/templates/, with templates.py turned into templates/catalog.py;
 - per console, copies src/tools/*.py except the tools the shared ones in
-  design/tools/ replace (build, index, render, overflow, hover, contrast)
-  and except any module identical to the shared copy it would shadow; turns
+  design/tools/ replace (build, index, render, overflow, hover, contrast,
+  selects, popups) and except any module identical to the shared copy it would shadow; turns
   build.py into catalog.py (its page table without the checks) and index.py
   into console.py (the contact sheet's words); copies the icons to assets/;
 - adds the SPDX lines to every file that lacks them.
@@ -41,7 +41,7 @@ CONSOLES = {
     "FerroTERM": ("ferroterm", "FerroTERM console"),
     "FerroEHR": ("ferroehr", "FerroEHR viewer"),
 }
-REPLACED = {"build.py", "index.py", "render.py", "overflow.py", "hover.py", "contrast.py"}
+REPLACED = {"build.py", "index.py", "render.py", "overflow.py", "hover.py", "contrast.py", "selects.py", "popups.py"}
 SHARED_TOOLS = ("tpl.py", "parts.py", "pg_about.py")
 SHARED_TEMPLATES = ("common.py", "data.py", "pages.py")
 KEEP = {"baseline.tsv"}

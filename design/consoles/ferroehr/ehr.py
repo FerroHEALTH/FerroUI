@@ -37,7 +37,7 @@ def quiet(line):
 def empty_line(line, action=""):
     """A one-line empty state with no icon, its one action beside it."""
     a = f" {action}" if action else ""
-    return f'<p class="fui-transform-empty mk-empty-line">{line}{a}</p>'
+    return f'<p class="fui-transform-empty">{line}{a}</p>'
 
 
 def planned(issue, text):
@@ -237,10 +237,11 @@ def editor(text, lang="json", lang_word="Canonical JSON", label="the document", 
         nw = len(diags) - ne
         marks = f" · <span>{plural(ne, 'error')}, {plural(nw, 'warning')}</span>"
     inv = ' aria-invalid="true"' if diags else ""
-    bar = f'<div class="fui-editor-bar"><span>{lang_word} · {plural(n, "line")}{marks}</span><div class="fui-actions">{tools}</div></div>'
+    lw = f"{lang_word} · " if lang_word else ""
+    bar = f'<div class="fui-editor-bar"><span>{lw}{plural(n, "line")}{marks}</span><div class="fui-actions">{tools}</div></div>'
     ed = (f'<div class="fui-editor"{inv}><div class="fui-editor-stack"><pre class="fui-editor-layer" aria-hidden="true">{code_lines(text, lang, current, diags, inline=False)}</pre>'
           f'<textarea id="ed" name="ed" class="fui-editor-input" aria-label="{e(label)}" autocomplete="off" autocapitalize="off" spellcheck="false" wrap="soft">{e(text)}</textarea></div></div>')
-    d = '<span class="fui-editor-dirty">Changed since opened</span>' if dirty else '<span>Unchanged</span>'
+    d = '<span class="fui-editor-dirty">Changed since opened</span>' if dirty else ""
     status = f'<div class="fui-editor-status"><span>{pos}</span><span>UTF-8 · LF</span>{d}</div>'
     return f'<section class="fui-card fui-panel fui-mapping-editor" aria-label="Editor">{bar}{ed}{status}</section>'
 
@@ -316,8 +317,12 @@ def reading_section(title, node, rows=(), children=""):
     return f'<section class="fui-reading-section"><h3 class="fui-reading-title">{e(title)}{nd}</h3>{dl}{children}</section>'
 
 
+UNIT_WORD = {"mm[Hg]": "mm Hg", "Cel": "°C", "/min": "/min", "%": "%"}
+
+
 def qty(v, unit):
-    return f'<span class="fui-reading-value">{e(v)}</span> <span class="fui-reading-unit">{e(unit)}</span>'
+    """A quantity with its unit as a person reads it; the UCUM code is the tooltip."""
+    return f'<span class="fui-reading-value">{e(v)}</span> <span class="fui-reading-unit" title="UCUM {e(unit)}">{e(UNIT_WORD.get(unit, unit))}</span>'
 
 
 def nullf(word):
@@ -380,3 +385,26 @@ def reveal_dialog(what="the subject id of EHR 0199c2a4…1a01"):
                     help_="Required. A colleague reading the audit trail should understand it.")
             + "</div>")
     return dialog("reveal", "eye", f"Reveal {what}?", body, button("secondary", "Cancel", "x") + button("primary", "Reveal for 30 s", "eye"))
+
+
+
+def tag_editor(rows, collection, conflict=False):
+    """The tags of one object (composition or party) and the row to set one.
+    rows: (key, value, target path or None)."""
+    from common import button as _button
+    out = []
+    for k, v, p in rows:
+        target = path(p) if p else f'<span class="mk-dash">the whole {collection}</span>'
+        out.append(f'<tr><th scope="row" data-role="title"><code>{e(k)}</code></th>{td("Value", e(v), role="sub")}{td("Target path", target)}'
+                   f'{td("", icon_button("x", f"Remove the tag {k}"), "fui-row-menu", role="menu")}</tr>')
+    t = table("Tags", th("Key") + th("Value") + th("Target path") + th('<span class="fui-sr-only">Remove</span>'), out)
+    new = (f'<div class="fui-clause-filter">{field("tk", "Key", input_("tk", "", extra="class=" + chr(34) + "fui-input fui-mono" + chr(34)))}'
+           f'{field("tv", "Value (optional)", input_("tv", ""))}{field("tp", "Target path (optional)", input_("tp", "", extra="class=" + chr(34) + "fui-input fui-mono" + chr(34)))}'
+           f'{_button("secondary", "Set the tag", "tags")}</div>')
+    top = ""
+    if conflict:
+        top = ('<div role="alert" class="fui-alert"><p class="fui-alert-title">' + icon("circle-alert", "16") + ' Another client changed these tags since you opened them, so yours were not saved.</p></div>'
+               + f'<div class="fui-cluster">{_button("primary", "Reload the tags", "refresh-cw")}</div>')
+    lst = section(f"Tags of the {collection}", intro(f"Tags stay on the {collection} across its versions; setting one commits no version.") + top + t, count=len(rows))
+    add = section("Set a tag", new)
+    return sections(lst, add)

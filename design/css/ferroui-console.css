@@ -3402,7 +3402,12 @@
       z-index: 41;
       display: block;
       width: min(18rem, 85vw);
+      height: auto;
+      max-height: none;
+      margin: 0;
+      border: 0;
       border-right: 1px solid var(--edge);
+      box-shadow: var(--shadow-overlay);
       overflow: visible;
     }
 
@@ -5932,7 +5937,7 @@
      list or a card is ink with no underline, at rest and on hover; the row
      is the target, tinted with the pointer on hover, and the keyboard
      shows the row's ring. An underline stays only in running prose. ---- */
-  .fui-table :is(th, td) a:not(.fui-button):not(.fui-tag),
+  .fui-table :is(th, td) a:not(.fui-button):not(.fui-tag):not(.fui-menu-item),
   .fui-table a.fui-row-link,
   .fui-topology-list a,
   .mk-plain-list a.mk-ink {
@@ -5940,7 +5945,7 @@
     text-decoration: none;
   }
 
-  .fui-table :is(th, td) a:not(.fui-button):not(.fui-tag):hover {
+  .fui-table :is(th, td) a:not(.fui-button):not(.fui-tag):not(.fui-menu-item):hover {
     color: var(--ink);
     text-decoration: none;
   }
@@ -7297,6 +7302,12 @@
 
   .fui-transform-options .fui-field:has(.fui-segmented) {
     flex: none;
+  }
+
+  /* An id field (a uuid or a versioned object uid) is wide enough for the
+     whole id, so neither its value nor its placeholder clips. */
+  .fui-transform-options .fui-field.is-id {
+    flex: 1 1 24rem;
   }
 
   .fui-transform-options .fui-segmented {
@@ -8897,8 +8908,6 @@
 
   .fui-reading-unit {
     color: var(--muted);
-    font-family: var(--font-mono);
-    font-size: var(--text-small);
     white-space: nowrap;
   }
 

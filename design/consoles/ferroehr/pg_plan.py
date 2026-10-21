@@ -18,10 +18,10 @@ def mirror(title, current, intro, issue, text, what):
 def page_audit_ferrosys():
     return mirror("Audit log", "audit", "The CDR's security audit trail: who accessed what, and with what outcome.", "3661",
                   "FerroSYS stores, reviews, retains and serves the access log; FerroEHR records and spools it locally.",
-                  "This CDR's audit trail is kept in FerroSYS, read-only from here.")
+                  "This CDR's audit trail will be kept in FerroSYS, read-only from here.")
 
 
 def page_subscriptions_ferrosys():
-    return mirror("Subscriptions", "subscriptions", "Which committed versions the CDR publishes to the message broker, and to which queue.", "3382",
+    return mirror("Subscriptions", "subscriptions", "Get a message on the event queue for each change that matches.", "3382",
                   "Notification subscriptions move to FerroSYS; the CDR keeps publishing what they select.",
-                  "This CDR's subscriptions are managed in FerroSYS, read-only from here.")
+                  "This CDR's subscriptions will be managed in FerroSYS, read-only from here.")

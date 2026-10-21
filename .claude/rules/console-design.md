@@ -60,7 +60,7 @@ one is a defect. In short:
 ## The checks
 
 `design/tools/check.sh` runs the build's markup checks and the overflow,
-hover, contrast and selects checks; CI runs it per design set on macOS
+hover, contrast, selects and popups checks; CI runs it per design set on macOS
 (`ci-cd.md`). A set's `baseline.tsv` holds the findings it was approved
 with and only shrinks. Never add an entry to make a check pass: fix the
 page, or record an approved design change with the baseline rewrite in the

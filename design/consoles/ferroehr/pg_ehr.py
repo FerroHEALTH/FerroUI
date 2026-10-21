@@ -61,16 +61,19 @@ def page_ehrs_hover():
 
 def page_ehrs_found():
     tb = tpl.toolbar("EHR id or subject id")
-    chips = (f'<div class="fui-filter-chips"><span class="fui-small fui-muted">Showing</span><span class="fui-filter-chip">Subject id {masked("537", static=True)}'
+    chip = masked("537", static=True).replace('<span class="fui-sr-only">Subject id </span>', "")
+    chips = (f'<div class="fui-filter-chips"><span class="fui-small fui-muted">Showing</span><span class="fui-filter-chip">Subject id: {chip}'
              f'<button type="button" aria-label="Remove the filter subject id">{icon("x", "12")}</button></span>{button("ghost", "Clear filters", "x", small=True)}</div>')
     c = tpl.card(ehr_rows(EHRS[-1:]), label="EHRs", title="EHRs", count="1")
     return shell("EHRs", "ehrs", ehrs_heading() + tpl.list_body("", tb, chips, c))
 
 
 def page_ehrs_no_match():
-    tb = tpl.toolbar("EHR id or subject id", "0199ffff-0000-7000-8000-000000000000")
+    tb = tpl.toolbar("EHR id or subject id")
+    chips = (f'<div class="fui-filter-chips"><span class="fui-small fui-muted">Showing</span><span class="fui-filter-chip">Id: <code>0199ffff…0000</code>'
+             f'<button type="button" aria-label="Remove the filter id">{icon("x", "12")}</button></span>{button("ghost", "Clear filters", "x", small=True)}</div>')
     c = tpl.card(empty_line("No EHR has that EHR id or subject id."), label="EHRs", title="EHRs", count="0")
-    return shell("EHRs", "ehrs", ehrs_heading() + tpl.list_body("", tb, "", c))
+    return shell("EHRs", "ehrs", ehrs_heading() + tpl.list_body("", tb, chips, c))
 
 
 def page_ehrs_loading():
@@ -109,17 +112,18 @@ def edit_dock(message="", save="Save", back_href="#", disabled=None, state_="rea
     return dock(m, acts, "")
 
 
-def ehr_new(top="", ehr_id="", invalid=False):
-    subj = section("Subject", intro("Bind the EHR to an outside identity, or leave both empty for an EHR with no external subject.")
+def ehr_new(top="", ehr_id="", invalid=False, conflict=False):
+    subj = section("Subject", intro("Bind the EHR to an outside identity, masked as you type, or leave both empty for no external subject.")
                    + '<div class="fui-form-grid">'
-                   + field("s-id", "Subject id", '<div class="fui-input-group">' + input_("s-id", "P-20517-284", type_="password", extra='class="fui-input fui-mono" spellcheck="false"') + icon_button("eye", "Show the subject id", cls="fui-input-toggle", attrs='aria-pressed="false"') + "</div>", help_="Masked as you type, as everywhere in the viewer.", cls="fui-span-2")
+                   + field("s-id", "Subject id", '<div class="fui-input-group">' + input_("s-id", "P-20517-284", type_="password", extra='class="fui-input fui-mono" spellcheck="false"') + icon_button("eye", "Show the subject id", cls="fui-input-toggle", attrs='aria-pressed="false"') + "</div>", cls="fui-span-2")
                    + field("s-ns", "Namespace", input_("s-ns", "demo.hospital.mrn", extra='class="fui-input fui-mono" spellcheck="false"'), cls="fui-span-2")
                    + "</div>")
-    err = "Not a UUID. Leave it empty and the CDR mints one." if invalid else None
-    eid = section("", '<div class="fui-form-grid">' + field("e-id", "EHR id", input_("e-id", ehr_id, "Leave empty for a new id", extra='class="fui-input fui-mono" spellcheck="false"' + (' aria-invalid="true"' if invalid else "")),
-                                                                    help_=None if invalid else "Optional. A UUID; the CDR refuses an id already in use.", error=err, cls="fui-span-2") + "</div>")
+    err = "Not a UUID. Leave it empty and the CDR mints one." if invalid else ("This id is in use; clear it for a new id." if conflict else None)
+    invalid_mark = invalid or conflict
+    eid = section("", '<div class="fui-form-grid">' + field("e-id", "EHR id", input_("e-id", ehr_id, "Leave empty for a new id", extra='class="fui-input fui-mono" spellcheck="false"' + (' aria-invalid="true"' if invalid_mark else "")),
+                                                                    help_=None if err else "Optional. A UUID; the CDR refuses an id already in use.", error=err, cls="fui-span-2") + "</div>")
     if invalid:
-        d = edit_dock(msg("circle-x", "Fix the EHR id before creating."), "Create this EHR", "ehrs.html", disabled="Fix the EHR id first")
+        d = edit_dock(msg("circle-x", "Not created."), "Create this EHR", "ehrs.html", disabled="Fix the EHR id first")
     else:
         d = edit_dock("", "Create this EHR", "ehrs.html")
     return edit_shell("New EHR", "ehrs", [("EHRs", "ehrs.html")], "An EHR with a subject, or with none.", top + sections(subj, eid, card=True), d)
@@ -134,9 +138,10 @@ def page_ehr_new_invalid():
 
 
 def page_ehr_new_conflict():
-    rf = refusal("The CDR refused the EHR, in its own words below.", request=f"PUT /ferroehr/rest/openehr/v1/ehr/{E1}",
-                 issues=[("bad", "error", "409 Conflict", f"An EHR with id {E1} already exists.")])
-    return ehr_new(top=rf, ehr_id=E1).replace('<p class="fui-dock-message"></p>', "")
+    rf = refusal("The CDR refused the EHR, so nothing was created.", request=f"PUT /ferroehr/rest/openehr/v1/ehr/{E1}",
+                 issues=[("bad", "error", "409 Conflict", f"An EHR with id <code>{E1}</code> already exists.")])
+    rf += f'<div class="fui-cluster">{link_button("secondary", "Open EHR 0199c2a4…1a01", "ehr.html", "arrow-right")}{button("ghost", "Clear the id", "x")}</div>'
+    return ehr_new(top=rf, ehr_id=E1, conflict=True)
 
 
 # ---- one EHR ----
@@ -146,17 +151,18 @@ EHR_TABS = [("compositions", "Compositions", "ehr.html", 8), ("directory", "Dire
 EHR_TABS_NODIR = [t for t in EHR_TABS if t[0] != "directory"]
 
 
-def ehr_more(admin=True, open_=False):
-    items = [menu_item("Commit several changes", "git-commit", href="contribution-new.html"),
-             menu_item("Edit status", "pencil", href="ehr-status-edit.html"),
-             menu_item("Copy EHR id", "copy")]
+def ehr_more(admin=True, open_=False, no_dir=False):
+    items = [menu_item("Commit several changes", "git-commit", href="contribution-new.html")]
+    if no_dir:
+        items.append(menu_item("Create the directory", "folder-plus", href="ehr-directory.html"))
+    items.append(menu_item("Copy EHR id", "copy"))
     if admin:
         items += [MENU_SEP, menu_item("Delete EHR…", "trash-2", danger=True, href="ehr-delete.html")]
     return items
 
 
-def ehr_header(more_open=False, admin=True, subject=True, revealed=False, queryable=True, reveal_state=None, eid=E1, created="2026-03-02T10:14"):
-    ag = action_group(link_button("primary", "New composition", "composition-new.html", "plus"), ehr_more(admin), open_=more_open, label="More actions for the EHR")
+def ehr_header(more_open=False, admin=True, subject=True, revealed=False, queryable=True, reveal_state=None, eid=E1, created="2026-03-02T10:14", no_dir=False):
+    ag = action_group(link_button("primary", "New composition", "composition-new.html", "plus"), ehr_more(admin, no_dir=no_dir), open_=more_open, label="More actions for the EHR")
     return page_heading(f"EHR {eid[:8]}…{eid[-4:]}", actions=ag, subtitle=f"Created {when(created)} on <code>{SYSTEM_ID}</code>.", crumbs=[("EHRs", "ehrs.html")],
                         after=subject_line(subject, queryable, True, revealed, reveal_state))
 
@@ -178,12 +184,13 @@ def comp_rows(items=COMPS):
 
 
 def comps_toolbar(template=None, start=None, composer=""):
-    return tpl.toolbar("Composer", composer, [tpl.filter_button("Template", template), tpl.filter_button("Start time", start)])
+    return tpl.toolbar("Find by composer", composer, [tpl.filter_button("Template", template), tpl.filter_button("Start time", start)])
 
 
 def comps_panel(rows=None, toolbar=None, chips="", note=""):
-    tb = toolbar if toolbar is not None else comps_toolbar()
-    return f'<div class="fui-panel"><div class="fui-panel-body fui-stack mk-routes-filters">{tb}{chips}</div>{rows if rows is not None else comp_rows()}{note}</div>'
+    # Family rule 8: a list of ten or fewer has no find field and no filters.
+    tools = f'<div class="fui-panel-body fui-stack mk-routes-filters">{toolbar}{chips}</div>' if toolbar else ""
+    return f'<div class="fui-panel">{tools}{rows if rows is not None else comp_rows()}{note}</div>'
 
 
 def page_ehr(toast_html=""):
@@ -195,10 +202,15 @@ def page_ehr_more():
 
 
 def page_ehr_filtered():
-    tb = comps_toolbar("Vital signs encounter.v1", "1 Sep to 21 Oct")
+    tb = comps_toolbar()
     chips = tpl.active(["Template: Vital signs encounter.v1", "Start time: 2026-09-01 to 2026-10-21"])
-    vs = [c for c in COMPS if c[2] == "Vital signs encounter.v1"]
-    return ehr_page(panel=comps_panel(comp_rows(vs), tb, chips), tabs_list=[("compositions", "Compositions", "ehr.html", 3)] + EHR_TABS[1:])
+    vs = [(f"v{i}", "Vital signs", "Vital signs encounter.v1", d, n, 1, "") for i, (d, n) in enumerate([
+        ("2026-10-18T09:10", "Demo Nurse"), ("2026-10-11T08:55", "Demo Nurse"), ("2026-10-04T09:20", "Demo Nurse"), ("2026-09-27T10:02", "Demo Nurse"),
+        ("2026-09-20T08:40", "Demo Nurse"), ("2026-09-13T09:31", "Demo Nurse"), ("2026-09-06T08:48", "Demo Nurse")])]
+    eid = EHRS[6][0]
+    h = ehr_header(eid=eid, created="2026-10-18T09:58")
+    tl = [("compositions", "Compositions", "ehr-filtered.html", 21)] + EHR_TABS[1:]
+    return shell(f"EHR {eid[:8]}", "ehrs", h + f'<div class="fui-stack">{tabbed(tabs("Views of this EHR", tl, "compositions"), comps_panel(comp_rows(vs), tb, chips))}</div>')
 
 
 def page_ehr_reveal():
@@ -211,14 +223,13 @@ def page_ehr_revealed():
 
 def page_ehr_no_subject():
     eid = EHRS[4][0]
-    note = f'<section class="fui-panel-section"><p class="fui-small fui-muted">This EHR has no directory. {link_button("ghost", "Create the directory", "ehr-directory.html", "folder-plus", small=True)}</p></section>'
     one = [("c", "Vital signs", "Vital signs encounter.v1", "2026-10-19T14:20", "Demo Nurse", 1, "0199c26a-9e10-7a42-8b3d-1c5f7e9a0b28")]
-    h = ehr_header(subject=False, eid=eid, created="2026-10-19T14:05")
-    return shell("EHR", "ehrs", h + f'<div class="fui-stack">{tabbed(tabs("Views of this EHR", [("compositions", "Compositions", "ehr-no-subject.html", 1)] + EHR_TABS_NODIR[1:], "compositions"), comps_panel(comp_rows(one), note=note))}</div>')
+    h = ehr_header(subject=False, eid=eid, created="2026-10-19T14:05", no_dir=True)
+    return shell("EHR", "ehrs", h + f'<div class="fui-stack">{tabbed(tabs("Views of this EHR", [("compositions", "Compositions", "ehr-no-subject.html", 1)] + EHR_TABS_NODIR[1:], "compositions"), comps_panel(comp_rows(one)))}</div>')
 
 
 def page_ehr_not_found():
-    h = page_heading("EHR 0199c2a4…1a99", crumbs=[("EHRs", "ehrs.html")])
+    h = page_heading("No EHR 0199c2a4…1a99", crumbs=[("EHRs", "ehrs.html")])
     body = (refusal("The CDR has no EHR with this id (404).", request="GET /ferroehr/rest/openehr/v1/ehr/0199c2a4-7e1b-7c3e-9a51-4f2d8b6e1a99")
             + f'<div class="fui-cluster">{link_button("primary", "Back to EHRs", "ehrs.html", "arrow-left")}</div>')
     return shell("EHR not found", "ehrs", h + f'<div class="fui-stack">{body}</div>')
@@ -238,9 +249,11 @@ def page_ehr_reader():
 # ---- Directory (E4) ----
 
 def folder_tree(editing=False, rename=False):
-    def acts(name, ref=False):
+    def acts(name, ref=False, root=False):
         if not editing:
             return ""
+        if root:
+            return icon_button("folder-plus", f"Add a folder in {name}") + icon_button("file-text", f"Add a reference in {name}")
         if ref:
             return icon_button("x", f"Remove the reference {name}")
         return icon_button("folder-plus", f"Add a folder in {name}") + icon_button("file-text", f"Add a reference in {name}") + icon_button("pencil", f"Rename {name}") + icon_button("trash-2", f"Remove {name}")
@@ -252,7 +265,7 @@ def folder_tree(editing=False, rename=False):
     f2 = tree_item("2026-08 Admission", children=[r3], expanded=True, glyph="folder", count="1 item", actions=acts("2026-08 Admission"))
     ep = tree_item("Episodes", children=[f1, f2], expanded=True, glyph="folder", count="2 folders", actions=acts("Episodes"))
     co = tree_item("Correspondence", leaf=True, glyph="folder", count="empty", actions=acts("Correspondence"))
-    root = tree_item("root", children=[ep, co], expanded=True, glyph="folder", selected=not editing, actions=acts("root"))
+    root = tree_item("root", children=[ep, co], expanded=True, glyph="folder", actions=acts("root", root=True))
     return tree([root], "The directory of this EHR", "fui-folder-tree" + (" is-editing" if editing else ""))
 
 
@@ -266,7 +279,7 @@ def dir_versions_table(restore_focus=False):
         rows.append(f'<tr><th scope="row" data-role="title"><a class="fui-row-link" href="ehr-directory.html">{version_cell(v, current=i == 0)}</a></th>'
                     + td("Change", how, role="sub") + td("Committed by", who, role="meta-q") + td("When", ago(w), role="meta-2")
                     + td("", act, "fui-row-menu", role="menu") + "</tr>")
-    return table("Directory versions", th("Version") + th("Change") + th("Committed by") + th("When") + th('<span class="fui-sr-only">Restore</span>'), rows)
+    return table("Directory versions", th("Version") + th("Change") + th("Committed by") + th("When") + th("Restore"), rows)
 
 
 def dir_panel(menu_open=False):
@@ -274,7 +287,7 @@ def dir_panel(menu_open=False):
     trig = (f'<span class="fui-anchor"><a href="ehr-directory-more.html" class="fui-icon-button" role="button" aria-haspopup="menu" aria-expanded="{"true" if menu_open else "false"}" '
             f'aria-label="More actions for the directory" title="More actions">{icon("ellipsis", "16")}</a>{m}</span>')
     tools = link_button("secondary", "Edit the directory", "ehr-directory-edit.html", "pencil", small=True) + trig
-    path = (f'<div class="fui-at-time">{field("d-path", "Show one folder by path", input_("d-path", "", "/Episodes/2026-10 Hypertension follow-up", extra="class=" + chr(34) + "fui-input fui-mono" + chr(34)))}'
+    path = (f'<div class="fui-at-time">{field("d-path", "Show one folder by path", input_("d-path", "", "/Episodes/…", extra="class=" + chr(34) + "fui-input fui-mono" + chr(34)))}'
             f'{button("secondary", "Show", "folder")}</div>')
     tree_s = section("Folders", folder_tree() + path, actions=tools)
     vers = section("Versions", intro("The newest three; an older one opens read-only and can be restored.") + dir_versions_table()
@@ -294,9 +307,16 @@ def page_ehr_directory_more():
 def page_ehr_directory_restore():
     d = (f'<div role="dialog" aria-modal="true" aria-labelledby="restore-title" class="fui-dialog fui-modal mk-open" open>'
          f'<h2 id="restore-title" class="fui-dialog-title">{icon("rotate-ccw", "18")} Restore version 2 of the directory?</h2>'
-         '<p>The CDR commits version 2\'s whole tree as a new version 4. Version 3 stays in the history. If the directory changed since you opened it, the CDR refuses (412) and nothing is written.</p>'
+         '<p>Version 2\'s tree is saved as a new version 4; version 3 stays in the history.</p>'
          f'<div class="fui-dialog-actions">{button("secondary", "Cancel", keys="Esc")}{button("primary", "Restore as version 4", "rotate-ccw")}</div></div>')
     return page_ehr_directory(overlay=d)
+
+
+def page_ehr_directory_restore_conflict():
+    top = refusal("The directory changed since you opened it, so version 2 was not restored (412).", request=f"PUT /ferroehr/rest/openehr/v1/ehr/{E1}/directory",
+                  issues=[("bad", "error", "412 Precondition Failed", "If-Match names version 3; the latest is version 4.")])
+    top += f'<div class="fui-cluster">{link_button("primary", "Reload the versions", "ehr-directory.html", "refresh-cw")}</div>'
+    return ehr_page("directory", f'<div class="fui-stack">{top}{dir_panel()}</div>')
 
 
 def page_ehr_directory_delete():
@@ -341,8 +361,11 @@ def status_versions_table():
 
 
 def status_panel(version="2", queryable=True, top=""):
-    f = facts([("Version", f'<code>0199c2a4…2a55::{SYSTEM_ID}::{version}</code>'), ("Committed", when("2026-10-14T10:41") if version == "2" else when("2026-03-02T10:14")),
-               ("Contribution", '<a href="contribution.html">0199d6a3…0a73</a>'), ("Signed", "No"), ("Archetype", arch("openEHR-EHR-EHR_STATUS.generic.v1"))])
+    rows = [("Version", f'<code>0199c2a4…2a55::{SYSTEM_ID}::{version}</code>'), ("Committed", when("2026-10-14T10:41") if version == "2" else when("2026-03-02T10:14")),
+            ("Contribution", '<a href="contribution.html">0199d6a3…0a73</a>'), ("Signed", "No"), ("Archetype", arch("openEHR-EHR-EHR_STATUS.generic.v1"))]
+    if not queryable:
+        rows.insert(1, ("Population queries", "Leave this EHR out"))
+    f = facts(rows)
     text = STATUS_JSON if queryable else STATUS_JSON.replace('"is_queryable": true', '"is_queryable": false')
     if version == "1":
         text = text.replace("::2", "::1")
@@ -361,9 +384,8 @@ def page_ehr_status_version():
 
 
 def page_ehr_status_not_queryable():
-    top = notice("warn", "triangle-alert", "This EHR is not queryable: AQL over the population leaves it out.")
     h = ehr_header(queryable=False)
-    return ehr_page("status", f'<div class="fui-stack">{top}{status_panel(queryable=False)}</div>', header=h)
+    return ehr_page("status", status_panel(queryable=False), header=h)
 
 
 # ---- Contributions ----
@@ -425,10 +447,10 @@ def status_edit(top="", d=None):
     flags = section("Capabilities", check("st-q", "Queryable", True, "Population queries (AQL) include this EHR.")
                     + check("st-m", "Modifiable", True, "New content may be committed to this EHR."))
     other = editor('{\n  "_type": "ITEM_TREE",\n  "archetype_node_id": "at0001",\n  "name": { "_type": "DV_TEXT", "value": "Details" },\n  "items": []\n}', label="other_details",
-                   lang_word="Canonical JSON · ITEM_STRUCTURE", pos="Ln 5, Col 13")
-    od = section("Other details", intro("An ITEM_STRUCTURE in canonical JSON, empty to remove it; every other attribute goes back as the CDR served it.") + other)
+                   lang_word="JSON", pos="Ln 5, Col 13")
+    od = section("Other details", intro("Extra details as JSON; leave it empty to remove them.") + other)
     dk = d or edit_dock(msg("pencil", "1 change: Other details."), "Save as version 3", "ehr-status.html")
-    return edit_shell("Edit", "ehrs", [("EHRs", "ehrs.html"), (f"EHR {E1[:8]}…", "ehr-status.html")], "Status version 2, opened 09:38.", top + sections(flags, od, card=True), dk)
+    return edit_shell("Edit", "ehrs", [("EHRs", "ehrs.html"), (f"EHR {E1[:8]}…", "ehr.html"), ("Status", "ehr-status.html")], "Status version 2, opened 09:38.", top + sections(flags, od, card=True), dk)
 
 
 def page_ehr_status_edit():
@@ -437,17 +459,16 @@ def page_ehr_status_edit():
 
 def page_ehr_status_conflict():
     rf = refusal("Another client committed a new status since you opened it, so the CDR refused the save (412).", request=f"PUT /ferroehr/rest/openehr/v1/ehr/{E1}/ehr_status",
-                 issues=[("bad", "error", "412 Precondition Failed", "If-Match names version 2; the current version is 3.")])
+                 issues=[("bad", "error", "412 Precondition Failed", "If-Match names version 2; the latest is version 3.")])
     rf += f'<div class="fui-cluster">{link_button("primary", "Reload version 3", "ehr-status.html", "refresh-cw")}<span class="fui-small fui-muted">Your edit stays in this page until you leave it.</span></div>'
-    return status_edit(rf, edit_dock(msg("circle-x", "Not saved. Reload the current version first."), "Save as version 3", "ehr-status.html", disabled="Reload the current version first"))
+    return status_edit(rf, edit_dock(msg("circle-x", "Not saved."), "Save as version 3", "ehr-status.html", disabled="Reload the current version first"))
 
 
 def dir_edit(top="", d=None):
     body = section("Folders", intro("Changes stay in this page until you save them as one new version.") + folder_tree(editing=True, rename=True)
                    + f'<div class="fui-add-row">{button("ghost", "Add a folder at the root", "folder-plus", small=True)}</div>')
-    adv = section("", f'<p class="fui-small fui-muted">The tree is the canonical FOLDER; {link_button("ghost", "Edit it as JSON", "#", "braces", small=True, attrs="rel=" + chr(34) + "nofollow" + chr(34))}</p>')
     dk = d or edit_dock(msg("pencil", "2 changes: a folder renamed, a reference removed."), "Save as version 4", "ehr-directory.html")
-    return edit_shell("Edit", "ehrs", [("EHRs", "ehrs.html"), (f"EHR {E1[:8]}…", "ehr-directory.html")], "Directory version 3, opened 09:38.", top + sections(body, card=True), dk)
+    return edit_shell("Edit", "ehrs", [("EHRs", "ehrs.html"), (f"EHR {E1[:8]}…", "ehr.html"), ("Directory", "ehr-directory.html")], "Directory version 3, opened 09:38.", top + sections(body, card=True), dk)
 
 
 def page_ehr_directory_edit():
@@ -456,9 +477,20 @@ def page_ehr_directory_edit():
 
 def page_ehr_directory_conflict():
     rf = refusal("Another client changed the directory since you opened it, so the CDR refused the save (412).", request=f"PUT /ferroehr/rest/openehr/v1/ehr/{E1}/directory",
-                 issues=[("bad", "error", "412 Precondition Failed", "If-Match names version 3; the current version is 4.")])
-    rf += f'<div class="fui-cluster">{link_button("primary", "Reload version 4", "ehr-directory.html", "refresh-cw")}{button("secondary", "Overwrite with my tree…", "save")}</div>'
-    return dir_edit(rf, edit_dock(msg("circle-x", "Not saved. Reload, or overwrite with your tree."), "Save as version 4", "ehr-directory.html", disabled="Reload or overwrite first"))
+                 issues=[("bad", "error", "412 Precondition Failed", "If-Match names version 3; the latest is version 4.")])
+    rf += (f'<div class="fui-cluster">{link_button("primary", "Reload version 4", "ehr-directory.html", "refresh-cw")}'
+           f'<a href="ehr-directory-overwrite.html" class="fui-button fui-button-danger">{icon("save", "16")}Overwrite version 4…</a></div>')
+    return dir_edit(rf, edit_dock(msg("circle-x", "Not saved."), "Save as version 4", "ehr-directory.html", disabled="Reload or overwrite first"))
+
+
+def page_ehr_directory_overwrite():
+    d = confirm_delete("ow", "Overwrite version 4 with your tree?", "Your tree is saved as version 5; what the other client changed in version 4 is no longer current, though version 4 stays in the history.",
+                       False, "Overwrite with my tree").replace("Logical delete", "Overwrite")
+    return _overlay(page_ehr_directory_conflict(), d)
+
+
+def _overlay(html, dialog_html):
+    return html.replace('<div class="fui-page">', '<div class="fui-page mk-page-overlaid">', 1).replace("</div><script>", "</div><script>").replace("</div></body>", f'<div class="mk-scrim" aria-hidden="true"></div>{dialog_html}</div></body>', 1)
 
 
 # ---- the contribution builder ----
@@ -476,31 +508,35 @@ VITALS_JSON = """{
   "territory": { "terminology_id": { "value": "ISO_3166-1" }, "code_string": "NL" },
   "category": { "value": "event", "defining_code": { "code_string": "433" } },
   "composer": { "_type": "PARTY_IDENTIFIED", "name": "Demo Nurse" },
-  "context": { "start_time": { "value": "2026-10-21T08:14:00+02:00" }, "setting": { "value": "other care", "defining_code": { "code_string": "238" } } },
+  "context": { "start_time": { "value": "2026-10-21T07:50:00+02:00" }, "setting": { "value": "other care", "defining_code": { "code_string": "238" } } },
   "content": [ "… 2 observations …" ]
 }"""
+
+
+CHANGE_WORD = {"249": "Creation", "251": "Amendment", "250": "Modification"}
 
 
 def staged_card(n, title, kind, change, body, issue=None):
     acts = icon_button("x", f"Remove change {n}")
     iss = f'<p class="fui-clause-issue" role="note">{icon("circle-x", "14")}<span>{issue}</span></p>' if issue else ""
     return (f'<div class="fui-repeater-card"><div class="fui-repeater-card-head"><h3>{n}. {title}</h3>{acts}</div>'
-            f'<div class="fui-form-grid">{field(f"k{n}", "Change", select(f"k{n}", [("cc", "New composition"), ("ca", "Amended composition"), ("sm", "EHR status")], kind), cls="fui-span-2")}'
-            f'{field(f"t{n}", "Change type", select(f"t{n}", [("249", "Creation"), ("251", "Amendment"), ("250", "Modification")], change), cls="fui-span-2")}</div>{body}{iss}</div>')
+            f'<div class="fui-form-grid">{field(f"k{n}", "What changes", select(f"k{n}", [("cc", "A new composition"), ("ca", "An amended composition"), ("sm", "The EHR status")], kind), help_=f"Recorded as the audit change type {CHANGE_WORD[change]}.", cls="fui-span-2")}'
+            f'</div>{body}{iss}</div>')
 
 
 def contribution_new(top="", refused=False, d=None):
     c1 = staged_card(1, "New composition: Vital signs", "cc", "249",
-                     field("tm1", "Template", select("tm1", [(t[0], t[0]) for t in TEMPLATES[:5]], "Vital signs encounter.v1"), cls="fui-span-2") + editor(VITALS_JSON, label="The composition of change 1", pos="Ln 16, Col 3", dirty=True,
-                                                                                                                                  diags={14: ("bad", "VALIDATION", "/context/setting: the code is missing.")} if refused else None),
+                     field("tm1", "Template", select("tm1", [(t[0], t[0]) for t in TEMPLATES[:5]], "Vital signs encounter.v1"), cls="fui-span-2") + editor(VITALS_JSON.replace(', "defining_code": { "code_string": "238" }', "") if refused else VITALS_JSON, label="The composition of change 1", pos="Ln 14, Col 70" if refused else "Ln 16, Col 3", dirty=True,
+                                                                                                                                  diags={14: ("bad", "DV_CODED_TEXT", "/context/setting needs its defining_code.")} if refused else None)
+                     + (diag_list([("bad", "DV_CODED_TEXT", 14, 70, "/context/setting needs its defining_code, the code of the care setting.")], current=14) if refused else ""),
                      issue=None)
-    c2 = staged_card(2, "EHR status: version 2 to 3", "sm", "250", '<p class="fui-small fui-muted">Loaded from version 2, which it supersedes. Change: Queryable cleared.</p>')
+    c2 = staged_card(2, "EHR status: version 2 to 3", "sm", "250", f'<p class="fui-small fui-muted">Loaded from version 2, which it supersedes: Queryable cleared. {link_button("ghost", "Show the change", "ehr-status-edit.html", "pencil", small=True)}</p>')
     staged = section("Staged changes", intro("Every change commits together, or none of them does; leaving this page discards them.") + f'<div class="fui-repeater">{c1}{c2}</div>'
                      + f'<div class="fui-add-row">{button("ghost", "Stage a change", "plus", small=True)}</div>', count=2)
     audit = section("Contribution audit", '<div class="fui-form-grid">' + field("au-d", "Description", input_("au-d", "Follow-up visit and research opt-out"), cls="fui-span-2")
                     + field("au-c", "Committer", input_("au-c", "", "Leave empty to commit as Demo Operator"), cls="fui-span-2") + "</div>")
     if refused:
-        dk = edit_dock(msg("circle-x", "Nothing was committed."), "Commit 2 changes", "ehr-contributions.html")
+        dk = edit_dock(msg("circle-x", "Nothing was committed. Fix line 14, then commit again."), "Commit 2 changes", "ehr-contributions.html")
     else:
         dk = d or edit_dock(msg("git-commit", "As one contribution: all of them or none."), "Commit 2 changes", "ehr-contributions.html")
     return edit_shell("New contribution", "ehrs", [("EHRs", "ehrs.html"), (f"EHR {E1[:8]}…", "ehr.html")], "Several changes, committed as one atomic contribution.",
@@ -517,8 +553,8 @@ def page_contribution_committed():
     vers = section("Versions it made", table("Versions it made", th("Object") + th("Version") + th("Change"), [
         f'<tr><th scope="row" data-role="title"><a class="fui-row-link" href="composition.html">Vital signs</a></th>{td("Version", "Version 1", role="sub")}{td("Change", "Creation", role="meta-q")}</tr>'
         f'<tr><th scope="row" data-role="title"><a class="fui-row-link" href="ehr-status.html">EHR status</a></th>{td("Version", "Version 3", role="sub")}{td("Change", "Modification", role="meta-q")}</tr>']), count=2)
-    h = page_heading("New contribution", subtitle="Several changes, committed as one atomic contribution.", crumbs=[("EHRs", "ehrs.html"), (f"EHR {E1[:8]}…", "ehr.html")], here=False)
-    return shell("New contribution", "ehrs", h + f'<div class="fui-stack">{top}{sections(vers, card=True)}</div>')
+    h = page_heading("Contribution committed", subtitle="Both changes are in, as one contribution.", crumbs=[("EHRs", "ehrs.html"), (f"EHR {E1[:8]}…", "ehr.html")], here=False)
+    return shell("Contribution committed", "ehrs", h + f'<div class="fui-stack">{top}{sections(vers, card=True)}</div>')
 
 
 def page_contribution_refused():
@@ -528,10 +564,10 @@ def page_contribution_refused():
 
 
 def contribution_body(demo=False):
-    f = facts([("Committed", when("2026-10-14T10:40")), ("Committer", "Demo Clinician"), ("Change type", "Creation"), ("Description", "Problems and medication reviewed at the outpatient visit"),
+    f = facts([("Committed", when("2026-10-14T10:40")), ("Committer", "Demo Clinician"), ("Audit change type", "Creation"), ("Description", "Problems and medication reviewed at the outpatient visit"),
                ("System", f"<code>{SYSTEM_ID}</code>")])
     if demo:
-        f = facts([("Committed", when("2026-10-20T15:02")), ("Committer", "Demo Operator"), ("Change type", "Modification"), ("Description", "Identity corrected"), ("System", f"<code>{SYSTEM_ID}</code>")])
+        f = facts([("Committed", when("2026-10-20T15:02")), ("Committer", "Demo Operator"), ("Audit change type", "Modification"), ("Description", "Identity corrected"), ("System", f"<code>{SYSTEM_ID}</code>")])
         rows = [f'<tr><th scope="row" data-role="title"><a class="fui-row-link" href="party.html">Demo Person 0417</a></th>{td("Kind", "Person", role="sub")}{td("Version", "Version 2", role="meta-q")}</tr>']
         t = table("Versions it touched", th("Object") + th("Kind") + th("Version"), rows)
     else:

@@ -3,6 +3,7 @@
 """Headless Chrome over the DevTools protocol on --remote-debugging-pipe
 (JSON records on fd 3 and 4), with no dependency beyond the standard
 library. Every browser tool drives its pages through this."""
+import fcntl
 import json
 import os
 import time
@@ -14,6 +15,12 @@ class Chrome:
     def __init__(self, profile, log_dir):
         child_read, parent_write = os.pipe()
         parent_read, child_write = os.pipe()
+        # A dup2 onto the same number keeps close-on-exec, so the child's ends
+        # move above 4 first and are then placed on 3 and 4.
+        high = [fcntl.fcntl(fd, fcntl.F_DUPFD_CLOEXEC, 10) for fd in (child_read, child_write)]
+        os.close(child_read)
+        os.close(child_write)
+        child_read, child_write = high
         os.makedirs(log_dir, exist_ok=True)
         log = os.open(os.path.join(log_dir, f"chrome-{os.getpid()}.log"), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
         args = [
@@ -106,8 +113,9 @@ def open_page(site, profile):
 def load(chrome, session, url, width, height=900, theme=None, reduced_motion=False, still=False):
     """Navigates the session to url at a viewport and colour scheme, sets the
     page's data-theme as the console does, and waits for the load event.
-    With still, every animation is paused at its start, so a spinner
-    measures the same on every run."""
+    With still, a finite animation is run to its end and an endless one (a
+    spinner) is paused at its start, so a page measures the same on every
+    run."""
     chrome.send("Emulation.setDeviceMetricsOverride", {"width": width, "height": height, "deviceScaleFactor": 1, "mobile": width < 600}, session)
     features = []
     if theme:
@@ -122,7 +130,30 @@ def load(chrome, session, url, width, height=900, theme=None, reduced_motion=Fal
         lock = "document.documentElement.dataset.lockTheme"
         chrome.send("Runtime.evaluate", {"expression": f"document.documentElement.setAttribute('data-theme', {lock} || '{theme}')"}, session)
     if still:
-        chrome.send("Runtime.evaluate", {"expression": "document.getAnimations().forEach(a => { a.pause(); a.currentTime = 0; })"}, session)
+        chrome.send("Runtime.evaluate", {"expression": "document.getAnimations().forEach(a => { if (a.effect && a.effect.getComputedTiming().endTime === Infinity) { a.pause(); a.currentTime = 0; } else { a.finish(); } })"}, session)
+    settle(chrome, session)
+
+
+SETTLE = r"""
+new Promise((done) => {
+  const shape = () => [...document.querySelectorAll('body *')].reduce((n, e) => { const r = e.getBoundingClientRect(); return n + r.x * 3 + r.y * 7 + r.width * 11 + r.height * 13; }, document.documentElement.scrollHeight);
+  let last = null, same = 0, frames = 0;
+  const tick = () => {
+    const now = shape();
+    same = now === last ? same + 1 : 0;
+    last = now;
+    if (same >= 3 || ++frames > 120) done(frames); else requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+})
+"""
+
+
+def settle(chrome, session):
+    """Waits until every box on the page keeps its place for three frames in
+    a row (at most 120 frames), so a measure never races a layout still
+    running after a load or a viewport change."""
+    chrome.send("Runtime.evaluate", {"expression": SETTLE, "awaitPromise": True, "returnByValue": True}, session)
 
 
 def evaluate(chrome, session, expression):

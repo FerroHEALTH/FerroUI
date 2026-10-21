@@ -17,14 +17,14 @@ from parts import line_chart, skeleton_lines
 # ---- dashboard ----
 
 
-def dashboard_heading():
-    return page_heading("Dashboard", subtitle="What <code>cdr.example.org</code> holds, as it answered at 09:42.")
+def dashboard_heading(line="What <code>cdr.example.org</code> holds, as it answered at 09:42."):
+    return page_heading("Dashboard", subtitle=line)
 
 
 def stats(zero=False):
     s1 = stat_card("database", "0" if zero else f"{EHR_COUNT:,}", "EHRs", href="ehrs.html")
-    s2 = stat_card("file-text", "0" if zero else f"{COMP_COUNT:,}", "Compositions")
-    s3 = stat_card("file-code", "0" if zero else str(len(TEMPLATES)), "Templates", '<span class="fui-small fui-muted">ADL 1.4</span>', href="templates.html")
+    s2 = stat_card("file-text", "0" if zero else f"{COMP_COUNT:,}", "Compositions", href="query.html")
+    s3 = stat_card("file-code", "0" if zero else str(len(TEMPLATES)), "Templates", href="templates.html")
     s4 = stat_card("scroll-text", "0" if zero else str(len(QUERIES)), "Stored queries", href="stored-queries.html")
     return f'<div class="fui-grid fui-grid-stats">{s1}{s2}{s3}{s4}</div>'
 
@@ -45,8 +45,8 @@ def namespaces_card(failed=False):
     for ns, n, m in NAMESPACES:
         q = f"{n} {'query' if n == 1 else 'queries'}"
         if failed and ns == "org.example.quality":
-            val = '<span class="mk-dash" title="hba1c_overdue 1.0.0 did not run, so no total is shown">no total</span>'
-            q += " · hba1c_overdue 1.0.0 did not run"
+            val = state("warn", "No total")
+            q += ' · <a href="stored-query.html">hba1c_overdue 1.0.0</a> did not run'
         else:
             val = f"{m:,} matches"
         label = f"<code>{ns}</code>" if ns != "unqualified" else "Unqualified"
@@ -57,11 +57,11 @@ def namespaces_card(failed=False):
 
 
 def page_dashboard(search_state=None, search_value="", results=None, menu_open=False, menu_theme="light", menu_focus=None,
-                   rail=False, rail_tip=None, drawer=False, toast_html="", sandbox=False, overlay=None, failed=False, probes=True):
+                   rail=False, rail_tip=None, drawer=False, toast_html="", sandbox=False, overlay=None, failed=False, probes=True, status="up"):
     content = dashboard_heading() + f'<div class="fui-stack fui-gap-section">{stats()}<div class="fui-grid fui-grid-start">{activity_card()}{namespaces_card(failed)}</div></div>'
     return shell("Dashboard", "dashboard", content, search_state=search_state, search_value=search_value, results=results,
                  menu_open=menu_open, menu_theme=menu_theme, menu_focus=menu_focus, rail=rail, rail_tip=rail_tip, drawer=drawer,
-                 toast_html=toast_html, sandbox=sandbox, overlay=overlay, probes=probes)
+                 toast_html=toast_html, sandbox=sandbox, overlay=overlay, probes=probes, status=status)
 
 
 def page_dashboard_loading():
@@ -69,7 +69,7 @@ def page_dashboard_loading():
         f'<div class="fui-card fui-stat" aria-hidden="true"><span class="fui-stat-glyph mk-sk-glyph"></span><div class="fui-stat-text mk-grow">{skeleton_lines([40, 80])}</div></div>'
         for _ in range(4)) + "</div>"
     sk = f'<div class="fui-card mk-sk-card" aria-hidden="true">{skeleton_lines([30, 100, 90, 100, 80, 95])}</div>'
-    content = dashboard_heading() + '<p class="fui-sr-only" role="status">Reading what the CDR holds</p>' + f'<div class="fui-stack fui-gap-section" aria-busy="true">{st}<div class="fui-grid fui-grid-start">{sk}{sk}</div></div>'
+    content = dashboard_heading("Reading what <code>cdr.example.org</code> holds…") + f'<div class="fui-stack fui-gap-section" aria-busy="true">{st}<div class="fui-grid fui-grid-start">{sk}{sk}</div></div>'
     return shell("Dashboard", "dashboard", content)
 
 
@@ -90,13 +90,12 @@ def tech_detail():
 
 def page_cdr_unreachable():
     content = (
-        dashboard_heading() + '<div class="fui-stack">'
-        + refusal("The CDR refused the connection, so the dashboard cannot be shown.")
+        dashboard_heading("The CDR last answered at 09:38.") + '<div class="fui-stack">'
+        + refusal("The CDR refused the connection, so the dashboard cannot be shown. Your session is kept.")
         + f'<div class="fui-cluster">{button("primary", "Try again", "refresh-cw")}<span class="fui-small fui-muted">Last tried {when("2026-10-21T09:42:11", seconds=True)} · request id <code>01JAH2V6Q8R4</code></span></div>'
-        + card("What still works", '<p class="fui-muted">The viewer keeps no copy of the CDR, so no screen can be drawn until it answers. Your session is kept.</p>')
         + tech_detail() + "</div>"
     )
-    return shell("Dashboard", "dashboard", content, status="down")
+    return shell("Dashboard", "dashboard", content, status="down", search_state="disabled")
 
 
 def page_dashboard_sandbox():
@@ -120,7 +119,7 @@ def results_list(kind):
     groups = [
         ("Templates", [("Vital signs encounter.v1", "ADL 1.4 · 1,284 compositions", "template.html", True, "file-code")]),
         ("Stored queries", [("recent_vitals", "Unqualified · version 1.0.0", "stored-query.html", False, "scroll-text")]),
-        ("Compositions", [("Vital signs", "Today 08:14 · EHR 0199c2a4…1a01", "composition.html", False, "file-text")]),
+        ("Compositions", [("Vital signs", "today 07:50 · EHR 0199c2a4…1a01", "composition.html", False, "file-text")]),
     ]
     body = '<p class="mk-results-head">3 matches for “vital”</p>'
     for g, items in groups:
@@ -158,12 +157,11 @@ def page_topbar_no_result():
 
 def page_find():
     rows = [
-        ("Open EHR 0199c2a4…1a01", "An EHR id from its shape: the EHR with this id.", "ehr.html"),
+        ("Open EHR 0199c2a4…1a01", "The EHR with this id.", "ehr.html"),
         ("Find the EHRs with this subject id", "Read as a subject id instead, in the EHRs list.", "ehrs-found.html"),
         ("Open a party with this id", "In Parties, for a person, an organisation, a group, an agent or a role.", "parties.html"),
     ]
-    items = "".join(f'<tr><th scope="row" data-role="title"><a class="fui-row-link" href="{h}">{e(t)}</a><span class="fui-row-sub">{e(line)}</span></th></tr>' for t, line, h in rows)
-    t = table("Where it can go", th("Where it goes"), items)
+    t = '<ul class="fui-match-list">' + "".join(f'<li><a class="fui-row-link" href="{h}">{e(t_)}</a><div class="fui-small fui-muted">{e(line)}</div></li>' for t_, line, h in rows) + "</ul>"
     head = page_heading("Find", subtitle="What you typed, read by its shape, and the screens that take it.")
     read = notice("info", "info", f"<strong>{short(E1)}</strong> reads as an EHR id from its shape alone.")
     content = head + f'<div class="fui-list-page">{read}{tpl.card(t, label="Where it can go", title="Where it can go", count=3)}</div>'
@@ -229,8 +227,9 @@ def page_toast_success():
 
 
 def page_toast_warning():
-    return page_dashboard(toast_html=toasts(toast("warn", "triangle-alert", "The CDR stopped answering", "The last read at 09:42 failed. The screen shows what it read before; a run or a save waits until it answers.",
-                                                  action=button("secondary", "Try again", "refresh-cw", small=True))))
+    t = toast("warn", "triangle-alert", "The CDR stopped answering", "The screen shows what it read at 09:42; a run or a save waits until it answers.",
+              action=button("secondary", "Try again", "refresh-cw", small=True))
+    return page_dashboard(toast_html=toasts(t), status="unknown")
 
 
 def page_toast_error():
@@ -247,14 +246,14 @@ def status_page(code, glyph, title, body, actions, current="dashboard", reader=F
 
 def page_forbidden():
     return status_page("403 · Not allowed", "ban", "The audit log needs the admin role",
-                       "You are signed in as Demo Clinician with the role <code>user</code>; the CDR answers the audit trail only to the <code>admin</code> role. Everything else you may read stays open. Ask whoever runs your identity provider for the role, then sign in again.",
+                       "You are signed in as Demo Clinician with the user role, and the CDR shows the audit trail only to the admin role.",
                        link_button("primary", "Dashboard", "dashboard.html", "arrow-left") + link_button("secondary", "Your access", "access.html", "key-round"), current="audit", reader=True)
 
 
 def page_not_found():
     return status_page("404 · Not found", "compass", "No such screen",
                        "The viewer has no page at <code>/ehr/<wbr>0199c2a4</code>. EHRs live under <code>/ehrs</code>.",
-                       link_button("primary", "EHRs", "ehrs.html", "database") + link_button("secondary", "Dashboard", "dashboard.html"))
+                       link_button("primary", "EHRs", "ehrs.html", "database") + link_button("secondary", "Dashboard", "dashboard.html"), current="")
 
 
 # ---- about ----
@@ -276,12 +275,12 @@ MANIFEST = """{
 
 
 def page_about():
-    vers = card("Versions", definitions([("Viewer", f"ferroehr-viewer {VERSION}"), ("CDR", f"FerroEHR {VERSION}"),
+    vers = card("Versions", definitions([("Viewer", f"FerroEHR Viewer {VERSION}"), ("CDR", f"FerroEHR {VERSION}"),
                                          ("openEHR REST", "ITS-REST 1.1.0"), ("Specifications", "RM 1.2.0, BASE 1.3.0, TERM 3.1.0, AM 1.4.0 and 2.4.0"), ("FerroUI", "ferrohealth-ui 0.3.0")]))
     maker = card("Manufacturer", definitions([("Made by", "Cadasto B.V."), ("Licence", "Business Source License 1.1"), ("Support", '<a href="#" rel="external">info@cadasto.com</a>'), ("Documentation", '<a href="#" rel="external">The FerroEHR book</a>')]))
     acts = copy_button("Copy", "the conformance manifest") + button("secondary", "Download", "download", small=True)
     doc = (f'<section class="fui-card fui-panel mk-options-card"><div class="fui-panel-head"><h2 class="fui-card-title"><span>The conformance manifest</span></h2><div class="fui-actions">{acts}</div></div>'
-           f'<div class="fui-panel-body fui-stack"><p class="fui-small fui-muted">What the CDR answers at <code>OPTIONS /ferroehr/<wbr>rest/<wbr>openehr/<wbr>v1</code>; <a href="server.html">Server</a> reads it.</p>'
+           f'<div class="fui-panel-body fui-stack"><p class="fui-small fui-muted">What the CDR answers at <code>OPTIONS /ferroehr/<wbr>rest/<wbr>openehr/<wbr>v1</code>; <code>/demographic</code> is the ITS-REST demographic API, still in development.</p>'
            f'<div class="fui-code-panel mk-options-code" role="region" aria-label="The conformance manifest" tabindex="0"><pre>{json_html(MANIFEST)}</pre></div></div></section>')
     content = (page_heading("About", subtitle="The viewer, the CDR it reads, and the manufacturer.")
                + f'<div class="fui-stack"><div class="fui-grid fui-grid-start">{vers}{maker}</div>{doc}</div>')
@@ -292,7 +291,7 @@ def page_about():
 
 def page_shortcuts():
     legend = shortcut_legend([
-        ("Everywhere", [("/", "Find an EHR, a composition, a template or a query"), ("?", "This legend"), ("Esc", "Close a dialog, a menu or a panel"),
+        ("Everywhere", [("/", "Find anything"), ("?", "This legend"), ("Esc", "Close a dialog, a menu or a panel"),
                         ("g d", "Go to the dashboard"), ("g e", "Go to EHRs"), ("g t", "Go to Templates"), ("g q", "Go to Query")]),
         ("Lists", [("j | down", "Next row"), ("k | up", "Previous row"), ("Enter", "Open the row"), ("left | right", "Previous and next page")]),
         ("Trees", [("up | down", "Previous and next node"), ("right", "Open a level"), ("left", "Close a level, or go to the parent"), ("Enter", "Read the node")]),
@@ -308,7 +307,7 @@ def page_focus_rings():
     def row(title, html):
         return f'<div class="mk-focus-row"><span class="mk-focus-name">{title}</span><div class="mk-focus-demo">{html}</div></div>'
     from ehr import rm_type
-    tr = tree([tree_item("Blood pressure", extra=rm_type("OBSERVATION"), focus=True)], "Example tree")
+    tr = tree([tree_item("Blood pressure", extra=rm_type("OBSERVATION"), focus=True)], "Example tree", "fui-path-tree")
     rows = (
         row("Primary button", button("primary", "Run", "play", cls="mk-focus", keys="Ctrl Enter"))
         + row("Secondary button", button("secondary", "Open", "history", cls="mk-focus"))
@@ -324,7 +323,7 @@ def page_focus_rings():
         + row("Tree", tr)
         + row("Menu item", menu([menu_item("Copy EHR id", "copy", focus=True), menu_item("Edit status", "pencil")], anchored=False))
     )
-    content = page_heading("Focus, on every control", subtitle="One ring, the --focus role at 3:1, on every control type.") + f'<div class="fui-card mk-focus-sheet">{rows}</div>'
+    content = page_heading("Focus, on every control", subtitle="One focus ring on every control, at 3:1 contrast.") + f'<div class="fui-card mk-focus-sheet">{rows}</div>'
     return shell("Focus rings", "", content)
 
 
@@ -334,7 +333,6 @@ def _frame(title, line, html, cls=""):
 
 def ehr_menu_items(hover=None, focus=None, desc=False, disabled=False, admin=True):
     items = [menu_item("Commit several changes", "git-commit", href="contribution-new.html", hover=hover == "c", focus=focus == "c", desc="Several versions as one contribution" if desc else None),
-             menu_item("Edit status", "pencil", href="ehr-status-edit.html", desc="Queryable, modifiable and other details" if desc else None),
              menu_item("Copy EHR id", "copy", desc="The EHR id, to the clipboard" if desc else None, disabled="The clipboard is not available in this browser" if disabled else None)]
     if admin:
         items += [MENU_SEP, menu_item("Delete EHR…", "trash-2", danger=True, href="ehr-delete.html", desc="Removes the EHR and all its data for good" if desc else None)]
@@ -350,7 +348,7 @@ def page_menu_states():
         m = menu(items, label="Actions for the EHR", up=up) if open_ else ""
         return f'<div class="mk-menu-demo{" mk-menu-demo-up" if up else ""}"><span class="fui-anchor">{trig(open_)}{m}</span></div>'
     frames = (
-        _frame("Rest", "4 px under its trigger, aligned to its end edge; ink text, muted icons; Delete last in the danger tone", demo(ehr_menu_items()))
+        _frame("Rest", "4 px under its trigger, at its end edge; Delete last, in the danger tone", demo(ehr_menu_items()))
         + _frame("Hover", "the neutral tint, the icon to ink", demo(ehr_menu_items(hover="c")))
         + _frame("Keyboard focus", "the same tint, plus the focus ring; ↑ ↓ Home End and a letter move, Enter activates, Esc returns to the trigger", demo(ehr_menu_items(focus="c")))
         + _frame("Disabled, with its reason", "muted and skipped by the keyboard; the reason is its tooltip", demo(ehr_menu_items(disabled=True)))
@@ -376,8 +374,8 @@ def page_action_group_states():
         + _frame("More open", "the same anchored menu", f'<div class="mk-menu-demo">{action_group(newc, ehr_menu_items(), open_=True, label="More actions for the EHR")}</div>')
         + _frame("A composition", "Edit as a new version; Delete composition… last",
                  f'<div class="mk-menu-demo">{action_group(link_button("primary", "Edit as a new version", "composition-edit.html", "pencil"), [menu_item("Download", "download"), menu_item("Copy uid", "copy"), MENU_SEP, menu_item("Delete composition…", "trash-2", danger=True, href="composition-delete.html")], label="More actions for the composition")}</div>')
-        + _frame("A stored query", "Run; the editors and Delete this version… in More",
-                 f'<div class="mk-menu-demo">{action_group(link_button("primary", "Run", "stored-query-run.html", "play"), [menu_item("Open in Query", "square-terminal", href="query-aql.html"), menu_item("Copy name", "copy"), MENU_SEP, menu_item("Delete this version…", "trash-2", danger=True, href="stored-query-delete.html")], label="More actions for the stored query")}</div>')
+        + _frame("A stored query", "Open in Query; Delete this version… in More",
+                 f'<div class="mk-menu-demo">{action_group(link_button("primary", "Open in Query", "query-aql.html", "square-terminal"), [menu_item("Copy name", "copy"), MENU_SEP, menu_item("Delete this version…", "trash-2", danger=True, href="stored-query-delete.html")], label="More actions for the stored query")}</div>')
     )
     sheet = '<div class="mk-sheet-demo">' + menu(ehr_menu_items(), label="More actions for the EHR", sheet=True, anchored=False).replace('fui-menu fui-menu-compact fui-menu-sheet', 'fui-menu fui-menu-compact fui-menu-sheet mk-sheet-static') + "</div>"
     frames += _frame("Phone", "the primary stays; More opens the bottom sheet", sheet)

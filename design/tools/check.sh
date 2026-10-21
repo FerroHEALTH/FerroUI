@@ -4,8 +4,8 @@
 # Builds a design set's pages and runs every check over them: the markup
 # checks of build.py (links, the BSN eleven-proof, dead buttons, plurals,
 # one-sentence intros, planned screens), then overflow and broken words,
-# hover stability, contrast and selects in headless Chrome. A finding the
-# set's baseline.tsv does not hold fails, and so does a baseline entry that
+# hover stability, contrast, selects and popups in headless Chrome. A
+# finding the set's baseline.tsv does not hold fails, and so does a baseline entry that
 # no longer occurs (no specification governs this: our own design).
 #
 # Usage: design/tools/check.sh <set|all> [slug ...]
@@ -27,7 +27,7 @@ fi
 
 failed=0
 for set in "${sets[@]}"; do
-  for check in build overflow hover contrast selects; do
+  for check in build overflow hover contrast selects popups; do
     python3 "$tools/$check.py" "$set" "$@" || failed=1
   done
 done

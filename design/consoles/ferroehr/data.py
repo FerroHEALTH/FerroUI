@@ -37,7 +37,7 @@ EHRS = [
 # ---- compositions of E1 ----
 # (key, name, template, start iso, composer, versions, uid)
 COMPS = [
-    ("vitals", "Vital signs", "Vital signs encounter.v1", "2026-10-21T08:14", "Demo Nurse", 3, "0199f1d0-33aa-7b20-8c4e-2a9e51b07c11"),
+    ("vitals", "Vital signs", "Vital signs encounter.v1", "2026-10-21T07:50", "Demo Nurse", 3, "0199f1d0-33aa-7b20-8c4e-2a9e51b07c11"),
     ("lab", "Laboratory result report", "Laboratory result report.v1", "2026-10-18T13:02", "Demo Clinician", 1, "0199e4b7-91c2-7d05-b3a8-6f0d2c4e8a37"),
     ("problems", "Problem list", "Problem list.v1", "2026-10-14T10:40", "Demo Clinician", 4, "0199d6a3-2e5f-7a19-9c71-0b8e4d3f2c90"),
     ("meds", "Medication list", "Medication list.v1", "2026-10-14T10:38", "Demo Clinician", 2, "0199d6a2-7c40-7b88-a2e6-3d1f9c0b5e14"),
@@ -69,9 +69,9 @@ COMP_COUNT = sum(t[3] for t in TEMPLATES)
 
 # ADL 2 artefacts: (hrid, concept, root, compositions)
 ADL2 = [
-    ("openEHR-EHR-COMPOSITION.vital_signs_encounter.v1.1.0", "Vital signs encounter", "openEHR-EHR-COMPOSITION.encounter.v1", 0),
-    ("openEHR-EHR-COMPOSITION.vital_signs_encounter.v1.0.0", "Vital signs encounter", "openEHR-EHR-COMPOSITION.encounter.v1", 0),
-    ("openEHR-EHR-COMPOSITION.lab_order.v0.4.0", "Laboratory order", "openEHR-EHR-COMPOSITION.request.v1", 0),
+    ("openEHR-EHR-COMPOSITION.vital_signs_encounter.v1.1.0", "Vital signs encounter", "openEHR-EHR-COMPOSITION.encounter.v1", 0, "2026-10-12T11:20"),
+    ("openEHR-EHR-COMPOSITION.vital_signs_encounter.v1.0.0", "Vital signs encounter", "openEHR-EHR-COMPOSITION.encounter.v1", 0, "2026-09-01T10:05"),
+    ("openEHR-EHR-COMPOSITION.lab_order.v0.4.0", "Laboratory order", "openEHR-EHR-COMPOSITION.request.v1", 0, "2026-07-15T14:48"),
 ]
 
 # ---- stored queries ----

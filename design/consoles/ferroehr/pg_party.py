@@ -11,6 +11,7 @@ from common import (
 )
 from data import ORG1, P1, REL1, SYSTEM_ID
 from ehr import (
+    tag_editor, diag_list,
     arch, path,
     at_time, codeview, coding, confirm_delete, editor, empty_line, facts, intro, reading, reading_section, section, sections, short, state, version_cell,
 )
@@ -26,10 +27,10 @@ def parties_heading():
 
 def open_form(kind="person", value="", invalid=None):
     inv = ' aria-invalid="true"' if invalid else ""
-    return (f'<form class="fui-list-toolbar mk-open-form" method="get" action="party.html"><div class="fui-list-toolbar-start">'
+    return (f'<form class="fui-card fui-panel" method="get" action="party.html"><div class="fui-transform-options">'
             f'{field("p-kind", "Kind", select("p-kind", KINDS, kind))}'
-            f'{field("p-id", "Id", input_("p-id", value, "A versioned object uid or a version uid", extra="class=" + chr(34) + "fui-input fui-mono" + chr(34) + " spellcheck=" + chr(34) + "false" + chr(34) + inv))}'
-            f'<div class="fui-field"><span class="fui-label" aria-hidden="true">&nbsp;</span>{button("secondary", "Open", "arrow-right", type_="submit")}</div></div></form>')
+            f'{field("p-id", "Party uid", input_("p-id", value, "", extra="class=" + chr(34) + "fui-input fui-mono" + chr(34) + " spellcheck=" + chr(34) + "false" + chr(34) + inv), cls="is-id")}'
+            f'<div class="fui-transform-run">{button("secondary", "Open", "arrow-right", type_="submit")}</div></div></form>')
 
 
 TAG_INDEX = [("follow-up", "2026-11-04", "Demo Person 0417", "party.html", "Person"), ("research-consent", "granted", "Demo Person 0417", "party.html", "Person"),
@@ -46,7 +47,7 @@ def tag_index(rows=TAG_INDEX):
 
 def parties_page(top="", value=""):
     note = notice("info", "info", "Parties follow the released RM 1.1.0 demographic model; the REST API for them is still in development, and FerroEHR adds the relationship routes it does not define yet.")
-    c = tpl.card(tag_index(), label="Tagged parties", title="Tagged parties", count=4)
+    c = tpl.card(tag_index(), label="Tags on parties", title="Tags on parties", count=4)
     return shell("Parties", "parties", parties_heading() + f'<div class="fui-list-page">{note}{open_form(value=value)}{top}{c}</div>')
 
 
@@ -55,7 +56,8 @@ def page_parties():
 
 
 def page_parties_not_found():
-    top = f'<p class="fui-small" role="status">{icon("search-x", "14")} No person has the id <code>8a3e51c2-6d04-4f7b-9e18-2c5a0b7d3f99</code>; it may be another kind.</p>'
+    top = (f'<p class="fui-small" role="status">{icon("search-x", "14")} No person has this uid. Try it as '
+           '<a href="parties-not-found.html">Organisation</a>, <a href="parties-not-found.html">Group</a>, <a href="parties-not-found.html">Agent</a> or <a href="parties-not-found.html">Role</a>.</p>')
     return parties_page(top, "8a3e51c2-6d04-4f7b-9e18-2c5a0b7d3f99")
 
 
@@ -87,12 +89,14 @@ PERSON_JSON = """{
 
 
 def party_new(top="", refused=False):
-    meta = section("", '<div class="fui-form-grid">' + field("pk", "Kind", select("pk", KINDS[:5], "person"), help_="A role also needs a performer, the party that plays it.", cls="fui-span-2") + "</div>")
-    diags = {11: ("bad", "VALIDATION", "/identities[0]/archetype_node_id: not an archetype id.")} if refused else None
+    meta = section("", '<div class="fui-form-grid">' + field("pk", "Kind", select("pk", KINDS[:5], "person"), cls="fui-span-2") + "</div>")
+    diags = {12: ("bad", "ARCHETYPE_ID", "/identities[0]/archetype_node_id: person_name is not an archetype id.")} if refused else None
     ed = editor(PERSON_JSON.replace("openEHR-DEMOGRAPHIC-PARTY_IDENTITY.person_name.v1", "person_name") if refused else PERSON_JSON,
-                label="The new party", diags=diags, pos="Ln 11, Col 30", tools=button("ghost", "Choose a file", "upload", small=True))
+                label="The new party", diags=diags, pos="Ln 12, Col 30" if refused else "Ln 1, Col 1", dirty=refused, tools=button("ghost", "Choose a file", "upload", small=True))
+    if refused:
+        ed = f'<div class="fui-editor-split">{ed}<section class="fui-card fui-panel" aria-label="Diagnostics"><div class="fui-panel-head"><h2 class="fui-card-title"><span>What the CDR refused <span class="mk-count">· 1</span></span></h2></div>{diag_list([("bad", "ARCHETYPE_ID", 12, 30, "/identities[0]/archetype_node_id: person_name is not an archetype id.")], current=12)}</section></div>'
     d = edit_dock(msg("circle-x", "Not created: 1 error to fix.") if refused else "", "Create this party", "parties.html")
-    return edit_shell("New party", "parties", [("Parties", "parties.html")], "The smallest document a person accepts; replace the archetype ids with your own.", top + sections(meta, card=True) + ed, d)
+    return edit_shell("New party", "parties", [("Parties", "parties.html")], "A starting document for a person.", top + sections(meta, card=True) + ed, d)
 
 
 def page_party_new():
@@ -100,7 +104,7 @@ def page_party_new():
 
 
 def page_party_new_refused():
-    rf = refusal("The CDR refused the party, in its own words below.", request="POST /ferroehr/rest/openehr/v1/demographic/person",
+    rf = refusal("The CDR refused the party, so nothing was created.", request="POST /ferroehr/rest/openehr/v1/demographic/person",
                  issues=[("bad", "error", "422 Unprocessable", "/identities[0]/archetype_node_id: person_name is not an archetype id.")])
     return party_new(rf, refused=True)
 
@@ -122,8 +126,8 @@ def party_page(tab="overview", panel=None, overlay=None):
 
 
 def party_overview():
-    f = facts([("Kind", "Person"), ("Type", "<code>PERSON</code>, the RM's name for its kind"), ("Archetype", arch("openEHR-DEMOGRAPHIC-PERSON.person.v1")),
-               ("Current version", f"<code>{P1[:8]}…::{SYSTEM_ID}::2</code>"), ("Identities", "1"), ("Relationships it is the source of", "1")])
+    f = facts([("Kind", "Person"), ("Archetype", arch("openEHR-DEMOGRAPHIC-PERSON.person.v1")),
+               ("Current version", f"<code>{P1[:8]}…::{SYSTEM_ID}::2</code>"), ("Identities", "1"), ("Relationships from this party", '<a href="party-relationships.html">1</a>')])
     r = reading(reading_section("Legal name", "openEHR-DEMOGRAPHIC-PARTY_IDENTITY.person_name.v1", [("Given name", "Demo"), ("Family name", "Person 0417")]))
     return sections(section("Facts", f), section("Identities", r))
 
@@ -145,45 +149,41 @@ def page_party_versions():
 
 
 def page_party_relationships():
-    rows = [f'<tr><th scope="row" data-role="title"><a class="fui-row-link" href="relationship.html">employment</a></th>{td("Target", "<a href=" + chr(34) + "party.html" + chr(34) + ">Demo General Hospital</a>", role="sub")}{td("Target kind", "Organisation", role="meta-q")}</tr>']
+    rows = [f'<tr><th scope="row" data-role="title"><a class="fui-row-link" href="relationship.html"><code>employment</code></a></th>{td("Target", "<a href=" + chr(34) + "party.html" + chr(34) + ">Demo General Hospital</a>", role="sub")}{td("Target kind", "Organisation", role="meta-q")}</tr>']
     t = table("Relationships", th("Type") + th("Target") + th("Target kind"), rows)
     body = intro("The relationships this person is the source of; the CDR cannot list the ones that point at it.") + t
     return party_page("relationships", sections(section("Relationships", body, count=1, actions=link_button("secondary", "Relate this party", "relationship-new.html", "link", small=True))))
 
 
 def page_party_tags():
-    rows = [f'<tr><th scope="row" data-role="title"><code>follow-up</code></th>{td("Value", "2026-11-04", role="sub")}{td("Target path", "<span class=" + chr(34) + "mk-dash" + chr(34) + ">the whole party</span>", role="meta-q")}{td("", icon_button("x", "Remove the tag follow-up"), "fui-row-menu", role="menu")}</tr>',
-            f'<tr><th scope="row" data-role="title"><code>research-consent</code></th>{td("Value", "granted", role="sub")}{td("Target path", "<span class=" + chr(34) + "mk-dash" + chr(34) + ">the whole party</span>", role="meta-q")}{td("", icon_button("x", "Remove the tag research-consent"), "fui-row-menu", role="menu")}</tr>']
-    t = table("Tags", th("Key") + th("Value") + th("Target path") + th('<span class="fui-sr-only">Remove</span>'), rows)
-    new = (f'<div class="fui-clause-filter">{field("tk", "Key", input_("tk", "", "flag", extra="class=" + chr(34) + "fui-input fui-mono" + chr(34)))}'
-           f'{field("tv", "Value", input_("tv", "", "Optional"))}{field("tp", "Target path", input_("tp", "", "Optional", extra="class=" + chr(34) + "fui-input fui-mono" + chr(34)))}'
-           f'{button("secondary", "Set the tag", "tags")}</div>')
-    return party_page("tags", sections(section("Tags", intro("Tags stay on the party across its versions and are not versioned.") + t, count=2),
-                                       section("Set a tag", intro("Saving re-sends the whole collection, so reload first if another client may have tagged it.") + new)))
+    return party_page("tags", tag_editor([("follow-up", "2026-11-04", None), ("research-consent", "granted", None)], "party"))
 
 
 def page_party_edit():
-    ids = editor(PERSON_JSON[PERSON_JSON.index('[\n    {'):PERSON_JSON.rindex("]") + 1], label="identities", lang_word="Canonical JSON · identities", pos="Ln 14, Col 120")
-    det = editor("", label="details", lang_word="Canonical JSON · details", dirty=False)
-    body = sections(section("Identities", intro("At least one identity; the RM requires it.") + ids),
-                    section("Details", intro("Optional, empty to remove it; every other attribute goes back as the CDR served it.") + det), card=True)
+    ids = editor(PERSON_JSON[PERSON_JSON.index('[\n    {'):PERSON_JSON.rindex("]") + 1], label="identities", lang_word="JSON", pos="Ln 14, Col 120")
+    det = editor("", label="details", lang_word="JSON", dirty=False)
+    body = sections(section("Identities", intro("A party needs at least one identity.") + ids),
+                    section("Details", intro("Extra details; leave it empty to remove them.") + det), card=True)
     return edit_shell("Edit", "parties", [("Parties", "parties.html"), ("Demo Person 0417", "party.html")], "Version 2, opened 09:38.", body,
                       edit_dock(msg("pencil", "1 change: the family name."), "Save as version 3", "party.html"))
 
 
 def page_party_delete():
-    d = confirm_delete("del", "Delete Demo Person 0417?", "Marks the party deleted with a new version 3; it stops resolving as current, and versions 1 and 2 stay readable in Versions.", False, "Delete the party")
+    d = confirm_delete("del", "Delete Demo Person 0417?", "The party is marked deleted. Versions 1 and 2 stay readable, and its 1 relationship stays.", False, "Delete the party")
     return party_page(overlay=d)
 
 
 def page_relationship_new():
-    body = sections(section("", '<div class="fui-form-grid">'
-                            + field("r-src", "Source", input_("r-src", "Demo Person 0417", extra="readonly"), help_="This party, as the source.", cls="fui-span-2")
-                            + field("r-type", "Type", input_("r-type", "employment"), help_="Stored as the relationship's name.", cls="fui-span-2")
+    src = facts([("Source", '<a href="party.html">Demo Person 0417</a> · Person, this party')])
+    body = sections(section("", src + '<div class="fui-form-grid">'
+                            + field("r-type", "Type", input_("r-type", "employment"), cls="fui-span-2")
                             + field("r-tk", "Target kind", select("r-tk", KINDS[:5], "organisation"), cls="fui-span-2")
-                            + field("r-tid", "Target id", input_("r-tid", ORG1, extra='class="fui-input fui-mono"'), cls="fui-span-2")
+                            + field("r-tid", "Target party uid", input_("r-tid", ORG1, extra='class="fui-input fui-mono"'),
+                                    help_='<a href="parties.html">Find a party</a> to copy its uid.', cls="fui-span-2")
+                            + field("r-from", "Valid from", input_("r-from", "2024-02-01", "YYYY-MM-DD", extra='inputmode="numeric"'), cls="fui-span-2")
+                            + field("r-to", "Valid to (optional)", input_("r-to", "", "YYYY-MM-DD", extra='inputmode="numeric"'), cls="fui-span-2")
                             + "</div>"),
-                    section("Details", intro("Optional, as an ITEM_STRUCTURE in canonical JSON.") + editor("", label="details", dirty=False)), card=True)
+                    section("Details", intro("Optional extra details, as JSON.") + editor("", label="details", dirty=False)), card=True)
     return edit_shell("New relationship", "parties", [("Parties", "parties.html"), ("Demo Person 0417", "party-relationships.html")], "From this party to another.", body,
                       edit_dock("", "Create this relationship", "party-relationships.html"))
 
@@ -206,8 +206,10 @@ def page_relationship():
 
 
 def page_relationship_versions():
-    rows = [f'<tr><th scope="row" data-role="title">{version_cell("1", current=True)}</th>{td("Change", "Creation", role="sub")}{td("Committed by", "Demo Operator", role="meta-q")}{td("When", ago("2026-09-11T11:34"), role="meta-2")}</tr>']
-    return rel_page("versions", sections(section("Versions", table("Versions", th("Version") + th("Change") + th("Committed by") + th("When"), rows), count=1)))
+    rows = [f'<tr><th scope="row" data-role="title">{version_cell("1", current=True)}</th>{td("Change", "Creation", role="sub")}{td("Committed by", "Demo Operator", role="meta-q")}'
+            f'{td("When", ago("2026-09-11T11:34"), role="meta-2")}{td("Contribution", "<a href=" + chr(34) + "party-contribution.html" + chr(34) + "><code>01994a7c…2e18</code></a>", role="wide")}</tr>']
+    t = table("Versions", th("Version") + th("Change") + th("Committed by") + th("When") + th("Contribution"), rows)
+    return rel_page("versions", sections(section("Versions", t + at_time("rel-at", what="the relationship as it stood then"), count=1)))
 
 
 def page_party_contribution():
@@ -216,10 +218,9 @@ def page_party_contribution():
 
 
 def page_relationship_edit():
-    body = sections(section("", '<div class="fui-form-grid">'
-                            + field("re-s", "Source", input_("re-s", "Demo Person 0417", extra="readonly"), cls="fui-span-2")
-                            + field("re-t", "Target", input_("re-t", "Demo General Hospital", extra="readonly"), help_="The ends are fixed: other parties make another relationship.", cls="fui-span-2")
+    ends = facts([("Source", '<a href="party.html">Demo Person 0417</a> · Person'), ("Target", '<a href="party.html">Demo General Hospital</a> · Organisation')])
+    body = sections(section("", intro("The two ends are fixed; other parties make another relationship.") + ends + '<div class="fui-form-grid">'
                             + field("re-ty", "Type", input_("re-ty", "employment"), cls="fui-span-2") + "</div>"),
-                    section("Details", intro("Optional, as an ITEM_STRUCTURE in canonical JSON.") + editor("", label="details", dirty=False)), card=True)
-    return edit_shell("Edit", "parties", [("Parties", "parties.html"), ("employment", "relationship.html")], "Version 1, opened 09:38.", body,
+                    section("Details", intro("Optional extra details, as JSON.") + editor("", label="details", dirty=False)), card=True)
+    return edit_shell("Edit", "parties", [("Parties", "parties.html"), ("Demo Person 0417", "party-relationships.html"), ("employment", "relationship.html")], "Version 1, opened 09:38.", body,
                       edit_dock("", "Save as version 2", "relationship.html"))
