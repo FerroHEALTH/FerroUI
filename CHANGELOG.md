@@ -11,6 +11,19 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-21
+
+A patch release with no API change: a console pins `=0.2.1` in place of
+`=0.2.0` and changes nothing else.
+
+### Changed
+
+- The crate declares `rust-version = "1.98"` in place of 1.97, and the
+  repository builds with Rust 1.99.1 in place of 1.98.1: the FerroHEALTH
+  family builds with the latest stable toolchain and declares the release
+  before it as its MSRV. A console on a toolchain older than 1.98 can no
+  longer take the crate.
+
 ## [0.2.0] - 2026-10-19
 
 Every console can draw every label from its own catalog: each text a
@@ -617,7 +630,8 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/FerroHEALTH/FerroUI/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.7...v0.2.0
 [0.1.7]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.5...v0.1.6
