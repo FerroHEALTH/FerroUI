@@ -1,0 +1,107 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+# The findings this set carried when its design was approved: a check
+# fails on any finding not listed here and on a listed one that no longer
+# occurs, so the list only shrinks. One finding per line, tab-separated:
+# the check, the page, then what the check reports. Rewrite it with
+# FERROUI_DESIGN_BASELINE=write design/tools/check.sh <set>.
+build	config-review	intro of 2 sentences: Each setting your draft changes, against the revision that runs. Every replica follows wha
+build	config-review-approval	intro of 2 sentences: Each setting your draft changes, against the revision that runs. A secret shows by its ref
+build	configuration-access	a button-looking link leads nowhere: <a href="#" class="fui-button fui-button-secondary fui-button-small" >
+build	configuration-compare	intro of 2 sentences: Each setting that differs, with how it took effect. Every other setting is the same.
+build	configuration-consent	a button-looking link leads nowhere: <a href="#" class="fui-button fui-button-secondary fui-button-small" >
+build	configuration-fanout	a button-looking link leads nowhere: <a href="#" class="fui-button fui-button-secondary fui-button-small" >
+build	configuration-fhir	a button-looking link leads nowhere: <a href="#" class="fui-button fui-button-secondary fui-button-small" >
+build	configuration-stored	a button-looking link leads nowhere: <a href="#" class="fui-button fui-button-secondary fui-button-small" >
+build	node-routes-review	intro of 2 sentences: One registered mapping for node-a, against the revision that runs. Every replica follows w
+build	preferences	intro of 2 sentences: Only for you, in this browser. The gateway's settings are in Configuration.
+build	preferences-account	a button-looking link leads nowhere: <a href="#" class="fui-button fui-button-ghost fui-button-small" >
+build	preferences-account	intro of 2 sentences: Only for you, in this browser. The gateway's settings are in Configuration.
+build	preferences-dark	intro of 2 sentences: Only for you, in this browser. The gateway's settings are in Configuration.
+build	preferences-keyboard	intro of 2 sentences: Only for you, in this browser. The gateway's settings are in Configuration.
+build	preferences-language	intro of 2 sentences: Only for you, in this browser. The gateway's settings are in Configuration.
+build	preferences-query	intro of 2 sentences: Only for you, in this browser. The gateway's settings are in Configuration.
+build	preferences-reset	intro of 2 sentences: Only for you, in this browser. The gateway's settings are in Configuration.
+build	preferences-saved	intro of 2 sentences: Only for you, in this browser. The gateway's settings are in Configuration.
+build	query	intro of 2 sentences: Run AQL or a stored query across the federation, as yourself. The rows are shown here and 
+build	query-complete	intro of 2 sentences: Run AQL or a stored query across the federation, as yourself. The rows are shown here and 
+build	query-failed	intro of 2 sentences: Run AQL or a stored query across the federation, as yourself. The rows are shown here and 
+build	query-invalid	intro of 2 sentences: Run AQL or a stored query across the federation, as yourself. The rows are shown here and 
+build	query-no-rows	intro of 2 sentences: Run AQL or a stored query across the federation, as yourself. The rows are shown here and 
+build	query-options	intro of 2 sentences: Run AQL or a stored query across the federation, as yourself. The rows are shown here and 
+build	query-partial	intro of 2 sentences: Run AQL or a stored query across the federation, as yourself. The rows are shown here and 
+build	query-raw	intro of 2 sentences: Run AQL or a stored query across the federation, as yourself. The rows are shown here and 
+build	query-refused	intro of 2 sentences: Run AQL or a stored query across the federation, as yourself. The rows are shown here and 
+build	query-running	intro of 2 sentences: Run AQL or a stored query across the federation, as yourself. The rows are shown here and 
+build	query-stored	intro of 2 sentences: Run AQL or a stored query across the federation, as yourself. The rows are shown here and 
+build	search-states	intro of 2 sentences: FerroUI #144 in FerroFED: one joined control that finds an organisation, a node or a store
+build	self-description	intro of 2 sentences: What clients see when they ask the gateway what it is. The raw OPTIONS document is on Abou
+build	self-description-areas	intro of 2 sentences: What clients see when they ask the gateway what it is. The raw OPTIONS document is on Abou
+build	self-description-capabilities	intro of 2 sentences: What clients see when they ask the gateway what it is. The raw OPTIONS document is on Abou
+build	self-description-endpoints	intro of 2 sentences: What clients see when they ask the gateway what it is. The raw OPTIONS document is on Abou
+build	self-description-limits	intro of 2 sentences: What clients see when they ask the gateway what it is. The raw OPTIONS document is on Abou
+build	service	intro of 2 sentences: Consent · [nl_gf.mitz] · the Dutch Generic Functions' consent pre-filter, asked before a q
+build	service-audit	intro of 2 sentences: Consent · [nl_gf.mitz] · the Dutch Generic Functions' consent pre-filter, asked before a q
+build	service-connection	intro of 2 sentences: Consent · [nl_gf.mitz] · the Dutch Generic Functions' consent pre-filter, asked before a q
+build	service-connection-edit	intro of 2 sentences: Consent · [nl_gf.mitz] · the Dutch Generic Functions' consent pre-filter, asked before a q
+build	service-new	intro of 2 sentences: A service the gateway does not ask yet. Saved as a revision you review, have approved and 
+build	service-requests	intro of 2 sentences: Consent · [nl_gf.mitz] · the Dutch Generic Functions' consent pre-filter, asked before a q
+build	shortcuts	intro of 2 sentences: Run AQL or a stored query across the federation, as yourself. The rows are shown here and 
+build	stored-new	intro of 2 sentences: Stored at once in the stored-query store, which every replica serves. It is data, not conf
+build	stored-new-confirm	intro of 2 sentences: Stored at once in the stored-query store, which every replica serves. It is data, not conf
+build	stored-new-held	intro of 2 sentences: Stored at once in the stored-query store, which every replica serves. It is data, not conf
+overflow	organisations-filtered	1440	wider-than-box	span.fui-anchor	State · degraded reachable 3 degraded 1 unreachabl
+overflow	organisations-filtered	390	wider-than-box	span.fui-anchor	State · degraded reachable 3 degraded 1 unreachabl
+overflow	sidebar-rail	1440	wider-than-box	a.fui-nav-entry	Integrity 2 Integrity
+overflow	sidebar-rail	1440	wider-than-box	li	Integrity 2 Integrity
+overflow	sidebar-rail	1440	wider-than-box	nav#sidebar.fui-sidebar.fui-sidebar-rail	Overview  Dashboard Topology  Federation  Organisa
+overflow	sidebar-rail	1440	wider-than-box	ul.fui-nav-list	Organisations Services Integrity 2 Integrity
+overflow	topology-controls	1440	wider-than-box	div.fui-topology-zoom	Fit Minimap
+overflow	topology-controls	1440	wider-than-box	span.fui-anchor	Collapse every group
+overflow	topology-controls	1440	wider-than-box	span.fui-anchor	Live traffic
+overflow	topology-controls	1440	wider-than-box	span.fui-anchor	Minimap
+overflow	topology-controls	390	wider-than-box	div.fui-topology-zoom	Fit Minimap
+overflow	topology-controls	390	wider-than-box	span.fui-anchor	Collapse every group
+overflow	topology-controls	390	wider-than-box	span.fui-anchor	Live traffic
+overflow	topology-controls	390	wider-than-box	span.fui-anchor	Minimap
+overflow	topology-filtered	1440	wider-than-box	span.fui-anchor	Status · 3 of 5 reachable 13 degraded 2 unreachabl
+overflow	topology-filtered	390	wider-than-box	span.fui-anchor	Status · 3 of 5 reachable 13 degraded 2 unreachabl
+selects	config-applied	390	no-id-or-name	select#tabs-sel	
+selects	config-apply-trial	390	no-id-or-name	select#tabs-sel	
+selects	config-approve-dialog	390	no-id-or-name	select#tabs-sel	
+selects	config-approved	390	no-id-or-name	select#tabs-sel	
+selects	config-approver	390	no-id-or-name	select#tabs-sel	
+selects	config-awaiting-approval	390	no-id-or-name	select#tabs-sel	
+selects	config-confirmed	390	no-id-or-name	select#tabs-sel	
+selects	config-conflict	390	no-id-or-name	select#tabs-sel	
+selects	config-pending	390	no-id-or-name	select#tabs-sel	
+selects	config-replica-refused	390	no-id-or-name	select#tabs-sel	
+selects	config-restart	390	no-id-or-name	select#tabs-sel	
+selects	config-rollback	390	no-id-or-name	select#tabs-sel	
+selects	config-rolled-back	390	no-id-or-name	select#tabs-sel	
+selects	config-settings-edit	390	no-id-or-name	select#tabs-sel	
+selects	config-settings-review	390	no-id-or-name	select#tabs-sel	
+selects	config-trial	390	no-id-or-name	select#tabs-sel	
+selects	configuration	390	no-id-or-name	select#tabs-sel	
+selects	configuration-access	390	no-id-or-name	select#tabs-sel	
+selects	configuration-actions	390	no-id-or-name	select#tabs-sel	
+selects	configuration-consent	390	no-id-or-name	select#tabs-sel	
+selects	configuration-export-done	390	no-id-or-name	select#tabs-sel	
+selects	configuration-fanout	390	no-id-or-name	select#tabs-sel	
+selects	configuration-fhir	390	no-id-or-name	select#tabs-sel	
+selects	configuration-file-mode	390	no-id-or-name	select#tabs-sel	
+selects	configuration-file-mode-dialog	390	no-id-or-name	select#tabs-sel	
+selects	configuration-file-mode-history	390	no-id-or-name	select#tabs-sel	
+selects	configuration-history	390	no-id-or-name	select#tabs-sel	
+selects	configuration-history-filtered	390	no-id-or-name	select#tabs-sel	
+selects	configuration-history-range	390	no-id-or-name	select#tabs-sel	
+selects	configuration-key-hint	390	no-id-or-name	select#tabs-sel	
+selects	configuration-loading	390	no-id-or-name	select#tabs-sel	
+selects	configuration-mode-dialog	390	no-id-or-name	select#tabs-sel	
+selects	configuration-stored	390	no-id-or-name	select#tabs-sel	
+selects	endpoint-credentials	390	value-clipped	select#c-ep	node-a-lab-pub · node-a-lab, Ziekenhuis 
+selects	endpoint-credentials-invalid	390	value-clipped	select#c-ep	node-a-lab-pub · node-a-lab, Ziekenhuis 
+selects	endpoint-credentials-nuts	390	value-clipped	select#c-ep	node-a-lab-pub · node-a-lab, Ziekenhuis 
+selects	endpoint-credentials-oauth	390	value-clipped	select#c-ep	node-a-lab-pub · node-a-lab, Ziekenhuis 
+selects	focus-rings	1440	no-label	select#f2	
+selects	focus-rings	390	no-label	select#f2	

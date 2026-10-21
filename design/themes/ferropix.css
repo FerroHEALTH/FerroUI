@@ -1,0 +1,43 @@
+/* SPDX-FileCopyrightText: Cadasto B.V. */
+/* SPDX-License-Identifier: BUSL-1.1 */
+/* The FerroPIX brand, "Plum & Iron": the accent of each theme over the roles
+   of ferrohealth-ui.css, in the shape of the library's other brand files
+   (FerroPIX architecture section 12.7, gap 7). Light takes the plum of
+   assets/brand/tokens.css (--ferropix-plum, #6B21A8) with the landing page's
+   darker step as its hover; dark takes plum-light (--ferropix-plum-light,
+   #C084FC) with the ink of the tile as the text on it, and a translucent
+   tint, as the FerroFED and FerroTERM brands do. Loaded after
+   ferrohealth-ui.css; every pairing holds WCAG 2.2 AA (plum on the light
+   surface 8.3:1, plum-light on the dark raised surface 6.6:1). */
+:root {
+  --accent: #6b21a8;
+  --accent-hover: #581c87;
+  --accent-ink: #ffffff;
+  --accent-tint: rgb(107 33 168 / 0.1);
+  --focus: #6b21a8;
+}
+
+:root[data-theme="dark"] {
+  --accent: #c084fc;
+  --accent-hover: #d8b4fe;
+  --accent-ink: #0f172a;
+  --accent-tint: rgb(192 132 252 / 0.12);
+  --focus: #c084fc;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"], [data-theme="dark"]) {
+    --accent: #c084fc;
+    --accent-hover: #d8b4fe;
+    --accent-ink: #0f172a;
+    --accent-tint: rgb(192 132 252 / 0.12);
+    --focus: #c084fc;
+  }
+}
+
+/* The accents the theme previews in Your preferences draw, one per theme,
+   whatever theme the page itself is in (shared library). */
+:root {
+  --preview-accent-light: #6b21a8;
+  --preview-accent-dark: #c084fc;
+}

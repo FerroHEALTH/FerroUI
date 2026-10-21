@@ -21,3 +21,8 @@
 
 # Finder metadata.
 .DS_Store
+
+# The design pages, renders and contact sheets design/tools/ writes, and the
+# bytecode Python leaves beside its modules.
+/design/out/
+__pycache__/
