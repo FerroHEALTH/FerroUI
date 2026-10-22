@@ -57,7 +57,7 @@ pub(crate) async fn window(
 }
 
 /// Waits until the overlays page has hydrated: its ok toast button raises a
-/// toast, which is then dismissed by its own timer.
+/// toast, which carries an action and so waits for its Dismiss.
 pub(crate) async fn hydrated_toasts(browser: &Browser) -> Result<(), Box<dyn Error>> {
     let raise = browser.element(By::Css("button[data-toast='ok']")).await?;
     until("the toasts answer a press", async || {
@@ -65,7 +65,7 @@ pub(crate) async fn hydrated_toasts(browser: &Browser) -> Result<(), Box<dyn Err
         Ok(!browser
             .driver()
             .find_all(By::XPath(
-                "//p[contains(., 'Saved, and the set reloaded.')]",
+                "//div[contains(@class, 'fui-toast ')]/div/strong[contains(., 'Saved, and the set reloaded.')]",
             ))
             .await?
             .is_empty())
@@ -182,7 +182,9 @@ async fn the_dialog_confirms_and_a_toast_says_so() -> Result<(), Box<dyn Error>>
             .await?
             .click()
             .await?;
-        browser.text("p", "The synthetic file was deleted.").await?;
+        browser
+            .text("strong", "The synthetic file was deleted.")
+            .await?;
         until("the dialog closes", async || {
             Ok(!dialog.is_displayed().await?)
         })

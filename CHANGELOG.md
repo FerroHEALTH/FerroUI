@@ -13,6 +13,35 @@ and this project adheres to
 
 ### Added
 
+- Binder tabs joined to their panel (R3, #152): `view::tabs::binder(label,
+  tabs, current, panel)` draws each `Tab` as a link to its own route, the
+  current one `aria-current="page"` and raised into the panel, with an
+  optional count whose words name what it counts (`Tab::count`) and the
+  draft badge (`Tab::draft`, `fui-tab-draft`). Past five tabs a phone shows
+  the sections as a select, the island `island::TabSelect`, which takes the
+  row's place only once it works; until then the row of links serves. A
+  tab keyed `keyboard` leaves the row below 40 rem. The keyboard tabs of
+  `widget::tabs::tab_list` are binder tabs too, their panels the binder
+  panel.
+- Toasts with a title, a line and an action (R17, #156):
+  `widget::toast::Toast` with `ToastAction::Link` or `ToastAction::Run`. A
+  toast of the bad tone is `role="alert"`; a toast with an action stays
+  until it is dismissed (WCAG 2.2 SC 2.2.1); its Dismiss is absent until
+  the page hydrates. The page keeps its foot and footer clear of the region
+  while a toast shows.
+- The anchored popover form (R17 anchored, #156):
+  `view::popover::popover_form`, a native `popover` placed 4 px under its
+  trigger and aligned to its end edge by CSS anchor positioning, and a
+  bottom sheet over a scrim below 40 rem. The browser closes it on Escape
+  and returns the focus to the trigger.
+- Every widget's words as props (#219): `CopyWords`, `ModalWords`,
+  `HelpWords`, `SidePanelWords`, `ComboboxWords`, `ChartWords`,
+  `view::chart::FiguresWords`, `UploadWords`, `SizeWords` and
+  `view::time::TimeWords` (with `timestamp_in`), each built on the server
+  by its `of_page()`, and `i18n::Phrase` for a sentence around a value the browser
+  learns. No island looks a word up, so the browser bundle carries no
+  Fluent loader and no catalog: the gallery's brotli-compressed
+  WebAssembly falls from 402593 bytes to 365376.
 - The interaction contract every component follows, written into
   `design/COMPONENTS.md` § Interaction and the crate's `CLAUDE.md` (#196):
   native elements first, behaviour in Rust compiled to WebAssembly, every
@@ -28,7 +57,7 @@ and this project adheres to
   feature `islands`, writes `<HydrationScripts options islands=true/>`, and
   calls `leptos::mount::hydrate_islands()` from a browser entry that names
   this crate.
-- `widget::toast::raise(tone, text)`, which any island calls to show a
+- `widget::toast::raise(toast)`, which any island calls to show a
   toast, and `widget::toast::Flash` and `RegionWords`: the region draws the
   flash toasts the server hands it, so a form post's outcome shows with no
   WebAssembly.
@@ -36,9 +65,6 @@ and this project adheres to
   server, every one, and stay out of the WebAssembly.
 - `widget::nav::marks`, `widget::nav::drawer`, and the `current` path
   `sidebar` takes to mark the page.
-- `i18n::provide_page_locale` and `i18n::document_lang`, which give the
-  islands of a page the locale of its `<html lang>` for a widget that still
-  looks its words up.
 - The gallery's no-WebAssembly journey (`tests/it/no_wasm.rs`): every page
   loaded with the bundle refused keeps its content, and its links, forms
   and popovers still work.
@@ -236,6 +262,25 @@ and this project adheres to
   `link_open_pager`). A console changes its imports.
 - `widget::filter::table_filter` is only for rows that are already island
   data; a listing's filter is `table::filter::find_form`.
+- The tab API (#152): `view::tabs::link_tabs`, `keyed_tabs` and `KeyedTab`
+  are gone; `binder` takes `Tab { key, href, label, count, draft }`
+  (`Tab::new(key, href, label)`) and the panel. A console moves each tab
+  row and the panel under it into one `binder` call, and the panel loses
+  its own card frame.
+- The toast API (#156): `widget::toast::raise(tone, text)` is
+  `raise(Toast)`, and `Flash` has `title`, `line` and `action` in place of
+  `text`. A console that toasts a load result moves it to the load report
+  (B4).
+- Each widget takes the words it draws (#219): `copy_button` takes
+  `CopyWords`, `help_switch` takes `HelpWords`, `line_chart` takes
+  `ChartWords`, and `Modal`, `SidePanel`, `Combobox`,
+  `KeyedCombobox` and `Upload` gain a `words` field.
+  `view::chart::figures` takes `FiguresWords`, and
+  `upload::Refused::sentence` takes `UploadWords`. A
+  console builds each with `of_page()` on the server and passes it to its
+  island as a prop.
+- The gallery's bundle budget is 491520 bytes of brotli-compressed
+  WebAssembly, down from 552960 (`.claude/rules/leptos-ui.md` §12).
 - The console layer of the approved design moves into
   `css/ferrohealth-ui.css` (#150): the class of every console component in
   `design/COMPONENTS.md` and the family rules as CSS, in the `components`
@@ -348,6 +393,9 @@ and this project adheres to
 - `view::shell::About`, `footer_about`, `shell_about` and `centred_about`:
   with no client router an About link is a plain link; call `footer`,
   `shell` and `centred`.
+- `i18n::provide_page_locale` and `i18n::document_lang` (#219): a
+  console's browser entry builds no locale; it calls `hydrate_islands()`
+  alone. `widget::upload::size` is `SizeWords::size`.
 - `widget::theme::theme_toggle`, the toggle that swapped the theme in
   place.
 - `widget::toast::Toasts`, `provide_toasts` and `use_toasts`: an island

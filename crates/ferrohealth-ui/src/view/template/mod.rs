@@ -22,18 +22,3 @@ pub mod about;
 pub mod detail;
 pub mod list;
 pub mod settings;
-
-use leptos::prelude::*;
-
-/// Returns the binder tabs `tabs` joined to the one panel under them,
-/// holding `panel`, with the panel's extra `class` when it has one.
-fn tabbed(tabs: AnyView, panel: AnyView, class: &'static str) -> AnyView {
-    // TODO(#152): the binder tabs component draws the row and its panel as one.
-    view! {
-        <div class=class>
-            {tabs}
-            <div class="fui-tab-panel">{panel}</div>
-        </div>
-    }
-    .into_any()
-}

@@ -19,12 +19,13 @@
 //! design, after the common practice of accenting and padding each string.
 
 use std::borrow::Cow;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::LazyLock;
 
-use ferrohealth_ui::i18n::{Arg, Locale, Message, library_catalog, locale};
+use ferrohealth_ui::i18n::{Arg, Locale, Message, Phrase, library_catalog, locale};
 use fluent_templates::fluent_bundle::FluentValue;
 use fluent_templates::{LanguageIdentifier, Loader};
+use serde::{Deserialize, Serialize};
 
 fluent_templates::static_loader! {
     static GALLERY = {
@@ -711,6 +712,22 @@ messages! {
     Success = "success",
     /// `Saved, and the set reloaded.`
     SavedSetReloaded = "saved-set-reloaded",
+    /// `Open the tables`
+    OpenTheTables = "open-the-tables",
+    /// `Popover form`
+    PopoverForm = "popover-form",
+    /// `It opens under its trigger and, on a phone, rises from the foot of the screen.`
+    PopoverFormOpensUnderTrigger = "popover-form-opens-under-trigger",
+    /// `Save the query`
+    SaveTheQuery = "save-the-query",
+    /// `Save the query to the server`
+    SaveTheQueryToTheServer = "save-the-query-to-the-server",
+    /// `Someone saved the file first; reload it to see their change.`
+    SomeoneSavedTheFileFirst = "someone-saved-the-file-first",
+    /// `3 files compiled; the facade serves them now.`
+    ThreeFilesCompiledFacadeServes = "three-files-compiled-facade-serves",
+    /// `Two mappings name a path the template does not hold.`
+    TwoMappingsNameMissingPath = "two-mappings-name-missing-path",
     /// `Access`
     Access = "access",
     /// `View access`
@@ -857,6 +874,22 @@ messages! {
     Format = "format",
     /// `Keyboard tabs: Left, Right, Home and End move between them.`
     KeyboardTabsLeftRightHome = "keyboard-tabs-left-right-home",
+    /// `Appearance`
+    Appearance = "appearance",
+    /// `Past five tabs, a phone shows the sections as a select once the page has loaded its script.`
+    BinderManyTabsSelect = "binder-many-tabs-select",
+    /// `The tab you are on opens into this panel, so the two read as one sheet.`
+    BinderPanelJoined = "binder-panel-joined",
+    /// `Notifications holds a draft; Keyboard leaves the row on a phone, which has no keyboard.`
+    BinderPreferencesDraft = "binder-preferences-draft",
+    /// `{ $count } findings`
+    FindingsCount = "findings-count",
+    /// `Keyboard`
+    Keyboard = "keyboard",
+    /// `Notifications`
+    Notifications = "notifications",
+    /// `Your preferences`
+    YourPreferences = "your-preferences",
     /// `Tabs`
     Tabs = "tabs",
     /// `What the console asked.`
@@ -1401,6 +1434,106 @@ pub fn tr_with(msg: Msg, args: &[(&'static str, Arg)]) -> String {
 #[must_use]
 pub fn tr_in(locale: &Locale, msg: Msg, args: &[(&'static str, Arg)]) -> String {
     locale.lookup_with(&CATALOG, msg.id(), args)
+}
+
+/// The words an island of the gallery draws, resolved on the server in the
+/// page's locale and handed to the island as a prop, so the island carries
+/// no catalog (`leptos-ui.md` §15.4).
+///
+/// The server names the messages the island draws ([`Words::of`]), leaving
+/// the placeables the island fills open ([`Words::open`]). A message the
+/// island draws that the server did not name is logged as an error, which
+/// fails a journey.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Words(BTreeMap<String, String>);
+
+impl Words {
+    /// The messages `msgs` in the page's locale.
+    #[must_use]
+    pub fn of(msgs: &[Msg]) -> Self {
+        Self(
+            msgs.iter()
+                .map(|msg| (msg.id().to_owned(), tr(*msg)))
+                .collect(),
+        )
+    }
+
+    /// These words and `msg` in the page's locale, its placeables `names`
+    /// left open for [`Words::fill`].
+    #[must_use]
+    pub fn open(mut self, msg: Msg, names: &[&'static str]) -> Self {
+        let args: Vec<(&'static str, Arg)> = names
+            .iter()
+            .map(|name| (*name, Phrase::open(name)))
+            .collect();
+        self.0.insert(msg.id().to_owned(), tr_with(msg, &args));
+        self
+    }
+
+    /// These words and `msg` in the page's locale, its counts `names` left
+    /// for [`Words::count`]: one form per count of one or of any other
+    /// number, as the catalog's plural selects it.
+    #[must_use]
+    pub fn counted(mut self, msg: Msg, names: &[&'static str]) -> Self {
+        for mask in 0..(1_u32 << names.len()) {
+            let args: Vec<(&'static str, Arg)> = (0_u32..)
+                .zip(names)
+                .map(|(bit, name)| {
+                    let one = mask & (1 << bit) != 0;
+                    (
+                        *name,
+                        if one {
+                            Arg::from(1_u32)
+                        } else {
+                            Phrase::open(name)
+                        },
+                    )
+                })
+                .collect();
+            self.0
+                .insert(format!("{}#{mask}", msg.id()), tr_with(msg, &args));
+        }
+        self
+    }
+
+    /// The message `msg`.
+    #[must_use]
+    pub fn get(&self, msg: Msg) -> String {
+        self.held(msg.id())
+    }
+
+    /// The words held under `key`, a message's id or its counted form.
+    fn held(&self, key: &str) -> String {
+        self.0.get(key).cloned().unwrap_or_else(|| {
+            leptos::logging::error!("the island was not handed the message {key}");
+            key.to_owned()
+        })
+    }
+
+    /// The message `msg` with its counts `values` filled in, in the form
+    /// [`Words::counted`] resolved for them.
+    #[must_use]
+    pub fn count(&self, msg: Msg, values: &[(&str, u64)]) -> String {
+        let mask = (0_u32..)
+            .zip(values)
+            .filter(|(_, (_, value))| *value == 1)
+            .fold(0_u32, |mask, (bit, _)| mask | (1 << bit));
+        let numbers: Vec<(&str, String)> = values
+            .iter()
+            .map(|(name, value)| (*name, value.to_string()))
+            .collect();
+        let filled: Vec<(&str, &str)> = numbers
+            .iter()
+            .map(|(name, value)| (*name, value.as_str()))
+            .collect();
+        Phrase::new(self.held(&format!("{}#{mask}", msg.id()))).fill(&filled)
+    }
+
+    /// The message `msg`, its open placeables filled with `values`.
+    #[must_use]
+    pub fn fill(&self, msg: Msg, values: &[(&str, &str)]) -> String {
+        Phrase::new(self.get(msg)).fill(values)
+    }
 }
 
 /// The gallery's message `msg` as a [`Message`] a component looks up as it

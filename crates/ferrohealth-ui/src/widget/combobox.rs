@@ -18,6 +18,7 @@
 use std::borrow::Cow;
 
 use leptos::prelude::*;
+use serde::{Deserialize, Serialize};
 
 use crate::i18n::{Text, tr};
 use crate::icon::{Glyph, icon};
@@ -65,6 +66,24 @@ impl ComboOption {
     }
 }
 
+/// The words a combobox draws itself, resolved on the server in the page's
+/// locale, so an island that draws it carries no catalog.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ComboboxWords {
+    /// The line the list shows when no option matches.
+    pub no_match: String,
+}
+
+impl ComboboxWords {
+    /// The combobox's words in the locale of the page being drawn.
+    #[must_use]
+    pub fn of_page() -> Self {
+        Self {
+            no_match: tr(Text::ComboboxNoMatch),
+        }
+    }
+}
+
 /// What a combobox shows.
 #[derive(Debug, Clone)]
 pub struct Combobox {
@@ -81,6 +100,8 @@ pub struct Combobox {
     pub options: Vec<ComboOption>,
     /// The value chosen, if any.
     pub selected: RwSignal<Option<String>>,
+    /// The words it draws itself ([`ComboboxWords::of_page`]).
+    pub words: ComboboxWords,
 }
 
 /// What a combobox shows, with ids a console makes at run time, such as one
@@ -103,6 +124,8 @@ pub struct KeyedCombobox {
     /// The id of the element that describes the control, such as its help
     /// line, which the input names in `aria-describedby`.
     pub described_by: Option<String>,
+    /// The words it draws itself ([`ComboboxWords::of_page`]).
+    pub words: ComboboxWords,
 }
 
 impl From<Combobox> for KeyedCombobox {
@@ -115,6 +138,7 @@ impl From<Combobox> for KeyedCombobox {
             options: combo.options,
             selected: combo.selected,
             described_by: None,
+            words: combo.words,
         }
     }
 }
@@ -426,10 +450,10 @@ fn enhanced_view(combo: KeyedCombobox) -> AnyView {
         options,
         selected,
         described_by,
+        words: ComboboxWords { no_match },
     } = combo;
     let list_id = format!("{id}-list");
     let state = State::new(id.clone(), options, selected);
-    let no_match = tr(Text::ComboboxNoMatch);
     let revealed = list_id.clone();
     Effect::new(move |_| {
         if let Some(option) = state.active_id() {

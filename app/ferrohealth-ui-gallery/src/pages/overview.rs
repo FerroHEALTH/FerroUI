@@ -5,7 +5,8 @@
 //! the facts, the tabs and segmented controls, the refusal, the empty and
 //! loading states, and every icon.
 
-use crate::locale::{Msg, tr, tr_with};
+use crate::locale::{Msg, Words, tr, tr_with};
+use ferrohealth_ui::i18n::Phrase;
 use ferrohealth_ui::icon::{Glyph, icon};
 use ferrohealth_ui::island::KeyboardTabs;
 use ferrohealth_ui::tone::Tone;
@@ -21,22 +22,12 @@ use ferrohealth_ui::view::surface::{
     Stat, card, card_action, chip, cluster, definitions, disclosure, facts_row, grid, or_none,
     page_header, stack, stat_card, stat_card_marked, stat_grid, titled_panel, well,
 };
-use ferrohealth_ui::view::tabs::{KeyedTab, Tab, keyed_tabs, link_tabs};
+use ferrohealth_ui::view::tabs::{Tab, binder};
 use ferrohealth_ui::view::theme_switch::{density_switch, locale_switch, theme_switch};
 use ferrohealth_ui::view::time::timestamp;
 use ferrohealth_ui::widget::segmented::segmented;
 use ferrohealth_ui::widget::tabs::tab_panels;
 use leptos::prelude::*;
-
-/// The formats the segmented control offers, in the page's locale.
-fn formats() -> [(&'static str, String); 4] {
-    [
-        ("json", tr(Msg::Json)),
-        ("xml", tr(Msg::Xml)),
-        ("flat", tr(Msg::FlatUpper)),
-        ("structured", tr(Msg::Structured)),
-    ]
-}
 
 /// A panel that previews the newest files, its header action leading to
 /// all of them.
@@ -59,7 +50,7 @@ fn preview() -> AnyView {
 }
 
 /// The path of the page `page` of the brand the route names.
-fn brand_page(page: &str) -> Option<String> {
+pub(crate) fn brand_page(page: &str) -> Option<String> {
     crate::app::route_brand().map(|brand| format!("/{}/{page}", brand.key()))
 }
 
@@ -331,69 +322,58 @@ fn facts() -> AnyView {
     .into_any()
 }
 
-/// The link tabs, the keyed tabs and the keyboard tabs.
+/// The panel of a binder: one sentence.
+fn binder_panel(words: String) -> AnyView {
+    view! { <p>{words}</p> }.into_any()
+}
+
+/// The binder tabs: a file's views with a count, a record's seven sections
+/// that a phone shows as a select, preferences with a draft and the
+/// Keyboard tab, and the keyboard tabs that switch in place.
 fn tab_sets() -> AnyView {
-    let links = link_tabs(
+    let views = binder(
         tr(Msg::ViewsFile),
-        &[
-            Tab {
-                href: "#tabs",
-                label: tr(Msg::Source).into(),
-            },
-            Tab {
-                href: "#tabs-diagnostics",
-                label: tr(Msg::Diagnostics).into(),
-            },
-            Tab {
-                href: "#tabs-history",
-                label: tr(Msg::History).into(),
-            },
-        ],
-        "#tabs",
-    )
-    .into_any();
-    let keyed = keyed_tabs(
-        tr(Msg::Record),
         vec![
-            KeyedTab {
-                key: "compositions",
-                href: String::from("?tab=compositions"),
-                label: tr(Msg::Compositions).into(),
-            },
-            KeyedTab {
-                key: "status",
-                href: String::from("?tab=status"),
-                label: tr(Msg::Status).into(),
-            },
-            KeyedTab {
-                key: "contributions",
-                href: String::from("?tab=contributions"),
-                label: tr(Msg::Contributions).into(),
-            },
-            KeyedTab {
-                key: "directory",
-                href: String::from("?tab=directory"),
-                label: tr(Msg::Directory).into(),
-            },
-            KeyedTab {
-                key: "history",
-                href: String::from("?tab=history"),
-                label: tr(Msg::StatusHistory).into(),
-            },
-            KeyedTab {
-                key: "commit",
-                href: String::from("?tab=commit"),
-                label: tr(Msg::Commit).into(),
-            },
-            KeyedTab {
-                key: "tags",
-                href: String::from("?tab=tags"),
-                label: tr(Msg::Tags).into(),
-            },
+            Tab::new("source", "#tabs", tr(Msg::Source)),
+            Tab::new("diagnostics", "#tabs-diagnostics", tr(Msg::Diagnostics))
+                .count(2, tr_with(Msg::FindingsCount, &[("count", 2.into())])),
+            Tab::new("history", "#tabs-history", tr(Msg::History)),
         ],
+        "source",
+        binder_panel(tr(Msg::BinderPanelJoined)),
+    );
+    let record = binder(
+        tr(Msg::Record),
+        [
+            ("compositions", Msg::Compositions),
+            ("status", Msg::Status),
+            ("contributions", Msg::Contributions),
+            ("directory", Msg::Directory),
+            ("history", Msg::StatusHistory),
+            ("commit", Msg::Commit),
+            ("tags", Msg::Tags),
+        ]
+        .into_iter()
+        .map(|(key, msg)| Tab::new(key, format!("?tab={key}"), tr(msg)))
+        .collect(),
         "status",
-    )
-    .into_any();
+        binder_panel(tr(Msg::BinderManyTabsSelect)),
+    );
+    let preferences = binder(
+        tr(Msg::YourPreferences),
+        vec![
+            Tab::new("appearance", "?prefs=appearance", tr(Msg::Appearance)),
+            Tab::new("keyboard", "?prefs=keyboard", tr(Msg::Keyboard)),
+            Tab::new(
+                "notifications",
+                "?prefs=notifications",
+                tr(Msg::Notifications),
+            )
+            .draft(),
+        ],
+        "appearance",
+        binder_panel(tr(Msg::BinderPreferencesDraft)),
+    );
     let panels = tab_panels(
         "answer",
         vec![
@@ -414,31 +394,44 @@ fn tab_sets() -> AnyView {
     .into_any();
     card(
         tr(Msg::Tabs),
-        view! {
-            {links}
-            {keyed}
+        stack(view! {
+            {views}
+            {record}
+            {preferences}
             <p class="fui-muted">{tr(Msg::KeyboardTabsLeftRightHome)}</p>
             {keyboard}
-        },
+        }),
     )
     .into_any()
 }
 
 /// The segmented control bound to state at the head of the cluster of
-/// `others`, and the line that follows it.
-pub(crate) fn format_segments(others: AnyView) -> AnyView {
+/// `others`, in `words`, and the line that follows it.
+pub(crate) fn format_segments(words: &Words, others: AnyView) -> AnyView {
     let format = RwSignal::new("json");
-    let chosen = segmented(tr(Msg::Format), &formats(), format.into(), move |key| {
-        format.set(key);
-    })
+    let formats = [
+        ("json", words.get(Msg::Json)),
+        ("xml", words.get(Msg::Xml)),
+        ("flat", words.get(Msg::FlatUpper)),
+        ("structured", words.get(Msg::Structured)),
+    ];
+    let chosen = segmented(
+        words.get(Msg::Format),
+        &formats,
+        format.into(),
+        move |key| {
+            format.set(key);
+        },
+    )
     .into_any();
+    let shown = words.get(Msg::ShownAs);
     view! {
         {cluster(view! {
             {chosen}
             {others}
         })}
         <p class="fui-muted">
-            {move || tr_with(Msg::ShownAs, &[("format", format.get().to_uppercase().into())])}
+            {move || Phrase::new(shown.clone()).fill(&[("format", &format.get().to_uppercase())])}
         </p>
     }
     .into_any()
@@ -470,7 +463,13 @@ fn segments() -> AnyView {
     card(
         tr(Msg::SegmentedControls),
         view! {
-            <crate::islands::FormatSegments>
+            <crate::islands::FormatSegments words=Words::of(&[
+                Msg::Json,
+                Msg::Xml,
+                Msg::FlatUpper,
+                Msg::Structured,
+                Msg::Format,
+            ]).open(Msg::ShownAs, &["format"])>
                 {as_links}
                 {posted}
             </crate::islands::FormatSegments>

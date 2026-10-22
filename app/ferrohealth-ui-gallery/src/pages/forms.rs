@@ -4,8 +4,9 @@
 //! The forms page: the fields, the checkbox row, the highlighted editor with
 //! diagnostics that link to its lines, and the filter over a list.
 
-use crate::locale::{Msg, message, tr, tr_with};
+use crate::locale::{Msg, Words, message, tr, tr_with};
 use ferrohealth_ui::highlight::Language;
+use ferrohealth_ui::i18n::Phrase;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::button::{Variant, label};
@@ -23,12 +24,12 @@ use ferrohealth_ui::view::surface::{
     Crumb, Header, Mode, card, editor_heading, grid, grid_start, page_header, stack, well,
 };
 use ferrohealth_ui::widget::combobox::{
-    ComboOption, Combobox, KeyedCombobox, combobox, keyed_combobox,
+    ComboOption, Combobox, ComboboxWords, KeyedCombobox, combobox, keyed_combobox,
 };
 use ferrohealth_ui::widget::editor::{Editor, LineMark, MarkKind, code_editor, line_id};
 use ferrohealth_ui::widget::filter::{keeps, table_filter};
 use ferrohealth_ui::widget::pick_or_type::{PickOrType, Picker, pick_or_type};
-use ferrohealth_ui::widget::upload::{Upload, upload_field};
+use ferrohealth_ui::widget::upload::{Upload, UploadWords, upload_field};
 use leptos::prelude::*;
 
 /// A query form: the nodes as checkbox chips, an option as a switch, and the
@@ -154,12 +155,29 @@ const ANOTHER: &str = "another";
 /// combobox, or typed behind the last option, each control with its own
 /// label, and a button back to the list.
 fn pick_or_typed() -> AnyView {
-    card(tr(Msg::PickType), view! { <crate::islands::PickOrTyped /> }).into_any()
+    let words = Words::of(&[
+        Msg::OneServerResolves,
+        Msg::AnotherVersion,
+        Msg::Version,
+        Msg::VersionServerHoldsAnotherOne,
+        Msg::ChooseFromList,
+        Msg::Loinc,
+        Msg::SnomedCt,
+        Msg::AnotherCanonical,
+        Msg::CodeSystem,
+        Msg::ChooseOneServerHolds,
+        Msg::CodeSystemServerHoldsCanonical,
+    ]);
+    card(
+        tr(Msg::PickType),
+        view! { <crate::islands::PickOrTyped words combo=ComboboxWords::of_page() /> },
+    )
+    .into_any()
 }
 
 /// The interactive part of [`pick_or_typed`], hydrated as the island
 /// [`crate::islands::PickOrTyped`].
-pub(crate) fn pick_or_typed_body() -> AnyView {
+pub(crate) fn pick_or_typed_body(words: &Words, combo: ComboboxWords) -> AnyView {
     let version_typing = RwSignal::new(false);
     let select = view! {
         <select
@@ -169,14 +187,14 @@ pub(crate) fn pick_or_typed_body() -> AnyView {
             prop:value=move || if version_typing.get() { ANOTHER } else { "" }
             on:change=move |event| version_typing.set(event_target_value(&event) == ANOTHER)
         >
-            <option value="">{tr(Msg::OneServerResolves)}</option>
+            <option value="">{words.get(Msg::OneServerResolves)}</option>
             <option value="2.81">"2.81"</option>
             <option value="2.80">"2.80"</option>
-            <option value=ANOTHER>{tr(Msg::AnotherVersion)}</option>
+            <option value=ANOTHER>{words.get(Msg::AnotherVersion)}</option>
         </select>
     };
     let version = pick_or_type(PickOrType {
-        label: tr(Msg::Version),
+        label: words.get(Msg::Version),
         picker: Picker::Control {
             id: String::from("pick-version-choice"),
             control: select.into_any(),
@@ -190,7 +208,7 @@ pub(crate) fn pick_or_typed_body() -> AnyView {
         after: Some(
             view! {
                 <p id=help_id("pick-version") class="fui-help">
-                    {tr(Msg::VersionServerHoldsAnotherOne)}
+                    {words.get(Msg::VersionServerHoldsAnotherOne)}
                 </p>
                 <button
                     type="button"
@@ -199,7 +217,7 @@ pub(crate) fn pick_or_typed_body() -> AnyView {
                     hidden=move || !version_typing.get()
                     on:click=move |_| version_typing.set(false)
                 >
-                    {label(Some(Glyph::ARROW_LEFT), tr(Msg::ChooseFromList))}
+                    {label(Some(Glyph::ARROW_LEFT), words.get(Msg::ChooseFromList))}
                 </button>
             }
             .into_any(),
@@ -213,21 +231,22 @@ pub(crate) fn pick_or_typed_body() -> AnyView {
         }
     });
     let offered = vec![
-        ComboOption::new("http://loinc.org", tr(Msg::Loinc)).detail("http://loinc.org"),
-        ComboOption::new("http://snomed.info/sct", tr(Msg::SnomedCt))
+        ComboOption::new("http://loinc.org", words.get(Msg::Loinc)).detail("http://loinc.org"),
+        ComboOption::new("http://snomed.info/sct", words.get(Msg::SnomedCt))
             .detail("http://snomed.info/sct"),
-        ComboOption::new(ANOTHER, tr(Msg::AnotherCanonical)),
+        ComboOption::new(ANOTHER, words.get(Msg::AnotherCanonical)),
     ];
     let canonical = pick_or_type(PickOrType {
-        label: tr(Msg::CodeSystem),
+        label: words.get(Msg::CodeSystem),
         picker: Picker::Labelled(keyed_combobox(KeyedCombobox {
             id: String::from("pick-canonical-choice"),
             name: String::from("picked"),
-            label: tr(Msg::CodeSystem),
-            placeholder: tr(Msg::ChooseOneServerHolds),
+            label: words.get(Msg::CodeSystem),
+            placeholder: words.get(Msg::ChooseOneServerHolds),
             options: offered,
             selected: picked,
             described_by: Some(help_id("pick-canonical")),
+            words: combo,
         })),
         typed_id: String::from("pick-canonical"),
         typed: view! {
@@ -238,7 +257,7 @@ pub(crate) fn pick_or_typed_body() -> AnyView {
         after: Some(
             view! {
                 <p id=help_id("pick-canonical") class="fui-help">
-                    {tr(Msg::CodeSystemServerHoldsCanonical)}
+                    {words.get(Msg::CodeSystemServerHoldsCanonical)}
                 </p>
             }
             .into_any(),
@@ -403,7 +422,11 @@ fn clause_pickers() -> AnyView {
             let help = format!("clause-{place}-system-help");
             view! {
                 <div class="fui-field">
-                    <crate::islands::ClausePicker place />
+                    <crate::islands::ClausePicker
+                        place
+                        words=system_words().open(Msg::ClauseCodeSystem, &["place"])
+                        combo=ComboboxWords::of_page()
+                    />
                     <p id=help class="fui-help">
                         {tr(Msg::SystemClauseDrawsCodesFrom)}
                     </p>
@@ -414,72 +437,85 @@ fn clause_pickers() -> AnyView {
         .into_any()
 }
 
-/// The code systems the comboboxes offer: each value, its words and its
+/// The code systems the comboboxes offer: each value, its message and its
 /// canonical.
-fn systems() -> [(&'static str, String, &'static str); 12] {
-    [
-        ("loinc", tr(Msg::Loinc), "http://loinc.org"),
-        ("snomed", tr(Msg::SnomedCt), "http://snomed.info/sct"),
-        ("ucum", tr(Msg::Ucum), "http://unitsofmeasure.org"),
-        ("icd10", tr(Msg::Icd10), "http://hl7.org/fhir/sid/icd-10"),
-        ("atc", tr(Msg::Atc), "http://www.whocc.no/atc"),
-        (
-            "rxnorm",
-            tr(Msg::Rxnorm),
-            "http://www.nlm.nih.gov/research/umls/rxnorm",
-        ),
-        ("iso3166", tr(Msg::Iso3166Countries), "urn:iso:std:iso:3166"),
-        ("bcp47", tr(Msg::Bcp47Languages), "urn:ietf:bcp:47"),
-        ("mime", tr(Msg::MediaTypes), "urn:ietf:bcp:13"),
-        (
-            "gender",
-            tr(Msg::AdministrativeGender),
-            "http://hl7.org/fhir/administrative-gender",
-        ),
-        (
-            "status",
-            tr(Msg::ObservationStatus),
-            "http://hl7.org/fhir/observation-status",
-        ),
-        (
-            "synthetic",
-            tr(Msg::SyntheticGalleryCodes),
-            "http://example.org/fhir/CodeSystem/gallery-synthetic",
-        ),
-    ]
+const SYSTEMS: [(&str, Msg, &str); 12] = [
+    ("loinc", Msg::Loinc, "http://loinc.org"),
+    ("snomed", Msg::SnomedCt, "http://snomed.info/sct"),
+    ("ucum", Msg::Ucum, "http://unitsofmeasure.org"),
+    ("icd10", Msg::Icd10, "http://hl7.org/fhir/sid/icd-10"),
+    ("atc", Msg::Atc, "http://www.whocc.no/atc"),
+    (
+        "rxnorm",
+        Msg::Rxnorm,
+        "http://www.nlm.nih.gov/research/umls/rxnorm",
+    ),
+    ("iso3166", Msg::Iso3166Countries, "urn:iso:std:iso:3166"),
+    ("bcp47", Msg::Bcp47Languages, "urn:ietf:bcp:47"),
+    ("mime", Msg::MediaTypes, "urn:ietf:bcp:13"),
+    (
+        "gender",
+        Msg::AdministrativeGender,
+        "http://hl7.org/fhir/administrative-gender",
+    ),
+    (
+        "status",
+        Msg::ObservationStatus,
+        "http://hl7.org/fhir/observation-status",
+    ),
+    (
+        "synthetic",
+        Msg::SyntheticGalleryCodes,
+        "http://example.org/fhir/CodeSystem/gallery-synthetic",
+    ),
+];
+
+/// The words of a code system combobox's island: every system's, the
+/// label's and the placeholder's.
+fn system_words() -> Words {
+    let msgs: Vec<Msg> = SYSTEMS
+        .iter()
+        .map(|(_, msg, _)| *msg)
+        .chain([Msg::CodeSystem, Msg::ChooseCodeSystem])
+        .collect();
+    Words::of(&msgs)
 }
 
-/// The options of [`systems`].
-fn system_options() -> Vec<ComboOption> {
-    systems()
+/// The options of [`SYSTEMS`] in `words`.
+fn system_options(words: &Words) -> Vec<ComboOption> {
+    SYSTEMS
         .iter()
-        .map(|(value, label, url)| ComboOption::new(*value, label.clone()).detail(*url))
+        .map(|(value, msg, url)| ComboOption::new(*value, words.get(*msg)).detail(*url))
         .collect()
 }
 
-/// The combobox of the clause at `place`.
-pub(crate) fn clause_picker(place: u8) -> AnyView {
+/// The combobox of the clause at `place`, in `words` and the combobox's own
+/// `combo`.
+pub(crate) fn clause_picker(place: u8, words: &Words, combo: ComboboxWords) -> AnyView {
     let id = format!("clause-{place}-system");
     keyed_combobox(KeyedCombobox {
         id: id.clone(),
         name: format!("clause{place}"),
-        label: tr_with(Msg::ClauseCodeSystem, &[("place", u32::from(place).into())]),
-        placeholder: tr(Msg::ChooseCodeSystem),
-        options: system_options(),
+        label: words.fill(Msg::ClauseCodeSystem, &[("place", &place.to_string())]),
+        placeholder: words.get(Msg::ChooseCodeSystem),
+        options: system_options(words),
         selected: RwSignal::new(None),
         described_by: Some(format!("{id}-help")),
+        words: combo,
     })
 }
 
-/// The combobox of the code system, SNOMED CT chosen.
-pub(crate) fn system_picker() -> AnyView {
+/// The combobox of the code system, SNOMED CT chosen, in `words` and the
+/// combobox's own `combo`.
+pub(crate) fn system_picker(words: &Words, combo: ComboboxWords) -> AnyView {
     combobox(Combobox {
         id: "choose-system",
         name: "system",
-        label: tr(Msg::CodeSystem).into(),
-        placeholder: tr(Msg::ChooseCodeSystem).into(),
-        options: system_options(),
+        label: words.get(Msg::CodeSystem).into(),
+        placeholder: words.get(Msg::ChooseCodeSystem).into(),
+        options: system_options(words),
         selected: RwSignal::new(Some(String::from("snomed"))),
+        words: combo,
     })
 }
 
@@ -494,7 +530,7 @@ fn choosing() -> AnyView {
         tr(Msg::Combobox),
         view! {
             <div class=FORM>
-                <crate::islands::SystemPicker />
+                <crate::islands::SystemPicker words=system_words() combo=ComboboxWords::of_page() />
                 <fieldset class="fui-fieldset">
                     <legend class="fui-sr-only">{tr(Msg::Clauses)}</legend>
                     {clauses}
@@ -682,21 +718,34 @@ fn long_label() -> AnyView {
 
 /// The upload field: a file dropped or chosen, read into the text area.
 fn upload() -> AnyView {
-    card(tr(Msg::Upload), view! { <crate::islands::UploadField /> }).into_any()
+    let words = Words::of(&[Msg::OperationalTemplate, Msg::ChooseOptFile]);
+    let upload = UploadWords::of_page(UPLOAD_ACCEPT, UPLOAD_MAX_BYTES);
+    card(
+        tr(Msg::Upload),
+        view! { <crate::islands::UploadField words upload /> },
+    )
+    .into_any()
 }
+
+/// The extensions the upload field takes.
+const UPLOAD_ACCEPT: &[&str] = &[".opt", ".xml"];
+
+/// The largest file the upload field reads.
+const UPLOAD_MAX_BYTES: u64 = 2 * 1024 * 1024;
 
 /// The interactive part of [`upload`], hydrated as the island
 /// [`crate::islands::UploadField`].
-pub(crate) fn upload_body() -> AnyView {
+pub(crate) fn upload_body(words: &Words, upload: UploadWords) -> AnyView {
     let source = RwSignal::new(String::new());
     upload_field(
         Upload {
             id: "gallery-upload",
-            label: tr(Msg::OperationalTemplate).into(),
-            choose: tr(Msg::ChooseOptFile).into(),
-            accept: &[".opt", ".xml"],
-            max_bytes: 2 * 1024 * 1024,
+            label: words.get(Msg::OperationalTemplate).into(),
+            choose: words.get(Msg::ChooseOptFile).into(),
+            accept: UPLOAD_ACCEPT,
+            max_bytes: UPLOAD_MAX_BYTES,
             placeholder: "<?xml version=\"1.0\" encoding=\"UTF-8\"?>".into(),
+            words: upload,
         },
         source,
         Signal::derive(|| false),
@@ -710,14 +759,22 @@ pub(crate) fn upload_body() -> AnyView {
 fn editor() -> AnyView {
     card(
         tr(Msg::HighlightedEditor),
-        view! { <crate::islands::DraftEditor /> },
+        view! {
+            <crate::islands::DraftEditor words=Words::of(&[
+                Msg::CommentAfterValueKeptBut,
+                Msg::TemplateGalleryTemplateV1Not,
+                Msg::File,
+            ])
+            .counted(Msg::SizeLines, &["bytes", "lines"])
+            .open(Msg::IssueLine, &["line"]) />
+        },
     )
     .into_any()
 }
 
 /// The interactive part of [`editor`], hydrated as the island
 /// [`crate::islands::DraftEditor`].
-pub(crate) fn editor_body() -> AnyView {
+pub(crate) fn editor_body(words: Words) -> AnyView {
     let text = RwSignal::new(String::from(crate::data::YAML));
     let ready = RwSignal::new(false);
     Effect::new(move |_| ready.set(true));
@@ -743,15 +800,14 @@ pub(crate) fn editor_body() -> AnyView {
         },
         move |typed| text.set(typed),
     );
+    let words = StoredValue::new(words);
     let size = move || {
         text.with(|text| {
-            tr_with(
-                Msg::SizeLines,
-                &[
-                    ("bytes", text.len().into()),
-                    ("lines", text.split('\n').count().into()),
-                ],
-            )
+            let bytes = u64::try_from(text.len()).unwrap_or(u64::MAX);
+            let lines = u64::try_from(text.split('\n').count()).unwrap_or(u64::MAX);
+            words.with_value(|words| {
+                words.count(Msg::SizeLines, &[("bytes", bytes), ("lines", lines)])
+            })
         })
     };
     let diagnostics = [
@@ -759,13 +815,13 @@ pub(crate) fn editor_body() -> AnyView {
             4,
             Tone::Warn,
             "warning",
-            tr(Msg::CommentAfterValueKeptBut),
+            words.with_value(|words| words.get(Msg::CommentAfterValueKeptBut)),
         ),
         (
             13,
             Tone::Bad,
             "error",
-            tr(Msg::TemplateGalleryTemplateV1Not),
+            words.with_value(|words| words.get(Msg::TemplateGalleryTemplateV1Not)),
         ),
     ]
     .into_iter()
@@ -774,7 +830,7 @@ pub(crate) fn editor_body() -> AnyView {
             <li>
                 {badge(tone, word)}
                 <span class="fui-issue-head">
-                    <a href=format!("#{}", line_id(DRAFT, line))>{tr_with(Msg::IssueLine, &[("line", line.into())])}</a>
+                    <a href=format!("#{}", line_id(DRAFT, line))>{words.with_value(|words| words.fill(Msg::IssueLine, &[("line", &line.to_string())]))}</a>
                     ":"
                 </span>
                 <span class="fui-issue-text">{text}</span>
@@ -783,7 +839,7 @@ pub(crate) fn editor_body() -> AnyView {
     })
     .collect_view();
     view! {
-        {Field::new(DRAFT, tr(Msg::File))
+        {Field::new(DRAFT, words.with_value(|words| words.get(Msg::File)))
             .after(view! {
                 <p class="fui-help" role="status">
                     {size}
@@ -831,14 +887,19 @@ async fn pause() {
 fn reloading_editor() -> AnyView {
     card(
         tr(Msg::EditorReloads),
-        view! { <crate::islands::ReloadingEditor /> },
+        view! {
+            <crate::islands::ReloadingEditor words=Words::of(&[Msg::ReadAgain])
+                .counted(Msg::ReadTimesAgain, &["count"]) />
+        },
     )
     .into_any()
 }
 
 /// The interactive part of [`reloading_editor`], hydrated as the island
 /// [`crate::islands::ReloadingEditor`].
-pub(crate) fn reloading_editor_body() -> AnyView {
+pub(crate) fn reloading_editor_body(words: Words) -> AnyView {
+    let again = words.get(Msg::ReadAgain);
+    let words = StoredValue::new(words);
     let reloads = RwSignal::new(0_u32);
     let text = RwSignal::new(String::from("{\n  \"synthetic\": true\n}\n"));
     let marks = Signal::stored(Vec::<LineMark>::new());
@@ -857,7 +918,7 @@ pub(crate) fn reloading_editor_body() -> AnyView {
         Suspend::new(async move {
             let count = read.await;
             view! {
-                <p id="reloaded" class="fui-help">{tr_with(Msg::ReadTimesAgain, &[("count", count.into())])}</p>
+                <p id="reloaded" class="fui-help">{words.with_value(|words| words.count(Msg::ReadTimesAgain, &[("count", u64::from(count))]))}</p>
                 {code_editor(
                     Editor {
                         id: "reloading-draft",
@@ -879,7 +940,7 @@ pub(crate) fn reloading_editor_body() -> AnyView {
                 class=Variant::Secondary.class()
                 on:click=move |_| reloads.update(|count| *count = count.saturating_add(1))
             >
-                {tr(Msg::ReadAgain)}
+                {again}
             </button>
         </div>
         <Transition fallback=|| ()>{drawn}</Transition>
@@ -889,13 +950,19 @@ pub(crate) fn reloading_editor_body() -> AnyView {
 
 /// The filter over a list of synthetic file names.
 fn filter() -> AnyView {
-    card(tr(Msg::Filter), view! { <crate::islands::FileFilter /> }).into_any()
+    let words =
+        Words::of(&[Msg::FilterFiles, Msg::Files]).open(Msg::FilesOnPage, &["kept", "total"]);
+    card(
+        tr(Msg::Filter),
+        view! { <crate::islands::FileFilter words /> },
+    )
+    .into_any()
 }
 
 /// The interactive part of [`filter`], hydrated as the island
 /// [`crate::islands::FileFilter`].
-pub(crate) fn filter_body() -> AnyView {
-    let words = RwSignal::new(String::new());
+pub(crate) fn filter_body(words: &Words) -> AnyView {
+    let typed = RwSignal::new(String::new());
     let names: Vec<String> = crate::data::rows()
         .into_iter()
         .take(12)
@@ -904,7 +971,7 @@ pub(crate) fn filter_body() -> AnyView {
     let total = names.len();
     let names = StoredValue::new(names);
     let kept = Memo::new(move |_| {
-        let words = words.get();
+        let words = typed.get();
         names.with_value(|names| {
             names
                 .iter()
@@ -913,18 +980,17 @@ pub(crate) fn filter_body() -> AnyView {
                 .collect::<Vec<_>>()
         })
     });
+    let on_page = words.get(Msg::FilesOnPage);
+    let total = total.to_string();
     let count = Signal::derive(move || {
-        tr_with(
-            Msg::FilesOnPage,
-            &[
-                ("kept", kept.with(Vec::len).into()),
-                ("total", total.into()),
-            ],
-        )
+        Phrase::new(on_page.clone()).fill(&[
+            ("kept", &kept.with(Vec::len).to_string()),
+            ("total", &total),
+        ])
     });
     view! {
-        {table_filter("gallery-filter", tr(Msg::FilterFiles), words, count)}
-        <ul class="fui-divided" aria-label=tr(Msg::Files)>
+        {table_filter("gallery-filter", words.get(Msg::FilterFiles), typed, count)}
+        <ul class="fui-divided" aria-label=words.get(Msg::Files)>
             <For each=move || kept.get() key=|name| name.clone() let:name>
                 <li>
                     <code>{name}</code>

@@ -13,6 +13,7 @@ use ferrohealth_ui::view::error_page::{Detail, ErrorPage, Status, Way, error_pag
 use ferrohealth_ui::view::shell::{Footer, footer};
 use ferrohealth_ui::view::status::pill;
 use ferrohealth_ui::view::surface::{Crumb, Header, page_heading};
+use ferrohealth_ui::view::tabs::{Tab, TabRow};
 use ferrohealth_ui::view::template::about::{
     AboutPage, Link, Manufacturer, SelfDescription, about_page,
 };
@@ -43,6 +44,15 @@ fn header(title: &str) -> Header {
     }
 }
 
+/// A row of one binder tab, named "Sections".
+fn row() -> TabRow {
+    TabRow {
+        label: String::from("Sections"),
+        tabs: vec![Tab::new("all", "/all", "tabs")],
+        current: String::from("all"),
+    }
+}
+
 /// A list page of `total` items with every optional part offered.
 fn list(total: Option<u64>, filters: ActiveFilters, tabs: bool) -> String {
     html(move || {
@@ -60,7 +70,7 @@ fn list(total: Option<u64>, filters: ActiveFilters, tabs: bool) -> String {
                 title: String::from("Locations"),
                 count: total,
                 order: None,
-                tabs: tabs.then(|| view! { <nav class="fui-tabs">"tabs"</nav> }.into_any()),
+                tabs: tabs.then(row),
                 actions: None,
                 body: view! { <table class="fui-table"></table> }.into_any(),
                 pager: total
@@ -145,7 +155,7 @@ fn binder_tabs_carry_the_title_and_the_card_is_their_panel() {
         "no header row under tabs: {page}"
     );
     assert!(
-        page.contains(r#"<div class="fui-tabbed"><nav class="fui-tabs">"#),
+        page.contains(r#"<div class="fui-tabbed"><nav aria-label="Sections" class="fui-tabs">"#),
         "{page}"
     );
     assert!(
@@ -261,12 +271,12 @@ fn a_detail_page_puts_its_one_section_under_binder_tabs() {
         detail_page(DetailPage {
             header: header("Locatie Noord"),
             actions: None,
-            tabs: Some(view! { <nav class="fui-tabs">"tabs"</nav> }.into_any()),
+            tabs: Some(row()),
             body: view! { <p>"Overview"</p> }.into_any(),
         })
     });
     assert!(
-        page.contains(r#"<div class="fui-stack"><div class="fui-tabbed"><nav class="fui-tabs">tabs</nav><div class="fui-tab-panel"><p>Overview</p>"#),
+        page.contains(r#"<div class="fui-stack"><div class="fui-tabbed"><nav aria-label="Sections" class="fui-tabs"><a href="/all" aria-current="page" data-tab="all" class="fui-tab">tabs</a></nav><div class="fui-tab-panel"><p>Overview</p>"#),
         "{page}"
     );
     let plain = html(|| {
@@ -357,7 +367,7 @@ fn a_file_only_configuration_says_where_it_is_set_and_has_no_badge_or_marker() {
                 file: String::from("ferrobridge.toml"),
                 how: String::from("/configuration/how"),
             },
-            tabs: Some(view! { <nav class="fui-tabs">"tabs"</nav> }.into_any()),
+            tabs: Some(row()),
             settings: vec![setting("telemetry.format", true)],
         })
     });

@@ -127,6 +127,18 @@ async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error
                     .await?,
                 "the first keyboard tab's panel shows"
             );
+            // NOTE: leptos-ui.md §15.8: the phone's tab select waits disabled, and
+            // every binder tab is a link to its own route.
+            let select = browser.element(By::Id("fui-tabs-select")).await?;
+            assert!(
+                select.attr("disabled").await?.is_some(),
+                "the tab select cannot work yet"
+            );
+            browser
+                .element(By::Css(
+                    "nav.fui-tabs a[href='?tab=commit'][data-tab='commit']",
+                ))
+                .await?;
         }
         "/forms" => {
             // The combobox's native select stands until its island hydrates,
@@ -466,6 +478,17 @@ async fn popovers_open_with_the_webassembly_withheld() -> Result<(), Box<dyn Err
         let dialog = browser.element(By::Id("reload-set")).await?;
         until("the confirmation opens", async || {
             Ok(dialog.is_displayed().await?)
+        })
+        .await?;
+        // The popover form is a popover its trigger opens, and Escape closes.
+        browser
+            .element(By::Css("button[popovertarget='save-query']"))
+            .await?
+            .click()
+            .await?;
+        let form = browser.element(By::Id("save-query")).await?;
+        until("the popover form opens", async || {
+            Ok(form.is_displayed().await?)
         })
         .await?;
         // On a narrow screen the drawer is a popover the menu button opens,

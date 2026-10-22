@@ -1,10 +1,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The keyboard tabs that switch panels in place.
+//! The keyboard tabs that switch panels in place, and the phone's select
+//! over binder tabs.
 //!
-//! They follow WAI-ARIA Authoring Practices 1.2, the tabs pattern with
-//! automatic activation: one tab stop,
+//! The keyboard tabs are binder tabs joined to their panel, as
+//! [`crate::view::tabs::binder`] draws them, and follow WAI-ARIA Authoring
+//! Practices 1.2, the tabs pattern with automatic activation: one tab stop,
 //! Left and Right move between the tabs and wrap, Home and End go to the
 //! first and the last, and the panel of the selected tab is shown. Before
 //! the page hydrates the first panel shows and the others are hidden; the
@@ -115,7 +117,7 @@ pub fn tab_list(label: String, prefix: String, tabs: Vec<String>, panels: AnyVie
         })
         .collect_view();
     view! {
-        <div>
+        <div class="fui-tabbed">
             <div role="tablist" aria-label=label class="fui-tabs" on:keydown=on_key>
                 {buttons}
             </div>
@@ -123,6 +125,61 @@ pub fn tab_list(label: String, prefix: String, tabs: Vec<String>, panels: AnyVie
         </div>
     }
     .into_any()
+}
+
+/// Returns the phone's select over `choices`, named `label`, on the one
+/// leading to `chosen`.
+///
+/// Once the page has hydrated it leads to the route chosen; until then it
+/// is disabled and the row of links serves. A console draws it through
+/// [`crate::view::tabs::binder`], as the island [`crate::island::TabSelect`].
+#[must_use]
+pub fn tab_select(
+    label: String,
+    choices: Vec<crate::view::tabs::TabChoice>,
+    chosen: &str,
+) -> AnyView {
+    let hydrated = RwSignal::new(false);
+    Effect::new(move |_| hydrated.set(true));
+    let options = choices
+        .into_iter()
+        .map(|choice| {
+            let selected = choice.href == chosen;
+            view! {
+                <option value=choice.href selected=selected>
+                    {choice.words}
+                </option>
+            }
+        })
+        .collect_view();
+    view! {
+        <div class="fui-tabs-select">
+            <label class="fui-sr-only" for="fui-tabs-select">
+                {label}
+            </label>
+            <select
+                id="fui-tabs-select"
+                class=crate::view::form::SELECT
+                disabled=move || !hydrated.get()
+                on:change:target=move |event| go(&event.target().value())
+            >
+                {options}
+            </select>
+        </div>
+    }
+    .into_any()
+}
+
+/// Leads the browser to `href`.
+fn go(href: &str) {
+    #[cfg(target_arch = "wasm32")]
+    {
+        if window().location().assign(href).is_err() {
+            leptos::logging::warn!("the browser refused to follow a tab");
+        }
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    let _: &str = href;
 }
 
 /// Shows panel `chosen` of the `count` panels of the tabs `prefix` and hides

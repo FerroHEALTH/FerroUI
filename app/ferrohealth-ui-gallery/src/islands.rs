@@ -21,54 +21,94 @@
     reason = "the #[island] macro writes an undocumented struct of each island's props as they cross to the browser"
 )]
 
+use ferrohealth_ui::widget::combobox::ComboboxWords;
+use ferrohealth_ui::widget::dialog::ModalWords;
+use ferrohealth_ui::widget::help::HelpWords;
+use ferrohealth_ui::widget::side_panel::SidePanelWords;
+use ferrohealth_ui::widget::upload::UploadWords;
 use leptos::prelude::*;
+
+use crate::locale::Words;
 
 /// The charts page's line chart and its legend.
 #[island]
-pub fn RequestsChart() -> impl IntoView {
-    crate::pages::charts::requests_chart()
+pub fn RequestsChart(
+    /// Its words, in the page's locale.
+    words: crate::pages::charts::RequestsWords,
+) -> impl IntoView {
+    crate::pages::charts::requests_chart(words)
 }
 
 /// The confirm button of a confirmation dialog, which raises a toast.
 #[island]
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "an island takes its props by value, as they arrive from the page"
+)]
 pub fn ConfirmAndToast(
     /// The id of the dialog it confirms.
     dialog: String,
     /// Whether it is the danger dialog's.
     danger: bool,
+    /// Its words, in the page's locale.
+    words: Words,
 ) -> impl IntoView {
-    crate::pages::overlays::confirm_and_toast(dialog, danger)
+    crate::pages::overlays::confirm_and_toast(dialog, danger, &words)
 }
 
 /// The overlays page's modal dialogs and the rows that open them.
 #[island]
-pub fn ModalDialogs() -> impl IntoView {
-    crate::pages::overlays::modal_dialogs()
+pub fn ModalDialogs(
+    /// Their words, in the page's locale.
+    words: Words,
+    /// The dialogs' own words, in the page's locale.
+    modal: ModalWords,
+) -> impl IntoView {
+    crate::pages::overlays::modal_dialogs(words, modal)
 }
 
 /// The overlays page's side panel, around the body the server drew.
 #[island]
 pub fn AccessPanel(
+    /// The panel's title, in the page's locale.
+    title: String,
+    /// The panel's own words, in the page's locale.
+    words: SidePanelWords,
     /// The body, drawn on the server.
     children: Children,
 ) -> impl IntoView {
-    crate::pages::overlays::access_panel(children().into_any())
+    crate::pages::overlays::access_panel(title, words, children().into_any())
 }
 
 /// The overlays page's buttons that raise a toast in each tone.
 #[island]
-pub fn ToastButtons() -> impl IntoView {
-    crate::pages::overlays::toast_buttons()
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "an island takes its props by value, as they arrive from the page"
+)]
+pub fn ToastButtons(
+    /// Their words, in the page's locale.
+    words: Words,
+    /// The tables page, where the success toast leads.
+    tables: String,
+) -> impl IntoView {
+    crate::pages::overlays::toast_buttons(&words, tables)
 }
 
 /// The overview's segmented control bound to state, in a cluster with the
 /// controls the server drew as its children.
 #[island]
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "an island takes its props by value, as they arrive from the page"
+)]
 pub fn FormatSegments(
+    /// Its words, in the page's locale.
+    words: Words,
     /// The segmented links and the posted segments.
     children: Children,
 ) -> impl IntoView {
-    crate::pages::overview::format_segments(children().into_any())
+    crate::pages::overview::format_segments(&words, children().into_any())
 }
 
 /// The layouts page's concept tree, which keeps its open items in the
@@ -81,8 +121,10 @@ pub fn ConceptTree(
     concept: Option<String>,
     /// The open items the address names.
     open: Option<String>,
+    /// Its words, in the page's locale.
+    words: Words,
 ) -> impl IntoView {
-    crate::pages::layouts::concept_tree(brand, concept, open)
+    crate::pages::layouts::concept_tree(brand, concept, open, words)
 }
 
 /// The layouts page's runner form: its help switch and the fields it
@@ -95,51 +137,103 @@ pub fn ConceptTree(
 pub fn RunnerForm(
     /// The key of the brand whose page it is on.
     brand: String,
+    /// Its words, in the page's locale.
+    words: Words,
+    /// The help switch's words, in the page's locale.
+    help: HelpWords,
 ) -> impl IntoView {
-    crate::pages::layouts::runner_form_in(&brand)
+    crate::pages::layouts::runner_form_in(&brand, &words, help)
 }
 
 /// The forms page's pick-or-type fields.
 #[island]
-pub fn PickOrTyped() -> impl IntoView {
-    crate::pages::forms::pick_or_typed_body()
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "an island takes its props by value, as they arrive from the page"
+)]
+pub fn PickOrTyped(
+    /// Its words, in the page's locale.
+    words: Words,
+    /// The combobox's own words, in the page's locale.
+    combo: ComboboxWords,
+) -> impl IntoView {
+    crate::pages::forms::pick_or_typed_body(&words, combo)
 }
 
 /// The forms page's upload field.
 #[island]
-pub fn UploadField() -> impl IntoView {
-    crate::pages::forms::upload_body()
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "an island takes its props by value, as they arrive from the page"
+)]
+pub fn UploadField(
+    /// Its words, in the page's locale.
+    words: Words,
+    /// The field's own words, in the page's locale.
+    upload: UploadWords,
+) -> impl IntoView {
+    crate::pages::forms::upload_body(&words, upload)
 }
 
 /// The forms page's highlighted editor and the size it reports.
 #[island]
-pub fn DraftEditor() -> impl IntoView {
-    crate::pages::forms::editor_body()
+pub fn DraftEditor(
+    /// Its words, in the page's locale.
+    words: Words,
+) -> impl IntoView {
+    crate::pages::forms::editor_body(words)
 }
 
 /// The forms page's editor inside a reloading transition.
 #[island]
-pub fn ReloadingEditor() -> impl IntoView {
-    crate::pages::forms::reloading_editor_body()
+pub fn ReloadingEditor(
+    /// Its words, in the page's locale.
+    words: Words,
+) -> impl IntoView {
+    crate::pages::forms::reloading_editor_body(words)
 }
 
 /// The forms page's filter and the list it filters.
 #[island]
-pub fn FileFilter() -> impl IntoView {
-    crate::pages::forms::filter_body()
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "an island takes its props by value, as they arrive from the page"
+)]
+pub fn FileFilter(
+    /// Its words, in the page's locale.
+    words: Words,
+) -> impl IntoView {
+    crate::pages::forms::filter_body(&words)
 }
 
 /// The forms page's code system combobox.
 #[island]
-pub fn SystemPicker() -> impl IntoView {
-    crate::pages::forms::system_picker()
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "an island takes its props by value, as they arrive from the page"
+)]
+pub fn SystemPicker(
+    /// Its words, in the page's locale.
+    words: Words,
+    /// The combobox's own words, in the page's locale.
+    combo: ComboboxWords,
+) -> impl IntoView {
+    crate::pages::forms::system_picker(&words, combo)
 }
 
 /// The forms page's combobox of one clause.
 #[island]
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "an island takes its props by value, as they arrive from the page"
+)]
 pub fn ClausePicker(
     /// The clause's place, from 1.
     place: u8,
+    /// Its words, in the page's locale.
+    words: Words,
+    /// The combobox's own words, in the page's locale.
+    combo: ComboboxWords,
 ) -> impl IntoView {
-    crate::pages::forms::clause_picker(place)
+    crate::pages::forms::clause_picker(place, &words, combo)
 }

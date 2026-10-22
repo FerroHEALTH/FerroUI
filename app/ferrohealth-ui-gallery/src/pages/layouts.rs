@@ -9,7 +9,7 @@
 
 use std::collections::BTreeSet;
 
-use crate::locale::{Msg, tr};
+use crate::locale::{Msg, Words, tr};
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::view::button::{Variant, label};
@@ -27,7 +27,7 @@ use ferrohealth_ui::view::surface::{
     panel_sections_card, section_intro, split,
 };
 use ferrohealth_ui::widget::help::{
-    explained_check_field, explained_field, help_switch, provide_help,
+    HelpWords, explained_check_field, explained_field, help_switch, provide_help,
 };
 use ferrohealth_ui::widget::picker::{Picker, picker_field};
 use ferrohealth_ui::widget::tree::{Tree, TreeNode, tree_view_collapsing};
@@ -53,33 +53,37 @@ fn concept(brand: &str, code: &str, words: &str) -> TreeNode {
         .href(here(brand, &format!("?concept={code}")))
 }
 
-/// The synthetic hierarchy: the top read at once, a branch read when it
-/// opens.
-fn hierarchy(brand: &str) -> Vec<TreeNode> {
+/// The synthetic hierarchy in `words`: the top read at once, a branch read
+/// when it opens.
+fn hierarchy(brand: &str, words: &Words) -> Vec<TreeNode> {
     vec![
-        concept(brand, "SYN-100", &tr(Msg::SyntheticFinding)).children(vec![
-            concept(brand, "SYN-110", &tr(Msg::SyntheticFindingArm)),
-            concept(brand, "SYN-120", &tr(Msg::SyntheticFindingLeg)).expandable(),
+        concept(brand, "SYN-100", &words.get(Msg::SyntheticFinding)).children(vec![
+            concept(brand, "SYN-110", &words.get(Msg::SyntheticFindingArm)),
+            concept(brand, "SYN-120", &words.get(Msg::SyntheticFindingLeg)).expandable(),
         ]),
-        concept(brand, "SYN-200", &tr(Msg::SyntheticProcedure)).expandable(),
-        concept(brand, "SYN-300", &tr(Msg::SyntheticBodySite)),
+        concept(brand, "SYN-200", &words.get(Msg::SyntheticProcedure)).expandable(),
+        concept(brand, "SYN-300", &words.get(Msg::SyntheticBodySite)),
     ]
 }
 
-/// The children read when the item `key` opens, the first time.
-fn read_children(brand: &str, nodes: &mut [TreeNode], key: &str) {
+/// The children in `words` read when the item `key` opens, the first time.
+fn read_children(brand: &str, words: &Words, nodes: &mut [TreeNode], key: &str) {
     for node in nodes.iter_mut() {
         if node.key == key && node.children.is_empty() {
             node.children = vec![
                 concept(
                     brand,
                     &format!("{key}-1"),
-                    &tr(Msg::SyntheticChildReadOpening),
+                    &words.get(Msg::SyntheticChildReadOpening),
                 ),
-                concept(brand, &format!("{key}-2"), &tr(Msg::AnotherSyntheticChild)),
+                concept(
+                    brand,
+                    &format!("{key}-2"),
+                    &words.get(Msg::AnotherSyntheticChild),
+                ),
             ];
         } else {
-            read_children(brand, &mut node.children, key);
+            read_children(brand, words, &mut node.children, key);
         }
     }
 }
@@ -150,7 +154,7 @@ fn browser() -> AnyView {
             (tr(Msg::Parent), or_none(String::new()).into_any()),
         ])}
     };
-    let tree = view! { <crate::islands::ConceptTree brand concept open /> };
+    let tree = view! { <crate::islands::ConceptTree brand concept open words=tree_words() /> };
     card(
         tr(Msg::ThreePanesTree),
         three_panes(
@@ -162,20 +166,64 @@ fn browser() -> AnyView {
     .into_any()
 }
 
-/// The hierarchy of the brand `brand`, with the concept `concept` selected
+/// The words of the concept tree's island.
+fn tree_words() -> Words {
+    Words::of(&[
+        Msg::SyntheticFinding,
+        Msg::SyntheticFindingArm,
+        Msg::SyntheticFindingLeg,
+        Msg::SyntheticProcedure,
+        Msg::SyntheticBodySite,
+        Msg::SyntheticChildReadOpening,
+        Msg::AnotherSyntheticChild,
+        Msg::SyntheticHierarchy,
+    ])
+}
+
+/// The words of the runner form's island.
+fn runner_words() -> Words {
+    Words::of(&[
+        Msg::SyntheticSigns,
+        Msg::SyntheticSites,
+        Msg::SyntheticUnits,
+        Msg::UseFirstValueSet,
+        Msg::ValueSet,
+        Msg::ChooseValueSetServerHolds,
+        Msg::CanonicalValueSetList,
+        Msg::ChooseOneServerHolds,
+        Msg::AnotherCanonical,
+        Msg::English,
+        Msg::Dutch,
+        Msg::ListValueSet,
+        Msg::PageSize,
+        Msg::HowManyConceptsOnePage,
+        Msg::DisplayLanguage,
+        Msg::LanguageDisplays,
+        Msg::WhyYouRun,
+        Msg::NoteKeptBesideRun,
+        Msg::IncludeInactiveConcepts,
+        Msg::InactiveConceptListedMarked,
+        Msg::List,
+    ])
+}
+
+/// The hierarchy of the brand `brand` in `words`, with the concept `concept` selected
 /// and the items `open` names open, keeping its open items in the address
 /// as they change.
 pub(crate) fn concept_tree(
     brand: String,
     concept: Option<String>,
     open: Option<String>,
+    words: Words,
 ) -> AnyView {
     let selected = Signal::stored(concept);
     let opened = open_in(open);
-    let mut first = hierarchy(&brand);
+    let mut first = hierarchy(&brand, &words);
     for key in &opened {
-        read_children(&brand, &mut first, key);
+        read_children(&brand, &words, &mut first, key);
     }
+    let label = words.get(Msg::SyntheticHierarchy);
+    let words = StoredValue::new(words);
     let nodes = RwSignal::new(first);
     let expanded = RwSignal::new(opened);
     let brand = StoredValue::new(brand);
@@ -192,12 +240,16 @@ pub(crate) fn concept_tree(
     tree_view_collapsing(
         Tree {
             id: "gallery-tree",
-            label: tr(Msg::SyntheticHierarchy).into(),
+            label: label.into(),
             nodes: nodes.into(),
             expanded,
             selected,
             on_expand: Some(Callback::new(move |key: String| {
-                brand.with_value(|brand| nodes.update(|nodes| read_children(brand, nodes, &key)));
+                brand.with_value(|brand| {
+                    words.with_value(|words| {
+                        nodes.update(|nodes| read_children(brand, words, nodes, &key));
+                    });
+                });
                 remember();
             })),
             actions: None,
@@ -262,28 +314,29 @@ fn listing() -> AnyView {
 /// is the island [`crate::islands::RunnerForm`].
 fn runner_form() -> AnyView {
     let brand = brand_key();
-    view! { <crate::islands::RunnerForm brand /> }.into_any()
+    view! { <crate::islands::RunnerForm brand words=runner_words() help=HelpWords::of_page() /> }
+        .into_any()
 }
 
-/// The runner's form on the layouts page of the brand `brand`.
-pub(crate) fn runner_form_in(brand: &str) -> AnyView {
+/// The runner's form on the layouts page of the brand `brand`, in `words`
+/// and the help switch's `help`.
+pub(crate) fn runner_form_in(brand: &str, words: &Words, help: HelpWords) -> AnyView {
     let ferrohealth_ui::widget::help::HelpShown(_shown) = provide_help();
-    let choices = Signal::derive(|| {
-        vec![
-            (
-                String::from("http://example.org/vs/signs"),
-                tr(Msg::SyntheticSigns),
-            ),
-            (
-                String::from("http://example.org/vs/sites"),
-                tr(Msg::SyntheticSites),
-            ),
-            (
-                String::from("http://example.org/vs/units"),
-                tr(Msg::SyntheticUnits),
-            ),
-        ]
-    });
+    let options = vec![
+        (
+            String::from("http://example.org/vs/signs"),
+            words.get(Msg::SyntheticSigns),
+        ),
+        (
+            String::from("http://example.org/vs/sites"),
+            words.get(Msg::SyntheticSites),
+        ),
+        (
+            String::from("http://example.org/vs/units"),
+            words.get(Msg::SyntheticUnits),
+        ),
+    ];
+    let choices = Signal::stored(options);
     let first = String::from("http://example.org/vs/signs");
     let value = RwSignal::new(first.clone());
     // The console's side: a value set from outside, which the picker's
@@ -295,19 +348,19 @@ pub(crate) fn runner_form_in(brand: &str) -> AnyView {
             class=Variant::Secondary.class()
             on:click=move |_| value.set(first.clone())
         >
-            {tr(Msg::UseFirstValueSet)}
+            {words.get(Msg::UseFirstValueSet)}
         </button>
     };
     let picker = picker_field(Picker {
         id: "run-value-set",
         name: "url",
-        label: tr(Msg::ValueSet).into(),
-        choose_label: tr(Msg::ChooseValueSetServerHolds).into(),
-        help: Some(tr(Msg::CanonicalValueSetList).into()),
+        label: words.get(Msg::ValueSet).into(),
+        choose_label: words.get(Msg::ChooseValueSetServerHolds).into(),
+        help: Some(words.get(Msg::CanonicalValueSetList).into()),
         choices,
         value,
-        empty_word: tr(Msg::ChooseOneServerHolds).into(),
-        other_word: tr(Msg::AnotherCanonical).into(),
+        empty_word: words.get(Msg::ChooseOneServerHolds).into(),
+        other_word: words.get(Msg::AnotherCanonical).into(),
     });
     let count = view! {
         <input
@@ -321,8 +374,8 @@ pub(crate) fn runner_form_in(brand: &str) -> AnyView {
     };
     let language = view! {
         <select id="run-language" name="language" class=format!("{SELECT} {MEDIUM}") aria-describedby=help_id("run-language")>
-            <option value="en">{tr(Msg::English)}</option>
-            <option value="nl">{tr(Msg::Dutch)}</option>
+            <option value="en">{words.get(Msg::English)}</option>
+            <option value="nl">{words.get(Msg::Dutch)}</option>
         </select>
     };
     let note = view! {
@@ -333,15 +386,15 @@ pub(crate) fn runner_form_in(brand: &str) -> AnyView {
     };
     view! {
         <form method="get" action=here(brand, "") class=FORM>
-            {split(view! { <h2 class="fui-card-title">{tr(Msg::ListValueSet)}</h2> }, help_switch())}
+            {split(view! { <h2 class="fui-card-title">{words.get(Msg::ListValueSet)}</h2> }, help_switch(help))}
             {picker}
             <div>{reset}</div>
-            {explained_field("run-count", tr(Msg::PageSize), tr(Msg::HowManyConceptsOnePage), count)}
-            {explained_field("run-language", tr(Msg::DisplayLanguage), tr(Msg::LanguageDisplays), language)}
-            {explained_field("run-note", tr(Msg::WhyYouRun), tr(Msg::NoteKeptBesideRun), note)}
-            {explained_check_field("run-inactive", tr(Msg::IncludeInactiveConcepts), tr(Msg::InactiveConceptListedMarked), inactive)}
+            {explained_field("run-count", words.get(Msg::PageSize), words.get(Msg::HowManyConceptsOnePage), count)}
+            {explained_field("run-language", words.get(Msg::DisplayLanguage), words.get(Msg::LanguageDisplays), language)}
+            {explained_field("run-note", words.get(Msg::WhyYouRun), words.get(Msg::NoteKeptBesideRun), note)}
+            {explained_check_field("run-inactive", words.get(Msg::IncludeInactiveConcepts), words.get(Msg::InactiveConceptListedMarked), inactive)}
             <button type="submit" class=Variant::Primary.class()>
-                {label(Some(Glyph::PLAY), tr(Msg::List))}
+                {label(Some(Glyph::PLAY), words.get(Msg::List))}
             </button>
         </form>
     }

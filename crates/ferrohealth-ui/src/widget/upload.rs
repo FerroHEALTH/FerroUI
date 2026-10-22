@@ -18,9 +18,10 @@
 use std::borrow::Cow;
 
 use leptos::prelude::*;
+use serde::{Deserialize, Serialize};
 
 use crate::highlight::Language;
-use crate::i18n::{Locale, Text, locale};
+use crate::i18n::{Phrase, Text, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::widget::editor::{Drawn, Grammar, drawn};
 
@@ -40,6 +41,117 @@ pub struct Upload {
     pub max_bytes: u64,
     /// The text area's placeholder: the format's first line.
     pub placeholder: Cow<'static, str>,
+    /// The words the field draws itself ([`UploadWords::of_page`] over the
+    /// same `accept` and `max_bytes`).
+    pub words: UploadWords,
+}
+
+/// A size in words, resolved on the server in the page's locale with the
+/// count left open, so an island can name the size of a file it reads.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SizeWords {
+    /// One byte, whole.
+    pub one_byte: String,
+    /// A count of bytes other than one, around the open `count`.
+    pub bytes: Phrase,
+    /// A count of kibibytes, around the open `count`.
+    pub kib: Phrase,
+    /// A count of mebibytes, around the open `count`.
+    pub mib: Phrase,
+}
+
+impl SizeWords {
+    /// The size words in the locale of the page being drawn.
+    #[must_use]
+    pub fn of_page() -> Self {
+        let open = |text| Phrase::new(tr_with(text, &[("count", Phrase::open("count"))]));
+        Self {
+            one_byte: tr_with(Text::SizeBytes, &[("count", 1_u32.into())]),
+            bytes: open(Text::SizeBytes),
+            kib: open(Text::SizeKib),
+            mib: open(Text::SizeMib),
+        }
+    }
+
+    /// `bytes` in the largest unit that keeps it above one.
+    #[must_use]
+    pub fn size(&self, bytes: u64) -> String {
+        const KIB: u64 = 1024;
+        const MIB: u64 = 1024 * 1024;
+        let (unit, count) = if bytes >= MIB {
+            (&self.mib, bytes.div_ceil(MIB))
+        } else if bytes >= KIB {
+            (&self.kib, bytes.div_ceil(KIB))
+        } else if bytes == 1 {
+            return self.one_byte.clone();
+        } else {
+            (&self.bytes, bytes)
+        };
+        unit.fill(&[("count", &count.to_string())])
+    }
+}
+
+/// The words an upload field draws itself, resolved on the server in the
+/// page's locale, so an island that draws it carries no catalog.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UploadWords {
+    /// The drop zone's words.
+    pub drop_invite: String,
+    /// The drop zone's words while a file is over it.
+    pub drop_over: String,
+    /// The kinds of file and the limit the field takes.
+    pub rule: String,
+    /// The line while the console sends.
+    pub busy: String,
+    /// The line once a file is read, around the open `file`.
+    pub read: Phrase,
+    /// A file of a kind the field does not take, around the open `file`.
+    pub refused_kind: Phrase,
+    /// A file over the limit, around the open `file` and `size`.
+    pub refused_size: Phrase,
+    /// A file the browser could not read, around the open `file`.
+    pub unreadable: Phrase,
+    /// The words of a size.
+    pub sizes: SizeWords,
+}
+
+impl UploadWords {
+    /// The words of a field that takes the extensions `accept` up to
+    /// `max_bytes`, in the locale of the page being drawn.
+    #[must_use]
+    pub fn of_page(accept: &[&str], max_bytes: u64) -> Self {
+        let sizes = SizeWords::of_page();
+        let kinds = accept.join(", ");
+        let limit = sizes.size(max_bytes);
+        let file = || ("file", Phrase::open("file"));
+        Self {
+            drop_invite: tr(Text::UploadDropInvite),
+            drop_over: tr(Text::UploadDropOver),
+            rule: tr_with(
+                Text::UploadRule,
+                &[
+                    ("kinds", kinds.clone().into()),
+                    ("limit", limit.clone().into()),
+                ],
+            ),
+            busy: tr(Text::UploadBusy),
+            read: Phrase::new(tr_with(Text::UploadRead, &[file()])),
+            refused_kind: Phrase::new(tr_with(
+                Text::UploadRefusedKind,
+                &[file(), ("kinds", kinds.into())],
+            )),
+            refused_size: Phrase::new(tr_with(
+                Text::UploadRefusedSize,
+                &[
+                    file(),
+                    ("size", Phrase::open("size")),
+                    ("limit", limit.into()),
+                ],
+            )),
+            unreadable: Phrase::new(tr_with(Text::UploadUnreadable, &[file()])),
+            sizes,
+        }
+    }
 }
 
 /// Why a file was refused.
@@ -60,54 +172,16 @@ pub enum Refused {
 }
 
 impl Refused {
-    /// The sentence the field shows for the refusal in the page's locale,
-    /// naming `accept` and the limit `max_bytes`.
+    /// The sentence the field shows for the refusal, in `words`.
     #[must_use]
-    pub fn sentence(&self, accept: &[&str], max_bytes: u64) -> String {
-        self.sentence_in(&locale(), accept, max_bytes)
-    }
-
-    /// [`Refused::sentence`] in `locale`.
-    fn sentence_in(&self, locale: &Locale, accept: &[&str], max_bytes: u64) -> String {
+    pub fn sentence(&self, words: &UploadWords) -> String {
         match self {
-            Self::Kind { name } => locale.text_with(
-                Text::UploadRefusedKind,
-                &[
-                    ("file", name.clone().into()),
-                    ("kinds", accept.join(", ").into()),
-                ],
-            ),
-            Self::Size { name, bytes } => locale.text_with(
-                Text::UploadRefusedSize,
-                &[
-                    ("file", name.clone().into()),
-                    ("size", size_in(locale, *bytes).into()),
-                    ("limit", size_in(locale, max_bytes).into()),
-                ],
-            ),
+            Self::Kind { name } => words.refused_kind.fill(&[("file", name)]),
+            Self::Size { name, bytes } => words
+                .refused_size
+                .fill(&[("file", name), ("size", &words.sizes.size(*bytes))]),
         }
     }
-}
-
-/// `bytes` in the largest unit that keeps it above one, in words of the
-/// page's locale.
-#[must_use]
-pub fn size(bytes: u64) -> String {
-    size_in(&locale(), bytes)
-}
-
-/// [`size`] in `locale`.
-fn size_in(locale: &Locale, bytes: u64) -> String {
-    const KIB: u64 = 1024;
-    const MIB: u64 = 1024 * 1024;
-    let (unit, count) = if bytes >= MIB {
-        (Text::SizeMib, bytes.div_ceil(MIB))
-    } else if bytes >= KIB {
-        (Text::SizeKib, bytes.div_ceil(KIB))
-    } else {
-        (Text::SizeBytes, bytes)
-    };
-    locale.text_with(unit, &[("count", count.into())])
 }
 
 /// Whether a file `name` of `bytes` may be read under `upload`, or why not.
@@ -187,11 +261,8 @@ pub fn upload_field(
     refusal: Signal<Option<String>>,
 ) -> AnyView {
     let picked = RwSignal::new(Picked::None);
-    // The page's locale is read once here: the file is read in a handler
-    // and a task, where no page tree is in reach.
-    let locale = locale();
-    let uploading = locale.text(Text::UploadBusy);
-    let read_locale = locale.clone();
+    let words = StoredValue::new(upload.words.clone());
+    let uploading = upload.words.busy.clone();
     let text_id = format!("{}-text", upload.id);
     let label_for = text_id.clone();
     let state = move || match picked.get() {
@@ -200,7 +271,7 @@ pub fn upload_field(
             view! {
                 <p class="fui-drop-state" role="status">
                     {icon(Glyph::FILE_TEXT, "14")}
-                    {read_locale.text_with(Text::UploadRead, &[("file", name.into())])}
+                    {words.with_value(|words| words.read.fill(&[("file", &name)]))}
                 </p>
             }
             .into_any(),
@@ -215,7 +286,7 @@ pub fn upload_field(
             .into_any(),
         ),
     };
-    let zone = drop_zone(&upload, &locale, source, picked);
+    let zone = drop_zone(&upload, words, source, picked);
     // The text area is the highlighted editor, its grammar read from the
     // text: a pasted or read OPT shows as XML, a JSON document as JSON.
     let editor = drawn(
@@ -271,21 +342,14 @@ pub fn upload_field(
 /// `picked`.
 fn drop_zone(
     upload: &Upload,
-    locale: &Locale,
+    words: StoredValue<UploadWords>,
     source: RwSignal<String>,
     picked: RwSignal<Picked>,
 ) -> impl IntoView + use<> {
     let over = RwSignal::new(false);
-    let release = locale.text(Text::UploadDropOver);
-    let invite = locale.text(Text::UploadDropInvite);
-    let rule = locale.text_with(
-        Text::UploadRule,
-        &[
-            ("kinds", upload.accept.join(", ").into()),
-            ("limit", size_in(locale, upload.max_bytes).into()),
-        ],
-    );
-    let (on_drop, on_choose) = (locale.clone(), locale.clone());
+    let release = upload.words.drop_over.clone();
+    let invite = upload.words.drop_invite.clone();
+    let rule = upload.words.rule.clone();
     let file_id = format!("{}-file", upload.id);
     let drop_id = format!("{}-drop", upload.id);
     let accept = upload.accept.join(",");
@@ -314,7 +378,7 @@ fn drop_zone(
                 on:drop=move |event| {
                     event.prevent_default();
                     over.set(false);
-                    dropped(kinds, &on_drop, &event, source, picked);
+                    dropped(kinds, words, &event, source, picked);
                 }
             >
                 <span class="fui-drop-glyph">{icon(Glyph::UPLOAD, "20")}</span>
@@ -330,7 +394,7 @@ fn drop_zone(
                     type="file"
                     class="fui-sr-only"
                     accept=accept
-                    on:change=move |event| chosen(kinds, &on_choose, &event, source, picked)
+                    on:change=move |event| chosen(kinds, words, &event, source, picked)
                 />
                 <p class="fui-small">{rule}</p>
             </div>
@@ -340,7 +404,7 @@ fn drop_zone(
 /// Reads the file `event` chose into `source`, or refuses it.
 fn chosen(
     upload: Rule,
-    locale: &Locale,
+    words: StoredValue<UploadWords>,
     event: &leptos::ev::Event,
     source: RwSignal<String>,
     picked: RwSignal<Picked>,
@@ -354,23 +418,23 @@ fn chosen(
             .and_then(|input| input.files())
             .and_then(|files| files.get(0));
         if let Some(file) = file {
-            read(upload, locale, &file, source, picked);
+            read(upload, words, &file, source, picked);
         }
     }
     #[cfg(not(target_arch = "wasm32"))]
     let _: (
         Rule,
-        &Locale,
+        StoredValue<UploadWords>,
         &leptos::ev::Event,
         RwSignal<String>,
         RwSignal<Picked>,
-    ) = (upload, locale, event, source, picked);
+    ) = (upload, words, event, source, picked);
 }
 
 /// Reads the file `event` dropped into `source`, or refuses it.
 fn dropped(
     upload: Rule,
-    locale: &Locale,
+    words: StoredValue<UploadWords>,
     event: &leptos::ev::DragEvent,
     source: RwSignal<String>,
     picked: RwSignal<Picked>,
@@ -382,17 +446,17 @@ fn dropped(
             .and_then(|transfer| transfer.files())
             .and_then(|files| files.get(0));
         if let Some(file) = file {
-            read(upload, locale, &file, source, picked);
+            read(upload, words, &file, source, picked);
         }
     }
     #[cfg(not(target_arch = "wasm32"))]
     let _: (
         Rule,
-        &Locale,
+        StoredValue<UploadWords>,
         &leptos::ev::DragEvent,
         RwSignal<String>,
         RwSignal<Picked>,
-    ) = (upload, locale, event, source, picked);
+    ) = (upload, words, event, source, picked);
 }
 
 /// Reads `file` into `source` when [`admit`] lets it, and says so in
@@ -400,21 +464,19 @@ fn dropped(
 #[cfg(target_arch = "wasm32")]
 fn read(
     upload: Rule,
-    locale: &Locale,
+    words: StoredValue<UploadWords>,
     file: &web_sys::File,
     source: RwSignal<String>,
     picked: RwSignal<Picked>,
 ) {
     let name = file.name();
     if let Err(refused) = upload.admit(&name, whole_bytes(file.size())) {
-        picked.set(Picked::Refused(refused.sentence_in(
-            locale,
-            upload.accept,
-            upload.max_bytes,
-        )));
+        picked.set(Picked::Refused(
+            words.with_value(|words| refused.sentence(words)),
+        ));
         return;
     }
-    let unreadable = locale.text_with(Text::UploadUnreadable, &[("file", name.clone().into())]);
+    let unreadable = words.with_value(|words| words.unreadable.fill(&[("file", &name)]));
     let promise = file.text();
     wasm_bindgen_futures::spawn_local(async move {
         let read = wasm_bindgen_futures::JsFuture::from(promise)
@@ -455,32 +517,38 @@ fn whole_bytes(size: f64) -> u64 {
 mod tests {
     use std::borrow::Cow;
 
-    use super::{Refused, Upload, admit, size};
+    use super::{Refused, SizeWords, Upload, UploadWords, admit};
 
-    const UPLOAD: Upload = Upload {
-        id: "opt",
-        label: Cow::Borrowed("Operational template"),
-        choose: Cow::Borrowed("Choose OPT file"),
-        accept: &[".opt", ".xml"],
-        max_bytes: 2 * 1024 * 1024,
-        placeholder: Cow::Borrowed("<?xml version=\"1.0\"?>"),
-    };
+    const ACCEPT: &[&str] = &[".opt", ".xml"];
+    const MAX_BYTES: u64 = 2 * 1024 * 1024;
+
+    fn upload() -> Upload {
+        Upload {
+            id: "opt",
+            label: Cow::Borrowed("Operational template"),
+            choose: Cow::Borrowed("Choose OPT file"),
+            accept: ACCEPT,
+            max_bytes: MAX_BYTES,
+            placeholder: Cow::Borrowed("<?xml version=\"1.0\"?>"),
+            words: UploadWords::of_page(ACCEPT, MAX_BYTES),
+        }
+    }
 
     #[test]
     fn a_file_is_read_only_of_an_accepted_kind_and_within_the_limit() {
-        assert_eq!(Ok(()), admit(&UPLOAD, "Vital signs.OPT", 1024));
+        assert_eq!(Ok(()), admit(&upload(), "Vital signs.OPT", 1024));
         assert_eq!(
             Err(Refused::Kind {
                 name: String::from("notes.txt")
             }),
-            admit(&UPLOAD, "notes.txt", 10)
+            admit(&upload(), "notes.txt", 10)
         );
         assert_eq!(
             Err(Refused::Size {
                 name: String::from("big.xml"),
                 bytes: 3 * 1024 * 1024
             }),
-            admit(&UPLOAD, "big.xml", 3 * 1024 * 1024)
+            admit(&upload(), "big.xml", 3 * 1024 * 1024)
         );
     }
 
@@ -489,12 +557,29 @@ mod tests {
         let kind = Refused::Kind {
             name: String::from("notes.txt"),
         };
+        let words = UploadWords::of_page(ACCEPT, MAX_BYTES);
         assert_eq!(
             "notes.txt was not read: the field takes .opt, .xml files.",
-            kind.sentence(UPLOAD.accept, UPLOAD.max_bytes)
+            kind.sentence(&words)
         );
-        assert_eq!("2 MiB", size(UPLOAD.max_bytes));
-        assert_eq!("12 bytes", size(12));
-        assert_eq!("2 KiB", size(1500));
+        let size = Refused::Size {
+            name: String::from("big.xml"),
+            bytes: 3 * 1024 * 1024,
+        };
+        assert_eq!(
+            "big.xml was not read: it is 3 MiB and the field takes up to 2 MiB.",
+            size.sentence(&words)
+        );
+        assert_eq!(".opt, .xml files, up to 2 MiB.", words.rule);
+    }
+
+    #[test]
+    fn a_size_takes_the_largest_unit_above_one_and_its_plural() {
+        let sizes = SizeWords::of_page();
+        assert_eq!("2 MiB", sizes.size(MAX_BYTES));
+        assert_eq!("12 bytes", sizes.size(12));
+        assert_eq!("1 byte", sizes.size(1));
+        assert_eq!("0 bytes", sizes.size(0));
+        assert_eq!("2 KiB", sizes.size(1500));
     }
 }

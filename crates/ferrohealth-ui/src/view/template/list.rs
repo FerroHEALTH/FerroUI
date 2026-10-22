@@ -19,7 +19,7 @@ use leptos::prelude::*;
 use crate::i18n::{Text, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::view::surface::{Header, page_heading};
-use crate::view::template::tabbed;
+use crate::view::tabs::{TabRow, joined};
 
 /// The number of items a list shows with no summary strip and no toolbar
 /// (family rule 8).
@@ -79,7 +79,7 @@ pub struct ListCard {
     /// The binder tabs over the card, when the list has two or more real
     /// views; they carry the title and the count, so the card draws no
     /// header row of its own.
-    pub tabs: Option<AnyView>,
+    pub tabs: Option<TabRow>,
     /// The header row's actions at its far end, when it has any.
     pub actions: Option<AnyView>,
     /// The list: a table edge to edge, or [`list_empty`].
@@ -205,7 +205,7 @@ pub fn list_card(card: ListCard) -> AnyView {
             </section>
         }
         .into_any();
-        return tabbed(tabs, panel, "fui-tabbed");
+        return joined(tabs, panel, None);
     }
     let name = title.clone();
     view! {

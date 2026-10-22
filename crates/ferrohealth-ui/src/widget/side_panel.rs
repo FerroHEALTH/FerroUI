@@ -14,6 +14,7 @@
 use std::borrow::Cow;
 
 use leptos::prelude::*;
+use serde::{Deserialize, Serialize};
 
 use crate::i18n::{Text, tr};
 use crate::icon::{Glyph, icon};
@@ -30,6 +31,26 @@ pub struct SidePanel {
     pub title: Cow<'static, str>,
     /// The body.
     pub body: AnyView,
+    /// The words the panel draws itself ([`SidePanelWords::of_page`]).
+    pub words: SidePanelWords,
+}
+
+/// The words a side panel draws itself, resolved on the server in the
+/// page's locale, so an island that draws it carries no catalog.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SidePanelWords {
+    /// The Close button's name.
+    pub close: String,
+}
+
+impl SidePanelWords {
+    /// The panel's words in the locale of the page being drawn.
+    #[must_use]
+    pub fn of_page() -> Self {
+        Self {
+            close: tr(Text::Close),
+        }
+    }
 }
 
 /// Returns a button of `class` that opens the side panel `id`, with `glyph`
@@ -59,6 +80,7 @@ pub fn side_panel(panel: SidePanel) -> AnyView {
         body_id,
         title,
         body,
+        words: SidePanelWords { close },
     } = panel;
     let node = NodeRef::<leptos::html::Aside>::new();
     let title_id = format!("{id}-title");
@@ -82,7 +104,7 @@ pub fn side_panel(panel: SidePanel) -> AnyView {
                     class="fui-icon-button fui-side-panel-close"
                     popovertarget=id
                     popovertargetaction="hide"
-                    aria-label=tr(Text::Close)
+                    aria-label=close
                 >
                     {icon(Glyph::X, "16")}
                 </button>

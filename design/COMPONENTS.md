@@ -70,7 +70,7 @@ Every component follows one interaction contract, so the consoles behave alike a
 
 The consoles render in **Leptos islands mode** (the Leptos book, "Guide: Islands"): the server draws every page whole, and the browser hydrates only the interactive parts, each a small island of its own. Navigation is plain links and forms, with no client router. An island's props, its words among them, are resolved on the server and are page content, so no island carries clinical data the page does not already show. Toasts come from one region island in the shell; with no WebAssembly the server draws the outcome of a form post in it.
 
-Hydrating the whole page was measured against islands on the gallery and rejected: 685903 bytes of brotli-compressed WebAssembly against 427449, and on a slowed phone profile 315 ms against 277 ms to interactive on the forms page. The gallery's budget is 552960 bytes; each console keeps its own (FerroBRIDGE: 458752). The islands router is revisited when Leptos ships it stable.
+Hydrating the whole page was measured against islands on the gallery and rejected: 685903 bytes of brotli-compressed WebAssembly against 427449, and on a slowed phone profile 315 ms against 277 ms to interactive on the forms page. The gallery's budget is 491520 bytes, since every island takes its words as props and the browser carries no catalog; each console keeps its own (FerroBRIDGE: 458752). The islands router is revisited when Leptos ships it stable.
 
 ## Page templates
 
@@ -165,7 +165,7 @@ Measured on the FerroPIX identifier domains table at 1440 px. Every console's ta
 |---|---|
 | R1 | Responsive key hints |
 | R2 | Tag |
-| R3 | Binder tabs joined to their panel A tab row that scrolls starts with its current tab in view (`scroll-initial-target`). A tab marked `data-tab="keyboard"` (the family hook for Keyboard in Your preferences) is hidden below 40 rem: phones have no keyboard items. |
+| R3 | Binder tabs joined to their panel A tab row that scrolls starts with its current tab in view (`scroll-initial-target`). A tab marked `data-tab="keyboard"` (the family hook for Keyboard in Your preferences) is hidden below 40 rem: phones have no keyboard items. Each tab is a link to its own route, so the row works with no WebAssembly; the phone's tab select takes the row's place only once it works. |
 | R4 | Docked decision bar |
 | R5 | Previous and next in the page header |
 | R6 | Breadcrumb as a back link on a phone |
@@ -179,7 +179,7 @@ Measured on the FerroPIX identifier domains table at 1440 px. Every console's ta
 | R14 | Filter chips On a phone Clear filters keeps one line beside the chips. With a count the row says "Showing 7 of 21". |
 | R15 | Configuration editing A key hint (`fui-key-hint`) is a labelled copy button on the label's line, reachable by keyboard, shown on hover and focus, and always shown on a phone. |
 | R16 | Score scale |
-| R17 | Toasts and popover form A toast's action sits under its text. On a phone the page keeps clear of the toast region. |
+| R17 | Toasts and popover form A toast is a title, an optional line and an optional action; the action sits under its text. The bad tone is an alert; a toast with an action stays until dismissed. A toast never repeats a banner or a load report that says the same. On a phone the page keeps clear of the toast region while a toast shows. |
 | R18 | Focus ring on every control |
 | R19 | Sign-in. One card (`fui-sign-in`) and its caption in a centred column (`fui-sign-in-stack`): the lockup as plain text, an optional title (`fui-sign-in-title`), the notice of the state in its tone (`fui-sign-in-notice`, a status, or an alert for a refusal), the provider's action (busy while redirecting, disabled while unavailable), the basic form only where the console has one, muted lines (`fui-sign-in-line`) and the deployment's links. No placeholder repeats a label. |
 | R20 | Error page (`fui-status-page`) The status in words before its number, as one quiet line ("Not allowed · 403"); the title names the error in plain words; then what it means for you (who you are and the scope or role for a 403, the address and what it may mean for a 404, who can fix it for a 500), a quiet hint for the raw scope or key, and the way on as links. The time and the request id sit in a closed disclosure. It renders in the shell, and in the centred layout when no one is signed in. |
@@ -266,7 +266,7 @@ Measured on the FerroPIX identifier domains table at 1440 px. Every console's ta
 | E6 Condition groups (`fui-cond-group`, `fui-cond`) | The query builder's criteria: a group's head reads as one phrase, "Match [All | Any] of these conditions", the choice a segmented control, then a check box "Match the opposite (NOT)"; each group has an accent edge (dashed when negated; a nested group's edge is the strong hairline). A condition is an F7 row: the path as a select with its archetype path as a quiet mono line under it, the operator, a typed value (a unit suffix, a coded select), Remove; on a phone Remove stays on the first line. Add a condition and Add a group close each group. |
 | E7 Results pane (`fui-results-window`) | A query's answer as a B10 section: the row count in the heading, Table or Chart as a segmented control and Export CSV and Export JSON as its actions, the row window in one quiet line ("Rows 1 to 3 of 3, inside the query's own LIMIT 50"), then the table edge to edge or the base line chart with one series per numeric column over the time column. Shared by every screen that runs a query. |
 | E8 Scope grant (`fui-scopes`, `fui-scope`) | One SMART scope parsed: the raw scope in mono, never broken; the compartment and the resource in words; the five operations as tags, a permitted one on the accent tint and an absent one struck through (`del`), so the grant never rests on colour; a broad grant carries the warn badge Broad access. A malformed scope is the bad tone with what the grammar expected. |
-| R17 anchored | A popover form inside an anchor (Save to the CDR) opens 4 px under its trigger, aligned to its end edge; on a phone it rises from the foot of the screen at the content width. On a phone it is a bottom sheet over a scrim. |
+| R17 anchored | A popover form inside an anchor (Save to the CDR) is a native `popover`, placed against its trigger by CSS anchor positioning: it opens 4 px under its trigger, aligned to its end edge; on a phone it rises from the foot of the screen at the content width. On a phone it is a bottom sheet over a scrim. |
 | One overlay surface | Every open popup (F13 menu, R29 listbox, R17 popover, R25 date picker, the search answer) has a full border in the strong hairline, and in dark a ground lifted above the raised cards, so it never reads as pasted over what it opens on. A toolbar's date range opens as R25's bottom sheet on a phone. |
 | A row's actions on a phone | In a stacked table inside a B10 section, the row-menu cell sits on the card's first line at its end, as F7 keeps Remove on a repeatable row's first line. |
 

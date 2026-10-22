@@ -22,7 +22,7 @@
 use leptos::prelude::*;
 
 use crate::highlight::escape;
-use crate::i18n::{Text, tr, tr_with};
+use crate::i18n::{Phrase, Text, tr, tr_with};
 
 /// The number of colours a series can take: the role tones below, so a
 /// colour means what it means elsewhere and follows the brand's accent.
@@ -518,10 +518,37 @@ pub(crate) fn line_svg_grouped(chart: &LineChart, shown: &[bool]) -> String {
     )
 }
 
-/// The figures of `chart` as a table for assistive technology: a row per X
-/// value and a column per series.
+/// The words of a chart's figures table, resolved on the server in the
+/// page's locale, so an island that draws it carries no catalog.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct FiguresWords {
+    /// A cell with no value.
+    pub no_value: String,
+    /// The head of the X column.
+    pub x: String,
+    /// The caption, around the open `chart`, the chart's name.
+    pub caption: Phrase,
+}
+
+impl FiguresWords {
+    /// The table's words in the locale of the page being drawn.
+    #[must_use]
+    pub fn of_page() -> Self {
+        Self {
+            no_value: tr(Text::ChartNoValueCell),
+            x: tr(Text::ChartX),
+            caption: Phrase::new(tr_with(
+                Text::ChartAsTable,
+                &[("chart", Phrase::open("chart"))],
+            )),
+        }
+    }
+}
+
+/// The figures of `chart` as a table for assistive technology, in `words`:
+/// a row per X value and a column per series.
 #[must_use]
-pub fn figures(chart: &LineChart) -> impl IntoView + use<> {
+pub fn figures(chart: &LineChart, words: FiguresWords) -> impl IntoView + use<> {
     let mut xs: Vec<f64> = chart
         .series
         .iter()
@@ -530,7 +557,11 @@ pub fn figures(chart: &LineChart) -> impl IntoView + use<> {
         .collect();
     xs.sort_by(f64::total_cmp);
     xs.dedup();
-    let no_value = tr(Text::ChartNoValueCell);
+    let FiguresWords {
+        no_value,
+        x,
+        caption,
+    } = words;
     let heads = chart
         .series
         .iter()
@@ -564,13 +595,13 @@ pub fn figures(chart: &LineChart) -> impl IntoView + use<> {
             }
         })
         .collect_view();
-    let caption = tr_with(Text::ChartAsTable, &[("chart", chart.label.clone().into())]);
+    let caption = caption.fill(&[("chart", &chart.label)]);
     view! {
         <table class="fui-sr-only">
             <caption>{caption}</caption>
             <thead>
                 <tr>
-                    <th scope="col">{tr(Text::ChartX)}</th>
+                    <th scope="col">{x}</th>
                     {heads}
                 </tr>
             </thead>
