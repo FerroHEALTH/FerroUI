@@ -6,7 +6,7 @@
 
 skip crates/ferrohealth-ui/src/highlight/   # tokenizers: grammar keywords and the markup they write
 skip crates/ferrohealth-ui/src/icon.rs      # the vendored Lucide outlines and their names
-skip crates/ferrohealth-ui/src/i18n.rs      # the catalog mechanism: message ids and diagnostics
+skip crates/ferrohealth-ui/src/i18n/        # the catalog mechanism: message ids and diagnostics
 
 allow ^(ArrowUp|ArrowDown|ArrowLeft|ArrowRight|Home|End|Enter|Escape|Tab|PageUp|PageDown)$   # UI Events KeyboardEvent.key values
 allow ^\(width                         # a CSS media query the browser code matches

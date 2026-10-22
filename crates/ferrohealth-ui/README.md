@@ -121,7 +121,7 @@ Every word a component draws itself (a pager step, a dialog's Cancel, the
 user menu's Sign out, an empty listing's range) comes from a Fluent catalog
 under `locales/`, one directory per language. English is the one catalog
 that ships, and every lookup falls back to it; a language joins as one
-catalog file, with no code change. Choose the locale once per render, at the
+catalog directory, with no code change. Choose the locale once per render, at the
 root of the page tree on the server, and write it as `<html lang>`; an
 island takes the words it draws as props the server resolved:
 
