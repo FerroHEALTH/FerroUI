@@ -35,7 +35,7 @@ use crate::view::empty::{Busy, busy};
 use crate::view::kbd::{aria_keys, kbd};
 use crate::view::load_report::Outcome;
 use crate::view::surface::disclosure;
-use crate::widget::copy::CopyWords;
+use crate::widget::copy::{CopySource, CopyWords};
 
 /// How many fields an options row holds, which sets how they share it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -340,7 +340,7 @@ pub fn request(request: Request) -> AnyView {
             <CopyButton
                 id=id
                 label=tr(Text::DocumentCopy)
-                text=text.clone()
+                source=CopySource::Text(text.clone())
                 words=CopyWords::of_page()
             />
         }

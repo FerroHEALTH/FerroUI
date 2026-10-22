@@ -26,7 +26,7 @@ use ferrohealth_ui::view::transform::{
     Answer, AnswerState, Density, Request, Run, RunState, TransformPane, field_checks, request,
     run_button, transform_options, transform_pair,
 };
-use ferrohealth_ui::widget::copy::CopyWords;
+use ferrohealth_ui::widget::copy::{CopySource, CopyWords};
 use ferrohealth_ui::widget::editor::{Editor, code_editor};
 use leptos::prelude::*;
 
@@ -199,7 +199,7 @@ fn answer_pane(pair: Pair) -> TransformPane {
                     <CopyButton
                         id=String::from("pair-answer-copy")
                         label=tr(Msg::OpCopy)
-                        text=String::from(JSON)
+                        source=CopySource::Text(String::from(JSON))
                         words=CopyWords::of_page()
                     />
                 }

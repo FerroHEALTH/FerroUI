@@ -222,23 +222,38 @@ pub fn html(
 ) -> String {
     let mut out = String::with_capacity(text.len().saturating_mul(2));
     for (number, line) in (1_u32..).zip(lines(language, text)) {
-        out.push_str("<span class=\"fui-code-line");
-        if let Some(class) = marked(number) {
-            out.push(' ');
-            out.push_str(class);
-        }
-        out.push('"');
-        if let Some(prefix) = options.ids {
-            out.push_str(" id=\"");
-            escape(prefix, &mut out);
-            out.push_str(&number.to_string());
-            out.push('"');
-        }
-        out.push('>');
-        push_tokens(&line, &mut out);
-        out.push_str("</span>");
+        let mut body = String::new();
+        push_tokens(&line, &mut body);
+        push_line(&mut out, number, marked(number), options.ids, &body);
     }
     out
+}
+
+/// Appends line `number` to `out` as [`html`] writes it: a
+/// `<span class="fui-code-line">` with `class` beside, the id `prefix` and
+/// the number when there is a prefix, around the line's HTML `body`.
+pub(crate) fn push_line(
+    out: &mut String,
+    number: u32,
+    class: Option<&str>,
+    prefix: Option<&str>,
+    body: &str,
+) {
+    out.push_str("<span class=\"fui-code-line");
+    if let Some(class) = class {
+        out.push(' ');
+        out.push_str(class);
+    }
+    out.push('"');
+    if let Some(prefix) = prefix {
+        out.push_str(" id=\"");
+        escape(prefix, out);
+        out.push_str(&number.to_string());
+        out.push('"');
+    }
+    out.push('>');
+    out.push_str(body);
+    out.push_str("</span>");
 }
 
 /// Returns the tokens of one line, as [`lines`] cut them, as HTML: each
@@ -250,19 +265,47 @@ pub fn line_html(line: &[Token]) -> String {
     out
 }
 
+/// Returns `text` in `language` as one string of HTML per line, each as
+/// [`line_html`] writes the line [`lines`] cuts, in one pass over the
+/// tokens.
+pub(crate) fn lines_html(language: Language, text: &str) -> Vec<String> {
+    let mut out = vec![String::new()];
+    for token in tokens(language, text) {
+        let mut parts = token.text.split('\n');
+        if let (Some(first), Some(line)) = (parts.next(), out.last_mut()) {
+            push_token(token.kind, first, line);
+        }
+        for part in parts {
+            let mut line = String::new();
+            push_token(token.kind, part, &mut line);
+            out.push(line);
+        }
+    }
+    out
+}
+
 /// Appends the tokens `line` to `out` as escaped, classed HTML.
 fn push_tokens(line: &[Token], out: &mut String) {
     for token in line {
-        match token.kind.class() {
-            Some(class) => {
-                out.push_str("<span class=\"");
-                out.push_str(class);
-                out.push_str("\">");
-                escape(&token.text, out);
-                out.push_str("</span>");
-            }
-            None => escape(&token.text, out),
+        push_token(token.kind, &token.text, out);
+    }
+}
+
+/// Appends `text` as a token of `kind` to `out`, escaped and classed; an
+/// empty text adds nothing.
+fn push_token(kind: Kind, text: &str, out: &mut String) {
+    if text.is_empty() {
+        return;
+    }
+    match kind.class() {
+        Some(class) => {
+            out.push_str("<span class=\"");
+            out.push_str(class);
+            out.push_str("\">");
+            escape(text, out);
+            out.push_str("</span>");
         }
+        None => escape(text, out),
     }
 }
 
@@ -346,7 +389,29 @@ fn quoted(chars: &mut Peekable<Chars<'_>>) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{Kind, Language, Lines, html, line_html, lines, tokens};
+    use super::{Kind, Language, Lines, html, line_html, lines, lines_html, tokens};
+
+    #[test]
+    fn the_lines_as_html_are_the_cut_lines_each_written() {
+        for text in [
+            "",
+            "\n",
+            "a: |\n  b\n  c\n",
+            "{\"a\": [1,\n \"x\\\"y\"]}\n",
+            "<a b='1'><!-- c\n d --></a>",
+            "SELECT c\nFROM EHR e",
+            "MSH|^~\\&|A\rPID|1",
+            "naïve ✓ 患者\n<b>&",
+        ] {
+            for language in Language::ALL {
+                let cut: Vec<String> = lines(language, text)
+                    .iter()
+                    .map(|line| line_html(line))
+                    .collect();
+                assert_eq!(cut, lines_html(language, text), "{language:?} {text:?}");
+            }
+        }
+    }
 
     #[test]
     fn every_language_reads_back_as_its_input() {

@@ -39,7 +39,7 @@ use ferrohealth_ui::widget::action_menu::{
 };
 use ferrohealth_ui::widget::chart::{ChartWords, line_chart};
 use ferrohealth_ui::widget::combobox::{ComboOption, ComboboxWords};
-use ferrohealth_ui::widget::copy::CopyWords;
+use ferrohealth_ui::widget::copy::{CopySource, CopyWords};
 use ferrohealth_ui::widget::document::DocumentView;
 use ferrohealth_ui::widget::editor::{Editor, code_editor};
 use ferrohealth_ui::widget::pick_or_type::{PickOrType, Picker, pick_or_type};
@@ -1838,7 +1838,7 @@ fn the_copy_island_waits_hidden_and_leaves_its_text_to_the_page() {
             <CopyButton
                 id=String::from("about-copy")
                 label=String::from("Copy <it>")
-                text=String::from("{\"name\": \"<x>\"}")
+                source=CopySource::Text(String::from("{\"name\": \"<x>\"}"))
                 words=copy_words()
             />
         }

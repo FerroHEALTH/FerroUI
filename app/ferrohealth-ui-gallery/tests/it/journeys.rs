@@ -257,6 +257,97 @@ async fn the_editor_keeps_every_byte_typed_and_a_diagnostic_leads_to_its_line()
     .await
 }
 
+/// The editor `gallery-draft`'s layer as the page holds it: each line's id
+/// and text, and the text area's value.
+#[derive(Debug, serde::Deserialize)]
+struct Layer {
+    /// The id of each line element, in order.
+    ids: Vec<String>,
+    /// The text of each line element, in order.
+    lines: Vec<String>,
+    /// The text area's value.
+    value: String,
+    /// The mark each kept line element still carries, by its id.
+    kept: Vec<Option<u32>>,
+}
+
+/// Reads the layer of the editor `gallery-draft`.
+async fn layer(browser: &Browser) -> Result<Layer, Box<dyn Error>> {
+    measure(
+        browser,
+        r"const area = document.getElementById('gallery-draft');
+        const lines = Array.from(area.previousElementSibling.children);
+        return { ids: lines.map((line) => line.id), lines: lines.map((line) => line.textContent),
+          value: area.value, kept: lines.map((line) => line.fuiKept ?? null) };",
+    )
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_editor_redraws_only_the_lines_an_edit_changes() -> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/ferroterm/forms")).await?;
+        let draft = browser.element(By::Id("gallery-draft")).await?;
+        until("the editor may be edited", async || {
+            Ok(draft.attr("readonly").await?.is_none())
+        })
+        .await?;
+        // Each line element carries its number as a mark the page never
+        // writes, so a redrawn element comes back without it.
+        browser
+            .driver()
+            .execute(
+                r"const area = document.getElementById('gallery-draft');
+                Array.from(area.previousElementSibling.children)
+                  .forEach((line, at) => { line.fuiKept = at + 1; });
+                area.focus();
+                const start = area.value.split('\n').slice(0, 2).join('\n').length + 1;
+                area.setSelectionRange(start, start);",
+                Vec::new(),
+            )
+            .await?;
+        let before = layer(browser).await?;
+        let count = before.ids.len();
+        browser
+            .driver()
+            .action_chain()
+            .send_keys("x")
+            .send_keys(Key::Enter)
+            .perform()
+            .await?;
+        until("the layer draws the new line", async || {
+            Ok(layer(browser).await?.ids.len() == count + 1)
+        })
+        .await?;
+        let after = layer(browser).await?;
+        assert_eq!(
+            after.value,
+            after.lines.join("\n"),
+            "the layer draws the text area's text, line by line"
+        );
+        let expected: Vec<String> = (1..=count + 1)
+            .map(|line| format!("gallery-draft-L{line}"))
+            .collect();
+        assert_eq!(expected, after.ids, "the lines are numbered in order");
+        assert_eq!(
+            vec![Some(1), Some(2)],
+            after.kept[..2],
+            "the lines above the edit keep their elements"
+        );
+        assert_eq!(
+            (4..=u32::try_from(count)?).map(Some).collect::<Vec<_>>(),
+            after.kept[4..],
+            "the lines below the edit keep their elements under their new numbers"
+        );
+        browser.console_clean("the editor's redraw").await
+    })
+    .await
+}
+
 /// The text of the code editor's live region, which says the diagnostic of
 /// the line the cursor is on.
 async fn said(browser: &Browser) -> Result<String, Box<dyn Error>> {
@@ -1030,6 +1121,50 @@ async fn copy_puts_the_text_on_the_clipboard_and_says_so() -> Result<(), Box<dyn
             "the clipboard holds the file"
         );
         browser.console_clean("the copy button").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn copy_reads_the_document_from_the_raw_view_the_page_draws() -> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser
+            .driver()
+            .cdp()
+            .send_raw(
+                "Browser.grantPermissions",
+                json!({ "permissions": ["clipboardReadWrite", "clipboardSanitizedWrite"] }),
+            )
+            .await?;
+        browser.goto(&gallery.url("/ferrobridge/code")).await?;
+        let copy = browser.element(By::Id("document-copy")).await?;
+        until("Copy shows once it works", async || {
+            Ok(copy.is_displayed().await?)
+        })
+        .await?;
+        copy.scroll_into_view().await?;
+        copy.click().await?;
+        until("Copy says the text is copied", async || {
+            Ok(copy.text().await? == "Copied")
+        })
+        .await?;
+        let held = browser
+            .driver()
+            .execute_async(
+                "navigator.clipboard.readText().then(arguments[0], () => arguments[0](null));",
+                Vec::new(),
+            )
+            .await?;
+        assert_eq!(
+            Some(ferrohealth_ui_gallery::data::JSON),
+            held.json().as_str(),
+            "the clipboard holds the document as the raw view draws it"
+        );
+        browser.console_clean("the document's copy button").await
     })
     .await
 }

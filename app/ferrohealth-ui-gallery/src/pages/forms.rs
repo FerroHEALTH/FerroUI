@@ -6,8 +6,8 @@
 
 use crate::app::DRAFT_ROUTE;
 use crate::data::{
-    CONTEXT_MAPPING, DRAFT_FINDINGS, DRAFT_MAPPING, DRAFT_OPENED, DRAFT_PATH, DRAFT_TEXT,
-    FINDING_CODES, MAPPING_PATH, WHOLE_FINDING,
+    CLEAN_FILE, CONTEXT_MAPPING, DRAFT_FINDINGS, DRAFT_MAPPING, DRAFT_OPENED, DRAFT_PATH,
+    DRAFT_TEXT, FINDING_CODES, LONG_FINDING, MAPPING_PATH, WHOLE_FINDING,
 };
 use crate::locale::{Msg, Words, message, tr, tr_with};
 use ferrohealth_ui::calendar::{Bounds, Day, Preset, Quick, Weekday};
@@ -905,6 +905,7 @@ pub(crate) fn mapping_editor_body(
         href: None,
         lines: format!("#{MAPPING_DRAFT}-L"),
         current: None,
+        all: None,
         findings: vec![
             found(
                 Gravity::Warning,
@@ -1026,6 +1027,7 @@ fn diagnostics_of_files() -> AnyView {
             href: Some(String::from("code")),
             lines: String::from("code#file-L"),
             current: None,
+            all: None,
             findings: vec![
                 found(
                     Gravity::Warning,
@@ -1048,6 +1050,7 @@ fn diagnostics_of_files() -> AnyView {
             href: None,
             lines: format!("#{MAPPING_DRAFT}-L"),
             current: Some(line),
+            all: None,
             findings: vec![
                 found(
                     Gravity::Warning,
@@ -1080,6 +1083,53 @@ fn diagnostics_of_files() -> AnyView {
             Some(SectionHead {
                 title: tr(Msg::Diagnostics),
                 count: Some(5),
+                actions: None,
+            }),
+            diagnostics_by_file(&title, &files),
+        ),
+    )
+}
+
+/// The diagnostics list at real size: a finding whose message and mapping
+/// run past a phone's width, under a long path, and a file the check found
+/// clean, which says so.
+fn diagnostics_real_size() -> AnyView {
+    let [path, code, lines, mapping] = LONG_FINDING;
+    let [clean, clean_lines] = CLEAN_FILE;
+    let files = [
+        FileFindings {
+            file: String::from(path),
+            href: Some(String::from("code")),
+            lines: String::from(lines),
+            current: None,
+            all: None,
+            findings: vec![Finding {
+                gravity: Gravity::Error,
+                code: String::from(code),
+                at: Some(Position {
+                    line: 1204,
+                    column: 37,
+                }),
+                message: tr(Msg::PathNamesNoNode),
+                mapping: Some(String::from(mapping)),
+            }],
+        },
+        FileFindings {
+            file: String::from(clean),
+            href: None,
+            lines: String::from(clean_lines),
+            current: None,
+            all: None,
+            findings: Vec::new(),
+        },
+    ];
+    let title = tr(Msg::DiagnosticsRealSize);
+    panel_sections_card(
+        title.clone(),
+        panel_section(
+            Some(SectionHead {
+                title: title.clone(),
+                count: Some(1),
                 actions: None,
             }),
             diagnostics_by_file(&title, &files),
@@ -1475,6 +1525,7 @@ pub fn FormsPage() -> impl IntoView {
     let mapping = mapping_editor();
     let fresh = new_mapping();
     let by_file = diagnostics_of_files();
+    let real_size = diagnostics_real_size();
     let long = super::dock::long_form();
     let dock = super::dock::dock();
     view! {
@@ -1494,6 +1545,7 @@ pub fn FormsPage() -> impl IntoView {
             {mapping}
             {fresh}
             {by_file}
+            {real_size}
             {reloading}
             {sections.3}
             {super::records::identifiers_section()}

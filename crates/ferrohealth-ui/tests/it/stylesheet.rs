@@ -365,6 +365,32 @@ fn a_viewer_a_table_and_a_list_of_findings_in_a_section_reach_both_edges() {
 }
 
 #[test]
+fn a_findings_code_message_mapping_and_path_break_rather_than_widen_a_phone() {
+    // WCAG 2.2 SC 1.4.10: a finding reads at 320 px with no sideways scroll.
+    for part in ["fui-diag-code", "fui-diag-msg"] {
+        let at = STYLESHEET
+            .find(&format!("  .{part} {{\n"))
+            .unwrap_or_else(|| panic!("the rule of {part}"));
+        let rule = &STYLESHEET[at..at + STYLESHEET[at..].find('}').unwrap_or(0)];
+        assert!(
+            rule.contains("overflow-wrap: anywhere;") && rule.contains("min-width: 0;"),
+            "{part} breaks inside a long word: {rule}"
+        );
+    }
+    let link = "  :is(.fui-diags-file, .fui-group-row) a:not(.fui-button, .fui-tag) {\n";
+    let at = STYLESHEET.find(link).expect("the file head's link");
+    let rule = &STYLESHEET[at..at + STYLESHEET[at..].find('}').unwrap_or(0)];
+    assert!(
+        !rule.contains("nowrap"),
+        "a file's linked path breaks after its slashes: {rule}"
+    );
+    assert!(
+        STYLESHEET.contains("  .fui-diags-file > :is(a, code) {\n    min-width: 0;"),
+        "a file's path may be narrower than its longest name"
+    );
+}
+
+#[test]
 fn the_keyboard_tab_leaves_the_row_below_40rem() {
     let phone = STYLESHEET
         .find("    .fui-tabs > .fui-tab[data-tab=\"keyboard\"] {\n      display: none !important;")

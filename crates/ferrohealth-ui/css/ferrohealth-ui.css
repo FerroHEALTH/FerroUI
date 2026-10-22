@@ -10852,6 +10852,12 @@
     font-weight: 600;
   }
 
+  /* A file's path breaks after a slash, and inside a name only when one
+     name is wider than the row (WCAG 2.2 SC 1.4.10). */
+  .fui-diags-file > :is(a, code) {
+    min-width: 0;
+  }
+
   .fui-diags-file code {
     overflow-wrap: anywhere;
   }
@@ -10900,13 +10906,18 @@
     flex-wrap: wrap;
     align-items: baseline;
     gap: 0.125rem 0.625rem;
+    min-width: 0;
     font-size: var(--text-small);
     line-height: var(--leading-body);
   }
 
+  /* A code, message or mapping longer than the row breaks rather than
+     widen the page (WCAG 2.2 SC 1.4.10). */
   .fui-diag-code {
+    min-width: 0;
     font-family: var(--font-mono);
     font-weight: 600;
+    overflow-wrap: anywhere;
   }
 
   .fui-diag-where {
@@ -10922,9 +10933,11 @@
   }
 
   .fui-diag-msg {
+    min-width: 0;
     margin: 0;
     font-size: var(--text-small);
     line-height: var(--leading-small);
+    overflow-wrap: anywhere;
   }
 
   .fui-diag-mapping {
@@ -10933,6 +10946,28 @@
     color: var(--muted);
     font-size: var(--text-micro);
     line-height: var(--leading-small);
+  }
+
+  /* A list with no finding says so in one quiet line; a window ends in one
+     quiet row with the link to every finding. */
+  .fui-diags-empty,
+  .fui-diags-more {
+    display: flex;
+    align-items: center;
+    gap: var(--space-tight);
+    padding: 0.625rem 1rem;
+    color: var(--muted);
+    font-size: var(--text-small);
+    line-height: var(--leading-body);
+  }
+
+  .fui-diags-empty > .fui-icon {
+    flex: none;
+    color: var(--ok);
+  }
+
+  .fui-diags-more a {
+    color: var(--accent);
   }
 
   /* The diagnostic that points at the current line, in step with the gutter. */
@@ -11845,6 +11880,9 @@
   :is(.fui-diags-file, .fui-group-row) a:not(.fui-button, .fui-tag) {
     color: var(--ink);
     text-decoration: none;
+  }
+
+  .fui-group-row a:not(.fui-button, .fui-tag) {
     white-space: nowrap;
   }
 

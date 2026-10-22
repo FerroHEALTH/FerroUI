@@ -200,6 +200,19 @@ pub const DRAFT_MAPPING: &str = "gallery_weight";
 /// The code of a finding about the whole of the draft.
 pub const WHOLE_FINDING: &str = "FC-100";
 
+/// The findings at real size: a template whose path runs past a phone,
+/// the code of its one finding with the link to that finding's line, and
+/// the long name of the mapping it belongs to.
+pub const LONG_FINDING: [&str; 4] = [
+    "openehr/gallery-vital-signs-encounter-with-a-name-long-enough-to-run-past-a-phone.v1.opt",
+    "FC-301",
+    "#template-L",
+    "gallery_body_temperature_rectal_with_a_mapping_name_long_enough_to_break",
+];
+
+/// A file the check found clean, with the link to its lines.
+pub const CLEAN_FILE: [&str; 2] = ["fhirconnect/gallery-clean.context.yml", "#clean-L"];
+
 /// The mapping the findings on [`MAPPING`] belong to.
 pub const CONTEXT_MAPPING: &str = "gallery_context";
 

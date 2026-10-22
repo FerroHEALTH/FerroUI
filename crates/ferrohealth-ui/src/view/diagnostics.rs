@@ -13,7 +13,11 @@
 //! current line takes `is-current` and `aria-current`, in step with the
 //! line. A file's name heads its rows as a link in the ink with no
 //! underline (family rule 4), with its counts. On a phone a row is one
-//! column. No specification governs the list: our own design.
+//! column, and a long code, message, mapping or path breaks rather than
+//! widen the page (WCAG 2.2 SC 1.4.10). A file whose findings run past
+//! [`WINDOW`] draws the first [`WINDOW`] and one quiet row with the link
+//! to them all, when the console gives one; a list with no finding says
+//! so in one line. No specification governs the list: our own design.
 
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -21,6 +25,10 @@ use serde::{Deserialize, Serialize};
 use crate::i18n::{Phrase, Text, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::view::code::Gravity;
+
+/// The most rows one file draws while the console gives the link to all
+/// of them ([`FileFindings::all`]).
+pub const WINDOW: usize = 100;
 
 /// A place in a text: its 1-based line and 1-based column.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -67,6 +75,11 @@ pub struct FileFindings {
     pub current: Option<u32>,
     /// The findings, in any order: the list draws errors first.
     pub findings: Vec<Finding>,
+    /// The link to the page that lists every finding of the file: while it
+    /// is set, a file with more than [`WINDOW`] findings draws the first
+    /// [`WINDOW`] and a row that offers the rest; `None` draws every
+    /// finding, as the page that link opens does.
+    pub all: Option<String>,
 }
 
 /// The rank of `gravity` in the list: errors first.
@@ -137,6 +150,12 @@ pub struct DiagnosticsWords {
     pub line: Phrase,
     /// The mapping a finding belongs to, around the open `mapping`.
     pub mapping: Phrase,
+    /// The row under a window, around the open `shown` and `total`.
+    pub more: Phrase,
+    /// That row's link to every finding, around the open `total`.
+    pub more_all: Phrase,
+    /// What a list with no finding says.
+    pub none: String,
 }
 
 impl DiagnosticsWords {
@@ -158,6 +177,18 @@ impl DiagnosticsWords {
                 Text::DiagnosticsMapping,
                 &[("mapping", Phrase::open("mapping"))],
             )),
+            more: Phrase::new(tr_with(
+                Text::DiagnosticsMore,
+                &[
+                    ("shown", Phrase::open("shown")),
+                    ("total", Phrase::open("total")),
+                ],
+            )),
+            more_all: Phrase::new(tr_with(
+                Text::DiagnosticsMoreAll,
+                &[("total", Phrase::open("total"))],
+            )),
+            none: tr(Text::DiagnosticsNone),
         }
     }
 }
@@ -227,19 +258,55 @@ fn row(
     .into_any()
 }
 
+/// Returns the row that says a list holds no finding, in `words`.
+fn none_row(words: &DiagnosticsWords) -> AnyView {
+    view! {
+        <li class="fui-diags-empty">
+            {icon(Glyph::CIRCLE_CHECK, "14")} <span>{words.none.clone()}</span>
+        </li>
+    }
+    .into_any()
+}
+
+/// The number of rows of `file` the list draws: every finding, or the
+/// first [`WINDOW`] while the console links to them all.
+fn shown(file: &FileFindings) -> usize {
+    match file.all {
+        Some(_) => file.findings.len().min(WINDOW),
+        None => file.findings.len(),
+    }
+}
+
 /// Returns the rows of `file`, errors first, current while `current` names
-/// their line, in `words`; `on_line` hears a click on a line link.
+/// their line, in `words`, the first [`WINDOW`] and a more row while the
+/// console links to them all; `on_line` hears a click on a line link.
 pub(crate) fn rows(
     file: &FileFindings,
     words: &DiagnosticsWords,
     current: Signal<Option<u32>>,
     on_line: Option<Callback<Position>>,
 ) -> AnyView {
-    ordered(&file.findings)
+    if file.findings.is_empty() {
+        return none_row(words);
+    }
+    let shown = shown(file);
+    let total = file.findings.len();
+    let drawn = ordered(&file.findings)
         .into_iter()
+        .take(shown)
         .map(|finding| row(finding, &file.lines, words, current, on_line))
-        .collect_view()
-        .into_any()
+        .collect_view();
+    let more = file.all.as_ref().filter(|_| shown < total).map(|all| {
+        let (shown, total) = (shown.to_string(), total.to_string());
+        let said = words.more.fill(&[("shown", &shown), ("total", &total)]);
+        let link = words.more_all.fill(&[("total", &total)]);
+        view! {
+            <li class="fui-diags-more">
+                <span>{said} " " <a href=all.clone()>{link}</a></span>
+            </li>
+        }
+    });
+    view! { {drawn} {more} }.into_any()
 }
 
 /// Returns the diagnostics list of one file, named `label`, with no file
@@ -289,8 +356,10 @@ pub fn diagnostics_by_file(label: &str, files: &[FileFindings]) -> AnyView {
             }
         })
         .collect_view();
+    let none = files.is_empty().then(|| none_row(&words));
     view! {
         <ul class="fui-diags" aria-label=label.to_owned()>
+            {none}
             {groups}
         </ul>
     }
@@ -319,6 +388,7 @@ mod tests {
             lines: String::from("#L"),
             current: None,
             findings,
+            all: None,
         }
     }
 
