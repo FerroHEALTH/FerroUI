@@ -507,7 +507,7 @@ fn system_options(words: &Words) -> Vec<ComboOption> {
 /// The combobox of the clause at `place`, the library's island.
 fn clause_picker(place: u8) -> AnyView {
     let id = format!("clause-{place}-system");
-    let words = system_words();
+    let words = system_words().open(Msg::ClauseCodeSystem, &["place"]);
     view! {
         <Combobox
             id=id.clone()
