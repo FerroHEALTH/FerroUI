@@ -309,7 +309,8 @@ async fn session_pager_posts(browser: &Browser, gallery: &Gallery) -> Result<(),
     let last = By::XPath(
         "//nav[@aria-label = 'Pages of the mapping files, in the page']//button[contains(., 'Last')]",
     );
-    browser.element(last).await?.click().await?;
+    let last = browser.element(last).await?;
+    browser.click_and_load(&last).await?;
     browser.text("p", "126-137 of 137").await?;
     let session_rows = By::XPath("(//table)[2]/tbody/tr");
     assert_eq!(12, browser.driver().find_all(session_rows).await?.len());
@@ -367,7 +368,7 @@ async fn the_user_menu_posts_the_theme_and_the_choice_is_kept() -> Result<(), Bo
             ))
             .await?;
         until("the menu opens", async || Ok(dark.is_displayed().await?)).await?;
-        dark.click().await?;
+        browser.click_and_load(&dark).await?;
         browser
             .element(By::Css(r#"html[data-theme="dark"]"#))
             .await?;

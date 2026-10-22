@@ -527,26 +527,24 @@ async fn forms_post_and_submit_with_the_webassembly_withheld() -> Result<(), Box
             Ok(dark.is_displayed().await?)
         })
         .await?;
-        dark.click().await?;
+        browser.click_and_load(&dark).await?;
         browser
             .element(By::Css(r#"html[data-theme="dark"]"#))
             .await?;
-        browser
+        let compact = browser
             .element(By::XPath(
                 "//button[@name = 'density' and @value = 'compact']",
             ))
-            .await?
-            .click()
             .await?;
+        browser.click_and_load(&compact).await?;
         browser
             .element(By::Css(r#"html[data-density="compact"]"#))
             .await?;
         // The sidebar's Collapse posts, and the page comes back as the rail.
-        browser
+        let collapse = browser
             .element(By::XPath("//button[@name = 'sidebar' and @value = 'rail']"))
-            .await?
-            .click()
             .await?;
+        browser.click_and_load(&collapse).await?;
         browser
             .element(By::Css("#sidebar.fui-sidebar-rail"))
             .await?;
@@ -695,7 +693,8 @@ async fn a_listing_filters_sorts_and_pages_with_the_webassembly_withheld()
         let next = By::XPath(
             "//nav[@aria-label = 'Pages of the mapping files, in the page']//button[contains(., 'Next')]",
         );
-        browser.element(next).await?.click().await?;
+        let next = browser.element(next).await?;
+        browser.click_and_load(&next).await?;
         browser.text("p", "26-50 of 137").await?;
         let after = browser.driver().current_url().await?;
         assert!(

@@ -22,6 +22,7 @@ use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::time::Duration;
 
+use serde_json::json;
 use thirtyfour::LoggingPrefsLogLevel;
 use thirtyfour::prelude::*;
 use tokio::io::{AsyncBufReadExt, BufReader, Lines};
@@ -315,6 +316,48 @@ impl Browser {
     pub(crate) async fn follow(&self, text: &str) -> Result<(), Box<dyn Error>> {
         self.element(By::LinkText(text)).await?.click().await?;
         Ok(())
+    }
+
+    /// The id of the loader of the document the browser shows, which each
+    /// new document has its own of (Chrome DevTools Protocol,
+    /// `Page.getFrameTree`, `Frame.loaderId`).
+    async fn loader(&self) -> Result<String, Box<dyn Error>> {
+        let tree = self
+            .driver
+            .cdp()
+            .send_raw("Page.getFrameTree", json!({}))
+            .await?;
+        tree.pointer("/frameTree/frame/loaderId")
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_owned)
+            .ok_or_else(|| format!("the frame tree names no loader: {tree}").into())
+    }
+
+    /// Clicks `control`, which loads a new document (a form that posts, a
+    /// link), and waits until that document has replaced the one `control`
+    /// is in and has loaded.
+    ///
+    /// A posted form often comes back at the same address, so the address
+    /// cannot tell the two documents apart, and a read made too soon meets
+    /// the old document, or the new one half parsed. The loader id tells
+    /// them apart: the browser gives the new document its own when it
+    /// replaces the old one. An element held from before the click belongs
+    /// to the old document, so the journey finds afresh what it reads after.
+    pub(crate) async fn click_and_load(&self, control: &WebElement) -> Result<(), Box<dyn Error>> {
+        let old = self.loader().await?;
+        control.click().await?;
+        until("a new document replaces the old", async || {
+            Ok(self.loader().await? != old)
+        })
+        .await?;
+        until("the new document has loaded", async || {
+            let state = self
+                .driver
+                .execute("return document.readyState;", vec![])
+                .await?;
+            Ok(state.json().as_str() == Some("complete"))
+        })
+        .await
     }
 
     /// Waits until the browser is at `url`.
