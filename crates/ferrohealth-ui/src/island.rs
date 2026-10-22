@@ -8,8 +8,8 @@
 //! They are the toast region, the keyboard tabs, the navigation drawer, the
 //! menu and listbox behind every More, row menu and select button, the
 //! combobox, the picker field, the chart legend, the copy button, the
-//! commit-confirm countdown, the side panel, the tree, the work-list and
-//! the repeatable rows.
+//! commit-confirm countdown, the side panel, the topology, the tree, the
+//! work-list and the repeatable rows.
 //!
 //! An island is the only part of a page the browser hydrates (the Leptos
 //! book, "Guide: Islands"). Its props cross to the browser as JSON in the
@@ -178,6 +178,23 @@ pub fn WorkList(
         crate::widget::worklist::WorkList { focused, on_open },
         children().into_any(),
     )
+}
+
+/// The topology (F9) around the toolbar, the map and the List the server
+/// drew as its children, with the class `class`: zoom by the cluster and
+/// the keys, panning by the pointer, the quick look on "i" or Space and the
+/// arrows along the List ([`crate::widget::topology`]). A console draws it
+/// through [`crate::view::topology::topology`].
+#[island]
+pub fn TopologyKeys(
+    /// The topology's classes, its view among them.
+    class: String,
+    /// The readout's words, in the page's locale.
+    words: crate::widget::topology::TopologyWords,
+    /// The toolbar, the map and the List, drawn on the server.
+    children: Children,
+) -> impl IntoView {
+    crate::widget::topology::topology_keys(class, words, children().into_any())
 }
 
 /// The phone's select over binder tabs, named `label`, on the choice that

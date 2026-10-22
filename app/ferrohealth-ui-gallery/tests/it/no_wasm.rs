@@ -434,32 +434,61 @@ async fn overlays_content(browser: &Browser) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+/// The topology's floor (`leptos-ui.md` §15.8): the zoom waits for the
+/// script and says why, and the quick looks, the views and the List twin
+/// are there as links.
+async fn topology_floor(browser: &Browser) -> Result<(), Box<dyn Error>> {
+    let zoom = browser.element(By::Css("button[data-zoom='in']")).await?;
+    assert!(zoom.attr("disabled").await?.is_some(), "the zoom waits");
+    assert!(
+        zoom.attr("title").await?.is_some_and(|why| !why.is_empty()),
+        "it says why"
+    );
+    browser
+        .element(By::Css(".fui-tnode-info a[href*='look=node-b']"))
+        .await?;
+    browser
+        .element(By::Css(".fui-view-switch a[href*='view=list']"))
+        .await?;
+    let rows = browser
+        .driver()
+        .find_all(By::Css(".fui-topology-list [role='treeitem']"))
+        .await?;
+    assert!(!rows.is_empty(), "the List twin holds the graph");
+    Ok(())
+}
+
+/// The overview's floor: its first keyboard tab's panel shows, the phone's
+/// tab select waits, and every binder tab is a link.
+async fn overview_floor(browser: &Browser) -> Result<(), Box<dyn Error>> {
+    assert!(
+        browser
+            .element(By::Id("answer-panel-0"))
+            .await?
+            .is_displayed()
+            .await?,
+        "the first keyboard tab's panel shows"
+    );
+    // NOTE: leptos-ui.md §15.8: the phone's tab select waits disabled, and
+    // every binder tab is a link to its own route.
+    let select = browser.element(By::Id("fui-tabs-select")).await?;
+    assert!(
+        select.attr("disabled").await?.is_some(),
+        "the tab select cannot work yet"
+    );
+    browser
+        .element(By::Css(
+            "nav.fui-tabs a[href='?tab=commit'][data-tab='commit']",
+        ))
+        .await?;
+    Ok(())
+}
+
 /// Checks what a brand's page at `page` must show with no WebAssembly,
 /// beyond its heading and its navigation.
 async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error>> {
     match page {
-        "" => {
-            assert!(
-                browser
-                    .element(By::Id("answer-panel-0"))
-                    .await?
-                    .is_displayed()
-                    .await?,
-                "the first keyboard tab's panel shows"
-            );
-            // NOTE: leptos-ui.md §15.8: the phone's tab select waits disabled, and
-            // every binder tab is a link to its own route.
-            let select = browser.element(By::Id("fui-tabs-select")).await?;
-            assert!(
-                select.attr("disabled").await?.is_some(),
-                "the tab select cannot work yet"
-            );
-            browser
-                .element(By::Css(
-                    "nav.fui-tabs a[href='?tab=commit'][data-tab='commit']",
-                ))
-                .await?;
-        }
+        "" => overview_floor(browser).await?,
         "/forms" => {
             forms_content(browser).await?;
             crate::records::identifiers_floor(browser).await?;
@@ -522,6 +551,7 @@ async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error
         }
         "/terminology" => terminology_content(browser).await?,
         "/overlays" => overlays_content(browser).await?,
+        "/federation" => topology_floor(browser).await?,
         "/charts" => colour_key(browser).await?,
         "/layouts" => {
             let items = browser

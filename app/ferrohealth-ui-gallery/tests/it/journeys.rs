@@ -16,7 +16,7 @@ use crate::journeys_enabled;
 use crate::stack::Gallery;
 
 /// The pages of a brand, after its key.
-pub(crate) const PAGES: [&str; 26] = [
+pub(crate) const PAGES: [&str; 27] = [
     "",
     "/forms",
     "/tables",
@@ -29,6 +29,7 @@ pub(crate) const PAGES: [&str; 26] = [
     "/operations",
     "/clinical",
     "/terminology",
+    "/federation",
     "/preferences",
     "/preferences/language",
     "/preferences/keyboard",

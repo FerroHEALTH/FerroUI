@@ -21,6 +21,7 @@ use crate::island::CopyButton;
 use crate::view::action::ActionGroup;
 use crate::view::button::Variant;
 use crate::view::code::self_description;
+use crate::view::replica::{Replica, replica_line};
 use crate::view::shell::MAKER;
 use crate::view::surface::{Header, card, definitions, page_heading};
 use crate::widget::copy::CopyWords;
@@ -79,6 +80,9 @@ pub struct AboutPage {
     pub cards: Vec<AnyView>,
     /// The product's self-description, when it has one.
     pub self_description: Option<SelfDescription>,
+    /// The replica that answered, for a replicated product (F6), drawn as
+    /// one quiet line under the header.
+    pub replica: Option<Replica>,
 }
 
 /// Returns `link` as a fact's value.
@@ -133,8 +137,10 @@ pub fn about_page(page: AboutPage) -> AnyView {
         manufacturer,
         cards,
         self_description,
+        replica,
     } = page;
     let heading = page_heading(header, ActionGroup::none()).into_any();
+    let replica = replica.map(replica_line);
     let mut rows = vec![(tr(Text::AboutConsole), release.into_any())];
     rows.extend(versions);
     let versions = card(tr(Text::AboutVersions), definitions(rows)).into_any();
@@ -155,6 +161,7 @@ pub fn about_page(page: AboutPage) -> AnyView {
     let document = self_description.map(self_description_card);
     view! {
         {heading}
+        {replica}
         <div class="fui-stack">
             <div class="fui-grid fui-grid-start">{versions} {maker}</div>
             {cards}

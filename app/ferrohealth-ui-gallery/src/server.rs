@@ -35,7 +35,7 @@ use tower_http::set_header::SetResponseHeaderLayer;
 
 use crate::app::{
     COOKIE_PREFIX, DRAFT_ROUTE, OWN_PREFERENCES, PAGED_LISTINGS, PAGING_COOKIE, PAGING_ROUTE,
-    PREFERENCE_ROUTE, RESET_ROUTE, SIDEBAR_COOKIE, SIDEBAR_ROUTE, SIGN_OUT_ROUTE,
+    PREFERENCE_ROUTE, PROBE_ROUTE, RESET_ROUTE, SIDEBAR_COOKIE, SIDEBAR_ROUTE, SIGN_OUT_ROUTE,
     STYLESHEET as STYLESHEET_PATH,
 };
 
@@ -64,6 +64,7 @@ pub fn router(options: LeptosOptions) -> axum::Router {
         .route("/favicon.ico", get(favicon))
         .route("/themes/{file}", get(theme_file))
         .route(PREFERENCE_ROUTE, post(choose_preference))
+        .route(PROBE_ROUTE, post(probe))
         .route(RESET_ROUTE, post(reset_preferences))
         .route(PAGING_ROUTE, post(choose_paging))
         .route(DRAFT_ROUTE, post(receive_draft))
@@ -265,6 +266,18 @@ async fn choose_sidebar(Form(choice): Form<SidebarChoice>) -> Response {
         return (StatusCode::BAD_REQUEST, "the sidebar is not rail or full").into_response();
     }
     kept(SIDEBAR_COOKIE, &choice.sidebar, &choice.back)
+}
+
+/// Answers the topology's Probe now: the gallery probes nothing, so it
+/// sends the browser back to the page it came from.
+async fn probe(headers: http::HeaderMap) -> Response {
+    let back = headers
+        .get(http::header::REFERER)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.parse::<http::Uri>().ok())
+        .map(|uri| uri.path().to_owned())
+        .unwrap_or_default();
+    Redirect::to(return_path(&back)).into_response()
 }
 
 /// Signs the gallery's synthetic operator out: it holds no session, so it

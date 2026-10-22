@@ -793,7 +793,8 @@ interaction contract and the budget; this section is the component's side.
   `_loader` it writes). An island is lazy when building the gallery without
   it cuts more from the entry than its chunks add to the pages that draw
   it, as §12 records: the date pickers, the mapping editors, the masked
-  identifiers and the concept tree are, and the topology (B9, F9) is the
-  next candidate. Without `--split` a lazy island hydrates from the entry,
+  identifiers and the concept tree are. The topology (F9, #195) was
+  measured and stays in the entry: lazy, it cut 19305 bytes from the entry
+  and added 27181 in chunks to the page that draws it. Without `--split` a lazy island hydrates from the entry,
   so a console that does not split loses nothing. [review; the chunk table
   of `scripts/checks/gallery-bundle.sh`]

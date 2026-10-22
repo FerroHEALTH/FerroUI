@@ -374,6 +374,7 @@ fn a_file_only_configuration_says_where_it_is_set_and_has_no_badge_or_marker() {
             },
             tabs: Some(row()),
             settings: vec![setting("telemetry.format", true)],
+            replica: None,
         })
     });
     assert!(
@@ -406,6 +407,7 @@ fn a_setting_names_its_key_with_a_labelled_copy_button() {
             },
             tabs: None,
             settings: vec![setting("telemetry.<format>", false)],
+            replica: None,
         })
     });
     assert!(
@@ -456,6 +458,7 @@ fn a_managed_configuration_shows_its_badge_revision_intro_and_marker() {
             })),
             tabs: None,
             settings: vec![setting("mode", true)],
+            replica: None,
         })
     });
     assert!(
@@ -506,6 +509,7 @@ fn the_about_page_writes_the_console_version_in_the_footer_form() {
                 copy_id: String::from("about-copy"),
                 download: String::from("/about/document.json"),
             }),
+            replica: None,
         })
     });
     assert!(

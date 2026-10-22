@@ -186,6 +186,7 @@ mod clinical;
 mod code;
 mod configuration;
 mod dock;
+mod federation;
 mod forms;
 mod layouts;
 mod operations;
@@ -207,6 +208,7 @@ const AREAS: &[&[Msg]] = &[
     code::ALL,
     configuration::ALL,
     dock::ALL,
+    federation::ALL,
     forms::ALL,
     layouts::ALL,
     operations::ALL,

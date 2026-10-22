@@ -494,6 +494,7 @@ fn settings_file() -> AnyView {
         },
         tabs: Some(settings_tabs("settings", false)),
         settings: settings(),
+        replica: None,
     })
 }
 
@@ -525,6 +526,7 @@ fn settings_managed() -> AnyView {
         })),
         tabs: Some(settings_tabs("settings-managed", true)),
         settings: settings(),
+        replica: None,
     })
 }
 
@@ -564,6 +566,7 @@ fn about() -> AnyView {
             copy_id: String::from("about-copy"),
             download: at("about"),
         }),
+        replica: None,
     })
 }
 

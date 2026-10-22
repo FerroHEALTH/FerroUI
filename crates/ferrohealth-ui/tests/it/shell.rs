@@ -190,6 +190,7 @@ fn navigation(rail: Option<Rail>) -> String {
             }],
             current: String::from("/files/synthetic-007"),
             rail,
+            nest: None,
         })
     })
 }

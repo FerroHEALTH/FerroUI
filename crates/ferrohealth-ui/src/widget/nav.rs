@@ -23,6 +23,7 @@ use leptos::prelude::*;
 use crate::i18n::{Text, tr};
 use crate::icon::{Glyph, icon};
 use crate::view::button::Variant;
+use crate::view::flow::FlowState;
 use crate::widget::focus::focus_on_open;
 
 /// The count an entry carries (R12): a number while one is known, nothing
@@ -103,6 +104,9 @@ pub struct Sidebar {
     /// The rail and its Collapse and Expand at the foot, or `None` for a
     /// navigation that never folds.
     pub rail: Option<Rail>,
+    /// The nested section under one entry (F10), such as the organisation
+    /// in view and its nodes, or `None`.
+    pub nest: Option<Nest>,
 }
 
 /// Whether the entry leading to `href` marks the page at `current`: on its
@@ -148,11 +152,23 @@ fn count(count: Count) -> Option<AnyView> {
 
 /// Returns the entry `entry`, marked while `current` is its page, or a
 /// page under it unless it is exact; in the rail its words become its
-/// tooltip.
-fn entry(entry: Entry, current: &str, rail: bool) -> impl IntoView + use<> {
-    let here = marks(entry.href, entry.exact, current).then_some("page");
+/// tooltip. The nested section `nest` opens under it when it names the
+/// entry, which then marks the location the page is inside.
+fn entry(
+    entry: Entry,
+    current: &str,
+    rail: bool,
+    nest: &mut Option<Nest>,
+) -> impl IntoView + use<> {
+    let nest = nest.take_if(|nest| nest.under == entry.href);
+    let here = if nest.is_some() {
+        Some("location")
+    } else {
+        marks(entry.href, entry.exact, current).then_some("page")
+    };
     let title = rail.then(|| entry.label.to_string());
     let count = entry.count.and_then(count);
+    let nest = nest.map(|nest| nested::section(nest, current));
     view! {
         <li>
             <a href=entry.href class="fui-nav-entry" aria-current=here title=title>
@@ -160,20 +176,26 @@ fn entry(entry: Entry, current: &str, rail: bool) -> impl IntoView + use<> {
                 <span class="fui-nav-word">{entry.label}</span>
                 {count}
             </a>
+            {nest}
         </li>
     }
 }
 
 /// Returns the group `group`, its entries marked against `current`, its
 /// heading naming its list; nothing for a group with no entry.
-fn group(group: Group, current: &str, rail: bool) -> Option<impl IntoView + use<>> {
+fn group(
+    group: Group,
+    current: &str,
+    rail: bool,
+    nest: &mut Option<Nest>,
+) -> Option<impl IntoView + use<>> {
     if group.entries.is_empty() {
         return None;
     }
     let entries = group
         .entries
         .into_iter()
-        .map(|each| entry(each, current, rail))
+        .map(|each| entry(each, current, rail, nest))
         .collect_view();
     Some(view! {
         <p id=group.id class="fui-nav-group">
@@ -223,10 +245,11 @@ pub fn sidebar(sidebar: Sidebar) -> AnyView {
     let close = tr(Text::Close);
     let collapsed = sidebar.rail.as_ref().is_some_and(|rail| rail.collapsed);
     let current = sidebar.current;
+    let mut nest = sidebar.nest;
     let groups = sidebar
         .groups
         .into_iter()
-        .map(|each| group(each, &current, collapsed))
+        .map(|each| group(each, &current, collapsed, &mut nest))
         .collect_view();
     let foot = sidebar.rail.map(|rail| foot(sidebar.id, rail));
     view! {
@@ -276,6 +299,46 @@ pub fn drawer(id: String, label: String, close: String, rail: bool, entries: Any
     .into_any()
 }
 
+/// One item of a nested section: the parent in view or one of its
+/// children, each with its health dot (F12).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NestItem {
+    /// What it says, such as "Ziekenhuis Voorbeeldstad" or "node-a".
+    pub label: String,
+    /// Where it leads.
+    pub href: String,
+    /// Its state, drawn as the dot's shape and colour (family rule 12); an
+    /// item switched off draws no shape, only its word.
+    pub state: FlowState,
+    /// The state as the dot's accessible name and tooltip, such as
+    /// "Reachable", or "Worst node: degraded" for the parent.
+    pub state_words: String,
+    /// Whether the label is an identifier, drawn in the code face.
+    pub mono: bool,
+}
+
+/// The nested section under one entry of the navigation (F10).
+///
+/// It holds the parent in view, such as an organisation, and its children,
+/// such as its nodes, so a reader moves between the children without
+/// leaving the sidebar. It keeps family rule 2: it is one level more under the one entry, never
+/// a second sidebar. The rail leaves it out; the drawer keeps it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Nest {
+    /// The `href` of the entry it opens under, such as the organisations.
+    pub under: &'static str,
+    /// The accessible name of the section, such as "Ziekenhuis
+    /// Voorbeeldstad and its nodes".
+    pub label: String,
+    /// The parent in view.
+    pub parent: NestItem,
+    /// The number of children as a whole phrase, such as "2 nodes": the
+    /// accessible name of the count badge beside the parent.
+    pub count_words: String,
+    /// The children, in order.
+    pub children: Vec<NestItem>,
+}
+
 /// What the browser code adds to the drawer. From the first breakpoint up
 /// the navigation is no popover the browser opens, so it does not apply.
 mod drawer {
@@ -303,6 +366,109 @@ mod drawer {
         }
         #[cfg(not(target_arch = "wasm32"))]
         let _: (NodeRef<leptos::html::Nav>, &leptos::ev::MouseEvent) = (nav, event);
+    }
+}
+
+/// The nested section's drawing.
+mod nested {
+    use leptos::prelude::*;
+
+    use super::{Nest, NestItem, marks};
+    use crate::view::flow::FlowState;
+
+    /// The `aria-current` of the parent while its own page is in view, and
+    /// while a child's is.
+    const PAGE: &str = "page";
+    const LOCATION: &str = "location";
+
+    /// Returns the health dot of `item`: its shape, with its words as its
+    /// accessible name and tooltip; an item switched off has no shape and
+    /// says its words to assistive technology alone.
+    fn dot(item: &NestItem) -> AnyView {
+        let words = item.state_words.clone();
+        if item.state == FlowState::Off {
+            return view! { <span class="fui-sr-only">{words}</span> }.into_any();
+        }
+        let class = format!("fui-dot {}", item.state.tone().class());
+        let tooltip = words.clone();
+        view! { <span class=class role="img" aria-label=words title=tooltip></span> }.into_any()
+    }
+
+    /// Returns the label of `item`, in the code face when it is an
+    /// identifier.
+    fn word(item: &NestItem) -> AnyView {
+        let label = item.label.clone();
+        if item.mono {
+            view! { <span class="fui-nav-word"><code>{label}</code></span> }.into_any()
+        } else {
+            view! { <span class="fui-nav-word">{label}</span> }.into_any()
+        }
+    }
+
+    /// Returns one child, marked as the page in view while `current` is
+    /// its page.
+    fn child(item: NestItem, current: &str) -> impl IntoView + use<> {
+        let here = marks(&item.href, true, current).then_some("page");
+        let dot = dot(&item);
+        let word = word(&item);
+        view! {
+            <li>
+                <a href=item.href class="fui-nav-entry fui-nav-child" aria-current=here>
+                    {dot}
+                    {word}
+                </a>
+            </li>
+        }
+    }
+
+    /// Returns the nested section `nest`: the parent with its worst dot and
+    /// its count, marked as the page while `current` is its own page and
+    /// as the location while a child's is, then its children.
+    pub(super) fn section(nest: Nest, current: &str) -> AnyView {
+        let Nest {
+            under: _,
+            label,
+            parent,
+            count_words,
+            children,
+        } = nest;
+        let here = if marks(&parent.href, true, current) {
+            PAGE
+        } else {
+            LOCATION
+        };
+        let count = children.len().to_string();
+        let dot = dot(&parent);
+        let word = word(&parent);
+        let title = parent.label.clone();
+        let children = (!children.is_empty()).then(|| {
+            let rows = children
+                .into_iter()
+                .map(|item| child(item, current))
+                .collect_view();
+            view! { <ul class="fui-nav-children">{rows}</ul> }
+        });
+        view! {
+            <ul class="fui-nav-tree" aria-label=label>
+                <li>
+                    <a
+                        href=parent.href
+                        class="fui-nav-entry fui-nav-parent"
+                        aria-current=here
+                        title=title
+                    >
+                        {dot}
+                        {word}
+                        <span class="fui-nav-badge">
+                            <span aria-hidden="true">{count}</span>
+                            <span class="fui-sr-only">{count_words}</span>
+                        </span>
+                    </a>
+                    {children}
+                </li>
+            </ul>
+        }
+        .into_any()
     }
 }
 

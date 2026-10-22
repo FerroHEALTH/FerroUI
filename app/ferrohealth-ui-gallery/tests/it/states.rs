@@ -38,6 +38,7 @@ mod configuration;
 mod dates;
 mod document;
 mod editor;
+mod federation;
 mod fields;
 mod keys;
 mod layouts;
@@ -62,6 +63,7 @@ const AREAS: &[&[&str]] = &[
     dates::STATES,
     document::STATES,
     editor::STATES,
+    federation::STATES,
     fields::STATES,
     keys::STATES,
     layouts::STATES,
@@ -263,6 +265,7 @@ async fn every_state_is_captured_in_every_brand_light_and_dark() -> Result<(), B
                 dates::date_states(browser, &gallery, brand, theme).await?;
                 document::document(browser, &gallery, brand, theme).await?;
                 editor::editor(browser, &gallery, brand, theme).await?;
+                federation::federation(browser, &gallery, brand, theme).await?;
                 fields::field_states(browser, &gallery, brand, theme).await?;
                 keys::keys(browser, &gallery, brand, theme).await?;
                 layouts::layouts(browser, &gallery, brand, theme).await?;
