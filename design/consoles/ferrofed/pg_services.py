@@ -1,48 +1,58 @@
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 """Services: the outside services the gateway asks, each with one home. The
-binding sections ([pixm], [pdqm], [pmir], [nl_gf.nvi], [xcpd], [nl_gf.mitz])
-and the audit, terminology and directory dependencies. A service's own
-connection is set here; its per-node entries live on each node's Settings;
-the consent and localization policies live in Configuration."""
+binding sections ([pixm], [pdqm], [pmir], [nl_gf], [xcpd]) and the audit,
+terminology and directory dependencies. A service's own connection is set
+here; its per-node entries live on each node's Settings; the consent
+disclosure and the emergency rule live in Configuration › Consent."""
 from common import (
-    action_group, MENU_SEP, badge, button, card, definitions, dock, dock_field, e, empty_state, facts_row, field, health_dot, icon,
-    input_, link_button, menu, menu_item, notice, page_heading, pill, select, shell, table, tabbed, tabs, td, textarea,
-    th, titled_panel, toast, toasts, when,
+    action_group, MENU_SEP, button, definitions, dock, dock_field, e, field, health_dot, hint, icon,
+    input_, link_button, menu, menu_item, notice, page_heading, panel_head, rel, section, sections, select, shell,
+    state, table, tabbed, tabs, td, th, url_code, when,
 )
-from data import STATE_WORD
-from parts import effect, revision_strip
-from pg_orgs import requests_table, sparkline, state, BAD_PROBES, OK_PROBES
+import data
+from data import MITZ_SINCE, SERVICE_GROUPS, SERVICES, SET_UP, service_counts, word
+from parts import skeleton_lines
+from pg_orgs import sparkline
+import routes
+import tpl
 
-# (group, key, name, role in plain words, section, URL, tone, p50, approval kind, what it would enable when not set)
-SERVICES = [
-    ("Identity", "pixm", "PIXm resolver", "finds each node's EHR for a patient", "[pixm]", "https://pix.example.org/fhir/", "ok", 14, "identity-services", None),
-    ("Identity", "pdqm", "PDQm demographics", "finds the master identity first", "[pdqm]", "https://pdq.example.org/fhir/", "ok", 22, "identity-services", None),
-    ("Identity", "pmir", "PMIR identity feed", "drops stale bindings on a merge", "[pmir]", "https://pmir.example.org/fhir", "ok", 26, "identity-services", None),
-    ("Localization", "nvi", "NVI", "finds which nodes hold the patient", "[nl_gf.nvi]", "https://nvi.example.org/fhir", "ok", 31, "localization", None),
-    ("Localization", "xcpd", "XCPD", "", "[xcpd]", None, "unset", None, "localization", "would localize patients in an IHE community"),
-    ("Consent", "mitz", "Mitz", "asks consent before a node is asked", "[nl_gf.mitz]", "https://mitz.example.org/geslotenautorisatievraag", "warn", 1000, "consent", None),
-    ("Records and terminology", "arr", "Audit record repository", "keeps the ATNA audit records", "[audit] · [xcpd.audit_repository]", "tls://arr.example.org:6514", "ok", 9, None, None),
-    ("Records and terminology", "term", "Terminology server", "translates codes on the FHIR face", "[eehrxf.terminology]", "https://term.demo-regio.example.org/fhir", "neutral", None, None, None),
-    ("Directory", "mcsd", "Care services directory", "", "[registry.mcsd]", None, "unset", None, None, "would read organisations and nodes from an mCSD directory"),
-]
-HREF = {"mitz": "service.html"}
-GROUPS = ["Identity", "Localization", "Consent", "Records and terminology", "Directory"]
-SETUP_LABEL = {"xcpd": "Set up XCPD", "mcsd": "Set up the directory"}
+GROUPS = SERVICE_GROUPS
+SETUP_LABEL = {"xcpd": "New service", "mcsd": "New service"}
+APPROVAL_WORD = {"identity-services": "Identity services", "localization": "Identity services and localization", "consent": "Identity services, localization and consent"}
+APPROVAL_CODE = {"identity-services": "identity-services", "localization": "identity-services, localization", "consent": "identity-services, localization, consent"}
+MITZ_PROBES = [176, 182, 170, 188, 179, 175, 181, 184, 172, 178, 185, 180, 177, 183, 179, 174, 186, 181, 178, 182, 176, 180, 183, 179, 175, 181, 178, 180, 182, 180]
+MITZ_FAIL = tuple(range(19, 30))
 
 
 def host(url):
     return url.split("//", 1)[1].split("/", 1)[0] if url else None
 
 
-def svc_menu(name, open_=False, probe_hover=False):
+def svc(key):
+    return next(s for s in SERVICES if s[1] == key)
+
+
+def svc_menu(key, name, open_=False, probe_hover=False):
     trigger = (f'<button type="button" class="fui-icon-button" aria-haspopup="menu" aria-expanded="{"true" if open_ else "false"}" aria-label="Actions for {e(name)}" title="More actions">{icon("ellipsis", "16")}</button>')
-    m = menu([menu_item("Probe now", "activity", hover=probe_hover), menu_item("Open", "arrow-right", href="service.html", keys="Enter"),
-              menu_item("Edit the connection", "pencil", href="service-connection-edit.html")], label=f"Actions for {name}", sheet=True) if open_ else ""
+    m = menu([menu_item("Probe now", "activity", hover=probe_hover), menu_item("Open", "arrow-right", href=routes.svc_href(key), keys="Enter"),
+              menu_item("Edit the connection", "pencil", href="service-connection-edit.html" if key == "mitz" else routes.svc_href(key, "connection")),
+              MENU_SEP, menu_item("Stop asking this service…", "ban", danger=True)], label=f"Actions for {name}", sheet=True) if open_ else ""
     return f'<span class="fui-anchor">{trigger}{m}</span>'
 
 
-def svc_rows(only_attention=False, menu_open=None):
+def policy_line(edit=False):
+    if edit:
+        return ('<div class="mk-group-policy mk-group-policy-edit fui-columns">'
+                + field("lo-fail", f'When the localizer fails{hint("federation.localization.on_failure")}', select("lo-fail", [("closed", "Ask no node"), ("ask-all", "Ask every node")], "closed"),
+                        help_="Ask no node: the query fails and says why (§14.1).")
+                + field("lo-timeout", f'Localizer budget{hint("federation.localization.timeout_ms")}', '<div class="fui-input-group">' + input_("lo-timeout", "1200", extra='inputmode="numeric" class="fui-input fui-config-changed"') + '<span class="fui-input-suffix">ms</span></div>',
+                        help_="was 1,500 ms · a part of the overall budget, with Mitz and PDQm")
+                + "</div>")
+    return f'<span class="mk-group-policy">When the localizer fails: ask no node, after 1,500 ms {link_button("ghost", "Edit", "services-localization-edit.html", "pencil", small=True)}</span>'
+
+
+def svc_rows(only_attention=False, menu_open=None, loc_edit=False):
     order = {"bad": 0, "warn": 1, "neutral": 2, "ok": 3, "unset": 4}
     out = []
     for g in GROUPS:
@@ -52,49 +62,34 @@ def svc_rows(only_attention=False, menu_open=None):
             if not items:
                 continue
         items.sort(key=lambda x: order[x[6]])
-        policy = ""
-        if g == "Localization" and not only_attention:
-            policy = f'<span class="mk-group-policy">Policy: fail closed after 5 s {link_button("ghost", "Edit", "services-localization-edit.html", "pencil", small=True)}</span>'
-        out.append(f'<tr class="mk-group-row"><th scope="rowgroup" colspan="5"><span class="mk-group-name">{g}</span>{policy}</th></tr>')
+        pol = policy_line(loc_edit) if g == "Localization" and not only_attention else ""
+        out.append(f'<tr class="mk-group-row"><th scope="rowgroup" colspan="5"><span class="mk-group-name">{g}</span>{pol}</th></tr>')
         for gg, k, n, role, sec, url, t, p, appr, enable in items:
             if t == "unset":
-                out.append(f'<tr class="is-unset"><th scope="row" data-role="title"><span class="mk-svc-name">{e(n)}</span><span class="mk-svc-role">{e(enable)}</span></th>'
-                           + td("Host", '<span class="mk-dash">–</span>', role="wide") + td("Health", '<span class="fui-small fui-muted">Not set up</span>', role="meta-2")
-                           + td("Last probe", "", role="wide") + td("", link_button("secondary", SETUP_LABEL[k], "service-new.html", "plus", small=True), "fui-row-menu", role="menu") + "</tr>")
+                out.append(f'<tr class="is-unset"><th scope="row" data-role="title"><span class="mk-svc-name">{e(n)}</span></th>'
+                           + td("Host", f'<span class="fui-small fui-muted">{e(enable)}</span>', role="sub") + td("Health", '<span class="fui-small fui-muted">Not set up</span>', role="meta-2")
+                           + td("Last probe", "", role="wide") + td("", link_button("secondary", "Set it up", "service-new.html", "plus", small=True), "fui-row-menu", role="menu") + "</tr>")
                 continue
-            tip = {"warn": "degraded · 503 Service Unavailable", "neutral": "not probed yet: asked only when the FHIR face writes a summary", "ok": f"reachable · p50 {p} ms"}[t]
-            lat = f' · {p:,} ms' if t == "warn" and p else (f" · {p} ms" if p else "")
-            health = f'<span title="{e(tip)}">{state(t)}<span class="fui-small fui-muted">{lat if t != "warn" else ""}</span></span>'
-            import tpl
-            last = tpl.rel("09:41:52") if t != "neutral" else '<span class="mk-dash">never</span>'
-            out.append(f'<tr><th scope="row" data-role="title"><a class="fui-row-link mk-svc-name" href="{HREF.get(k, "service.html")}">{e(n)}</a><span class="mk-svc-role">{e(role)}</span></th>'
+            tip = {"warn": "Degraded · 503 Service Unavailable", "neutral": "Not probed yet: asked only when the FHIR face writes a summary", "ok": f"Reachable · median {p} ms"}[t]
+            health = f'<span title="{e(tip)}">{state(t, "503" if t == "warn" else None)}</span>'
+            last = ("probed " + rel("09:41:52")) if t != "neutral" else '<span class="mk-dash">never probed</span>'
+            out.append(f'<tr><th scope="row" data-role="title"><a class="fui-row-link mk-svc-name" href="{routes.svc_href(k)}">{e(n)}</a><span class="mk-svc-role">{e(role)}</span></th>'
                        + td("Host", f'<code title="{e(url)}">{e(host(url))}</code>', role="sub") + td("Health", health, role="meta-2")
-                       + td("Last probe", last, role="meta-q") + td("", svc_menu(n, menu_open == k), "fui-row-menu", role="menu") + "</tr>")
+                       + td("Last probe", last, role="meta-q") + td("", svc_menu(k, n, menu_open == k), "fui-row-menu", role="menu") + "</tr>")
     return out
 
 
-def summary_chips(active=None):
-    chips = [("all", "9 services", None), ("warn", "1 degraded", "warn"), ("neutral", "1 not probed", "neutral"), ("unset", "2 not set up", None), ("attention", "Needs attention · 2", None)]
-    out = ""
-    for k, w, t in chips:
-        on = (active or "all") == k
-        dot = health_dot(t) if t else ""
-        out += f'<button type="button" class="fui-chip-check" aria-pressed="{"true" if on else "false"}">{dot}{w}</button>'
-    return f'<div class="fui-chip-checks mk-svc-summary" role="group" aria-label="Show">{out}</div>'
-
-
 def services_page(toast_html="", overlay=None, loc_edit=False, attention=False, menu_open=None, dock_html=""):
-    rows = svc_rows(attention, menu_open)
-    if loc_edit:
-        rows = [r.replace('<span class="mk-group-policy">Policy: fail closed after 5 s', '<span class="mk-group-policy mk-group-policy-edit">'
-                          + field("lo-fail", "On a localization failure", select("lo-fail", [("closed", "Fail closed (§14.1)"), ("open", "Ask every node")], "closed"))
-                          + field("lo-timeout", "Budget", '<div class="fui-input-group">' + input_("lo-timeout", "4000", extra='inputmode="numeric" class="fui-input fui-config-changed"') + '<span class="fui-input-suffix">ms</span></div>', help_="was 5000 ms")
-                          + '<span hidden>') if "mk-group-policy" in r else r for r in rows]
-    import tpl
-    t = tpl.card(table("Services", th("Service") + th("Host") + th("Health") + th("Last probe") + th('<span class="fui-sr-only">Actions</span>'), rows, scroll_label="Services"), label="Services", count="7 set up, 2 not set up" if not attention else "2 need attention").replace("fui-list-card", "fui-list-card mk-svc-list")
-    head = page_heading("Services", actions=link_button("primary", "Set up a service", "services-setup.html", "plus"),
-                        subtitle="The outside services the gateway asks for identity, localization, consent, audit and terminology.")
-    content = head + tpl.list_body("", "", tpl.active(["Needs attention"]) if attention else "", t)
+    rows = svc_rows(attention, menu_open, loc_edit)
+    c = service_counts()
+    att = c.get("warn", 0) + c.get("neutral", 0)
+    chips = tpl.summary([(f"{len(SERVICES)} services", None, not attention), (f"{c.get('warn', 0)} degraded", "warn", False), (f"{c.get('neutral', 0)} not probed", "neutral", False),
+                         (f"{len(SERVICES) - len(SET_UP)} not set up", None, False), (f"Needs attention · {att}", None, attention)])
+    t = tpl.card(table("Services", th("Service") + th("Host") + th("Health") + th("Last probe") + th('<span class="fui-sr-only">Actions</span>'), rows, scroll_label="Services"),
+                 label="Services", count=f"{len(SET_UP)} set up, {len(SERVICES) - len(SET_UP)} not set up" if not attention else f"{att} need attention").replace("fui-list-card", "fui-list-card mk-svc-list")
+    act = "" if loc_edit else link_button("primary", "New service", "services-setup.html", "plus")
+    head = page_heading("Services", actions=act, subtitle="The outside services the gateway asks for identity, localization, consent, audit and terminology.")
+    content = head + tpl.list_body(chips, "", tpl.active(["Needs attention"], shown=(att, len(SET_UP))) if attention else "", t)
     return shell("Services", "services", content, toast_html=toast_html, overlay=overlay, dock_html=dock_html)
 
 
@@ -113,95 +108,118 @@ def page_services_menu():
 def page_services_setup():
     opts = "".join(
         f'<label class="fui-choice-card"><input type="radio" class="fui-sr-only" name="svc-new"{" checked" if k == "xcpd" else ""} />'
-        f'<span class="fui-choice-card-text"><span class="fui-choice-card-title">{n}</span><span class="fui-choice-card-sub">{e(enable)} · {e(g)}</span></span>'
+        f'<span class="fui-choice-card-text"><span class="fui-choice-card-title">{n}</span><span class="fui-choice-card-sub">{e(enable[0].upper() + enable[1:])} · {e(g)}</span></span>'
         f'<span class="fui-choice-card-check" aria-hidden="true">{icon("check", "12")}</span></label>'
         for g, k, n, role, sec, url, t, p, appr, enable in SERVICES if t == "unset")
     dialog = ('<div role="dialog" aria-modal="true" aria-labelledby="su-title" class="fui-dialog fui-modal mk-open" open>'
-              f'<h2 id="su-title" class="fui-dialog-title">{icon("plug", "18")} Set up a service</h2>'
+              f'<h2 id="su-title" class="fui-dialog-title">{icon("plug", "18")} New service</h2>'
               '<p>Only the services this gateway does not ask yet are offered.</p>'
-              f'<fieldset class="fui-choice-cards mk-ff-grants"><legend class="fui-sr-only">Service</legend>{opts}</fieldset>'
+              f'<fieldset class="fui-choice-cards mk-svc-choices"><legend class="fui-sr-only">Service</legend>{opts}</fieldset>'
               f'<div class="fui-dialog-actions">{button("secondary", "Cancel", keys="Esc")}{link_button("primary", "Continue", "service-new.html", "arrow-right")}</div></div>')
     return services_page(overlay=dialog)
 
 
 def page_services_localization_edit():
-    d = dock(dock_field("lo-reason", "Reason", "The pilot's queries need an answer sooner; localize within 4 s", "Why this changes", keys="r"),
-             link_button("secondary", "Discard the draft", "services.html", "x") + link_button("primary", "Review the changes", "config-review.html", "git-compare"))
+    d = dock(dock_field("lo-reason", "Reason", "The pilot's queries need an answer sooner; give the NVI 1.2 s", "Required: kept with the revision", keys="r"),
+             link_button("secondary", "Discard", "services.html", "x") + link_button("primary", "Review the changes", "config-review.html", "git-compare"))
     return services_page(loc_edit=True, dock_html=d)
 
 
-TABS = [("overview", "Overview", "service.html"), ("connection", "Connection", "service-connection.html"), ("requests", "Requests", "service-requests.html"), ("audit", "Audit", "service-audit.html")]
+# ---- one service (T2) ----
+
+def service_page(key, tab, panel, dock_html="", top="", drafts=()):
+    g, k, n, role, sec, url, t, p, appr, enable = svc(key)
+    own = key == "mitz"
+    edit_href = "service-connection-edit.html" if own else routes.svc_href(key, "connection")
+    ag = "" if drafts else action_group(link_button("primary", "Edit the connection", edit_href, "pencil"), [menu_item("Probe now", "activity"), MENU_SEP, menu_item("Stop asking this service…", "ban", danger=True)], label=f"More actions for {n}")
+    head = page_heading(e(n), actions=ag, badge=state(t, "503" if t == "warn" else None),
+                        subtitle=f"{e(g)} · {e(role[0].upper() + role[1:])}{hint(sec)}", crumbs=[("Services", "services.html")])
+    items = [(tk, {"overview": "Overview", "connection": "Connection", "requests": "Requests", "audit": "Audit"}[tk] + ('<span class="fui-tab-draft">draft</span>' if tk in drafts else ""), routes.svc_href(key, tk))
+             for tk in routes.SVC_TABS]
+    content = head + f'<div class="fui-stack">{top}{tabbed(tabs(n, items, tab), panel)}</div>'
+    return shell(n, "services", content, dock_html=dock_html)
 
 
-def service_page(tab, panel, dock_html="", top="", overlay=None):
-    ag = action_group(link_button("primary", "Edit the connection", "service-connection-edit.html", "pencil"), [menu_item("Probe now", "activity")], label="More actions for Mitz")
-    head = page_heading("Mitz", actions=ag, badge=state("warn", "503"),
-                        subtitle="Consent · <code>[nl_gf.mitz]</code> · the Dutch Generic Functions' consent pre-filter, asked before a query reaches a node. Changes need a second operator's approval (consent).",
-                        crumbs=[("Services", "services.html")])
-    content = head + f'<div class="fui-stack">{top}{tabbed(tabs("Mitz", TABS, tab), panel)}</div>'
-    return shell("Mitz", "services", content, dock_html=dock_html, overlay=overlay)
+def mitz_overview():
+    hc = section("Health", f'<p class="fui-cluster">{state("warn", "503")}<span class="fui-small fui-muted">since {MITZ_SINCE} · last probe {rel("09:41:52")}, every 60 s</span></p>'
+                 + sparkline(MITZ_PROBES, MITZ_FAIL) + '<p class="fui-spark-legend"><span>30 min ago</span><span>ms · a dot: a 503</span><span>now</span></p>'
+                 + '<p class="fui-small">While Mitz answers 503 the pre-filter has no answer. Each query records the consent decision as unavailable and asks every node, which decides itself (§13.2.1).</p>')
+    errs = section("Recent errors", f'<ul class="mk-plain-list fui-small"><li>{rel("09:41:52")} · 503 Service Unavailable · a consent question</li>'
+                   f'<li>{rel("09:40:52")} · 503 Service Unavailable · a probe</li><li>{rel("09:31:04")} · 503 Service Unavailable · the first one</li></ul>')
+    mapped = section("Who it serves", definitions([("Nodes mapped", '5 of 6 · <a href="node-settings.html">node-a-lab is not mapped</a>'),
+                                                   ("Consent policy", 'Exclusions disclosed, and in an emergency the pre-filter applies · <a href="configuration-consent.html">Configuration › Consent</a>')]))
+    return sections(hc, errs, mapped)
 
 
 def page_service():
-    hc = card("Health", f'<p class="fui-cluster">{state("warn", "503 since 09:38")}<span class="fui-small fui-muted">last probe {when("2026-10-21T09:41:52", seconds=True)} · every 60 s</span></p>'
-              + sparkline(BAD_PROBES, tuple(range(13, 30))) + '<p class="fui-spark-legend"><span>30 min ago</span><span>dashed: half the per-node budget</span><span>now</span></p>'
-              + '<p class="fui-small">While Mitz answers 503 the pre-filter cannot ask, so each query names it <strong>not-asked</strong> and goes on, as §13 lets a pre-filter that did not ask say so.</p>')
-    errs = card("Recent errors", '<ul class="mk-plain-list fui-small"><li><time class="fui-time">09:41:52</time> 503 Service Unavailable · geslotenautorisatievraag</li>'
-                '<li><time class="fui-time">09:40:52</time> 503 Service Unavailable · probe</li><li><time class="fui-time">09:38:04</time> TLS handshake slow: 1,840 ms</li></ul>')
-    mapped = card("Who it serves", definitions([("Nodes mapped", '5 of 6 · <a href="node-settings.html">node-a-lab is not mapped</a>'), ("Policy in force", 'exclusions disclosed (<a href="configuration.html">Configuration</a>) · in an emergency it applies (<a href="service-connection.html">Connection</a>)')]))
-    panel = f'<div class="fui-stack"><div class="fui-grid fui-grid-start">{hc}{errs}</div>{mapped}</div>'
-    top = notice("warn", "triangle-alert", "<strong>Degraded.</strong> Mitz answers 503 since 09:38. Queries go on with consent not asked; the access record says so for each one.")
-    return service_page("overview", panel, top=top)
+    top = notice("warn", "triangle-alert", f"<strong>Degraded.</strong> Mitz answers 503 since {MITZ_SINCE}. Queries go on without its answer; the access record says so for each one.")
+    return service_page("mitz", "overview", mitz_overview(), top=top)
 
 
-def connection_body(edit=False):
+def connection_view():
+    d = definitions([("URL", url_code("https://mitz.example.org/geslotenautorisatievraag")), ("Purpose of use", f"Treatment{hint('TREAT')}"),
+                     ("Data categories", "<code>GGC002</code>"), ("BSN namespaces", f"<code>urn:oid:2.999.1</code>{hint('nl_gf.mitz.namespaces')}"),
+                     ("Timeout", "1,000 ms, one round of questions, within the query's overall budget"),
+                     ("Client certificate", f'<span class="fui-secret-now">{icon("lock", "12")}set, read from <code>/run/secrets/ferrofed/mitz-client.pem</code></span>'),
+                     ("Password", f'<span class="fui-secret-now">{icon("lock", "12")}set, read from <code>/run/secrets/ferrofed/mitz-password</code></span>'),
+                     ("Approval", f'{APPROVAL_WORD["consent"]}{hint(APPROVAL_CODE["consent"])}: a second operator approves a change, which then runs on trial for 2 minutes')])
+    elsewhere = definitions([("Each node's care provider", '5 of 6 nodes mapped, on each node\'s Settings · <a href="node-settings.html">node-a-lab is not</a>'),
+                             ("Consent exclusions", 'Disclosed · <a href="configuration-consent.html">Configuration › Consent</a>'),
+                             ("In an emergency", 'The pre-filter applies · <a href="configuration-consent.html">Configuration › Consent</a>')])
+    return sections(panel_head("How the gateway reaches Mitz.", link_button("secondary", "Edit", "service-connection-edit.html", "pencil", small=True, keys="e")) + section("Connection", d), section("Set elsewhere", elsewhere))
+
+
+def connection_edit():
     from pg_config import secret_field
-    if not edit:
-        d = definitions([("URL", "<code class=\"fui-break\">https://mitz.example.org/geslotenautorisatievraag</code>"), ("Purpose of use", "TREAT, treatment"),
-                         ("Data categories", "<code>GGC002</code>"), ("Namespaces that stand for the BSN", "<code>urn:oid:2.999.1</code>"), ("Timeout", "1,000 ms, one round of questions"),
-                         ("In an emergency", "apply the pre-filter (<code>federation.consent.emergency</code>)"),
-                         ("Mutual TLS", f'<span class="fui-secret-now">{icon("lock", "12")}set, read from <code>/run/secrets/ferrofed/mitz-client.pem</code></span>'),
-                         ("Password", f'<span class="fui-secret-now">{icon("lock", "12")}set, read from <code>/run/secrets/ferrofed/mitz-password</code></span>'),
-                         ("Approval", "consent: a second operator approves a change, which then runs on trial for 2 minutes")])
-        d = d.replace('<dl class="fui-facts">', '<dl class="fui-facts">', 1)
-        return '<div class="fui-stack">' + card("Connection", d + '<p class="fui-small fui-muted">Configured in <code>[nl_gf.mitz]</code> · changes need a second operator\'s approval (consent), then run on trial for 2 minutes.</p>') + card("Set elsewhere", definitions([("Each node's care provider", '5 of 6 nodes mapped, on each node\'s Settings · <a href="node-settings.html">node-a-lab is not</a>'), ("Consent exclusions", 'disclosed · <a href="configuration.html">Set in Configuration</a>, as it also covers the nodes\' own refusals')])) + "</div>"
     fields = ('<div class="fui-columns">'
               + field("mz-url", "URL", input_("mz-url", "https://mitz.example.org/geslotenautorisatievraag", extra='spellcheck="false" class="fui-input fui-mono"'))
-              + field("mz-purpose", "Purpose of use", select("mz-purpose", [("TREAT", "TREAT, treatment"), ("COC", "COC, continuity of care")], "TREAT"))
-              + field("mz-timeout", "Timeout", '<div class="fui-input-group">' + input_("mz-timeout", "1500", extra='inputmode="numeric" class="fui-input fui-config-changed"') + '<span class="fui-input-suffix">ms</span></div>', help_="was 1000 ms · one round of questions, within the query's budget")
+              + field("mz-purpose", "Purpose of use", select("mz-purpose", [("TREAT", "Treatment (TREAT)"), ("COC", "Continuity of care (COC)")], "TREAT"))
+              + field("mz-timeout", "Timeout", '<div class="fui-input-group">' + input_("mz-timeout", "1500", extra='inputmode="numeric" class="fui-input fui-config-changed"') + '<span class="fui-input-suffix">ms</span></div>', help_="was 1,000 ms · with PDQm and the localizer, below the overall budget")
               + field("mz-cats", "Data categories", input_("mz-cats", "GGC002", extra='spellcheck="false" class="fui-input fui-mono"'), help_="The Mitz categories asked about, comma-separated.")
-              + field("mz-emerg", "In an emergency", select("mz-emerg", [("apply", "Apply the pre-filter"), ("pass", "Pass to the node")], "apply"), help_="federation.consent.emergency")
+              + field("mz-ns", "BSN namespaces", input_("mz-ns", "urn:oid:2.999.1", extra='spellcheck="false" class="fui-input fui-mono"'), help_="nl_gf.mitz.namespaces")
               + "</div>")
-    secrets = secret_field("client_identity", "keep", now="/run/secrets/ferrofed/mitz-client.pem", idx=20) + secret_field("credentials.password", "keep", now="/run/secrets/ferrofed/mitz-password", idx=21)
-    return ('<div class="fui-stack">' + revision_strip("draft", "Draft of [nl_gf.mitz] · 1 change", "Approved by a second operator (consent), then on trial for 2 minutes after the apply.")
-            + card("Connection", fields) + card("Mutual TLS and credentials", secrets) + "</div>")
+    secrets = secret_field("Client certificate", "keep", now="/run/secrets/ferrofed/mitz-client.pem", idx=20, key="client_identity_file") + secret_field("Password", "keep", now="/run/secrets/ferrofed/mitz-password", idx=21, key="credentials.password_file")
+    return sections(panel_head("A draft of this tab, based on revision 7: 1 change. A second operator approves it, then it runs on trial for 2 minutes after the apply.", '')
+                    + section("Connection", fields) + section("Client certificate and password", secrets))
 
 
 def page_service_connection():
-    return service_page("connection", connection_body())
+    return service_page("mitz", "connection", connection_view())
 
 
 def page_service_connection_edit():
-    d = dock(dock_field("mz-reason", "Reason", "Mitz answers slower in the pilot; give it 1.5 s", "Why this changes", keys="r"),
-             link_button("secondary", "Discard the draft", "service-connection.html", "x") + link_button("primary", "Review the changes", "config-review.html", "git-compare"))
-    return service_page("connection", connection_body(edit=True), dock_html=d)
+    d = dock(dock_field("mz-reason", "Reason", "Mitz answers slower in the pilot; give it 1.5 s", "Required: kept with the revision", keys="r"),
+             link_button("secondary", "Discard", "service-connection.html", "x") + link_button("primary", "Review the changes", "config-review.html", "git-compare"))
+    return service_page("mitz", "connection", connection_edit(), dock_html=d, drafts=("connection",))
+
+
+def mitz_requests():
+    rows = [("09:41:52", "a consent question for 3 nodes", "503", 180, "Unavailable: Mitz did not answer", "01JAF3M0R2KD"),
+            ("09:37:10", "a consent question for 4 nodes", "503", 176, "Unavailable: Mitz did not answer", "01JAF3KG7VNA"),
+            ("09:29:44", "a consent question for 4 nodes", "200", 212, "2 permitted, 2 denied", "01JAF3K1T9PE"),
+            ("09:24:31", "a consent question for 2 nodes", "200", 188, "2 permitted", "01JAF3JX4QRB")]
+    body = [f'<tr><th scope="row">{rel(t)}</th>' + td("Question", e(q)) + td("Status", f'<span class="fui-pill fui-tone-{"ok" if st == "200" else "bad"}">{st}</span>') + td("Latency", f"{lat:,} ms", "fui-num")
+            + td("Consent decision", e(a)) + td("Request id", f"<code>{rid}</code>") + "</tr>" for t, q, st, lat, a, rid in rows]
+    tbl = table("Questions to Mitz", th("Time", "t", "descending") + th("Question") + th("Status") + th("Latency", num=True) + th("Consent decision") + th("Request id"), body)
+    tools = tpl.toolbar("A request id", "", [tpl.filter_button("Status")])
+    return sections(f'<div class="fui-panel-section"><p class="fui-small fui-muted">Patient identifiers and values are not shown here; the access record keeps them.</p>{tools}</div>' + tbl)
 
 
 def page_service_requests():
-    rows = [("09:41:52", "mitz", "geslotenautorisatievraag, 3 nodes", "503", "1,000 ms", "not-asked", "01JAF3M0R2KD"),
-            ("09:37:10", "mitz", "geslotenautorisatievraag, 4 nodes", "200", "212 ms", "2 permitted, 2 denied", "01JAF3KG7VNA"),
-            ("09:31:44", "mitz", "geslotenautorisatievraag, 2 nodes", "200", "188 ms", "2 permitted", "01JAF3K1T9PE")]
-    panel = ('<div class="fui-stack"><p class="fui-small fui-muted">The questions the gateway asked Mitz: never a patient identifier or a value, as the access record keeps them.</p>'
-             + requests_table(rows).replace("<th scope=\"col\">Endpoint</th>", "<th scope=\"col\">Service</th>") + "</div>")
-    return service_page("requests", panel)
+    return service_page("mitz", "requests", mitz_requests())
+
+
+def mitz_audit():
+    rows = [("2026-10-08T13:25", "Demo Operator", "Confirmation", "confirmed revision 2 after its trial", None),
+            ("2026-10-08T13:22", "Demo Reviewer", "Approval", "approved revision 2", None),
+            ("2026-10-08T13:15", "Demo Operator", "Change", "turned on the Mitz pre-filter · revision 2", "For the pilot")]
+    body = [f'<tr><th scope="row">{rel(t)}</th>' + td("By", e(by), "mk-nowrap") + td("Kind", e(k)) + td("What", e(w)) + td("Reason", e(r) if r else '<span class="mk-dash">–</span>') + "</tr>" for t, by, k, w, r in rows]
+    return sections(f'<div class="fui-panel-section"><p class="fui-small fui-muted">Every change to Mitz, with its approval and confirmation, newest first.</p></div>'
+                    + table("Audit", th("When", "t", "descending") + th("By") + th("Kind") + th("What") + th("Reason"), body))
 
 
 def page_service_audit():
-    rows = [("2026-10-08T13:15", "Demo Operator", "revision 2", "turned on the Mitz pre-filter for the pilot", "Turn on the Mitz pre-filter for the pilot"),
-            ("2026-10-08T13:22", "Demo Reviewer", "approval", "approved revision 2 (consent)", None),
-            ("2026-10-08T13:25", "Demo Operator", "confirmed", "confirmed revision 2 after its trial", None)]
-    body = [f'<tr><th scope="row">{when(t)}</th>' + td("By", e(by), "mk-nowrap") + td("Kind", badge("neutral", k)) + td("What", e(w)) + td("Reason", e(r) if r else '<span class="mk-dash">–</span>') + "</tr>" for t, by, k, w, r in rows]
-    return service_page("audit", table("Audit", th("When", "t", "descending") + th("By") + th("Kind") + th("What") + th("Reason"), body))
+    return service_page("mitz", "audit", mitz_audit())
 
 
 def page_service_new():
@@ -211,12 +229,58 @@ def page_service_new():
               + field("xc-home", "Home community", input_("xc-home", "2.999.40", extra='class="fui-input fui-mono"'))
               + field("xc-url", "Responding gateway", input_("xc-url", "https://xcpd.region.example.org/RespondingGateway", extra='spellcheck="false" class="fui-input fui-mono"'))
               + field("xc-device", "Its device OID", input_("xc-device", "2.999.50.1", extra='class="fui-input fui-mono"'))
-              + field("xc-audit", "Audit", select("xc-audit", [("log", "log, to the gateway's log"), ("repository", "repository, to the audit record repository")], "repository"))
+              + field("xc-audit", "Audit messages", select("xc-audit", [("log", "To the gateway's log"), ("repository", "To the audit record repository")], "repository"))
               + "</div>")
-    body = (revision_strip("draft", "Draft based on revision 7 · XCPD set up", "Approved by a second operator (localization). Each node's community is set on the node once XCPD runs.")
-            + card("Service", field("xc-kind", "Service", select("xc-kind", [("xcpd", "XCPD localization"), ("mcsd", "Care services directory")], "xcpd"), help_="Only the services not set yet are offered."))
-            + card("Connection", fields) + card("Mutual TLS", secret_field("client_identity", "file", now="", now_state="unset", path="/run/secrets/ferrofed/xcpd-client.pem", idx=30)))
-    content = page_heading("Set up a service", subtitle="A service the gateway does not ask yet. Saved as a revision you review, have approved and apply.", crumbs=[("Services", "services.html")]) + f'<div class="fui-stack">{body}</div>'
-    d = dock(dock_field("xc-reason", "Reason", "The region's XCPD community goes live on 1 November", "Why this changes", keys="r"),
-             link_button("secondary", "Cancel", "services.html", "x") + link_button("primary", "Review the changes", "config-review.html", "git-compare"))
-    return shell("Set up a service", "services", content, dock_html=d)
+    body = sections(
+        f'<div class="fui-panel-section"><p class="fui-small fui-muted">A draft based on revision 7. A second operator approves it ({APPROVAL_WORD["localization"].lower()}); each node\'s community is then set on the node.</p>'
+        + field("xc-kind", "Which service", select("xc-kind", [("xcpd", "XCPD"), ("mcsd", "Care services directory")], "xcpd"), help_="Only the services not set up yet are offered.") + "</div>"
+        + section("Connection", fields) + section("Client certificate", secret_field("Client certificate", "file", now="", now_state="unset", path="/run/secrets/ferrofed/xcpd-client.pem", idx=30, key="client_identity_file")))
+    content = page_heading("New service", subtitle="A service the gateway does not ask yet.", crumbs=[("Services", "services.html")]) + f'<div class="fui-stack">{body}</div>'
+    d = dock(dock_field("xc-reason", "Reason", "The region's XCPD community goes live on 1 November", "Required: kept with the revision", keys="r"),
+             link_button("secondary", "Discard", "services.html", "x") + link_button("primary", "Review the changes", "config-review.html", "git-compare"))
+    return shell("New service", "services", content, dock_html=d)
+
+
+# ---- route-only pages: every other service's tabs ----
+
+def generic_overview(key):
+    g, k, n, role, sec, url, t, p, appr, enable = svc(key)
+    if t == "neutral":
+        line = "Not probed yet: the gateway asks it only when the FHIR face writes a summary."
+        h = f'<p>{state(t)} <span class="fui-small fui-muted">{line}</span></p>'
+    else:
+        h = (f'<p class="fui-cluster">{state(t)}<span class="fui-small fui-muted">last probe {rel("09:41:52")}, every 60 s · median {p} ms</span></p>'
+             + sparkline([p + (i * 7) % 5 for i in range(30)]) + '<p class="fui-spark-legend"><span>30 min ago</span><span>response time, ms</span><span>now</span></p>')
+    return sections(section("Health", h))
+
+
+def generic_connection(key):
+    g, k, n, role, sec, url, t, p, appr, enable = svc(key)
+    rows = [("URL", url_code(url)), ("Section", f"<code>{e(sec)}</code>")]
+    if appr:
+        rows.append(("Approval", APPROVAL_WORD[appr] + hint(APPROVAL_CODE[appr])))
+    return sections(section("Connection", definitions(rows)))
+
+
+def generic_requests(key):
+    from common import quiet_line
+    return quiet_line(f"No request to {svc(key)[2]} in the last 24 hours that the access record keeps.")
+
+
+def generic_audit(key):
+    r = data.REVISIONS[0]
+    body = [f'<tr><th scope="row">{rel(r[3])}</th>' + td("By", e(r[2])) + td("Kind", "Change") + td("What", f"set up from the file · revision 1") + td("Reason", e(r[4])) + "</tr>"]
+    return sections(table("Audit", th("When", "t", "descending") + th("By") + th("Kind") + th("What") + th("Reason"), body))
+
+
+def route_pages():
+    out = {}
+    for s in SET_UP:
+        k = s[1]
+        if k == "mitz":
+            continue
+        out[routes.slug("svc", k, "overview")] = lambda k=k: service_page(k, "overview", generic_overview(k))
+        out[routes.slug("svc", k, "connection")] = lambda k=k: service_page(k, "connection", generic_connection(k))
+        out[routes.slug("svc", k, "requests")] = lambda k=k: service_page(k, "requests", generic_requests(k))
+        out[routes.slug("svc", k, "audit")] = lambda k=k: service_page(k, "audit", generic_audit(k))
+    return out

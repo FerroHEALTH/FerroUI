@@ -33,8 +33,8 @@ def server_page(tab, panel_html, line, tabs_list=SERVER_TABS, overlay=None, sand
 
 
 def overview_body(sandbox=False):
-    status = facts([("Status", state("ok", "Up") + ' <span class="fui-small fui-muted">answered 13 s ago</span>'),
-                    ("Deployment", ("Sandbox · 3 production safeguards are off" if sandbox else "Production")),
+    status = facts([("State", state("ok", "Up") + ' <span class="fui-small fui-muted">answered 13 s ago</span>'),
+                    ("Deployment", ("Sandbox" if sandbox else "Production")),
                     ("Versions and conformance", '<a href="about.html">About</a>')])
     build = facts([("Git commit", "<code>7c1e9d2</code>"), ("Built", when("2026-10-19T06:12")), ("rustc", "1.99.1"), ("PostgreSQL target", "18.6"),
                    ("Audit", "On · fails closed · local store · kept 7 years"), ("Support until", "2027-10")])
@@ -44,22 +44,22 @@ def overview_body(sandbox=False):
             f'<tr><th scope="row" data-role="title">{state("warn", "Shared database credential")}</th>{td("What it means", "Schema changes and the running CDR use one PostgreSQL role.", role="sub")}</tr>',
             f'<tr><th scope="row" data-role="title">{state("warn", "Shared cluster")}</th>{td("What it means", "The clinical, party and audit databases share one PostgreSQL cluster.", role="sub")}</tr>',
             f'<tr><th scope="row" data-role="title">{state("warn", "Migrations on the runtime credential")}</th>{td("What it means", "The CDR prepares its own schema at start.", role="sub")}</tr>'])
-        parts.append(section("Production safeguards that are off", intro("A sandbox runs without these, so it must not hold real patient data.") + gaps, count=3))
+        parts.append(section("Production safeguards that are off", intro("A sandbox must not hold real patient data.") + gaps, count=3))
     parts += [section("Build", build)]
     return "".join(parts)
 
 
 def page_server():
-    return server_page("overview", overview_body(), "What the CDR is and how it was built.")
+    return server_page("overview", overview_body(), "How the CDR was built and deployed.")
 
 
 def page_server_sandbox():
-    return server_page("overview", overview_body(True), "What the CDR is and how it was built.", sandbox=True)
+    return server_page("overview", overview_body(True), "How the CDR was built and deployed.", sandbox=True)
 
 
 def page_server_health():
-    rows = [("Database", "ok", "Up", "PostgreSQL 18.6 answered in 4 ms"), ("Migrations", "ok", "Up", "41 applied, none pending"),
-            ("Audit store", "ok", "Up", "Chain verified 09:30"), ("Event publisher", "warn", "Degraded", "Reconnecting to the broker, attempt 3"),
+    rows = [("Database", "ok", "Up", "PostgreSQL 18.6 answered in 4\u00a0ms"), ("Migrations", "ok", "Up", "41 applied, none pending"),
+            ("Audit store", "ok", "Up", "Chain verified " + ago("2026-10-21T09:30")), ("Event publisher", "warn", "Degraded", "Reconnecting to the broker, attempt 3"),
             ("Terminology server", "muted", "Off", "Not configured")]
     t = table("Dependency indicators", th("Dependency") + th("State") + th("Detail"),
               [f'<tr><th scope="row" data-role="title">{n}</th>{td("State", state(tone, w), role="sub")}{td("Detail", d, role="meta-q")}</tr>' for n, tone, w, d in rows])
@@ -69,24 +69,30 @@ def page_server_health():
 METRICS = ["aql_queries_total", "compositions_committed_total", "db_pool_connections", "http_request_duration_seconds", "http_requests_in_flight", "audit_events_total"]
 
 
+METRIC_NAME = {"aql_queries_total": "AQL queries", "compositions_committed_total": "Compositions committed", "db_pool_connections": "Database connections",
+               "http_request_duration_seconds": "Request duration", "http_requests_in_flight": "Requests in flight", "audit_events_total": "Audit events"}
+
+
 def page_server_metrics():
     from common import stat_card
-    tiles = (f'<div class="fui-grid fui-grid-stats">{stat_card("activity", "3", "Requests in flight")}{stat_card("file-text", "184", "Compositions committed")}'
-             f'{stat_card("square-terminal", "1,206", "AQL queries")}{stat_card("database", "6 of 20", "Database connections")}</div>')
-    pick = (f'<div class="fui-transform-options">{field("m-pick", "Metric", select("m-pick", [(m, m) for m in METRICS], "db_pool_connections"))}'
+    now = f'<div class="fui-grid fui-grid-stats fui-stat-row">{stat_card("activity", "3", "Requests in flight")}{stat_card("database", "6 of 20", "Database connections")}</div>'
+    since = f'<div class="fui-grid fui-grid-stats fui-stat-row">{stat_card("file-text", "184", "Compositions committed")}{stat_card("square-terminal", "1,206", "AQL queries")}</div>'
+    names = sorted([(METRIC_NAME[m], m) for m in METRICS])
+    pick = (f'<div class="fui-transform-options">{field("m-pick", "Metric", select("m-pick", [(m, f"{n} · {m}") for n, m in names], "db_pool_connections"), cls="is-id")}'
             f'<div class="fui-transform-run">{button("secondary", "Show", "chart-line")}</div></div>')
     samples = table("Samples of db_pool_connections", th("Connections") + th("Value", num=True), [
         f'<tr><th scope="row" data-role="title"><span title="state=&quot;in_use&quot;">In use</span></th>{td("Value", "6", "fui-num", role="sub")}</tr>',
         f'<tr><th scope="row" data-role="title"><span title="state=&quot;idle&quot;">Idle</span></th>{td("Value", "4", "fui-num", role="sub")}</tr>',
         f'<tr><th scope="row" data-role="title"><span title="state=&quot;max&quot;">Maximum</span></th>{td("Value", "20", "fui-num", role="sub")}</tr>'])
-    body = section("Since the last start", tiles) + section("The metric registry", pick + samples, count=f"{len(METRICS)} metrics")
+    body = section("Now", now) + section("Since the last start", since) + section("The metric registry", pick + samples, count=f"{len(METRICS)} metrics")
     return server_page("metrics", body, "Counters since the last start.")
 
 
 def logging_body():
-    f = facts([("In effect", "<code>ferroehr=info,sqlx=warn</code>"), ("At boot", '<code>ferroehr=info,sqlx=warn</code> <span class="fui-small fui-muted">log.filter</span>')])
-    form = (f'<div class="fui-transform-options">{field("lf", "New filter", input_("lf", "ferroehr=debug,sqlx=warn", extra="class=" + chr(34) + "fui-input fui-mono" + chr(34)))}'
-            f'<div class="fui-transform-run">{link_button("primary", "Apply…", "server-logging-apply.html", "check")}{button("secondary", "Reset to the boot filter", "rotate-ccw")}</div></div>')
+    f = facts([("In effect", "<code>ferroehr=info,sqlx=warn</code>"), ("At boot", '<code title="Set by log.filter">ferroehr=info,sqlx=warn</code>')])
+    reset = '<button type="button" class="fui-button fui-button-secondary" disabled title="The filter in effect is the boot filter">' + icon("rotate-ccw", "16") + "Reset to the boot filter</button>"
+    form = (f'<div class="fui-transform-options">{field("lf", "New filter", input_("lf", "ferroehr=debug,sqlx=warn", extra="class=" + chr(34) + "fui-input fui-mono" + chr(34)), cls="is-id")}'
+            f'<div class="fui-transform-run fui-cluster">{link_button("primary", "Apply…", "server-logging-apply.html", "check")}{reset}</div></div>')
     return section("Filter", f) + section("Change the log filter", intro("Applies to this instance until it restarts.") + form)
 
 
@@ -95,24 +101,42 @@ def page_server_logging(overlay=None):
 
 
 def page_server_logging_apply():
-    d = dialog("lg", "check", "Apply the filter ferroehr=debug,sqlx=warn?",
-               "<p>Until this instance restarts.</p>",
+    d = dialog("lg", "check", "Apply the new log filter?",
+               '<p><code>ferroehr=debug,sqlx=warn</code></p><p>Until this instance restarts.</p>',
                button("secondary", "Cancel", keys="Esc") + button("primary", "Apply the filter", "check"))
     return page_server_logging(d)
 
 
 def page_server_api():
-    fams = [("all", "The complete surface"), ("ehr", "openEHR: EHR"), ("query", "openEHR: Query"), ("definition", "openEHR: Definition"), ("demographic", "openEHR: Demographic"),
-            ("admin", "openEHR: Admin"), ("management", "FerroEHR: Status & Management"), ("terminology", "FerroEHR: Terminology"), ("relationships", "FerroEHR: Party Relationships"),
+    fams = [("all", "The complete surface"), ("ehr", "openEHR: EHR"), ("query", "openEHR: Query"), ("definition", "openEHR: Definition"), ("demographic", "openEHR: Demographic (in development)"),
+            ("admin", "openEHR: Admin (in development)"), ("management", "FerroEHR: Status & Management"), ("terminology", "FerroEHR: Terminology"), ("relationships", "FerroEHR: Party Relationships"),
             ("events", "FerroEHR: Event Subscriptions"), ("audit", "FerroEHR: Audit"), ("smart", "FerroEHR: SMART Discovery")]
     pick = f'<div class="fui-transform-options">{field("api-f", "API family", select("api-f", fams, "ehr"))}<div class="fui-transform-run">{button("secondary", "Download OpenAPI", "download")}</div></div>'
-    eps = [("GET", "/ehr/{ehr_id}", "Get an EHR by id"), ("POST", "/ehr", "Create an EHR"), ("PUT", "/ehr/{ehr_id}", "Create an EHR with an id"),
-           ("GET", "/ehr/{ehr_id}/ehr_status", "Get the EHR status"), ("PUT", "/ehr/{ehr_id}/ehr_status", "Update the EHR status"),
-           ("POST", "/ehr/{ehr_id}/composition", "Create a composition"), ("GET", "/ehr/{ehr_id}/composition/{uid_based_id}", "Get a composition"),
-           ("PUT", "/ehr/{ehr_id}/composition/{versioned_object_uid}", "Update a composition"), ("DELETE", "/ehr/{ehr_id}/composition/{preceding_version_uid}", "Delete a composition")]
-    t = table("Endpoints of openEHR: EHR", th("Method") + th("Path") + th("Summary"),
-              [f'<tr><th scope="row" data-role="title"><code>{m}</code></th>{td("Path", "<code>" + e(p).replace("/", "/<wbr>") + "</code>", role="sub")}{td("Summary", s, role="meta-q")}</tr>' for m, p, s in eps])
-    return server_page("api", section("", pick) + section("Compositions and EHR status", t + '<p class="fui-small fui-muted">The family\'s other groups (EHR, directory, contribution, versions) follow in the same table.</p>', count=9),
+    groups = [("EHR", [("POST", "/ehr", "Create an EHR"), ("GET", "/ehr", "Get an EHR by subject id"), ("PUT", "/ehr/{ehr_id}", "Create an EHR with an id"), ("GET", "/ehr/{ehr_id}", "Get an EHR by id")]),
+              ("EHR status", [("GET", "/ehr/{ehr_id}/ehr_status/{version_uid}", "Get the EHR status by version id"), ("GET", "/ehr/{ehr_id}/ehr_status", "Get the EHR status at a time"),
+                              ("PUT", "/ehr/{ehr_id}/ehr_status", "Update the EHR status"), ("GET", "/ehr/{ehr_id}/versioned_ehr_status", "Get the versioned EHR status"),
+                              ("GET", "/ehr/{ehr_id}/versioned_ehr_status/revision_history", "Get its revision history"), ("GET", "/ehr/{ehr_id}/versioned_ehr_status/version", "Get its version at a time"),
+                              ("GET", "/ehr/{ehr_id}/versioned_ehr_status/version/{version_uid}", "Get its version by id")]),
+              ("Composition", [("POST", "/ehr/{ehr_id}/composition", "Create a composition"), ("GET", "/ehr/{ehr_id}/composition/{uid_based_id}", "Get a composition"),
+                               ("PUT", "/ehr/{ehr_id}/composition/{uid_based_id}", "Update a composition"), ("DELETE", "/ehr/{ehr_id}/composition/{uid_based_id}", "Delete a composition"),
+                               ("GET", "/ehr/{ehr_id}/versioned_composition/{versioned_object_uid}", "Get the versioned composition"),
+                               ("GET", "/ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/revision_history", "Get its revision history"),
+                               ("GET", "/ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/version", "Get its version at a time"),
+                               ("GET", "/ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/version/{version_uid}", "Get its version by id")]),
+              ("Directory", [("POST", "/ehr/{ehr_id}/directory", "Create the directory"), ("PUT", "/ehr/{ehr_id}/directory", "Update the directory"), ("DELETE", "/ehr/{ehr_id}/directory", "Delete the directory"),
+                             ("GET", "/ehr/{ehr_id}/directory", "Get a folder at a time"), ("GET", "/ehr/{ehr_id}/directory/{version_uid}", "Get a folder in a version")]),
+              ("Contribution", [("POST", "/ehr/{ehr_id}/contribution", "Create a contribution"), ("GET", "/ehr/{ehr_id}/contribution/{contribution_uid}", "Get a contribution by id")]),
+              ("Tags", [("GET", "/ehr/{ehr_id}/tags", "Get the EHR's tags"), ("GET", "/ehr/{ehr_id}/composition/{uid_based_id}/tags", "Get a composition's tags"),
+                        ("PUT", "/ehr/{ehr_id}/composition/{uid_based_id}/tags", "Update a composition's tags"), ("DELETE", "/ehr/{ehr_id}/composition/{uid_based_id}/tags/{key}", "Delete a composition tag"),
+                        ("GET", "/ehr/{ehr_id}/ehr_status/{uid_based_id}/tags", "Get the EHR status's tags"), ("PUT", "/ehr/{ehr_id}/ehr_status/{uid_based_id}/tags", "Update the EHR status's tags"),
+                        ("DELETE", "/ehr/{ehr_id}/ehr_status/{uid_based_id}/tags/{key}", "Delete an EHR status tag")])]
+    rows = []
+    for g, eps in groups:
+        rows.append(f'<tr class="fui-group-row"><th scope="rowgroup" colspan="2">{g} <span class="fui-small fui-muted">· {plural(len(eps), "endpoint")}</span></th></tr>')
+        rows += [f'<tr><th scope="row" data-role="title"><code class="mk-method">{m}</code> <code class="fui-path">{e(p).replace("/", "/<wbr>")}</code></th>{td("Summary", sm, role="sub")}</tr>' for m, p, sm in eps]
+    total = sum(len(x[1]) for x in groups)
+    t = table("Endpoints of openEHR: EHR", th("Method and path") + th("Summary"), rows)
+    return server_page("api", section("", pick) + section("Endpoints of openEHR: EHR", t, count=total),
                        "The OpenAPI documents the CDR serves for itself, by API family.")
 
 
@@ -120,6 +144,7 @@ SMART = """{
   "issuer": "https://idp.example.org/realms/ferroehr",
   "authorization_endpoint": "https://idp.example.org/realms/ferroehr/protocol/openid-connect/auth",
   "token_endpoint": "https://idp.example.org/realms/ferroehr/protocol/openid-connect/token",
+  "grant_types_supported": [ "authorization_code", "client_credentials" ],
   "capabilities": [ "launch-standalone", "client-confidential-symmetric", "permission-v2" ],
   "scopes_supported": [ "openid", "fhirUser", "patient/composition-*.rs", "user/composition-*.cruds", "user/template-*.rs", "system/aql-*.rs" ],
   "code_challenge_methods_supported": [ "S256" ]
@@ -127,20 +152,23 @@ SMART = """{
 
 
 def page_server_smart():
-    return server_page("smart", section("", codeview("/.well-known/smart-configuration", SMART, what="the discovery document")),
+    rows = scopes([scope("patient/composition-*.rs", "Patient", "Compositions of any template", "rs"), scope("user/composition-*.cruds", "User", "Compositions of any template", "cruds"),
+                   scope("user/template-*.rs", "User", "Templates", "rs"), scope("system/aql-*.rs", "System", "Every stored and ad-hoc query", "rs", broad=True)], "Scopes the CDR supports")
+    other = facts([("Also", "<code>openid</code>, <code>fhirUser</code>"), ("Grant types", "authorization_code, client_credentials"), ("PKCE", "S256")])
+    return server_page("smart", section("Scopes it supports", rows, count=4) + section("Sign-in", other) + section("The document", codeview("/.well-known/smart-configuration", SMART, what="the discovery document")),
                        'The scopes the CDR supports; <a href="access.html">Your access</a> shows the ones you hold.')
 
 
 def page_server_no_management():
     tl = [t for t in SERVER_TABS if t[0] in ("overview", "api", "smart")]
-    note = section("", f'<p class="fui-small fui-muted">The CDR has no management endpoints turned on, so Health, Metrics and Logging are not offered. Set in ferroehr.toml · <a href="configuration-operations.html">Operations settings</a></p>')
+    note = section("", f'<p class="fui-small fui-muted">The CDR has no management endpoints turned on, so Health, Metrics and Logging are not offered.</p><p class="fui-small fui-muted">Set in ferroehr.toml · <a href="configuration-operations.html">Operations settings</a></p>')
     return server_page("overview", overview_body() + note, "What the CDR is and how it was built.", tabs_list=tl)
 
 
 # ---- Audit log ----
 
 def audit_heading():
-    return page_heading("Audit log", subtitle="The CDR's security audit trail: who accessed what, and with what outcome.")
+    return page_heading("Audit log", subtitle="The CDR's security audit log: who accessed what, and with what outcome.")
 
 
 def audit_rows(items=AUDIT):
@@ -148,7 +176,7 @@ def audit_rows(items=AUDIT):
     for t, ev, who, pat, tone, word in items:
         p = masked(pat, static=True) if pat else '<span class="mk-dash">No patient</span>'
         out.append(f'<tr><th scope="row" data-role="title"><a class="fui-row-link" href="audit-record.html">{e(ev)}</a></th>'
-                   + td("When", ago(f"2026-10-21T{t}", seconds=True), role="sub") + td("Principal", e(who), role="meta-q")
+                   + td("When", ago(f"2026-10-21T{t}", seconds=True), role="sub") + td("Principal", '<span class="fui-muted">Unknown</span>' if who == "unknown" else e(who), role="meta-q")
                    + td("Patient", p, role="meta-2") + td("Outcome", state(tone, word), role="meta-1") + "</tr>")
     return table("Audit records", th("Event") + th("When", key="w", sort="descending") + th("Principal") + th("Patient") + th("Outcome"), out)
 
@@ -157,9 +185,9 @@ def audit_toolbar(value="", window=None, outcome=None):
     return tpl.toolbar("Principal or action", value, [tpl.filter_button("When", window), tpl.filter_button("Outcome", outcome), tpl.filter_button("Patient")])
 
 
-def audit_page(body=None, tb=None, chips=(), foot=None):
+def audit_page(body=None, tb=None, chips=(), foot=None, count=4812):
     from common import pager
-    c = tpl.card(body if body is not None else audit_rows(), foot=pager("Audit pages", 4812, 10) if foot is None else foot, label="Audit records", title="Audit records")
+    c = tpl.card(body if body is not None else audit_rows(), foot=pager("Audit pages", 4812, 10) if foot is None else foot, label="Audit records", title="Audit records", count=f"{count:,}")
     return shell("Audit log", "audit", audit_heading() + tpl.list_body("", tb or audit_toolbar(), tpl.active(chips), c))
 
 
@@ -169,7 +197,7 @@ def page_audit():
 
 def page_audit_filtered():
     rows = [a for a in AUDIT if a[4] != "ok"]
-    return audit_page(audit_rows(rows), audit_toolbar(window="Today", outcome="Failures"), ["When: today", "Outcome: minor or serious failure"], foot="")
+    return audit_page(audit_rows(rows), audit_toolbar(window="today", outcome="failures"), ["When: today", "Outcome: failures"], foot="", count=len(rows))
 
 
 AE = """{
@@ -181,14 +209,14 @@ AE = """{
   "agent": [ { "who": { "display": "Demo Clinician" }, "requestor": true, "network": { "address": "10.20.4.17", "type": "2" } } ],
   "source": { "observer": { "display": "cdr.example.org" } },
   "entity": [
-    { "what": { "identifier": { "system": "demo.hospital.mrn", "value": "••••••537" } }, "role": { "code": "1", "display": "Patient" } },
-    { "what": { "reference": "composition/0199f1d0-33aa-7b20-8c4e-2a9e51b07c11::cdr.example.org::3" } }
+    { "what": { "identifier": { "system": "demo.hospital.mrn", "value": "••••••537" } }, "role": { "system": "http://terminology.hl7.org/CodeSystem/object-role", "code": "1", "display": "Patient" } },
+    { "what": { "identifier": { "system": "urn:openehr:cdr.example.org:composition", "value": "0199f1d0-33aa-7b20-8c4e-2a9e51b07c11::cdr.example.org::3" } }, "role": { "system": "http://terminology.hl7.org/CodeSystem/object-role", "code": "4", "display": "Domain Resource" } }
   ]
 }"""
 
 
 def page_audit_record():
-    f = facts([("When", when("2026-10-21T09:41:58", seconds=True)), ("Principal", "Demo Clinician, from 10.20.4.17"),
+    f = facts([("When", when("2026-10-21T09:41:58", seconds=True, absolute=True)), ("Principal", "Demo Clinician, from 10.20.4.17"),
                ("Patient", masked("537", "demo.hospital.mrn")), ("What", '<a href="composition.html">Vital signs, version 3</a>'), ("Outcome", state("ok", "Success"))])
     h = page_heading("Read composition", crumbs=[("Audit log", "audit.html")], subtitle='Stored as a <span title="IHE ITI-81">FHIR AuditEvent</span>')
     body = sections(section("The event", f), section("As stored", intro("The patient identifier is masked here as in the list; Reveal shows it.") + codeview("AuditEvent", AE, what="the record")))
@@ -196,13 +224,12 @@ def page_audit_record():
 
 
 def page_audit_no_match():
-    return audit_page(empty_line("No audit record matches these filters."), audit_toolbar("svc-etl", "Today", "Failures"), ["When: today", "Outcome: minor or serious failure", "Principal: svc-etl"], foot="")
+    return audit_page(empty_line("No audit record matches these filters."), audit_toolbar("svc-etl", "today", "failures"), ["When: today", "Outcome: failures", "Search: svc-etl"], foot="", count=0)
 
 
 def page_audit_store_off():
-    body = (f'<section class="fui-card fui-panel"><div class="fui-panel-body fui-stack"><p><strong>The CDR keeps no local audit store.</strong></p>'
-            '<p class="fui-small fui-muted">Its records go only to the forwarding target, so there is nothing to read here. Set in ferroehr.toml · <a href="configuration-records.html">Records settings</a></p>'
-            '</div></section>')
+    body = ('<p>The CDR keeps no local audit store; its records go only to the forwarding target, so there is nothing to read here.</p>'
+            '<p class="fui-small fui-muted">Set in ferroehr.toml · <a href="configuration-records.html">Records settings</a></p>')
     return shell("Audit log", "audit", audit_heading() + f'<div class="fui-stack">{body}</div>')
 
 
@@ -231,11 +258,10 @@ def sub_rows(extra_row=False, no_broker=False):
     out = []
     items = ([("all-changes", None, None, None, True, "2026-10-21T09:42:05")] if extra_row else []) + list(SUBSCRIPTIONS)
     for name, kind, change, tmpl, on, created in items:
-        sentence = {"vital-signs-feed": "Every committed composition under Vital signs encounter.v1", "ehr-status-changes": "Every committed EHR status",
-                    "deletions": "Every deletion, of any kind", "all-changes": "Every committed version of any kind"}[name]
+        sentence = sub_summary(kind or "", change or "", tmpl or "").rstrip(".")
         cls = "" if on else ' class="is-excluded"'
         out.append(f'<tr{cls}><th scope="row" data-role="title"><a class="fui-row-link" href="subscription-edit.html"><code>{e(name)}</code></a><span class="fui-row-sub">{sentence}</span></th>'
-                   + td("State", (state("warn", "Waiting for the broker") if no_broker and name == "all-changes" else state("ok", "Enabled")) if on else state("muted", "Disabled"), role="sub") + td("Created", ago(created), role="meta-q")
+                   + td("State", (state("warn", "Waiting for the broker") if no_broker else state("ok", "Enabled")) if on else state("muted", "Disabled"), role="sub") + td("Created", ago(created), role="meta-q")
                    + td("", sub_menu(name, on), "fui-row-menu", role="menu") + "</tr>")
     return table("Subscriptions", th("Subscription") + th("State") + th("Created") + th('<span class="fui-sr-only">Actions</span>'), out)
 
@@ -258,20 +284,22 @@ TMPL_OPTS = [("", "Any template"), ("Vital signs encounter.v1", "Vital signs enc
 
 
 def sub_summary(kind="", change="", tmpl=""):
-    k = dict(KIND_OPTS)[kind].lower() if kind else "any kind"
-    k = {"composition": "composition", "ehr status": "EHR status", "folder": "folder"}.get(k, k)
-    c = dict(CHANGE_OPTS)[change].lower() if change else "any change"
-    t = tmpl or "any template"
-    if kind:
-        return f"Every committed {k}, {c}, {t}." if kind == "COMPOSITION" else f"Every committed {k}, {c}."
-    return f"Every committed version of any kind, {c}, {t}."
+    """One sentence for what a subscription selects, the same in its list row and its dock."""
+    what = {"": "version of any kind", "COMPOSITION": "composition", "EHR_STATUS": "EHR status", "FOLDER": "folder"}[kind]
+    if change == "523":
+        line = "Every deletion" + (f" of a {what}" if kind else ", of any kind")
+    else:
+        line = f"Every committed {what}" + (f", {dict(CHANGE_OPTS)[change].lower()} only" if change else "")
+    if tmpl:
+        line += f" under <code>{e(tmpl)}</code>"
+    return line + "."
 
 
 def sub_form(name="all-changes", edit=False, invalid=None, kind="", change="", tmpl=""):
     queue = f"ferroehr.events.{name}" if name and not invalid else None
     if edit:
-        name_s = section("Name", facts([("Name", f"<code>{e(name)}</code>"), ("Queue", f"<code>ferroehr.events.{e(name)}</code>")])
-                         + quiet("The name cannot change: a new name would be a different queue."))
+        name_s = section("Name", f'<p><code>{e(name)}</code></p>' + facts([("Queue", f"<code>ferroehr.events.{e(name)}</code>")])
+                         + '<p class="fui-help">The name cannot change: a new name would be a different queue.</p>')
     else:
         help_ = None if invalid else (f"Lowercase letters, digits and dashes. The queue is <code>ferroehr.events.{name}</code>. The name cannot change later." if queue
                                       else "Lowercase letters, digits and dashes. The name cannot change later.")
@@ -302,17 +330,17 @@ def page_subscription_new():
 def page_subscription_new_invalid():
     return edit_shell("New subscription", "subscriptions", [("Subscriptions", "subscriptions.html")], SUB_INTRO,
                       sub_form("All changes", invalid="Use lowercase letters, digits and dashes only: “All changes” has a capital and a space."),
-                      sub_dock("Not created.", "Create subscription", disabled="Fix the name first", glyph="circle-x"))
+                      sub_dock(sub_summary(), "Create subscription", disabled="Fix the name first"))
 
 
 def page_subscription_name_taken():
     return edit_shell("New subscription", "subscriptions", [("Subscriptions", "subscriptions.html")], SUB_INTRO,
                       sub_form("vital-signs-feed", invalid="The CDR already has a subscription called vital-signs-feed. Choose another name, for example vital-signs-feed-2.", kind="COMPOSITION", tmpl="Vital signs encounter.v1"),
-                      sub_dock("Not created.", "Create subscription", disabled="Change the name first", glyph="circle-x"))
+                      sub_dock(sub_summary("COMPOSITION", "", "Vital signs encounter.v1"), "Create subscription", disabled="Change the name first"))
 
 
 def page_subscription_created(no_broker=False):
-    t = toast("ok", "circle-check", "Subscription created", "all-changes · queue ferroehr.events.all-changes.", action=link_button("secondary", "Edit", "subscription-edit.html", small=True))
+    t = toast("ok", "circle-check", "Subscription created", "<code>all-changes</code> · queue <code>ferroehr.events.all-changes</code>.", action=link_button("secondary", "Edit", "subscription-edit.html", small=True))
     return subs_page(toast_html=toasts(t), extra_row=True, no_broker=no_broker)
 
 
@@ -321,9 +349,10 @@ def page_subscription_created_no_broker():
 
 
 def page_subscription_edit():
+    more = action_group("", [menu_item("Copy the queue name", "copy"), MENU_SEP, menu_item("Delete the subscription…", "trash-2", danger=True, href="subscription-delete.html")], label="More actions for the subscription")
     return edit_shell("Edit vital-signs-feed", "subscriptions", [("Subscriptions", "subscriptions.html")], "Saving replaces what this subscription selects.",
                       sub_form("vital-signs-feed", edit=True, kind="COMPOSITION", tmpl="Vital signs encounter.v1"),
-                      sub_dock(sub_summary("COMPOSITION", "", "Vital signs encounter.v1"), "Save"))
+                      sub_dock(sub_summary("COMPOSITION", "", "Vital signs encounter.v1"), "Save"), actions=more)
 
 
 def page_subscription_delete():
@@ -338,7 +367,7 @@ VLINE = 'Set in <code>ferroehr-viewer.toml</code> · read at start · <a href="c
 
 
 def key_hint(k, show=False):
-    return f'<code class="mk-key-hint{" is-shown" if show else ""}" title="Copy the key">{e(k)}{icon("copy", "12")}</code>'
+    return f'<button type="button" class="mk-key-hint{" is-shown" if show else ""}" aria-label="Copy the key {e(k)}" title="Copy the key"><code>{e(k)}</code>{icon("copy", "12")}</button>'
 
 
 def srow(label, desc, value, key, hint=False):
@@ -347,7 +376,7 @@ def srow(label, desc, value, key, hint=False):
 
 
 def secret(ref):
-    return f'<span class="fui-secret-now">{icon("lock", "12")}set, read from <code>{e(ref).replace("/", "/<wbr>")}</code></span>'
+    return f'<span class="fui-secret-now">{icon("lock", "12")}set, read from <code>{e(ref)}</code></span>'
 
 
 def redacted():
@@ -365,15 +394,17 @@ def config_rows(hint=False):
         + srow("Safeguards accepted as off", "Production safeguards this deployment runs without, each by its code.", '<span class="mk-dash">none</span>', "deployment_accepts")
         + srow("System id", "The id the CDR writes into every version it commits.", "<code>cdr.example.org</code>", "server.system_id"),
         "server": srow("Listener", "The socket address the REST API binds.", "<code>0.0.0.0:8080</code>", "server.bind", hint)
-        + srow("Base path", "Where the openEHR REST API lives.", "<code>/ferroehr/<wbr>rest/<wbr>openehr/<wbr>v1</code>", "server.base_path")
+        + srow("Base path", "Where the openEHR REST API lives.", "<code>/ferroehr/rest/openehr/v1</code>", "server.base_path")
         + srow("Requests at once", "How many requests the CDR serves at once before it turns new ones away (503).", "512", "server.max_in_flight")
         + srow("Database", "The PostgreSQL URL of the running CDR.", secret("/run/secrets/ferroehr-db-url"), "db.url_file")
-        + srow("Connections", "The pool's size.", "4 to 20", "db.max_connections")
+        + srow("Connections", "The most connections the pool opens.", "20", "db.max_connections")
         + srow("Statement timeout", "The longest one statement may run.", "30 s", "db.statement_timeout_ms")
+        + srow("Query timeout", "The longest an AQL query may run.", "20 s", "query.timeout_ms")
+        + srow("Result rows", "The most rows one query may return.", "10,000", "query.max_result_rows")
         + srow("Migrations", "Whether the CDR prepares its schema at start.", "Checked, never applied: a separate role migrates", "db.migrate"),
-        "access": srow("Authentication", "Bearer tokens from the issuers below, and Basic sign-in for the CDR's own accounts.", "<code>https://idp.example.org/<wbr>realms/<wbr>ferroehr</code>", "auth.issuers")
+        "access": srow("Authentication", "Bearer tokens from this issuer, and Basic sign-in for the CDR's own accounts.", "<code>https://idp.example.org/realms/ferroehr</code>", "auth.issuers")
         + srow("Role-based access", "The CDR checks every request against the caller's role.", on(), "authz.enabled")
-        + srow("Admin role", "The role that may use the Admin API and read the audit trail.", "<code>admin</code>", "authz.admin_role")
+        + srow("Admin role", "The role that may use the Admin API and read the audit log.", "<code>admin</code>", "authz.admin_role")
         + srow("User role", "The role for reading and writing clinical content.", "<code>user</code>", "authz.user_role")
         + srow("Admin API", "Physical deletes of EHRs, templates and stored queries.", on(), "admin.enabled")
         + srow("SMART on openEHR", "SMART App Launch with scopes.", on(), "smart.enabled"),
@@ -382,29 +413,27 @@ def config_rows(hint=False):
         + srow("Audit failure", "A request whose audit record cannot be written is refused.", "Fails closed", "audit.fail_mode")
         + srow("Local audit store", "Keeps the records the Audit log reads.", on(), "audit.local_store")
         + srow("Audit retention", "How long a record is kept.", "7 years", "audit.retention_years")
-        + srow("Privacy scan", "Refuses a composition that carries an identifier outside the subject namespaces.", "Refuse", "privacy.mode")
+        + srow("Privacy scan", "Refuses a composition that carries an identifier outside the subject namespaces.", on(), "privacy.mode")
         + srow("Subject namespaces", "The namespaces a subject id may come from.", "<code>demo.hospital.mrn</code>", "privacy.subject_namespaces"),
-        "integrations": srow("Query timeout", "The longest an AQL query may run.", "20 s", "query.timeout_ms")
-        + srow("Result rows", "The most rows one query may return.", "10,000", "query.max_result_rows")
-        + srow("Event publishing", "Publishes committed versions to the broker.", on(), "events.enabled")
+        "integrations": srow("Event publishing", "Publishes committed versions to the broker.", on(), "events.enabled")
         + srow("Broker", "The AMQP URL.", secret("/run/secrets/ferroehr-amqp-url"), "events.url_file")
-        + srow("Subscription API", "Serves Subscriptions in the viewer.", on(), "events.admin_api")
-        + srow("Terminology API", "Serves Terminology in the viewer.", on(), "terminology.api_enabled")
+        + srow("Subscription API", "The API that creates and lists event subscriptions.", on(), "events.admin_api")
+        + srow("Terminology API", "The API that looks up codes and expands value sets.", on(), "terminology.api_enabled")
         + srow("External terminology", "A FHIR terminology server the lookups go to.", on(False), "terminology.external.enabled"),
-        "operations": srow("Log filter", "The filter at boot; Server › Logging changes it until a restart.", "<code>ferroehr=info,sqlx=warn</code>", "log.filter", hint)
+        "operations": srow("Log filter", 'The filter at boot; <a href="server-logging.html">Server › Logging</a> changes it until a restart.', "<code>ferroehr=info,sqlx=warn</code>", "log.filter", hint)
         + srow("Log format", "How each line is written.", "JSON", "log.format")
         + srow("Telemetry", "Where traces and metrics are sent.", redacted(), "telemetry.otlp_endpoint")
         + srow("Management surface", "Health, metrics, logging and configuration for the operator.", on(), "management.enabled")
-        + srow("Management endpoints", "Each one's access level.", "Admin only: info, metrics, env, loggers", "management.endpoints")
+        + srow("Management endpoints", "Who may read the build information, metrics, settings and log levels.", '<span title="info, metrics, env, loggers">Admin only</span>', "management.endpoints")
         + srow("Usage report", "Sends FerroPULSE a daily installation report with no patient data.", on(), "usage_report.enabled"),
-        "viewer": srow("CDR", "Where the viewer reaches the CDR.", "<code>http://ferroehr:8080</code>", "cdr.base_url", hint)
-        + srow("CDR base path", "The same path as the CDR's base path.", "<code>/ferroehr/<wbr>rest/<wbr>openehr/<wbr>v1</code>", "cdr.base_path")
-        + srow("Management", "The CDR's management surface, base path included.", "<code>http://ferroehr:9100/<wbr>management</code>", "cdr.management_base_url")
-        + srow("Basic sign-in", "Offers the username and password form, checked against the CDR.", on(), "auth.basic_enabled")
-        + srow("OIDC sign-in", "Offers sign-in at the identity provider.", "<code>https://idp.example.org/<wbr>realms/<wbr>ferroehr</code>", "auth.oidc.issuer")
-        + srow("OIDC client secret", "Read from a file; never shown.", secret("/run/secrets/viewer-oidc"), "auth.oidc.client_secret_file")
+        "viewer": srow("CDR address", "The address the viewer calls for every CDR request.", "<code>http://ferroehr:8080</code>", "cdr.base_url", hint)
+        + srow("CDR base path", "Must match the base path the CDR serves its API under.", "<code>/ferroehr/rest/openehr/v1</code>", "cdr.base_path")
+        + srow("Management address", "Where the viewer reads health, metrics and logging.", "<code>http://ferroehr:9100/management</code>", "cdr.management_base_url")
+        + srow("Basic sign-in", "Offers the username and password form; the CDR checks the account.", on(), "auth.basic_enabled")
+        + srow("OIDC sign-in", "The identity provider that signs people in.", "<code>https://idp.example.org/realms/ferroehr</code>", "auth.oidc.issuer")
+        + srow("OIDC client secret", "Proves the viewer to the identity provider; read from a file and never shown.", secret("/run/secrets/viewer-oidc"), "auth.oidc.client_secret_file")
         + srow("Session idle time", "A session ends after this long without a request.", "60 min", "session.idle_minutes")
-        + srow("Session key", "Seals the session cookie; every replica holds the same.", secret("/run/secrets/viewer-session"), "session.secret_file")
+        + srow("Session key", "Seals the session cookie; every replica holds the same key.", secret("/run/secrets/viewer-session"), "session.secret_file")
         + srow("Language", "Used when the browser asks for a language the viewer does not have.", "English (en)", "ui.locale"),
     }
 
@@ -415,11 +444,11 @@ CONFIG_TABS = [("deployment", "Deployment", "configuration.html"), ("server", "S
 
 
 def mode_dialog():
-    body = ('<p>Settings come from <code>ferroehr.toml</code> and the environment, read once at start; the viewer has its own <code>ferroehr-viewer.toml</code>.</p>'
+    body = ('<p>The CDR reads <code>ferroehr.toml</code> once at start, and the viewer reads <code>ferroehr-viewer.toml</code>; an environment variable overrides a key in either.</p>'
             '<div class="fui-modal-body"><div class="fui-ownership">'
             f'<div><h3>{icon("file-text", "16")} Where you see it</h3><p class="fui-small fui-muted">Here, read-only: the CDR\'s settings as it serves them, redacted, and the viewer\'s own.</p></div>'
             f'<div><h3>{icon("refresh-cw", "16")} How you change it</h3><p class="fui-small fui-muted">Change the file, review it, and restart the CDR or the viewer.</p></div></div>'
-            '<p class="fui-small fui-muted mk-mode-other">The CDR\'s PostgreSQL holds clinical data and never configuration, so there is no console mode.</p></div>')
+            '<p class="fui-small fui-muted mk-mode-other">Nothing here can be changed from the viewer: the database holds clinical data, never settings.</p></div>')
     return dialog("mode", "info", "How configuration works", body, button("secondary", "Close", "x", keys="Esc", attrs="autofocus"), wide=True)
 
 
@@ -484,7 +513,7 @@ def pref_rows(theme="light", saved=None):
         + setting_row("First day of the week", "Used by every date picker.", sel("week", [("monday", "Monday"), ("sunday", "Sunday")], "monday"), id_="week")
         + setting_row("Show a revealed identifier for", "How long a subject id stays shown after you reveal it; the viewer caps it at 2 minutes.",
                       sel("rev", [("15", "15 seconds"), ("30", "30 seconds"), ("60", "1 minute"), ("120", "2 minutes")], "60" if saved == "reveal" else "30"), id_="rev", saved=saved == "reveal"),
-        "keyboard": setting_row("Shortcut hints", "The key caps after a label. Phones never show them.", sel("hints", [("wide", "Wide screens only (default)"), ("always", "Always"), ("never", "Never")], "wide"), id_="hints")
+        "keyboard": setting_row("Shortcut hints", "The key caps after a label. Phones never show them.", sel("hints", [("wide", "On wide screens (default)"), ("never", "Never")], "wide"), id_="hints")
         + setting_row("All shortcuts", "Every shortcut of the screen you are on, in one list.", link_button("secondary", "Open the shortcut legend", "shortcuts.html", "keyboard", small=True, keys="?")),
     }
 
@@ -495,8 +524,9 @@ def preferences_page(tab="appearance", theme="light", saved=None, overlay=None, 
     content = (page_heading("Your preferences", subtitle="Only for you, in this browser.")
                + f'<div class="fui-stack">{tpl.settings_tabs("Preference sections", PREF_TABS, tab, inner)}{reset}</div>')
     html = shell("Your preferences", "", content, overlay=overlay)
-    if lock_dark:
-        html = html.replace('<html lang="en"', '<html lang="en" data-lock-theme="dark"', 1)
+    lock = "dark" if lock_dark else theme
+    if lock in ("light", "dark"):
+        html = html.replace('<html lang="en"', f'<html lang="en" data-lock-theme="{lock}"', 1)
     return html
 
 
@@ -518,7 +548,7 @@ def page_preferences_keyboard():
 
 def page_preferences_reset():
     d = dialog("reset", "rotate-ccw", "Reset your preferences?",
-               "<p>All your preferences in this browser go back to their defaults.</p>",
+               "<p>All your preferences go back to their defaults.</p>",
                button("secondary", "Cancel", keys="Esc") + button("primary", "Reset to defaults", "rotate-ccw"))
     return preferences_page(overlay=d)
 
@@ -531,7 +561,8 @@ def page_preferences_dark():
 
 def access_page(preview="", preview_items=None, basic=False):
     if basic:
-        who = facts([("Signed in as", "<strong>ferroehr</strong>"), ("How", "Basic sign-in with a CDR account"), ("Role", '<code>admin</code> <span class="fui-small fui-muted">authz.basic_roles</span>')])
+        who = facts([("Signed in as", "<strong>ferroehr</strong>"), ("How", "Basic sign-in with a CDR account"), ("Role", '<span title="authz.basic_roles">admin, from the account\'s role</span>'),
+                     ("Session", f"since {when('2026-10-21T08:30')}, ends after 60 minutes without a request")])
         sc = section("Scopes", quiet("A Basic session carries no SMART scopes; the CDR checks the account's role."), count="none")
     else:
         who = facts([("Signed in as", f"<strong>{OPERATOR}</strong>"), ("How", "OIDC at idp.example.org"), ("Role", "<code>admin</code>, from the token's roles claim"),
@@ -540,10 +571,10 @@ def access_page(preview="", preview_items=None, basic=False):
                                        scope("user/template-*.rs", "User", "Templates", "rs"),
                                        scope("system/aql-*.rs", "System", "Every stored and ad-hoc query", "rs", broad=True)]), count=3)
     prev_items = preview_items if preview_items is not None else ""
-    pv = (f'<div class="fui-transform-options">{field("sp", "Scope or claim", input_("sp", preview, "patient/composition-*.rs", extra="class=" + chr(34) + "fui-input fui-mono" + chr(34) + " spellcheck=" + chr(34) + "false" + chr(34)))}'
+    pv = (f'<div class="fui-transform-options">{field("sp", "Scope or claim", input_("sp", preview, "patient/composition-*.rs", extra="class=" + chr(34) + "fui-input fui-mono" + chr(34) + " spellcheck=" + chr(34) + "false" + chr(34)), cls="is-id")}'
           f'<div class="fui-transform-run">{button("secondary", "Read it", "search")}</div></div>' + (scopes(prev_items, "Previewed scopes") if prev_items else quiet("Paste a scope to read it here.")))
     body = sections(section("Who you are", who), sc,
-                    section("Read a scope", intro("Parsed with the grammar the CDR enforces; a scope narrows access and never grants it.") + pv), card=True)
+                    section("Read a scope", intro("Paste a scope to see what it allows.") + pv), card=True)
     h = page_heading("Your access", subtitle="What this session may do.")
     return shell("Your access", "", h + f'<div class="fui-stack">{body}</div>')
 
@@ -553,7 +584,7 @@ def page_access():
 
 
 def page_access_preview():
-    items = [scope("patient/composition-*.rs", "Patient compartment", "Compositions of any template", "rs"),
+    items = [scope("patient/composition-*.rs", "Patient", "Compositions of any template", "rs"),
              scope("patient/COMPOSITION.read", "", "", "", refused="Not a SMART on openEHR scope. Use composition-&lt;template&gt;, for example composition-*.rs.")]
     return access_page("patient/composition-*.rs patient/COMPOSITION.read", items)
 
@@ -564,22 +595,24 @@ def page_access_basic():
 
 # ---- sign-in ----
 
-def sign_in_card(notice_html="", state_=None):
+def sign_in_card(notice_html="", state_=None, form_error=None):
     off = " disabled" if state_ == "redirecting" else ""
     if state_ == "redirecting":
         oidc = '<button type="button" class="fui-button fui-button-primary" aria-busy="true" disabled><span class="fui-spinner-ring" aria-hidden="true"></span>Taking you to idp.example.org…</button>'
     else:
         oidc = f'<a href="sign-in-redirecting.html" rel="external" class="fui-button fui-button-primary">{icon("log-in", "16")}Sign in at idp.example.org</a>'
-    basic = (f'<form class="fui-stack" method="post" action="dashboard.html">{field("u", "Username", input_("u", "", extra="autocomplete=" + chr(34) + "username" + chr(34) + off))}'
-             f'{field("pw", "Password", input_("pw", "", type_="password", extra="autocomplete=" + chr(34) + "current-password" + chr(34) + off))}'
+    err = f'<div role="alert" class="fui-sign-in-notice fui-tone-bad">{form_error}</div>' if form_error else ""
+    uval = "ferroehr" if form_error else ""
+    basic = (f'<form class="fui-stack" method="post" action="dashboard.html">{err}{field("u", "Username", input_("u", uval, extra="autocomplete=" + chr(34) + "username" + chr(34) + off))}'
+             f'{field("pw", "Password", input_("pw", "", type_="password", extra="autocomplete=" + chr(34) + "current-password" + chr(34) + off + (" aria-invalid=" + chr(34) + "true" + chr(34) if form_error else "")))}'
              f'{button("secondary", "Sign in with a CDR account", "key-round", type_="submit", attrs=off.strip())}</form>')
     dep = '<p class="fui-small fui-muted mk-sign-in-line">Evaluation deployment: synthetic data only. Ask the operator for an account.</p>'
+    mark = lockup().replace('<a href="dashboard.html" class="fui-lockup">', '<span class="fui-lockup">', 1).replace("</span></a>", "</span></span>", 1)
     return (
-        f'<div class="fui-card fui-sign-in"><div class="fui-sign-in-lockup">{lockup()}</div>'
+        f'<div class="fui-card fui-sign-in"><div class="fui-sign-in-lockup">{mark}</div>'
         '<h1 class="mk-sign-in-title">Sign in</h1>'
         + notice_html + oidc + '<p class="fui-small fui-muted mk-sign-in-line">or</p>' + basic + dep
-        + '<p class="fui-small fui-muted mk-sign-in-line">The browser keeps only a sealed session cookie; your password and tokens stay on the viewer\'s server.</p>'
-        '<div class="fui-sign-in-links"><a href="#" rel="external noopener">API reference</a><a href="#" rel="external noopener">The FerroEHR book</a></div></div>'
+        + '<div class="fui-sign-in-links"><a href="https://ferroehr.eu/docs/latest/" rel="external noopener">The FerroEHR book</a></div></div>'
         '<p class="fui-sign-in-caption">The viewer of the FerroEHR clinical data repository.</p>'
     )
 
@@ -597,11 +630,11 @@ def page_sign_in():
 
 
 def page_sign_in_redirecting():
-    return sign_in_page(state_="redirecting", notice_html=n("info", "status", "Opening idp.example.org; you come back to the page you were on."))
+    return sign_in_page(state_="redirecting")
 
 
 def page_sign_in_refused():
-    return sign_in_page(notice_html=n("bad", "alert", "Not signed in: the CDR refused that username or password."))
+    return sign_in_page(form_error="Not signed in: the CDR refused that username or password.")
 
 
 def page_sign_in_expired():
@@ -613,4 +646,4 @@ def page_sign_in_signed_out():
 
 
 def page_sign_in_cdr_unreachable():
-    return sign_in_page(notice_html=n("warn", "status", "The CDR does not answer. You can try to sign in; it may fail."))
+    return sign_in_page(notice_html=n("warn", "status", f'The CDR did not answer at {when("2026-10-21T09:42:11", seconds=True)}. You can still try to sign in. {button("secondary", "Try again", "refresh-cw", small=True)}'))

@@ -90,10 +90,10 @@ def tree_item(code, display, children=None, expanded=False, selected=False, on_p
     else:
         tog = (f'<button type="button" class="fui-tree-toggle" tabindex="-1" aria-label="{"Collapse" if expanded else "Expand"} {e(display)}">'
                f'{icon("chevron-down" if expanded else "chevron-right", "14")}</button>')
-    cls = "fui-tree-item" + (" is-on-path" if on_path else "") + (" is-inactive" if inactive else "") + (" mk-focus-row" if focus else "")
+    cls = "fui-tree-item" + (" is-on-path" if on_path else "") + (" is-inactive" if inactive else "")
     attrs = f' aria-selected="{"true" if selected else "false"}"' + (f' aria-expanded="{"true" if expanded else "false"}"' if not leaf else "")
     mark = inactive_mark() if inactive else ""
-    row = (f'<div class="fui-tree-row{" mk-focus" if focus else ""}">{tog}<a class="fui-tree-label" href="{href}" tabindex="-1">{e(display)}</a>'
+    row = (f'<div class="fui-tree-row{" mk-focus-ring" if focus else ""}">{tog}<a class="fui-tree-label" href="{href}" tabindex="-1">{e(display)}</a>'
            f'<span class="fui-tree-code">{e(code)}</span>{mark}</div>')
     kids = ""
     if expanded:
@@ -118,8 +118,9 @@ def clause(kind, title, sentence, body="", actions="", issue=None):
     iss = ""
     if issue:
         code, text = issue
-        iss = f'<p class="fui-clause-issue" role="note">{icon("circle-x", "14")}<span><code>{e(code)}</code>{text}</span></p>'
-    return (f'<section class="fui-clause{" is-exclude" if kind == "exclude" else ""}" aria-label="{"Include" if kind == "include" else "Exclude"}: {e(title)}">'
+        iss = f'<p class="fui-clause-issue" role="note">{icon("circle-x", "14")}<span>{text} <code class="fui-muted">{e(code)}</code></span></p>'
+    plain = re.sub(r"<[^>]+>", "", title)
+    return (f'<section class="fui-clause{" is-exclude" if kind == "exclude" else ""}" aria-label="{"Include" if kind == "include" else "Exclude"}: {e(plain)}">'
             f'<div class="fui-clause-head">{mark}<h3 class="fui-clause-title">{title}</h3>{a}</div>'
             f'<p class="fui-clause-sentence">{sentence}</p>{body}{iss}</section>')
 
@@ -136,7 +137,7 @@ def root_head(root, answered=True):
 
 def relation(rel_word, none=False):
     if none:
-        return f'<span class="fui-relation is-none">{icon("ban", "14")}maps to nothing</span>'
+        return f'<span class="fui-relation is-none">{icon("ban", "14")}{e(rel_word or "maps to nothing")}</span>'
     return f'<span class="fui-relation">{icon("arrow-right", "14")}{e(rel_word)}</span>'
 
 

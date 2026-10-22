@@ -4,9 +4,10 @@
 # Builds a design set's pages and runs every check over them: the markup
 # checks of build.py (links, the BSN eleven-proof, dead buttons, plurals,
 # one-sentence intros, planned screens), then overflow and broken words,
-# hover stability, contrast, selects and popups in headless Chrome. A
-# finding the set's baseline.tsv does not hold fails, and so does a baseline entry that
-# no longer occurs (no specification governs this: our own design).
+# hover stability, contrast, selects, popups and forms in headless
+# Chrome. A finding the set's baseline.tsv does not hold fails, and so does
+# a baseline entry that no longer occurs (no specification governs this:
+# our own design).
 #
 # Usage: design/tools/check.sh <set|all> [slug ...]
 #   FERROUI_CHROME names the browser binary and FERROUI_DESIGN_JOBS the
@@ -27,7 +28,7 @@ fi
 
 failed=0
 for set in "${sets[@]}"; do
-  for check in build overflow hover contrast selects popups; do
+  for check in build overflow hover contrast selects popups forms; do
     python3 "$tools/$check.py" "$set" "$@" || failed=1
   done
 done

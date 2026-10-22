@@ -7,7 +7,11 @@ every internal link resolves, no nine-digit run passes the BSN
 eleven-proof, no button-looking link leads nowhere, a count of one takes
 the singular, every intro is one sentence (a settings panel's two: what
 the tab governs, then how a change takes effect), and no live page links
-to a planned screen. Exits 1 on a finding the set's baseline does not hold.
+to a planned screen. A set's route-only pages (the catalog's route_pages(),
+FerroFED's r-…) are built and checked the same way, and links may lead to
+them, but no browser check or render reads them. No page source may
+name a path on one machine (a home or temporary directory). Exits 1 on a finding the
+set's baseline does not hold.
 
 Usage: build.py <set> [slug ...]   (a set is `templates` or a console name)"""
 import os
@@ -40,15 +44,22 @@ def main():
     if hasattr(catalog, "PAGES"):
         problems += [("manifest", f"{s} has no page function") for s in slugs if s not in catalog.PAGES]
         problems += [("manifest", f"{s} is not in pages.py") for s in catalog.PAGES if s not in slugs]
+    routes = catalog.route_pages() if hasattr(catalog, "route_pages") else {}
+    problems += [("manifest", f"{s} is both a page and a route-only page") for s in routes if s in slugs]
+    every = slugs + sorted(s for s in routes if s not in slugs)
+    for name in sorted(os.listdir(site.src)):
+        if name.endswith(".py"):
+            with open(os.path.join(site.src, name), encoding="utf-8") as fh:
+                problems += [("manifest", f"{name}:{n} reads a path on one machine") for n in checks.local_paths(fh.read())]
     site.copy_assets()
     exempt = set(getattr(site.console, "EXEMPT_CHECKS", ()))
     html_of = {}
-    for slug in slugs:
-        html = page_function(catalog, slug)()
+    for slug in every:
+        html = page_function(catalog, slug)() if slug in slugs else routes[slug]()
         html_of[slug] = html
         if only and slug not in only:
             continue
-        found = checks.synthetic(html) + checks.links(html, slugs)
+        found = checks.synthetic(html) + checks.links(html, every)
         if "dead" not in exempt:
             found += checks.dead(html)
         found += checks.plural(html) + checks.intro(html)
@@ -58,7 +69,7 @@ def main():
     planned = getattr(site.pages, "PLANNED", None)
     if planned:
         problems += checks.reachable(entries, html_of, planned)
-    ran = set(only) if only else set(slugs) | {"manifest"}
+    ran = set(only) if only else set(every) | {"manifest"}
     return site.verdict("build", problems, ran)
 
 

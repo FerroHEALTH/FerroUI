@@ -454,8 +454,8 @@ jobs:
 
   # The design pages of each set, built and checked: links, the BSN
   # eleven-proof, plurals and one-sentence intros, then overflow and broken
-  # words, hover stability, contrast, selects and popups in headless Chrome at the
-  # gallery's pinned release. macOS, because the approved renders and every
+  # words, hover stability, contrast, selects, popups and forms in headless
+  # Chrome at the gallery's pinned release. macOS, because the approved renders and every
   # baseline.tsv were drawn with its system font, which the overflow and
   # broken-word checks measure.
   design:

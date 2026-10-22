@@ -366,9 +366,18 @@ def well(body):
     return f'<div class="fui-well">{body}</div>'
 
 
-def page_heading(title, actions="", subtitle=None, crumbs=(), mono=False, badge=None):
+def page_heading(title, actions="", subtitle=None, crumbs=(), mono=False, badge=None, here=True):
+    """`here`: the trail ends with the page itself; an editor's trail ends
+    with the file it edits and its title says only Edit or New."""
     trail = ""
-    if crumbs:
+    if crumbs and not here:
+        links = "".join(
+            f'<li><a href="{href}"><span class="fui-crumb-back" aria-hidden="true">{icon("arrow-left", "14")}</span>{e(label)}</a>'
+            + (f'<span class="fui-crumb-sep" aria-hidden="true">/</span>' if i < len(crumbs) - 1 else "") + "</li>"
+            for i, (label, href) in enumerate(crumbs)
+        )
+        trail = f'<nav class="fui-crumbs is-parent" aria-label="Breadcrumb"><ol>{links}</ol></nav>'
+    elif crumbs:
         links = "".join(
             f'<li><a href="{href}"><span class="fui-crumb-back" aria-hidden="true">{icon("arrow-left", "14")}</span>{e(label)}</a><span class="fui-crumb-sep" aria-hidden="true">/</span></li>'
             for label, href in crumbs
@@ -389,7 +398,7 @@ def tabs(label, items, current, focus=None, hover=None, scrolled=False):
         count = item[3] if len(item) > 3 else None
         cur = ' aria-current="page"' if key == current else ""
         cls = "fui-tab" + (" mk-focus" if key == focus else "") + (" mk-hover" if key == hover else "")
-        c = f'<span class="fui-tab-count" aria-label="{count} items">{count}</span>' if count is not None else ""
+        c = f'<span class="fui-tab-count" aria-label="{count} item{"" if count == 1 else "s"}">{count}</span>' if count is not None else ""
         links += f'<a href="{href}" class="{cls}"{cur} data-tab="{key}">{words}{c}</a>'
     sc = " mk-scrolled" if scrolled else ""
     return f'<nav class="fui-tabs{sc}" aria-label="{label}">{links}</nav>'
@@ -486,10 +495,10 @@ def th(label, key=None, sort=None, num=False, title=None, cls=""):
         return f"<th scope=\"col\"{cls_attr}{t}>{label}</th>"
     aria = sort or "none"
     glyph = {"ascending": "arrow-up", "descending": "arrow-down", "none": "arrow-up-down"}[aria]
-    return f'<th scope="col"{cls_attr}{t} aria-sort="{aria}"><a href="#" class="fui-sort">{label}{icon(glyph, "12")}</a></th>'
+    return f'<th scope="col"{cls_attr}{t} aria-sort="{aria}"><button type="button" class="fui-sort">{label}{icon(glyph, "12")}</button></th>'
 
 
-def td(label, body, cls="", role=None):
+def td(label, body, cls="", role=None, unit=None):
     """A body cell; its content is one node, so a stacked card's label and
     value grid keeps the value together. `role` places it in the
     work-list's phone card."""
@@ -497,6 +506,8 @@ def td(label, body, cls="", role=None):
         cls += " mk-nowrap"
     c = f' class="{cls}"' if cls else ""
     r = f' data-role="{role}"' if role else ""
+    if unit:
+        r += f' data-unit="{e(unit)}"'
     if "fui-table-actions" not in cls and "fui-row-menu" not in cls and "fui-row-check" not in cls and not body.startswith("<time"):
         body = f"<span>{body}</span>"
     return f'<td data-label="{e(label)}"{c}{r}>{body}</td>'
@@ -769,7 +780,7 @@ def shortcut_legend(groups, id_="shortcuts"):
     return (
         f'<div id="{id_}" role="dialog" aria-labelledby="{id_}-title" class="fui-dialog fui-dialog-wide fui-modal mk-open" open>'
         f'<h2 id="{id_}-title" class="fui-dialog-title">{icon("keyboard", "18")} Keyboard shortcuts</h2>'
-        f'<p class="fui-muted">A shortcut acts only when no field has the focus. Every shortcut has a control on the screen that does the same.</p>'
+        f'<p class="fui-muted">A shortcut acts only when no field has the focus; the editor\'s shortcuts also act inside the editor. Every shortcut has a control on the screen that does the same.</p>'
         f'<div class="fui-modal-body"><div class="fui-shortcuts">{gs}</div></div>'
         f'<div class="fui-dialog-actions">{button("secondary", "Close", "x", keys="Esc")}</div></div>'
     )
@@ -848,11 +859,15 @@ NAV = [
 DOT_WORD = {"ok": "reachable", "warn": "degraded", "bad": "unreachable", "neutral": "not probed", "muted": "off"}
 
 
-def nav_count(n):
+NAV_UNKNOWN = {"down": "Not known: the bridge did not answer", "loading": "Not known yet: the console is asking the bridge",
+               "off": "Not known: the operator API is off on this bridge"}
+
+
+def nav_count(n, why="down"):
     """Errors in the running load: a number, nothing at zero, a muted dash
-    when the bridge did not answer (the honest count, R12)."""
+    when it is not known, with why in its tooltip (the honest count, R12)."""
     if n is None:
-        return '<span class="fui-nav-count fui-nav-count-unknown" title="Not known: the bridge did not answer">–</span>'
+        return f'<span class="fui-nav-count fui-nav-count-unknown" title="{NAV_UNKNOWN[why]}">–</span>'
     if n == 0:
         return ""
     return f'<span class="fui-nav-count" aria-label="{n} errors in the running load" title="{n} errors in the running load">{n}</span>'
@@ -863,13 +878,13 @@ def health_dot(tone, label=None):
     return f'<span class="fui-dot fui-tone-{tone if tone != "muted" else "neutral"}{" is-muted" if tone == "muted" else ""}" role="img" aria-label="{e(label or word)}" title="{e(label or word)}"></span>'
 
 
-def sidebar(current, incidents=0, rail=False, tooltip=None, drawer=False, org=None, node=None):
+def sidebar(current, incidents=0, rail=False, tooltip=None, drawer=False, org=None, node=None, unknown="down"):
     groups = ""
     for gid, title, entries in NAV:
         items = ""
         for key, label, glyph, href, count in entries:
             cur = ' aria-current="page"' if key == current and not org else (' aria-current="location"' if key == current else "")
-            c = nav_count(incidents) if count == "diag-count" else ""
+            c = nav_count(incidents, unknown) if count == "diag-count" else ""
             tip = f'<span class="fui-tooltip" role="tooltip">{e(label)}</span>' if rail and tooltip == key else ""
             t = f' title="{e(label)}"' if rail else ""
             sub = ""
@@ -898,11 +913,15 @@ def brand_mark():
     )
 
 
-def lockup():
-    return f'<a href="dashboard.html" class="fui-lockup">{brand_mark()}<span class="fui-lockup-name">FerroBRIDGE <span class="fui-lockup-accent">Console</span></span></a>'
+def lockup(link=True):
+    """`link`: signed in, the lockup leads to the dashboard; signed out it is plain."""
+    inner = f'{brand_mark()}<span class="fui-lockup-name">FerroBRIDGE <span class="fui-lockup-accent">Console</span></span>'
+    if not link:
+        return f'<span class="fui-lockup">{inner}</span>'
+    return f'<a href="dashboard.html" class="fui-lockup">{inner}</a>'
 
 
-SEARCH_PLACEHOLDER = "File, context, template or resource type"
+SEARCH_PLACEHOLDER = "Context, file or template"
 
 
 def search_control(value="", state=None, word="Find", placeholder=SEARCH_PLACEHOLDER, id_="find", results=None):
@@ -936,23 +955,23 @@ def search_control(value="", state=None, word="Find", placeholder=SEARCH_PLACEHO
 OPERATOR = "Demo Operator"
 
 
-def operator_menu(open_=False, focus=None, theme="light"):
+def operator_menu(open_=False, focus=None, theme="light", dev=False):
+    head = ('<div class="fui-menu-header"><strong>No sign-in</strong><span>A development bridge: [auth] is off</span></div>' if dev
+            else f'<div class="fui-menu-header"><strong>{OPERATOR}</strong><span>Bridge operator · FerroHEALTH ID</span></div>')
     items = [
-        f'<div class="fui-menu-header"><strong>{OPERATOR}</strong><span>Bridge operator · FerroHEALTH ID</span></div>',
+        head,
         MENU_SEP,
         menu_item("Your preferences", "settings", href="preferences.html", focus=(focus == "prefs")),
         '<div class="fui-menu-label" id="theme-label">Theme</div>',
         '<div role="group" aria-labelledby="theme-label" class="fui-segmented">'
         + "".join(
-            f'<button type="submit" class="fui-segment" aria-pressed="{"true" if v == theme else "false"}">{icon(g, "14")}{w}</button>'
+            f'<button type="button" role="menuitemradio" class="fui-segment" aria-checked="{"true" if v == theme else "false"}">{icon(g, "14")}{w}</button>'
             for v, w, g in (("light", "Light", "sun"), ("dark", "Dark", "moon"), ("system", "System", "monitor"))
         )
         + "</div>",
-        menu_item("Keyboard shortcuts", "keyboard", keys="?", href="shortcuts.html"),
-        MENU_SEP,
-        menu_item("Sign out", "log-out", focus=(focus == "signout")),
-    ]
-    return menu(items, label=OPERATOR) if open_ else ""
+        menu_item("Keyboard shortcuts", "keyboard", keys="?", href="shortcuts.html").replace('class="fui-menu-item', 'class="fui-menu-item fui-wide-only', 1),
+    ] + ([] if dev else [MENU_SEP, menu_item("Sign out", "log-out", href="sign-in-signed-out.html", focus=(focus == "signout"))])
+    return menu(items, label="Your menu" if dev else OPERATOR, sheet=True) if open_ else ""
 
 
 GATEWAY_STATUS = {
@@ -963,14 +982,15 @@ GATEWAY_STATUS = {
 }
 
 
-def topbar(status="up", search_value="", search_state=None, results=None, menu_open=False, menu_theme="light", menu_focus=None):
+def topbar(status="up", search_value="", search_state=None, results=None, menu_open=False, menu_theme="light", menu_focus=None, dev=False):
     tone, word = GATEWAY_STATUS[status]
     search = search_control(search_value, search_state, results=results)
     operator = (
         '<span class="fui-anchor">'
-        f'<button type="button" class="fui-button fui-button-ghost fui-operator" aria-haspopup="menu" aria-expanded="{"true" if menu_open else "false"}" aria-controls="operator-menu">'
-        f'{icon("circle-user", "16")}<span class="fui-operator-name">{OPERATOR}</span>{icon("chevron-down", "14")}</button>'
-        + operator_menu(menu_open, menu_focus, theme=menu_theme)
+        f'<button type="button" class="fui-button fui-button-ghost fui-operator" aria-haspopup="menu" aria-expanded="{"true" if menu_open else "false"}" aria-controls="operator-menu"{' aria-label="Your menu"' if dev else ""}>'
+        + (f'{icon("circle-user", "16")}{icon("chevron-down", "14")}</button>' if dev
+           else f'{icon("circle-user", "16")}<span class="fui-operator-name">{OPERATOR}</span>{icon("chevron-down", "14")}</button>')
+        + operator_menu(menu_open, menu_focus, theme=menu_theme, dev=dev)
         + "</span>"
     )
     # The theme lives in the user menu and Your preferences; the top bar
@@ -989,12 +1009,13 @@ def dev_banner():
     view::status::banner), as the console shows it for profile = "development"."""
     return (
         f'<div class="fui-banner fui-tone-warn" role="note">{icon("triangle-alert", "16")}'
-        '<p><strong>Development deployment:</strong> this bridge runs with <code>[auth] enabled = false</code> on a loopback listener and must not carry real patient data.</p></div>'
+        '<p><strong>Development deployment:</strong> sign-in is off on this bridge, so anyone who reaches it can read and change its mappings. It must not carry real patient data. '
+        '<span class="fui-small fui-muted"><code>[auth] enabled = false</code>, on a loopback listener</span></p></div>'
     )
 
 
 def footer():
-    return '<footer class="fui-footer"><p>FerroBRIDGE Console v0.0.12 · Cadasto B.V. · <a href="about.html">About</a></p></footer>'
+    return '<footer class="fui-footer"><p>FerroBRIDGE Console 0.0.12 · Cadasto B.V. · <a href="about.html">About</a></p></footer>'
 
 
 def head(title, density="comfortable"):
@@ -1010,7 +1031,7 @@ def head(title, density="comfortable"):
 
 def shell(title, current, content, density="comfortable", status="up", overlay=None, search_value="",
           incidents=0, dock_html="", toast_html="", rail=False, rail_tip=None, drawer=False, search_state=None,
-          results=None, menu_open=False, menu_theme="light", menu_focus=None, banner=False, script="", org=None, node=None):
+          results=None, menu_open=False, menu_theme="system", menu_focus=None, banner=False, script="", org=None, node=None, unknown="down"):
     """A signed-in page; `overlay` is an open dialog drawn over the page,
     `dock_html` the docked bar at the foot of the main area."""
     ov = f'<div class="mk-scrim" aria-hidden="true"></div>{overlay}' if overlay else ""
@@ -1020,9 +1041,9 @@ def shell(title, current, content, density="comfortable", status="up", overlay=N
     return (
         head(title, density)
         + f'<body><div class="{cls}"><a href="#main" class="fui-skip">Skip to the page</a>'
-        + topbar(status, search_value, search_state, results, menu_open, menu_theme, menu_focus)
+        + topbar(status, search_value, search_state, results, menu_open, menu_theme, menu_focus, dev=banner)
         + (dev_banner() if banner else "")
-        + f'<div class="fui-body">{sidebar(current, incidents, rail, rail_tip, drawer, org, node)}{dr}<main id="main" class="fui-main"><div class="fui-column">{content}</div>{dock_html}</main></div>'
+        + f'<div class="fui-body">{sidebar(current, incidents, rail, rail_tip, drawer, org, node, unknown)}{dr}<main id="main" class="fui-main"><div class="fui-column">{content}</div>{dock_html}</main></div>'
         + footer()
         + toast_html
         + ov

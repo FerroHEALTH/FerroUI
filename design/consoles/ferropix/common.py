@@ -109,17 +109,23 @@ def icon(name, size="16", cls=""):
 
 # ---- status marks ----
 
+def cap_first(word):
+    """State words start with a capital (family rule 12)."""
+    w = str(word)
+    return w[:1].upper() + w[1:]
+
+
 def pill(tone, word):
-    return f'<span class="fui-pill fui-tone-{tone}">{e(word)}</span>'
+    return f'<span class="fui-pill fui-tone-{tone}">{e(cap_first(word))}</span>'
 
 
 def badge(tone, word):
-    return f'<span class="fui-badge fui-tone-{tone}">{e(word)}</span>'
+    return f'<span class="fui-badge fui-tone-{tone}">{e(cap_first(word))}</span>'
 
 
 def status(tone, glyph, word, detail=None):
     d = f'<span class="fui-status-detail">{e(detail)}</span>' if detail else ""
-    return f'<span class="fui-status fui-tone-{tone}">{icon(glyph, "14")}{e(word)}{d}</span>'
+    return f'<span class="fui-status fui-tone-{tone}">{icon(glyph, "14")}{e(cap_first(word))}{d}</span>'
 
 
 def chip(text, title=None):
@@ -154,13 +160,19 @@ def kbd(keys):
 TODAY = "2026-10-21"
 
 
+def zone(date):
+    """CEST from the last Sunday of March to the last Sunday of October (2026: 29 March to 25 October)."""
+    md = date[5:10]
+    return "CEST" if "03-29" <= md < "10-25" else "CET"
+
+
 def when(iso, seconds=False):
     """iso: 'YYYY-MM-DDTHH:MM[:SS]' or 'YYYY-MM-DD'."""
     date, _, clock = iso.partition("T")
     clock = clock.rstrip("Z")
     if clock and len(clock) == 5:
         clock += ":00"
-    full = f"{date} {clock} CEST" if clock else date
+    full = f"{date} {clock} {zone(date)}" if clock else date
     if not clock:
         shown = date
     else:
@@ -350,7 +362,7 @@ def tabs(label, items, current, focus=None, hover=None, scrolled=False):
         count = item[3] if len(item) > 3 else None
         cur = ' aria-current="page"' if key == current else ""
         cls = "fui-tab" + (" mk-focus" if key == focus else "") + (" mk-hover" if key == hover else "")
-        c = f'<span class="fui-tab-count" aria-label="{count} items">{count}</span>' if count is not None else ""
+        c = f'<span class="fui-tab-count" aria-label="{count} item{"" if count == 1 else "s"}">{count}</span>' if count is not None else ""
         links += f'<a href="{href}" class="{cls}"{cur} data-tab="{key}">{words}{c}</a>'
     sc = " mk-scrolled" if scrolled else ""
     return f'<nav class="fui-tabs{sc}" aria-label="{label}">{links}</nav>'
@@ -384,7 +396,7 @@ def refusal(title, request=None, issues=(), evidence=None):
     # A request path may break after each slash, never inside a segment.
     req = f'<p class="fui-alert-request"><code>{e(request).replace("/", "/<wbr>")}</code></p>' if request else ""
     items = "".join(
-        f'<li><span class="fui-badge fui-tone-{tone}">{sev}</span><span class="fui-issue-head"><code>{code}</code>:</span>'
+        f'<li><span class="fui-badge fui-tone-{tone}">{cap_first(sev)}</span><span class="fui-issue-head"><code>{code}</code>:</span>'
         f'<span class="fui-issue-text">{text}</span></li>'
         for tone, sev, code, text in issues
     )
@@ -449,7 +461,7 @@ def th(label, key=None, sort=None, num=False, title=None, cls=""):
         return f"<th scope=\"col\"{cls_attr}{t}>{label}</th>"
     aria = sort or "none"
     glyph = {"ascending": "arrow-up", "descending": "arrow-down", "none": "arrow-up-down"}[aria]
-    return f'<th scope="col"{cls_attr}{t} aria-sort="{aria}"><a href="#" class="fui-sort">{label}{icon(glyph, "12")}</a></th>'
+    return f'<th scope="col"{cls_attr}{t} aria-sort="{aria}"><button type="button" class="fui-sort">{label}{icon(glyph, "12")}</button></th>'
 
 
 def td(label, body, cls="", role=None):
@@ -614,7 +626,7 @@ def compare(caption, fields, leading, others, verdict, differ_first=True, note=N
     # offered; the other records are marked against the leading one.
     recs = [leading] + list(others)
     segs = "".join(
-        f'<a href="#" class="fui-segment"{" aria-current=\"true\"" if i == shown + 1 else ""}>{e(r.get("short", r["title"]))}</a>'
+        f'<button type="button" class="fui-segment" aria-pressed="{"true" if i == shown + 1 else "false"}">{e(r.get("short", r["title"]))}</button>'
         for i, r in enumerate(recs)
     )
     shown_rec = others[shown]
@@ -629,7 +641,7 @@ def compare(caption, fields, leading, others, verdict, differ_first=True, note=N
         srows += f'<div{rcls}><dt>{e(label)}</dt><dd><span class="fui-compare-cell"><span class="fui-compare-value">{sv}</span>{mark(vd)}</span>{lead_line}</dd></div>'
     stacked = (
         f'<div class="fui-compare-stacked"><div class="fui-compare-switch"><span class="fui-label" id="read-label">Record to read</span>'
-        f'<nav class="fui-segmented" aria-labelledby="read-label">{segs}</nav>'
+        f'<div role="group" class="fui-segmented" aria-labelledby="read-label">{segs}</div>'
         f'<span class="fui-small fui-muted">Marked against {e(leading["title"])}, the leading record.</span></div>'
         f'<dl class="fui-compare-stacked-rows">{srows}</dl></div>'
     )
@@ -775,6 +787,8 @@ def stepper(position, prev_href="#", next_href="#", prev_ok=True, next_ok=True):
         g = icon(glyph, "16")
         inner = f'<span class="fui-step-words">{label}</span>{g}' if end else f'{g}<span class="fui-step-words">{label}</span>'
         dis = "" if ok else ' aria-disabled="true"'
+        if not ok or href == "#":
+            return f'<span class="fui-button fui-button-secondary fui-button-small" aria-disabled="true" aria-label="{label} candidate">{inner}</span>'
         return f'<a href="{href}" class="fui-button fui-button-secondary fui-button-small" aria-keyshortcuts="{aria_key(keys)}" aria-label="{label} candidate" title="{label} candidate ({KEY_WORDS[keys]})"{dis}>{inner}</a>'
     return (
         f'<nav class="fui-stepper" aria-label="Candidates">{step("Previous", "arrow-left", prev_href, prev_ok, "left", False)}'
@@ -795,7 +809,7 @@ NAV = [
     ("registry", "Registry", [
         ("sources", "Sources", "radio-tower", "sources.html", None),
         ("domains", "Identifier domains", "tags", "domains.html", None),
-        ("pseudonym-domains", "Pseudonyms", "shield-check", "pseudonym-domains.html", None),
+        ("pseudonym-domains", "Pseudonymisation domains", "shield-check", "pseudonym-domains.html", None),
     ]),
     ("trail", "Trail", [
         ("audit", "Audit trail", "file-clock", "audit.html", None),
@@ -851,8 +865,11 @@ def brand_mark():
     )
 
 
-def lockup():
-    return f'<a href="dashboard.html" class="fui-lockup">{brand_mark()}<span class="fui-lockup-name">FerroPIX <span class="fui-lockup-accent">Console</span></span></a>'
+def lockup(link=True):
+    inner = f'{brand_mark()}<span class="fui-lockup-name">FerroPIX <span class="fui-lockup-accent">Console</span></span>'
+    if not link:
+        return f'<span class="fui-lockup">{inner}</span>'
+    return f'<a href="dashboard.html" class="fui-lockup">{inner}</a>'
 
 
 def search_control(value="", state=None, word="Find", placeholder="Identifier, name or birth date", id_="find", results=None):
@@ -864,7 +881,10 @@ def search_control(value="", state=None, word="Find", placeholder="Identifier, n
     if state == "focus-filled":
         cls += " mk-focus"
     busy = ' aria-busy="true"' if state == "busy" else ""
-    disabled = " disabled" if state == "disabled" else ""
+    disabled = ' disabled title="Search waits while the index is rebuilding"' if state == "disabled" else ""
+    submit_off = " disabled" if state in ("disabled", "busy") else ""
+    hint = "" if state == "disabled" else '<kbd class="fui-kbd fui-search-hint" aria-hidden="true">/</kbd>'
+    reason = '<span class="fui-sr-only" id="find-why">Search waits while the index is rebuilding.</span>' if state == "disabled" else ""
     glyph = (
         '<span class="fui-spinner-ring" aria-hidden="true"></span>' if state == "busy" else icon("search", "16")
     )
@@ -876,9 +896,9 @@ def search_control(value="", state=None, word="Find", placeholder="Identifier, n
         f'<div class="fui-search-field"><span class="fui-search-glyph">{glyph}</span>'
         f'<input id="{id_}" name="q" type="search" class="fui-input" placeholder="{e(placeholder)}" value="{e(value)}" '
         f'autocomplete="off" spellcheck="false" aria-keyshortcuts="/"{expanded}{disabled} />'
-        f'<kbd class="fui-kbd fui-search-hint" aria-hidden="true">/</kbd></div>'
-        f'<button type="submit" class="fui-search-submit" aria-label="{e(word)}"{disabled}>{icon("search", "16")}<span class="fui-search-word">{e(word)}</span></button>'
-        f"{res}</form>"
+        f'{hint}</div>'
+        f'<button type="submit" class="fui-search-submit" aria-label="{e(word)}"{submit_off}>{icon("search", "16")}<span class="fui-search-word">{e(word)}</span></button>'
+        f"{reason}{res}</form>"
     )
 
 
@@ -890,15 +910,15 @@ def operator_menu(open_=False, focus=None, theme="light"):
         '<div class="fui-menu-label" id="theme-label">Theme</div>',
         '<div role="group" aria-labelledby="theme-label" class="fui-segmented">'
         + "".join(
-            f'<button type="submit" class="fui-segment" aria-pressed="{"true" if v == theme else "false"}">{icon(g, "14")}{w}</button>'
+            f'<button type="button" role="menuitemradio" class="fui-segment" aria-checked="{"true" if v == theme else "false"}">{icon(g, "14")}{w}</button>'
             for v, w, g in (("light", "Light", "sun"), ("dark", "Dark", "moon"), ("system", "System", "monitor"))
         )
         + "</div>",
         menu_item("Keyboard shortcuts", "keyboard", keys="?", href="shortcuts.html"),
         MENU_SEP,
-        menu_item("Sign out", "log-out", focus=(focus == "signout")),
+        menu_item("Sign out", "log-out", href="sign-in-signed-out.html", focus=(focus == "signout")),
     ]
-    return menu(items, label="Demo Steward") if open_ else ""
+    return menu(items, label="Demo Steward", sheet=True) if open_ else ""
 
 
 def topbar(status_tone="ok", status_word="Server up", search_value="", search_state=None, results=None,
@@ -922,7 +942,7 @@ def topbar(status_tone="ok", status_word="Server up", search_value="", search_st
 
 
 def footer():
-    return '<footer class="fui-footer"><p>FerroPIX Console v0.1.0 · Cadasto B.V. · <a href="#">About</a></p></footer>'
+    return '<footer class="fui-footer"><p>FerroPIX Console v0.1.0 · Cadasto B.V. · <a href="about.html">About</a></p></footer>'
 
 
 def head(title, density="comfortable"):

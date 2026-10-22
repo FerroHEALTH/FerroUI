@@ -17,8 +17,8 @@ from term import root_head, section, sections
 SERVER_TABS = [("versions", "FHIR versions", "server.html"), ("operations", "Operations", "server-operations.html"), ("evidence", "Evidence", "server-evidence.html")]
 
 
-def server_heading():
-    return page_heading("Server", subtitle="What each FHIR root of <code>terminology.example.org</code> declares, and the evidence this build ships.")
+def server_heading(actions=""):
+    return page_heading("Server", actions=actions, subtitle="What each FHIR root of <code>terminology.example.org</code> declares, and the evidence this build ships.")
 
 
 def matrix(caption, rows, answered=(True, True, True, True)):
@@ -47,47 +47,56 @@ VERSION_ROWS = [
 ]
 
 
-def server_page(tab, panel_html, line):
+def server_page(tab, panel_html, line, status="up", actions="", top=""):
     intro = f'<div class="fui-settings-panel-head"><p class="fui-settings-panel-intro">{line}</p></div>'
-    tabs_html = tpl.settings_tabs("Server sections", SERVER_TABS, tab, f'<div class="fui-settings-panel">{intro}{panel_html}</div>')
-    return shell("Server", "server", server_heading() + f'<div class="fui-stack">{tabs_html}</div>')
+    tabs_html = tpl.settings_tabs("Server sections", SERVER_TABS, tab, f'<div class="fui-settings-panel">{intro}{top}{panel_html}</div>')
+    return shell("Server", "server", server_heading(actions) + f'<div class="fui-stack">{tabs_html}</div>', status=status)
 
 
-def page_server(answered=(True, True, True, True)):
-    line = "4 of 4 roots answered, from their CapabilityStatements." if all(answered) else "3 of 4 roots answered, from their CapabilityStatements."
-    rows = VERSION_ROWS
-    return server_page("versions", matrix("What each root declares", rows, answered), line)
+def page_server(answered=(True, True, True, True), actions=""):
+    down = not all(answered)
+    line = "3 of 4 roots answered, from their CapabilityStatements." if down else "4 of 4 roots answered, from their CapabilityStatements."
+    top = ""
+    if down:
+        from term import load_report
+        top = load_report("bad", "FHIR R6 did not answer at <code>/r6</code>, so its column is empty.", actions=button("secondary", "Retry", "refresh-cw", small=True))
+    return server_page("versions", matrix("What each root declares", VERSION_ROWS, answered), line, status="degraded" if down else "up", actions=actions, top=top)
 
 
 def page_server_root_down():
     return page_server((True, True, True, False))
 
 
+def op_name(op):
+    """A FHIR operation by its name; FerroTERM's own operation says so."""
+    if op == "$cache-control":
+        return f'<code>{e(op)}</code> <span class="fui-tag" title="Not a FHIR operation: FerroTERM defines it">FerroTERM\'s own</span>'
+    return f"<code>{e(op)}</code>"
+
+
 def page_server_operations():
-    rows = [(f"<code>{e(op)}</code>", [None if v is None else v.replace("type, instance", "Type and instance").replace("type", "Type").replace("declared", "Declared") for v in vals]) for op, vals in OPERATIONS]
+    rows = [(op_name(op), [None if v is None else v.replace("type, instance", "Type and instance").replace("type", "Type").replace("declared", "Declared") for v in vals]) for op, vals in OPERATIONS]
     return server_page("operations", matrix("Operations, and the levels each answers at", rows), "The operations each root declares, and whether it answers them on the resource type, on one resource, or both.")
 
 
 def page_server_evidence():
-    eco = table("The HL7 terminology ecosystem suite", th("Mode") + th("Surface") + th("Passed", num=True) + th("Needs"),
-                [f'<tr><th scope="row" data-role="title"><code>{m}</code></th>{td("Surface", f"<code>{s}</code>", role="sub")}{td("Passed", f"{p} of {r}", "fui-num", role="meta-q")}{td("Needs", n, role="meta-2")}</tr>' for m, s, p, r, n in ECOSYSTEM])
-    bars = table("The latency the project claims", th("Benchmark") + th("Bar", num=True) + th("Measured", num=True),
-                 [f'<tr><th scope="row" data-role="title"><code>{b}</code></th>{td("Bar", f"{bar} µs", "fui-num", role="sub")}{td("Measured", f"{m} µs", "fui-num", role="meta-q")}</tr>' for b, bar, m in BARS])
+    eco = table("The HL7 terminology ecosystem suite", th("Mode") + th("Surface") + th("Passed", num=True) + th("Content it needs"),
+                [f'<tr><th scope="row" data-role="title"><code>{m}</code></th>{td("Surface", f"<code>{s}</code>", role="sub")}{td("Passed", f"{p} of {r}", "fui-num", role="meta-q")}'
+                 f'{td("Content it needs", n or "<span class=" + chr(34) + "fui-muted" + chr(34) + ">No extra content</span>", role="meta-2")}</tr>' for m, s, p, r, n in ECOSYSTEM])
+    bars = table("Latency", th("Benchmark") + th("Target", num=True) + th("Measured", num=True),
+                 [f'<tr><th scope="row" data-role="title"><code>{b}</code></th>{td("Target", f"{bar} µs", "fui-num", role="sub")}{td("Measured", f"{m} µs", "fui-num", role="meta-q")}</tr>' for b, bar, m in BARS])
     body = sections(
         section("The HL7 terminology ecosystem suite", '<p class="fui-small fui-muted fui-section-intro">From the committed pass lists; only <code>general</code> runs in CI.</p>'
                 + f'{eco}', count=7),
-        section("The latency the project claims", '<p class="fui-small fui-muted fui-section-intro">Each bar is the claim; the measurement is one Apple M2 run over 20,000 synthetic concepts.</p>'
+        section("Latency", '<p class="fui-small fui-muted fui-section-intro">Each target is the project\'s claim; the measurement is one Apple M2 run over 20,000 synthetic concepts.</p>'
                 + f'{bars}', count=len(BARS)))
     return server_page("evidence", body, f"Read from the files the FerroTERM {VERSION} build commits, not from the server answering this page.")
 
 
 # ---- Configuration (file mode) ----
 
-LINE = 'Set in <code>console.toml</code> · read at start · <a href="configuration-file-mode-dialog.html">How configuration works</a>'
-
-
 def key_hint(k, show=False):
-    return f'<code class="mk-key-hint{" is-shown" if show else ""}" title="Copy the key">{e(k)}{icon("copy", "12")}</code>'
+    return f'<button type="button" class="mk-key-hint{" is-shown" if show else ""}" aria-label="Copy the key {e(k)}" title="Copy the key"><code>{e(k)}</code>{icon("copy", "12")}</button>'
 
 
 def srow(label, desc, value, key, hint=False):
@@ -106,22 +115,22 @@ def on(v=True):
 def config_rows(hint=False, oidc=True):
     conn = (srow("Server", "Where the console reaches the terminology server, on your private network.", "<code>http://ferroterm:8080/</code>", "ferroterm.base_url", hint)
             + srow("Public address", "The address readers see the FHIR API at, shown on the screens.", "<code>https://terminology.example.org/</code>", "ferroterm.public_url")
-            + srow("Synchronisation service", "Its admin listener, read for the release findings.", "<code>http://ferroterm-sync:8090/</code>", "ferroterm.sync_url")
+            + srow("Synchronisation service", "Where the console reads release checks from the synchronisation service.", "<code>http://ferroterm-sync:8090/</code>", "ferroterm.sync_url")
             + srow("Timeout", "How long one call to the server may take.", "30 s", "ferroterm.timeout_ms"))
     if oidc:
         sign = (srow("Identity provider", "Where readers sign in to edit, by OpenID Connect.", "<code>https://idp.example.org/realms/ferroterm</code>", "oidc.issuer")
                 + srow("Client", "The console's client at the provider.", "<code>ferroterm-console</code>", "oidc.client_id")
                 + srow("Client secret", "Read from a file; never shown.", secret("/run/secrets/console-client-secret"), "oidc.client_secret_file")
                 + srow("Redirect address", "Where the provider sends a reader back.", "<code>https://console.terminology.example.org/<wbr>auth/<wbr>callback</code>", "oidc.redirect_uri")
-                + srow("Scopes", "What the console asks for: the three write scopes and the synchronisation listener's.", "<code>openid</code>, <code>fhirUser</code>, 3 write scopes and <code>__ferroterm.sync</code>", "oidc.scopes")
-                + srow("Sign-out", "Ends the session at the provider and revokes its token.", "end session and revocation set", "oidc.end_session_endpoint"))
+                + srow("Scopes", "What the console asks the provider for.", "Sign-in and profile, editing code systems, value sets and concept maps, and release checks", "oidc.scopes")
+                + srow("Sign-out", "Ends the session at the provider too.", "Set up", "oidc.end_session_endpoint"))
     else:
-        sign = ""
+        sign = '<p class="fui-small fui-muted">Sign-in is not set up; reading stays open.</p>'
     sess = (srow("Secure cookie", "The session cookie is sent over HTTPS only.", on(), "session.secure_cookie")
             + srow("Idle timeout", "A session ends after this long without a request.", "30 min", "session.idle_timeout_s")
-            + srow("Absolute timeout", "A session ends after this long, whatever it does.", "8 h", "session.absolute_timeout_s")
-            + srow("Most sessions", "How many sessions the console holds at once.", "1,000", "session.max_sessions"))
-    lst = (srow("Listener", "The socket address the console binds.", "<code>0.0.0.0:3000</code>", "server.listen")
+            + srow("Absolute timeout", "A session ends after this long, even while in use.", "8 h", "session.absolute_timeout_s")
+            + srow("Session limit", "How many sessions the console holds at once.", "1,000", "session.max_sessions"))
+    lst = (srow("Listener", "Address and port the console listens on.", "<code>0.0.0.0:3000</code>", "server.listen")
            + srow("Site root", "Where the console's built site is read from.", "<code>/site</code>", "server.site_root"))
     return {"connection": conn, "signin": sign, "sessions": sess, "listener": lst}
 
@@ -134,31 +143,26 @@ def mode_dialog():
     return (
         '<div id="mode-dialog" role="dialog" aria-modal="true" aria-labelledby="mode-title" class="fui-dialog fui-dialog-wide fui-modal mk-open" open>'
         f'<h2 id="mode-title" class="fui-dialog-title">{icon("info", "18")} How configuration works</h2>'
-        '<p>The console runs in <strong>file mode</strong>: its configuration is <code>console.toml</code>, with <code>FERROTERM_CONSOLE__</code> overrides and <code>_file</code> secrets, read once at start.</p>'
+        '<p>The console reads its settings from one file when it starts. An environment variable can override a value, and a secret can come from a file of its own.</p>'
+        '<p class="fui-small fui-muted"><code>console.toml</code> · <code>FERROTERM_CONSOLE__</code> overrides · <code>_file</code> secrets</p>'
         '<div class="fui-modal-body"><div class="fui-ownership">'
-        '<div><h3>' + icon("file-text", "16") + ' Where you see it</h3><p class="fui-small fui-muted">Here, read-only, each value with its key on hover; the server\'s own environment is not visible, and <a href="server.html">Server</a> shows what it declares.</p></div>'
-        '<div><h3>' + icon("refresh-cw", "16") + ' How you change it</h3><p class="fui-small fui-muted">Change the file, review it, and restart the console.</p></div></div>'
-        '<p class="fui-small fui-muted mk-mode-other">Code systems, value sets and concept maps are content, not configuration: you edit them on their own pages. '
-        'The family\'s console mode is only for products with their own configuration store; FerroTERM has none.</p></div>'
+        '<div><h3>' + icon("file-text", "16") + ' Where you see it</h3><p class="fui-small fui-muted">Here, read-only, each value with its key when you point at it. The server keeps its own settings; <a href="server.html">Server</a> shows what it declares.</p></div>'
+        '<div><h3>' + icon("refresh-cw", "16") + ' How you change it</h3><p class="fui-small fui-muted">Edit the file, review it, and restart the console.</p></div></div>'
+        '<p class="fui-small fui-muted mk-mode-other">Code systems, value sets and concept maps are content: you edit them on their own pages.</p></div>'
         f'<div class="fui-dialog-actions">{button("secondary", "Close", "x", keys="Esc", attrs="autofocus")}</div></div>'
     )
 
 
 def config_heading(menu_open=False):
     help_ = link_button("ghost", "How configuration works", "configuration-file-mode-dialog.html", "info", attrs='aria-haspopup="dialog"')
-    ag = action_group(help_, [menu_item("Copy the file's path", "copy", desc="/etc/ferroterm/console.toml")], open_=menu_open, label="More configuration actions")
-    return page_heading("Configuration", actions=ag, subtitle="The settings in console.toml, the console's own file.")
+    ag = action_group(help_, [menu_item("Copy the file's path", "copy", desc_html="<code>/etc/ferroterm/console.toml</code>")], open_=menu_open, label="More configuration actions")
+    return page_heading("Configuration", actions=ag, subtitle="The settings in <code>console.toml</code>, read when the console starts.")
 
 
 def config_page(tab, overlay=None, menu_open=False, hint=False, oidc=True):
     rows = config_rows(hint, oidc)[tab]
-    top = ""
-    if tab == "signin" and not oidc:
-        top = notice("info", "info", "This console has no <code>[oidc]</code> section, so it offers no sign-in and no editing screen. Reading stays open.")
-    body = tpl.settings_panel(rows, LINE, "", top=top)
-    tabs_html = tpl.settings_tabs("Configuration sections", CONFIG_TABS, tab, body)
-    strip = (f'<div class="fui-revision mk-revision-compact">{icon("file-text", "16")}<p><strong>console.toml</strong> · read at start, '
-             f'<time class="fui-time" datetime="2026-10-21T06:00" title="2026-10-21 06:00 CEST">today 06:00</time></p></div>')
+    body = tpl.settings_panel(rows)
+    tabs_html = tpl.settings_tabs("Configuration sections", CONFIG_TABS, tab, body, many=True)
     return shell("Configuration", "configuration", config_heading(menu_open) + f'<div class="fui-stack">{tabs_html}</div>', overlay=overlay)
 
 
@@ -194,44 +198,34 @@ def page_configuration_no_oidc():
     return config_page("signin", oidc=False)
 
 
-# ---- Your preferences ----
+# ---- Your preferences: three cookie tabs; who you are lives in the user menu ----
 
-PREF_TABS = [("appearance", "Appearance", "preferences.html"), ("reading", "Reading", "preferences-reading.html"),
-             ("keyboard", "Keyboard", "preferences-keyboard.html"), ("account", "Account", "preferences-account.html")]
+PREF_TABS = [("appearance", "Appearance", "preferences.html"), ("reading", "Language and region", "preferences-reading.html"),
+             ("keyboard", "Keyboard", "preferences-keyboard.html", "fui-wide-only")]
 
 
-def pref_rows(theme="light", saved=None, visitor=False):
+def pref_rows(theme="system", saved=None):
     sel = lambda id_, opts, cur: select(id_, opts, cur, cls="fui-select fui-setting-select")
-    if visitor:
-        acct = (setting_row("Signed in", "You read as a visitor. Signing in is for editing.", '<span class="fui-setting-value">Not signed in</span>')
-                + setting_row("Sign in", "At idp.example.org, by OpenID Connect; the console never sees your password.", link_button("secondary", "Sign in", "sign-in.html", "log-in", small=True)))
-    else:
-        acct = (setting_row("Signed in as", "Your name, as the identity provider states it.", f'<span class="fui-setting-value fui-setting-strong">{OPERATOR}</span>')
-                + setting_row("Identity provider", "Where you signed in, by OpenID Connect.", '<span class="fui-setting-value">idp.example.org</span>')
-                + setting_row("May edit", "The write scopes your token carries; the server checks them on every write.", f'<span class="fui-setting-value mk-scopes">{badge("accent", "CodeSystem")}{badge("accent", "ValueSet")}{badge("accent", "ConceptMap")}</span>')
-                + setting_row("Session", "Ends after 30 minutes without a request, and after 8 hours at the latest.", f'<span class="fui-setting-value">since {when("2026-10-21T08:30")} · until today 16:30</span>')
-                + setting_row("Sign out", "Ends this session, revokes its token at the provider, then signs you out there.", link_button("secondary", "Sign out", "sign-in-signed-out.html", "log-out", small=True)))
     return {
         "appearance": setting_row("Theme", "Light, dark, or the one your system uses. Applies at once.",
                                   choice_cards("theme", "Theme", [("light", "Light", "Teal on white"), ("dark", "Dark", "Teal on ink"), ("system", "System", "Follows your device")], theme, theme_preview), saved=saved == "theme")
-        + setting_row("Density", "Compact fits more rows in every list; comfortable, the default, gives rows and forms room.",
+        + setting_row("Density", "How much fits on a screen.",
                       choice_cards("density", "Density", [("comfortable", "Comfortable", "More room"), ("compact", "Compact", "More rows")], "comfortable", density_preview))
         + setting_row("Reduce motion", "Fewer animations in menus, panels and the tree.", sel("motion", [("system", "Follow the system"), ("always", "Always reduce")], "system"), id_="motion"),
-        "reading": setting_row("Default FHIR version", "Used when an address carries no version of its own. The version select in the top bar changes it too.", sel("fhirv", [(r, f"{r} · {l}") for r, l in ROOTS], "R4"), id_="fhirv", saved=saved == "fhirv")
-        + setting_row("Display language", "A BCP 47 tag sent as displayLanguage. Leave it empty to take the server's own choice.", '<input id="dlang" class="fui-input fui-setting-select" placeholder="for example nl-NL" />', id_="dlang")
+        "reading": setting_row("Default FHIR version", "Used when an address names no version. The version select in the top bar switches only this session.", sel("fhirv", [(r, f"{r} · {l}") for r, l in ROOTS], "R4"), id_="fhirv", saved=saved == "fhirv")
+        + setting_row("Display language", 'Language for concept names, for example nl-NL. Empty takes the server\'s own choice. <code class="fui-muted">displayLanguage</code>', '<input id="dlang" class="fui-input fui-setting-select" placeholder="for example nl-NL" />', id_="dlang")
         + setting_row("Page size", "How many rows a paged screen asks for, from 1 to 1,000.", '<input id="psize" class="fui-input mk-num-input" value="25" inputmode="numeric" />', id_="psize"),
         "keyboard": setting_row("Shortcut hints", "The key caps after a label. Phones never show them.", sel("hints", [("wide", "Wide screens only (default)"), ("always", "Always"), ("never", "Never")], "wide"), id_="hints")
         + setting_row("All shortcuts", "Every shortcut of the screen you are on, in one list.", link_button("secondary", "Open the shortcut legend", "shortcuts.html", "keyboard", small=True, keys="?")),
-        "account": acct,
     }
 
 
-def preferences_page(tab="appearance", theme="light", saved=None, overlay=None, lock_dark=False, visitor=False):
-    inner = tpl.settings_panel(pref_rows(theme, saved, visitor)[tab])
+def preferences_page(tab="appearance", theme="system", saved=None, overlay=None, lock_dark=False):
+    inner = tpl.settings_panel(pref_rows(theme, saved)[tab])
     reset = f'<div class="fui-settings-foot"><p class="fui-small fui-muted">Each preference is its own cookie in this browser, read when each page is drawn.</p>{button("ghost", "Reset to defaults…", "rotate-ccw", small=True)}</div>'
     content = (page_heading("Your preferences", subtitle="Only for you, in this browser.")
                + f'<div class="fui-stack">{tpl.settings_tabs("Preference sections", PREF_TABS, tab, inner)}{reset}</div>')
-    html = shell("Your preferences", "", content, overlay=overlay, visitor=visitor)
+    html = shell("Your preferences", "", content, overlay=overlay)
     if lock_dark:
         html = html.replace('<html lang="en"', '<html lang="en" data-lock-theme="dark"', 1)
     return html
@@ -253,19 +247,11 @@ def page_preferences_keyboard():
     return preferences_page("keyboard")
 
 
-def page_preferences_account():
-    return preferences_page("account")
-
-
-def page_preferences_visitor():
-    return preferences_page("account", visitor=True)
-
-
 def page_preferences_reset():
     dialog = (
         '<div role="dialog" aria-modal="true" aria-labelledby="reset-title" class="fui-dialog fui-modal mk-open" open>'
         f'<h2 id="reset-title" class="fui-dialog-title">{icon("rotate-ccw", "18")} Reset your preferences?</h2>'
-        '<p>Theme, density, motion, the default FHIR version, the display language, the page size and the hints go back to their defaults: their cookies in this browser are cleared. Your session and the server are not touched.</p>'
+        '<p>All preferences on this page go back to their defaults. Your session and the server are not touched.</p>'
         f'<div class="fui-dialog-actions">{button("secondary", "Cancel", keys="Esc")}{button("primary", "Reset to defaults", "rotate-ccw")}</div></div>'
     )
     return preferences_page(overlay=dialog)
@@ -277,20 +263,29 @@ def page_preferences_dark():
 
 # ---- sign-in ----
 
-def sign_in_card(notice_html="", state=None):
+DOCS = "https://ferroterm.eu/docs/"
+PRIVACY = "https://terminology.example.org/privacy"
+
+
+def sign_in_card(notice_html="", state=None, title="Sign in to edit"):
+    retry = f'<a href="sign-in-redirecting.html" rel="external" class="fui-button fui-button-primary">{icon("refresh-cw", "16")}Try again</a>'
+    read_line = '<p class="fui-small mk-sign-in-line"><a href="dashboard-visitor.html">Read without signing in</a>: every screen is open to read.</p>'
+    foot = '<p class="fui-small fui-muted mk-sign-in-line">You sign in at your organisation\'s identity provider; the console never sees your password and the browser never holds a token.</p>'
     if state == "redirecting":
-        provider = '<button type="button" class="fui-button fui-button-primary" aria-busy="true" disabled><span class="fui-spinner-ring" aria-hidden="true"></span>Taking you to idp.example.org…</button>'
+        main = '<button type="button" class="fui-button fui-button-primary" aria-busy="true" disabled><span class="fui-spinner-ring" aria-hidden="true"></span>Taking you to idp.example.org…</button>' + read_line
     elif state == "unavailable":
-        provider = link_button("primary", "Read without signing in", "dashboard-visitor.html", "arrow-right")
+        main, foot = link_button("primary", "Read without signing in", "dashboard-visitor.html", "arrow-right"), ""
+    elif state == "retry":
+        main = retry + read_line
+    elif state == "rejected":
+        main = link_button("primary", "Read without signing in", "dashboard-visitor.html", "arrow-right")
     else:
-        provider = f'<a href="sign-in-redirecting.html" rel="external" class="fui-button fui-button-primary">{icon("log-in", "16")}Sign in at idp.example.org</a>'
-    read = "" if state == "unavailable" else '<p class="fui-small mk-sign-in-line"><a href="dashboard-visitor.html">Read without signing in</a>: every screen is open to read.</p>'
+        main = f'<a href="sign-in-redirecting.html" rel="external" class="fui-button fui-button-primary">{icon("log-in", "16")}Sign in at idp.example.org</a>' + read_line
     return (
         f'<div class="fui-card fui-sign-in"><div class="fui-sign-in-lockup">{lockup()}</div>'
-        '<h1 class="mk-sign-in-title">Sign in to edit</h1>'
-        + notice_html + provider + read
-        + '<p class="fui-small fui-muted mk-sign-in-line">You sign in at your organisation\'s identity provider; the console never sees your password and the browser never holds a token.</p>'
-        '<div class="fui-sign-in-links"><a href="#" rel="external noopener">Documentation</a><a href="#" rel="external noopener">Privacy notice</a></div></div>'
+        f'<h1 class="mk-sign-in-title">{title}</h1>'
+        + notice_html + main + foot
+        + f'<div class="fui-sign-in-links"><a href="{DOCS}" rel="external noopener">Documentation</a><a href="{PRIVACY}" rel="external noopener">Privacy notice</a></div></div>'
         '<p class="fui-sign-in-caption">The console of the FerroTERM terminology server. It holds no patient data.</p>'
     )
 
@@ -308,28 +303,37 @@ def page_sign_in():
 
 
 def page_sign_in_redirecting():
-    return sign_in_page(state="redirecting", notice_html=n("info", "status", "Opening idp.example.org. You come back to the screen you were on when you are signed in."))
+    return sign_in_page(state="redirecting", notice_html=n("info", "status", "You come back to this screen."))
 
 
 def page_sign_in_refused():
-    return sign_in_page(notice_html=n("bad", "alert", "Not signed in: the identity provider refused the sign-in or could not be reached (502). Try again; if it keeps failing, the provider may be down."))
+    return sign_in_page(state="retry", notice_html=n("bad", "alert", "The identity provider refused the sign-in. Try again; if it refuses again, ask whoever runs it."))
+
+
+def page_sign_in_unreachable():
+    return sign_in_page(state="retry", notice_html=n("bad", "alert", "The console could not reach the identity provider. Try again in a moment; it may be down."))
 
 
 def page_sign_in_rejected():
-    return sign_in_page(notice_html=n("bad", "alert", "Not signed in: the ID Token the provider sent did not pass the console's checks (401). Nothing was kept. Ask your provider's administrator to check the console's client registration."))
+    return sign_in_page(state="rejected", notice_html=n("bad", "alert", "The sign-in could not be completed: the provider's answer did not pass the console's checks, so nothing was kept. Ask whoever runs the identity provider to check the console's registration."))
 
 
 def page_sign_in_expired():
-    return sign_in_page(notice_html=n("warn", "status", "Your session ended after 30 minutes without a request. Sign in again to edit; reading needs no session."))
+    return sign_in_page(notice_html=n("warn", "status", "Your session ended after 30 minutes without a request. Sign in again to edit."))
+
+
+def page_sign_in_expired_absolute():
+    return sign_in_page(notice_html=n("warn", "status", "Your session ended: a session lasts 8 hours at most, even while in use. Sign in again to edit."))
 
 
 def page_sign_in_signed_out():
-    return sign_in_page(notice_html=n("ok", "status", "You are signed out of the console and of the identity provider, and the session's token is revoked."))
+    return sign_in_page(notice_html=n("ok", "status", "You are signed out of the console and of the identity provider."))
 
 
 def page_sign_in_unavailable():
-    return sign_in_page(state="unavailable", notice_html=n("warn", "status", "This console has no sign-in: its configuration has no <code>[oidc]</code> section, so there is no sign-in to complete. Every screen is open to read; editing is not offered."))
+    return sign_in_page(state="unavailable", title="Read-only console",
+                        notice_html=n("warn", "status", 'This console has no sign-in configured. Every screen is open to read. <span class="fui-small fui-muted">No <code>[oidc]</code> section.</span>'))
 
 
 def page_sign_in_full():
-    return sign_in_page(notice_html=n("warn", "alert", "The console holds as many sessions as it allows (503), so it cannot start yours. Try again in a few minutes; reading needs no session."))
+    return sign_in_page(notice_html=n("warn", "alert", "The console has no free sessions right now. Try again in a few minutes."))

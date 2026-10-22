@@ -42,12 +42,12 @@ CODE_SYSTEMS = [
     ("actcode", "ActCode", "http://terminology.hl7.org/CodeSystem/v3-ActCode", ["9.0.0"], "directory", "complete", True, True, "active", None, "code-system-builtin.html"),
 ]
 
-SOURCE_WORD = {"written": "Written here", "index": "Built index", "builtin": "Built in", "directory": "Resource directory"}
+SOURCE_WORD = {"written": "Stored on this server", "index": "Offline index", "builtin": "Built-in standard", "directory": "Resource directory"}
 SOURCE_TIP = {
     "written": "Written through the FHIR API and kept in the server's resource store; it can be edited and has a history",
-    "index": "Served from an index built offline; no write path",
-    "builtin": "Ships inside the server; no write path",
-    "directory": "Read from a FERROTERM_CODESYSTEMS directory at start; no write path",
+    "index": "Served from an index built offline; read-only",
+    "builtin": "Ships inside the server; read-only",
+    "directory": "Read from a resource directory when the server starts; read-only",
 }
 
 # The synthetic hierarchy: (code, display, parent, inactive, Dutch display).
@@ -82,14 +82,14 @@ VALUE_SETS = [
     ("clinical", "Condition Clinical Status Codes", "http://hl7.org/fhir/ValueSet/condition-clinical", "4.0.1", "directory", "active", "value-set-loaded.html", "the whole code system"),
     ("obscat", "Observation Category Codes", "http://hl7.org/fhir/ValueSet/observation-category", "4.0.1", "directory", "active", "value-set-loaded.html", "the whole code system"),
     ("langs", "All Languages", "http://hl7.org/fhir/ValueSet/all-languages", "4.0.1", "directory", "active", "value-set-loaded.html", "every BCP 47 tag"),
-    ("mime", "Mime Types", "http://hl7.org/fhir/ValueSet/mimetypes", "4.0.1", "directory", "active", "value-set-loaded.html", "every BCP 13 type"),
+    ("mime", "MimeType", "http://hl7.org/fhir/ValueSet/mimetypes", "4.0.1", "directory", "active", "value-set-loaded.html", "every BCP 13 type"),
 ]
 
 # (key, title, canonical, version, source, status, from, to, mappings, page)
 CONCEPT_MAPS = [
     ("legacy", "Legacy findings to synthetic findings", LOCAL + "/ConceptMap/legacy-findings", "2", "written", "active", "Legacy findings", "Synthetic clinical findings", 7, "concept-map.html"),
     ("act", "Care settings to ActCode", LOCAL + "/ConceptMap/care-settings-actcode", "1", "written", "draft", "Synthetic care settings", "ActCode", 6, "concept-map.html"),
-    ("gender", "AdministrativeGender to v2 Administrative Sex", "http://hl7.org/fhir/ConceptMap/cm-administrative-gender-v2", "4.0.1", "directory", "active", "AdministrativeGender", "v2 table 0001", 4, "concept-map-loaded.html"),
+    ("gender", "v2 map for AdministrativeGender", "http://hl7.org/fhir/ConceptMap/cm-administrative-gender-v2", "4.0.1", "directory", "draft", "AdministrativeGender", "v2 table 0001", 5, "concept-map-loaded.html"),
     ("clinical", "Condition clinical status to synthetic problem status", LOCAL + "/ConceptMap/clinical-to-problem-status", "1", "written", "active", "Condition Clinical Status Codes", "Synthetic problem status", 6, "concept-map.html"),
 ]
 
@@ -100,18 +100,25 @@ LEGACY_MAPPINGS = [
     ("LF-01", "Cough, any", "equivalent", "SF-1210", "Cough", ""),
     ("LF-02", "Cough, dry", "equivalent", "SF-1211", "Dry cough", ""),
     ("LF-03", "Cough with sputum", "equivalent", "SF-1212", "Productive cough", ""),
-    ("LF-04", "Chest complaint", "source-is-broader-than-target", "SF-1220", "Wheeze", "Only the wheeze part of the old code survives."),
-    ("LF-05", "Skin complaint", "source-is-narrower-than-target", "SF-1100", "Finding of the skin", ""),
+    ("LF-04", "Chest complaint", "narrower", "SF-1220", "Wheeze", "Only the wheeze part of the old code survives."),
+    ("LF-05", "Skin complaint", "wider", "SF-1100", "Finding of the skin", ""),
     ("LF-06", "Raised temperature", "equivalent", "SF-1310", "Fever", ""),
-    ("LF-07", "Feeling unwell", None, None, None, "No synthetic code carries this meaning; mapped to nothing on purpose."),
+    ("LF-07", "Feeling unwell", "unmatched", None, None, "No synthetic code carries this meaning."),
 ]
 
+# The R4 ConceptMap equivalence codes (http://hl7.org/fhir/concept-map-equivalence),
+# each read as the target's relation to the source, in plain words.
 REL_WORD = {
+    "relatedto": "related to",
     "equivalent": "equivalent",
-    "source-is-broader-than-target": "broader than the target",
-    "source-is-narrower-than-target": "narrower than the target",
-    "related-to": "related to",
-    "not-related-to": "not related to",
+    "equal": "equal",
+    "wider": "the target is wider",
+    "subsumes": "the target subsumes it",
+    "narrower": "the target is narrower",
+    "specializes": "the target specialises it",
+    "inexact": "inexact",
+    "unmatched": "maps to nothing",
+    "disjoint": "disjoint",
 }
 
 # The writes the server recorded, newest first, from each type's _history:
@@ -150,11 +157,11 @@ OPERATIONS = [
 # The HL7 terminology ecosystem suite, from conformance/tx-ecosystem/README.md
 # (validator 6.10.4, suite tests v1.9.3): (mode, surface, passed, ran, needs)
 ECOSYSTEM = [
-    ("general", "/r4", 635, 670, "nothing"),
-    ("general", "/r4b", 628, 670, "nothing"),
-    ("general", "/r5", 637, 670, "nothing"),
-    ("mimetypes", "/r4b", 35, 37, "nothing"),
-    ("icd-11", "/r4b", 44, 52, "the three ICD-11 artifacts"),
+    ("general", "/r4", 635, 670, None),
+    ("general", "/r4b", 628, 670, None),
+    ("general", "/r5", 637, 670, None),
+    ("mimetypes", "/r4b", 35, 37, None),
+    ("icd-11", "/r4b", 44, 52, "the three ICD-11 files"),
     ("tx.fhir.org", "/r4b", 57, 227, "a LOINC release"),
     ("snomed", "/r4b", 2, 170, "a SNOMED CT edition"),
 ]
@@ -164,3 +171,11 @@ BARS = [
     ("operations/lookup", 25, 3), ("operations/validate_code", 25, 4), ("operations/subsumes", 10, 1), ("operations/translate", 100, 16),
     ("expand/isa_root_page_10", 400, 66), ("http/lookup", 100, 13), ("http/validate_code", 50, 7), ("http/expand_page_10", 750, 129), ("http/translate", 400, 120),
 ]
+
+
+# Two resources of the HL7 FHIR R4 core package (4.0.1), as the server serves
+# them from its resource directory, less the narrative: verified against
+# hl7.fhir.r4.core ValueSet-mimetypes.json and ConceptMap-cm-administrative-gender-v2.json.
+R4_MIMETYPES = {'resourceType': 'ValueSet', 'id': 'mimetypes', 'meta': {'lastUpdated': '2019-11-01T09:29:23.356+11:00', 'profile': ['http://hl7.org/fhir/StructureDefinition/shareablevalueset']}, 'extension': [{'url': 'http://hl7.org/fhir/StructureDefinition/structuredefinition-wg', 'valueCode': 'fhir'}, {'url': 'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status', 'valueCode': 'normative'}, {'url': 'http://hl7.org/fhir/StructureDefinition/structuredefinition-normative-version', 'valueCode': '4.0.0'}, {'url': 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm', 'valueInteger': 5}], 'url': 'http://hl7.org/fhir/ValueSet/mimetypes', 'identifier': [{'system': 'urn:ietf:rfc:3986', 'value': 'urn:oid:2.16.840.1.113883.4.642.3.1024'}], 'version': '4.0.1', 'name': 'Mime Types', 'title': 'MimeType', 'status': 'active', 'experimental': False, 'date': '2019-11-01T09:29:23+11:00', 'publisher': 'HL7 International - FHIR-Infrastructure', 'contact': [{'telecom': [{'system': 'url', 'value': 'http://hl7.org/fhir'}]}], 'description': 'This value set includes all possible codes from BCP-13 (http://tools.ietf.org/html/bcp13)', 'compose': {'include': [{'system': 'urn:ietf:bcp:13'}]}}
+
+R4_GENDER_V2_MAP = {'resourceType': 'ConceptMap', 'id': 'cm-administrative-gender-v2', 'url': 'http://hl7.org/fhir/ConceptMap/cm-administrative-gender-v2', 'version': '4.0.1', 'name': 'v2.AdministrativeGender', 'title': 'v2 map for AdministrativeGender', 'status': 'draft', 'date': '2019-11-01T09:29:23+11:00', 'publisher': 'HL7 (FHIR Project)', 'sourceCanonical': 'http://hl7.org/fhir/ValueSet/administrative-gender', 'targetCanonical': 'http://terminology.hl7.org/ValueSet/v2-0001', 'group': [{'source': 'http://hl7.org/fhir/administrative-gender', 'target': 'http://terminology.hl7.org/CodeSystem/v2-0001', 'element': [{'code': 'male', 'target': [{'code': 'M', 'equivalence': 'equal'}]}, {'code': 'female', 'target': [{'code': 'F', 'equivalence': 'equal'}]}, {'code': 'other', 'target': [{'code': 'A', 'equivalence': 'wider'}, {'code': 'O', 'equivalence': 'wider'}]}, {'code': 'unknown', 'target': [{'code': 'U', 'equivalence': 'equal'}]}]}]}

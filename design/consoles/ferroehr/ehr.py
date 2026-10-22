@@ -88,21 +88,21 @@ def coding(display, code, system=None, inline=False, href=None):
 
 # ---- E1 Subject line ----
 
-def masked(tail, ns=None, static=False, revealed=None, left=None, state_=None, show_ns=True):
+def masked(tail, ns=None, static=False, revealed=None, left=None, state_=None, show_ns=True, popover=None):
     """R13: a subject id, masked, ending in `tail`; its namespace as the tag."""
     return identifier(ns or "Subject id", tail, revealed=revealed, left=left, static=static, reveal_id="reveal",
-                      show_domain=bool(ns) and show_ns, state=state_, total=30)
+                      show_domain=bool(ns) and show_ns, state=state_, total=30, popover=popover)
 
 
-def subject_line(subject=True, queryable=True, modifiable=True, revealed=False, state_=None, expired=False):
+def subject_line(subject=True, queryable=True, modifiable=True, revealed=False, state_=None, expired=False, tail="537", popover=None):
     if subject:
         if revealed:
             who = masked("37", "demo.hospital.mrn", revealed="P-20481-537", left=24)
         else:
-            who = masked("537", "demo.hospital.mrn", state_=("expired" if expired else state_))
+            who = masked(tail, "demo.hospital.mrn", state_=("expired" if expired else state_), popover=popover)
         who = f'<span class="fui-subject-label">Subject</span>{who}'
     else:
-        who = '<span class="fui-subject-label">Subject</span><span class="fui-subject-none">No external subject: the EHR is bound to no outside identity</span>'
+        who = '<span class="fui-subject-label">Subject</span><span class="fui-subject-none">No external subject</span>'
     q = state("ok", "Queryable") if queryable else state("muted", "Not queryable")
     m = state("ok", "Modifiable") if modifiable else state("muted", "Not modifiable")
     return f'<div class="fui-subject"><span class="fui-subject-who">{who}</span><span class="fui-subject-states">{q}{m}</span></div>'
@@ -117,10 +117,10 @@ def version_cell(n, current=False, deleted=False):
     return f'<span class="fui-version-cell">Version {n}{mark}</span>'
 
 
-def at_time(id_="at", value="2026-10-14 12:00", what="the version current then"):
+def at_time(id_="at", value="2026-10-14 12:00", what="the version current then", href="#"):
     from parts import date_input
     return (f'<div class="fui-at-time">{field(id_, "At a time", input_(id_, value, "YYYY-MM-DD HH:MM", extra="inputmode=" + chr(34) + "numeric" + chr(34) + " spellcheck=" + chr(34) + "false" + chr(34)))}'
-            f'{button("secondary", "Open", "history")}<span class="fui-small fui-muted">Opens {what}.</span></div>')
+            f'{link_button("secondary", "Open", href, "history") if href != "#" else button("secondary", "Open", "history")}<span class="fui-small fui-muted">Opens {what}.</span></div>')
 
 
 # ---- B4, B10, B1, B3 from the library ----
@@ -136,6 +136,15 @@ def load_report(tone, title, counts=(), actions="", glyph=None):
 
 def section(title, body, count=None, actions="", cls=""):
     """B10: one part of a tab panel, a heading over it, a hairline above it."""
+    if title and "<!--cvh-->" in body and body.count("<!--cvh-->") == 1 and not actions:
+        # B10 + B1: the section head is the code view's one head; its meta and actions move up.
+        import re as _re
+        meta = _re.search(r"<!--cvm-->(.*?)<!--/cvm-->", body, _re.S).group(1)
+        what = _re.search(r"<!--cvp-->(.*?)<!--/cvp-->", body, _re.S).group(1)
+        body = _re.sub(r"<!--cvh-->.*?<!--/cvh-->", "", body, flags=_re.S)
+        actions = f'<span class="fui-codeview-meta">{meta}</span>'
+        if count is None:
+            count = what
     c = f' <span class="mk-count">· {count}</span>' if count is not None else ""
     a = f'<div class="fui-actions">{actions}</div>' if actions else ""
     h = f'<div class="fui-panel-section-head"><h3 class="fui-panel-section-title">{title}{c}</h3>{a}</div>' if title else ""
@@ -228,8 +237,10 @@ def code_lines(text, lang="json", current=None, diags=None, inline=True):
     return out
 
 
-def editor(text, lang="json", lang_word="Canonical JSON", label="the document", diags=None, current=None, dirty=True, pos="Ln 1, Col 1", tools=""):
+def editor(text, lang="json", lang_word="JSON", label="the document", diags=None, current=None, dirty=True, pos="Ln 1, Col 1", tools=""):
     """B2: the library editor with F8's toolbar above and the status line below."""
+    import re as _re
+    eid = "ed-" + (_re.sub(r"[^a-z0-9]+", "-", label.lower()).strip("-") or "doc")
     n = len(text.rstrip("\n").split("\n"))
     marks = ""
     if diags:
@@ -240,18 +251,18 @@ def editor(text, lang="json", lang_word="Canonical JSON", label="the document", 
     lw = f"{lang_word} · " if lang_word else ""
     bar = f'<div class="fui-editor-bar"><span>{lw}{plural(n, "line")}{marks}</span><div class="fui-actions">{tools}</div></div>'
     ed = (f'<div class="fui-editor"{inv}><div class="fui-editor-stack"><pre class="fui-editor-layer" aria-hidden="true">{code_lines(text, lang, current, diags, inline=False)}</pre>'
-          f'<textarea id="ed" name="ed" class="fui-editor-input" aria-label="{e(label)}" autocomplete="off" autocapitalize="off" spellcheck="false" wrap="soft">{e(text)}</textarea></div></div>')
+          f'<textarea id="{eid}" name="{eid}" class="fui-editor-input" aria-label="{e(label)}" autocomplete="off" autocapitalize="off" spellcheck="false" wrap="soft">{e(text)}</textarea></div></div>')
     d = '<span class="fui-editor-dirty">Changed since opened</span>' if dirty else ""
     status = f'<div class="fui-editor-status"><span>{pos}</span><span>UTF-8 · LF</span>{d}</div>'
-    return f'<section class="fui-card fui-panel fui-mapping-editor" aria-label="Editor">{bar}{ed}{status}</section>'
+    return f'<section class="fui-card fui-panel fui-mapping-editor{" is-empty" if not text.strip() else ""}" aria-label="Editor">{bar}{ed}{status}</section>'
 
 
 def codeview(title, text, lang="json", meta="", label=None, what="the document", current=None, diags=None, actions=True):
     """B1: a document as the CDR sent it, numbered, never wrapped."""
     n = len(text.rstrip("\n").split("\n"))
     acts = (copy_button("Copy", what) + icon_button("download", f"Download {what}")) if actions else ""
-    head = (f'<div class="fui-codeview-head"><span class="fui-codeview-path">{title}</span>'
-            f'<span class="fui-codeview-meta">{meta}<span>{plural(n, "line")}</span>{acts}</span></div>')
+    head = (f'<!--cvh--><div class="fui-codeview-head"><span class="fui-codeview-path"><!--cvp-->{title}<!--/cvp--></span>'
+            f'<span class="fui-codeview-meta"><!--cvm-->{meta}<span>{plural(n, "line")}</span>{acts}<!--/cvm--></span></div><!--/cvh-->')
     return (f'<div class="fui-codeview">{head}<div class="fui-code-panel fui-code-panel-numbered" role="region" aria-label="{e(label or title)}, one numbered line per line" tabindex="0">'
             f'<pre>{code_lines(text, lang, current, diags)}</pre></div></div>')
 
@@ -268,6 +279,14 @@ def diag_list(rows, current=None):
     return f'<ul class="fui-diags" aria-label="Diagnostics">{items}</ul>'
 
 
+def contrib_ref(short_id):
+    """A contribution id: a link where the mockup draws that contribution
+    (0199f1d0…4f16), otherwise the id in code with nowhere to go."""
+    if short_id == "0199f1d0…4f16":
+        return f'<a href="contribution.html"><code>{short_id}</code></a>'
+    return f'<code>{short_id}</code>'
+
+
 def facts(rows):
     return '<dl class="fui-facts">' + "".join(f"<dt>{k}</dt><dd>{v}</dd>" for k, v in rows) + "</dl>"
 
@@ -275,17 +294,19 @@ def facts(rows):
 # ---- M1 tree rows, E4 folder tree, E5 path browser ----
 
 def tree_item(label, code="", children=None, expanded=False, selected=False, on_path=False, leaf=False, focus=False,
-              href="#", glyph=None, extra="", ref=False, actions="", rename=None, count=None):
+              href="#", glyph=None, extra="", ref=False, actions="", rename=None, count=None, removed=False):
     if leaf:
         tog = '<span class="fui-tree-spacer" aria-hidden="true"></span>'
     else:
         tog = (f'<button type="button" class="fui-tree-toggle" tabindex="-1" aria-label="{"Collapse" if expanded else "Expand"} {e(label)}">'
                f'{icon("chevron-down" if expanded else "chevron-right", "14")}</button>')
-    cls = "fui-tree-item" + (" is-on-path" if on_path else "") + (" is-ref" if ref else "") + (" mk-focus-row" if focus else "")
+    cls = "fui-tree-item" + (" is-on-path" if on_path else "") + (" is-ref" if ref else "") + (" mk-focus-row" if focus else "") + (" is-removed" if removed else "")
     attrs = f' aria-selected="{"true" if selected else "false"}"' + (f' aria-expanded="{"true" if expanded else "false"}"' if not leaf else "")
     g = f'<span class="fui-tree-glyph">{icon(glyph, "14")}</span>' if glyph else ""
     if rename is not None:
         lab = input_("rename", rename, extra=f'aria-label="New name for {e(label)}"')
+    elif href == "#" or removed:
+        lab = f'<span class="fui-tree-label">{e(label)}</span>' + ('<span class="fui-sr-only"> (removed)</span>' if removed else "")
     else:
         lab = f'<a class="fui-tree-label" href="{href}" tabindex="-1">{e(label)}</a>'
     c = f'<span class="fui-tree-code">{e(code)}</span>' if code else ""
@@ -337,9 +358,9 @@ def reading(*secs):
 
 def results_head(count_html, window, view="table", export=True):
     seg = (f'<div role="group" aria-label="Show the results as" class="fui-segmented">'
-           f'<a href="#" class="fui-segment"{" aria-current=" + chr(34) + "true" + chr(34) if view == "table" else ""}>{icon("table-2", "14")}Table</a>'
-           f'<a href="#" class="fui-segment"{" aria-current=" + chr(34) + "true" + chr(34) if view == "chart" else ""}>{icon("chart-line", "14")}Chart</a></div>')
-    ex = (button("secondary", "Export CSV", "download", small=True) + button("secondary", "Export JSON", "download", small=True)) if export else ""
+           f'<button type="button" class="fui-segment" aria-pressed="{"true" if view == "table" else "false"}">{icon("table-2", "14")}Table</button>'
+           f'<button type="button" class="fui-segment" aria-pressed="{"true" if view == "chart" else "false"}">{icon("chart-line", "14")}Chart</button></div>')
+    ex = (f'<span class="fui-anchor">{button("secondary", "Export", "download", small=True, attrs="aria-haspopup=" + chr(34) + "menu" + chr(34) + " aria-expanded=" + chr(34) + "false" + chr(34))}</span>') if export else ""
     return seg + ex
 
 
@@ -373,16 +394,25 @@ def dialog(id_, glyph, title, body, actions, wide=False):
 def confirm_delete(id_, title, what, physical, confirm_label, extra=""):
     """A delete confirmation that says in plain words whether the delete is
     physical (gone for good) or logical (a deleted version on top)."""
-    tone = ("Physical delete", "bad") if physical else ("Logical delete", "warn")
+    tone = ("Permanent delete", "bad") if physical else ("Logical delete", "warn")
     body = f'<p>{badge(tone[1], tone[0])} {what}</p>{extra}'
     return dialog(id_, "trash-2", title, body, button("secondary", "Cancel", keys="Esc", attrs="autofocus") + f'<button type="button" class="fui-button fui-button-danger">{icon("trash-2", "16")}{confirm_label}</button>')
 
 
+def reveal_popover():
+    """R17: the reveal form, anchored 4 px under Reveal; a bottom sheet on a phone."""
+    return ('<div id="reveal" class="fui-popover" role="dialog" aria-labelledby="reveal-title"><p id="reveal-title" class="fui-popover-title">Reveal the subject id?</p>'
+            '<p class="fui-small fui-muted">Shown for 30 seconds and recorded in the audit log with your name and this reason.</p>'
+            + field("reveal-reason", "Reason", '<textarea id="reveal-reason" class="fui-textarea fui-textarea-prose" rows="2">Checking the record against the referral letter</textarea>',
+                    help_="Required. A colleague reading the audit log should understand it.")
+            + f'<div class="fui-cluster">{button("secondary", "Cancel", keys="Esc")}{button("primary", "Reveal for 30 s", "eye")}</div></div>')
+
+
 def reveal_dialog(what="the subject id of EHR 0199c2a4…1a01"):
-    body = ('<p>The value is read from the CDR, shown for 30 seconds, and the reveal is recorded in the audit trail with your name and this reason.</p>'
+    body = ('<p>The value is read from the CDR, shown for 30 seconds, and the reveal is recorded in the audit log with your name and this reason.</p>'
             '<div class="fui-modal-body">'
             + field("reveal-reason", "Reason", '<textarea id="reveal-reason" class="fui-textarea fui-textarea-prose" rows="2">Checking the record against the referral letter</textarea>',
-                    help_="Required. A colleague reading the audit trail should understand it.")
+                    help_="Required. A colleague reading the audit log should understand it.")
             + "</div>")
     return dialog("reveal", "eye", f"Reveal {what}?", body, button("secondary", "Cancel", "x") + button("primary", "Reveal for 30 s", "eye"))
 
@@ -398,13 +428,16 @@ def tag_editor(rows, collection, conflict=False):
         out.append(f'<tr><th scope="row" data-role="title"><code>{e(k)}</code></th>{td("Value", e(v), role="sub")}{td("Target path", target)}'
                    f'{td("", icon_button("x", f"Remove the tag {k}"), "fui-row-menu", role="menu")}</tr>')
     t = table("Tags", th("Key") + th("Value") + th("Target path") + th('<span class="fui-sr-only">Remove</span>'), out)
-    new = (f'<div class="fui-clause-filter">{field("tk", "Key", input_("tk", "", extra="class=" + chr(34) + "fui-input fui-mono" + chr(34)))}'
-           f'{field("tv", "Value (optional)", input_("tv", ""))}{field("tp", "Target path (optional)", input_("tp", "", extra="class=" + chr(34) + "fui-input fui-mono" + chr(34)))}'
+    kv, vv = ("priority", "high") if conflict else ("", "")
+    new = (f'<div class="fui-clause-filter">{field("tk", "Key", input_("tk", kv, extra="class=" + chr(34) + "fui-input fui-mono" + chr(34)))}'
+           f'{field("tv", "Value (optional)", input_("tv", vv))}{field("tp", "Target path (optional)", input_("tp", "", extra="class=" + chr(34) + "fui-input fui-mono" + chr(34)))}'
            f'{_button("secondary", "Set the tag", "tags")}</div>')
     top = ""
     if conflict:
-        top = ('<div role="alert" class="fui-alert"><p class="fui-alert-title">' + icon("circle-alert", "16") + ' Another client changed these tags since you opened them, so yours were not saved.</p></div>'
-               + f'<div class="fui-cluster">{_button("primary", "Reload the tags", "refresh-cw")}</div>')
+        from common import refusal as _refusal
+        top = (_refusal("Another client changed these tags since you opened them, so the CDR refused the save (412).", request="PUT /ferroehr/rest/openehr/v1/ehr/…/composition/…/tags",
+                        issues=[("bad", "Error", "412 Precondition Failed", "If-Match names the tag set you read; another client has changed it since.")])
+               + f'<div class="fui-cluster">{_button("secondary", "Reload the tags", "refresh-cw")}<span class="fui-small fui-muted">Your tag stays in Set a tag below; set it again after the reload.</span></div>')
     lst = section(f"Tags of the {collection}", intro(f"Tags stay on the {collection} across its versions; setting one commits no version.") + top + t, count=len(rows))
     add = section("Set a tag", new)
     return sections(lst, add)

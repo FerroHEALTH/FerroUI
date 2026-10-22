@@ -5,69 +5,63 @@
 # occurs, so the list only shrinks. One finding per line, tab-separated:
 # the check, the page, then what the check reports. Rewrite it with
 # FERROUI_DESIGN_BASELINE=write design/tools/check.sh <set>.
-overflow	sidebar-rail	1440	wider-than-box	a.fui-nav-entry	Code systems Code systems
-overflow	sidebar-rail	1440	wider-than-box	li	Code systems Code systems
-overflow	sidebar-rail	1440	wider-than-box	nav#sidebar.fui-sidebar.fui-sidebar-rail	Overview  Dashboard  Terminology  Code systems Cod
-overflow	sidebar-rail	1440	wider-than-box	ul.fui-nav-list	Code systems Code systems Value sets Concept maps 
 selects	code-system-conflict	1440	no-label	select#life-SF-1000	
 selects	code-system-conflict	1440	no-label	select#life-SF-1300	
 selects	code-system-conflict	1440	no-label	select#life-SF-1310	
 selects	code-system-conflict	1440	no-label	select#life-SF-1320	
 selects	code-system-conflict	1440	no-label	select#life-SF-1390	
-selects	code-system-conflict	1440	no-label	select#p-1t	
 selects	code-system-conflict	390	no-label	select#life-SF-1000	
 selects	code-system-conflict	390	no-label	select#life-SF-1300	
 selects	code-system-conflict	390	no-label	select#life-SF-1310	
 selects	code-system-conflict	390	no-label	select#life-SF-1320	
 selects	code-system-conflict	390	no-label	select#life-SF-1390	
-selects	code-system-conflict	390	no-label	select#p-1t	
 selects	code-system-edit	1440	no-label	select#life-SF-1000	
 selects	code-system-edit	1440	no-label	select#life-SF-1300	
 selects	code-system-edit	1440	no-label	select#life-SF-1310	
 selects	code-system-edit	1440	no-label	select#life-SF-1320	
 selects	code-system-edit	1440	no-label	select#life-SF-1390	
-selects	code-system-edit	1440	no-label	select#p-1t	
 selects	code-system-edit	390	no-label	select#life-SF-1000	
 selects	code-system-edit	390	no-label	select#life-SF-1300	
 selects	code-system-edit	390	no-label	select#life-SF-1310	
 selects	code-system-edit	390	no-label	select#life-SF-1320	
 selects	code-system-edit	390	no-label	select#life-SF-1390	
-selects	code-system-edit	390	no-label	select#p-1t	
 selects	code-system-expired	1440	no-label	select#life-SF-1000	
 selects	code-system-expired	1440	no-label	select#life-SF-1300	
 selects	code-system-expired	1440	no-label	select#life-SF-1310	
 selects	code-system-expired	1440	no-label	select#life-SF-1320	
 selects	code-system-expired	1440	no-label	select#life-SF-1390	
-selects	code-system-expired	1440	no-label	select#p-1t	
 selects	code-system-expired	390	no-label	select#life-SF-1000	
 selects	code-system-expired	390	no-label	select#life-SF-1300	
 selects	code-system-expired	390	no-label	select#life-SF-1310	
 selects	code-system-expired	390	no-label	select#life-SF-1320	
 selects	code-system-expired	390	no-label	select#life-SF-1390	
-selects	code-system-expired	390	no-label	select#p-1t	
 selects	code-system-refused	1440	no-label	select#life-SF-1000	
 selects	code-system-refused	1440	no-label	select#life-SF-1300	
 selects	code-system-refused	1440	no-label	select#life-SF-1310	
 selects	code-system-refused	1440	no-label	select#life-SF-1320	
 selects	code-system-refused	1440	no-label	select#life-SF-1390	
-selects	code-system-refused	1440	no-label	select#p-1t	
 selects	code-system-refused	390	no-label	select#life-SF-1000	
 selects	code-system-refused	390	no-label	select#life-SF-1300	
 selects	code-system-refused	390	no-label	select#life-SF-1310	
 selects	code-system-refused	390	no-label	select#life-SF-1320	
 selects	code-system-refused	390	no-label	select#life-SF-1390	
-selects	code-system-refused	390	no-label	select#p-1t	
 selects	code-system-saving	1440	no-label	select#life-SF-1000	
 selects	code-system-saving	1440	no-label	select#life-SF-1300	
 selects	code-system-saving	1440	no-label	select#life-SF-1310	
 selects	code-system-saving	1440	no-label	select#life-SF-1320	
 selects	code-system-saving	1440	no-label	select#life-SF-1390	
-selects	code-system-saving	1440	no-label	select#p-1t	
 selects	code-system-saving	390	no-label	select#life-SF-1000	
 selects	code-system-saving	390	no-label	select#life-SF-1300	
 selects	code-system-saving	390	no-label	select#life-SF-1310	
 selects	code-system-saving	390	no-label	select#life-SF-1320	
 selects	code-system-saving	390	no-label	select#life-SF-1390	
-selects	code-system-saving	390	no-label	select#p-1t	
+selects	configuration	390	no-id-or-name	select#tabs-sel	
+selects	configuration-actions	390	no-id-or-name	select#tabs-sel	
+selects	configuration-file-mode-dialog	390	no-id-or-name	select#tabs-sel	
+selects	configuration-key-hint	390	no-id-or-name	select#tabs-sel	
+selects	configuration-listener	390	no-id-or-name	select#tabs-sel	
+selects	configuration-no-oidc	390	no-id-or-name	select#tabs-sel	
+selects	configuration-sessions	390	no-id-or-name	select#tabs-sel	
+selects	configuration-sign-in	390	no-id-or-name	select#tabs-sel	
 selects	focus-rings	1440	no-label	select#f2	
 selects	focus-rings	390	no-label	select#f2	

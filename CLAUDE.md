@@ -55,7 +55,8 @@ never publish under it.
   templates and every component spec), the console stylesheet, the five
   brand themes, the reference templates and each console's page sources
   under `consoles/<console>/`, with the shared tools in `tools/` (build,
-  render, the overflow, hover, contrast and selects checks, and the sync
+  render, the overflow, hover, contrast, selects, popups and forms
+  checks, and the sync
   from the design folders). Renders go to the ignored `design/out/`.
 - `scripts/`: `vendor/lucide.sh`, `release/` (journey tools, the gallery
   site build, the crate publish), `checks/` (the committed guards), `gh/`

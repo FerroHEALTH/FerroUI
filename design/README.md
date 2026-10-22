@@ -17,7 +17,7 @@ match it.
 | `themes/` | One brand file per console: its accents and the two preview accents Your preferences draws. |
 | `templates/` | The reference templates' page table (`catalog.py`), manifest and the library's helpers (`common.py`, `data.py`). |
 | `consoles/<console>/` | One console's page modules, its manifest (`pages.py`), its page table (`catalog.py`), the words of its contact sheet (`console.py`), its brand icons (`assets/`) and its `baseline.tsv`. |
-| `tools/` | The shared tools: the build with its markup checks, the renderer, the browser checks (overflow, hover, contrast, selects, popups), the contact sheet, and the sync. |
+| `tools/` | The shared tools: the build with its markup checks, the renderer, the browser checks (overflow, hover, contrast, selects, popups, forms), the contact sheet, and the sync. |
 
 The mockups draw with the crate's own base stylesheet, copied beside the
 pages at build time, so a mockup shows what a console ships. The library's
@@ -58,7 +58,10 @@ The checks are the ones CI runs, one job per set:
   nine-digit run passes the BSN eleven-proof; no button-looking link leads
   nowhere; a count of one takes the singular; a page's and a section's
   intro is one sentence and a settings panel's at most two; no live page
-  links to a planned screen.
+  links to a planned screen. A set's route-only pages (FerroFED's `r-…`
+  pages, one per tab of every object the captured screens do not show)
+  are built and held to the same markup checks, but no browser check,
+  render or contact sheet reads them.
 - **Overflow** (`overflow.py`): at 1440 and 390 px, a box narrower than its
   content, anything past the viewport, text on text, text past an SVG
   card, a word broken inside itself, a short label forced over two lines.
@@ -73,6 +76,11 @@ The checks are the ones CI runs, one job per set:
   results panel and date picker, at 1440 light and dark and 390 light, is
   inside the screen, shows its items unclipped, is solid (ground, border
   and shadow) and stands out from what it opens over.
+- **Forms** (`forms.py`): at 1440 and 390 px light, fields side by side
+  share a top line, no text input's placeholder (or value, in a field
+  narrower than its row) is clipped, an open phone drawer is docked full
+  height at the left edge, and no two visible primary actions carry the
+  same label outside a dialog, menu or specimen.
 
 Each set's `baseline.tsv` lists the findings it carried when its design was
 approved. A check fails on a finding the baseline does not hold, and on a
@@ -108,6 +116,7 @@ python3 design/tools/sync.py ~/Downloads
 The sync copies the specification, the stylesheet, the themes and every
 console's page modules; drops a module that is identical to the shared one
 it would shadow; turns each console's `build.py` into `catalog.py` and its
-`index.py` into `console.py`; and adds the SPDX lines. It keeps each
+`index.py` into `console.py`, keeping a `route_pages()` beside the page
+table; and adds the SPDX lines. It keeps each
 `baseline.tsv` and never touches the shared tools. Run the checks after a
 sync and update the baselines in the same pull request.

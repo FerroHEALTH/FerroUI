@@ -199,18 +199,31 @@ def kbd(keys):
 TODAY = "2026-10-21"
 
 
-def when(iso, seconds=False):
+def tz(date):
+    """Central European time: summer time from the last Sunday of March to
+    the last Sunday of October (01:00 UTC)."""
+    import datetime as _d
+    y = int(date[:4])
+
+    def last_sunday(m):
+        d = _d.date(y, m, 31)
+        return d - _d.timedelta(days=(d.weekday() + 1) % 7)
+    day = _d.date.fromisoformat(date[:10])
+    return "CEST" if last_sunday(3) <= day < last_sunday(10) else "CET"
+
+
+def when(iso, seconds=False, absolute=False):
     """iso: 'YYYY-MM-DDTHH:MM[:SS]' or 'YYYY-MM-DD'."""
     date, _, clock = iso.partition("T")
     clock = clock.rstrip("Z")
     if clock and len(clock) == 5:
         clock += ":00"
-    full = f"{date} {clock} CEST" if clock else date
+    full = f"{date} {clock if seconds else clock[:5]} {tz(date)}" if clock else date
     if not clock:
         shown = date
     else:
         hm = clock if seconds else clock[:5]
-        shown = f"today {hm}" if date == TODAY else f"{date} {hm}"
+        shown = f"today {hm}" if date == TODAY and not absolute else f"{date} {hm}"
     dt = iso if iso.endswith("Z") or not clock else iso
     return f'<time class="fui-time" datetime="{e(dt)}" title="{e(full)}">{e(shown)}</time>'
 
@@ -244,7 +257,7 @@ def ago(iso, seconds=False):
             w = f"{days // 30} months ago"
         else:
             w = f"{days // 365} year{'s' if days >= 730 else ''} ago"
-    full = f"{date} {clock if seconds else clock[:5]} CEST"
+    full = f"{date} {clock if seconds else clock[:5]} {tz(date)}"
     return f'<time class="fui-time" datetime="{e(iso)}" title="{e(full)}">{w}</time>'
 
 
@@ -442,7 +455,7 @@ def tabs(label, items, current, focus=None, hover=None, scrolled=False):
         count = item[3] if len(item) > 3 else None
         cur = ' aria-current="page"' if key == current else ""
         cls = "fui-tab" + (" mk-focus" if key == focus else "") + (" mk-hover" if key == hover else "")
-        c = f'<span class="fui-tab-count" aria-label="{count} items">{count}</span>' if count is not None else ""
+        c = f'<span class="fui-tab-count" aria-label="{count} item{"" if count == 1 else "s"}">{count}</span>' if count is not None else ""
         links += f'<a href="{href}" class="{cls}"{cur} data-tab="{key}">{words}{c}</a>'
     sc = " mk-scrolled" if scrolled else ""
     return f'<nav class="fui-tabs{sc}" aria-label="{label}">{links}</nav>'
@@ -539,10 +552,10 @@ def th(label, key=None, sort=None, num=False, title=None, cls=""):
         return f"<th scope=\"col\"{cls_attr}{t}>{label}</th>"
     aria = sort or "none"
     glyph = {"ascending": "arrow-up", "descending": "arrow-down", "none": "arrow-up-down"}[aria]
-    return f'<th scope="col"{cls_attr}{t} aria-sort="{aria}"><a href="#" class="fui-sort">{label}{icon(glyph, "12")}</a></th>'
+    return f'<th scope="col"{cls_attr}{t} aria-sort="{aria}"><button type="button" class="fui-sort">{label}{icon(glyph, "12")}</button></th>'
 
 
-def td(label, body, cls="", role=None):
+def td(label, body, cls="", role=None, unit=None):
     """A body cell; its content is one node, so a stacked card's label and
     value grid keeps the value together. `role` places it in the
     work-list's phone card."""
@@ -550,6 +563,8 @@ def td(label, body, cls="", role=None):
         cls += " mk-nowrap"
     c = f' class="{cls}"' if cls else ""
     r = f' data-role="{role}"' if role else ""
+    if unit:
+        r += f' data-unit="{e(unit)}"'
     if "fui-table-actions" not in cls and "fui-row-menu" not in cls and "fui-row-check" not in cls and not body.startswith("<time"):
         body = f"<span>{body}</span>"
     return f'<td data-label="{e(label)}"{c}{r}>{body}</td>'
@@ -614,7 +629,7 @@ def countdown(left, total=30):
 
 
 def identifier(domain, tail, revealed=None, left=None, total=30, static=False, reveal_id=None, dots=6,
-               show_domain=True, state=None, copied=False):
+               show_domain=True, state=None, copied=False, popover=None):
     """A masked identifier: the domain tag (left out where the row already
     names the domain, review item 11), the mask ending in `tail`, and the
     reveal control. `revealed` draws the value with its countdown, Hide
@@ -644,7 +659,11 @@ def identifier(domain, tail, revealed=None, left=None, total=30, static=False, r
         attrs = 'aria-pressed="false"'
         if reveal_id:
             attrs += f' aria-controls="{reveal_id}"'
+        if popover:
+            attrs = attrs.replace('aria-pressed="false"', 'aria-haspopup="dialog" aria-expanded="true"')
         reveal = button("secondary", "Reveal", "eye", small=True, attrs=attrs, cls="fui-identifier-reveal")
+        if popover:
+            reveal = f'<span class="fui-anchor">{reveal}{popover}</span>'
     exp = '<span class="fui-identifier-expired" role="status">Hidden again after 30 s</span>' if state == "expired" else ""
     return f'<span class="fui-identifier">{name}{dom}{mask}{reveal}{exp}</span>'
 
@@ -889,7 +908,7 @@ NAV = [
     ]),
     ("definitions", "Definitions", [
         ("templates", "Templates", "file-code", "templates.html", None),
-        ("terminology", "Terminology", "book-open", "terminology.html", "probe"),
+        ("terminology", "Terminology", "book-open", "terminology.html", None),
     ]),
     ("queries", "Queries", [
         ("stored", "Stored queries", "scroll-text", "stored-queries.html", None),
@@ -897,7 +916,7 @@ NAV = [
     ]),
     ("console", "Console", [
         ("server", "Server", "server", "server.html", None),
-        ("audit", "Audit log", "shield-check", "audit.html", None),
+        ("audit", "Audit log", "shield-check", "audit.html", "admin"),
         ("subscriptions", "Subscriptions", "radio-tower", "subscriptions.html", "probe"),
         ("configuration", "Configuration", "file-text", "configuration.html", None),
         ("about", "About", "info", "about.html", None),
@@ -911,12 +930,12 @@ def health_dot(tone, label=None):
     return f'<span class="fui-dot fui-tone-{tone if tone != "muted" else "neutral"}{" is-muted" if tone == "muted" else ""}" role="img" aria-label="{e(label or word)}" title="{e(label or word)}"></span>'
 
 
-def sidebar(current, rail=False, tooltip=None, drawer=False, probes=True):
+def sidebar(current, rail=False, tooltip=None, drawer=False, probes=True, reader=False):
     groups = ""
     for gid, title, entries in NAV:
         items = ""
         for key, label, glyph, href, flag in entries:
-            if flag == "probe" and not probes:
+            if (flag == "probe" and not probes) or (flag == "admin" and reader):
                 continue
             cur = ' aria-current="page"' if key == current else ""
             tip = f'<span class="fui-tooltip" role="tooltip">{e(label)}</span>' if rail and tooltip == key else ""
@@ -950,7 +969,7 @@ def lockup():
     return f'<a href="dashboard.html" class="fui-lockup">{brand_mark()}<span class="fui-lockup-name">FerroEHR <span class="fui-lockup-accent">Viewer</span></span></a>'
 
 
-SEARCH_PLACEHOLDER = "EHR, composition, template or query"
+SEARCH_PLACEHOLDER = "Id, name or subject id"
 
 
 def search_control(value="", state=None, word="Find", placeholder=SEARCH_PLACEHOLDER, id_="find", results=None):
@@ -963,6 +982,8 @@ def search_control(value="", state=None, word="Find", placeholder=SEARCH_PLACEHO
         cls += " mk-focus"
     busy = ' aria-busy="true"' if state == "busy" else ""
     disabled = " disabled" if state == "disabled" else ""
+    if state == "disabled":
+        placeholder = "Search waits for the CDR"
     glyph = (
         '<span class="fui-spinner-ring" aria-hidden="true"></span>' if state == "busy" else icon("search", "16")
     )
@@ -974,7 +995,7 @@ def search_control(value="", state=None, word="Find", placeholder=SEARCH_PLACEHO
         f'<div class="fui-search-field"><span class="fui-search-glyph">{glyph}</span>'
         f'<input id="{id_}" name="q" type="search" class="fui-input" placeholder="{e(placeholder)}" value="{e(value)}" '
         f'autocomplete="off" spellcheck="false" aria-keyshortcuts="/"{expanded}{disabled} />'
-        f'<kbd class="fui-kbd fui-search-hint" aria-hidden="true">/</kbd></div>'
+        + ("" if disabled else '<kbd class="fui-kbd fui-search-hint" aria-hidden="true">/</kbd>') + '</div>'
         f'<button type="submit" class="fui-search-submit" aria-label="{e(word)}"{disabled}>{icon("search", "16")}<span class="fui-search-word">{e(word)}</span></button>'
         f"{res}</form>"
     )
@@ -988,7 +1009,7 @@ def theme_group(theme):
     return ('<div class="fui-menu-label" id="theme-label">Theme</div>'
             '<div role="group" aria-labelledby="theme-label" class="fui-segmented">'
             + "".join(
-                f'<button type="submit" class="fui-segment" aria-pressed="{"true" if v == theme else "false"}">{icon(g, "14")}{w}</button>'
+                f'<button type="button" role="menuitemradio" class="fui-segment" aria-checked="{"true" if v == theme else "false"}">{icon(g, "14")}{w}</button>'
                 for v, w, g in (("light", "Light", "sun"), ("dark", "Dark", "moon"), ("system", "System", "monitor")))
             + "</div>")
 
@@ -1006,13 +1027,13 @@ def operator_menu(open_=False, focus=None, theme="light", reader=False):
         MENU_SEP,
         menu_item("Sign out", "log-out", href="sign-in-signed-out.html", focus=(focus == "signout")),
     ]
-    return menu(items, label=who) if open_ else ""
+    return menu(items, label=who, sheet=True) if open_ else ""
 
 
 CDR_STATUS = {
     "up": ("ok", "CDR up"),
     "down": ("bad", "CDR unreachable"),
-    "unknown": ("warn", "CDR unknown"),
+    "unknown": ("neutral", "CDR unknown"),
     "refused": ("bad", "CDR refused 401"),
 }
 VIEWER_VERSION = "4.3.10"
@@ -1025,7 +1046,8 @@ def topbar(status="up", search_value="", search_state=None, results=None, menu_o
     trigger = (f'<button type="button" class="fui-button fui-button-ghost fui-operator" aria-haspopup="menu" aria-expanded="{"true" if menu_open else "false"}" aria-controls="operator-menu">'
                f'{icon("circle-user", "16")}<span class="fui-operator-name">{who}</span>{icon("chevron-down", "14")}</button>')
     operator = '<span class="fui-anchor">' + trigger + operator_menu(menu_open, menu_focus, menu_theme, reader) + "</span>"
-    title = f' title="FerroEHR {VIEWER_VERSION} at https://cdr.example.org · {profile} deployment · answered 13 s ago"' if status == "up" else ""
+    title = {"up": f' title="FerroEHR {VIEWER_VERSION} at https://cdr.example.org · {profile} deployment · answered 13 s ago"',
+             "down": ' title="Last answered 09:38"', "unknown": ' title="No answer since 09:41; the next request will tell"'}.get(status, "")
     end = f'<span class="fui-pill fui-tone-{tone} fui-roomy-only"{title}>{word}</span>{operator}'
     drawer = f'<button type="button" class="fui-icon-button fui-drawer-only" popovertarget="sidebar" aria-controls="sidebar" aria-label="Menu">{icon("menu", "18")}</button>'
     return (
@@ -1073,7 +1095,7 @@ def shell(title, current, content, density="comfortable", status="up", overlay=N
         + f'<body><div class="{cls}"><a href="#main" class="fui-skip">Skip to the page</a>'
         + topbar(status, search_value, search_state, results, menu_open, menu_theme, menu_focus, reader, "sandbox" if sandbox else "production")
         + ((sandbox_band().replace(' · <a href="server-sandbox.html">Details</a>', "") if current == "server" else sandbox_band()) if sandbox else "")
-        + f'<div class="fui-body">{sidebar(current, rail, rail_tip, drawer, probes)}{dr}<main id="main" class="fui-main"><div class="fui-column">{content}</div>{dock_html}</main></div>'
+        + f'<div class="fui-body">{sidebar(current, rail, rail_tip, drawer, probes, reader)}{dr}<main id="main" class="fui-main"><div class="fui-column">{content}</div>{dock_html}</main></div>'
         + footer()
         + toast_html
         + ov

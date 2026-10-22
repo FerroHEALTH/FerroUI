@@ -12,7 +12,7 @@ from common import (
     refusal, select, shell, table, tabbed, tabs, td, th,
 )
 from bridge import SEV, input_tools, json_html, json_panel, pane, pane_tools, plan_badge, planned, proposed, section, state, transform
-from data import BUNDLE_JSON, COMPOSITION_FLAT, HL7_SEGMENTS, OBSERVATION_JSON, PATIENT_REF
+from data import BUNDLE_JSON, COMPOSITION_FLAT, HL7_BUNDLE, HL7_RAW, HL7_SEGMENTS, OBSERVATION_JSON, PATIENT_REF
 
 SUB = "Runs the bridge's operations on what you enter, and keeps nothing."
 
@@ -56,7 +56,7 @@ def options(fields, run):
 
 
 def tofhir_options(running=False, off=None):
-    fmt = seg_field("Composition format", "fmt", [("canonical", "canonical"), ("flat", "FLAT")], "flat")
+    fmt = seg_field("Composition format", "fmt", [("canonical", "Canonical"), ("flat", "FLAT")], "flat")
     tid = field("pg-tid", "Template", select("pg-tid", [("synthetic.vital_signs.v1", "synthetic.vital_signs.v1"), ("synthetic.lab_report.v1", "synthetic.lab_report.v1")], "synthetic.vital_signs.v1"))
     pat = field("pg-pat", 'Patient<span class="fui-field-key">context.patient</span>', input_("pg-pat", PATIENT_REF, extra='spellcheck="false" class="fui-input fui-mono"'))
     return options(fmt + tid + pat, run_button("Convert to FHIR", running, off, "$tofhir"))
@@ -76,17 +76,19 @@ def status_line(tone, word, rest=""):
     return f'<span class="fui-transform-status">{state(tone, word)}{r}</span>'
 
 
-def tofhir_panel(answer=None, running=False, invalid=None, status_html="", off=None, refused=None):
-    left_body = json_editor(COMPOSITION_FLAT if invalid is None else "", "Composition, canonical or FLAT JSON", invalid=bool(invalid))
+def tofhir_panel(answer=None, running=False, invalid=None, status_html="", off=None, refused=None, composition=COMPOSITION_FLAT, off_line=None):
+    left_body = json_editor(composition if invalid is None else "", "Composition, canonical or FLAT JSON", invalid=bool(invalid))
     if invalid:
         left_body += f'<p class="fui-help fui-error fui-transform-error">{icon("circle-alert", "14")} {invalid}</p>'
-    left = pane("Composition", left_body, '<span class="fui-tag">FLAT</span>', input_tools("the composition", example=False))
+    left = pane("Composition", left_body, '<span class="fui-tag">FLAT</span>', input_tools("the composition"))
     if running:
-        rbody = '<div class="fui-transform-body"><span class="fui-spinner"><span class="fui-spinner-ring" aria-hidden="true"></span>Converting with $tofhir</span></div>'
+        rbody = '<div class="fui-transform-body"><span class="fui-spinner"><span class="fui-spinner-ring" aria-hidden="true"></span>Converting to FHIR</span></div>'
     elif answer:
         rbody = json_out(answer, "The Bundle as JSON")
     elif refused:
         rbody = f'<div class="fui-transform-body">{refused}</div>'
+    elif off_line:
+        rbody = off_line
     else:
         rbody = answer_idle()
     right = pane("Bundle", rbody, '<span class="fui-tag">FHIR R4</span>', pane_tools("the Bundle") if answer else "", status_html)
@@ -106,24 +108,24 @@ def page_playground_running():
 
 
 def page_playground_answered():
-    return page_layout("tofhir", tofhir_panel(answer=BUNDLE_JSON, status_html=status_line("ok", "200", "$tofhir · 1 Observation · 84 ms")))
+    return page_layout("tofhir", tofhir_panel(answer=BUNDLE_JSON, status_html=status_line("ok", "Converted", "1 Observation · 84 ms · $tofhir 200")))
 
 
 def page_playground_refused():
-    rf = refusal("The bridge refused the transform.", request="POST /fhir/$tofhir",
-                 issues=[("bad", "error", "processing", "No context maps template synthetic.lab_report.v1 with the archetype openEHR-EHR-OBSERVATION.body_weight.v2."),
-                         ("warn", "warning", "not-found", "The FLAT path of the body weight is in no template the context names.")])
-    return page_layout("tofhir", tofhir_panel(refused=rf, status_html=status_line("bad", "422", "$tofhir · 1 error, 1 warning")))
+    rf = refusal("The bridge refused the conversion.", request="POST /fhir/$tofhir",
+                 issues=[("bad", "error", "processing", "The body weight unit is lb, which synthetic.vital_signs.v1 does not allow: use kg or g.")])
+    comp = COMPOSITION_FLAT.replace('"vitals/body_weight/any_event:0/weight|unit": "kg"', '"vitals/body_weight/any_event:0/weight|unit": "lb"')
+    return page_layout("tofhir", tofhir_panel(refused=rf, composition=comp, status_html=status_line("bad", "Refused", "1 error · $tofhir 422")))
 
 
 def page_playground_off():
-    rf = refusal("The operations lane is off, so the bridge answers no transform.", request="POST /fhir/$tofhir",
-                 issues=[("neutral", "cause", "operations.enabled", 'is false. It is set in ferrobridge.toml; <a href="facade-settings.html">the FHIR facade\'s Settings</a> show it.')])
-    return page_layout("tofhir", tofhir_panel(refused=rf, status_html=status_line("bad", "503", "$tofhir"), off="The operations lane is off on this bridge"))
+    line = ('<p class="fui-transform-empty">Conversions are off on this bridge (set in ferrobridge.toml). <a href="facade-settings.html">See the setting</a> '
+            '<span class="fui-small fui-muted"><code>operations.enabled = false</code></span></p>')
+    return page_layout("tofhir", tofhir_panel(off_line=line, off="Conversions are off on this bridge"))
 
 
 def page_playground_example():
-    menu_html = menu([menu_item(f"synthetic.{t}", "file-code") for t in ("vital_signs.v1", "lab_report.v1", "diagnosis.v1")], label="Example from a template", sheet=True)
+    menu_html = menu([menu_item("From synthetic.vital_signs.v1", "file-code", desc="The template chosen above")], label="Example", sheet=True)
     ex = f'<span class="fui-anchor"><button type="button" class="fui-button fui-button-ghost fui-button-small" aria-haspopup="menu" aria-expanded="true">{icon("file-code", "16")}Example{icon("chevron-down", "14")}</button>{menu_html}</span>'
     left = pane("Composition", json_editor(COMPOSITION_FLAT, "Composition"), '<span class="fui-tag">FLAT</span>', ex + button("ghost", "Load file", "upload", small=True) + button("ghost", "Clear", "x", small=True))
     right = pane("Bundle", answer_idle(), '<span class="fui-tag">FHIR R4</span>')
@@ -142,15 +144,51 @@ COMPOSITION_CANONICAL = """{
   "language": { "terminology_id": { "value": "ISO_639-1" }, "code_string": "en" },
   "territory": { "terminology_id": { "value": "ISO_3166-1" }, "code_string": "NL" },
   "composer": { "_type": "PARTY_IDENTIFIED", "name": "Demo Clinician" },
-  "content": [ "… 1 OBSERVATION: body_weight, 72.4 kg …" ]
+  "content": [
+    {
+      "_type": "OBSERVATION",
+      "name": { "value": "Body weight" },
+      "archetype_node_id": "openEHR-EHR-OBSERVATION.body_weight.v2",
+      "language": { "terminology_id": { "value": "ISO_639-1" }, "code_string": "en" },
+      "encoding": { "terminology_id": { "value": "IANA_character-sets" }, "code_string": "UTF-8" },
+      "subject": { "_type": "PARTY_SELF" },
+      "data": {
+        "_type": "HISTORY",
+        "archetype_node_id": "at0002",
+        "name": { "value": "History" },
+        "origin": { "value": "2026-10-20T08:15:00+02:00" },
+        "events": [
+          {
+            "_type": "POINT_EVENT",
+            "archetype_node_id": "at0003",
+            "name": { "value": "Any event" },
+            "time": { "value": "2026-10-20T08:15:00+02:00" },
+            "data": {
+              "_type": "ITEM_TREE",
+              "archetype_node_id": "at0001",
+              "name": { "value": "Tree" },
+              "items": [
+                {
+                  "_type": "ELEMENT",
+                  "archetype_node_id": "at0004",
+                  "name": { "value": "Weight" },
+                  "value": { "_type": "DV_QUANTITY", "magnitude": 72.4, "units": "kg" }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
 }"""
 
 
 def page_playground_toopenehr():
-    fmt = seg_field("Composition format (answer)", "fmt2", [("canonical", "canonical"), ("flat", "FLAT")], "canonical")
-    left = pane("Bundle", json_editor(BUNDLE_JSON, "Bundle, JSON"), '<span class="fui-tag">FHIR R4</span>', input_tools("the Bundle", example=False))
-    right = pane("Composition", json_out(COMPOSITION_CANONICAL, "The composition"), '<span class="fui-tag">canonical</span>', pane_tools("the composition"),
-                 status_line("ok", "200", "$toopenehr · 1 entry · 102 ms"))
+    fmt = seg_field("Composition format (answer)", "fmt2", [("canonical", "Canonical"), ("flat", "FLAT")], "canonical")
+    left = pane("Bundle", json_editor(BUNDLE_JSON, "Bundle, JSON"), '<span class="fui-tag">FHIR R4</span>', input_tools("the Bundle"))
+    right = pane("Composition", json_out(COMPOSITION_CANONICAL, "The composition"), '<span class="fui-tag">Canonical</span>', pane_tools("the composition"),
+                 status_line("ok", "Converted", "1 entry · 102 ms · $toopenehr 200"))
     return page_layout("toopenehr", f'<div class="fui-panel">{options(fmt, run_button("Convert to openEHR", op="$toopenehr"))}{transform(left, right)}</div>')
 
 
@@ -173,16 +211,16 @@ def rowgraph():
         '<div class="fui-rowgraph">'
         + tb("MEASUREMENT", "1 row · synthetic_measurement", [("measurement_concept_id", "3025315 · Body weight"), ("value_as_number", "72.4"),
                                                                ("unit_concept_id", "9529 · kilogram"), ("measurement_date", "2026-10-20"), ("person_id", "the EHR's person")])
-        + tb("OBSERVATION", "1 row · the method", [("observation_concept_id", cz), ("value_as_concept_id", cz), ("observation_date", "2026-10-20")])
-        + tb("PERSON", "placeholder · create on first sight", [("person_id", "new"), ("gender_concept_id", "0"), ("year_of_birth", "0")])
+        + tb("OBSERVATION", "1 row · synthetic_measurement, the weighing method", [("observation_concept_id", cz), ("value_as_concept_id", cz), ("observation_date", "2026-10-20")])
+        + tb("PERSON", "a placeholder row, created on first sight", [("person_id", "new"), ("gender_concept_id", cz), ("year_of_birth", "0")])
         + "</div>")
 
 
 def omop_panel(answered):
     note = '<div class="fui-panel-section">' + proposed("A dry run of the OMOCL engine on one composition: the rows it would write, table by table, concept 0 marked. It needs an operator API route the bridge does not have.") + "</div>"
-    left = pane("Composition", json_editor(COMPOSITION_FLAT, "Composition, FLAT JSON"), '<span class="fui-tag">FLAT</span>', input_tools("the composition", example=False))
+    left = pane("Composition", json_editor(COMPOSITION_FLAT, "Composition, FLAT JSON"), '<span class="fui-tag">FLAT</span>', input_tools("the composition"))
     if answered:
-        right = pane("Rows", rowgraph(), '<span class="fui-tag">OMOP CDM v5.4</span>', pane_tools("the rows"), status_line("warn", "3 rows", "2 concept 0"))
+        right = pane("Rows", rowgraph(), '<span class="fui-tag">OMOP CDM v5.4</span>', pane_tools("the rows"), status_line("warn", "3 values with no standard concept", "concept 0, in 3 rows"))
     else:
         right = pane("Rows", answer_idle("Preview to see the rows."), '<span class="fui-tag">OMOP CDM v5.4</span>')
     tid = field("om-tid", "Template", select("om-tid", [("synthetic.vital_signs.v1", "synthetic.vital_signs.v1")], "synthetic.vital_signs.v1"))
@@ -202,11 +240,7 @@ def page_playground_omop_answered():
 def hl7_raw():
     from data import HL7_SEGMENTS as S
     lines = []
-    raw = ["MSH|^~\\&|DEMO-LAB|DEMO-HOSP|FERROBRIDGE|DEMO-REGIO|20261021094211||ORU^R01^ORU_R01|MSG-2026-1021-0007|P|2.5.1",
-           "PID|1||SYN-0042^^^DEMO-HOSP^MR||TEST^SYNTHETIC^^^^^L||19800101|U",
-           "OBR|1|ORD-77^DEMO-LAB|FIL-77^DEMO-LAB|29463-7^Body weight^LN|||20261021091500",
-           "OBX|1|NM|29463-7^Body weight^LN||72.4|kg^kilogram^UCUM|||||F"]
-    for l in raw:
+    for l in HL7_RAW:
         seg, rest = l[:3], l[3:]
         rest = "".join(f'<span class="fui-hl7-sep">{e(ch)}</span>' if ch in "|^~&\\" else e(ch) for ch in rest)
         lines.append(f'<span class="fui-hl7-segid">{seg}</span>{rest}')
@@ -223,10 +257,10 @@ def hl7_segments():
 
 def hl7_panel(answered):
     note = '<div class="fui-panel-section">' + proposed("A dry run of the HL7 v2 face on one message: how the guide's maps read it, and the Bundle it maps to. Nothing is committed and no acknowledgment is sent. It needs an operator API route the bridge does not have.") + "</div>"
-    left = pane("Message", hl7_raw(), '<span class="fui-tag">v2.5.1</span>', input_tools("the message", example=False))
+    left = pane("Message", hl7_raw(), '<span class="fui-tag">v2.5.1</span>', input_tools("the message"))
     if answered:
-        right = pane("Bundle", json_out(BUNDLE_JSON.replace('"collection"', '"transaction"'), "The Bundle as JSON"), '<span class="fui-tag">FHIR R4</span>', pane_tools("the Bundle"),
-                     status_line("ok", "would answer AA", "1 Observation"))
+        right = pane("Bundle", json_out(HL7_BUNDLE, "The message Bundle as JSON"), '<span class="fui-tag">FHIR R4</span>', pane_tools("the Bundle"),
+                     status_line("ok", "Would answer AA", "9 resources · the facade commits 1"))
         segs = section("The message as read", hl7_segments(), "4 segments")
     else:
         right = pane("Bundle", answer_idle("Map to see the Bundle."), '<span class="fui-tag">FHIR R4</span>')
@@ -253,25 +287,27 @@ def issue_list(items):
         else:
             tone, g, w = SEV[sev]
         out += (f'<li class="fui-diag fui-tone-{tone}"><span class="fui-diag-sev">{icon(g, "14")}{w}</span>'
-                f'<span class="fui-diag-head"><code class="fui-diag-code">{e(code)}</code><span class="fui-diag-where">{e(where)}</span></span><p class="fui-diag-msg">{e(msg)}</p></li>')
+                f'<span class="fui-diag-head">{"" if sev == "information" else '<code class="fui-diag-code">' + e(code) + '</code>'}<span class="fui-diag-where">{e(where)}</span></span><p class="fui-diag-msg">{e(msg)}</p></li>')
     return f'<ul class="fui-diags" aria-label="Issues, by severity">{out}</ul>'
 
 
 def validate_panel(result=None, refused=None):
     rt = field("v-type", "Resource type", select("v-type", [("Observation", "Observation"), ("Condition", "Condition"), ("AllergyIntolerance", "AllergyIntolerance")], "Observation"))
     text = OBSERVATION_JSON if result != "issues" else OBSERVATION_JSON.replace('  "status": "final",\n', "")
-    left = pane("Resource", json_editor(text, "Resource, JSON"), '<span class="fui-tag">FHIR R4</span>', input_tools("the resource", example=False))
+    if refused:
+        text = CONDITION_JSON
+    left = pane("Resource", json_editor(text, "Resource, JSON"), '<span class="fui-tag">FHIR R4</span>', input_tools("the resource"))
     st = ""
     if result == "issues":
         body = issue_list([("error", "required", "Observation.status", "Observation.status: minimum required = 1, but only found 0."),
                            ("warning", "invariant dom-6", "Observation", "A resource should have narrative for robust management.")])
-        st = status_line("bad", "1 error", "$validate · 1 warning")
+        st = status_line("bad", "1 error, 1 warning", "$validate")
     elif result == "clean":
-        body = issue_list([("information", "informational", "Observation", "No issue: the resource conforms to synthetic-body-weight.")])
-        st = status_line("ok", "No issue", "$validate")
+        body = issue_list([("information", "informational", "Observation", "No issues: checked against the profile in meta.profile, through the facade's dry run.")])
+        st = status_line("ok", "No issues", "$validate")
     elif refused:
         body = f'<div class="fui-transform-body">{refused}</div>'
-        st = status_line("bad", "400", "$validate")
+        st = status_line("bad", "Refused", "$validate 400")
     else:
         body = answer_idle("Validate to see the issues.")
     right = pane("Issues", body, '<span class="fui-tag">OperationOutcome</span>', pane_tools("the OperationOutcome") if result in ("issues", "clean") else "", st)
@@ -290,7 +326,20 @@ def page_validate_clean():
     return page_layout("validate", validate_panel("clean"))
 
 
+CONDITION_JSON = """{
+  "resourceType": "Condition",
+  "clinicalStatus": {
+    "coding": [ { "system": "http://terminology.hl7.org/CodeSystem/condition-clinical", "code": "active" } ]
+  },
+  "code": {
+    "coding": [ { "system": "http://snomed.info/sct", "code": "38341003", "display": "Hypertensive disorder" } ]
+  },
+  "subject": { "reference": "Patient/synthetic-0042" },
+  "onsetDateTime": "2026-09-14"
+}"""
+
+
 def page_validate_refused():
-    rf = refusal("The resource's resourceType is not the type chosen.", request="POST …/Observation/$validate",
-                 issues=[("bad", "error", "structure", "The body names resourceType Condition; choose Condition, or send an Observation.")])
+    rf = refusal("The resource's type is not the type chosen.", request="POST …/Observation/$validate",
+                 issues=[("bad", "error", "structure", "the body is a Condition: choose Condition, or send an Observation.")])
     return page_layout("validate", validate_panel(refused=rf))

@@ -35,7 +35,7 @@ def dot_svg(tone, x, y):
     if tone == "warn":
         return f'<rect class="fui-tdot fui-tone-warn" x="{x - 3.5}" y="{y - 3.5}" width="7" height="7" transform="rotate(45 {x} {y})"/>'
     if tone == "bad":
-        return f'<path class="fui-tdot fui-tone-bad" d="M{x} {y - 4.5} L{x + 4.5} {y + 3.5} L{x - 4.5} {y + 3.5} Z"/>'
+        return f'<path class="fui-tdot fui-tdot-cross fui-tone-bad" d="M{x - 3.5} {y - 3.5} L{x + 3.5} {y + 3.5} M{x + 3.5} {y - 3.5} L{x - 3.5} {y + 3.5}" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>'
     if tone in ("neutral", "muted", "planned"):
         return f'<circle class="fui-tdot fui-tdot-ring" cx="{x}" cy="{y}" r="3.5"/>'
     return f'<circle class="fui-tdot fui-tone-ok" cx="{x}" cy="{y}" r="4"/>'
@@ -78,7 +78,7 @@ def curve(x1, y1, x2, y2, tone, tip, path=False, dim=False, label=None):
 
 
 # The bridge as the dashboard draws it. (id, column, row y, kind glyph, name, line, tone, href)
-def nodes(states):
+def nodes(states, dev=False):
     s = {"facade": "ok", "ops": "ok", "hl7": "ok", "etl": "ok", "cdr": "ok", "term": "ok", "cdm": "ok"}
     s.update(states or {})
     line = {
@@ -87,13 +87,13 @@ def nodes(states):
         "hl7": {"ok": "On · MLLP :2575", "muted": "Off", "bad": "Listener down"},
         "etl": {"ok": "Batch · its own process", "neutral": "No run yet"},
         "cdr": {"ok": "FerroEHR · Up", "bad": "No answer · 3 attempts", "warn": "Slow · 2,940 ms"},
-        "term": {"ok": "FerroTERM · Up", "bad": "Unreachable · 503", "neutral": "Not configured"},
+        "term": {"ok": "FerroTERM · Up", "warn": "Degraded · answers 503", "bad": "No answer", "neutral": "Not configured"},
         "cdm": {"ok": "PostgreSQL · Up", "bad": "Unreachable"},
     }
     def ln(k):
         return line[k].get(s[k], WORD[s[k]])
     return s, [
-        ("clients", "call", 1.0, "clients", "FHIR clients", "SMART App Launch", "ok", "facade-security.html"),
+        ("clients", "call", 1.0, "clients", "FHIR clients", "No sign-in" if dev else "SMART App Launch", "ok", "facade-security.html"),
         ("senders", "call", 2.5, "senders", "HL7 v2 senders", "2 accepted senders", "ok" if s["hl7"] != "muted" else "muted", "hl7v2-settings.html"),
         ("sched", "call", 3.5, "sched", "ETL run", "by your scheduler", "ok", "omop.html"),
         ("facade", "face", 0.5, "facade", "FHIR facade", ln("facade"), s["facade"], "facade.html"),
@@ -118,8 +118,8 @@ def worst(ts):
     return "muted"
 
 
-def flow_svg(states=None, hover=None, pulse_frame=False, hub_line="9 contexts · 4 OMOCL", hub_tone="ok"):
-    s, ns = nodes(states)
+def flow_svg(states=None, hover=None, pulse_frame=False, hub_line="9 contexts · 4 OMOCL", hub_tone="ok", dev=False):
+    s, ns = nodes(states, dev)
     col = {"call": (X_CALL, W_CALL), "face": (X_FACE, W_FACE), "up": (X_UP, W_UP)}
     pos = {}
     N, E = [], []
@@ -153,7 +153,7 @@ def flow_svg(states=None, hover=None, pulse_frame=False, hub_line="9 contexts ·
         if tone == "bad":
             label = "no answer" if b == "cdr" else ("503" if b == "term" else "down")
         elif tone == "warn":
-            label = "2,940 ms"
+            label = "503" if b == "term" else "2,940 ms"
         tip = f"{a} to {b}: {WORD[tone]}"
         E.append(curve(x1, y1, x2, y2, tone, tip, path=path, dim=dim, label=label))
     if chain:
@@ -185,10 +185,10 @@ def flow_svg(states=None, hover=None, pulse_frame=False, hub_line="9 contexts ·
             f'aria-label="The bridge as a flow: callers, faces, the mapping set and the upstreams; each card opens its page">{inner}</svg></div>')
 
 
-def flow_list(states=None, hub_line="9 contexts · 4 OMOCL", hub_tone="ok"):
+def flow_list(states=None, hub_line="9 contexts · 4 OMOCL", hub_tone="ok", dev=False):
     """The phone twin: the same cards as rows, lane by lane, each opening its page."""
     from common import health_dot
-    _, ns = nodes(states)
+    _, ns = nodes(states, dev)
     lanes = [("Callers", "call"), ("Faces", "face"), ("Mapping set", "hub"), ("Upstreams", "up")]
     out = ""
     for title, col in lanes:
@@ -216,11 +216,11 @@ def help_dialog():
             f'<div class="fui-dialog-actions">{button("secondary", "Close", keys="Esc")}</div></div>')
 
 
-def flow_card(states=None, hover=None, pulse_frame=False, foot=None, hub_line="9 contexts · 4 OMOCL", hub_tone="ok"):
+def flow_card(states=None, hover=None, pulse_frame=False, foot=None, hub_line="9 contexts · 4 OMOCL", hub_tone="ok", dev=False):
     from common import icon
-    f = foot or "3 faces on, the ETL a batch · 3 of 3 upstreams up."
+    f = foot or "3 faces on, and the ETL runs as a batch · 3 of 3 upstreams up."
     help_ = f'<a href="flow-help.html" class="fui-button fui-button-ghost fui-button-small" aria-haspopup="dialog">{icon("info", "16")}How it is drawn</a>'
     head = (f'<div class="fui-panel-head"><h2 class="fui-card-title"><span>Flow</span></h2>'
             f'<div class="fui-actions">{help_}{link_button("secondary", "Connections", "connections.html", glyph_end="chevron-right", small=True)}</div></div>')
-    return (f'<section class="fui-card fui-panel fui-pipeline" aria-label="Flow">{head}{flow_svg(states, hover, pulse_frame, hub_line, hub_tone)}{flow_list(states, hub_line, hub_tone)}'
+    return (f'<section class="fui-card fui-panel fui-pipeline" aria-label="Flow">{head}{flow_svg(states, hover, pulse_frame, hub_line, hub_tone, dev)}{flow_list(states, hub_line, hub_tone, dev)}'
             f'<p class="fui-pipeline-foot">{f}</p></section>')
