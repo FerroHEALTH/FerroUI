@@ -94,6 +94,8 @@ jobs:
         run: git ls-files -z '*.sh' | xargs -0 -r shellcheck --severity=style
       - name: The release milestone script refuses open items and closes only after every leg
         run: bash scripts/release/milestone.sh --self-test
+      - name: The crate version guard reads files past the pipe buffer and refuses a missing section
+        run: bash scripts/checks/crate-version-guard.sh --self-test
 
   comment-style:
     name: comment-style

@@ -251,37 +251,32 @@ pub fn has_gaps(chart: &LineChart) -> bool {
         .any(|series| series.points.iter().any(|point| !point.1.is_finite()))
 }
 
-/// The parts every chart's SVG shares: its opening tag with title and
-/// description, the grid lines and labels of four Y ticks, and the X ticks.
-fn frame(
-    id: &str,
-    label: &str,
-    summary: &str,
-    height: f64,
-    x: Scale,
-    y: Scale,
-    x_ticks: &[(f64, String)],
-) -> String {
+/// The parts every chart's drawing shares that no series changes: the
+/// labels and grid lines of the Y ticks and the labels of the X ticks.
+#[derive(Debug, Clone)]
+struct Frame {
+    /// The drawing's height, as its `height` attribute.
+    height: String,
+    /// The `viewBox` of the stretched plot.
+    view_box: String,
+    /// The Y labels, a `<span>` each, the highest first.
+    y_labels: String,
+    /// The grid lines, the axis first.
+    grid: String,
+    /// The X labels, a `<text>` each.
+    x_labels: String,
+}
+
+/// The frame of a drawing `height` high over the two scales.
+fn frame(height: f64, x: Scale, y: Scale, x_ticks: &[(f64, String)]) -> Frame {
     let values = ticks(y);
-    let mut svg = String::from(
-        "<div class=\"fui-chart-frame\"><div class=\"fui-chart-y\" aria-hidden=\"true\">",
-    );
+    let mut y_labels = String::new();
     for value in values.iter().rev().copied() {
-        svg.push_str("<span>");
-        escape(&tick_label(value), &mut svg);
-        svg.push_str("</span>");
+        y_labels.push_str("<span>");
+        escape(&tick_label(value), &mut y_labels);
+        y_labels.push_str("</span>");
     }
-    svg.push_str("</div>");
-    put(
-        &mut svg,
-        format_args!(
-            "<svg class=\"fui-chart-svg\" width=\"100%\" height=\"{height:.0}\" role=\"img\" aria-labelledby=\"{id}-title {id}-desc\"><title id=\"{id}-title\">"
-        ),
-    );
-    escape(label, &mut svg);
-    put(&mut svg, format_args!("</title><desc id=\"{id}-desc\">"));
-    escape(summary, &mut svg);
-    svg.push_str("</desc>");
+    let mut grid = String::new();
     for (index, value) in values.iter().copied().enumerate() {
         let at = y.at(value);
         let class = if index == 0 {
@@ -290,13 +285,13 @@ fn frame(
             "fui-chart-grid"
         };
         put(
-            &mut svg,
+            &mut grid,
             format_args!(
                 "<line class=\"{class}\" x1=\"0\" x2=\"100%\" y1=\"{at:.1}\" y2=\"{at:.1}\"/>"
             ),
         );
     }
-    let mut labels = String::new();
+    let mut x_labels = String::new();
     for (value, text) in x_ticks {
         let share = x.at(*value) / WIDTH;
         let anchor = if share <= 0.01 {
@@ -307,37 +302,60 @@ fn frame(
             "middle"
         };
         put(
-            &mut labels,
+            &mut x_labels,
             format_args!(
                 "<text class=\"fui-chart-label\" x=\"{:.2}%\" y=\"{:.1}\" text-anchor=\"{anchor}\">",
                 share * 100.0,
                 height - 6.0
             ),
         );
-        escape(text, &mut labels);
-        labels.push_str("</text>");
+        escape(text, &mut x_labels);
+        x_labels.push_str("</text>");
     }
+    Frame {
+        height: format!("{height:.0}"),
+        view_box: format!("0 0 {WIDTH:.0} {height:.0}"),
+        y_labels,
+        grid,
+        x_labels,
+    }
+}
+
+/// The SVG of a chart named `label` and summed up by `summary`, the frame
+/// `frame` around `lines` in the stretched plot under the X labels, and
+/// `marks` (the points) over them.
+fn drawn(id: &str, label: &str, summary: &str, frame: &Frame, lines: &str, marks: &str) -> String {
+    let Frame {
+        height,
+        view_box,
+        y_labels,
+        grid,
+        x_labels,
+    } = frame;
+    let mut svg = String::from(
+        "<div class=\"fui-chart-frame\"><div class=\"fui-chart-y\" aria-hidden=\"true\">",
+    );
+    svg.push_str(y_labels);
     put(
         &mut svg,
         format_args!(
-            "<svg class=\"fui-chart-plot-lines\" width=\"100%\" height=\"{height:.0}\" viewBox=\"0 0 {WIDTH:.0} {height:.0}\" preserveAspectRatio=\"none\">"
+            "</div><svg class=\"fui-chart-svg\" width=\"100%\" height=\"{height}\" role=\"img\" aria-labelledby=\"{id}-title {id}-desc\"><title id=\"{id}-title\">"
         ),
     );
-    svg.push_str(PLOT_OPEN);
-    svg.push_str(&labels);
-    svg
-}
-
-/// The marker [`close`] finds to put the lines inside the stretched plot,
-/// under the labels.
-const PLOT_OPEN: &str = "<!--plot-->";
-
-/// Closes the frame `svg` that [`frame`] opened, with `lines` inside the
-/// stretched plot under the labels, and `marks` (the points) over them.
-fn close(mut svg: String, lines: &str, marks: &str) -> String {
-    if let Some(at) = svg.find(PLOT_OPEN) {
-        svg.replace_range(at..at + PLOT_OPEN.len(), &format!("{lines}</svg>"));
-    }
+    escape(label, &mut svg);
+    put(&mut svg, format_args!("</title><desc id=\"{id}-desc\">"));
+    escape(summary, &mut svg);
+    svg.push_str("</desc>");
+    svg.push_str(grid);
+    put(
+        &mut svg,
+        format_args!(
+            "<svg class=\"fui-chart-plot-lines\" width=\"100%\" height=\"{height}\" viewBox=\"{view_box}\" preserveAspectRatio=\"none\">"
+        ),
+    );
+    svg.push_str(lines);
+    svg.push_str("</svg>");
+    svg.push_str(x_labels);
     svg.push_str(marks);
     svg.push_str("</svg></div>");
     svg
@@ -384,56 +402,120 @@ fn scales(chart: &LineChart, height: f64) -> (Scale, Scale) {
     )
 }
 
+/// The drawing of one series: its line and the dashed bridges of its gaps,
+/// and its points.
+#[derive(Debug, Clone)]
+struct SeriesDrawing {
+    /// The paths, drawn in the stretched plot.
+    lines: String,
+    /// The points, drawn over the X labels.
+    marks: String,
+}
+
+/// The drawing of `series` under the two scales.
+fn series_drawing(series: &Series, x: Scale, y: Scale) -> SeriesDrawing {
+    let tone = series.palette % PALETTE;
+    let mut lines = String::new();
+    let mut marks = String::new();
+    put(
+        &mut lines,
+        format_args!(
+            "<path class=\"fui-chart-line fui-series-{tone}\" d=\"{}\"/>",
+            path(&series.points, x, y)
+        ),
+    );
+    let bridge = gaps(&series.points, x, y);
+    if !bridge.is_empty() {
+        put(
+            &mut lines,
+            format_args!("<path class=\"fui-chart-gap fui-series-{tone}\" d=\"{bridge}\"/>"),
+        );
+    }
+    for &(px, py) in &series.points {
+        if px.is_finite() && py.is_finite() {
+            put(
+                &mut marks,
+                format_args!(
+                    "<circle class=\"fui-chart-point fui-series-{tone}\" cx=\"{:.2}%\" cy=\"{:.1}\" r=\"3\"/>",
+                    x.at(px) / WIDTH * 100.0,
+                    y.at(py)
+                ),
+            );
+        }
+    }
+    SeriesDrawing { lines, marks }
+}
+
+/// The height of a line chart's drawing.
+const LINE_HEIGHT: f64 = 240.0;
+
+/// The frame of `chart` and the drawing of each of its series, in order.
+fn line_drawing(chart: &LineChart) -> (Frame, Vec<SeriesDrawing>) {
+    let (x, y) = scales(chart, LINE_HEIGHT);
+    let series = chart
+        .series
+        .iter()
+        .map(|series| series_drawing(series, x, y))
+        .collect();
+    (frame(LINE_HEIGHT, x, y, &chart.x_ticks), series)
+}
+
 /// The SVG of `chart`, drawing only the series `shown` keeps.
 #[must_use]
 pub fn line_svg(chart: &LineChart, shown: &[bool]) -> String {
-    const HEIGHT: f64 = 240.0;
-    let (x, y) = scales(chart, HEIGHT);
-    let mut svg = frame(
+    let (frame, series) = line_drawing(chart);
+    let mut lines = String::new();
+    let mut marks = String::new();
+    for (index, drawing) in series.iter().enumerate() {
+        if shown.get(index).copied().unwrap_or(true) {
+            lines.push_str(&drawing.lines);
+            marks.push_str(&drawing.marks);
+        }
+    }
+    drawn(
         chart.id,
         &chart.label,
         &chart.summary,
-        HEIGHT,
-        x,
-        y,
-        &chart.x_ticks,
-    );
+        &frame,
+        &lines,
+        &marks,
+    )
+}
+
+/// The SVG of `chart` with every series drawn, its lines and its points
+/// each in a group named by the series' index (`data-series-lines` and
+/// `data-series-marks`), `hidden` where `shown` hides the series, so the
+/// interactive chart shows or hides a series in place.
+pub(crate) fn line_svg_grouped(chart: &LineChart, shown: &[bool]) -> String {
+    let (frame, series) = line_drawing(chart);
     let mut lines = String::new();
     let mut marks = String::new();
-    for (index, series) in chart.series.iter().enumerate() {
-        if !shown.get(index).copied().unwrap_or(true) {
-            continue;
-        }
-        let tone = series.palette % PALETTE;
-        put(
-            &mut lines,
-            format_args!(
-                "<path class=\"fui-chart-line fui-series-{tone}\" d=\"{}\"/>",
-                path(&series.points, x, y)
-            ),
-        );
-        let bridge = gaps(&series.points, x, y);
-        if !bridge.is_empty() {
-            put(
-                &mut lines,
-                format_args!("<path class=\"fui-chart-gap fui-series-{tone}\" d=\"{bridge}\"/>"),
-            );
-        }
-        for &(px, py) in &series.points {
-            if px.is_finite() && py.is_finite() {
+    for (index, drawing) in series.iter().enumerate() {
+        for (out, part, inner) in [
+            (&mut lines, "lines", &drawing.lines),
+            (&mut marks, "marks", &drawing.marks),
+        ] {
+            if shown.get(index).copied().unwrap_or(true) {
                 put(
-                    &mut marks,
-                    format_args!(
-                        "<circle class=\"fui-chart-point fui-series-{tone}\" cx=\"{:.2}%\" cy=\"{:.1}\" r=\"3\"/>",
-                        x.at(px) / WIDTH * 100.0,
-                        y.at(py)
-                    ),
+                    out,
+                    format_args!("<g data-series-{part}=\"{index}\">{inner}</g>"),
+                );
+            } else {
+                put(
+                    out,
+                    format_args!("<g data-series-{part}=\"{index}\" hidden>{inner}</g>"),
                 );
             }
         }
     }
-    svg = close(svg, &lines, &marks);
-    svg
+    drawn(
+        chart.id,
+        &chart.label,
+        &chart.summary,
+        &frame,
+        &lines,
+        &marks,
+    )
 }
 
 /// The figures of `chart` as a table for assistive technology: a row per X
@@ -539,15 +621,7 @@ pub fn activity_chart(chart: &ActivityChart) -> impl IntoView + use<> {
         y_range: None,
     };
     let (x, y) = scales(&line, HEIGHT);
-    let svg = frame(
-        chart.name,
-        &line.label,
-        &line.summary,
-        HEIGHT,
-        x,
-        y,
-        &line.x_ticks,
-    );
+    let frame = frame(HEIGHT, x, y, &line.x_ticks);
     let lines = line.series.first().map_or_else(String::new, |series| {
         format!(
             "<path class=\"fui-chart-line fui-chart-accent\" d=\"{}\"/>",
@@ -571,7 +645,14 @@ pub fn activity_chart(chart: &ActivityChart) -> impl IntoView + use<> {
             ),
         );
     }
-    let svg = close(svg, &lines, &marks);
+    let svg = drawn(
+        chart.name,
+        &line.label,
+        &line.summary,
+        &frame,
+        &lines,
+        &marks,
+    );
     view! { <figure class="fui-chart fui-chart-activity" data-activity-chart=chart.name inner_html=svg></figure> }
 }
 
@@ -606,7 +687,9 @@ pub fn proportion(percent: u8, label: Option<String>) -> AnyView {
 
 #[cfg(test)]
 mod tests {
-    use super::{LineChart, Scale, Series, line_svg, nice_range, tick_label, ticks};
+    use super::{
+        LineChart, Scale, Series, line_svg, line_svg_grouped, nice_range, tick_label, ticks,
+    };
 
     fn chart() -> LineChart {
         LineChart {
@@ -650,6 +733,19 @@ mod tests {
         assert!(svg.contains("fui-series-0") && !svg.contains("fui-series-1"));
         assert_eq!("3", tick_label(3.0));
         assert_eq!("2.5", tick_label(2.5));
+    }
+
+    #[test]
+    fn the_grouped_drawing_keeps_a_hidden_series_drawn_and_hidden() {
+        let svg = line_svg_grouped(&chart(), &[true, false]);
+        assert!(
+            svg.contains("fui-series-0") && svg.contains("fui-series-1"),
+            "{svg}"
+        );
+        assert!(svg.contains("<g data-series-lines=\"0\">"), "{svg}");
+        assert!(svg.contains("<g data-series-lines=\"1\" hidden>"), "{svg}");
+        assert!(svg.contains("<g data-series-marks=\"1\" hidden>"), "{svg}");
+        assert!(svg.contains("Rates &lt;per day&gt;"), "{svg}");
     }
 
     #[test]

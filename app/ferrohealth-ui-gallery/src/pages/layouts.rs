@@ -278,7 +278,20 @@ pub(crate) fn runner_form_in(brand: &str) -> AnyView {
             ),
         ]
     });
-    let value = RwSignal::new(String::from("http://example.org/vs/signs"));
+    let first = String::from("http://example.org/vs/signs");
+    let value = RwSignal::new(first.clone());
+    // The console's side: a value set from outside, which the picker's
+    // select follows after the reader has chosen another.
+    let reset = view! {
+        <button
+            type="button"
+            id="run-value-set-reset"
+            class=Variant::Secondary.class()
+            on:click=move |_| value.set(first.clone())
+        >
+            {tr(Msg::UseFirstValueSet)}
+        </button>
+    };
     let picker = picker_field(Picker {
         id: "run-value-set",
         name: "url",
@@ -316,6 +329,7 @@ pub(crate) fn runner_form_in(brand: &str) -> AnyView {
         <form method="get" action=here(brand, "") class=FORM>
             {split(view! { <h2 class="fui-card-title">{tr(Msg::ListValueSet)}</h2> }, help_switch())}
             {picker}
+            <div>{reset}</div>
             {explained_field("run-count", tr(Msg::PageSize), tr(Msg::HowManyConceptsOnePage), count)}
             {explained_field("run-language", tr(Msg::DisplayLanguage), tr(Msg::LanguageDisplays), language)}
             {explained_field("run-note", tr(Msg::WhyYouRun), tr(Msg::NoteKeptBesideRun), note)}

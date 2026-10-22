@@ -523,6 +523,8 @@ messages! {
     ChooseOneServerHolds = "choose-one-server-holds",
     /// `Another canonical`
     AnotherCanonical = "another-canonical",
+    /// `Use the first value set`
+    UseFirstValueSet = "use-first-value-set",
     /// `Choose from the list`
     ChooseFromList = "choose-from-list",
     /// `A version this server holds, or another one you type.`
