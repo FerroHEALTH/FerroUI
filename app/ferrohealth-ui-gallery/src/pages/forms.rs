@@ -5,17 +5,18 @@
 //! diagnostics that link to its lines, and the filter over a list.
 
 use crate::locale::{Msg, Words, message, tr, tr_with};
+use ferrohealth_ui::calendar::{Bounds, Day, Preset, Quick, Weekday};
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::i18n::Phrase;
 use ferrohealth_ui::icon::Glyph;
-use ferrohealth_ui::island::Combobox;
+use ferrohealth_ui::island::{Combobox, DatePicker, DateRangePicker};
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::button::{Variant, label};
 use ferrohealth_ui::view::form::{
-    ERROR, FORM, Field, INPUT, MEDIUM, SELECT, SWITCH, TEXTAREA, action_field, check, check_field,
-    chip_choices, columns, described_by, error_id, field, field_flow, help_id, keyed_check_field,
-    keyed_field,
+    ERROR, FIELD_FLOW, FORM, Field, INPUT, Inner, SELECT, SWITCH, TEXTAREA, action_field, check,
+    check_field, chip_choices, columns, described_by, described_with_unit, error_id, field,
+    field_flow, help_id, keyed_check_field, keyed_field,
 };
 use ferrohealth_ui::view::layout::{FieldRow, field_row};
 use ferrohealth_ui::view::notice::{Announce, notice};
@@ -25,6 +26,9 @@ use ferrohealth_ui::view::surface::{
     Crumb, Header, Mode, card, editor_heading, grid, grid_start, page_header, stack, well,
 };
 use ferrohealth_ui::widget::combobox::{ComboOption, ComboboxWords, KeyedCombobox, keyed_combobox};
+use ferrohealth_ui::widget::date::{
+    DateField, DateRange, DateWords, QuickChoice, RangeEnd, RangePreset,
+};
 use ferrohealth_ui::widget::editor::{Editor, LineMark, MarkKind, code_editor, line_id};
 use ferrohealth_ui::widget::filter::{keeps, table_filter};
 use ferrohealth_ui::widget::pick_or_type::{PickOrType, Picker, pick_or_type};
@@ -283,7 +287,9 @@ fn fields() -> AnyView {
     };
     let bundle =
         view! { <textarea id="form-bundle" name="bundle" rows="4" class=TEXTAREA></textarea> };
-    let until = view! { <input id="form-until" name="until" type="date" class=format!("{INPUT} {MEDIUM}") /> };
+    let until = view! {
+        <DatePicker field=date_field("form-until", "until", tr(Msg::KeepDraftUntil), "", Bounds { earliest: today().step(1), latest: None }) />
+    };
     let confirm = view! { <input id="form-confirm" name="confirmed" type="checkbox" /> };
     card(
         tr(Msg::Fields),
@@ -292,7 +298,7 @@ fn fields() -> AnyView {
                 {field("form-reason", tr(Msg::WhyYouSaveOneLine), Some(tr(Msg::TwoHundredCharactersMost).clone()), reason)}
                 {field("form-format", tr(Msg::CompositionFormat), None, format)}
                 {field("form-bundle", tr(Msg::BundleJson), None, bundle)}
-                {field("form-until", tr(Msg::KeepDraftUntil), None, until)}
+                {until}
                 {check(
                     "form-confirm",
                     tr(Msg::SaveDraftReloadSetBridge),
@@ -320,7 +326,13 @@ fn inline() -> AnyView {
             <option value="1">{tr(Msg::Version1)}</option>
         </select>
     };
-    let at = view! { <input id="row-at" name="at" type="datetime-local" class=INPUT /> };
+    let at = view! {
+        <DatePicker field=DateField {
+            with_time: true,
+            words: DateWords::of_page(true),
+            ..date_field("row-at", "at", tr(Msg::TimeTravelUtc), "", Bounds { earliest: None, latest: Some(today()) })
+        } />
+    };
     card(
         tr(Msg::FieldsRow),
         view! {
@@ -335,7 +347,7 @@ fn inline() -> AnyView {
                 })}
                 {field_flow(view! {
                     {field("row-version", tr(Msg::Version), None, version)}
-                    {field("row-at", tr(Msg::TimeTravelUtc), None, at)}
+                    {at}
                     {field("row-path", tr(Msg::TargetPathOptional), None, path)}
                     <button type="button" class=Variant::Secondary.class()>
                         {tr(Msg::Time)}
@@ -996,6 +1008,162 @@ fn editor_headers() -> AnyView {
     .into_any()
 }
 
+/// The day the gallery takes as today, so every capture draws the same
+/// month.
+#[expect(
+    clippy::expect_used,
+    reason = "2026-10-21 is a day of the calendar, by inspection"
+)]
+fn today() -> Day {
+    Day::new(2026, 10, 21).expect("the gallery's today should be a day")
+}
+
+/// A date field `id` posting as `name`, labelled `label`, holding `value`
+/// and allowing `bounds`, its week from Monday.
+fn date_field(id: &str, name: &str, label: String, value: &str, bounds: Bounds) -> DateField {
+    DateField {
+        id: id.to_owned(),
+        name: name.to_owned(),
+        label,
+        value: value.to_owned(),
+        help: None,
+        error: None,
+        today: today(),
+        bounds,
+        first_day: Weekday::Monday,
+        with_time: false,
+        quick: Vec::new(),
+        chosen: None,
+        words: DateWords::of_page(false),
+    }
+}
+
+/// The date fields: an audit's From that forbids the future, a deferral's
+/// date with its quick choices, and a history filter's range.
+fn dates() -> AnyView {
+    let past = Bounds {
+        earliest: None,
+        latest: Some(today()),
+    };
+    let from = DateField {
+        help: Some(tr(Msg::DaysAfterTodayNotOffered)),
+        ..date_field("audit-from", "from", tr(Msg::FromDay), "2026-10-14", past)
+    };
+    let quick = [
+        (Quick::Days(1), Msg::Tomorrow),
+        (Quick::Days(3), Msg::InThreeDays),
+        (Quick::Next(Weekday::Monday), Msg::NextMonday),
+        (Quick::Days(7), Msg::InAWeek),
+    ]
+    .into_iter()
+    .map(|(quick, words)| QuickChoice {
+        quick,
+        words: tr(words),
+    })
+    .collect();
+    let defer = DateField {
+        quick,
+        chosen: Some(Phrase::new(tr_with(
+            Msg::BackInQueueOn,
+            &[("day", Phrase::open("day"))],
+        ))),
+        ..date_field(
+            "defer-until",
+            "until",
+            tr(Msg::DeferUntil),
+            "2026-10-28",
+            Bounds {
+                earliest: today().step(1),
+                latest: None,
+            },
+        )
+    };
+    let range = DateRange {
+        id: String::from("audit-range"),
+        label: tr(Msg::ActionsBetween),
+        from: RangeEnd {
+            id: String::from("audit-range-from"),
+            name: String::from("from"),
+            label: tr(Msg::FromDay),
+            value: String::from("2026-10-15"),
+        },
+        to: RangeEnd {
+            id: String::from("audit-range-to"),
+            name: String::from("to"),
+            label: tr(Msg::ToDay),
+            value: String::from("2026-10-21"),
+        },
+        today: today(),
+        bounds: past,
+        first_day: Weekday::Monday,
+        presets: [
+            Preset::Today,
+            Preset::LastDays(7),
+            Preset::LastDays(30),
+            Preset::ThisMonth,
+        ]
+        .into_iter()
+        .map(RangePreset::of_page)
+        .collect(),
+        words: DateWords::of_page(false),
+    };
+    card(
+        tr(Msg::DateFields),
+        view! {
+            <div class=FORM>
+                <DatePicker field=from />
+                <DatePicker field=defer />
+                <form method="get" action="#date-range" id="date-range" class=FIELD_FLOW>
+                    <DateRangePicker range=range />
+                    <button type="submit" class=Variant::Secondary.class()>
+                        {tr(Msg::ShowActions)}
+                    </button>
+                </form>
+            </div>
+        },
+    )
+    .into_any()
+}
+
+/// Fields with a part inside their edge: a unit, a prefix, a refused value
+/// and a disabled one (R10).
+fn edge_parts() -> AnyView {
+    let timeout = view! {
+        <input id="edge-timeout" name="timeout" class=INPUT inputmode="numeric" value="1200" aria-describedby=described_with_unit("edge-timeout", false, false) />
+    };
+    let base = view! {
+        <input id="edge-base" name="base" class=INPUT spellcheck="false" value="cdr-a.example.org" />
+    };
+    let limit = view! {
+        <input id="edge-limit" name="limit" class=INPUT inputmode="numeric" value="fifty" aria-invalid="true" aria-describedby=described_with_unit("edge-limit", false, true) />
+    };
+    let retention = view! {
+        <input id="edge-retention" name="retention" class=INPUT inputmode="numeric" value="30" disabled aria-describedby=described_with_unit("edge-retention", true, false) />
+    };
+    card(
+        tr(Msg::FieldEdgeParts),
+        view! {
+            <div class=FORM>
+                {Field::new("edge-timeout", tr(Msg::Timeout))
+                    .trailing(Inner::Unit(tr(Msg::Milliseconds)))
+                    .view(timeout)}
+                {Field::new("edge-base", tr(Msg::BaseAddress))
+                    .leading(Inner::Text(String::from("https://")))
+                    .view(base)}
+                {Field::new("edge-limit", tr(Msg::RowLimit))
+                    .trailing(Inner::Unit(tr(Msg::RowsUnit)))
+                    .after(view! { <p id=error_id("edge-limit") class=ERROR>{tr(Msg::TypeWholeNumber)}</p> })
+                    .view(limit)}
+                {Field::new("edge-retention", tr(Msg::Retention))
+                    .help(tr(Msg::SetByDeployment))
+                    .trailing(Inner::Unit(tr(Msg::DaysUnit)))
+                    .view(retention)}
+            </div>
+        },
+    )
+    .into_any()
+}
+
 /// The forms page.
 #[component]
 #[expect(
@@ -1038,6 +1206,11 @@ pub fn FormsPage() -> impl IntoView {
     })
     .into_any();
     let headers = editor_headers();
+    let dated = grid_start(view! {
+        {dates()}
+        {edge_parts()}
+    })
+    .into_any();
     let reloading = reloading_editor();
     let long = super::dock::long_form();
     let dock = super::dock::dock();
@@ -1046,6 +1219,7 @@ pub fn FormsPage() -> impl IntoView {
         {header}
         {stack(view! {
             {sections.0}
+            {dated}
             {headers}
             {sections.4}
             {sections.6}

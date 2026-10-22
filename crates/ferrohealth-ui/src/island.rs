@@ -294,3 +294,27 @@ pub fn Search(
 ) -> impl IntoView {
     crate::widget::search::search_control(search, selected, open, children().into_any())
 }
+
+/// The date field `field` with its picker (R23, R25): a popover under the
+/// field from 40 rem, a bottom sheet below it. The server draws it closed,
+/// and the typed text posts with its form whether or not the WebAssembly
+/// runs.
+#[island]
+pub fn DatePicker(
+    /// The field, its bounds, its quick choices and its words
+    /// ([`crate::widget::date::DateWords::of_page`]).
+    field: crate::widget::date::DateField,
+) -> impl IntoView {
+    crate::widget::date::date_field(field)
+}
+
+/// The date range `range` of a history filter with its picker (R22,
+/// R25): its From and To fields until the WebAssembly runs, then one button
+/// naming the range.
+#[island]
+pub fn DateRangePicker(
+    /// The range, its ends, its presets and its words.
+    range: crate::widget::date::DateRange,
+) -> impl IntoView {
+    crate::widget::date::date_range(range)
+}

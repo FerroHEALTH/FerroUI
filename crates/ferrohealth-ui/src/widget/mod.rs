@@ -16,6 +16,7 @@ pub mod action_menu;
 pub mod chart;
 pub mod combobox;
 pub mod copy;
+pub mod date;
 pub mod dialog;
 pub mod document;
 pub mod editor;

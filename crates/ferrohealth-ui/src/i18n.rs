@@ -818,6 +818,144 @@ texts! {
     ErrorTime = "error-time",
     /// The id of the request that failed.
     ErrorRequest = "error-request",
+    /// The format a date field is typed in, stated after its label.
+    DateFormat = "date-format",
+    /// The format a date and time field is typed in.
+    DateTimeFormat = "date-time-format",
+    /// The quiet hint after a date field's label, its format.
+    DateFormatHint = "date-format-hint",
+    /// The quiet hint after a date and time field's label, its format.
+    DateTimeFormatHint = "date-time-format-hint",
+    /// The name of the button that opens the date picker.
+    DateChoose = "date-choose",
+    /// The name of the date picker's button before the page's WebAssembly runs.
+    DateNeedsScript = "date-needs-script",
+    /// The picker's arrow to the month before.
+    DatePreviousMonth = "date-previous-month",
+    /// The picker's arrow to the month after.
+    DateNextMonth = "date-next-month",
+    /// The month chooser's arrow to the year before.
+    DatePreviousYear = "date-previous-year",
+    /// The month chooser's arrow to the year after.
+    DateNextYear = "date-next-year",
+    /// The name of the picker's title, which opens the month chooser.
+    DateChooseMonth = "date-choose-month",
+    /// The name of the month chooser's title, which goes back to the days.
+    DateBackToDays = "date-back-to-days",
+    /// The name of the month chooser's grid.
+    DateMonthsOf = "date-months-of",
+    /// A month's title over its days.
+    DateMonthTitle = "date-month-title",
+    /// A day's full name, its accessible name in the grid.
+    DateDayName = "date-day-name",
+    /// The picker's button that chooses today.
+    DateToday = "date-today",
+    /// The picker's button that empties the field.
+    DateClear = "date-clear",
+    /// The picker's button that closes it and keeps the field as it was.
+    DateCancel = "date-cancel",
+    /// The picker's button that keeps the choice and closes it.
+    DateApply = "date-apply",
+    /// The label of the picker's time row.
+    DateTime = "date-time",
+    /// The quiet hint after the time row's label.
+    DateTimeHint = "date-time-hint",
+    /// The name of the time row's hours.
+    DateHours = "date-hours",
+    /// The name of the time row's minutes.
+    DateMinutes = "date-minutes",
+    /// The name of the picker's quick choices.
+    DateQuick = "date-quick",
+    /// The name of the range picker's presets.
+    DateRanges = "date-ranges",
+    /// A range button with no range chosen.
+    DateAny = "date-any",
+    /// A range, its first and last day.
+    DateRangeWords = "date-range-words",
+    /// The range picker's line once the first day is chosen.
+    DateRangeHalf = "date-range-half",
+    /// The range picker's line once both days are chosen, with the days the range holds.
+    DateRangeFull = "date-range-full",
+    /// A number of days.
+    DateDays = "date-days",
+    /// The picker's line for a typed text that is no date.
+    DateTypeFormat = "date-type-format",
+    /// The picker's line for a typed text that is no date and time.
+    DateTypeFormatTime = "date-type-format-time",
+    /// How many days a month has.
+    DateMonthLength = "date-month-length",
+    /// A typed day its month does not have, and why.
+    DateNotADay = "date-not-a-day",
+    /// A typed month that is not one of the twelve.
+    DateNoMonth = "date-no-month",
+    /// A typed time that is no time of day.
+    DateNotATime = "date-not-a-time",
+    /// A typed text not written as a date.
+    DateNotFormat = "date-not-format",
+    /// A typed text not written as a date and time.
+    DateNotFormatTime = "date-not-format-time",
+    /// A typed date before the earliest the field allows.
+    DateBefore = "date-before",
+    /// A typed date after the latest the field allows.
+    DateAfter = "date-after",
+    /// The range preset of today alone.
+    PresetToday = "preset-today",
+    /// The range preset of today and the days before it.
+    PresetLastDays = "preset-last-days",
+    /// The range preset of the month so far.
+    PresetThisMonth = "preset-this-month",
+    /// The name of month 1.
+    Month1 = "month-1",
+    /// The name of month 2.
+    Month2 = "month-2",
+    /// The name of month 3.
+    Month3 = "month-3",
+    /// The name of month 4.
+    Month4 = "month-4",
+    /// The name of month 5.
+    Month5 = "month-5",
+    /// The name of month 6.
+    Month6 = "month-6",
+    /// The name of month 7.
+    Month7 = "month-7",
+    /// The name of month 8.
+    Month8 = "month-8",
+    /// The name of month 9.
+    Month9 = "month-9",
+    /// The name of month 10.
+    Month10 = "month-10",
+    /// The name of month 11.
+    Month11 = "month-11",
+    /// The name of month 12.
+    Month12 = "month-12",
+    /// The name of Monday.
+    WeekdayMonday = "weekday-monday",
+    /// The name of Tuesday.
+    WeekdayTuesday = "weekday-tuesday",
+    /// The name of Wednesday.
+    WeekdayWednesday = "weekday-wednesday",
+    /// The name of Thursday.
+    WeekdayThursday = "weekday-thursday",
+    /// The name of Friday.
+    WeekdayFriday = "weekday-friday",
+    /// The name of Saturday.
+    WeekdaySaturday = "weekday-saturday",
+    /// The name of Sunday.
+    WeekdaySunday = "weekday-sunday",
+    /// The two-letter name of Monday over a column of days.
+    WeekdayShortMonday = "weekday-short-monday",
+    /// The two-letter name of Tuesday over a column of days.
+    WeekdayShortTuesday = "weekday-short-tuesday",
+    /// The two-letter name of Wednesday over a column of days.
+    WeekdayShortWednesday = "weekday-short-wednesday",
+    /// The two-letter name of Thursday over a column of days.
+    WeekdayShortThursday = "weekday-short-thursday",
+    /// The two-letter name of Friday over a column of days.
+    WeekdayShortFriday = "weekday-short-friday",
+    /// The two-letter name of Saturday over a column of days.
+    WeekdayShortSaturday = "weekday-short-saturday",
+    /// The two-letter name of Sunday over a column of days.
+    WeekdayShortSunday = "weekday-short-sunday",
 }
 
 /// The library's message `text` in the page's locale.
@@ -847,10 +985,11 @@ mod tests {
 
     /// The names of the placeables the library's messages take.
     const PLACEABLES: &[&str] = &[
-        "action", "chart", "code", "count", "date", "document", "file", "filter", "first", "held",
-        "key", "kinds", "label", "last", "limit", "note", "noun", "nouns", "page", "pages",
-        "range", "shown", "size", "stated", "status", "summary", "tab", "time", "total", "value",
-        "what", "words",
+        "action", "chart", "code", "count", "date", "day", "days", "document", "earliest", "file",
+        "filter", "first", "from", "held", "key", "kinds", "label", "last", "latest", "limit",
+        "month", "note", "noun", "nouns", "page", "pages", "range", "shown", "size", "stated",
+        "status", "summary", "tab", "time", "title", "to", "total", "value", "weekday", "what",
+        "why", "words", "year",
     ];
 
     /// The ids of the messages the catalog file at `path` defines.

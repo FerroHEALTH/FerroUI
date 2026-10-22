@@ -464,6 +464,7 @@ dependencies = [
  "leptos",
  "leptos_router",
  "serde",
+ "serde_json",
  "wasm-bindgen-futures",
  "web-sys",
 ]

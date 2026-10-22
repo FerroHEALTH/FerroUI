@@ -53,6 +53,7 @@ web-sys = { version = "0.3.85", default-features = false, features = [
   "HtmlDetailsElement",
   "HtmlDialogElement",
   "HtmlElement",
+  "HtmlFormElement",
   "HtmlInputElement",
   "KeyboardEvent",
   "Location",
@@ -71,6 +72,8 @@ web-sys = { version = "0.3.85", default-features = false, features = [
 leptos = { workspace = true, features = ["ssr"] }
 leptos_router = { workspace = true, features = ["ssr"] }
 hydration_context.workspace = true
+# A day crosses to the browser as JSON; its unit tests read it back.
+serde_json.workspace = true
 
 [lints]
 workspace = true

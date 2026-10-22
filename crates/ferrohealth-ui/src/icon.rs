@@ -53,6 +53,10 @@ impl Glyph {
     pub const BOOK_X: Self = Self(
         r#"<path d="m14.5 7.5-5 5" /><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20" /><path d="m9.5 7.5 5 5" />"#,
     );
+    /// Lucide `calendar`.
+    pub const CALENDAR: Self = Self(
+        r#"<path d="M8 2v3" /><path d="M16 2v3" /><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18" />"#,
+    );
     /// Lucide `chart-line`.
     pub const CHART_LINE: Self =
         Self(r#"<path d="M3 3v16a2 2 0 0 0 2 2h16" /><path d="m19 9-5 5-4-4-3 3" />"#);
@@ -64,6 +68,8 @@ impl Glyph {
     pub const CHEVRON_LEFT: Self = Self(r#"<path d="m15 18-6-6 6-6" />"#);
     /// Lucide `chevron-right`.
     pub const CHEVRON_RIGHT: Self = Self(r#"<path d="m9 18 6-6-6-6" />"#);
+    /// Lucide `chevron-up`.
+    pub const CHEVRON_UP: Self = Self(r#"<path d="m18 15-6-6-6 6" />"#);
     /// Lucide `chevrons-left`.
     pub const CHEVRONS_LEFT: Self =
         Self(r#"<path d="m11 17-5-5 5-5" /><path d="m18 17-5-5 5-5" />"#);
@@ -197,6 +203,10 @@ impl Glyph {
     /// Lucide `list-checks`.
     pub const LIST_CHECKS: Self = Self(
         r#"<path d="M13 5h8" /><path d="M13 12h8" /><path d="M13 19h8" /><path d="m3 17 2 2 4-4" /><path d="m3 7 2 2 4-4" />"#,
+    );
+    /// Lucide `lock`.
+    pub const LOCK: Self = Self(
+        r#"<rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />"#,
     );
     /// Lucide `log-in`.
     pub const LOG_IN: Self = Self(
@@ -337,7 +347,7 @@ impl Glyph {
     pub const X: Self = Self(r#"<path d="M18 6 6 18" /><path d="m6 6 12 12" />"#);
 
     /// Every glyph, with the Lucide name of its vendored file.
-    pub const ALL: [(&str, Self); 87] = [
+    pub const ALL: [(&str, Self); 90] = [
         ("activity", Self::ACTIVITY),
         ("arrow-down", Self::ARROW_DOWN),
         ("arrow-left", Self::ARROW_LEFT),
@@ -348,11 +358,13 @@ impl Glyph {
         ("bell", Self::BELL),
         ("book-a", Self::BOOK_A),
         ("book-x", Self::BOOK_X),
+        ("calendar", Self::CALENDAR),
         ("chart-line", Self::CHART_LINE),
         ("check", Self::CHECK),
         ("chevron-down", Self::CHEVRON_DOWN),
         ("chevron-left", Self::CHEVRON_LEFT),
         ("chevron-right", Self::CHEVRON_RIGHT),
+        ("chevron-up", Self::CHEVRON_UP),
         ("chevrons-left", Self::CHEVRONS_LEFT),
         ("chevrons-right", Self::CHEVRONS_RIGHT),
         ("circle-alert", Self::CIRCLE_ALERT),
@@ -389,6 +401,7 @@ impl Glyph {
         ("layout-dashboard", Self::LAYOUT_DASHBOARD),
         ("link", Self::LINK),
         ("list-checks", Self::LIST_CHECKS),
+        ("lock", Self::LOCK),
         ("log-in", Self::LOG_IN),
         ("log-out", Self::LOG_OUT),
         ("menu", Self::MENU),

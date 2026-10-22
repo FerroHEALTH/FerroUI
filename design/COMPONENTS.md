@@ -164,7 +164,7 @@ Measured on the FerroPIX identifier domains table at 1440 px. Every console's ta
 | | |
 |---|---|
 | R1 | Responsive key hints |
-| R2 | Tag |
+| R2 | Tag (`fui-tag`): a kind, a format, an owner or a namespace as a short word in the UI face on the sunken ground, on one line that never breaks inside itself, read as text. The word starts with a capital; where the value has a raw code (a language key, a scope operation), the code follows inside the tag as a quiet mono hint (`fui-tag-code`). A glyph before the word is hidden from the accessibility tree (F4's lock). `fui-tag-mono` draws an identifier-like tag (a version, an RM type) in the code face. |
 | R3 | Binder tabs joined to their panel A tab row that scrolls starts with its current tab in view (`scroll-initial-target`). A tab marked `data-tab="keyboard"` (the family hook for Keyboard in Your preferences) is hidden below 40 rem: phones have no keyboard items. Each tab is a link to its own route, so the row works with no WebAssembly; the phone's tab select takes the row's place only once it works. |
 | R4 | Docked decision bar It takes up to two fields, a reason and a path, side by side before the decisions (`fui-dock-field`); an editor's dock with no field puts its state line in the field's place. Below 40 rem each field takes its own rows and the decisions stack under them at full width, the primary first. A disabled decision says why as visible text in the bar's line ("Give a reason to save"), never only in a tooltip. The page keeps a focused control clear of the bar (`scroll-padding-bottom`). Every decision is a form submit. |
 | R5 | Previous and next in the page header |
@@ -172,7 +172,7 @@ Measured on the FerroPIX identifier domains table at 1440 px. Every console's ta
 | R7 | Page actions folding into one menu. F14 replaces it. |
 | R8 | Anchored menu and row menu. F13 replaces it. |
 | R9 | The worklist. Its extension: names in the ink, no underline, the row is the target. |
-| R10 | Field with an inner control |
+| R10 | Field with an inner control (`fui-input-group`): the group carries the field's one edge, its ground and its focus ring (`:focus-within`), and the input inside it has none and takes the room that is left. A prefix (`fui-input-prefix`), a suffix (`fui-input-suffix`; a unit is part of the control's description) and an inner button (`fui-input-toggle`, a 30 px target with its own name) sit beside the text in the same edge, so the typed text never runs under them. An invalid or disabled input marks the whole group. |
 | R11 | Form grid. Its extension: fields share their label line (`align-items: start`), so help or an error under one field never lifts its neighbours; a field holding a URL, a path or another long token takes the whole row (`fui-span-row`). |
 | R12 | Honest navigation count. The number is hidden from assistive technology and the whole phrase ("2 errors in the running load") is read in its place; nothing shows at zero; an unknown count is a muted dash with the reason in its tooltip. In the rail the count rides on the glyph. |
 | R13 | Masked identifier revealed |
@@ -184,10 +184,10 @@ Measured on the FerroPIX identifier domains table at 1440 px. Every console's ta
 | R19 | Sign-in. One card (`fui-sign-in`) and its caption in a centred column (`fui-sign-in-stack`): the lockup as plain text, an optional title (`fui-sign-in-title`), the notice of the state in its tone (`fui-sign-in-notice`, a status, or an alert for a refusal), the provider's action (busy while redirecting, disabled while unavailable), the basic form only where the console has one, muted lines (`fui-sign-in-line`) and the deployment's links. No placeholder repeats a label. |
 | R20 | Error page (`fui-status-page`) The status in words before its number, as one quiet line ("Not allowed · 403"); the title names the error in plain words; then what it means for you (who you are and the scope or role for a 403, the address and what it may mean for a 404, who can fix it for a 500), a quiet hint for the raw scope or key, and the way on as links. The time and the request id sit in a closed disclosure. It renders in the shell, and in the centred layout when no one is signed in. |
 | R21 | Settings rows hugging their options |
-| R22 | History filter |
-| R23 | Date field |
+| R22 | History filter. Its date range is one control: a secondary button naming the range ("Any date" when there is none) opens R25's range picker, and Apply submits the filter. Without WebAssembly the range's From and To date fields show in the button's place and post with the filter. |
+| R23 | Date field: a text input, year first (`YYYY-MM-DD`, with a time `YYYY-MM-DD HH:MM`), the format stated after the label as a quiet hint, the calendar behind R10's inner button. The typed text is the field's value and posts with its form; without WebAssembly the button is disabled and its name says to type the date. A typed text that is no date marks the field invalid and says why under it. |
 | R24 | Title line and mode badge |
-| R25 | Date picker, popover and sheet |
+| R25 | Date picker, popover and sheet (`role="dialog"`): one month under its field from 40 rem, with both arrows and the month and year chooser behind its title; a range shows two months (the earlier one's arrow back, the later one's arrow on) with the presets at its side. A picker that would run past the screen's edge opens the other way (`is-end`, and `is-start` for a range). Below 40 rem it is a bottom sheet over a scrim at the full width: one month with both arrows, larger days, the foot's buttons with their words centred. Days, months and arrows past the field's earliest or latest date are disabled, so a field that forbids the future offers no later month. A preset means what it says: Last 7 days is today and the six days before. A typed text that is no date disables Apply, and the picker says why. Keys: the arrows move a day, Page Up and Page Down a month (with Shift a year), Home and End the week's ends, Enter chooses, Escape closes and returns the focus to the field. |
 | R26 | The settings page. T3 replaces it: no in-page sidebar. |
 | R27 | Setting rows |
 | R28 | Radio preview cards Saved has a fixed slot above the control and never moves it; under preview cards it takes its own line. The three cards share one row on a phone. |

@@ -79,6 +79,70 @@ pub fn described_by(id: &str, help: bool, error: bool) -> Option<String> {
     }
 }
 
+/// The id of the unit suffix of the control `id` ([`Inner::Unit`]), which
+/// the control names in `aria-describedby`.
+#[must_use]
+pub fn unit_id(id: &str) -> String {
+    format!("{id}-unit")
+}
+
+/// The value of the `aria-describedby` of the control `id` that has a unit
+/// suffix: the unit ([`unit_id`]) first, then its help and its error line
+/// as [`described_by`] names them.
+///
+/// The unit is read with the value it qualifies, so it comes first
+/// (WAI-ARIA 1.2, `aria-describedby`; WCAG 2.2 SC 1.3.1).
+#[must_use]
+pub fn described_with_unit(id: &str, help: bool, error: bool) -> String {
+    match described_by(id, help, error) {
+        Some(rest) => format!("{} {rest}", unit_id(id)),
+        None => unit_id(id),
+    }
+}
+
+/// The classes of a button inside a field's edge ([`Inner::Button`]): a
+/// square 30 px target with an icon and its name in `aria-label`
+/// (WCAG 2.2 SC 2.5.8).
+pub const INNER_BUTTON: &str = "fui-icon-button fui-input-toggle";
+
+/// A part inside a field's edge, before or after the typed text (R10): the
+/// input and its parts share one border and one focus ring, and the text
+/// never runs under a part.
+#[derive(Debug)]
+pub enum Inner {
+    /// Words before or after the typed text that frame it, such as a
+    /// scheme before an address.
+    Text(String),
+    /// The unit of a quantity, after it, such as "ms" or "mm Hg". It has
+    /// the id [`unit_id`], and the control names it in `aria-describedby`
+    /// ([`described_with_unit`]), so the unit is read with the value.
+    Unit(String),
+    /// A button, such as a reveal, a clear or the date picker's: give it
+    /// [`INNER_BUTTON`] and a name.
+    Button(AnyView),
+}
+
+impl Inner {
+    /// Returns the part, its words in the prefix's or the suffix's place.
+    fn view(self, id: &str, leading: bool) -> AnyView {
+        let class = if leading {
+            "fui-input-prefix"
+        } else {
+            "fui-input-suffix"
+        };
+        match self {
+            Self::Text(words) => view! { <span class=class>{words}</span> }.into_any(),
+            Self::Unit(words) => view! {
+                <span id=unit_id(id) class=class>
+                    {words}
+                </span>
+            }
+            .into_any(),
+            Self::Button(button) => button,
+        }
+    }
+}
+
 /// The classes of a field's error line: the help's size in the refusal's
 /// colour.
 ///
@@ -88,9 +152,13 @@ pub fn described_by(id: &str, help: bool, error: bool) -> Option<String> {
 /// ([`described_by`]).
 pub const ERROR: &str = "fui-help fui-error";
 
-/// A field drawn piece by piece: its label above the control or visually
-/// hidden, the control, its help line, and a trailing line after the help,
-/// such as the line a refusal shows in.
+/// A field drawn piece by piece: its label, the control, its help line and
+/// a trailing line after the help.
+///
+/// The label shows above the control or is visually hidden, the control
+/// can hold a part inside its edge before or after the typed text
+/// ([`Inner`]), and the trailing line is such as the one a refusal shows
+/// in.
 ///
 /// [`field`] and [`keyed_field`] draw the common case; this is the shape
 /// they share.
@@ -122,6 +190,8 @@ pub struct Field {
     label_hidden: bool,
     help: Option<Oco<'static, str>>,
     after: Option<AnyView>,
+    leading: Option<Inner>,
+    trailing: Option<Inner>,
 }
 
 impl Field {
@@ -133,6 +203,8 @@ impl Field {
             label_hidden: false,
             help: None,
             after: None,
+            leading: None,
+            trailing: None,
         }
     }
 
@@ -164,6 +236,18 @@ impl Field {
         self
     }
 
+    /// Puts `part` inside the field's edge before the typed text (R10).
+    pub fn leading(mut self, part: Inner) -> Self {
+        self.leading = Some(part);
+        self
+    }
+
+    /// Puts `part` inside the field's edge after the typed text (R10).
+    pub fn trailing(mut self, part: Inner) -> Self {
+        self.trailing = Some(part);
+        self
+    }
+
     /// Returns the field around `control`.
     pub fn view(self, control: impl IntoView + 'static) -> AnyView {
         let Self {
@@ -172,8 +256,16 @@ impl Field {
             label_hidden,
             help,
             after,
+            leading,
+            trailing,
         } = self;
-        let control = control.into_any();
+        let control = if leading.is_none() && trailing.is_none() {
+            control.into_any()
+        } else {
+            let leading = leading.map(|part| part.view(&id, true));
+            let trailing = trailing.map(|part| part.view(&id, false));
+            view! { <div class="fui-input-group">{leading}{control}{trailing}</div> }.into_any()
+        };
         let help = help.map(|help| view! { <p id=help_id(&id) class="fui-help">{help}</p> });
         let class = if label_hidden {
             "fui-sr-only"

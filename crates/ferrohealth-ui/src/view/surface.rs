@@ -559,8 +559,11 @@ pub fn or_none(value: String) -> AnyView {
     }
 }
 
-/// Returns `text` as a chip: a short code or name on the accent's tint, in
-/// the code face.
+/// Returns `text` as a chip: a short code, such as a path or a scope, on
+/// the accent's tint, in the code face.
+///
+/// A kind, a format, an owner or a namespace is a tag
+/// ([`crate::view::tag::tag`]), in the UI face.
 #[must_use]
 pub fn chip(text: impl Into<String>) -> impl IntoView {
     view! { <span class="fui-chip">{text.into()}</span> }

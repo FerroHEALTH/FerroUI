@@ -11,9 +11,10 @@
 //! interaction needs browser code, as functions a page calls inside an
 //! island. [`island`] holds the widgets that need nothing from the console's
 //! code as ready islands, such as the toast region, the navigation drawer,
-//! the user menu, the keyboard tabs and the action menus. [`table`] is the
-//! one paging and
-//! sorting model every listing shares, [`highlight`] the tokenizers of YAML,
+//! the user menu, the keyboard tabs, the action menus and the date picker.
+//! [`table`] is the one paging and sorting model every listing shares,
+//! [`calendar`] the days a date field counts in, [`highlight`] the
+//! tokenizers of YAML,
 //! JSON, XML and AQL, [`icon`] the vendored Lucide outlines, [`tone`] and
 //! [`theme`] the status tones and the theme choice, [`i18n`] the locale and
 //! the catalogs of every word the components draw, and [`style`] the
@@ -29,6 +30,7 @@
 //! own design.
 #![doc(test(attr(deny(warnings))))]
 
+pub mod calendar;
 pub mod highlight;
 pub mod i18n;
 pub mod icon;

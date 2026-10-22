@@ -185,10 +185,7 @@ fn meta(
     digest: Option<Digest>,
     actions: Option<AnyView>,
 ) -> AnyView {
-    let tags = tags
-        .into_iter()
-        .map(|tag| view! { <span class="fui-tag">{tag}</span> })
-        .collect_view();
+    let tags = tags.into_iter().map(crate::view::tag::tag).collect_view();
     let lines = tr_with(Text::CodeLines, &[("count", line_count(text).into())]);
     let digest = digest.map(|Digest { text, title }| {
         view! {
