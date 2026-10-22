@@ -8,7 +8,9 @@ use crate::locale::{Msg, Words, message, tr, tr_with};
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::i18n::Phrase;
 use ferrohealth_ui::icon::Glyph;
+use ferrohealth_ui::island::Combobox;
 use ferrohealth_ui::tone::Tone;
+use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::button::{Variant, label};
 use ferrohealth_ui::view::form::{
     ERROR, FORM, Field, INPUT, MEDIUM, SELECT, SWITCH, TEXTAREA, action_field, check, check_field,
@@ -23,9 +25,7 @@ use ferrohealth_ui::view::status::badge;
 use ferrohealth_ui::view::surface::{
     Crumb, Header, Mode, card, editor_heading, grid, grid_start, page_header, stack, well,
 };
-use ferrohealth_ui::widget::combobox::{
-    ComboOption, Combobox, ComboboxWords, KeyedCombobox, combobox, keyed_combobox,
-};
+use ferrohealth_ui::widget::combobox::{ComboOption, ComboboxWords, KeyedCombobox, keyed_combobox};
 use ferrohealth_ui::widget::editor::{Editor, LineMark, MarkKind, code_editor, line_id};
 use ferrohealth_ui::widget::filter::{keeps, table_filter};
 use ferrohealth_ui::widget::pick_or_type::{PickOrType, Picker, pick_or_type};
@@ -413,7 +413,7 @@ fn per_row() -> AnyView {
     .into_any()
 }
 
-/// One combobox per clause, the island [`crate::islands::ClausePicker`],
+/// One combobox per clause, the library's island,
 /// its id made from the clause's place, each described by its own help
 /// line.
 fn clause_pickers() -> AnyView {
@@ -422,11 +422,7 @@ fn clause_pickers() -> AnyView {
             let help = format!("clause-{place}-system-help");
             view! {
                 <div class="fui-field">
-                    <crate::islands::ClausePicker
-                        place
-                        words=system_words().open(Msg::ClauseCodeSystem, &["place"])
-                        combo=ComboboxWords::of_page()
-                    />
+                    {clause_picker(place)}
                     <p id=help class="fui-help">
                         {tr(Msg::SystemClauseDrawsCodesFrom)}
                     </p>
@@ -489,34 +485,41 @@ fn system_options(words: &Words) -> Vec<ComboOption> {
         .collect()
 }
 
-/// The combobox of the clause at `place`, in `words` and the combobox's own
-/// `combo`.
-pub(crate) fn clause_picker(place: u8, words: &Words, combo: ComboboxWords) -> AnyView {
+/// The combobox of the clause at `place`, the library's island.
+fn clause_picker(place: u8) -> AnyView {
     let id = format!("clause-{place}-system");
-    keyed_combobox(KeyedCombobox {
-        id: id.clone(),
-        name: format!("clause{place}"),
-        label: words.fill(Msg::ClauseCodeSystem, &[("place", &place.to_string())]),
-        placeholder: words.get(Msg::ChooseCodeSystem),
-        options: system_options(words),
-        selected: RwSignal::new(None),
-        described_by: Some(format!("{id}-help")),
-        words: combo,
-    })
+    let words = system_words();
+    view! {
+        <Combobox
+            id=id.clone()
+            name=format!("clause{place}")
+            label=words.fill(Msg::ClauseCodeSystem, &[("place", &place.to_string())])
+            placeholder=words.get(Msg::ChooseCodeSystem)
+            options=system_options(&words)
+            selected=None
+            described_by=Some(format!("{id}-help"))
+            words=ComboboxWords::of_page()
+        />
+    }
+    .into_any()
 }
 
-/// The combobox of the code system, SNOMED CT chosen, in `words` and the
-/// combobox's own `combo`.
-pub(crate) fn system_picker(words: &Words, combo: ComboboxWords) -> AnyView {
-    combobox(Combobox {
-        id: "choose-system",
-        name: "system",
-        label: words.get(Msg::CodeSystem).into(),
-        placeholder: words.get(Msg::ChooseCodeSystem).into(),
-        options: system_options(words),
-        selected: RwSignal::new(Some(String::from("snomed"))),
-        words: combo,
-    })
+/// The combobox of the code system, SNOMED CT chosen, the library's island.
+fn system_picker() -> AnyView {
+    let words = system_words();
+    view! {
+        <Combobox
+            id=String::from("choose-system")
+            name=String::from("system")
+            label=words.get(Msg::CodeSystem)
+            placeholder=words.get(Msg::ChooseCodeSystem)
+            options=system_options(&words)
+            selected=Some(String::from("snomed"))
+            described_by=None
+            words=ComboboxWords::of_page()
+        />
+    }
+    .into_any()
 }
 
 /// A long list to choose from, filtered as the reader types, beside a group
@@ -530,7 +533,7 @@ fn choosing() -> AnyView {
         tr(Msg::Combobox),
         view! {
             <div class=FORM>
-                <crate::islands::SystemPicker words=system_words() combo=ComboboxWords::of_page() />
+                {system_picker()}
                 <fieldset class="fui-fieldset">
                     <legend class="fui-sr-only">{tr(Msg::Clauses)}</legend>
                     {clauses}
@@ -1017,7 +1020,7 @@ fn editor_headers() -> AnyView {
                 crumbs,
                 ..Header::default()
             },
-            (),
+            ActionGroup::none(),
         ))
     };
     card(
@@ -1042,7 +1045,7 @@ pub fn FormsPage() -> impl IntoView {
     let header = page_header(
         tr(Msg::FormsEditor),
         Some(tr(Msg::FieldsGroupedFieldsUploadField)),
-        (),
+        ActionGroup::none(),
     )
     .into_any();
     let pair = grid(view! {

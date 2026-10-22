@@ -118,7 +118,7 @@ async fn the_picker_writes_a_choice_and_keeps_a_typed_value() -> Result<(), Box<
 
             .driver()
 
-            .execute("arguments[0].value = arguments[0].options[arguments[0].options.length - 1].value; arguments[0].dispatchEvent(new Event('change', {bubbles: true}));", vec![choice.to_json()?])
+            .execute("arguments[0].selectedIndex = arguments[0].options.length - 1; arguments[0].dispatchEvent(new Event('change', {bubbles: true}));", vec![choice.to_json()?])
 
             .await?;
         until("another opens the input", async || Ok(input.is_displayed().await?)).await?;

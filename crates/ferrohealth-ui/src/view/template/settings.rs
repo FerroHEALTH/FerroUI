@@ -19,6 +19,7 @@ use leptos::prelude::*;
 
 use crate::i18n::{Text, tr};
 use crate::icon::{Glyph, icon};
+use crate::view::action::ActionGroup;
 use crate::view::surface::{Header, page_heading};
 use crate::view::tabs::{TabRow, joined};
 use crate::widget::copy::KeyHintWords;
@@ -74,8 +75,9 @@ pub struct Managed {
 pub struct SettingsPage {
     /// The title and its subtitle; its badge is the source's to set.
     pub header: Header,
-    /// The title row's actions, such as How configuration works and More.
-    pub actions: Option<AnyView>,
+    /// The title row's action group (F14), such as How configuration works
+    /// and More.
+    pub actions: ActionGroup,
     /// Where the settings come from.
     pub source: Source,
     /// The binder tabs, when the page has three or more sections.

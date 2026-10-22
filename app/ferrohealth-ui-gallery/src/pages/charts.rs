@@ -6,6 +6,7 @@
 //! dashboard.
 
 use crate::locale::{Msg, tr};
+use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::chart::{
     ACCENT, ActivityChart, BAD, LineChart, NEUTRAL, Series, activity_chart,
 };
@@ -28,17 +29,13 @@ fn days() -> [String; 7] {
     .map(tr)
 }
 
-/// The line chart of three synthetic series, one with a gap, drawn by the
-/// island [`crate::islands::RequestsChart`].
+/// The line chart of three synthetic series, one with a gap, its legend
+/// the library's island.
 fn lines() -> AnyView {
-    card(
-        tr(Msg::LineChart),
-        view! { <crate::islands::RequestsChart words=RequestsWords::of_page() /> },
-    )
-    .into_any()
+    card(tr(Msg::LineChart), requests_chart(RequestsWords::of_page())).into_any()
 }
 
-/// The words the line chart's island draws, resolved on the server.
+/// The words the line chart draws, resolved on the server.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RequestsWords {
     label: String,
@@ -52,7 +49,7 @@ pub struct RequestsWords {
 
 impl RequestsWords {
     /// The words in the page's locale.
-    pub(crate) fn of_page() -> Self {
+    fn of_page() -> Self {
         Self {
             label: tr(Msg::RequestsPerDay),
             summary: tr(Msg::ThreeSyntheticSeriesOverWeek),
@@ -67,7 +64,7 @@ impl RequestsWords {
 
 /// The line chart of three synthetic series in `words`, its legend showing
 /// and hiding each.
-pub(crate) fn requests_chart(words: RequestsWords) -> AnyView {
+fn requests_chart(words: RequestsWords) -> AnyView {
     let RequestsWords {
         label,
         summary,
@@ -100,8 +97,7 @@ pub(crate) fn requests_chart(words: RequestsWords) -> AnyView {
             .collect(),
         y_range: None,
     };
-    let shown = RwSignal::new(vec![true, true, true]);
-    line_chart(chart, shown, chart_words)
+    line_chart(&chart, chart_words)
 }
 
 /// The activity line of thirty synthetic days.
@@ -130,8 +126,12 @@ fn activity() -> AnyView {
     reason = "the #[component] macro drops a #[must_use] from the function it writes"
 )]
 pub fn ChartsPage() -> impl IntoView {
-    let header =
-        page_header(tr(Msg::Charts), Some(tr(Msg::DrawnSvgServerScaledCard)), ()).into_any();
+    let header = page_header(
+        tr(Msg::Charts),
+        Some(tr(Msg::DrawnSvgServerScaledCard)),
+        ActionGroup::none(),
+    )
+    .into_any();
     let sections = (lines(), activity());
     view! {
         {super::title(tr(Msg::Charts))}

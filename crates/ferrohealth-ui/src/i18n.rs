@@ -610,6 +610,12 @@ texts! {
     HelpHide = "help-hide",
     /// The combobox list when the filter keeps no option.
     ComboboxNoMatch = "combobox-no-match",
+    /// The title row's button that opens the More menu.
+    MenuMore = "menu-more",
+    /// The name of a split button's toggle: the variants of `$action`.
+    MenuVariants = "menu-variants",
+    /// The name of a select button: its `$label` and the `$value` chosen.
+    SelectName = "select-name",
     /// The basic form's user name field.
     SignInUsername = "sign-in-username",
     /// The basic form's password field.
@@ -835,9 +841,10 @@ mod tests {
 
     /// The names of the placeables the library's messages take.
     const PLACEABLES: &[&str] = &[
-        "chart", "code", "count", "date", "document", "file", "filter", "first", "held", "key",
-        "kinds", "last", "limit", "note", "noun", "nouns", "page", "pages", "range", "shown",
-        "size", "stated", "status", "summary", "tab", "time", "total", "what", "words",
+        "action", "chart", "code", "count", "date", "document", "file", "filter", "first", "held",
+        "key", "kinds", "label", "last", "limit", "note", "noun", "nouns", "page", "pages",
+        "range", "shown", "size", "stated", "status", "summary", "tab", "time", "total", "value",
+        "what", "words",
     ];
 
     /// The ids of the messages the catalog file at `path` defines.

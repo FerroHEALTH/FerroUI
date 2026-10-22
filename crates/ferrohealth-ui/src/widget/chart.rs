@@ -3,14 +3,17 @@
 
 //! The line chart with a legend that shows and hides its series.
 //!
-//! The drawing is [`crate::view::chart::line_svg`]'s, drawn once with every
-//! series in groups of its own, and a press of the legend sets the `hidden`
-//! attribute of that series' groups alone, so the browser parses no SVG
-//! again; each chip of the legend is a `<button aria-pressed>` with its series'
-//! swatch beside its name, so the colour never carries the meaning alone,
-//! and hiding one series recolours none, since each keeps its palette
-//! index. The chips stay hidden until the page hydrates, so none offers a
-//! press that does nothing; the figures table reads the same either way.
+//! The drawing is [`crate::view::chart::line_svg`]'s, drawn once on the
+//! server with every series in groups of its own, and the figures table
+//! beside it reads the same for assistive technology. Only the legend is an
+//! island ([`crate::island::ChartLegend`]). Before the page hydrates it is a
+//! static key, each series' swatch beside its name, so a sighted reader of
+//! a page with no WebAssembly keeps the colours' meaning (leptos-ui.md
+//! §15.8). Once hydrated each entry is a `<button aria-pressed>`, and a
+//! press sets the `hidden` attribute of that series' groups alone, so the
+//! browser parses no SVG again; hiding one series recolours none, since
+//! each keeps its palette index, and the last series shown cannot be
+//! hidden.
 
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -42,6 +45,21 @@ impl ChartWords {
     }
 }
 
+/// One entry of a chart's legend: a series' name and its colour.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LegendEntry {
+    /// The series' name, as the table shows it.
+    pub name: String,
+    /// The series' palette index, which pins its colour.
+    pub palette: u8,
+}
+
+/// The id of the plot of the chart `id`, which the legend shows and hides
+/// series in.
+fn plot_id(id: &str) -> String {
+    format!("{id}-plot")
+}
+
 /// How many of `count` series `shown` keeps, a missing flag counting as
 /// shown.
 fn shown_count(shown: RwSignal<Vec<bool>>, count: usize) -> usize {
@@ -58,88 +76,140 @@ fn is_shown(shown: RwSignal<Vec<bool>>, index: usize) -> bool {
     shown.with(|flags| flags.get(index).copied().unwrap_or(true))
 }
 
-/// Returns the line chart `chart` in `words`, its legend toggling `shown`,
-/// one flag per series; the last series shown cannot be hidden.
+/// Returns the line chart `chart` in `words`: its drawing and its figures
+/// table, drawn on the server, with the legend island between them.
 #[must_use]
-pub fn line_chart(chart: LineChart, shown: RwSignal<Vec<bool>>, words: ChartWords) -> AnyView {
+pub fn line_chart(chart: &LineChart, words: ChartWords) -> AnyView {
     let ChartWords {
         no_value,
-        series: legend,
+        series: label,
         figures: figure_words,
     } = words;
-    let table = figures(&chart, figure_words).into_any();
-    let count = chart.series.len();
-    let hydrated = RwSignal::new(false);
-    Effect::new(move || hydrated.set(true));
-    let chips = chart
+    let table = figures(chart, figure_words).into_any();
+    let entries = chart
         .series
         .iter()
-        .enumerate()
-        .map(|(index, series)| {
-            let swatch = format!("fui-swatch fui-series-{}", series.palette % PALETTE);
-            let on = move || is_shown(shown, index);
-            // The last series shown cannot be hidden, so the chart never
-            // empties itself; its chip stays pressed and refuses the press.
-            let last = move || on() && shown_count(shown, count) == 1;
-            view! {
-                <button
-                    type="button"
-                    class="fui-legend-chip"
-                    data-series=series.name.clone()
-                    aria-pressed=move || on().to_string()
-                    disabled=last
-                    hidden=move || !hydrated.get()
-                    on:click=move |_| {
-                        if last() {
-                            return;
-                        }
-                        shown
-                            .update(|flags| {
-                                if flags.len() < count {
-                                    flags.resize(count, true);
-                                }
-                                if let Some(flag) = flags.get_mut(index) {
-                                    *flag = !*flag;
-                                }
-                            });
-                    }
-                >
-                    <span class=swatch aria-hidden="true"></span>
-                    {series.name.clone()}
-                </button>
-            }
+        .map(|series| LegendEntry {
+            name: series.name.clone(),
+            palette: series.palette,
         })
-        .collect_view();
-    let note = has_gaps(&chart).then(|| {
-        view! {
-            <span class="fui-legend-note">
-                <span class="fui-swatch-gap" aria-hidden="true"></span>
-                {no_value}
-            </span>
-        }
-    });
-    let plot = NodeRef::<leptos::html::Div>::new();
-    let drawn = shown.with_untracked(move |flags| line_svg_grouped(&chart, flags));
-    Effect::new(move || shown.with(|flags| show_in_place(plot, flags, count)));
+        .collect::<Vec<_>>();
+    let gap = has_gaps(chart).then_some(no_value);
+    let plot = plot_id(chart.id);
+    let target = plot.clone();
+    let drawn = line_svg_grouped(chart, &[]);
     view! {
         <figure class="fui-chart">
-            <div class="fui-chart-plot" node_ref=plot inner_html=drawn></div>
-            <figcaption class="fui-legend" aria-label=legend>
-                {chips}
-                {note}
-            </figcaption>
+            <div class="fui-chart-plot" id=plot inner_html=drawn></div>
+            <crate::island::ChartLegend plot=target label entries gap />
             {table}
         </figure>
     }
     .into_any()
 }
 
-/// Hides or shows each of `count` series drawn in `plot` as `flags` says,
-/// by the `hidden` attribute of its two groups, leaving the drawing as it is.
-fn show_in_place(plot: NodeRef<leptos::html::Div>, flags: &[bool], count: usize) {
+/// Returns the entry of the series `entry` at `index`: its static key
+/// before the page hydrates, its toggle of `shown` once it has.
+fn entry(
+    entry: LegendEntry,
+    index: usize,
+    count: usize,
+    shown: RwSignal<Vec<bool>>,
+    hydrated: RwSignal<bool>,
+) -> impl IntoView {
+    let swatch = format!("fui-swatch fui-series-{}", entry.palette % PALETTE);
+    let on = move || is_shown(shown, index);
+    // The last series shown cannot be hidden, so the chart never empties
+    // itself; its chip stays pressed and refuses the press.
+    let last = move || on() && shown_count(shown, count) == 1;
+    let name = entry.name;
+    move || {
+        if hydrated.get() {
+            view! {
+                <button
+                    type="button"
+                    class="fui-legend-chip"
+                    data-series=name.clone()
+                    aria-pressed=move || on().to_string()
+                    disabled=last
+                    on:click=move |_| {
+                        if last() {
+                            return;
+                        }
+                        shown
+                            .update(|flags| {
+                                if let Some(flag) = flags.get_mut(index) {
+                                    *flag = !*flag;
+                                }
+                            });
+                    }
+                >
+                    <span class=swatch.clone() aria-hidden="true"></span>
+                    {name.clone()}
+                </button>
+            }
+            .into_any()
+        } else {
+            view! {
+                <span class="fui-legend-key" data-series=name.clone()>
+                    <span class=swatch.clone() aria-hidden="true"></span>
+                    {name.clone()}
+                </span>
+            }
+            .into_any()
+        }
+    }
+}
+
+/// Returns the legend of the plot `plot`, named `label`, one entry per
+/// series in `entries`, with `gap` saying what a break in a line means when
+/// the chart has one. A console draws it through [`line_chart`].
+#[must_use]
+pub fn legend(
+    plot: String,
+    label: String,
+    entries: Vec<LegendEntry>,
+    gap: Option<String>,
+) -> AnyView {
+    let count = entries.len();
+    let shown = RwSignal::new(vec![true; count]);
+    let hydrated = RwSignal::new(false);
+    Effect::new(move || hydrated.set(true));
+    let plot = StoredValue::new(plot);
+    Effect::new(move || {
+        shown.with(|flags| plot.with_value(|plot| show_in_place(plot, flags, count)));
+    });
+    let chips = entries
+        .into_iter()
+        .enumerate()
+        .map(|(index, each)| entry(each, index, count, shown, hydrated))
+        .collect_view();
+    let note = gap.map(|gap| {
+        view! {
+            <span class="fui-legend-note">
+                <span class="fui-swatch-gap" aria-hidden="true"></span>
+                {gap}
+            </span>
+        }
+    });
+    view! {
+        <div class="fui-legend" role="group" aria-label=label>
+            {chips}
+            {note}
+        </div>
+    }
+    .into_any()
+}
+
+/// Hides or shows each of `count` series drawn in the plot `plot` as
+/// `flags` says, by the `hidden` attribute of its two groups, leaving the
+/// drawing as it is.
+fn show_in_place(plot: &str, flags: &[bool], count: usize) {
     #[cfg(target_arch = "wasm32")]
     {
-        let Some(plot) = plot.get() else {
+        // NOTE: leptos_macro 0.8 `src/lib.rs`, island limitation 1: the plot is drawn on
+        // the server outside the island, out of reach of a node reference, so it is found by id.
+        let Some(plot) = document().get_element_by_id(plot) else {
             return;
         };
         for index in 0..count {
@@ -159,5 +229,5 @@ fn show_in_place(plot: NodeRef<leptos::html::Div>, flags: &[bool], count: usize)
         }
     }
     #[cfg(not(target_arch = "wasm32"))]
-    let _: (NodeRef<leptos::html::Div>, &[bool], usize) = (plot, flags, count);
+    let _: (&str, &[bool], usize) = (plot, flags, count);
 }

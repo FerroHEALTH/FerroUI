@@ -5,6 +5,10 @@
 //! from a console's code, each ready to place in a page Leptos renders in
 //! islands mode.
 //!
+//! They are the toast region, the keyboard tabs, the navigation drawer, the
+//! menu and listbox behind every More, row menu and select button, the
+//! combobox, the picker field and the chart legend.
+//!
 //! An island is the only part of a page the browser hydrates (the Leptos
 //! book, "Guide: Islands"). Its props cross to the browser as JSON in the
 //! page, so they are plain data, and the words it draws are among them,
@@ -28,6 +32,8 @@
 use leptos::prelude::*;
 
 use crate::view::tabs::TabChoice;
+use crate::widget::action_menu::Trigger;
+use crate::widget::combobox::{ComboOption, ComboboxWords, KeyedCombobox};
 use crate::widget::toast::{Flash, RegionWords};
 
 /// The toast region, which draws `flash` as the page arrives and every
@@ -154,4 +160,118 @@ pub fn UserMenuButton(
     children: Children,
 ) -> impl IntoView {
     crate::widget::menu::menu_button(id, label, name, cancel, children().into_any())
+}
+
+/// The menu or listbox `id` behind `trigger`, around the items the server
+/// drew as its children. A console draws it through
+/// [`crate::widget::action_menu::more_menu`], [`crate::widget::action_menu::row_menu`],
+/// [`crate::widget::action_menu::variants_menu`] or
+/// [`crate::widget::action_menu::listbox`].
+#[island]
+pub fn MenuButton(
+    /// The menu's id, which its trigger controls.
+    id: String,
+    /// The menu's name and the title of the phone's sheet, in the page's
+    /// locale.
+    label: String,
+    /// The trigger's name, in the page's locale.
+    name: String,
+    /// What the trigger is and the words it shows.
+    trigger: Trigger,
+    /// The sheet's Cancel, in the page's locale.
+    cancel: String,
+    /// The items or options, drawn on the server.
+    children: Children,
+) -> impl IntoView {
+    crate::widget::action_menu::menu_button(id, label, name, trigger, cancel, children().into_any())
+}
+
+/// The combobox `id`, posting its value as `name`: a native select until
+/// the page hydrates, then the filtering listbox
+/// ([`crate::widget::combobox`]).
+#[island]
+pub fn Combobox(
+    /// The control's id.
+    id: String,
+    /// The name the form posts the value as.
+    name: String,
+    /// The label, in the page's locale.
+    label: String,
+    /// The words shown while nothing is chosen, in the page's locale.
+    placeholder: String,
+    /// The choices, in their order.
+    options: Vec<ComboOption>,
+    /// The value chosen, if any.
+    selected: Option<String>,
+    /// The id of the element that describes the control, such as its help
+    /// line.
+    described_by: Option<String>,
+    /// The words it draws itself, in the page's locale
+    /// ([`ComboboxWords::of_page`]).
+    words: ComboboxWords,
+) -> impl IntoView {
+    crate::widget::combobox::keyed_combobox(KeyedCombobox {
+        id,
+        name,
+        label,
+        placeholder,
+        options,
+        selected: RwSignal::new(selected),
+        described_by,
+        words,
+    })
+}
+
+/// The picker field `id`: a choice from what the server holds or a typed
+/// value, posted as `name` ([`crate::widget::picker`]).
+#[island]
+pub fn PickerField(
+    /// The text input's id; the select's is this with `-choice`.
+    id: String,
+    /// The name the input submits as.
+    name: String,
+    /// The input's label, in the page's locale.
+    label: String,
+    /// The select's label, in the page's locale.
+    choose_label: String,
+    /// The help line under both, in the page's locale.
+    help: Option<String>,
+    /// The choices, value and words.
+    choices: Vec<(String, String)>,
+    /// The value the input holds as the page arrives.
+    value: String,
+    /// The empty choice's words, in the page's locale.
+    empty_word: String,
+    /// The words of the choice that opens the input, in the page's locale.
+    other_word: String,
+) -> impl IntoView {
+    crate::widget::picker::picker_field(crate::widget::picker::Picker {
+        id,
+        name,
+        label: label.into(),
+        choose_label: choose_label.into(),
+        help: help.map(Into::into),
+        choices: Signal::stored(choices),
+        value: RwSignal::new(value),
+        empty_word: empty_word.into(),
+        other_word: other_word.into(),
+    })
+}
+
+/// The legend of a line chart's plot `plot`: a static key until the page
+/// hydrates, then a toggle per series. A console draws it through
+/// [`crate::widget::chart::line_chart`].
+#[island]
+pub fn ChartLegend(
+    /// The id of the plot the series are drawn in.
+    plot: String,
+    /// The legend's name, in the page's locale.
+    label: String,
+    /// The series, each its name and its palette index.
+    entries: Vec<crate::widget::chart::LegendEntry>,
+    /// What a break in a line means, in the page's locale, when the chart
+    /// has one.
+    gap: Option<String>,
+) -> impl IntoView {
+    crate::widget::chart::legend(plot, label, entries, gap)
 }

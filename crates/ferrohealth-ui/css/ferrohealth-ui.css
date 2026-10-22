@@ -4167,6 +4167,18 @@
     background: var(--series);
   }
 
+  /* The legend as a static key, before the page hydrates or with no
+     WebAssembly: each swatch beside its name, no control. */
+  .fui-legend-key {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: var(--space-tight) 0.625rem;
+    color: var(--ink);
+    font-size: var(--text-micro);
+    line-height: var(--leading-micro);
+  }
+
   .fui-legend-chip[aria-pressed="false"] .fui-swatch {
     background: transparent;
     box-shadow: inset 0 0 0 2px var(--series);
@@ -8959,14 +8971,16 @@
     color: var(--ink);
   }
 
-  /* An open menu rises above the rows and panels after it. */
-  tr:has(> td .fui-menu),
+  /* An open menu rises above the rows and panels after it; a menu in a
+     closed `<details>` is not open. */
+  tr:has(> td .fui-menu:not(details:not([open]) *)),
   td:has(> .fui-anchor > .fui-menu),
-  .fui-table-scroll:has(.fui-menu) {
+  td:has(details[open] > .fui-menu),
+  .fui-table-scroll:has(.fui-menu:not(details:not([open]) *)) {
     z-index: 50;
   }
 
-  .fui-table-scroll:has(.fui-menu) {
+  .fui-table-scroll:has(.fui-menu:not(details:not([open]) *)) {
     overflow: visible;
     clip-path: none;
   }
@@ -9079,6 +9093,74 @@
   .fui-split-button .fui-split-toggle[aria-expanded="true"] {
     background: var(--accent-hover);
     color: var(--accent-ink);
+  }
+
+  /* F13 and R29 on their native floor: the trigger is the summary of a
+     `<details>`, so the menu opens with no script; its marker is dropped,
+     an open menu's trigger looks pressed as aria-expanded makes it once
+     the island runs, and a form around an item adds no box. */
+  details.fui-anchor,
+  details.fui-select-anchor {
+    display: inline-block;
+  }
+
+  :is(.fui-anchor, .fui-select-anchor) > summary {
+    list-style: none;
+    cursor: pointer;
+  }
+
+  :is(.fui-anchor, .fui-select-anchor) > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  details[open] > summary:is(.fui-icon-button, .fui-button):not(.fui-split-toggle) {
+    background: var(--surface-sunken);
+    color: var(--ink);
+  }
+
+  .fui-split-button details[open] > .fui-split-toggle {
+    background: var(--accent-hover);
+    color: var(--accent-ink);
+  }
+
+  details[open] > .fui-select-button {
+    border-color: var(--focus);
+    outline: 2px solid var(--focus);
+    outline-offset: 0;
+  }
+
+  .fui-menu-form,
+  .fui-action-form {
+    display: contents;
+  }
+
+  /* An option of the listbox is a link or a form's button: the row the
+     listbox draws, with the menu's focus ring. */
+  :is(a, button).fui-listbox-option {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    text-align: start;
+    text-decoration: none;
+  }
+
+  :is(a, button).fui-listbox-option[aria-selected="true"] {
+    color: var(--accent);
+  }
+
+  .fui-listbox-option:focus-visible {
+    background: var(--surface-sunken);
+    outline: 2px solid var(--focus);
+    outline-offset: -2px;
+  }
+
+  @media (width < 40rem) {
+    .fui-select-anchor > .fui-listbox {
+      overflow-y: auto;
+      padding: 0.5rem 0.75rem 1rem;
+    }
   }
 
   .fui-setting-card.is-editing {
@@ -13142,7 +13224,7 @@
       z-index: 90;
     }
 
-    body:has(.fui-menu-sheet) .fui-transform-head {
+    body:has(.fui-menu-sheet:not(details:not([open]) *)) .fui-transform-head {
       z-index: auto;
     }
 
@@ -13261,7 +13343,7 @@
   }
 
   /* An open menu stacks above the next row's controls. */
-  .fui-table tbody tr:has(.fui-menu) {
+  .fui-table tbody tr:has(.fui-menu:not(details:not([open]) *)) {
     position: relative;
     z-index: 60;
   }

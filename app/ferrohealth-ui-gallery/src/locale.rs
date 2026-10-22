@@ -790,6 +790,56 @@ messages! {
     FilesDiskCompileReplaceRunning = "files-disk-compile-replace-running",
     /// `Reload the set?`
     ReloadTheSet = "reload-the-set",
+    /// `A primary alone`
+    APrimaryAlone = "a-primary-alone",
+    /// `A split primary and its variants`
+    ASplitPrimary = "a-split-primary",
+    /// `Action groups`
+    ActionGroups = "action-groups",
+    /// `Copy the location id`
+    CopyLocationId = "copy-location-id",
+    /// `Delete the location`
+    DeleteLocation = "delete-location",
+    /// `The synthetic location and its units go for good.`
+    DeleteLocationBody = "delete-location-body",
+    /// `Delete the location?`
+    DeleteTheLocation = "delete-the-location",
+    /// `Download the file`
+    DownloadTheFile = "download-the-file",
+    /// `Export as JSON`
+    ExportJson = "export-json",
+    /// `Menus and select buttons`
+    MenusAndSelects = "menus-and-selects",
+    /// `Merge with another location`
+    MergeLocation = "merge-location",
+    /// `Only an administrator merges locations.`
+    MergeReason = "merge-reason",
+    /// `More actions for the file`
+    MoreActionsFile = "more-actions-file",
+    /// `More actions for the location`
+    MoreActionsLocation = "more-actions-location",
+    /// `More actions for the mapping set`
+    MoreActionsSet = "more-actions-set",
+    /// `More actions for the settings`
+    MoreActionsSettings = "more-actions-settings",
+    /// `More alone`
+    MoreAlone = "more-alone",
+    /// `Open the document`
+    OpenTheDocument = "open-the-document",
+    /// `A plain form post, with or without WebAssembly`
+    PostsTheDensity = "posts-the-density",
+    /// `The file is provisioned and read-only.`
+    ProvisionedReadOnly = "provisioned-read-only",
+    /// `Save and reload the set`
+    SaveAndReload = "save-and-reload",
+    /// `Save as a draft`
+    SaveAsDraft = "save-as-draft",
+    /// `Switch to the compact density`
+    SwitchToCompact = "switch-to-compact",
+    /// `{ $version } (latest of { $count })`
+    VersionLatestOf = "version-latest-of",
+    /// `Ways to save`
+    WaysToSave = "ways-to-save",
     /// `New file`
     NewFile = "new-file",
     /// `Every static view of the library, in this brand's theme.`

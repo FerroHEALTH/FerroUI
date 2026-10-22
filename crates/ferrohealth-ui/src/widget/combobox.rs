@@ -25,7 +25,7 @@ use crate::icon::{Glyph, icon};
 use crate::view::form::SELECT;
 
 /// One choice of a combobox.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ComboOption {
     /// The value the form posts.
     pub value: String,
@@ -384,26 +384,22 @@ impl State {
     }
 }
 
-/// The rows of the list: the options kept, or "No match".
-fn rows(state: State, no_match: String) -> AnyView {
-    let list = state.shown.get();
-    if list.is_empty() {
-        return view! {
-            <li class="fui-combobox-empty" role="option" aria-disabled="true" aria-selected="false">
-                {no_match}
-            </li>
-        }
-        .into_any();
-    }
-    list.into_iter()
-        .enumerate()
-        .map(|(at, place)| row(state, at, place))
-        .collect_view()
-        .into_any()
+/// The key of the option at `place`: its value, stable while the typed
+/// words change which options show.
+fn key(state: State, place: usize) -> String {
+    state.options.with_value(|options| {
+        options
+            .get(place)
+            .map(|option| option.value.clone())
+            .unwrap_or_default()
+    })
 }
 
-/// The row at `at` of the list, the option at `place`.
-fn row(state: State, at: usize, place: usize) -> AnyView {
+/// The row of the option at `place`.
+///
+/// It stays in the list as long as its option is shown; only its
+/// highlight and its choice change in place.
+fn row(state: State, place: usize) -> AnyView {
     let Some(option) = state
         .options
         .with_value(|options| options.get(place).cloned())
@@ -417,15 +413,33 @@ fn row(state: State, at: usize, place: usize) -> AnyView {
             .with(|chosen| chosen.as_deref() == Some(value.as_str()))
     };
     let check = is_chosen.clone();
+    let is_active = move || {
+        state
+            .active
+            .get()
+            .and_then(|at| state.shown.with(|list| list.get(at).copied()))
+            == Some(place)
+    };
+    let at = move || {
+        state
+            .shown
+            .with_untracked(|list| list.iter().position(|each| *each == place))
+    };
     view! {
         <li
             id=state.id.with_value(|id| option_id(id, place))
             role="option"
             class="fui-combobox-option"
             aria-selected=move || is_chosen().to_string()
-            data-active=move || (state.active.get() == Some(at)).then_some("true")
+            data-active=move || is_active().then_some("true")
             on:mousedown=|event| event.prevent_default()
-            on:mousemove=move |_| state.active.set(Some(at))
+            on:mousemove=move |_| {
+                if let Some(at) = at()
+                    && state.active.get_untracked() != Some(at)
+                {
+                    state.active.set(Some(at));
+                }
+            }
             on:click=move |_| state.choose(place)
         >
             <span class="fui-combobox-text">
@@ -500,7 +514,28 @@ fn enhanced_view(combo: KeyedCombobox) -> AnyView {
                 class="fui-combobox-list"
                 hidden=move || !state.open.get()
             >
-                {move || rows(state, no_match.clone())}
+                <For
+                    each=move || state.shown.get()
+                    key=move |place| key(state, *place)
+                    children=move |place| row(state, place)
+                />
+                {move || {
+                    state
+                        .shown
+                        .with(Vec::is_empty)
+                        .then(|| {
+                            view! {
+                                <li
+                                    class="fui-combobox-empty"
+                                    role="option"
+                                    aria-disabled="true"
+                                    aria-selected="false"
+                                >
+                                    {no_match.clone()}
+                                </li>
+                            }
+                        })
+                }}
             </ul>
         </div>
     }

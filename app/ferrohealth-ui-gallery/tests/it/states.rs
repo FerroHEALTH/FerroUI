@@ -12,7 +12,10 @@
 //! keyboard, the search box focused, the tables in the compact density, the
 //! compact stat tiles and the stacked timestamps of a phone at 320 and
 //! 390 px, the disabled fields inside a well at 1440 and 390 px, and the
-//! document pane switched to its raw view.
+//! title row's action group with More open by the pointer and the keyboard,
+//! the split button's variants, a row menu and the select button's listbox,
+//! with the action group, More's bottom sheet and the listbox's at 390 px,
+//! and the document pane switched to its raw view.
 //!
 //! Each state is written as `states/<brand>/<state>.png` and its `-dark`
 //! twin under the screenshots folder, every brand in the light and the
@@ -35,7 +38,7 @@ use crate::journeys::window;
 use crate::stack::Gallery;
 
 /// Every state, by the name its images take.
-pub(crate) const STATES: [&str; 54] = [
+pub(crate) const STATES: [&str; 63] = [
     "hover-nav",
     "focus-nav",
     "hover-stat",
@@ -90,6 +93,15 @@ pub(crate) const STATES: [&str; 54] = [
     "pick-or-type-combobox-typed",
     "disabled-well-390",
     "document-raw",
+    "action-group",
+    "menu-open",
+    "menu-keyboard",
+    "split-open",
+    "row-menu-open",
+    "listbox-open",
+    "action-group-390",
+    "menu-sheet-390",
+    "listbox-sheet-390",
 ];
 
 /// The viewport the states are taken in.
@@ -543,12 +555,12 @@ async fn overlays(
     let opened = [
         (
             "dialog-open",
-            "//button[normalize-space(.) = 'Reload the set']",
+            "//button[@popovertarget = 'reload-set' and not(@role)]",
             "reload-set",
         ),
         (
             "dialog-danger",
-            "//button[normalize-space(.) = 'Delete the file']",
+            "//button[@role = 'menuitem' and contains(., 'Delete the file')]",
             "delete-file",
         ),
         (
@@ -574,6 +586,14 @@ async fn overlays(
         ),
     ];
     for (state, opener, id) in opened {
+        if state == "dialog-danger" {
+            // The delete is More's last item, so More opens first.
+            press(
+                browser,
+                &crate::menus::hydrated_trigger(browser, "overlays-more").await?,
+            )
+            .await?;
+        }
         overlay(browser, brand, theme, state, By::XPath(opener), By::Id(id)).await?;
     }
     raised_toasts(browser, brand, theme).await?;
@@ -642,7 +662,7 @@ async fn layouts(
 
         .driver()
 
-        .execute("arguments[0].value = arguments[0].options[arguments[0].options.length - 1].value; arguments[0].dispatchEvent(new Event('change', {bubbles: true}));", vec![choice.to_json()?])
+        .execute("arguments[0].selectedIndex = arguments[0].options.length - 1; arguments[0].dispatchEvent(new Event('change', {bubbles: true}));", vec![choice.to_json()?])
 
         .await?;
     let input = browser.element(By::Id("run-value-set")).await?;
@@ -772,6 +792,82 @@ async fn phone(
         .await?;
     let grouped = browser.element(card("Grouped fields")).await?;
     shot_of(browser, brand, theme, "disabled-well-390", &grouped).await?;
+    window(browser, WIDTH, HEIGHT).await
+}
+
+/// Opens the menu `id` by a press on its trigger, scrolled to the middle of
+/// the viewport, and writes the viewport as `state`.
+async fn opened_menu(
+    browser: &Browser,
+    brand: Brand,
+    theme: &str,
+    state: &str,
+    id: &str,
+) -> Result<(), Box<dyn Error>> {
+    let trigger = crate::menus::hydrated_trigger(browser, id).await?;
+    press(browser, &trigger).await?;
+    until(&format!("{state} opens"), async || {
+        Ok(trigger.attr("aria-expanded").await?.as_deref() == Some("true"))
+    })
+    .await?;
+    let heading = browser.element(By::Css("main h1")).await?;
+    hover(browser, &heading).await?;
+    shot_of_view(browser, brand, theme, state).await
+}
+
+/// Closes the menu `id` with Escape from its trigger.
+async fn closed_menu(browser: &Browser, id: &str) -> Result<(), Box<dyn Error>> {
+    escape(browser).await?;
+    let trigger = crate::menus::hydrated_trigger(browser, id).await?;
+    until(&format!("{id} closes"), async || {
+        Ok(trigger.attr("aria-expanded").await?.as_deref() == Some("false"))
+    })
+    .await
+}
+
+/// The title row's action group, More open by the pointer and by the
+/// keyboard, the split button's variants, a row menu and the select
+/// button's listbox, then the action group, More's bottom sheet and the
+/// listbox's at 390 px.
+async fn menu_states(
+    browser: &Browser,
+    gallery: &Gallery,
+    brand: Brand,
+    theme: &str,
+) -> Result<(), Box<dyn Error>> {
+    let page = gallery.url(&format!("/{}/overlays", brand.key()));
+    browser.goto(&page).await?;
+    crate::menus::hydrated_trigger(browser, "overlays-more").await?;
+    let header = browser.element(By::Css(".fui-page-header")).await?;
+    shot_of(browser, brand, theme, "action-group", &header).await?;
+    browser
+        .driver()
+        .execute("window.scrollTo(0, 0);", vec![])
+        .await?;
+    opened_menu(browser, brand, theme, "menu-open", "overlays-more").await?;
+    browser
+        .driver()
+        .action_chain()
+        .send_keys(Key::Down)
+        .perform()
+        .await?;
+    shot_of_view(browser, brand, theme, "menu-keyboard").await?;
+    closed_menu(browser, "overlays-more").await?;
+    opened_menu(browser, brand, theme, "split-open", "save-variants").await?;
+    closed_menu(browser, "save-variants").await?;
+    opened_menu(browser, brand, theme, "row-menu-open", "row-menu-0").await?;
+    closed_menu(browser, "row-menu-0").await?;
+    opened_menu(browser, brand, theme, "listbox-open", "version-list").await?;
+    closed_menu(browser, "version-list").await?;
+    window(browser, 390, 844).await?;
+    browser.goto(&page).await?;
+    crate::menus::hydrated_trigger(browser, "overlays-more").await?;
+    let header = browser.element(By::Css(".fui-page-header")).await?;
+    shot_of(browser, brand, theme, "action-group-390", &header).await?;
+    opened_menu(browser, brand, theme, "menu-sheet-390", "overlays-more").await?;
+    closed_menu(browser, "overlays-more").await?;
+    opened_menu(browser, brand, theme, "listbox-sheet-390", "version-list").await?;
+    closed_menu(browser, "version-list").await?;
     window(browser, WIDTH, HEIGHT).await
 }
 
@@ -909,6 +1005,7 @@ async fn every_state_is_captured_in_every_brand_light_and_dark() -> Result<(), B
                 rail(browser, &gallery, brand, theme).await?;
                 phone(browser, &gallery, brand, theme).await?;
                 document(browser, &gallery, brand, theme).await?;
+                menu_states(browser, &gallery, brand, theme).await?;
             }
         }
         let missing = unwritten();

@@ -16,8 +16,9 @@ use leptos::prelude::*;
 
 use crate::i18n::{Text, tr, tr_with};
 use crate::icon::{Glyph, icon};
+use crate::view::action::ActionGroup;
 use crate::view::button::Variant;
-use crate::view::surface::{Header, page_heading};
+use crate::view::surface::{Header, page_heading, stepped_heading};
 use crate::view::tabs::{TabRow, joined};
 
 /// What a detail page shows.
@@ -25,8 +26,11 @@ use crate::view::tabs::{TabRow, joined};
 pub struct DetailPage {
     /// The trail, the title with its state badge, and the subtitle.
     pub header: Header,
-    /// The title row's actions: one primary plus More, or a [`stepper`].
-    pub actions: Option<AnyView>,
+    /// The title row's action group (F14): one primary plus More.
+    pub actions: ActionGroup,
+    /// The previous and next of a queue (R5), drawn in the title row in
+    /// place of the action group.
+    pub stepper: Option<Stepper>,
     /// The binder tabs, when the object has more than one section.
     pub tabs: Option<TabRow>,
     /// The section in view: the tab's panel, or the whole page under the
@@ -41,11 +45,14 @@ pub fn detail_page(page: DetailPage) -> AnyView {
     let DetailPage {
         header,
         actions,
+        stepper: steps,
         tabs,
         body,
     } = page;
-    // TODO(#153): the title row takes the action group of one primary plus More.
-    let heading = page_heading(header, actions).into_any();
+    let heading = match steps {
+        Some(steps) => stepped_heading(header, stepper(steps)),
+        None => page_heading(header, actions).into_any(),
+    };
     let section = match tabs {
         Some(tabs) => joined(tabs, body, None),
         None => body,

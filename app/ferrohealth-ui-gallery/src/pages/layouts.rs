@@ -12,6 +12,7 @@ use std::collections::BTreeSet;
 use crate::locale::{Msg, Words, tr};
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::icon::Glyph;
+use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::button::{Variant, label};
 use ferrohealth_ui::view::change::{Change, change_table};
 use ferrohealth_ui::view::chart::proportion;
@@ -352,8 +353,8 @@ pub(crate) fn runner_form_in(brand: &str, words: &Words, help: HelpWords) -> Any
         </button>
     };
     let picker = picker_field(Picker {
-        id: "run-value-set",
-        name: "url",
+        id: String::from("run-value-set"),
+        name: String::from("url"),
         label: words.get(Msg::ValueSet).into(),
         choose_label: words.get(Msg::ChooseValueSetServerHolds).into(),
         help: Some(words.get(Msg::CanonicalValueSetList).into()),
@@ -665,7 +666,7 @@ pub fn LayoutsPage() -> impl IntoView {
     let header = page_header(
         tr(Msg::Layouts),
         Some(tr(Msg::ThreePanesTreeListBeside)),
-        (),
+        ActionGroup::none(),
     )
     .into_any();
     let sections = (

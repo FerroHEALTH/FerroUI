@@ -13,7 +13,7 @@
 //! and a small table that fits a phone unstacked. Every listing works with
 //! no WebAssembly, and below 40rem every row is a line under a hairline.
 
-use ferrohealth_ui::icon::{Glyph, icon};
+use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::table::filter::{Find, find_form};
 use ferrohealth_ui::table::model::{
     Direction, Noun, OpenWindow, Paging, Sort, StateSource, Window, fields, href,
@@ -26,6 +26,7 @@ use ferrohealth_ui::table::view::{
     count_cell, data_table, data_table_unstacked, depth, group_row, menu_cell, title_cell,
 };
 use ferrohealth_ui::tone::Tone;
+use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::button::Variant;
 use ferrohealth_ui::view::change::{Change, change_table};
 use ferrohealth_ui::view::empty::empty_quiet;
@@ -33,6 +34,7 @@ use ferrohealth_ui::view::status::badge;
 use ferrohealth_ui::view::surface::{card, page_header, stack, titled_panel};
 use ferrohealth_ui::view::template::list::{ListCard, list_card};
 use ferrohealth_ui::view::time::timestamp;
+use ferrohealth_ui::widget::action_menu::{self, Act, Action, Item, Menu};
 use ferrohealth_ui::widget::filter::keeps;
 use leptos::prelude::*;
 use leptos_router::hooks::{use_location, use_query_map};
@@ -94,19 +96,22 @@ fn tone(state: &str) -> Tone {
     }
 }
 
-/// The row menu of the file `name`: the ⋯ button, named for its row.
+/// The row menu of the file `name`: the ⋯ button, named for its row, and
+/// its menu (F13).
 fn row_menu(name: &str) -> AnyView {
-    view! {
-        <button
-            type="button"
-            class="fui-icon-button"
-            aria-label=tr_with(Msg::ActionsFor, &[("name", name.into())])
-            title=tr(Msg::MoreActions)
-        >
-            {icon(Glyph::ELLIPSIS, "16")}
-        </button>
-    }
-    .into_any()
+    let code = crate::app::route_brand().map_or_else(
+        || String::from("/"),
+        |brand| format!("/{}/code", brand.key()),
+    );
+    action_menu::row_menu(Menu::new(
+        format!("row-{name}"),
+        tr_with(Msg::ActionsFor, &[("name", name.into())]),
+        vec![Item::new(Action::new(
+            Some(Glyph::FILE_CODE),
+            tr(Msg::OpenTheDocument),
+            Act::Link(code),
+        ))],
+    ))
 }
 
 /// The table row of `row` under `columns`, its name over a canonical too
@@ -711,7 +716,7 @@ pub fn TablesPage() -> impl IntoView {
     let header = page_header(
         tr(Msg::TablesPaging),
         Some(tr(Msg::OneTablePagerModelUrl)),
-        (),
+        ActionGroup::none(),
     )
     .into_any();
     let sections = (

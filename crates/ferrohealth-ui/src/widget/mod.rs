@@ -12,6 +12,7 @@
 //! `#[cfg(target_arch = "wasm32")]`, so it renders the same on the server
 //! and in the browser, and its first paint is the server's. None fetches.
 
+pub mod action_menu;
 pub mod chart;
 pub mod combobox;
 pub mod copy;
