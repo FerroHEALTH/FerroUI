@@ -1,1 +1,0 @@
-- The native select and the combobox input draw their chevron at the size of the 16 px Lucide chevron a select button draws, 10 by 5 px on screen; it was 12 by 6.
