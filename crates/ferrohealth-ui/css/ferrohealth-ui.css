@@ -13137,7 +13137,23 @@
      placed against its trigger by CSS anchor positioning, the anchor's
      name scoped to its own anchor; a browser without it centres the
      form in the viewport. Its backdrop stays clear from 40 rem, where it
-     reads as a popover; the page behind is inert all the same. ---- */
+     reads as a popover; the page behind is inert all the same. A popover
+     drawn in the page (a mockup's) keeps its place under its trigger. ---- */
+  .fui-anchor > .fui-popover {
+    inset: calc(100% + 0.25rem) 0 auto auto;
+    text-align: start;
+  }
+
+  @media (width < 40rem) {
+    .fui-anchor > .fui-popover {
+      position: fixed;
+      inset: auto 0.75rem 0.75rem 0.75rem;
+      z-index: 80;
+      width: auto;
+      box-shadow: var(--shadow-overlay), 0 0 0 100vmax var(--scrim);
+    }
+  }
+
   .fui-anchor > dialog.fui-popover {
     position: fixed;
     inset: 0;
