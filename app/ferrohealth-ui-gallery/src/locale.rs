@@ -184,6 +184,7 @@ macro_rules! messages {
 mod charts;
 mod clinical;
 mod code;
+mod configuration;
 mod dock;
 mod forms;
 mod layouts;
@@ -204,6 +205,7 @@ const AREAS: &[&[Msg]] = &[
     charts::ALL,
     clinical::ALL,
     code::ALL,
+    configuration::ALL,
     dock::ALL,
     forms::ALL,
     layouts::ALL,

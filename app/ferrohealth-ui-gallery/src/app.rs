@@ -310,6 +310,14 @@ pub fn App() -> impl IntoView {
                     <Route path=path!("forms") view=crate::pages::forms::FormsPage />
                     <Route path=path!("tables") view=crate::pages::tables::TablesPage />
                     <Route path=path!("code") view=crate::pages::code::CodePage />
+                    <Route
+                        path=path!("configuration")
+                        view=crate::pages::configuration::ConfigurationPage
+                    />
+                    <Route
+                        path=path!("configuration/provisioned")
+                        view=crate::pages::configuration::ProvisionedPage
+                    />
                     <Route path=path!("overlays") view=crate::pages::overlays::OverlaysPage />
                     <Route path=path!("overlays/access") view=crate::pages::overlays::AccessPage />
                     <Route path=path!("charts") view=crate::pages::charts::ChartsPage />
@@ -384,6 +392,13 @@ macro_rules! entries {
                 label: tr(Msg::Documents).into(),
                 glyph: Glyph::SQUARE_TERMINAL,
                 exact: true,
+                count: None,
+            },
+            Entry {
+                href: concat!("/", $key, "/configuration"),
+                label: tr(Msg::Configuration).into(),
+                glyph: Glyph::SETTINGS,
+                exact: false,
                 count: None,
             },
             Entry {

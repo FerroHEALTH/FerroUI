@@ -34,6 +34,7 @@ use crate::stack::Gallery;
 mod charts;
 mod clinical;
 mod combobox;
+mod configuration;
 mod dates;
 mod document;
 mod editor;
@@ -57,6 +58,7 @@ const AREAS: &[&[&str]] = &[
     charts::STATES,
     clinical::STATES,
     combobox::STATES,
+    configuration::STATES,
     dates::STATES,
     document::STATES,
     editor::STATES,
@@ -257,6 +259,7 @@ async fn every_state_is_captured_in_every_brand_light_and_dark() -> Result<(), B
                 charts::charts(browser, &gallery, brand, theme).await?;
                 clinical::clinical(browser, &gallery, brand, theme).await?;
                 combobox::combobox_states(browser, &gallery, brand, theme).await?;
+                configuration::configuration(browser, &gallery, brand, theme).await?;
                 dates::date_states(browser, &gallery, brand, theme).await?;
                 document::document(browser, &gallery, brand, theme).await?;
                 editor::editor(browser, &gallery, brand, theme).await?;

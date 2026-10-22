@@ -18,6 +18,7 @@ clinical-records = Clinical records
 code = Code
 components = Components
 concept = Concept
+configuration = Configuration
 console = Console
 delete = Delete
 display = Display

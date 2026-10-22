@@ -12,9 +12,15 @@
 //! scope operation), the code follows inside the tag as a quiet hint in the
 //! code face, so a reader who knows the code finds it. A glyph before the
 //! word is hidden from assistive technology, since the word says it
-//! already (F4's lock). An identifier-like tag, a version or an RM type,
-//! draws in the code face. No specification governs the tag: our own
-//! design.
+//! already. An identifier-like tag, a version or an RM type, draws in the
+//! code face.
+//!
+//! The provenance tag (F4, [`Tag::locked`]) marks a value the console may
+//! not change: a file, a directory or a reserved namespace owns it. It is
+//! the tag with a dashed edge and the lock before its word, and it names
+//! its owner in its tooltip and in its accessible name, so neither the
+//! lock nor the dashed edge stands alone. No specification governs the
+//! tag: our own design.
 
 use leptos::prelude::*;
 
@@ -40,8 +46,8 @@ pub struct Tag {
     glyph: Option<Glyph>,
     /// Whether it is set in the code face.
     mono: bool,
-    /// Whether it marks something the console cannot change (F4).
-    locked: bool,
+    /// What owns the value when the console cannot change it (F4).
+    owner: Option<String>,
     /// The tooltip, which says more than the word.
     title: Option<String>,
 }
@@ -54,7 +60,7 @@ impl Tag {
             code: None,
             glyph: None,
             mono: false,
-            locked: false,
+            owner: None,
             title: None,
         }
     }
@@ -78,11 +84,16 @@ impl Tag {
         self
     }
 
-    /// Marks something the console cannot change (F4): a dashed edge, no
-    /// ground, muted words and the lock before them.
-    pub fn locked(mut self) -> Self {
-        self.locked = true;
+    /// Marks a value the console cannot change (F4): a dashed edge, no
+    /// ground, muted words and the lock before them, with `owner` (what
+    /// owns it, such as "Provisioned from mappings/observation.yml") as its
+    /// tooltip and after its word in its accessible name. A later
+    /// [`Tag::title`] replaces the tooltip alone.
+    pub fn locked(mut self, owner: impl Into<String>) -> Self {
+        let owner = owner.into();
         self.glyph = Some(Glyph::LOCK);
+        self.title = Some(owner.clone());
+        self.owner = Some(owner);
         self
     }
 
@@ -95,7 +106,7 @@ impl Tag {
 
     /// The tag's classes.
     fn class(&self) -> &'static str {
-        match (self.mono, self.locked) {
+        match (self.mono, self.owner.is_some()) {
             (false, false) => "fui-tag",
             (true, false) => "fui-tag fui-tag-mono",
             (false, true) => "fui-tag fui-tag-locked",
@@ -112,9 +123,10 @@ impl Tag {
             code,
             glyph,
             title,
+            owner,
             ..
         } = self;
-        if glyph.is_none() && code.is_none() {
+        if glyph.is_none() && code.is_none() && owner.is_none() {
             return view! {
                 <span class=class title=title>
                     {words}
@@ -127,6 +139,7 @@ impl Tag {
                 {glyph.map(|glyph| icon(glyph, "12"))}
                 {words}
                 {code.map(|code| view! { <span class="fui-tag-code">{code}</span> })}
+                {owner.map(|owner| view! { <span class="fui-sr-only">{format!(" ({owner})")}</span> })}
             </span>
         }
         .into_any()

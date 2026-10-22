@@ -513,6 +513,49 @@ pub const SUPPORT_HREF: &str = "mailto:info@cadasto.com";
 /// The file a file-only configuration is read from.
 pub const CONFIG_FILE: &str = "example.toml";
 
+/// The secret every set state of the configuration page's secret fields
+/// reads from.
+pub const SECRET_FILE: &str = "/run/secrets/gallery/node-b.secret";
+
+/// The secret of the configuration page's unreadable secret field.
+pub const BROKEN_FILE: &str = "/run/secrets/gallery/node-c-client.pem";
+
+/// The path the configuration page's file choice holds.
+pub const NEW_SECRET_FILE: &str = "/run/secrets/gallery/node-a-client-2026-11.pem";
+
+/// The read-only secrets of a console in file mode: each setting's
+/// configuration key and the file it is read from, when it names one.
+pub const FILE_SECRETS: [(&str, Option<&str>); 4] = [
+    ("db.url_file", Some("/run/secrets/gallery/db-url")),
+    ("events.url", None),
+    ("auth.oidc.client_secret_file", None),
+    ("session.secret_file", Some("/run/secrets/gallery/session")),
+];
+
+/// The deadline of the configuration page's revision on trial, the trial's
+/// length and the seconds left as the page is drawn.
+pub const TRIAL: (&str, u32, u32) = ("10:14:42", 120, 102);
+
+/// The mapping files of the provenance table: the file, the template it
+/// fills and whether a provisioned directory owns it.
+pub const MAPPING_FILES: [(&str, &str, bool); 3] = [
+    (
+        "observation.yml",
+        "openEHR-EHR-OBSERVATION.blood_pressure.v2",
+        true,
+    ),
+    (
+        "vital-signs.yml",
+        "openEHR-EHR-COMPOSITION.encounter.v1",
+        true,
+    ),
+    (
+        "allergy-draft.yml",
+        "openEHR-EHR-EVALUATION.adverse_reaction_risk.v2",
+        false,
+    ),
+];
+
 /// The operator scope the 403 page names.
 pub const OPERATOR_SCOPE: &str = "__example.operator";
 

@@ -10,8 +10,9 @@
 //! preferences, the confirmation dialog, the popover form, the timestamp,
 //! the record compare, the timeline, the operation parts (the load
 //! report, the transform pair, the OMOP row preview and the HL7 v2 viewer),
-//! and the terminology parts (the coding, the value set clause, the root
-//! matrix and the mapping row).
+//! the terminology parts (the coding, the value set clause, the root matrix
+//! and the mapping row), and the configuration parts (the revision
+//! lifecycle with its pending card and the write-only secret field).
 //! Each is a plain function
 //! returning its typed view, never a `#[component]`: a component
 //! writes a props type and a builder the browser bundle carries for each,
@@ -45,6 +46,7 @@ pub mod help;
 pub mod hl7v2;
 pub mod kbd;
 pub mod layout;
+pub mod lifecycle;
 pub mod load_report;
 pub mod mapping;
 pub mod notice;
@@ -59,6 +61,7 @@ pub mod row_preview;
 pub mod scope;
 pub mod score;
 pub mod search;
+pub mod secret;
 pub mod segmented;
 pub mod shell;
 pub mod sign_in;
