@@ -42,6 +42,14 @@ const CHROMEDRIVER: &str = "chromedriver";
 /// What chromedriver prints once it listens, before the port it chose.
 const LISTENING: &str = "ChromeDriver was started successfully on port ";
 
+/// What chromedriver prints before it exits when the port it took on one
+/// address family is already taken on the other.
+const PORT_TAKEN: &str = " port not available. Exiting";
+
+/// How many chromedrivers a session starts, at most, while each in turn
+/// finds its port taken on the other address family.
+const DRIVER_ATTEMPTS: u32 = 3;
+
 /// The environment variable naming the Chrome binary, when it is not the one
 /// in [`installed`], or else the one chromedriver finds itself.
 const CHROME_ENV: &str = "FERROUI_CHROME";
@@ -100,10 +108,48 @@ struct Chromedriver {
     _stdout: Lines<BufReader<ChildStdout>>,
 }
 
+/// Why one chromedriver did not come to listen.
+#[derive(Debug)]
+enum DriverStart {
+    /// It took a port on IPv4 that another process held on IPv6, or the
+    /// reverse, and exited: a race with the rest of the machine, which a
+    /// new chromedriver on a new port does not meet again.
+    PortTaken(String),
+    /// Anything else, which a new chromedriver would meet again.
+    Failed(Box<dyn Error>),
+}
+
 impl Chromedriver {
     /// Starts a chromedriver on a port the system picks, waits until it
     /// says it listens, and returns it with its endpoint.
+    ///
+    /// Asked for port 0, chromedriver takes a free port on IPv4 and then
+    /// needs the same port free on IPv6, and exits when another process
+    /// holds it there. Only that exit starts a new chromedriver, at most
+    /// [`DRIVER_ATTEMPTS`] in all, and each one says why on standard error.
     async fn start() -> Result<(Self, String), Box<dyn Error>> {
+        let mut attempt = 1;
+        loop {
+            match Self::start_once().await {
+                Ok(started) => return Ok(started),
+                Err(DriverStart::PortTaken(line)) if attempt < DRIVER_ATTEMPTS => {
+                    note_port_taken(attempt, &line);
+                    attempt += 1;
+                }
+                Err(DriverStart::PortTaken(line)) => {
+                    return Err(format!(
+                        "chromedriver found its port taken {DRIVER_ATTEMPTS} times, last: {line}"
+                    )
+                    .into());
+                }
+                Err(DriverStart::Failed(error)) => return Err(error),
+            }
+        }
+    }
+
+    /// Starts one chromedriver on a port the system picks and waits until it
+    /// says it listens.
+    async fn start_once() -> Result<(Self, String), DriverStart> {
         let binary = std::env::var_os(CHROMEDRIVER_ENV)
             .map(PathBuf::from)
             .or_else(|| installed().0)
@@ -119,32 +165,58 @@ impl Chromedriver {
             .kill_on_drop(true)
             .spawn()
             .map_err(|error| {
-                format!(
+                DriverStart::Failed(format!(
                     "{} does not start (run scripts/release/journey-tools.sh target/journey-tools, or name chromedriver in {CHROMEDRIVER_ENV}): {error}",
                     binary.display()
-                )
+                ).into())
             })?;
         let stdout = child
             .stdout
             .take()
-            .ok_or("chromedriver's standard output")?;
+            .ok_or_else(|| DriverStart::Failed("chromedriver's standard output".into()))?;
         let mut lines = BufReader::new(stdout).lines();
         let port = tokio::time::timeout(WAIT, async {
-            while let Some(line) = lines.next_line().await? {
+            while let Some(line) = lines
+                .next_line()
+                .await
+                .map_err(|error| DriverStart::Failed(error.into()))?
+            {
                 if let Some(port) = line.strip_prefix(LISTENING) {
-                    return Ok(port.trim_end_matches('.').parse::<u16>()?);
+                    return port
+                        .trim_end_matches('.')
+                        .parse::<u16>()
+                        .map_err(|error| DriverStart::Failed(error.into()));
+                }
+                if line.contains(PORT_TAKEN) {
+                    return Err(DriverStart::PortTaken(line));
                 }
             }
-            Err::<u16, Box<dyn Error>>("chromedriver exited before it listened".into())
+            Err(DriverStart::Failed(
+                "chromedriver exited before it listened".into(),
+            ))
         })
         .await
-        .map_err(|_elapsed| format!("chromedriver never listened within {WAIT:?}"))??;
+        .map_err(|_elapsed| {
+            DriverStart::Failed(format!("chromedriver never listened within {WAIT:?}").into())
+        })??;
         let chromedriver = Self {
             child,
             _stdout: lines,
         };
         Ok((chromedriver, format!("http://127.0.0.1:{port}")))
     }
+}
+
+/// Says on standard error that chromedriver attempt `attempt` found its port
+/// taken, with the line it printed, so a retried start is never silent.
+#[expect(
+    clippy::print_stderr,
+    reason = "a retried chromedriver start is reported where nextest shows a test's output"
+)]
+fn note_port_taken(attempt: u32, line: &str) {
+    eprintln!(
+        "chromedriver attempt {attempt} of {DRIVER_ATTEMPTS} found its port taken ({line}); starting another"
+    );
 }
 
 impl Drop for Chromedriver {
