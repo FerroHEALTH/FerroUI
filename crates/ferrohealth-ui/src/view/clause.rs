@@ -8,8 +8,10 @@
 //! it selects, then its body: the filter rows (F7 rows of
 //! [`crate::widget::repeat`]) and its codes, each an M2 coding. Include is a
 //! solid accent edge and Exclude a dashed warn edge, with the word beside,
-//! so the kind never rests on colour (WCAG 2.2 SC 1.4.1). An invariant the
-//! clause breaks is named by its own number inline. A clause is read-only
+//! so the kind never rests on colour (WCAG 2.2 SC 1.4.1). Each invariant
+//! the clause breaks is named by its own number inline, two or more as a
+//! list. A list of codes longer than a page ends in the more row
+//! ([`MoreCodes`]), which the console's server answers. A clause is read-only
 //! on a value set's page and editable in a composer, where its body holds
 //! the fields; clauses run edge to edge in their section (B10). No
 //! specification governs the layout: our own design.
@@ -19,7 +21,7 @@ use leptos::prelude::*;
 use crate::i18n::{Arg, Text, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::tone::Tone;
-use crate::view::coding::{Coding, Layout, coding};
+use crate::view::coding::{Coding, Layout, MoreCodes, coding, more_codes};
 use crate::view::status::badge;
 
 /// Whether a clause adds codes or takes them back out.
@@ -76,8 +78,8 @@ pub struct Clause {
     pub body: Option<AnyView>,
     /// The actions at the end of its head, such as "Remove this clause".
     pub actions: Option<AnyView>,
-    /// The invariant it breaks, if any.
-    pub issue: Option<ClauseIssue>,
+    /// The invariants it breaks, in the order the console checks them.
+    pub issues: Vec<ClauseIssue>,
 }
 
 /// One code of a clause: its coding and, in a composer, its Remove.
@@ -99,7 +101,7 @@ pub fn clause(clause: Clause) -> AnyView {
         sentence,
         body,
         actions,
-        issue,
+        issues,
     } = clause;
     let label = tr_with(
         match kind {
@@ -111,17 +113,7 @@ pub fn clause(clause: Clause) -> AnyView {
     let word = kind.word();
     let mark = badge(kind.tone(), &word);
     let actions = actions.map(|actions| view! { <div class="fui-actions">{actions}</div> });
-    let issue = issue.map(|ClauseIssue { key, text }| {
-        view! {
-            <p class="fui-clause-issue" role="note">
-                {icon(Glyph::CIRCLE_X, "14")}
-                <span>
-                    <code>{key}</code>
-                    {text}
-                </span>
-            </p>
-        }
-    });
+    let issue = clause_issues(issues);
     view! {
         <section class="fui-clause" class:is-exclude=kind == ClauseKind::Exclude aria-label=label>
             <div class="fui-clause-head">
@@ -133,6 +125,33 @@ pub fn clause(clause: Clause) -> AnyView {
         </section>
     }
     .into_any()
+}
+
+/// Returns the invariants `issues` a clause breaks: one as a note, two or
+/// more as a list of them, or nothing.
+fn clause_issues(issues: Vec<ClauseIssue>) -> Option<AnyView> {
+    let said = |ClauseIssue { key, text }: ClauseIssue| {
+        view! {
+            {icon(Glyph::CIRCLE_X, "14")}
+            <span>
+                <code>{key}</code>
+                {text}
+            </span>
+        }
+    };
+    let mut issues = issues.into_iter();
+    let first = issues.next()?;
+    let Some(second) = issues.next() else {
+        return Some(
+            view! { <p class="fui-clause-issue" role="note">{said(first)}</p> }.into_any(),
+        );
+    };
+    let items = [first, second]
+        .into_iter()
+        .chain(issues)
+        .map(|issue| view! { <li class="fui-clause-issue">{said(issue)}</li> })
+        .collect_view();
+    Some(view! { <ul class="fui-clause-issues">{items}</ul> }.into_any())
 }
 
 /// Returns the clauses of a value set, edge to edge in their section with
@@ -159,9 +178,10 @@ pub fn clause_fields(fields: impl IntoView + 'static) -> AnyView {
 }
 
 /// Returns the codes of a clause, one per line, each an inline M2 coding
-/// with its Remove at the end in a composer.
+/// with its Remove at the end in a composer, ending in the more row `more`
+/// when the console's server pages them.
 #[must_use]
-pub fn clause_codes(codes: Vec<ClauseCode>) -> AnyView {
+pub fn clause_codes(codes: Vec<ClauseCode>, more: Option<MoreCodes>) -> AnyView {
     let items = codes
         .into_iter()
         .map(
@@ -174,5 +194,6 @@ pub fn clause_codes(codes: Vec<ClauseCode>) -> AnyView {
             },
         )
         .collect_view();
-    view! { <ul class="fui-clause-codes">{items}</ul> }.into_any()
+    let more = more.map(more_codes);
+    view! { <ul class="fui-clause-codes">{items} {more}</ul> }.into_any()
 }

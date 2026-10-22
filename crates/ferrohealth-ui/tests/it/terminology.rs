@@ -5,11 +5,12 @@
 //! select (M3), the value set clause (M4), the root matrix (M5), the
 //! mapping row (M6) and the repeatable rows (F7).
 
+use ferrohealth_ui::style::STYLESHEET;
 use ferrohealth_ui::table::view::{Body, DataTable, Sorting, data_table};
 use ferrohealth_ui::view::clause::{
     Clause, ClauseCode, ClauseIssue, ClauseKind, clause, clause_codes, clauses,
 };
-use ferrohealth_ui::view::coding::{Coding, Layout, canonical, coding, inactive_mark};
+use ferrohealth_ui::view::coding::{Coding, Layout, MoreCodes, canonical, coding, inactive_mark};
 use ferrohealth_ui::view::mapping::{
     MapElement, Mapping, Relationship, map_element, map_elements, mapping_columns, mapping_row,
     relation,
@@ -82,6 +83,7 @@ fn a_coding_with_no_display_says_so_and_a_linked_one_is_a_row_link() {
                 system: None,
                 inactive: false,
                 href: None,
+                current: false,
             },
             Layout::Stacked,
         )
@@ -270,15 +272,22 @@ fn a_clause(kind: ClauseKind, broken: bool) -> String {
             title: view! { "From " <a href="/cs">"Findings"</a> }.into_any(),
             source: String::from("From Findings <v3>"),
             sentence: "Includes everything below SF-1200.".into_any(),
-            body: Some(clause_codes(vec![ClauseCode {
-                coding: Coding::new("SF-1310", "Fever"),
-                remove: None,
-            }])),
+            body: Some(clause_codes(
+                vec![ClauseCode {
+                    coding: Coding::new("SF-1310", "Fever"),
+                    remove: None,
+                }],
+                None,
+            )),
             actions: None,
-            issue: broken.then(|| ClauseIssue {
-                key: String::from("vsd-3"),
-                text: String::from("Cannot have both concept and filter."),
-            }),
+            issues: if broken {
+                vec![ClauseIssue {
+                    key: String::from("vsd-3"),
+                    text: String::from("Cannot have both concept and filter."),
+                }]
+            } else {
+                Vec::new()
+            },
         })
     })
 }
@@ -347,6 +356,131 @@ fn a_broken_invariant_is_named_by_its_number_inline() {
     assert!(
         has(&together, "div", &[("class", "fui-clauses")]),
         "{together}"
+    );
+}
+
+#[test]
+fn two_broken_invariants_are_a_list_of_issues_whose_numbers_never_break() {
+    // NOTE: HL7 FHIR R4 (4.0.1), ValueSet vsd-2 and vsd-3 can fail on one clause together.
+    let broken = html(|| {
+        clause(Clause {
+            kind: ClauseKind::Include,
+            title: "No code system".into_any(),
+            source: String::from("No code system"),
+            sentence: "Lists codes and a filter.".into_any(),
+            body: None,
+            actions: None,
+            issues: vec![
+                ClauseIssue {
+                    key: String::from("vsd-2"),
+                    text: String::from("Choose the code system its codes and filter come from."),
+                },
+                ClauseIssue {
+                    key: String::from("vsd-3"),
+                    text: String::from("Split the codes and the filter into two clauses."),
+                },
+            ],
+        })
+    });
+    assert!(
+        has(&broken, "ul", &[("class", "fui-clause-issues")]),
+        "{broken}"
+    );
+    assert_eq!(
+        2,
+        tags(&broken, "li")
+            .iter()
+            .filter(|item| item
+                .get("class")
+                .is_some_and(|class| class == "fui-clause-issue"))
+            .count(),
+        "one issue each: {broken}"
+    );
+    assert!(broken.contains("<code>vsd-2</code>"), "{broken}");
+    assert!(broken.contains("<code>vsd-3</code>"), "{broken}");
+    assert!(
+        !has(&broken, "p", &[("class", "fui-clause-issue")]),
+        "{broken}"
+    );
+    assert!(
+        STYLESHEET.contains(
+            "  .fui-clause-issue code {\n    margin-inline-end: 0.25rem;\n    color: var(--bad);\n    font-weight: 600;\n    white-space: nowrap;"
+        ),
+        "an invariant's number breaks at its hyphen"
+    );
+}
+
+#[test]
+fn a_clause_of_thousands_of_codes_ends_in_the_more_row() {
+    let codes = html(|| {
+        clause_codes(
+            vec![ClauseCode {
+                coding: Coding::new("SF-1310", "Fever"),
+                remove: None,
+            }],
+            Some(MoreCodes::of_page(1, 4000, 25, "/value-set?codes=1")),
+        )
+    });
+    assert!(has(&codes, "li", &[("class", "fui-code-more")]), "{codes}");
+    assert!(codes.contains("1 of 4000 codes shown."), "{codes}");
+    assert!(
+        has(&codes, "a", &[("href", "/value-set?codes=1")]),
+        "{codes}"
+    );
+    assert!(codes.contains("Show the next 25"), "{codes}");
+    assert_eq!(
+        "Show the other 10",
+        MoreCodes::of_page(3990, 4000, 25, "/").link
+    );
+    assert_eq!(
+        "Show the other one",
+        MoreCodes::of_page(3999, 4000, 25, "/").link
+    );
+    assert_eq!(4000, MoreCodes::of_page(1, 4000, 25, "/").total);
+}
+
+#[test]
+fn a_long_code_and_a_urn_canonical_break_between_their_pieces() {
+    let uid = "8849182c-82ad-4088-a07f-48ead4180515::ferroehr.example.org::12";
+    let shown = html(move || coding(Coding::new(uid, "Encounter"), Layout::Stacked));
+    assert!(
+        shown.contains("<span>8849182c-</span><wbr"),
+        "a long code breaks after its hyphens: {shown}"
+    );
+    assert!(
+        shown.contains("<span>ferroehr.</span><wbr"),
+        "and its dots: {shown}"
+    );
+    assert_eq!(
+        9,
+        tags(&shown, "wbr").len(),
+        "a break after each piece, and none inside a double colon: {shown}"
+    );
+    assert!(
+        text(&shown).contains(uid),
+        "the text is the code whole: {shown}"
+    );
+    assert!(
+        STYLESHEET.contains("  .fui-coding-code:has(> wbr) {\n    white-space: normal;\n  }"),
+        "a long code's breaks are held back by nowrap"
+    );
+    let short = html(|| coding(Coding::new("SF-1210", "Cough"), Layout::Inline));
+    assert!(
+        !short.contains("<wbr"),
+        "an ordinary code never breaks: {short}"
+    );
+    let urn = "urn:uuid:8849182c-82ad-4088-a07f-48ead4180515";
+    let canonical_urn = html(move || canonical(urn));
+    assert_eq!(
+        6,
+        tags(&canonical_urn, "wbr").len(),
+        "after each colon and hyphen: {canonical_urn}"
+    );
+    assert_eq!(urn, text(&canonical_urn));
+    let oid = "urn:oid:2.16.840.1.113883.3.1937.777.63.10";
+    assert!(
+        !tags(&html(move || canonical(oid)), "wbr").is_empty(),
+        "an OID breaks after its dots"
     );
 }
 

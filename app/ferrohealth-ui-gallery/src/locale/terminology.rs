@@ -124,6 +124,8 @@ messages! {
     TmStacked = "tm-stacked",
     /// `Coded values, value set clauses, the FHIR roots of a server and a concept map's mappings. The top bar reads through one FHIR version.`
     TmSubtitle = "tm-subtitle",
+    /// `Synthetic encounter`
+    TmSyntheticEncounter = "tm-synthetic-encounter",
     /// `Target code`
     TmTargetCode = "tm-target-code",
     /// `Target system`
@@ -132,6 +134,8 @@ messages! {
     TmTargetsOf = "tm-targets-of",
     /// `Title`
     TmTitle = "tm-title",
+    /// `A URN canonical`
+    TmUrnCanonical = "tm-urn-canonical",
     /// `Value`
     TmValue = "tm-value",
     /// `Synthetic respiratory findings`
@@ -142,6 +146,8 @@ messages! {
     TmVersion = "tm-version",
     /// `3 (default)`
     TmVersionDefault = "tm-version-default",
+    /// `A versioned uid as its code`
+    TmVersionedUid = "tm-versioned-uid",
     /// `This clause lists codes and filters at once. Split it into two clauses; the two clauses add together.`
     TmVsd3 = "tm-vsd3",
 }

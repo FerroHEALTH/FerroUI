@@ -7,15 +7,16 @@
 use std::collections::BTreeSet;
 
 use ferrohealth_ui::island::TreeView;
+use ferrohealth_ui::style::STYLESHEET;
 use ferrohealth_ui::table::filter::Find;
 use ferrohealth_ui::table::model::StateSource;
 use ferrohealth_ui::view::browser::{
-    BrowserPane, Heading, Match, Panes, PathNode, browser, browser_find, match_list, pane_body,
-    path_node,
+    BrowserPane, Heading, Panes, PathNode, browser, browser_find, match_list, pane_body, path_node,
 };
+use ferrohealth_ui::view::coding::{Coding, Layout, MoreCodes, coding};
 use ferrohealth_ui::view::path::{archetype, path};
 use ferrohealth_ui::widget::tree::{
-    Edit, Mark, More, Tree, TreeData, TreeKind, TreeNode, TreeWords, tree_view,
+    Edit, Mark, More, Tree, TreeData, TreeKind, TreeNode, TreeWords, path_key, tree_view,
 };
 use leptos::prelude::*;
 
@@ -84,7 +85,7 @@ fn a_tree_item_states_its_level_by_name() {
         TreeKind::Concept,
         false,
         concepts(),
-        &["root", "chest"],
+        &["root", "root/chest"],
         None,
     );
     assert!(tree.contains(r#"aria-level="1""#), "{tree}");
@@ -99,8 +100,8 @@ fn the_concept_tree_marks_the_path_reads_a_level_and_ends_a_long_one() {
         TreeKind::Concept,
         false,
         concepts(),
-        &["root", "chest", "general"],
-        Some("cough"),
+        &["root", "root/chest", "root/general"],
+        Some("root/chest/cough"),
     );
     assert!(
         has(&tree, "div", &[("class", "fui-concept-tree")]),
@@ -118,10 +119,16 @@ fn the_concept_tree_marks_the_path_reads_a_level_and_ends_a_long_one() {
             .cloned()
             .unwrap_or_default()
     };
-    // The keys' bytes in hex: root, chest, cough.
-    assert!(item("726f6f74")["class"].contains("is-on-path"), "{tree}");
-    assert!(item("6368657374")["class"].contains("is-on-path"), "{tree}");
-    let cough = item("636f756768");
+    // The path keys' bytes in hex: root, root/chest, root/chest/cough.
+    assert!(
+        item("item-726f6f74")["class"].contains("is-on-path"),
+        "{tree}"
+    );
+    assert!(
+        item("item-726f6f742f6368657374")["class"].contains("is-on-path"),
+        "{tree}"
+    );
+    let cough = item("item-726f6f742f63686573742f636f756768");
     assert_eq!("true", cough["aria-selected"], "{tree}");
     assert_eq!("0", cough["tabindex"], "one tab stop, on the selection");
     assert!(!cough["class"].contains("is-on-path"), "{tree}");
@@ -144,7 +151,10 @@ fn the_concept_tree_marks_the_path_reads_a_level_and_ends_a_long_one() {
         has(&tree, "span", &[("class", "fui-inactive-mark")]),
         "{tree}"
     );
-    assert!(item("6f6c64")["class"].contains("is-inactive"), "{tree}");
+    assert!(
+        item("item-726f6f742f6f6c64")["class"].contains("is-inactive"),
+        "{tree}"
+    );
     assert_eq!(
         1,
         items
@@ -214,14 +224,18 @@ fn a_tree_posts_its_open_items_as_hidden_fields() {
         TreeKind::Concept,
         false,
         concepts(),
-        &["chest", "root"],
+        &["root/chest", "root"],
         None,
     );
     assert!(
         has(
             &tree,
             "input",
-            &[("type", "hidden"), ("name", "open"), ("value", "chest")]
+            &[
+                ("type", "hidden"),
+                ("name", "open"),
+                ("value", "root/chest")
+            ]
         ),
         "{tree}"
     );
@@ -232,6 +246,59 @@ fn a_tree_posts_its_open_items_as_hidden_fields() {
             &[("type", "hidden"), ("name", "open"), ("value", "root")]
         ),
         "{tree}"
+    );
+}
+
+#[test]
+fn a_concept_under_two_parents_draws_two_items_with_distinct_ids_and_one_selection() {
+    let pneumonia = || {
+        TreeNode::new("233604007", "Pneumonia")
+            .code("233604007")
+            .children(vec![TreeNode::new("75570004", "Viral pneumonia")])
+    };
+    let tree = drawn(
+        TreeKind::Concept,
+        false,
+        vec![
+            TreeNode::new("19829001", "Disorder of lung").children(vec![pneumonia()]),
+            TreeNode::new("40733004", "Infectious disease").children(vec![pneumonia()]),
+        ],
+        &["19829001", "40733004", "19829001/233604007"],
+        Some(&path_key(&["40733004", "233604007"])),
+    );
+    let items = tags(&tree, "li");
+    let ids: BTreeSet<&str> = items
+        .iter()
+        .filter_map(|item| item.get("id").map(String::as_str))
+        .collect();
+    assert_eq!(items.len(), ids.len(), "every item has its own id: {tree}");
+    assert_eq!(
+        1,
+        tree.matches("Viral pneumonia").count(),
+        "only the copy under the lung is open: {tree}"
+    );
+    let selected: Vec<_> = items
+        .iter()
+        .filter(|item| {
+            item.get("aria-selected")
+                .is_some_and(|value| value == "true")
+        })
+        .collect();
+    assert_eq!(1, selected.len(), "one item is selected: {tree}");
+    assert!(
+        selected
+            .first()
+            .and_then(|item| item.get("id"))
+            .is_some_and(|id| id.ends_with("item-34303733333030342f323333363034303037")),
+        "the copy under the infectious disease is the selected one: {tree}"
+    );
+    assert_eq!(
+        1,
+        items
+            .iter()
+            .filter(|item| item.get("tabindex").is_some_and(|stop| stop == "0"))
+            .count(),
+        "one tab stop: {tree}"
     );
 }
 
@@ -275,7 +342,7 @@ fn the_folder_tree_draws_folders_and_references_and_names_every_action_in_an_edi
         TreeKind::Folder,
         false,
         directory(),
-        &["root", "episodes"],
+        &["root", "root/episodes"],
         None,
     );
     assert!(
@@ -303,7 +370,7 @@ fn the_folder_tree_draws_folders_and_references_and_names_every_action_in_an_edi
         TreeKind::Folder,
         true,
         directory(),
-        &["root", "episodes"],
+        &["root", "root/episodes"],
         None,
     );
     assert!(
@@ -376,7 +443,7 @@ fn the_path_tree_tags_each_row_with_its_rm_type() {
                 ]),
         ],
         &["bp"],
-        Some("sys"),
+        Some("bp/sys"),
     );
     assert!(
         has(&tree, "div", &[("class", "fui-concept-tree fui-path-tree")]),
@@ -398,7 +465,7 @@ fn the_tree_island_draws_its_props_on_the_server() {
                     editing: false,
                     nodes: vec![TreeNode::new("a", "A").children(vec![TreeNode::new("b", "B")])],
                     open: BTreeSet::from([String::from("a")]),
-                    selected: Some(String::from("b")),
+                    selected: Some(String::from("a/b")),
                     open_field: None,
                 }
                 words=TreeWords::of_page()
@@ -462,7 +529,7 @@ fn the_browser_lays_out_its_panes_and_the_inspector_reads_a_coded_node() {
                         }))}
                         {match_list(
                             "Concepts the search matched",
-                            vec![Match { body: "Cough".into_any(), selected: true }],
+                            vec!["Cough".into_any()],
                         )}
                     },
                 ),
@@ -497,7 +564,6 @@ fn the_browser_lays_out_its_panes_and_the_inspector_reads_a_coded_node() {
         ),
         "{three}"
     );
-    assert!(has(&three, "li", &[("aria-selected", "true")]), "{three}");
     let flat = html(|| browser(Panes::Flat, Heading::Two, vec![]));
     assert!(
         has(&flat, "div", &[("class", "fui-browser is-two-pane")]),
@@ -517,6 +583,7 @@ fn the_browser_lays_out_its_panes_and_the_inspector_reads_a_coded_node() {
                     units: None,
                     flat_path: Some(String::from("vital_signs/blood_pressure/position")),
                     codes: vec!["Standing".into_any(), "Sitting".into_any()],
+                    more: None,
                     query: String::from("/query?path=position"),
                 }),
             ],
@@ -540,4 +607,86 @@ fn the_browser_lays_out_its_panes_and_the_inspector_reads_a_coded_node() {
     assert!(!two.contains(">Units<"), "no units on a coded node: {two}");
     assert!(has(&two, "a", &[("href", "/query?path=position")]), "{two}");
     assert!(has(&two, "ul", &[("class", "fui-code-list")]), "{two}");
+}
+
+#[test]
+fn a_large_value_set_on_a_path_node_ends_in_the_more_row_and_counts_its_total() {
+    let node = html(|| {
+        browser(
+            Panes::Two,
+            Heading::Three,
+            vec![path_node(PathNode {
+                name: String::from("Finding"),
+                path: String::from("/content[id0.1]/data[id2]/value"),
+                rm_type: String::from("DV_CODED_TEXT"),
+                occurrences: String::from("0..1"),
+                units: None,
+                flat_path: None,
+                codes: vec!["Cough".into_any(), "Fever".into_any()],
+                more: Some(MoreCodes::of_page(2, 4000, 25, "/node?codes=2")),
+                query: String::from("/query"),
+            })],
+        )
+    });
+    assert!(node.contains("Value set · 4000 codes"), "{node}");
+    assert!(
+        has(&node, "li", &[("class", "fui-code-more")]),
+        "the more row is the list's last item: {node}"
+    );
+    assert!(node.contains("2 of 4000 codes shown."), "{node}");
+    assert!(has(&node, "a", &[("href", "/node?codes=2")]), "{node}");
+    assert!(node.contains("Show the next 25"), "{node}");
+}
+
+#[test]
+fn every_tree_keeps_the_width_of_a_name_its_code_and_its_count() {
+    // NOTE: COMPONENTS.md M1: a name never wraps and a deep level scrolls, so nothing overlaps it.
+    let every = ":is(.fui-concept-tree, .fui-folder-tree, .fui-path-tree)";
+    let rule = format!(
+        "  {every} .fui-tree-label,\n  {every} .fui-tree-code,\n  {every} .fui-tree-count,\n  {every} .fui-rm-type {{\n    flex: none;\n  }}"
+    );
+    assert!(
+        STYLESHEET.contains(&rule),
+        "a concept tree's name shrinks under its code"
+    );
+}
+
+#[test]
+fn the_match_in_view_is_current_on_its_link_and_no_row_is_selected() {
+    let three = html(|| {
+        match_list(
+            "Concepts the search matched",
+            vec![
+                coding(
+                    Coding::new("SF-1210", "Cough")
+                        .href("/c/cough")
+                        .current(true),
+                    Layout::Inline,
+                ),
+                coding(
+                    Coding::new("SF-1211", "Dry cough").href("/c/dry"),
+                    Layout::Inline,
+                ),
+            ],
+        )
+    });
+    // NOTE: WAI-ARIA 1.2 allows aria-selected on no plain list item; aria-current is global.
+    assert!(!three.contains("aria-selected"), "{three}");
+    assert!(
+        has(
+            &three,
+            "a",
+            &[("href", "/c/cough"), ("aria-current", "true")]
+        ),
+        "the match in view is current on its link: {three}"
+    );
+    assert!(
+        !has(&three, "a", &[("href", "/c/dry"), ("aria-current", "true")]),
+        "{three}"
+    );
+    assert!(
+        STYLESHEET
+            .contains("  .fui-match-list > li:has([aria-current]:not([aria-current=\"false\"])) {"),
+        "the current match's row takes the tint"
+    );
 }

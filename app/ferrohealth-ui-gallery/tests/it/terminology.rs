@@ -298,3 +298,44 @@ async fn on_a_phone_remove_keeps_its_line_the_matrix_scrolls_in_its_card_and_a_m
     })
     .await
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn at_320_px_a_long_code_and_a_urn_canonical_break_inside_the_page()
+-> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        window(browser, 320, 900).await?;
+        browser.goto(&gallery.url(PAGE)).await?;
+        browser.element(By::Css("#codings")).await?;
+        // NOTE: CSSOM View, `clientWidth`: a classic scrollbar narrows the root's client box.
+        let over: Vec<String> = browser
+            .driver()
+            .execute(
+                "const edge = document.documentElement.clientWidth;
+                 return [...document.querySelectorAll('#codings :is(.fui-coding, .fui-canonical)')]
+                   .filter(each => each.getBoundingClientRect().right > edge + 0.5)
+                   .map(each => each.textContent);",
+                Vec::new(),
+            )
+            .await?
+            .convert()?;
+        assert!(over.is_empty(), "past the page's edge: {over:?}");
+        let lines: f64 = browser
+            .driver()
+            .execute(
+                "const code = [...document.querySelectorAll('#codings .fui-coding-code')]
+                   .find(each => each.textContent.includes('::'));
+                 return code.getBoundingClientRect().height / parseFloat(getComputedStyle(code).lineHeight);",
+                Vec::new(),
+            )
+            .await?
+            .convert()?;
+        assert!(lines > 1.5, "the versioned uid breaks over {lines} lines");
+        assert!(!page_scrolls_sideways(browser).await?, "the page never scrolls sideways");
+        browser.console_clean("the codings at 320 px").await
+    })
+    .await
+}

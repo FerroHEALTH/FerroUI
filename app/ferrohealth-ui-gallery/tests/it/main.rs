@@ -26,6 +26,7 @@ mod browser;
 mod configuration;
 mod dates;
 mod federation;
+mod filter;
 mod http;
 mod journeys;
 mod keys;

@@ -55,7 +55,7 @@ def search_pane(value="", matches=(), selected=None, none=False, busy=False, dis
     elif none:
         body = sf + f'<p class="fui-small fui-muted">No concept matches “{e(value)}”.</p></div>'
     elif matches:
-        items = "".join(f'<li{" aria-selected=\"true\"" if c == selected else ""}>{coding(d, c, inactive=i, href="browse.html")}</li>' for c, d, i in matches)
+        items = "".join(f'<li>{coding(d, c, inactive=i, href="browse.html", current=c == selected)}</li>' for c, d, i in matches)
         body = sf + f'<p class="fui-small fui-muted" role="status">{plural(len(matches), "concept")}</p></div><ul class="fui-match-list" aria-label="Concepts the search matched">{items}</ul>'
     else:
         body = sf + '<p class="fui-small fui-muted">Search to see concepts.</p></div>'

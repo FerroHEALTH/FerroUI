@@ -11,10 +11,20 @@
 //! works with no WebAssembly and no listing row reaches the page as island
 //! props. Without the WebAssembly this filter does nothing, so the rows it
 //! narrows must read whole without it.
+//!
+//! The count shows at once, and assistive technology hears it once the
+//! typing pauses ([`SETTLE`]): a `role="status"` region of its own takes
+//! the count only then, so a word typed letter by letter is not read out
+//! letter by letter (WCAG 2.2 SC 4.1.3, WAI-ARIA 1.2 `status`).
+
+use std::time::Duration;
 
 use leptos::prelude::*;
 
 use crate::view::form::INPUT;
+
+/// How long the typing pauses before the status region takes the count.
+pub const SETTLE: Duration = Duration::from_millis(600);
 
 /// Whether `row`'s searchable texts hold the filter `words`, ignoring case;
 /// an empty filter keeps every row.
@@ -28,7 +38,8 @@ pub fn keeps(words: &str, texts: &[&str]) -> bool {
 }
 
 /// Returns the filter box `id` labelled `label`, bound to `words`, with
-/// `count` the sentence of how many rows it keeps.
+/// `count` the sentence of how many rows it keeps, said to assistive
+/// technology once the count has held for [`SETTLE`].
 #[must_use]
 pub fn table_filter(
     id: &'static str,
@@ -37,6 +48,8 @@ pub fn table_filter(
     count: Signal<String>,
 ) -> impl IntoView {
     let label = label.into();
+    let said = RwSignal::new(count.get_untracked());
+    settle(count, said);
     view! {
         <div class="fui-table-tools">
             <div class="fui-field">
@@ -53,11 +66,40 @@ pub fn table_filter(
                     on:input:target=move |event| words.set(event.target().value())
                 />
             </div>
-            <p role="status" class="fui-muted">
+            <p class="fui-muted" aria-hidden="true">
                 {move || count.get()}
+            </p>
+            <p role="status" class="fui-sr-only">
+                {move || said.get()}
             </p>
         </div>
     }
+}
+
+/// Keeps `said` one [`SETTLE`] behind `count`: each change of the count
+/// restarts the wait, so only the count the typing paused on is said.
+fn settle(count: Signal<String>, said: RwSignal<String>) {
+    #[cfg(target_arch = "wasm32")]
+    {
+        let pending = StoredValue::new(None::<TimeoutHandle>);
+        Effect::watch(
+            move || count.get(),
+            move |now, _, _| {
+                if let Some(handle) = pending.get_value() {
+                    handle.clear();
+                }
+                let now = now.clone();
+                let handle = set_timeout_with_handle(move || said.set(now), SETTLE);
+                if handle.is_err() {
+                    leptos::logging::warn!("the browser refused the filter's wait");
+                }
+                pending.set_value(handle.ok());
+            },
+            false,
+        );
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    let _: (Signal<String>, RwSignal<String>) = (count, said);
 }
 
 #[cfg(test)]

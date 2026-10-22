@@ -18,8 +18,7 @@ use ferrohealth_ui::table::filter::Find;
 use ferrohealth_ui::table::model::StateSource;
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::browser::{
-    BrowserPane, Heading, Match, Panes, PathNode, browser, browser_find, match_list, pane_body,
-    path_node,
+    BrowserPane, Heading, Panes, PathNode, browser, browser_find, match_list, pane_body, path_node,
 };
 use ferrohealth_ui::view::coding::{Coding, Layout, coding, inactive_mark};
 use ferrohealth_ui::view::path::archetype;
@@ -27,7 +26,9 @@ use ferrohealth_ui::view::surface::{
     Crumb, Header, SectionHead, definitions, page_heading, panel_section, section_intro, stack,
     titled_panel,
 };
-use ferrohealth_ui::widget::tree::{Edit, Mark, More, TreeData, TreeKind, TreeNode, TreeWords};
+use ferrohealth_ui::widget::tree::{
+    Edit, Mark, More, TreeData, TreeKind, TreeNode, TreeWords, path_key,
+};
 use leptos::prelude::*;
 use leptos_router::hooks::use_query_map;
 
@@ -72,11 +73,36 @@ fn children_of(code: &str) -> Vec<&'static str> {
         .collect()
 }
 
-/// The finding `code` as a tree item, its children read when `open` names
-/// it, as a console's server reads one level at a time; each toggle leads
-/// to the page with its item opened or closed.
-fn deep_node(brand: &str, code: &str, open: &BTreeSet<String>, concept: &str) -> Option<TreeNode> {
+/// The codes from the top finding to the finding `code`.
+fn walk_to(code: &str) -> Vec<&str> {
+    let mut walk = vec![code];
+    let mut at = code;
+    while let Some((_, parent)) = PARENTS.into_iter().find(|(child, _)| *child == at) {
+        walk.insert(0, parent);
+        at = parent;
+    }
+    walk
+}
+
+/// The path key of the finding `code` in the tree.
+fn path_of(code: &str) -> String {
+    path_key(&walk_to(code))
+}
+
+/// The finding `code` under the findings `above` as a tree item, its
+/// children read when `open` names its path key, as a console's server
+/// reads one level at a time; each toggle leads to the page with its item
+/// opened or closed.
+fn deep_node(
+    brand: &str,
+    above: &[&str],
+    code: &str,
+    open: &BTreeSet<String>,
+    concept: &str,
+) -> Option<TreeNode> {
     let (code, display, inactive) = finding(code)?;
+    let keys = [above, &[code]].concat();
+    let key = path_key(&keys);
     let mut node = TreeNode::new(code, tr(display))
         .code(code)
         .href(address(brand, open, code));
@@ -88,15 +114,15 @@ fn deep_node(brand: &str, code: &str, open: &BTreeSet<String>, concept: &str) ->
         return Some(node);
     }
     let mut flipped = open.clone();
-    if !flipped.remove(code) {
-        flipped.insert(code.to_owned());
+    if !flipped.remove(&key) {
+        flipped.insert(key.clone());
     }
     node = node.toggle_href(address(brand, &flipped, concept));
-    Some(if open.contains(code) {
+    Some(if open.contains(&key) {
         node.children(
             children
                 .into_iter()
-                .filter_map(|child| deep_node(brand, child, open, concept))
+                .filter_map(|child| deep_node(brand, &keys, child, open, concept))
                 .collect(),
         )
     } else {
@@ -108,7 +134,7 @@ fn deep_node(brand: &str, code: &str, open: &BTreeSet<String>, concept: &str) ->
 /// it names none.
 fn open_in(query: Option<String>) -> BTreeSet<String> {
     query.map_or_else(
-        || FINDINGS_OPEN.into_iter().map(str::to_owned).collect(),
+        || FINDINGS_OPEN.into_iter().map(path_of).collect(),
         |list| {
             list.split(',')
                 .filter(|key| !key.is_empty())
@@ -119,13 +145,16 @@ fn open_in(query: Option<String>) -> BTreeSet<String> {
 }
 
 /// A row of a search's matches: an inline M2 coding, its display the
-/// row's link.
-fn found(href: String, display: String, code: &str) -> AnyView {
-    coding(Coding::new(code, display).href(href), Layout::Inline)
+/// row's link, marked current when it is the concept in view.
+fn found(href: String, display: String, code: &str, current: bool) -> AnyView {
+    coding(
+        Coding::new(code, display).href(href).current(current),
+        Layout::Inline,
+    )
 }
 
 /// The search pane, searching for `value` in a field `id`, with `matches`.
-fn search_pane(id: &'static str, value: &'static str, matches: Vec<Match>) -> BrowserPane {
+fn search_pane(id: &'static str, value: &'static str, matches: Vec<AnyView>) -> BrowserPane {
     let label = tr(Msg::TreesSearchDesignations);
     let field = browser_find(Find {
         id,
@@ -198,12 +227,16 @@ fn deep_browser() -> AnyView {
     let matches = FINDINGS_MATCHED
         .into_iter()
         .filter_map(finding)
-        .map(|(code, display, _)| Match {
-            body: found(address(&brand, &open, code), tr(display), code),
-            selected: code == concept,
+        .map(|(code, display, _)| {
+            found(
+                address(&brand, &open, code),
+                tr(display),
+                code,
+                code == concept,
+            )
         })
         .collect();
-    let nodes = deep_node(&brand, FINDINGS_TOP, &open, &concept)
+    let nodes = deep_node(&brand, &[], FINDINGS_TOP, &open, &concept)
         .into_iter()
         .collect();
     let tree = view! {
@@ -215,7 +248,7 @@ fn deep_browser() -> AnyView {
                 editing: false,
                 nodes,
                 open: open.clone(),
-                selected: Some(concept.clone()),
+                selected: Some(path_of(&concept)),
                 open_field: None,
             }
             words=TreeWords::of_page()
@@ -236,7 +269,7 @@ fn deep_browser() -> AnyView {
     if let Some((code, display, _)) = parent {
         facts.push((
             tr(Msg::TreesParent),
-            found(address(&brand, &open, code), tr(display), code),
+            found(address(&brand, &open, code), tr(display), code, false),
         ));
     }
     let children = children_of(&concept);
@@ -292,11 +325,14 @@ fn long_browser() -> AnyView {
                 kind: TreeKind::Concept,
                 editing: false,
                 nodes: vec![root],
-                open: [NATIONAL_TOP, NATIONAL_CHEST, NATIONAL_SKIN]
-                    .into_iter()
-                    .map(str::to_owned)
-                    .collect(),
-                selected: Some(String::from(NATIONAL_CHEST)),
+                open: [
+                    path_key(&[NATIONAL_TOP]),
+                    path_key(&[NATIONAL_TOP, NATIONAL_CHEST]),
+                    path_key(&[NATIONAL_TOP, NATIONAL_SKIN]),
+                ]
+                .into_iter()
+                .collect(),
+                selected: Some(path_key(&[NATIONAL_TOP, NATIONAL_CHEST])),
                 open_field: None,
             }
             words=TreeWords::of_page()
@@ -309,6 +345,7 @@ fn long_browser() -> AnyView {
                 String::from("#trees-long"),
                 tr(Msg::TreesNationalFinding),
                 NATIONAL_TOP,
+                false,
             ),
         ),
         (tr(Msg::TreesChildren), total.to_string().into_any()),
@@ -344,10 +381,7 @@ fn flat_browser() -> AnyView {
     let matches = COUNTRIES
         .into_iter()
         .enumerate()
-        .map(|(at, (code, words))| Match {
-            body: found(String::from("#trees-flat"), tr(words), code),
-            selected: at == 0,
-        })
+        .map(|(at, (code, words))| found(String::from("#trees-flat"), tr(words), code, at == 0))
         .collect();
     let (code, words) = COUNTRIES[0];
     let facts = vec![(tr(Msg::TreesDisplay), tr(words).into_any())];
@@ -425,10 +459,15 @@ fn directory(editing: bool) -> Vec<TreeNode> {
 /// The directory's folder tree as the island draws it, `id`, in an edit
 /// when `editing` says so.
 fn folder_tree(id: &str, editing: bool) -> AnyView {
-    let open = ["root", "episodes", "follow-up", "admission"]
-        .into_iter()
-        .map(str::to_owned)
-        .collect();
+    let open = [
+        &["root"][..],
+        &["root", "episodes"],
+        &["root", "episodes", "follow-up"],
+        &["root", "episodes", "admission"],
+    ]
+    .into_iter()
+    .map(path_key)
+    .collect();
     view! {
         <TreeView
             tree=TreeData {
@@ -538,6 +577,7 @@ fn path_browser() -> AnyView {
         units: None,
         flat_path: Some(String::from(POSITION_FLAT)),
         codes,
+        more: None,
         query: String::from("#trees-paths"),
     });
     let template = panel_section(

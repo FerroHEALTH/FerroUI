@@ -1,9 +1,9 @@
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 
-# The English words of the coding, the version select, the value set clause,
-# the root matrix and the mapping row: one message per `Text` of
-# `src/i18n/words/terminology.rs`, in the order of their ids. The
+# The English words of the coding and its more row, the version select, the
+# value set clause, the root matrix and the mapping row: one message per
+# `Text` of `src/i18n/words/terminology.rs`, in the order of their ids. The
 # relationships read as the HL7 FHIR specification defines its codes: R4
 # ConceptMapEquivalence, read from the target to the source, and R5
 # ConceptMapRelationship, read from the source to the target.
@@ -12,6 +12,12 @@ clause-exclude = Exclude
 clause-exclude-label = Exclude: { $title }
 clause-include = Include
 clause-include-label = Include: { $title }
+codes-more = { $shown } of { $total } codes shown.
+codes-more-next = Show the next { $count }
+codes-more-rest = { $count ->
+    [one] Show the other one
+   *[other] Show the other { $count }
+}
 coding-inactive = Inactive
 coding-no-display = no display
 mapping-comment = Comment

@@ -13,7 +13,7 @@
 use leptos::prelude::*;
 
 /// The segments of `text`, each ending after one of `breaks` but the last.
-fn segments(text: &str, breaks: &[char]) -> Vec<String> {
+pub(crate) fn segments(text: &str, breaks: &[char]) -> Vec<String> {
     let mut out = Vec::new();
     let mut current = String::new();
     for character in text.chars() {
@@ -29,7 +29,7 @@ fn segments(text: &str, breaks: &[char]) -> Vec<String> {
 }
 
 /// The segments `parts`, each a `<span>` with a break offered after it.
-fn broken(parts: Vec<String>) -> impl IntoView {
+pub(crate) fn broken(parts: Vec<String>) -> impl IntoView {
     parts
         .into_iter()
         .map(|part| {

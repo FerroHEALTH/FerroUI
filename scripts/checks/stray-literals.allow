@@ -17,6 +17,7 @@ allow ^(checkbox|radio|button|submit|reset|range|color|file|image)$   # the inpu
 allow ^Ferro(BRIDGE|FED|EHR|TERM|PIX)$ # product names, the same in every language
 allow ^Cadasto B\.V\.$                  # the maker's legal name
 allow ^(start|middle|end)$              # SVG text-anchor keywords
+allow ^%2F$                             # a tree's path key: the percent-encoded separator inside a key
 allow ^<                                # SVG markup a chart writes as a string
 allow ^M\{                              # SVG path data
 allow ^M-?[0-9][-0-9 .AHLVZ]*$          # the SVG path of a chart's point mark

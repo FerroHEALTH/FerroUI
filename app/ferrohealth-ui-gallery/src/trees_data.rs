@@ -169,10 +169,10 @@ pub const TEMPLATE: [Node; 14] = [
     ),
 ];
 
-/// The template's nodes open as the page arrives.
-pub const TEMPLATE_OPEN: [&str; 2] = ["encounter", "blood-pressure"];
-/// The template node selected: a coded one.
-pub const TEMPLATE_SELECTED: &str = "position";
+/// The path keys of the template's nodes open as the page arrives.
+pub const TEMPLATE_OPEN: [&str; 2] = ["encounter", "encounter/blood-pressure"];
+/// The path key of the template node selected: a coded one.
+pub const TEMPLATE_SELECTED: &str = "encounter/blood-pressure/position";
 /// The selected node's archetype path.
 pub const POSITION_PATH: &str = "/content[openEHR-EHR-OBSERVATION.blood_pressure.v2]/data[at0001]/events[at0006]/state[at0007]/items[at0008]/value";
 /// The selected node's FLAT path.
