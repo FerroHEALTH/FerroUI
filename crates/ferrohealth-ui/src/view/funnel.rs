@@ -74,29 +74,59 @@ fn share(count: u64, whole: u64) -> f64 {
     count as f64 / whole as f64 * 100.0
 }
 
+/// The least share of the stacked bar a part with any count takes, in per
+/// cent, so three refusals among two million still show.
+const LEAST: f64 = 1.5;
+
+/// The widths of parts of `counts`, in per cent of the bar: each its share,
+/// a part with any count at least [`LEAST`], the room that takes coming off
+/// the widest part.
+fn widths(counts: &[u64]) -> Vec<f64> {
+    let whole = counts.iter().sum::<u64>();
+    let mut widths: Vec<f64> = counts.iter().map(|count| share(*count, whole)).collect();
+    let mut owed = 0.0;
+    for (width, count) in widths.iter_mut().zip(counts) {
+        if *count > 0 && *width < LEAST {
+            owed += LEAST - *width;
+            *width = LEAST;
+        }
+    }
+    if let Some(widest) = widths.iter_mut().max_by(|a, b| a.total_cmp(b)) {
+        *widest = (*widest - owed).max(LEAST);
+    }
+    widths
+}
+
 /// Returns the stacked bar of `funnel`: the total, the bar of its parts
 /// split by a hairline, and the legend with each part's swatch, words and
 /// figure.
 ///
 /// A part with a count of zero draws no segment and keeps its legend entry,
-/// so a run with nothing refused still says "0".
+/// so a run with nothing refused still says "0"; a part with any count
+/// takes at least 1.5 % of the bar and a stroke of its colour around it,
+/// so it never vanishes.
 #[must_use]
 pub fn funnel(funnel: &Funnel) -> AnyView {
-    let whole = funnel.parts.iter().map(|part| part.count).sum::<u64>();
+    let counts: Vec<u64> = funnel.parts.iter().map(|part| part.count).collect();
+    let whole = counts.iter().sum::<u64>();
     let mut start = 0.0;
     let mut segments = Vec::new();
-    for part in &funnel.parts {
-        let width = share(part.count, whole);
+    for (part, width) in funnel.parts.iter().zip(widths(&counts)) {
         if width > 0.0 {
-            segments.push((start, width, part));
+            segments.push((start, width, part, share(part.count, whole) < LEAST));
         }
         start += width;
     }
     let drawn = segments
         .iter()
         .enumerate()
-        .map(|(index, (start, width, part))| {
-            let class = tone_class("fui-funnel-part", part.tone);
+        .map(|(index, (start, width, part, least))| {
+            let base = if *least {
+                "fui-funnel-part fui-funnel-least"
+            } else {
+                "fui-funnel-part"
+            };
+            let class = tone_class(base, part.tone);
             let x = format!("{start:.2}%");
             let cut = (index > 0).then(|| {
                 let at = x.clone();
@@ -187,12 +217,55 @@ pub fn bar_list(label: &str, bars: &[Bar]) -> AnyView {
 
 #[cfg(test)]
 mod tests {
-    use super::share;
+    use leptos::prelude::*;
+
+    use super::{Funnel, FunnelPart, LEAST, funnel, share, widths};
+    use crate::tone::Tone;
 
     #[test]
     fn a_share_of_nothing_is_zero_and_a_whole_is_a_hundred() {
         assert!(share(3, 0).abs() < f64::EPSILON);
         assert!((share(8, 8) - 100.0).abs() < f64::EPSILON);
         assert!((share(1, 4) - 25.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn a_tiny_part_keeps_a_visible_width_taken_from_the_widest() {
+        let drawn = widths(&[2_000_000, 0, 3]);
+        let near =
+            |at: usize, width: f64| drawn.get(at).is_some_and(|got| (got - width).abs() < 1e-9);
+        assert!(near(2, LEAST), "three in two million shows: {drawn:?}");
+        assert!(near(1, 0.0), "nothing draws nothing: {drawn:?}");
+        let total: f64 = drawn.iter().sum();
+        assert!(
+            (total - 100.0).abs() < 1e-9,
+            "the parts still fill the bar: {drawn:?}"
+        );
+    }
+
+    #[test]
+    fn three_refusals_in_two_million_draw_a_part_that_shows() {
+        let part = |label: &str, count: u64, tone: Tone| FunnelPart {
+            label: label.to_owned(),
+            count,
+            figure: count.to_string(),
+            tone,
+        };
+        let shown = Owner::new().with(|| {
+            funnel(&Funnel {
+                figure: String::from("2,000,003"),
+                words: String::from("read"),
+                label: String::from("Of 2,000,003 read: 3 refused"),
+                parts: vec![
+                    part("Written", 2_000_000, Tone::Ok),
+                    part("Refused", 3, Tone::Bad),
+                ],
+            })
+            .to_html()
+        });
+        assert!(
+            shown.contains(r#"<rect x="98.50%" y="0" width="1.50%" height="100%" class="fui-funnel-part fui-funnel-least fui-tone-bad">"#),
+            "{shown}"
+        );
     }
 }

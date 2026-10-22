@@ -131,6 +131,30 @@ fn outcome(failing: usize) -> AnyView {
     card(tr(title), body).into_any()
 }
 
+/// The fan-out of a query no node was asked for, every node excluded,
+/// each named by a long host name.
+fn outcome_none_asked() -> AnyView {
+    let nodes = ["node-eu-west-1", "node-eu-central-2", "node-eu-north-3"]
+        .map(|host| {
+            node(
+                &format!("{host}.ferrofed.internal.example.org"),
+                Answer::Skipped,
+                Msg::FedExcluded,
+                "excluded",
+                Msg::FedNotAsked,
+                Some(Msg::FedExcludedByOperator),
+            )
+        })
+        .to_vec();
+    let body = fanout(Fanout {
+        label: tr(Msg::FedWhatEachDid),
+        line: tr(Msg::FedLineNoneAsked),
+        missing: String::new(),
+        nodes,
+    });
+    card(tr(Msg::FedNoneAsked), body).into_any()
+}
+
 /// The state of the topology the query names.
 #[derive(Debug, Clone, Default)]
 struct Asked {
@@ -675,7 +699,7 @@ pub fn FederationPage() -> impl IntoView {
         ActionGroup::none(),
     )
     .into_any();
-    let outcomes = (outcome(0), outcome(1), outcome(5));
+    let outcomes = (outcome(0), outcome(1), outcome(5), outcome_none_asked());
     let map = card(tr(Msg::FedTopology), federation_map(brand, &asked)).into_any();
     view! {
         {super::title(tr(Msg::Federation))}
@@ -686,6 +710,7 @@ pub fn FederationPage() -> impl IntoView {
                 {outcomes.0}
                 {outcomes.1}
                 {outcomes.2}
+                {outcomes.3}
             },
         )}
     }

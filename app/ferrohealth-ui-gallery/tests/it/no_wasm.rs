@@ -196,16 +196,27 @@ async fn copy_waits(browser: &Browser, id: &str) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-/// Checks that the chart shows its colour key to a sighted reader.
+/// Checks that each line chart shows its colour key to a sighted reader,
+/// one key per series it draws.
 async fn colour_key(browser: &Browser) -> Result<(), Box<dyn Error>> {
     browser.element(By::Css("main svg")).await?;
-    let keys = browser
+    let charts = browser
         .driver()
-        .find_all(By::Css(".fui-legend-key"))
+        .find_all(By::Css("figure.fui-chart:has(.fui-legend)"))
         .await?;
-    assert_eq!(3, keys.len(), "the colour key names every series");
-    for key in keys {
-        assert!(key.is_displayed().await?, "a sighted reader sees the key");
+    assert_eq!(2, charts.len(), "the page draws two line charts");
+    for chart in charts {
+        let series = chart.find_all(By::Css("[data-series-lines]")).await?;
+        let keys = chart.find_all(By::Css(".fui-legend-key")).await?;
+        assert_eq!(
+            series.len(),
+            keys.len(),
+            "the colour key names every series"
+        );
+        assert!(!keys.is_empty(), "a chart has a key");
+        for key in keys {
+            assert!(key.is_displayed().await?, "a sighted reader sees the key");
+        }
     }
     Ok(())
 }

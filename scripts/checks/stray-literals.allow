@@ -19,6 +19,7 @@ allow ^Cadasto B\.V\.$                  # the maker's legal name
 allow ^(start|middle|end)$              # SVG text-anchor keywords
 allow ^<                                # SVG markup a chart writes as a string
 allow ^M\{                              # SVG path data
+allow ^M-?[0-9][-0-9 .AHLVZ]*$          # the SVG path of a chart's point mark
 allow ^(Zz|Tt )$                        # the bytes a timestamp parser accepts
 allow ^\{\}T\{\}Z?$                     # the HTML machine form of a date-time
 allow ^\{id\}-L                         # an editor line's id

@@ -4061,6 +4061,60 @@
     overflow: visible;
   }
 
+  /* The X labels a narrow chart has no room for: each label the server
+     thinned names the chart width it shows from. */
+  .fui-chart-frame {
+    container-type: inline-size;
+  }
+
+  @container (width < 15rem) {
+    .fui-chart-tick-15 {
+      display: none;
+    }
+  }
+
+  @container (width < 20rem) {
+    .fui-chart-tick-20 {
+      display: none;
+    }
+  }
+
+  @container (width < 25rem) {
+    .fui-chart-tick-25 {
+      display: none;
+    }
+  }
+
+  @container (width < 30rem) {
+    .fui-chart-tick-30 {
+      display: none;
+    }
+  }
+
+  @container (width < 40rem) {
+    .fui-chart-tick-40 {
+      display: none;
+    }
+  }
+
+  @container (width < 50rem) {
+    .fui-chart-tick-50 {
+      display: none;
+    }
+  }
+
+  @container (width < 60rem) {
+    .fui-chart-tick-60 {
+      display: none;
+    }
+  }
+
+  @container (width < 80rem) {
+    .fui-chart-tick-80 {
+      display: none;
+    }
+  }
+
   .fui-chart-point {
     fill: var(--surface-raised);
     stroke: var(--series);
@@ -4209,11 +4263,16 @@
     background: var(--surface-raised);
   }
 
+  /* A series' swatch: its point mark (a circle, a square, a diamond or a
+     triangle) in its colour, as the plot draws it. */
   .fui-swatch {
+    flex: none;
     width: 0.625rem;
     height: 0.625rem;
-    border-radius: 9999px;
-    background: var(--series);
+    overflow: visible;
+    fill: var(--series);
+    stroke: var(--series);
+    stroke-width: 1.5;
   }
 
   /* The legend as a static key, before the page hydrates or with no
@@ -4229,8 +4288,7 @@
   }
 
   .fui-legend-chip[aria-pressed="false"] .fui-swatch {
-    background: transparent;
-    box-shadow: inset 0 0 0 2px var(--series);
+    fill: transparent;
   }
 
   /* ---- The document pane ---- */
@@ -4600,6 +4658,7 @@
   .fui-score-label {
     min-width: 0;
     font-weight: 500;
+    overflow-wrap: anywhere;
   }
 
   .fui-score-reading {
@@ -7641,6 +7700,68 @@
     height: 2.75rem;
   }
 
+  /* Labels too close for one row take more: the server works out the
+     rows of a phone's card, drawn as they stand, and the row each takes
+     from 40 rem, which the container query moves it to. A row is 14 px,
+     the step of the labels' `y`. */
+  .fui-score-scale-box {
+    container-type: inline-size;
+  }
+
+  .fui-score-scale.fui-score-rows-2 {
+    height: 58px;
+  }
+
+  .fui-score-scale.fui-score-rows-3 {
+    height: 72px;
+  }
+
+  .fui-score-scale.fui-score-rows-4 {
+    height: 86px;
+  }
+
+  @container (width >= 40rem) {
+    .fui-score-scale.fui-score-wide-1 {
+      height: 2.75rem;
+    }
+
+    .fui-score-scale.fui-score-wide-2 {
+      height: 58px;
+    }
+
+    .fui-score-scale.fui-score-wide-3 {
+      height: 72px;
+    }
+
+    .fui-score-scale.fui-score-wide-4 {
+      height: 86px;
+    }
+
+    .fui-score-up-1 {
+      transform: translateY(-14px);
+    }
+
+    .fui-score-up-2 {
+      transform: translateY(-28px);
+    }
+
+    .fui-score-up-3 {
+      transform: translateY(-42px);
+    }
+
+    .fui-score-down-1 {
+      transform: translateY(14px);
+    }
+
+    .fui-score-down-2 {
+      transform: translateY(28px);
+    }
+
+    .fui-score-down-3 {
+      transform: translateY(42px);
+    }
+  }
+
   @media (width < 40rem) {
     .fui-score-scale-tick {
       display: none;
@@ -8221,10 +8342,11 @@
     gap: 0.25rem 0.5rem;
   }
 
+  /* A node's name wraps after its dots, or anywhere when a label is
+     longer than the row, so it never runs into the next node. */
   .fui-fanout-line > code {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    min-width: 0;
+    overflow-wrap: anywhere;
     font-size: var(--text-small);
     line-height: var(--leading-small);
     font-weight: 600;
@@ -11492,6 +11614,13 @@
     fill: var(--bad-dot);
   }
 
+  /* A part far under its least width: a stroke of its own colour widens
+     it by a few pixels at any width. */
+  rect.fui-funnel-part.fui-funnel-least {
+    stroke: var(--tone-dot);
+    stroke-width: 3px;
+  }
+
   .fui-funnel-cut {
     stroke: var(--surface-raised);
     stroke-width: 2;
@@ -14427,6 +14556,236 @@
   @media (width >= 48rem) {
     .fui-drawer-only {
       display: none;
+    }
+  }
+}
+
+/* ---- Forced colours ----
+   Under forced colours the user's palette replaces every colour, and box
+   shadows and gradient images are dropped, so each mark drawn by them is
+   drawn here again in system colours: the state shapes, the swatches, the
+   switch, the pressed and current controls, the select's chevron, the
+   state edges of rows, and the frame of a chart or a score. The marks of
+   a data series keep their own colour beside their shape and word.
+   WCAG 2.2 SC 1.4.1 and SC 1.4.11; CSS Color Adjustment Module Level 1,
+   § 3 (https://www.w3.org/TR/css-color-adjust-1/#forced). */
+@layer components {
+  @media (forced-colors: active) {
+    /* A state's shape in the text colour (F12, family rule 12): the
+       filled dot, the diamond and the cross keep their outline, the
+       hollow ring its ring. */
+    .fui-pill::before,
+    .fui-dot,
+    .fui-editor-dirty::before,
+    .is-current > .fui-lifecycle-dot::after {
+      forced-color-adjust: none;
+      background: CanvasText;
+    }
+
+    .fui-pill.fui-tone-neutral::before,
+    .fui-dot.is-muted,
+    .fui-dot.fui-tone-neutral,
+    .fui-inactive-mark::before {
+      forced-color-adjust: none;
+      border: 1.5px solid CanvasText;
+      background: transparent;
+    }
+
+    .fui-dot.is-excluded {
+      border: 0;
+      background: GrayText;
+    }
+
+    /* Rules drawn as a ground: the divider's lines and the timeline's
+       rail. */
+    .fui-divider::before,
+    .fui-divider::after,
+    .fui-timeline::before {
+      forced-color-adjust: none;
+      background: GrayText;
+    }
+
+    .fui-skeleton {
+      outline: 1px solid GrayText;
+      outline-offset: -1px;
+    }
+
+    /* The switch: its knob, and its on state in the highlight. */
+    :is(.fui-check > input.fui-switch, input.fui-switch)::before {
+      forced-color-adjust: none;
+      background: ButtonText;
+    }
+
+    :is(.fui-check > input.fui-switch, input.fui-switch):checked {
+      border-color: Highlight;
+      background: Highlight;
+    }
+
+    :is(.fui-check > input.fui-switch, input.fui-switch):checked::before {
+      background: HighlightText;
+    }
+
+    :is(.fui-check > input.fui-switch, input.fui-switch):disabled {
+      border-color: GrayText;
+    }
+
+    :is(.fui-check > input.fui-switch, input.fui-switch):disabled::before {
+      background: GrayText;
+    }
+
+    /* A pressed or chosen segment, the theme choice of the user menu
+       among them, and a checked chip: the highlight, as the system draws
+       a chosen item. Kept from the forced palette, so no backplate of the
+       canvas colour hides its words. */
+    .fui-segment:is([aria-pressed="true"], [aria-current="true"], [aria-checked="true"], :has(> input:checked)),
+    .fui-chip-check:has(:checked) {
+      forced-color-adjust: none;
+      border-color: Highlight;
+      background: Highlight;
+      color: HighlightText;
+    }
+
+    .fui-segment:is([aria-pressed="true"], [aria-current="true"], [aria-checked="true"]):focus-visible,
+    .fui-segment:has(> input:checked:focus-visible),
+    .fui-chip-check:has(:checked:focus-visible) {
+      outline-color: CanvasText;
+      box-shadow: inset 0 0 0 4px HighlightText;
+    }
+
+    /* The current or selected item of a list: a ring in the highlight,
+       which the focus ring replaces while it is focused. */
+    .fui-nav-entry[aria-current="page"]:not(:focus-visible),
+    .fui-settings-nav .fui-nav-entry[aria-current="true"]:not(:focus-visible),
+    .fui-tab:is([aria-current="page"], [aria-current="true"], [aria-selected="true"]):not(:focus-visible),
+    .fui-menu-item:is([aria-pressed="true"], [aria-current="true"]):not(:focus-visible),
+    .fui-pager-size:is([aria-current="true"], [aria-pressed="true"]):not(:focus-visible),
+    .fui-listbox-option[aria-selected="true"]:not(:focus-visible),
+    .fui-search-results li[aria-selected="true"] > a:not(:focus-visible),
+    .fui-search-results li > a[aria-current="true"]:not(:focus-visible),
+    .fui-tree-item[aria-selected="true"]:not(:focus-visible) > .fui-tree-row,
+    .fui-choice-card:has(input:checked):not(:has(input:focus-visible)) {
+      outline: 2px solid Highlight;
+      outline-offset: -2px;
+    }
+
+    /* The day that is today, and the end of a range being chosen. */
+    td[aria-current="date"] > .fui-day,
+    .fui-day.fui-day-tentative-end,
+    .fui-datepicker-cell[aria-current="date"] {
+      outline: 1px solid CanvasText;
+      outline-offset: -1px;
+    }
+
+    /* A row's state edge, an inset shadow elsewhere, as a border. */
+    .fui-worklist .fui-table tbody tr[aria-current="true"] > :first-child,
+    .fui-table tbody tr[aria-current="true"] > :first-child,
+    .fui-match-list > li[aria-selected="true"],
+    .fui-diag.is-current,
+    .fui-code-line.is-current,
+    .fui-code-line:target {
+      border-inline-start: 3px solid Highlight;
+    }
+
+    .fui-compare tr.fui-compare-row-differ > th,
+    .fui-compare-stacked-rows > div.fui-compare-row-differ,
+    .fui-editor[aria-invalid="true"] {
+      border-inline-start: 3px solid CanvasText;
+    }
+
+    .fui-worklist .fui-table tbody tr:is(:focus-visible, :has(.fui-row-link:focus-visible)) {
+      outline: 2px solid CanvasText;
+      outline-offset: -2px;
+    }
+
+    /* A clause's edge: include solid, exclude dashed. */
+    .fui-clause::before {
+      forced-color-adjust: none;
+      background: CanvasText;
+    }
+
+    .fui-clause.is-exclude::before {
+      border-inline-start: 3px dashed CanvasText;
+      background: none;
+    }
+
+    /* The select and the combobox keep their chevron, drawn in the field
+       text colour. */
+    .fui-select:not([multiple], [size]),
+    .fui-combobox-input {
+      forced-color-adjust: none;
+      border-color: FieldText;
+      background-color: Field;
+      background-image:
+        linear-gradient(45deg, transparent calc(50% - 0.75px), FieldText calc(50% - 0.75px), FieldText calc(50% + 0.75px), transparent calc(50% + 0.75px)),
+        linear-gradient(-45deg, transparent calc(50% - 0.75px), FieldText calc(50% - 0.75px), FieldText calc(50% + 0.75px), transparent calc(50% + 0.75px));
+      color: FieldText;
+    }
+
+    .fui-combobox-input::placeholder {
+      color: GrayText;
+    }
+
+    :is(.fui-select:not([multiple], [size]), .fui-combobox-input):is(:hover, :focus-visible) {
+      border-color: Highlight;
+    }
+
+    :is(.fui-select:not([multiple], [size]), .fui-combobox-input):focus-visible {
+      outline-color: Highlight;
+    }
+
+    :is(.fui-select:not([multiple], [size]), .fui-combobox-input):disabled {
+      border-color: GrayText;
+      background-image:
+        linear-gradient(45deg, transparent calc(50% - 0.75px), GrayText calc(50% - 0.75px), GrayText calc(50% + 0.75px), transparent calc(50% + 0.75px)),
+        linear-gradient(-45deg, transparent calc(50% - 0.75px), GrayText calc(50% - 0.75px), GrayText calc(50% + 0.75px), transparent calc(50% + 0.75px));
+      color: GrayText;
+    }
+
+    /* Charts: the frame and the labels in system colours, each series in
+       its own colour and mark, and the swatches beside their names. */
+    .fui-chart-label,
+    .fui-score-mark-label,
+    .fui-score-point-label {
+      fill: CanvasText;
+      stroke: Canvas;
+    }
+
+    .fui-score-mark-label {
+      stroke: none;
+    }
+
+    .fui-chart-grid {
+      stroke: GrayText;
+    }
+
+    .fui-chart-axis,
+    .fui-score-mark,
+    .fui-score-bar-zero {
+      stroke: CanvasText;
+    }
+
+    .fui-chart-point {
+      fill: Canvas;
+    }
+
+    .fui-score-point {
+      stroke: Canvas;
+    }
+
+    .fui-funnel-cut {
+      stroke: Canvas;
+    }
+
+    .fui-swatch,
+    .fui-chart-line,
+    .fui-chart-gap,
+    .fui-chart-point {
+      forced-color-adjust: none;
+    }
+
+    .fui-funnel-swatch {
+      forced-color-adjust: none;
+      border: 1px solid CanvasText;
     }
   }
 }

@@ -6,7 +6,8 @@
 //!
 //! When any node failed, "Incomplete answer" comes first, in words, with
 //! what is missing. Then a summary line: the verdict as a pill and the
-//! console's count and timing. Then one row per node: its name, its state
+//! console's count and timing; with no node asked the verdict says so in
+//! the neutral tone, never Complete. Then one row per node: its name, its state
 //! as a shape, a colour and a word (family rule 12), the time it took or
 //! the rows it gave, and the reason when it failed. A node the request left
 //! out is drawn dashed and stays listed, never hidden. No specification
@@ -77,15 +78,18 @@ pub struct Fanout {
     pub nodes: Vec<FanoutNode>,
 }
 
-/// The verdict of a fan-out: whole, partial, or nothing.
+/// The verdict of a fan-out: whole, partial, failed, or not asked.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Verdict {
-    /// No node failed.
+    /// A node answered and none failed.
     Complete,
     /// Some nodes answered and some failed.
     Incomplete,
     /// Every node asked failed.
     Failed,
+    /// No node was asked: every node was left out, or there is none, so
+    /// nothing answered and the answer holds no rows.
+    Unasked,
 }
 
 impl Verdict {
@@ -101,6 +105,7 @@ impl Verdict {
             .filter(|node| node.answer == Answer::Answered)
             .count();
         match (failed, answered) {
+            (0, 0) => Self::Unasked,
             (0, _) => Self::Complete,
             (_, 0) => Self::Failed,
             _ => Self::Incomplete,
@@ -113,6 +118,7 @@ impl Verdict {
             Self::Complete => Tone::Ok,
             Self::Incomplete => Tone::Warn,
             Self::Failed => Tone::Bad,
+            Self::Unasked => Tone::Neutral,
         }
     }
 
@@ -122,8 +128,23 @@ impl Verdict {
             Self::Complete => Text::FanoutComplete,
             Self::Incomplete => Text::FanoutIncomplete,
             Self::Failed => Text::FanoutFailed,
+            Self::Unasked => Text::FanoutUnasked,
         })
     }
+}
+
+/// Returns a node's name with a break opportunity after each dot, so a
+/// long host name wraps between its labels.
+fn breakable(name: &str) -> impl IntoView + use<> {
+    let mut pieces = Vec::new();
+    let mut rest = name;
+    while let Some(at) = rest.find('.') {
+        let (head, tail) = rest.split_at(at + 1);
+        pieces.push(view! { {head.to_owned()} <wbr /> }.into_any());
+        rest = tail;
+    }
+    pieces.push(rest.to_owned().into_any());
+    pieces
 }
 
 /// Returns one node's row: its name and state on one line, what it gave
@@ -144,7 +165,7 @@ fn node_row(node: FanoutNode) -> impl IntoView {
     view! {
         <li class=class class:is-excluded=answer == Answer::Skipped>
             <span class="fui-fanout-line">
-                <code>{name}</code>
+                <code>{breakable(&name)}</code>
                 <span class=tone.pill()>{word}</span>
                 {term}
             </span>
@@ -168,7 +189,7 @@ pub fn fanout(fanout: Fanout) -> AnyView {
         nodes,
     } = fanout;
     let verdict = Verdict::of(&nodes);
-    let incomplete = (verdict != Verdict::Complete).then(|| {
+    let incomplete = matches!(verdict, Verdict::Incomplete | Verdict::Failed).then(|| {
         let tone = if verdict == Verdict::Failed {
             Tone::Bad
         } else {
@@ -199,4 +220,65 @@ pub fn fanout(fanout: Fanout) -> AnyView {
         </div>
     }
     .into_any()
+}
+
+#[cfg(test)]
+mod tests {
+    use leptos::prelude::*;
+
+    use super::{Answer, Fanout, FanoutNode, Verdict, fanout};
+
+    fn node(name: &str, answer: Answer) -> FanoutNode {
+        FanoutNode {
+            name: name.to_owned(),
+            answer,
+            word: String::from("Excluded"),
+            term: None,
+            measure: String::from("not asked"),
+            reason: None,
+        }
+    }
+
+    fn drawn(nodes: Vec<FanoutNode>) -> String {
+        Owner::new().with(|| {
+            fanout(Fanout {
+                label: String::from("What each node did"),
+                line: String::from("0 of 2 nodes asked"),
+                missing: String::new(),
+                nodes,
+            })
+            .to_html()
+        })
+    }
+
+    #[test]
+    fn no_node_asked_is_never_complete() {
+        let skipped = node("node-a", Answer::Skipped);
+        assert_eq!(
+            Verdict::Unasked,
+            Verdict::of(&[skipped.clone(), skipped.clone()]),
+            "every node left out"
+        );
+        assert_eq!(Verdict::Unasked, Verdict::of(&[]), "no node at all");
+        let shown = drawn(vec![skipped]);
+        assert!(!shown.contains(">Complete<"), "{shown}");
+        assert!(shown.contains(">No node asked<"), "{shown}");
+        assert!(shown.contains("fui-pill fui-tone-neutral"), "{shown}");
+        assert!(
+            !shown.contains("Incomplete answer."),
+            "nothing is missing: {shown}"
+        );
+    }
+
+    #[test]
+    fn a_long_host_name_breaks_after_its_dots() {
+        let shown = drawn(vec![node(
+            "node-eu-west-1.ferrofed.internal.example.org",
+            Answer::Answered,
+        )]);
+        assert!(
+            shown.contains("node-eu-west-1.<wbr>ferrofed.<wbr>internal.<wbr>example.<wbr>org"),
+            "{shown}"
+        );
+    }
 }

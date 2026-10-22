@@ -8,6 +8,7 @@ fanout-complete = Complete
 fanout-failed = Failed
 fanout-incomplete = Incomplete
 fanout-incomplete-answer = Incomplete answer.
+fanout-unasked = No node asked
 replica-answered = Answered by replica
 topology-collapse = Collapse { $title }
 topology-collapse-all = Collapse every group

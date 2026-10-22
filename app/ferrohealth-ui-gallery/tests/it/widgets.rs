@@ -327,11 +327,15 @@ async fn the_chart_legend_hides_and_shows_a_series_in_place() -> Result<(), Box<
         .await?;
         let lines = browser
             .driver()
-            .find_all(By::Css("[data-series-lines] .fui-chart-line"))
+            .find_all(By::Css(
+                "#requests-plot [data-series-lines] .fui-chart-line",
+            ))
             .await?;
         assert_eq!(3, lines.len(), "every series is drawn");
         let writes = browser
-            .element(By::Css("[data-series-lines] .fui-chart-line.fui-series-5"))
+            .element(By::Css(
+                "#requests-plot [data-series-lines] .fui-chart-line.fui-series-5",
+            ))
             .await?;
         assert!(writes.is_displayed().await?);
         chip.click().await?;
@@ -347,7 +351,9 @@ async fn the_chart_legend_hides_and_shows_a_series_in_place() -> Result<(), Box<
             3,
             browser
                 .driver()
-                .find_all(By::Css("[data-series-lines] .fui-chart-line"))
+                .find_all(By::Css(
+                    "#requests-plot [data-series-lines] .fui-chart-line"
+                ))
                 .await?
                 .len(),
             "a hidden series stays drawn"

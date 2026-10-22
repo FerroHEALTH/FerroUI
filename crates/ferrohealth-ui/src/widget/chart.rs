@@ -19,7 +19,9 @@ use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::i18n::{Text, tr};
-use crate::view::chart::{FiguresWords, LineChart, PALETTE, figures, has_gaps, line_svg_grouped};
+use crate::view::chart::{
+    FiguresWords, LineChart, figures, has_gaps, line_svg_grouped, mark_path, series_look,
+};
 
 /// The words a line chart draws itself, resolved on the server in the
 /// page's locale, so an island that draws it carries no catalog.
@@ -108,6 +110,16 @@ pub fn line_chart(chart: &LineChart, words: ChartWords) -> AnyView {
     .into_any()
 }
 
+/// Returns a series' swatch: its point mark `shape` in the colour `class`
+/// names, as the plot draws it.
+fn swatch_of(class: &str, shape: &'static str) -> impl IntoView + use<> {
+    view! {
+        <svg class=class.to_owned() viewBox="-5 -5 10 10" focusable="false" aria-hidden="true">
+            <path d=shape></path>
+        </svg>
+    }
+}
+
 /// Returns the entry of the series `entry` at `index`: its static key
 /// before the page hydrates, its toggle of `shown` once it has.
 fn entry(
@@ -117,7 +129,9 @@ fn entry(
     shown: RwSignal<Vec<bool>>,
     hydrated: RwSignal<bool>,
 ) -> impl IntoView {
-    let swatch = format!("fui-swatch fui-series-{}", entry.palette % PALETTE);
+    let (tone, mark) = series_look(entry.palette);
+    let swatch = format!("fui-swatch fui-series-{tone}");
+    let shape = mark_path(mark);
     let on = move || is_shown(shown, index);
     // The last series shown cannot be hidden, so the chart never empties
     // itself; its chip stays pressed and refuses the press.
@@ -144,7 +158,7 @@ fn entry(
                             });
                     }
                 >
-                    <span class=swatch.clone() aria-hidden="true"></span>
+                    {swatch_of(&swatch, shape)}
                     {name.clone()}
                 </button>
             }
@@ -152,7 +166,7 @@ fn entry(
         } else {
             view! {
                 <span class="fui-legend-key" data-series=name.clone()>
-                    <span class=swatch.clone() aria-hidden="true"></span>
+                    {swatch_of(&swatch, shape)}
                     {name.clone()}
                 </span>
             }
