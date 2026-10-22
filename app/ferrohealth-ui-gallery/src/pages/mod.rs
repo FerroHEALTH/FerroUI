@@ -9,6 +9,7 @@
 //! page is built from erased sections, so rustc sees a shallow tree.
 
 pub mod charts;
+pub mod clinical;
 pub mod code;
 pub mod dock;
 pub mod forms;

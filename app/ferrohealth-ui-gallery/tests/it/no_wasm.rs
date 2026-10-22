@@ -454,6 +454,28 @@ async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error
             let raw = text_of(browser, By::Css(".fui-hl7-raw")).await?;
             assert!(raw.starts_with("MSH|"), "the raw message shows: {raw}");
         }
+        "/clinical" => {
+            // NOTE: leptos-ui.md §15.8: At a time, the switch and the builder are links
+            // and forms, so each works with no WebAssembly.
+            let subject = text_of(browser, By::Css("#subject .fui-subject")).await?;
+            assert!(
+                subject.contains("demo.hospital.mrn"),
+                "the subject line names the namespace: {subject}"
+            );
+            browser
+                .element(By::Css(
+                    "form.fui-at-time[method='get'] button[type='submit']",
+                ))
+                .await?;
+            browser
+                .element(By::Css("#results nav.fui-segmented a[aria-current='true']"))
+                .await?;
+            browser
+                .element(By::Css(
+                    "#query button[type='submit'][name='remove'][value='c1']",
+                ))
+                .await?;
+        }
         "/overlays" => overlays_content(browser).await?,
         "/charts" => colour_key(browser).await?,
         "/layouts" => {

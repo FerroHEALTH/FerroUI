@@ -16,6 +16,7 @@
     reason = "test assertions"
 )]
 
+mod clinical;
 mod console;
 mod contrast;
 mod dock;

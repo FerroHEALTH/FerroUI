@@ -26,6 +26,8 @@ messages! {
     Charts = "charts",
     /// `Choose one this server holds`
     ChooseOneServerHolds = "choose-one-server-holds",
+    /// `Clinical records`
+    ClinicalRecords = "clinical-records",
     /// `Code`
     Code = "code",
     /// `Components`

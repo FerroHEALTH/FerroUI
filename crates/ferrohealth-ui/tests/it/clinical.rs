@@ -1,0 +1,696 @@
+// SPDX-FileCopyrightText: Cadasto B.V.
+// SPDX-License-Identifier: BUSL-1.1
+
+//! The clinical record parts rendered to HTML: the subject line (E1), the
+//! version history with At a time (E2), the clinical reading (E3), the
+//! condition groups (E6), the results pane (E7) and the scope grant (E8).
+
+use ferrohealth_ui::view::conditions::{
+    ADD_CONDITION, ADD_GROUP, Choice, Condition, ConditionGroup, Match, Operand, REMOVE,
+    REMOVE_GROUP, condition_groups,
+};
+use ferrohealth_ui::view::reading::{Element, Level, Reading, Section, Value, reading};
+use ferrohealth_ui::view::results::{ResultsPane, SHOWN, Shown, Switch, results_pane};
+use ferrohealth_ui::view::scope::{
+    Compartment, Grant, Operation, Scope, ScopeError, ScopeGrant, scope_grants,
+};
+use ferrohealth_ui::view::subject::{Subject, SubjectLine, subject_line};
+use ferrohealth_ui::view::versions::{
+    AtTime, Standing, Version, VersionHistory, older_version, version_cell, version_history,
+};
+use ferrohealth_ui::widget::identifier::{Domain, Masked, identifier_static};
+use leptos::prelude::*;
+
+use crate::markup::{has, tags};
+use crate::render::html;
+
+// ---- E1 ----
+
+#[test]
+fn a_subject_line_draws_the_identifier_and_both_states() {
+    let line = html(|| {
+        subject_line(SubjectLine {
+            subject: Subject::External(identifier_static(
+                &Masked::new(Domain::new("demo.hospital.mrn"), "P-20481-537", 3),
+                true,
+            )),
+            queryable: true,
+            modifiable: true,
+        })
+    });
+    assert!(has(&line, "div", &[("class", "fui-subject")]), "{line}");
+    assert!(line.contains(">Subject</span>"), "the label: {line}");
+    assert!(line.contains("demo.hospital.mrn"), "the namespace: {line}");
+    assert!(!line.contains("P-20481"), "the value stays masked: {line}");
+    assert!(
+        line.contains("Queryable") && line.contains("Modifiable"),
+        "{line}"
+    );
+    assert!(
+        has(
+            &line,
+            "span",
+            &[("class", "fui-dot fui-tone-ok"), ("aria-hidden", "true")]
+        ),
+        "a filled dot beside the word: {line}"
+    );
+    assert!(!line.contains("style="), "{line}");
+}
+
+#[test]
+fn a_cleared_state_is_the_hollow_ring_and_its_negation() {
+    // NOTE: design/COMPONENTS.md family rule 12: a state is a shape, a colour and a word.
+    let line = html(|| {
+        subject_line(SubjectLine {
+            subject: Subject::None,
+            queryable: false,
+            modifiable: true,
+        })
+    });
+    assert!(line.contains("No external subject"), "{line}");
+    assert!(line.contains("Not queryable"), "{line}");
+    assert!(
+        has(
+            &line,
+            "span",
+            &[("class", "fui-state fui-tone-neutral is-muted")]
+        ),
+        "{line}"
+    );
+    assert!(
+        has(
+            &line,
+            "span",
+            &[("class", "fui-dot fui-tone-neutral is-muted")]
+        ),
+        "the hollow ring: {line}"
+    );
+}
+
+// ---- E2 ----
+
+/// A version `number` standing `standing`, read when `read`.
+fn version(number: &str, standing: Standing, read: bool) -> Version {
+    Version {
+        number: number.to_owned(),
+        standing,
+        href: (standing != Standing::Deleted).then(|| format!("/versions/{number}")),
+        change: String::from("Modification"),
+        committer: String::from("Demo Nurse <b>"),
+        when: "5 min ago".into_any(),
+        contribution: view! { <a href="/contributions/1">"0199f1d0…4f16"</a> }.into_any(),
+        read,
+    }
+}
+
+#[test]
+fn a_version_history_marks_current_deleted_and_the_version_read() {
+    let table = html(|| {
+        version_history(VersionHistory {
+            caption: String::from("Versions"),
+            versions: vec![
+                version("4", Standing::Deleted, false),
+                version("3", Standing::Current, false),
+                version("2", Standing::Older, true),
+            ],
+            at_time: None,
+        })
+    });
+    assert!(table.contains("Version 3"), "{table}");
+    assert!(
+        has(&table, "span", &[("class", "fui-badge fui-tone-accent")]),
+        "the Current mark: {table}"
+    );
+    assert!(table.contains("Deleted"), "{table}");
+    assert_eq!(
+        1,
+        tags(&table, "tr")
+            .iter()
+            .filter(|row| row.get("aria-current").map(String::as_str) == Some("true"))
+            .count(),
+        "one row is the version read: {table}"
+    );
+    assert!(has(&table, "a", &[("href", "/versions/2")]), "{table}");
+    assert!(
+        !has(&table, "a", &[("href", "/versions/4")]),
+        "a deletion has nothing to read"
+    );
+    for header in ["Version", "Change", "Committed by", "When", "Contribution"] {
+        assert!(
+            table.contains(&format!(">{header}</th>")),
+            "{header}: {table}"
+        );
+    }
+    assert!(table.contains("Demo Nurse &lt;b&gt;"), "escaped: {table}");
+}
+
+#[test]
+fn a_version_cell_keeps_its_mark_beside_its_number() {
+    let cell = html(|| version_cell("1.1.0", Standing::Current));
+    assert!(
+        has(&cell, "span", &[("class", "fui-version-cell")]),
+        "{cell}"
+    );
+    assert!(cell.contains("Version 1.1.0"), "{cell}");
+}
+
+#[test]
+fn at_a_time_is_a_get_form_with_its_field_open_and_quiet_line() {
+    let table = html(|| {
+        version_history(VersionHistory {
+            caption: String::from("Versions"),
+            versions: vec![version("1", Standing::Current, false)],
+            at_time: Some(AtTime {
+                action: String::from("/compositions/c1"),
+                field: view! { <div class="fui-field">"field"</div> }.into_any(),
+                opens: String::from("Opens the version current then."),
+            }),
+        })
+    });
+    assert!(
+        has(
+            &table,
+            "form",
+            &[
+                ("class", "fui-at-time"),
+                ("method", "get"),
+                ("action", "/compositions/c1")
+            ]
+        ),
+        "{table}"
+    );
+    assert!(
+        has(&table, "button", &[("type", "submit")]),
+        "Open: {table}"
+    );
+    assert!(table.contains(">Open</button>"), "{table}");
+    assert!(table.contains("Opens the version current then."), "{table}");
+    let table_at = table.find("<table").unwrap();
+    let form_at = table.find("<form").unwrap();
+    assert!(table_at < form_at, "At a time sits under the table");
+}
+
+#[test]
+fn an_older_version_says_so_once_with_the_way_to_the_latest() {
+    let shown = html(|| older_version("2", 3, "/compositions/c1"));
+    assert!(shown.contains("You are reading version 2 of 3."), "{shown}");
+    assert!(has(&shown, "a", &[("href", "/compositions/c1")]), "{shown}");
+    assert!(shown.contains("Read the latest"), "{shown}");
+    assert!(
+        has(&shown, "div", &[("class", "fui-notice fui-tone-info")]),
+        "{shown}"
+    );
+}
+
+// ---- E3 ----
+
+/// A composition read with a nested cluster two levels deep.
+fn composition() -> Reading {
+    Reading {
+        sections: vec![Section {
+            title: String::from("Blood pressure"),
+            node: Some(String::from("openEHR-EHR-OBSERVATION.blood_pressure.v2")),
+            elements: vec![
+                Element {
+                    label: String::from("Systolic"),
+                    value: Value::Quantity {
+                        magnitude: String::from("128"),
+                        unit: String::from("mm Hg"),
+                        ucum: String::from("mm[Hg]"),
+                    },
+                },
+                Element {
+                    label: String::from("Position"),
+                    value: Value::Coded(view! { <span class="coded">"Sitting"</span> }.into_any()),
+                },
+                Element {
+                    label: String::from("Cuff size"),
+                    value: Value::Null(String::from("No information: unknown")),
+                },
+            ],
+            sections: vec![Section {
+                title: String::from("Device"),
+                node: Some(String::from("openEHR-EHR-CLUSTER.device.v1")),
+                elements: vec![Element {
+                    label: String::from("Device name"),
+                    value: Value::Text(String::from("Upper-arm cuff <i>")),
+                }],
+                sections: vec![Section {
+                    title: String::from("Calibration"),
+                    node: None,
+                    elements: Vec::new(),
+                    sections: Vec::new(),
+                }],
+            }],
+        }],
+        level: Level::Three,
+        folded: Some("The uids are folded away.".into_any()),
+    }
+}
+
+#[test]
+fn a_reading_draws_its_elements_with_their_units_codes_and_null_flavours() {
+    let shown = html(|| reading(composition()));
+    assert!(has(&shown, "div", &[("class", "fui-reading")]), "{shown}");
+    assert!(
+        has(&shown, "dl", &[("class", "fui-reading-rows")]),
+        "{shown}"
+    );
+    assert!(shown.contains("<dt>Systolic</dt>"), "{shown}");
+    assert!(
+        has(
+            &shown,
+            "span",
+            &[("class", "fui-reading-unit"), ("title", "UCUM mm[Hg]")]
+        ),
+        "the UCUM code is the tooltip: {shown}"
+    );
+    assert!(shown.contains(">mm Hg</span>"), "{shown}");
+    assert!(
+        has(&shown, "span", &[("class", "coded")]),
+        "the coding: {shown}"
+    );
+    assert!(
+        has(&shown, "span", &[("class", "fui-reading-null")]),
+        "the null flavour: {shown}"
+    );
+    assert!(
+        shown.contains("Upper-arm cuff &lt;i&gt;"),
+        "escaped: {shown}"
+    );
+    assert!(shown.contains("The uids are folded away."), "{shown}");
+}
+
+#[test]
+fn a_reading_nests_its_headings_as_the_document_nests() {
+    // NOTE: WCAG 2.2 SC 1.3.1: the outline follows the document's nesting.
+    let shown = html(|| reading(composition()));
+    let blood = shown.find("<h3").unwrap();
+    let device = shown.find("<h4").unwrap();
+    let calibration = shown.find("<h5").unwrap();
+    assert!(blood < device && device < calibration, "{shown}");
+    assert_eq!(3, tags(&shown, "section").len(), "{shown}");
+    assert!(
+        has(
+            &shown,
+            "code",
+            &[
+                ("class", "fui-archetype fui-reading-node"),
+                ("title", "openEHR-EHR-CLUSTER.device.v1")
+            ]
+        ),
+        "{shown}"
+    );
+    assert!(shown.contains(".<wbr>"), "breaks only after a dot: {shown}");
+}
+
+// ---- E6 ----
+
+/// A choice of `options`, `chosen` chosen.
+fn choice(options: &[&str], chosen: &str) -> Choice {
+    Choice {
+        options: options
+            .iter()
+            .map(|each| ((*each).to_owned(), (*each).to_owned()))
+            .collect(),
+        chosen: chosen.to_owned(),
+    }
+}
+
+/// A query: All of a quantity and a coded value, and a negated Any group.
+fn query() -> ConditionGroup {
+    ConditionGroup {
+        key: String::from("g1"),
+        number: 1,
+        matching: Match::All,
+        negated: false,
+        conditions: vec![
+            Condition {
+                key: String::from("c1"),
+                path: choice(&["Blood pressure › Systolic"], "Blood pressure › Systolic"),
+                archetype_path: String::from("…/items[at0004]/value/magnitude"),
+                operator: choice(&[">", "="], ">"),
+                operand: Operand::Typed {
+                    value: String::from("140"),
+                    unit: Some(String::from("mm Hg")),
+                },
+            },
+            Condition {
+                key: String::from("c2"),
+                path: choice(&["Position"], "Position"),
+                archetype_path: String::from("…/items[at0008]/value"),
+                operator: choice(&["="], "="),
+                operand: Operand::Coded(choice(&["at1000", "at1001"], "at1001")),
+            },
+        ],
+        groups: vec![ConditionGroup {
+            key: String::from("g2"),
+            number: 2,
+            matching: Match::Any,
+            negated: true,
+            conditions: vec![Condition {
+                key: String::from("c3"),
+                path: choice(&["Pulse › Rate"], "Pulse › Rate"),
+                archetype_path: String::from("…/items[at0004]/value/magnitude"),
+                operator: choice(&[">"], ">"),
+                operand: Operand::Typed {
+                    value: String::from("100"),
+                    unit: None,
+                },
+            }],
+            groups: Vec::new(),
+        }],
+    }
+}
+
+#[test]
+fn the_groups_draw_all_any_negated_and_nested_with_their_conditions() {
+    let shown = html(|| condition_groups(query()));
+    assert!(
+        has(&shown, "div", &[("class", "fui-cond-group")]),
+        "{shown}"
+    );
+    assert!(
+        has(&shown, "div", &[("class", "fui-cond-group is-not")]),
+        "{shown}"
+    );
+    assert!(
+        has(
+            &shown,
+            "input",
+            &[("name", "g1-match"), ("value", "all"), ("checked", "")]
+        ),
+        "{shown}"
+    );
+    assert!(
+        has(
+            &shown,
+            "input",
+            &[("name", "g2-match"), ("value", "any"), ("checked", "")]
+        ),
+        "{shown}"
+    );
+    assert!(
+        has(
+            &shown,
+            "input",
+            &[("name", "g2-not"), ("type", "checkbox"), ("checked", "")]
+        ),
+        "the negation is a word: {shown}"
+    );
+    assert!(shown.contains("Match the opposite (NOT)"), "{shown}");
+    assert_eq!(
+        3,
+        tags(&shown, "li")
+            .iter()
+            .filter(|li| li.get("class").map(String::as_str) == Some("fui-cond"))
+            .count()
+    );
+    assert!(
+        has(&shown, "span", &[("class", "fui-cond-path")]),
+        "{shown}"
+    );
+    assert!(
+        has(&shown, "option", &[("value", "at1001"), ("selected", "")]),
+        "{shown}"
+    );
+    assert!(shown.contains("mm Hg"), "the unit suffix: {shown}");
+    assert!(
+        has(
+            &shown,
+            "button",
+            &[
+                ("name", REMOVE),
+                ("value", "c1"),
+                (
+                    "aria-label",
+                    "Remove the condition on Blood pressure › Systolic"
+                )
+            ]
+        ),
+        "{shown}"
+    );
+    assert!(
+        has(&shown, "button", &[("name", REMOVE_GROUP), ("value", "g2")]),
+        "{shown}"
+    );
+    assert!(
+        !has(&shown, "button", &[("name", REMOVE_GROUP), ("value", "g1")]),
+        "{shown}"
+    );
+    assert!(
+        has(
+            &shown,
+            "button",
+            &[
+                ("name", ADD_CONDITION),
+                ("value", "g2"),
+                ("aria-label", "Add a condition to group 2")
+            ]
+        ),
+        "{shown}"
+    );
+    assert_eq!(
+        1,
+        tags(&shown, "button")
+            .iter()
+            .filter(|b| b.get("name").map(String::as_str) == Some(ADD_GROUP))
+            .count(),
+        "{shown}"
+    );
+}
+
+#[test]
+fn a_group_head_reads_as_one_phrase() {
+    // NOTE: WAI-ARIA 1.2, `radiogroup` named by `aria-labelledby`: the head's
+    // visible words are said once, as the choice's name.
+    let shown = html(|| condition_groups(query()));
+    assert!(
+        has(
+            &shown,
+            "div",
+            &[
+                ("role", "radiogroup"),
+                ("aria-labelledby", "g1-match-label")
+            ]
+        ),
+        "{shown}"
+    );
+    assert!(
+        shown.contains("Group 1: match all or any of these conditions"),
+        "{shown}"
+    );
+    assert!(
+        has(
+            &shown,
+            "span",
+            &[("class", "fui-cond-phrase"), ("aria-hidden", "true")]
+        ),
+        "{shown}"
+    );
+    assert!(
+        has(&shown, "label", &[("for", "c1-path")]),
+        "each control is labelled: {shown}"
+    );
+}
+
+// ---- E7 ----
+
+/// A pane showing `shown`, its switch `switch`.
+fn pane(shown: Shown, switch: Switch) -> String {
+    html(move || {
+        results_pane(ResultsPane {
+            title: String::from("Results"),
+            count: 6,
+            shown,
+            switch,
+            csv: String::from("/answer.csv"),
+            json: String::from("/answer.json"),
+            window: String::from("Rows 1 to 6 of 6, inside the query's own LIMIT 50."),
+            body: view! { <div class="fui-table-scroll">"table"</div> }.into_any(),
+        })
+    })
+}
+
+#[test]
+fn a_results_pane_draws_its_count_window_switch_and_exports() {
+    let shown = pane(
+        Shown::Table,
+        Switch::Url {
+            table: String::from("?shown=table"),
+            chart: String::from("?shown=chart"),
+        },
+    );
+    assert!(shown.contains("Results"), "{shown}");
+    assert!(shown.contains("· 6"), "the count: {shown}");
+    assert!(
+        has(&shown, "p", &[("class", "fui-results-window")]),
+        "{shown}"
+    );
+    assert!(
+        has(&shown, "a", &[("href", "/answer.csv")]) && shown.contains("Export CSV"),
+        "{shown}"
+    );
+    assert!(
+        has(&shown, "a", &[("href", "/answer.json")]) && shown.contains("Export JSON"),
+        "{shown}"
+    );
+    assert!(
+        has(
+            &shown,
+            "a",
+            &[("href", "?shown=table"), ("aria-current", "true")]
+        ),
+        "the view in force: {shown}"
+    );
+    assert!(
+        !shown.contains("fui-panel-body"),
+        "a table runs edge to edge: {shown}"
+    );
+}
+
+#[test]
+fn a_session_switch_posts_and_a_chart_keeps_its_inset() {
+    let shown = pane(
+        Shown::Chart,
+        Switch::Session {
+            action: String::from("/results/shown"),
+            back: String::from("/query"),
+        },
+    );
+    assert!(
+        has(
+            &shown,
+            "form",
+            &[("method", "post"), ("action", "/results/shown")]
+        ),
+        "{shown}"
+    );
+    assert!(
+        has(
+            &shown,
+            "button",
+            &[
+                ("name", SHOWN),
+                ("value", "chart"),
+                ("aria-pressed", "true")
+            ]
+        ),
+        "{shown}"
+    );
+    assert!(
+        has(&shown, "div", &[("class", "fui-panel-body")]),
+        "{shown}"
+    );
+}
+
+// ---- E8 ----
+
+#[test]
+fn a_scope_parses_by_the_smart_grammar() {
+    // NOTE: SMART App Launch 2.2.0, Scopes and Launch Context: a subset of the in-order
+    // string `cruds`; the SMART 1 suffixes read as `rs`, `cud` and `cruds`.
+    let scope = Scope::parse("system/aql-org.openehr::bp.v1.rs").unwrap();
+    assert_eq!(Compartment::System, scope.compartment);
+    assert_eq!(
+        "aql-org.openehr::bp.v1", scope.resource,
+        "the permissions follow the last dot"
+    );
+    assert!(scope.operations.permits(Operation::Read));
+    assert!(!scope.operations.permits(Operation::Create));
+    let v1 = Scope::parse("patient/Observation.write").unwrap();
+    assert!(v1.operations.permits(Operation::Delete) && !v1.operations.permits(Operation::Read));
+    let all = Scope::parse("user/*.*").unwrap();
+    assert!(
+        Operation::ALL
+            .into_iter()
+            .all(|each| all.operations.permits(each))
+    );
+    let constrained = Scope::parse("patient/Observation.rs?category=laboratory").unwrap();
+    assert_eq!(
+        Some("category=laboratory"),
+        constrained.constraint.as_deref()
+    );
+    for (raw, error) in [
+        ("Observation.rs", ScopeError::Compartment),
+        ("doctor/Observation.rs", ScopeError::Compartment),
+        ("patient/.rs", ScopeError::Resource),
+        ("patient/Observation", ScopeError::Resource),
+        ("patient/Observation.dus", ScopeError::Permissions),
+        ("patient/Observation.rr", ScopeError::Permissions),
+        ("patient/Observation.", ScopeError::Permissions),
+    ] {
+        assert_eq!(Err(error), Scope::parse(raw), "{raw}");
+    }
+}
+
+#[test]
+fn a_grant_strikes_an_absent_operation_and_marks_a_broad_one() {
+    let narrow = Scope::parse("patient/composition-*.rs").unwrap();
+    let broad = Scope::parse("system/aql-*.rs").unwrap();
+    let shown = html(move || {
+        scope_grants(
+            "Scopes",
+            vec![
+                ScopeGrant {
+                    raw: String::from("patient/composition-*.rs"),
+                    grant: Grant::Granted {
+                        scope: narrow,
+                        resource: String::from("Compositions of any template"),
+                        broad: false,
+                    },
+                },
+                ScopeGrant {
+                    raw: String::from("system/aql-*.rs"),
+                    grant: Grant::Granted {
+                        scope: broad,
+                        resource: String::from("Every stored query"),
+                        broad: true,
+                    },
+                },
+                ScopeGrant {
+                    raw: String::from("doctor/x.rs"),
+                    grant: Grant::Refused(ScopeError::Compartment.expected()),
+                },
+            ],
+        )
+    });
+    assert!(
+        has(
+            &shown,
+            "ul",
+            &[("class", "fui-scopes"), ("aria-label", "Scopes")]
+        ),
+        "{shown}"
+    );
+    assert!(
+        has(&shown, "code", &[("class", "fui-scope-raw")]),
+        "{shown}"
+    );
+    assert!(
+        shown.contains("Patient · Compositions of any template"),
+        "{shown}"
+    );
+    assert_eq!(
+        6,
+        tags(&shown, "del").len(),
+        "three struck per grant: {shown}"
+    );
+    assert!(shown.contains("not permitted"), "said absent: {shown}");
+    assert_eq!(
+        4,
+        tags(&shown, "span")
+            .iter()
+            .filter(|s| s.get("class").map(String::as_str) == Some("fui-scope-op is-on"))
+            .count()
+    );
+    assert_eq!(1, shown.matches("Broad access").count(), "{shown}");
+    assert!(
+        has(&shown, "li", &[("class", "fui-scope is-refused")]),
+        "{shown}"
+    );
+    assert!(
+        shown.contains("Expected patient, user or system, then a slash."),
+        "{shown}"
+    );
+}
