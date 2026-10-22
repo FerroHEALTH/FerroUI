@@ -17,20 +17,20 @@ VIEWER = "https://viewer.example.org"
 SYSTEM_ID = "cdr.example.org"
 
 # ---- EHRs ----
-E1 = "0199c2a4-7e1b-7c3e-9a51-4f2d8b6e1a01"
-E2 = "0199c2a1-02d4-7f61-b0c3-6e1d2f9a4b17"
+E1 = "0199c2a4-7e1b-4c3e-9a51-4f2d8b6e1a01"
+E2 = "0199c2a1-02d4-4f61-b0c3-6e1d2f9a4b17"
 
 # (id, subject tail or None, created iso, compositions)
 EHRS = [
     (E2, "112", "2026-10-21T09:31", 0),
-    ("0199c29e-55a0-7d12-8e40-0b7c3a1f6d29", "208", "2026-10-21T08:02", 3),
-    ("0199c28b-1f3c-7a88-9d21-3c5e7b0a2e44", "761", "2026-10-20T16:47", 12),
-    ("0199c27f-9b62-7c05-a1f4-7d2e8c6b5a90", "054", "2026-10-20T11:20", 5),
-    ("0199c26a-4e08-71b3-b6d7-2a9f0e4c8d13", None, "2026-10-19T14:05", 1),
-    ("0199c25c-07d9-7e44-8a3b-5f1c6d2e9b78", "390", "2026-10-18T09:58", 21),
-    ("0199c241-c3a5-7f9e-92c0-8b4d1e7a3f05", "618", "2026-10-17T13:36", 7),
-    ("0199c22d-6a17-70c8-b5e2-1d9a3c8f4e66", "925", "2026-10-15T10:11", 2),
-    ("0199c210-8d4f-7b31-a7c6-4e2b9d0f1a82", "473", "2026-10-14T15:44", 16),
+    ("0199c29e-55a0-4d12-8e40-0b7c3a1f6d29", "208", "2026-10-21T08:02", 3),
+    ("0199c28b-1f3c-4a88-9d21-3c5e7b0a2e44", "761", "2026-10-20T16:47", 12),
+    ("0199c27f-9b62-4c05-a1f4-7d2e8c6b5a90", "054", "2026-10-20T11:20", 5),
+    ("0199c26a-4e08-41b3-b6d7-2a9f0e4c8d13", None, "2026-10-19T14:05", 1),
+    ("0199c25c-07d9-4e44-8a3b-5f1c6d2e9b78", "390", "2026-10-18T09:58", 21),
+    ("0199c241-c3a5-4f9e-92c0-8b4d1e7a3f05", "618", "2026-10-17T13:36", 7),
+    ("0199c22d-6a17-40c8-b5e2-1d9a3c8f4e66", "925", "2026-10-15T10:11", 2),
+    ("0199c210-8d4f-4b31-a7c6-4e2b9d0f1a82", "473", "2026-10-14T15:44", 16),
     (E1, "537", "2026-03-02T10:14", 8),
 ]
 
@@ -87,7 +87,7 @@ QUERIES = [
     (None, "recent_vitals", "1.0.0", []),
 ]
 # The dashboard's namespace rows: (namespace label, queries, summed matches or None when one failed)
-NAMESPACES = [("org.example.cardio", 3, 1342), ("org.example.quality", 2, 57), ("org.example.research", 1, 214), ("unqualified", 2, 3120)]
+NAMESPACES = [("org.example.cardio", 2, 1342), ("org.example.quality", 2, 57), ("org.example.research", 1, 214), ("unqualified", 2, 3120)]
 
 BP_AQL = """SELECT
   c/context/start_time/value AS time,
@@ -101,14 +101,26 @@ ORDER BY c/context/start_time/value DESC"""
 
 # ---- contributions of E1: (uid, committed iso, committer, change, versions) ----
 CONTRIBS = [
+    # (uid, committed, committer, change, versions); 18 contributions make the EHR's 20 versions:
+    # compositions 15, status 2, directory 3.
+    ("0199f1da-0c55-7e21-b7a4-1d3f6c9e2a80", "2026-10-21T08:20", "Demo Nurse", "Modification", 1),
     ("0199f1d0-3412-7c9a-a0e1-5b7d2c8e4f16", "2026-10-21T08:14", "Demo Nurse", "Modification", 1),
+    ("0199f1c4-8d02-7b55-9e17-4a6c0f2b9e30", "2026-10-21T08:02", "Demo Nurse", "Modification", 1),
     ("0199f1b2-77e0-7a3d-9f42-0c6e1b5d8a29", "2026-10-21T07:55", "Demo Nurse", "Creation", 1),
+    ("0199eb10-6c2f-7a51-9d04-3e8b1f7d7d42", "2026-10-20T15:02", "Demo Operator", "Modification", 1),
     ("0199e4b7-9a03-7e61-b2c9-4d8f0a3e7c52", "2026-10-18T13:02", "Demo Clinician", "Creation", 1),
+    ("0199dbe2-41f6-7a08-8c35-6e9b2d0f4a71", "2026-10-16T11:30", "Demo Clinician", "Modification", 2),
+    ("0199d7f0-2a9c-7d43-b6e1-0f8a5c3d7b26", "2026-10-15T09:10", "Demo Clinician", "Modification", 1),
+    ("0199d6a4-7b13-7f62-a0d8-3c5e9b1f6a44", "2026-10-14T10:45", "Demo Clinician", "Modification", 1),
+    ("0199d6a3-5f21-7c84-9b06-2d7e0a4c8f19", "2026-10-14T10:41", "Demo Clinician", "Modification", 1),
     ("0199d6a3-31b8-7f04-8c5a-2e9d6b1f0a73", "2026-10-14T10:40", "Demo Clinician", "Creation", 2),
     ("0199c9e1-5c27-7d90-a6b3-8f1e4c2d9b05", "2026-10-07T09:05", "Demo Nurse", "Creation", 1),
     ("0199bc08-6e15-7b72-9d48-3a0c7f5e1b86", "2026-09-30T15:22", "Demo Clinician", "Creation", 1),
     ("0199ae6f-1b88-7c3f-b5d0-6e2a9c4f8d17", "2026-09-23T08:51", "Demo Nurse", "Creation", 1),
+    ("01996446-3e70-7a19-8f52-1b4d7c0e9a35", "2026-08-12T09:00", "Demo Clinician", "Modification", 1),
     ("01995f22-d915-7e8b-a3c6-0d7b2e1f5a94", "2026-08-11T16:30", "Demo Clinician", "Creation", 1),
+    ("01994a22-6c48-7d01-9a7e-5f2b8c1d3e60", "2026-03-02T10:20", "Demo Operator", "Creation", 1),
+    ("01994a1f-0e93-7b26-8d41-7a3c9e5f0b12", "2026-03-02T10:14", "Demo Operator", "Creation", 1),
 ]
 
 # ---- parties ----

@@ -28,10 +28,11 @@ def nice_range(low, high):
     return lo, hi, step
 
 
-def line_chart(id_, label, summary, series, x_ticks, height=220, legend=True):
-    """series: [(name, [y...], palette_index)]; x evenly spaced."""
+def line_chart(id_, label, summary, series, x_ticks, height=220, legend=True, y_from=0):
+    """series: [(name, [y...], palette_index)]; x evenly spaced. y_from: the
+    axis floor, so readings far from zero keep their shape."""
     ys = [y for _, pts, _ in series for y in pts]
-    lo, hi, step = nice_range(0, max(ys))
+    lo, hi, step = nice_range(y_from, max(ys))
     if all(float(y).is_integer() for y in ys) and step < 1:
         step, hi = 1, max(1, math.ceil(max(ys)))
     n = max(len(pts) for _, pts, _ in series)
@@ -70,7 +71,7 @@ def line_chart(id_, label, summary, series, x_ticks, height=220, legend=True):
     chips = ""
     if legend and len(series) > 1:
         chips = '<figcaption class="fui-legend" aria-label="Series">' + "".join(
-            f'<button type="button" class="fui-legend-chip" aria-pressed="true"><span class="fui-swatch fui-series-{pal}" aria-hidden="true"></span>{e(name)}</button>'
+            f'<span class="fui-legend-key"><span class="fui-swatch fui-series-{pal}" aria-hidden="true"></span>{e(name)}</span>'
             for name, _, pal in series
         ) + "</figcaption>"
     return f'<figure class="fui-chart"><div class="fui-chart-plot">{svg}</div>{chips}</figure>'

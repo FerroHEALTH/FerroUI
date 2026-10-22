@@ -38,6 +38,7 @@ PAGES = {
     "node-audit": o.page_node_audit, "node-settings": o.page_node_settings, "node-settings-edit": o.page_node_settings_edit, "node-degraded": o.page_node_degraded,
     "node-probing": o.page_node_probing, "node-exclude": o.page_node_exclude, "node-remove": o.page_node_remove, "node-new": o.page_node_new,
     "node-new-invalid": o.page_node_new_invalid, "node-edit": o.page_node_edit, "endpoint-new": o.page_endpoint_new,
+    "endpoint-edit": o.page_endpoint_edit, "endpoint-exclude": o.page_endpoint_exclude, "endpoint-remove": o.page_endpoint_remove,
     "endpoint-credentials": c.page_credential_new, "endpoint-credentials-oauth": c.page_credential_oauth, "endpoint-credentials-nuts": c.page_credential_nuts,
     "endpoint-credentials-invalid": c.page_credential_invalid, "secret-field-states": c.page_secret_states,
     "services": v.page_services, "services-attention": v.page_services_attention, "services-setup": v.page_services_setup, "services-menu": v.page_services_menu, "services-localization-edit": v.page_services_localization_edit, "service": v.page_service,
@@ -56,7 +57,8 @@ PAGES = {
     "stored-queries": q.page_stored, "stored-queries-filtered": q.page_stored_filtered, "stored-queries-no-match": q.page_stored_no_match,
     "stored-queries-loading": q.page_stored_loading, "stored-query": q.page_stored_query, "stored-query-missing": q.page_stored_query_missing,
     "stored-query-repair": q.page_stored_repair, "stored-query-repaired": q.page_stored_repaired,
-    "stored-new": c.page_stored_new, "stored-new-confirm": c.page_stored_new_confirm, "stored-new-held": c.page_stored_new_held,
+    "stored-new": q.page_stored_new, "stored-new-confirm": q.page_stored_new_confirm, "stored-new-held": q.page_stored_new_held,
+    "stored-new-reserved": q.page_stored_new_reserved, "stored-new-literal": q.page_stored_new_literal, "stored-new-not-aql": q.page_stored_new_not_aql, "stored-new-read-only": q.page_stored_new_read_only,
     "self-description": f.page_self_description, "self-description-capabilities": f.page_self_description_capabilities, "self-description-areas": f.page_self_description_areas, "self-description-limits": f.page_self_description_limits, "self-description-endpoints": f.page_self_description_endpoints,
     "configuration": c.page_config_settings, "configuration-fanout": c.page_configuration_fanout, "configuration-key-hint": c.page_configuration_key_hint, "configuration-consent": c.page_configuration_consent, "configuration-stored": c.page_configuration_stored, "configuration-access": c.page_configuration_access, "configuration-fhir": c.page_configuration_fhir, "configuration-mode-dialog": c.page_configuration_mode_dialog, "configuration-actions": c.page_configuration_actions,
     "configuration-loading": c.page_configuration_loading, "configuration-export-done": c.page_configuration_export_done,
@@ -73,8 +75,16 @@ PAGES = {
     "configuration-file-mode": c.page_configuration_file_mode, "configuration-file-mode-dialog": c.page_configuration_file_mode_dialog,
     "configuration-file-mode-history": c.page_configuration_file_mode_history,
     "preferences": p.page_preferences, "preferences-language": p.page_preferences_language, "preferences-saved": p.page_preferences_saved,
-    "preferences-reset": p.page_preferences_reset, "preferences-query": p.page_preferences_query, "preferences-keyboard": p.page_preferences_keyboard, "preferences-account": p.page_preferences_account, "preferences-dark": p.page_preferences_dark,
+    "preferences-reset": p.page_preferences_reset, "preferences-keyboard": p.page_preferences_keyboard, "preferences-dark": p.page_preferences_dark,
     "sign-in": p.page_sign_in, "sign-in-redirecting": p.page_sign_in_redirecting, "sign-in-refused": p.page_sign_in_refused,
     "sign-in-rejected": p.page_sign_in_rejected, "sign-in-expired": p.page_sign_in_expired, "sign-in-signed-out": p.page_sign_in_signed_out,
     "sign-in-unavailable": p.page_sign_in_unavailable, "sign-in-full": p.page_sign_in_full,
 }
+
+
+def route_pages():
+    """Every route-only page (r-…): each other object's tabs."""
+    out = {}
+    for mod in (o, v, q, c):
+        out.update(mod.route_pages())
+    return out

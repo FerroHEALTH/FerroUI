@@ -12,7 +12,7 @@ LINE = 'Set in <code>ferrobridge.toml</code> · read at start · <a href="config
 
 
 def key_hint(k, show=False):
-    return f'<code class="mk-key-hint{" is-shown" if show else ""}" title="Copy the key">{e(k)}{icon("copy", "12")}</code>'
+    return f'<button type="button" class="mk-key-hint{" is-shown" if show else ""}" aria-label="Copy the key {e(k)}" title="Copy the key"><code>{e(k)}</code>{icon("copy", "12")}</button>'
 
 
 def on(v=True):
@@ -20,8 +20,10 @@ def on(v=True):
     return badge("ok", "On") if v else badge("neutral", "Off")
 
 
-def srow(label, desc, value, key, hint=False):
-    return (f'<div class="fui-setting-row{" mk-hover" if hint else ""}"><div class="fui-setting-text"><span class="fui-setting-label">{label}{key_hint(key, hint)}</span>'
+def srow(label, desc, value, key, hint=False, keys=None):
+    """`keys`: a row that shows two or more keys names each of them."""
+    hints = "".join(key_hint(k, hint) for k in (keys or (key,)))
+    return (f'<div class="fui-setting-row{" mk-hover" if hint else ""}"><div class="fui-setting-text"><span class="fui-setting-label">{label}{hints}</span>'
             f'<p class="fui-setting-desc">{desc}</p></div><div class="fui-setting-control"><span class="fui-setting-value">{value}</span></div></div>')
 
 

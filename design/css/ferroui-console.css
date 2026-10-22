@@ -593,7 +593,7 @@
 
   .fui-shortcuts {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
     gap: var(--space-loose) 1.5rem;
   }
 
@@ -2655,12 +2655,22 @@
   .fui-form-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(min(100%, 10rem), 1fr));
-    align-items: end;
+    align-items: start;
     gap: 0.75rem var(--space-loose);
   }
 
   .fui-form-grid > .fui-span-2 {
     grid-column: span 2;
+  }
+
+  /* A button in the grid has no label, so it sits on the inputs' line. */
+  .fui-form-grid > :not(.fui-field) {
+    align-self: end;
+  }
+
+  /* A field that holds a URL, a path or another long token takes the row. */
+  .fui-form-grid > .fui-span-row {
+    grid-column: 1 / -1;
   }
 
   @media (width < 40rem) {
@@ -2760,6 +2770,7 @@
 
   /* The tooltip a rail glyph shows on hover or focus. */
   .fui-tooltip {
+    white-space: nowrap;
     position: absolute;
     inset: 50% auto auto calc(100% + 0.5rem);
     z-index: 36;
@@ -5400,8 +5411,6 @@
     color: var(--muted);
     font-size: var(--text-micro);
     font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
   }
 
   .mk-results li a > .fui-dot {
@@ -5594,12 +5603,10 @@
       font-weight: 600;
     }
 
-    tr:has(.fui-menu-sheet)::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      z-index: 70;
-      background: var(--scrim);
+    /* The sheet carries its own scrim: a spread shadow drawn under the
+       sheet, so no stacking context between them can put the scrim on top. */
+    .fui-menu.fui-menu-anchored.fui-menu-sheet:not(.mk-sheet-static) {
+      box-shadow: 0 -8px 24px -8px rgb(15 23 42 / 0.25), 0 0 0 100vmax var(--scrim);
     }
   }
 
@@ -5856,7 +5863,12 @@
 
   .mk-key-hint {
     display: inline-flex;
-    visibility: hidden;
+    opacity: 0;
+    overflow-wrap: break-word;
+    word-break: normal;
+    border: 0;
+    font: inherit;
+    cursor: pointer;
     width: fit-content;
     align-items: center;
     gap: 0.25rem;
@@ -5869,8 +5881,13 @@
   }
 
   .fui-setting-row:is(:hover, :focus-within, .mk-hover) .mk-key-hint,
-  .mk-key-hint.is-shown {
-    visibility: visible;
+  .mk-key-hint.is-shown,
+  .mk-key-hint:focus-visible {
+    opacity: 1;
+  }
+
+  .mk-key-hint > code {
+    font-size: 0.75rem;
   }
 
   .fui-setting-row:has(.mk-key-hint.is-shown) {
@@ -5937,7 +5954,7 @@
      list or a card is ink with no underline, at rest and on hover; the row
      is the target, tinted with the pointer on hover, and the keyboard
      shows the row's ring. An underline stays only in running prose. ---- */
-  .fui-table :is(th, td) a:not(.fui-button):not(.fui-tag):not(.fui-menu-item),
+  .fui-table :is(th, td) a:not(.fui-button):not(.fui-tag, .fui-menu-item),
   .fui-table a.fui-row-link,
   .fui-topology-list a,
   .mk-plain-list a.mk-ink {
@@ -5945,7 +5962,7 @@
     text-decoration: none;
   }
 
-  .fui-table :is(th, td) a:not(.fui-button):not(.fui-tag):not(.fui-menu-item):hover {
+  .fui-table :is(th, td) a:not(.fui-button):not(.fui-tag, .fui-menu-item):hover {
     color: var(--ink);
     text-decoration: none;
   }
@@ -6408,6 +6425,14 @@
     white-space: nowrap;
   }
 
+  /* On a phone an issue's text takes the whole row under its badge and
+     head, so a whole id in it (kept unbroken above) still fits. */
+  @media (width < 40rem) {
+    .fui-issues > li > .fui-issue-text {
+      grid-column: 1 / -1;
+    }
+  }
+
 
 
   /* A card is a link: the pointer and the path on hover; the Details button
@@ -6757,10 +6782,11 @@
     text-align: start;
   }
 
-  /* Phones have no hover: the TOML key hint stays out of the row. */
+  /* Phones have no hover: the key's copy button is always shown there, so
+     touch reaches it. */
   @media (width < 40rem) {
     .fui-setting-label .mk-key-hint {
-      display: none;
+      opacity: 1;
     }
   }
 }
@@ -6820,12 +6846,13 @@
 }
 
 @layer components {
-  /* A search result: its dot or glyph, then the name over its line. */
-  .mk-results li > a {
+  /* A search result that starts with its dot or glyph: the mark, then the
+     name over its line. Other answer rows keep their own grid. */
+  .mk-results li > a:has(> :is(.fui-dot, .fui-icon, svg):first-child) {
     grid-template-columns: auto minmax(0, 1fr);
   }
 
-  .mk-results li > a > .fui-small {
+  .mk-results li > a:has(> :is(.fui-dot, .fui-icon, svg):first-child) > .fui-small {
     grid-column: 2;
   }
 }
@@ -7209,6 +7236,15 @@
     box-shadow: inset 3px 0 0 var(--accent);
   }
 
+  /* The current diagnostic's bar takes its severity's colour. */
+  .fui-diag.fui-tone-bad.is-current {
+    box-shadow: inset 3px 0 0 var(--bad);
+  }
+
+  .fui-diag.fui-tone-warn.is-current {
+    box-shadow: inset 3px 0 0 var(--warn);
+  }
+
   @media (width < 40rem) {
     .fui-diag {
       grid-template-columns: minmax(0, 1fr);
@@ -7287,10 +7323,13 @@
 
   /* The operation's options, one row, with Run at its end aligned to the
      inputs, so Run sits next to what it runs. */
+  /* Fields share their label line, so help or an error under one field
+     never lifts its neighbours; Run and a check group sit at the row's
+     foot, on the inputs' line when no field carries help. */
   .fui-transform-options {
     display: flex;
     flex-wrap: wrap;
-    align-items: flex-end;
+    align-items: flex-start;
     gap: var(--space-loose);
     padding: var(--space-loose);
   }
@@ -7320,6 +7359,7 @@
   }
 
   .fui-transform-run {
+    align-self: flex-end;
     margin-inline-start: auto;
   }
 
@@ -8684,6 +8724,7 @@
   }
 
   .fui-transform-options .fui-field-checks {
+    align-self: flex-end;
     display: flex;
     flex: none;
     flex-direction: column;
@@ -8976,10 +9017,28 @@
     padding-inline-start: 1rem;
   }
 
+  /* The rename field grows with the name it holds; on a phone it takes its
+     own line under the row's glyph and actions (F7: actions on the first
+     line). */
   .fui-folder-tree .fui-tree-row > .fui-input {
-    max-width: 16rem;
+    flex: 1 1 12rem;
+    min-width: 12rem;
+    max-width: 28rem;
     min-height: 2rem;
     padding-block: 0.125rem;
+  }
+
+  @media (width < 40rem) {
+    .fui-folder-tree.is-editing .fui-tree-row:has(> .fui-input) {
+      flex-wrap: wrap;
+    }
+
+    .fui-folder-tree .fui-tree-row > .fui-input {
+      order: 1;
+      flex-basis: 100%;
+      min-width: 0;
+      max-width: none;
+    }
   }
 
   /* ---- E5 Path browser: a template's paths as M1's tree beside the node
@@ -9229,23 +9288,33 @@
     .fui-anchor > .fui-popover {
       position: fixed;
       inset: auto 0.75rem 0.75rem 0.75rem;
+      z-index: 80;
       width: auto;
+      box-shadow: var(--shadow-overlay), 0 0 0 100vmax var(--scrim);
     }
   }
 
-  /* ---- A row's actions on a phone (FerroEHR pass): in a stacked table
-     inside a B10 section, the row-menu cell sits on the card's first line,
+  /* ---- A row's actions on a phone (FerroEHR pass): in every stacked
+     table, the row-menu cell sits on the card's first line,
      at its end, as F7 keeps Remove on a repeatable row's first line. ---- */
   @media (width < 40rem) {
-    .fui-panel-section .fui-table-stack .fui-table tbody tr:has(> td.fui-row-menu) {
+    .fui-table-stack .fui-table tbody tr:has(> td.fui-row-menu) {
       position: relative;
       padding-inline-end: 3rem;
     }
 
-    .fui-panel-section .fui-table-stack .fui-table tbody tr > td.fui-row-menu {
+    .fui-table-stack .fui-table tbody tr > td.fui-row-menu {
       position: absolute;
       inset-block-start: 0.375rem;
       inset-inline-end: 0.375rem;
+    }
+
+    .fui-worklist .fui-table-stack .fui-table tbody tr:has(> [data-role="title-2"]):has(> td.fui-row-menu) {
+      padding-inline-end: 0.25rem;
+    }
+
+    .fui-worklist .fui-table-stack .fui-table tbody tr:has(> [data-role="title-2"]) > td.fui-row-menu {
+      position: static;
     }
   }
 
@@ -9294,4 +9363,983 @@
       background: color-mix(in srgb, var(--surface-raised) 92%, var(--ink));
     }
   }
+
+  /* ---- Verified review round (FerroEHR): shared fixes ---- */
+
+  /* F12 shapes in the status pill (rule 12): degraded a diamond,
+     unreachable a cross, unknown a hollow ring. */
+  .fui-pill.fui-tone-warn::before {
+    border-radius: 0.0625rem;
+    transform: rotate(45deg);
+  }
+
+  .fui-pill.fui-tone-bad::before {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 0;
+    clip-path: polygon(20% 0, 50% 30%, 80% 0, 100% 20%, 70% 50%, 100% 80%, 80% 100%, 50% 70%, 20% 100%, 0 80%, 30% 50%, 0 20%);
+  }
+
+  .fui-pill.fui-tone-neutral::before {
+    background: transparent;
+    box-shadow: inset 0 0 0 1.5px var(--muted);
+  }
+
+  /* Below 64 rem the top bar's status keeps its shape: the words leave
+     the line and stay the pill's accessible name and tooltip. */
+  @media (width < 64rem) {
+    .fui-topbar-end .fui-pill.fui-roomy-only {
+      display: inline-flex !important;
+      gap: 0;
+      padding: 0.4375rem;
+      font-size: 0;
+      line-height: 0;
+    }
+
+    .fui-topbar-end .fui-pill.fui-roomy-only::before {
+      margin: 0;
+    }
+  }
+
+  /* A theme choice in the user menu is a menuitemradio. */
+  .fui-segment[aria-checked="true"] {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  /* Menu separators stand out on the dark overlay surface. */
+  :root[data-theme="dark"] .fui-menu-sep {
+    background: var(--edge-strong);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .fui-menu-sep {
+      background: var(--edge-strong);
+    }
+  }
+
+  /* A toast's action sits under its text, so the text keeps its width. */
+  .fui-toast:has(> .fui-button) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: start;
+  }
+
+  .fui-toast:has(> .fui-button) > .fui-button {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: start;
+  }
+
+  .fui-toast:has(> .fui-button) > .fui-icon-button {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  /* M1: a tree's focus ring is drawn on the row, not on the item. */
+  .fui-tree-item:focus-visible {
+    outline: none;
+  }
+
+  .fui-tree-item:focus-visible > .fui-tree-row,
+  .fui-tree-row.mk-focus {
+    outline: 2px solid var(--focus);
+    outline-offset: -2px;
+    border-radius: var(--radius-control);
+  }
+
+  /* On a phone the subtitle stays under the title; the actions follow. */
+  @media (width < 40rem) {
+    .fui-page-header:has(> .fui-page-heading > .fui-actions) {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .fui-page-header > .fui-page-heading:has(> .fui-actions) {
+      display: contents;
+    }
+
+    .fui-page-header > .fui-page-heading > .fui-actions {
+      order: 1;
+      margin-block-start: 0.75rem;
+    }
+  }
+
+  /* T1/T3: a tab row that scrolls starts with its current tab in view. */
+  .fui-tabs > .fui-tab:is([aria-current="page"], [aria-current="true"], [aria-selected="true"]) {
+    scroll-initial-target: nearest;
+  }
+
+  /* B1 in a B10 section runs edge to edge; a section head is its only head. */
+  .fui-panel-section > .fui-codeview {
+    margin-inline: calc(var(--space-loose) * -1);
+    border-top: 1px solid var(--edge);
+  }
+
+  .fui-panel-section > .fui-codeview:last-child {
+    margin-block-end: calc(var(--space-loose) * -1);
+  }
+
+  .fui-panel-section > .fui-codeview:first-child {
+    margin-block-start: calc(var(--space-loose) * -1);
+    border-top: 0;
+  }
+
+  .fui-panel-section > .fui-codeview .fui-code-panel {
+    border-radius: 0;
+  }
+
+  /* B2 in a B10 section has no card frame and runs edge to edge. */
+  .fui-panel-section > .fui-mapping-editor {
+    margin-inline: calc(var(--space-loose) * -1);
+    border: 0;
+    border-top: 1px solid var(--edge);
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .fui-panel-section > .fui-mapping-editor:last-child {
+    margin-block-end: calc(var(--space-loose) * -1);
+  }
+
+  /* On a phone the code view's head puts its meta under the title. */
+  @media (width < 40rem) {
+    .fui-codeview-head {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+
+  /* B4 on a phone: the glyph keeps its line beside the title. */
+  @media (width < 40rem) {
+    .fui-load-report {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: start;
+    }
+
+    .fui-load-report > :not(.fui-icon, .fui-load-report-title) {
+      grid-column: 2;
+    }
+  }
+
+  /* A field's segmented control is as wide as its segments. */
+  .fui-field > .fui-segmented {
+    width: fit-content;
+    max-width: 100%;
+  }
+
+  /* An issue's severity badge starts with a capital. */
+  .fui-issues .fui-badge {
+    text-transform: capitalize;
+  }
+
+  /* On a phone the options row's fields take the full width. */
+  @media (width < 40rem) {
+    .fui-transform-options .fui-field:not(.fui-field-checks, :has(.fui-segmented)) {
+      flex: 1 1 100%;
+    }
+  }
+
+  /* A count cell on a phone card carries its noun (data-unit). */
+  @media (width < 40rem) {
+    .fui-table-stack .fui-table tbody td[data-unit]::after {
+      content: "\00a0" attr(data-unit);
+      color: var(--muted);
+    }
+  }
+
+  /* A search value longer than the field ends in an ellipsis while the
+     field is not being edited, so the cut is visible. */
+  .fui-search .fui-input:not(:focus) {
+    text-overflow: ellipsis;
+  }
+
+  /* A column sort is a button: it sorts in place and goes nowhere. */
+  button.fui-sort {
+    border: 0;
+    background: none;
+    padding: 0;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  /* A loading bar in a number column sits at the column's end. */
+  .fui-num .fui-skeleton {
+    margin-inline-start: auto;
+  }
+
+  /* A table that declares its columns keeps them, however few its rows. */
+  .fui-table:has(> colgroup) {
+    table-layout: fixed;
+  }
+
+  /* An empty end of a list toolbar takes no room, so the find field
+     reaches the card edge on a phone. */
+  .fui-list-toolbar-end:empty {
+    display: none;
+  }
+
+  /* A specimen that starts at the text edge. */
+  .mk-menu-demo.is-start {
+    justify-content: flex-start;
+    padding-inline-end: 0;
+  }
+
+  /* E2: the version being read is marked in its table. */
+  .fui-table tbody tr[aria-current="true"] > :is(th, td) {
+    background: var(--surface-sunken);
+  }
+
+  .fui-table tbody tr[aria-current="true"] > :first-child {
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
+
+  /* E4 in edit: a removed item stays in place, struck through, with Undo. */
+  .fui-folder-tree .fui-tree-item.is-removed > .fui-tree-row :is(.fui-tree-label, .fui-tree-code) {
+    color: var(--muted);
+    text-decoration: line-through;
+  }
+
+  /* E4 in edit on a phone: the row's icon actions stay on its first line,
+     inside the panel; the name gives way with an ellipsis. */
+  @media (width < 40rem) {
+    .fui-folder-tree.is-editing .fui-tree-row > .fui-tree-label {
+      flex: 1 1 0;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .fui-folder-tree.is-editing .fui-tree-row > :is(.fui-tree-code, .fui-tree-count) {
+      display: none;
+    }
+
+    .fui-folder-tree.is-editing .fui-tree-actions {
+      flex: none;
+      margin-inline-start: auto;
+      padding-inline-start: 0.25rem;
+    }
+  }
+
+  /* M1/E4: a tree wider than its panel scrolls sideways under the scroll
+     cue, and a uid in a row never breaks inside itself. */
+  .fui-concept-tree {
+    scrollbar-width: thin;
+    scrollbar-color: var(--edge-strong) transparent;
+    background:
+      linear-gradient(to left, var(--surface-raised) 40%, transparent) right center / 2.5rem 100% no-repeat local,
+      linear-gradient(to left, color-mix(in srgb, var(--ink) 16%, transparent), transparent) right center / 1.25rem 100% no-repeat scroll,
+      var(--surface-raised);
+  }
+
+  .fui-concept-tree .fui-tree-code {
+    white-space: nowrap;
+  }
+
+  /* M4's row on a phone: with no Remove beside it, the first field takes
+     the whole row too. */
+  @media (width < 40rem) {
+    .fui-clause-filter:not(:has(> .fui-icon-button)) > :first-child {
+      grid-column: 1 / -1;
+    }
+  }
+
+  /* B2's toolbar on a phone keeps its tools on the line; the status words
+     give way. */
+  @media (width < 40rem) {
+    .fui-editor-bar {
+      flex-wrap: nowrap;
+    }
+
+    .fui-editor-bar > span:first-child {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  /* A path or an archetype id in a phone card breaks only where it offers
+     a break (after a slash, a bracket or a dot), so each dot stays with
+     its segment. */
+  @media (width < 40rem) {
+    .fui-table-stack .fui-table :is(.fui-path, .fui-archetype),
+    .fui-table-stack .fui-table :is(td, th):has(> span > :is(.fui-path, .fui-archetype)) {
+      overflow-wrap: normal;
+    }
+  }
+
+  /* B2 with nothing in it is a few lines tall, not a full editor. */
+  .fui-mapping-editor.is-empty .fui-editor-stack {
+    min-height: 6rem;
+  }
+
+  /* E2: At a time sits under its table with a hairline and a gap. */
+  .fui-table-scroll + .fui-at-time {
+    margin-block-start: var(--space-loose);
+    border-top: 1px solid var(--edge);
+    padding-block-start: var(--space-loose);
+  }
+
+  /* A short field (a version, a number) keeps a short width. */
+  .fui-field.is-short {
+    max-width: 14rem;
+  }
+
+  /* Run on its own line under a section's fields. */
+  .fui-transform-run.mk-run-row {
+    margin-block-start: 0.75rem;
+  }
+
+  /* R14 on a phone: Clear filters keeps one line and lines up with the chips. */
+  @media (width < 40rem) {
+    .fui-filter-chips > .fui-button {
+      padding-inline: 0.25rem;
+      white-space: nowrap;
+    }
+  }
+
+  /* A chart's legend: plain keys, not toggles. */
+  .fui-legend-key {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    color: var(--muted);
+    font-size: var(--text-small);
+  }
+
+  /* A repeater on a phone: the column heads leave, each field shows its label. */
+  @media (width < 40rem) {
+    .fui-repeater-head {
+      display: none;
+    }
+
+    .fui-repeater-row .fui-field > label.fui-sr-only {
+      position: static;
+      width: auto;
+      height: auto;
+      margin: 0 0 0.25rem;
+      overflow: visible;
+      clip-path: none;
+      white-space: normal;
+      color: var(--muted);
+      font-size: var(--text-small);
+    }
+  }
+
+  /* A path in facts keeps to one line and scrolls sideways. */
+  .fui-facts dd .fui-path {
+    display: inline-block;
+    max-width: 100%;
+    overflow-x: auto;
+    vertical-align: bottom;
+    white-space: nowrap;
+    scrollbar-width: thin;
+  }
+
+  /* An id, a path or a URI breaks only where it offers a break (<wbr>),
+     never inside a segment. */
+  :is(.fui-archetype, .fui-path, .fui-request) {
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+
+  .fui-alert .fui-alert-request code {
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+
+  /* R28: Saved has a fixed slot above the control's end, so it never moves
+     the control; under preview cards it takes its own line below them. */
+  .fui-setting-control {
+    position: relative;
+  }
+
+  .fui-setting-row .fui-setting-control > .fui-setting-saved {
+    position: absolute;
+    inset: auto 0 calc(100% + 0.125rem) auto;
+    white-space: nowrap;
+  }
+
+  .fui-setting-row:has(.fui-choice-cards) .fui-setting-control > .fui-setting-saved {
+    position: static;
+    flex-basis: 100%;
+  }
+
+  @media (width < 40rem) {
+    .fui-setting-row .fui-setting-control > .fui-setting-saved {
+      position: static;
+      order: 1;
+      flex-basis: 100%;
+    }
+
+    /* On a phone the preview cards are one column, each the full width,
+       so no card is left alone on a row and no preview is squeezed. */
+    .fui-choice-cards {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .fui-choice-card {
+      width: 100%;
+      min-width: 0;
+      flex: none;
+    }
+  }
+
+  /* A row's settings start at the section's edge. */
+  .fui-panel-section > .fui-setting-rows > .fui-setting-row {
+    padding-inline: 0;
+  }
+
+  /* A name, a queue or a file name never breaks inside itself. */
+  :is(.fui-toast, .fui-dialog) code,
+  .fui-table-stack .fui-table [data-role="title"] code {
+    white-space: nowrap;
+    overflow-wrap: normal;
+  }
+
+  /* On a phone the toast region keeps clear of the page's last row. */
+  @media (width < 40rem) {
+    .fui-page:has(> .fui-toasts) .fui-main {
+      padding-block-end: 7rem;
+    }
+  }
+
+  /* Flat marks: a scope's permission letters are not buttons. */
+  .fui-scope-ops {
+    gap: 0.25rem 0.75rem;
+  }
+
+  .fui-scope-op,
+  .fui-scope-op.is-on {
+    border: 0;
+    background: none;
+    padding: 0;
+    cursor: default;
+  }
+
+  .fui-scope-op.is-on::before {
+    content: "✓\00a0";
+    color: var(--ok);
+  }
+
+  /* Facts in a panel's sections share one label column, so the values line
+     up from section to section. */
+  @media (width >= 40rem) {
+    .fui-panel-section .fui-facts {
+      grid-template-columns: minmax(10rem, 14rem) minmax(0, 1fr);
+    }
+  }
+
+  /* A row of numbers in a section: the stat cards lose their frame. */
+  .fui-stat-row > .fui-stat {
+    border: 0;
+    box-shadow: none;
+    background: none;
+    padding: 0;
+  }
+
+  /* One stacked-row style on a phone: in a card or a panel the rows are
+     hairline-separated lines that keep the panel's inset, never cards in
+     a card; a group row is a full-width band between them. */
+  @media (width < 40rem) {
+    .fui-panel > .fui-table-stack,
+    .fui-panel-section > .fui-table-stack {
+      padding: 0;
+    }
+
+    .fui-panel-section > .fui-table-stack {
+      margin-inline: calc(var(--space-loose) * -1);
+    }
+
+    .fui-table-stack .fui-table tbody tr {
+      border: 0;
+      border-radius: 0;
+      border-top: 1px solid var(--edge);
+      background: transparent;
+      padding: 0.625rem var(--space-loose);
+    }
+
+    .fui-table-stack .fui-table tbody:first-child tr:first-child,
+    .fui-table-stack .fui-table thead + tbody tr:first-child {
+      border-top: 0;
+    }
+
+    .fui-table-stack .fui-table tbody tr + tr,
+    .fui-table-stack .fui-table tbody + tbody {
+      margin-block-start: 0;
+    }
+
+    .fui-table-stack .fui-table tbody tr.fui-group-row {
+      background: var(--surface-sunken);
+      padding-block: 0.375rem;
+    }
+
+    .fui-table-stack .fui-table tbody tr.fui-group-row > th {
+      display: block;
+      margin: 0;
+      background: none;
+      padding: 0;
+    }
+  }
+
+  /* A modal drawn in a static capture sits in the middle of the first
+     screen, clear of the page header. */
+  @media (width >= 48rem) {
+    .mk-open.fui-modal:not(.mk-open-low) {
+      top: 50vh;
+      transform: translate(-50%, -50%);
+    }
+  }
+
+  /* A path in a phone card takes the card's width under its label. */
+  @media (width < 40rem) {
+    .fui-table-stack .fui-table tbody td[data-label]:has(.fui-path) {
+      display: block;
+    }
+
+    .fui-table-stack .fui-table tbody td[data-label]:has(.fui-path)::before {
+      display: block;
+    }
+  }
+
+  /* A sheet whose menu opens with its own header (the user menu) needs no
+     second title. */
+  .fui-menu-sheet:has(.fui-menu-header) .fui-menu-sheet-title {
+    display: none !important;
+  }
+
+  /* ---- Library items from the FerroTERM fixer ---- */
+
+  /* M1 browser over a flat code system: no hierarchy to walk, so the
+     concept takes the room of two panes (adopted from FerroTERM). */
+  @media (width >= 64rem) {
+    .fui-browser.is-two-pane {
+      grid-template-columns: minmax(14rem, 0.9fr) minmax(18rem, 2.3fr);
+    }
+  }
+
+  /* B1's scroll cue on every code box, the About manifest's included, and
+     on M5's matrix. */
+  .fui-code-panel,
+  .fui-root-matrix .fui-table-scroll {
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--edge-strong) transparent;
+  }
+
+  .fui-root-matrix .fui-table-scroll {
+    background:
+      linear-gradient(to left, var(--surface-raised) 40%, transparent) right center / 2.5rem 100% no-repeat local,
+      linear-gradient(to left, color-mix(in srgb, var(--ink) 16%, transparent), transparent) right center / 1.25rem 100% no-repeat scroll,
+      var(--surface-raised);
+  }
+
+  /* Card heads keep one height, with or without actions. */
+  .fui-panel-head {
+    min-height: 3rem;
+  }
+
+  /* A menu item's focus ring stays inside the menu. */
+  .fui-menu .fui-menu-item:focus-visible,
+  .fui-menu .fui-menu-item.mk-focus {
+    outline-offset: -2px;
+  }
+
+  /* B4 inside a B10 section is a line of the section, not a card. */
+  .fui-panel-section > .fui-load-report {
+    border: 0;
+    background: none;
+    padding-inline: 0;
+  }
+
+  /* A select in a field takes the field's width on a phone. */
+  @media (width < 40rem) {
+    .fui-field .fui-select:not(.fui-select-button) {
+      width: 100%;
+    }
+  }
+
+  /* A code in a phone card breaks only when it cannot fit its line
+     ("v3-ActCode" stays whole). */
+  @media (width < 40rem) {
+    .fui-table-stack .fui-table td code {
+      overflow-wrap: break-word;
+    }
+  }
+
+  /* A code value in facts (a canonical URL, an id) keeps to one line and
+     scrolls sideways; a <wbr> in it is no longer needed. */
+  .fui-facts dd > code {
+    display: inline-block;
+    max-width: 100%;
+    overflow-x: auto;
+    vertical-align: bottom;
+    white-space: nowrap;
+    scrollbar-width: thin;
+  }
+
+  /* A row's hover tint reads in light too. */
+  .fui-table tbody tr:hover {
+    background: color-mix(in srgb, var(--ink) 4%, transparent);
+  }
+
+  /* ---- Library items from the FerroBRIDGE fixer ---- */
+
+  /* A key hint keeps its room (nothing moves on hover) and wraps inside
+     its column instead of running past it. */
+  .mk-key-hint {
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+
+  /* A long key never breaks inside a segment: it keeps to one line and
+     scrolls inside the hint. */
+  .mk-key-hint > code {
+    min-width: 0;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: none;
+  }
+
+  /* Skeleton bars show in the phone table stack. */
+  .fui-table-stack .fui-skeleton {
+    display: block;
+    min-width: 4rem;
+    min-height: 0.75rem;
+  }
+
+  /* A unit or a product name that must stay whole, in a table card too. */
+  :is(.fui-unit, .fui-nowrap),
+  .fui-table-stack .fui-table :is(.fui-unit, .fui-nowrap) {
+    white-space: nowrap !important;
+    overflow-wrap: normal !important;
+  }
+
+  /* A bottom sheet stands above sticky pane heads. */
+  @media (width < 40rem) {
+    .fui-menu.fui-menu-anchored.fui-menu-sheet {
+      z-index: 90;
+    }
+
+    body:has(.fui-menu-sheet) .fui-transform-head {
+      z-index: auto;
+    }
+
+    /* The user menu's theme group keeps the content inset; a stacked
+       group fills the inset instead of the full width. */
+    .fui-menu-sheet .fui-segmented {
+      margin-inline: 0.5rem;
+    }
+
+    .fui-menu-sheet .fui-segmented:has(> :nth-child(4)) {
+      width: auto;
+    }
+  }
+
+  /* The lockup keeps its accent word at every width. */
+  .fui-topbar-row > .fui-lockup .fui-lockup-accent {
+    display: inline !important;
+  }
+
+  /* The dock's message glyph sits on the first line. */
+  .fui-dock-message {
+    align-items: flex-start;
+  }
+
+  .fui-dock-message > .fui-icon {
+    flex: none;
+    margin-block-start: 0.125rem;
+  }
+
+  /* A refusal inside a transform pane is flat: no box in a box. */
+  .fui-transform-body > .fui-alert {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  /* An invalid editor carries the bad tone on its edge. */
+  .fui-editor[aria-invalid="true"] {
+    box-shadow: inset 3px 0 0 var(--bad);
+  }
+
+  /* In the rail a group's name leaves the layout and stays its list's
+     accessible name; a hairline keeps the groups apart. */
+  .fui-sidebar-rail .fui-nav-group {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .fui-sidebar-rail .fui-nav-group + .fui-nav-list:not(:first-of-type) {
+    margin-block-start: 0.5rem;
+    border-top: 1px solid var(--edge);
+    padding-block-start: 0.5rem;
+  }
+
+  /* A B3 line reference is a link and looks like one. */
+  a.fui-diag-where {
+    color: var(--accent);
+  }
+
+  /* ---- Library items from the FerroPIX and FerroFED reviews ---- */
+
+  /* A focused row is one outline on the row; its cells add no tint or ring. */
+  .fui-table tbody tr:is(.mk-focus, :focus-visible, :has(a.fui-row-link:focus-visible)) {
+    outline: 2px solid var(--focus);
+    outline-offset: -2px;
+  }
+
+  .fui-table tbody tr:is(.mk-focus, :focus-visible, :has(a.fui-row-link:focus-visible)) > :is(th, td) {
+    outline: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+
+  /* R25 on a phone: the date sheet's grid takes the sheet's width and each
+     day's label sits in its middle. */
+  @media (width < 40rem) {
+    :is(.mk-range-pop, .fui-date-field) > .fui-datepicker table {
+      width: 100%;
+    }
+
+    :is(.mk-range-pop, .fui-date-field) > .fui-datepicker .fui-day {
+      display: grid;
+      width: 100%;
+      place-items: center;
+    }
+  }
+
+  /* A page overlay's scrim covers the top bar too. */
+  .mk-page-overlaid .fui-topbar {
+    z-index: auto;
+  }
+
+  /* On a phone the score scale keeps its middle tick. */
+  @media (width < 40rem) {
+    .fui-score-scale-tick:nth-child(odd) {
+      display: revert;
+    }
+  }
+
+  /* The toast region keeps clear of the page's last row at every width. */
+  .fui-page:has(> .fui-toasts) .fui-main {
+    padding-block-end: 7rem;
+  }
+
+  /* F12: excluded is its own mark (a bar), and an excluded row's links are muted. */
+  .fui-dot.is-excluded {
+    height: 0.125rem;
+    border-radius: 0.0625rem;
+    background: var(--muted);
+    box-shadow: none;
+  }
+
+  .fui-table tbody tr.is-excluded a:not(.fui-button) {
+    color: var(--muted);
+  }
+
+  /* A segmented control of four or more options stacks on a phone. */
+  @media (width < 40rem) {
+    .fui-segmented:has(> :nth-child(4)) {
+      display: grid;
+      width: 100%;
+      grid-auto-flow: row;
+    }
+  }
+
+  /* Grant tiles reserve their check badge's corner, and take the full
+     width on a phone. */
+  .mk-ff-grants > * {
+    position: relative;
+    padding-inline-end: 2.25rem;
+  }
+
+  @media (width < 40rem) {
+    .mk-ff-grants {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  /* Facts across a row are a column grid, never a ragged wrap. */
+  .fui-facts-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  }
+
+  /* An open menu stacks above the next row's controls. */
+  .fui-table tbody tr:has(.fui-menu) {
+    position: relative;
+    z-index: 60;
+  }
+
+  /* Mono text keeps a plain hyphen (no ligature or contextual dash). */
+  :is(code, kbd, .fui-mono, pre) {
+    font-variant-ligatures: none;
+    font-feature-settings: "calt" 0, "liga" 0;
+  }
+
+  /* R28 on a phone: the cards keep a compact padding and a small title,
+     so "Comfortable" fits whole in a third of the row. */
+  @media (width < 40rem) {
+    .fui-choice-card {
+      padding: 0.375rem;
+    }
+
+    .fui-choice-card :is(strong, .fui-choice-card-title, .fui-choice-title) {
+      font-size: var(--text-small);
+    }
+
+    .fui-choice-card {
+      font-size: var(--text-small);
+    }
+  }
+
+  /* ---- Library items from the FerroFED and FerroPIX fixers (final pass) ---- */
+
+  /* R17: the toast region keeps clear of the footer too. */
+  .fui-page:has(> .fui-toasts) > .fui-footer {
+    padding-block-end: 7rem;
+  }
+
+  /* Skeleton bars read on the dark ground. */
+  :root[data-theme="dark"] .fui-skeleton {
+    background: color-mix(in srgb, var(--ink) 16%, transparent);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .fui-skeleton {
+      background: color-mix(in srgb, var(--ink) 16%, transparent);
+    }
+  }
+
+  /* R28: a choice card reserves its check corner; an option card without a
+     preview takes the full width on a phone. */
+  .fui-choice-card-text {
+    padding-inline-end: 1.25rem;
+  }
+
+  @media (width < 40rem) {
+    .fui-choice-cards:not(:has(.fui-preview)) {
+      flex-direction: column;
+    }
+
+    .fui-choice-cards:not(:has(.fui-preview)) > .fui-choice-card {
+      width: 100%;
+      flex: none;
+    }
+  }
+
+  /* Fan-out results are hairline rows with their tone edge, not cards. */
+  .fui-fanout-item {
+    border: 0;
+    border-top: 1px solid var(--edge);
+    border-inline-start: 3px solid var(--tone, var(--edge-strong));
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .fui-fanout-item:first-child {
+    border-top: 0;
+  }
+
+  /* Topology on a phone: no minimap over the graph; the touch hint shows
+     only where there is touch. */
+  @media (width < 40rem) {
+    .fui-topology-minimap {
+      display: none;
+    }
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .fui-topology-hint.is-touch {
+      display: none;
+    }
+  }
+
+  /* R4 on a phone: the dock's actions stack, the primary full width. */
+  @media (width < 40rem) {
+    .fui-dock-actions {
+      flex-wrap: wrap;
+    }
+
+    .fui-dock-actions > .fui-button-primary {
+      order: -1;
+    }
+  }
+
+  /* R29 on a phone: the open listbox is a bottom sheet over a scrim. */
+  @media (width < 40rem) {
+    .fui-select-anchor > .fui-listbox {
+      position: fixed;
+      inset: auto 0 0 0;
+      z-index: 80;
+      width: auto;
+      max-width: none;
+      max-height: 60vh;
+      border-radius: var(--radius-card) var(--radius-card) 0 0;
+      box-shadow: 0 0 0 100vmax var(--scrim);
+    }
+  }
+
+  /* The effect words stay readable on a changed row's tint. */
+  .fui-setting-row.is-changed .fui-effect-live {
+    color: color-mix(in srgb, var(--ok) 80%, var(--ink));
+  }
+
+  .fui-setting-row.is-changed .fui-effect-restart {
+    color: color-mix(in srgb, var(--warn) 80%, var(--ink));
+  }
+
+  /* A link in a notice and a tool in an editor's bar keep their words on
+     one line. */
+  :is(.fui-notice, .fui-alert) a,
+  .fui-editor-bar .fui-button {
+    white-space: nowrap;
+  }
+
+  .fui-editor-bar > .fui-actions {
+    flex: none;
+  }
+
+  /* A key hint beside its label stays inside the label's column. */
+  .fui-setting-label .mk-key-hint {
+    max-width: calc(100% - 0.5rem);
+  }
+
+  /* A changed value in a phone card (a URL) wraps inside its cell. */
+  @media (width < 40rem) {
+    td .fui-change {
+      display: inline;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+  }
+
+  /* On a phone the preview cards' column takes the content width. */
+  @media (width < 40rem) {
+    .fui-setting-control:has(> .fui-choice-cards),
+    .fui-choice-cards {
+      width: 100%;
+    }
+
+    .fui-choice-cards > .fui-choice-card {
+      width: 100%;
+    }
+
+    /* Phones have no keyboard: the Keyboard tab (data-tab="keyboard", the
+       family hook) leaves the tab row. */
+    .fui-tabs > .fui-tab[data-tab="keyboard"] {
+      display: none !important;
+    }
+  }
+
 }

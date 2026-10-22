@@ -49,6 +49,11 @@ def plan_badge(issue=None):
     return f'<span class="fui-badge fui-tone-neutral" title="{"Tracked as issue #" + str(issue) if issue else "Not tracked yet: proposed by this redesign"}">{w}</span>'
 
 
+def quiet(line):
+    """An empty, off or no-match state: one quiet line, no icon, a text link at most."""
+    return f'<p class="fui-transform-empty">{line}</p>'
+
+
 def wb(text):
     """A path that may break after each slash, and never inside a name."""
     return e(text).replace("/", "/<wbr>")
@@ -179,7 +184,7 @@ def load_report(tone, title, counts=(), actions=""):
             f'<ul class="fui-load-counts">{c}</ul>{a}</div>')
 
 
-RUNNING_COUNTS = [("9", "contexts"), ("27", "files"), ("7", "templates"), ("0", "errors"), ("3", "warnings")]
+RUNNING_COUNTS = [("0", "errors"), ("3", "warnings")]
 
 
 def json_html(text):
@@ -233,7 +238,5 @@ def pane_tools(what):
     return copy_button("Copy", what) + icon_button("download", f"Download {what}")
 
 
-def input_tools(what, example=True):
-    ex = (f'<button type="button" class="fui-button fui-button-ghost fui-button-small" aria-disabled="true" title="Planned #611: an example generated from a template">'
-          f'{icon("file-code", "16")}Example</button>') if example else ""
-    return ex + button("ghost", "Load file", "upload", small=True) + button("ghost", "Clear", "x", small=True)
+def input_tools(what):
+    return button("ghost", "Load file", "upload", small=True) + button("ghost", "Clear", "x", small=True)

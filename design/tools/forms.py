@@ -1,23 +1,32 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
-"""forms.py <console src> [slug...]: form and page-shape checks at 1440 and
-390 light. Flags:
-  top-line   fields drawn side by side in one row whose labels (or, with a
-             hidden label, whose controls) do not share a top line;
-  clips      a text input whose value, or placeholder when empty, is wider
-             than the room inside the input (measured with the input's font);
-  drawer     an open phone drawer drawn as a native popover: not docked at the
-             left and top edges, not full height, a margin, or the UA border;
-  primary    two visible primary actions with the same label outside a
-             dialog, menu, popover or specimen card."""
-import os, sys, glob, importlib.util
-HERE = os.path.dirname(os.path.abspath(__file__))
-spec = importlib.util.spec_from_file_location("render", os.path.join(HERE, "render.py"))
-sys.path.insert(0, HERE)
-render = importlib.util.module_from_spec(spec); spec.loader.exec_module(render)
-src = sys.argv[1]; only = set(sys.argv[2:])
-JS = r"""(() => {
+"""Checks the forms and the page shape of every page at 1440 and 390 px,
+light:
+
+- top-line: fields drawn side by side in one row whose labels (or, with a
+  hidden label, whose controls) do not share a top line; a check group has
+  no field label and is left out;
+- clips: a text input whose placeholder, or whose value when the field is
+  narrower than its row, is wider than the room inside the input, measured
+  with the input's font; a value longer than a field that already spans
+  its row scrolls, as every text input does;
+- drawer: an open phone drawer drawn as a native popover that is not docked
+  at the left and top edges, not full height, or keeps a margin or the UA
+  border;
+- primary: two visible primary actions with the same label outside a
+  dialog, menu, popover or specimen card.
+
+Usage: forms.py <set> [slug ...]   (run build.py first)"""
+import os
+import sys
+
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import chrome as browser  # noqa: E402
+import design_set  # noqa: E402
+
+PROBE = r"""(() => {
 const out = [];
 const vis = (el) => { const r = el.getBoundingClientRect(); if (r.width < 2 || r.height < 2) return false;
   if (el.closest('.fui-sr-only, [hidden]')) return false; const cs = getComputedStyle(el); return cs.visibility !== 'hidden' && cs.display !== 'none'; };
@@ -26,7 +35,8 @@ const short = (s) => (s || '').replace(/\s+/g, ' ').trim().slice(0, 40);
 const CONTROL = 'input:not([type=checkbox]):not([type=radio]), select, textarea, .fui-segmented, .fui-input-group';
 for (const box of document.querySelectorAll('.fui-form-grid, .fui-transform-options, .fui-repeater-row, .fui-cond, .fui-field-row')) {
   if (!vis(box)) continue;
-  const fields = [...box.children].filter(c => c.matches('.fui-field') && vis(c));
+  // NOTE: a check group (fui-field-checks) has no field label; its labels sit on the inputs' line by design.
+  const fields = [...box.children].filter(c => c.matches('.fui-field') && !c.matches('.fui-field-checks') && vis(c));
   const rows = [];
   for (const f of fields) { const r = f.getBoundingClientRect(); const row = rows.find(g => g.some(o => { const q = o.getBoundingClientRect(); return Math.min(r.bottom, q.bottom) - Math.max(r.top, q.top) > 0.5 * Math.min(r.height, q.height); })); if (row) row.push(f); else rows.push([f]); }
   for (const row of rows) {
@@ -49,7 +59,18 @@ for (const el of document.querySelectorAll('input:not([type]), input[type=text],
   const ls = parseFloat(cs.letterSpacing) || 0;
   const need = cv.measureText(el.type === 'password' && el.value ? '•'.repeat(el.value.length) : text).width + ls * text.length;
   const room = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
-  if (need > room + 1) out.push(['clips', el.id || el.name || '?', el.value ? 'value' : 'placeholder', short(text), Math.round(need) + '>' + Math.round(room)]);
+  // A value longer than a field that already spans its row scrolls inside it, as any text input does; only a
+  // field narrower than its row, or a placeholder (design text), is a defect.
+  const unit = el.closest('.fui-input-group, .fui-secret-field, form.fui-search') || el;
+  let field = unit.closest('.fui-field, .fui-dock-field') || unit.parentElement;
+  while (getComputedStyle(field).display === 'contents') field = field.parentElement;
+  let row = field.parentElement; while (getComputedStyle(row).display === 'contents') row = row.parentElement;
+  const rcs = getComputedStyle(row);
+  const rowRoom = row.clientWidth - parseFloat(rcs.paddingLeft) - parseFloat(rcs.paddingRight);
+  const fcs = getComputedStyle(field);
+  const fieldRoom = field.clientWidth - parseFloat(fcs.paddingLeft) - parseFloat(fcs.paddingRight);
+  const spans = unit.getBoundingClientRect().width >= fieldRoom - 2 && field.getBoundingClientRect().width >= rowRoom - 2;
+  if (need > room + 1 && !(el.value && spans)) out.push(['clips', el.id || el.name || '?', el.value ? 'value' : 'placeholder', short(text), Math.round(need) + '>' + Math.round(room)]);
 }
 // drawer
 const vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
@@ -75,23 +96,24 @@ for (const b of document.querySelectorAll('.fui-button-primary')) {
 }
 for (const [label, n] of seen) if (n > 1) out.push(['primary', label, n + ' visible']);
 return out; })()"""
-ch = render.Chrome(os.path.join(render.STATE_DIR, "chrome-forms"))
-n = 0
-try:
-    t = ch.send("Target.createTarget", {"url": "about:blank"})["targetId"]
-    s = ch.send("Target.attachToTarget", {"targetId": t, "flatten": True})["sessionId"]
-    ch.send("Page.enable", {}, s); ch.send("Runtime.enable", {}, s)
-    for f in sorted(glob.glob(os.path.join(src, "*.html"))):
-        slug = os.path.basename(f)[:-5]
-        if only and slug not in only: continue
-        if slug == "index": continue
-        for w in (1440, 390):
-            ch.send("Emulation.setDeviceMetricsOverride", {"width": w, "height": 900, "deviceScaleFactor": 1, "mobile": w < 600}, s)
-            ch.send("Emulation.setEmulatedMedia", {"features": [{"name": "prefers-color-scheme", "value": "light"}]}, s)
-            ch.send("Page.navigate", {"url": "file://" + os.path.abspath(f)}, s); ch.wait_event("Page.loadEventFired", s)
-            ch.send("Runtime.evaluate", {"expression": "document.fonts.ready", "awaitPromise": True}, s)
-            for x in ch.send("Runtime.evaluate", {"expression": JS, "returnByValue": True}, s)["result"].get("value") or []:
-                n += 1; print(f"{slug:34} {w} {x}", flush=True)
-    print(n, "findings")
-finally:
-    ch.close()
+
+
+def worker(site, chrome, session, slugs):
+    found = []
+    for slug in slugs:
+        for width in (1440, 390):
+            browser.load(chrome, session, site.page_url(slug), width, theme="light", still=True)
+            for hit in browser.evaluate(chrome, session, PROBE) or []:
+                found.append((slug, width) + tuple(hit))
+    return found
+
+
+def main():
+    site, only = design_set.site_from_argv(__doc__)
+    slugs = [s for s in site.slugs() if not only or s in only]
+    findings = browser.run(site, "forms", slugs, worker)
+    return site.verdict("forms", findings, set(slugs))
+
+
+if __name__ == "__main__":
+    sys.exit(main())

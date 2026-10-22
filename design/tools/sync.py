@@ -15,9 +15,10 @@ brand icons in src/). The sync:
   design/templates/, with templates.py turned into templates/catalog.py;
 - per console, copies src/tools/*.py except the tools the shared ones in
   design/tools/ replace (build, index, render, overflow, hover, contrast,
-  selects, popups) and except any module identical to the shared copy it would shadow; turns
-  build.py into catalog.py (its page table without the checks) and index.py
-  into console.py (the contact sheet's words); copies the icons to assets/;
+  selects, popups, forms) and except any module identical to the shared
+  copy it would shadow; turns build.py into catalog.py (its page table and
+  any route_pages(), without the checks) and index.py into console.py (the
+  contact sheet's words); copies the icons to assets/;
 - adds the SPDX lines to every file that lacks them.
 
 Each console directory is replaced whole except its baseline.tsv. The
@@ -41,7 +42,7 @@ CONSOLES = {
     "FerroTERM": ("ferroterm", "FerroTERM console"),
     "FerroEHR": ("ferroehr", "FerroEHR viewer"),
 }
-REPLACED = {"build.py", "index.py", "render.py", "overflow.py", "hover.py", "contrast.py", "selects.py", "popups.py"}
+REPLACED = {"build.py", "index.py", "render.py", "overflow.py", "hover.py", "contrast.py", "selects.py", "popups.py", "forms.py"}
 SHARED_TOOLS = ("tpl.py", "parts.py", "pg_about.py")
 SHARED_TEMPLATES = ("common.py", "data.py", "pages.py")
 KEEP = {"baseline.tsv"}
@@ -77,10 +78,15 @@ def copy_text(src, dst, header):
 
 
 def catalog(build_src, title):
-    """A console's build.py as its page table: the imports and the slug
-    table or page_fn, without the checks and main()."""
-    s = read(build_src)
-    s = s[: s.index("\ndef check_synthetic")].rstrip() + "\n"
+    """A console's build.py as its page table: the imports, the slug table
+    or page_fn and any route_pages(), without the checks and main()."""
+    full = read(build_src)
+    s = full[: full.index("\ndef check_synthetic")].rstrip() + "\n"
+    # A console with route-only pages (FerroFED's r-…) names them in
+    # route_pages(), which the page table keeps.
+    extra = re.search(r"^def route_pages\(\):\n.*?(?=^\S)", full, re.S | re.M)
+    if extra:
+        s += "\n\n" + extra.group(0).rstrip() + "\n"
     s = re.sub(r'\A#!/usr/bin/env python3\n"""(.*?)"""\n', "", s, flags=re.S)
     s = s.replace("from parts import bsn_valid  # noqa: E402\n", "")
     s = re.sub(r"^sys\.path\.insert\(0, os\.path\.dirname\(os\.path\.abspath\(__file__\)\)\)\n", "", s, flags=re.M)

@@ -18,7 +18,17 @@ import design_set  # noqa: E402
 
 PROBE = r"""
 (() => {
+  window.scrollTo(0, 0);
   const vw = document.documentElement.clientWidth;
+  // An open popup (menu, listbox, popover, date picker) may be wider than
+  // its trigger by design; while it stays inside the viewport, the boxes
+  // that hold it do not count as overflowing.
+  const popupsInside = (el) => {
+    const ps = el.querySelectorAll('.fui-menu, .fui-listbox, .fui-popover, .fui-datepicker, .fui-tooltip');
+    if (!ps.length) return false;
+    for (const p of ps) { const r = p.getBoundingClientRect(); if (r.width && (r.left < -1 || r.right > vw + 1)) return false; }
+    return true;
+  };
   const out = [];
   const name = (el) => {
     let s = el.tagName.toLowerCase();
@@ -37,6 +47,10 @@ PROBE = r"""
       if (rr.width <= 1 || rr.height <= 1) return true;
       if (e.classList && (e.classList.contains('fui-sr-only') || e.classList.contains('fui-nav-group') || e.classList.contains('fui-nav-word'))) return true;
       if (e.tagName === 'CAPTION' || e.tagName === 'svg' || e.tagName === 'SELECT') return true;
+      // A spinner measured mid-turn is not a layout fault.
+      if (e.classList && (e.classList.contains('fui-spinner-ring') || e.classList.contains('fui-spinner'))) return true;
+      if (e.querySelector && e.querySelector(':scope > .fui-spinner-ring')) return true;
+      if (cs.animationName && cs.animationName !== 'none' && cs.animationPlayState !== 'paused' && /spin|rotate/i.test(cs.animationName)) return true;
     }
     return false;
   };
@@ -48,12 +62,12 @@ PROBE = r"""
     if (intended(el)) continue;
     const text = (el.innerText || '').trim().slice(0, 50);
     // A box narrower than its content (clipped or spilling).
-    if (el.scrollWidth > el.clientWidth + 2 && el.clientWidth > 0 && !['inline'].includes(cs.display)
+    if (el.scrollWidth > el.clientWidth + 2 && el.clientWidth > 0 && !['inline'].includes(cs.display) && !popupsInside(el)
         && !['INPUT', 'TEXTAREA', 'PRE', 'svg', 'path'].includes(el.tagName)) {
       out.push(['wider-than-box', name(el), Math.round(el.scrollWidth - el.clientWidth), text]);
     }
     // Past the viewport's right edge (not inside a positioned overlay that is meant to be there).
-    if (r.right > vw + 1 && r.left < vw) {
+    if (r.right > vw + 1 && r.left < vw && !popupsInside(el)) {
       out.push(['past-viewport', name(el), Math.round(r.right - vw), text]);
     }
   }
@@ -102,7 +116,8 @@ PROBE = r"""
     if (overlay(el) || intended(el)) continue;
     const cs = getComputedStyle(el);
     if (cs.display === 'none' || cs.visibility === 'hidden') continue;
-    if (el.closest('svg, pre, .fui-break, .fui-code-panel, textarea, .fui-editor')) continue;
+    // An archetype id or a path breaks at its offered breaks by design.
+    if (el.closest('svg, pre, .fui-break, .fui-code-panel, textarea, .fui-editor, .fui-archetype, .fui-path')) continue;
     const texts = [...el.childNodes].filter(n => n.nodeType === 3 && n.textContent.trim());
     if (!texts.length) continue;
     let lines = new Set(), total = '';

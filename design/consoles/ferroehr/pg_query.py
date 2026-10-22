@@ -11,7 +11,7 @@ from common import (
 )
 from data import BP_AQL, E1, QUERIES, TEMPLATES
 from ehr import (
-    aql_html, codeview, confirm_delete, diag_list, editor, empty_line, facts, intro, load_report, quiet, results_head, section, sections, short, state,
+    UNIT_WORD, aql_html, codeview, confirm_delete, diag_list, editor, empty_line, facts, intro, load_report, quiet, results_head, section, sections, short, state,
     version_cell,
 )
 from parts import line_chart
@@ -42,22 +42,25 @@ def sq_rows(items=QUERIES, open_row=None, only=None):
         if only and g != only:
             continue
         qs = [q for q in items if q[0] == g]
+        names = len({q[1] for q in qs})
         label = f"<code>{g}</code>" if g else "Unqualified"
-        body += f'<tr class="fui-group-row"><th scope="rowgroup" colspan="4">{label} <span class="fui-small fui-muted">· {len(qs)} {"query" if len(qs) == 1 else "queries"}</span></th></tr>'
+        vers = f" · {len(qs)} versions" if len(qs) != names else ""
+        body += f'<tr class="fui-group-row"><th scope="rowgroup" colspan="4">{label} <span class="fui-small fui-muted">· {names} {"query" if names == 1 else "queries"}{vers}</span></th></tr>'
         for ns, name, ver, params in qs:
-            p = ", ".join(f"<code>${x}</code>" for x in params) if params else '<span class="mk-dash">none</span>'
+            p = ", ".join(f"<code>{x}</code>" for x in params) if params else '<span class="mk-dash">none</span>'
             older = any(q[1] == name and q[0] == ns and q[2] > ver for q in items)
             sub = '<span class="fui-row-sub">older version</span>' if older else ""
-            body += (f'<tr><th scope="row" data-role="title"><a class="fui-row-link" href="stored-query.html">{e(name)}</a>{sub}</th>'
+            href = "stored-query-version.html" if older else "stored-query.html"
+            body += (f'<tr><th scope="row" data-role="title"><a class="fui-row-link" href="{href}">{e(name)}</a>{sub}</th>'
                      + td("Version", ver, role="sub") + td("Parameters", p, role="meta-q") + td("", sq_menu(name, open_row == i), "fui-row-menu", role="menu") + "</tr>")
             i += 1
     return table("Stored queries", th("Name") + th("Version") + th("Parameters") + th('<span class="fui-sr-only">Actions</span>'), [body])
 
 
-def sq_page(body=None, chips=(), value="", count="8"):
+def sq_page(body=None, chips=(), value="", count="7 queries, 8 versions"):
     tb = ""
     c = tpl.card(body if body is not None else sq_rows(), label="Stored queries", title="Stored queries", count=count,
-                 actions=link_button("ghost", "Write one in Query", "query-aql.html", "square-terminal", small=True))
+                 actions=link_button("ghost", "Write one in Query", "query-aql-new.html", "square-terminal", small=True))
     return shell("Stored queries", "stored", sq_heading() + tpl.list_body("", tb, tpl.active(chips), c))
 
 
@@ -70,12 +73,12 @@ def page_stored_queries_row_menu():
 
 
 def page_stored_queries_namespace():
-    return sq_page(sq_rows(only="org.example.cardio"), chips=["Namespace org.example.cardio, from the dashboard"], count="3")
+    return sq_page(sq_rows(only="org.example.cardio"), chips=["Namespace org.example.cardio, from the dashboard"], count="2 queries, 3 versions")
 
 
 def page_stored_queries_empty():
     c = tpl.card(empty_line("No stored query yet."), label="Stored queries", title="Stored queries", count="0",
-                 actions=link_button("ghost", "Write one in Query", "query-aql.html", "square-terminal", small=True))
+                 actions=link_button("ghost", "Write one in Query", "query-aql-new.html", "square-terminal", small=True))
     return shell("Stored queries", "stored", sq_heading() + tpl.list_body("", "", "", c))
 
 
@@ -83,20 +86,40 @@ SQ_TABS = [("definition", "Definition", "stored-query.html"), ("run", "Run", "st
 QNAME = "org.example.cardio::bp_latest"
 
 
-def sq_header():
-    more = [menu_item("Copy name", "copy"), MENU_SEP, menu_item("Delete this version…", "trash-2", danger=True, href="stored-query-delete.html")]
-    ag = action_group(link_button("primary", "Open in Query", "query-aql.html", "square-terminal"), more, label="More actions for the stored query")
-    return page_heading("bp_latest", actions=ag, crumbs=[("Stored queries", "stored-queries.html")], subtitle=f"<code>{QNAME}</code> · version 1.1.0")
+def sq_header(version="1.1.0", more_open=False):
+    more = [menu_item("Copy name", "copy"), MENU_SEP, menu_item(f"Delete version {version}…", "trash-2", danger=True, href="stored-query-delete.html")]
+    ag = action_group(link_button("primary", "Open in Query", "query-aql.html", "square-terminal"), more, open_=more_open, label="More actions for the stored query")
+    return page_heading("bp_latest", actions=ag, crumbs=[("Stored queries", "stored-queries.html")], subtitle=f"<code>{QNAME}</code> · version {version}")
 
 
-def sq_detail(tab, panel, overlay=None):
-    return shell("bp_latest", "stored", sq_header() + f'<div class="fui-stack">{tabbed(tabs("Views of this stored query", SQ_TABS, tab), panel)}</div>', overlay=overlay)
+def sq_detail(tab, panel, overlay=None, version="1.1.0", more_open=False, tabs_list=SQ_TABS):
+    return shell("bp_latest", "stored", sq_header(version, more_open) + f'<div class="fui-stack">{tabbed(tabs("Views of this stored query", tabs_list, tab), panel)}</div>', overlay=overlay)
 
 
-def page_stored_query(overlay=None):
-    f = facts([("Type", "AQL"), ("Saved", when("2026-10-08T14:22")),
-               ("Parameters", "<code>$ehr_id</code>")])
-    return sq_detail("definition", sections(section("Facts", f), section("AQL", codeview("bp_latest 1.1.0", BP_AQL, lang="aql", what="the AQL"))), overlay)
+def page_stored_query(overlay=None, more_open=False):
+    f = facts([("Type", "AQL"), ("Saved", when("2026-10-08T14:22", absolute=True)),
+               ("Parameters", "<code>ehr_id</code>")])
+    return sq_detail("definition", sections(section("Facts", f), section("AQL", codeview("bp_latest 1.1.0", BP_AQL, lang="aql", what="the AQL"))), overlay, more_open=more_open)
+
+
+def page_stored_query_more():
+    return page_stored_query(more_open=True)
+
+
+BP_AQL_100 = """SELECT
+  c/context/start_time/value AS time,
+  o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude AS systolic
+FROM EHR e[ehr_id/value=$ehr_id]
+  CONTAINS COMPOSITION c
+    CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2]
+ORDER BY c/context/start_time/value DESC"""
+
+
+def page_stored_query_version():
+    top = notice("info", "history", f'You are reading version 1.0.0, saved {when("2026-09-02T10:15", absolute=True)}; Latest runs 1.1.0. <a href="stored-query.html">Read 1.1.0</a>')
+    f = facts([("Type", "AQL"), ("Saved", when("2026-09-02T10:15", absolute=True)), ("Parameters", "<code>ehr_id</code>")])
+    tl = [("definition", "Definition", "stored-query-version.html"), ("versions", "Versions", "stored-query-versions.html", 2)]
+    return sq_detail("definition", sections(section("", top), section("Facts", f), section("AQL", codeview("bp_latest 1.0.0", BP_AQL_100, lang="aql", what="the AQL"))), version="1.0.0", tabs_list=tl)
 
 
 RES_ROWS = [("2026-10-21T07:50:00+02:00", "128", "82"), ("2026-10-07T09:05:00+02:00", "141", "88"), ("2026-09-23T08:51:00+02:00", "136", "85"),
@@ -119,7 +142,7 @@ def results_chart(rows=RES_ROWS):
     n = len(rows) - 1
     ticks = [(0, lab[0]), (n // 2, lab[n // 2]), (n, lab[n])]
     return line_chart("res", "systolic and diastolic over time", f"Systolic from {sys_[0]} to {sys_[-1]} and diastolic from {dia[0]} to {dia[-1]}, {lab[0]} to {lab[-1]} 2026.",
-                      [("systolic", sys_, 0), ("diastolic", dia, 1)], ticks, height=220)
+                      [("systolic", sys_, 0), ("diastolic", dia, 1)], ticks, height=220, y_from=min(dia) // 20 * 20)
 
 
 def results_section(view="table", window="Rows 1 to 6 of 6. No LIMIT in the query, so the CDR returns at most 1,000 rows; times are as the CDR returns them.", rows=RES_ROWS):
@@ -132,38 +155,38 @@ def run_form(resolution="latest", version="", invalid=False):
                    for k, w in [("latest", "Latest"), ("prefix", "A prefix"), ("exact", "Exact")])
     req = {"latest": f"POST /query/{QNAME}", "prefix": f"POST /query/{QNAME}/{version or '1'}", "exact": f"POST /query/{QNAME}/{version or '1.1.0'}"}[resolution]
     err = "1.1.0 is a full version, so it cannot be a prefix. Choose Exact, or type 1 or 1.1." if invalid else None
-    ver = field("rv", "Version", input_("rv", version, "1 or 1.1", extra='class="fui-input fui-mono"' + (' aria-invalid="true"' if invalid else "")), error=err) if resolution != "latest" else ""
-    return (f'<fieldset class="fui-fieldset fui-choice"><legend class="fui-label">Which version runs</legend><div class="fui-segmented">{segs}</div></fieldset>'
+    ver = field("rv", "Version", input_("rv", version, "1 or 1.1", extra='class="fui-input fui-mono"' + (' aria-invalid="true"' if invalid else "")), error=err, cls="is-short") if resolution != "latest" else ""
+    return (f'<fieldset class="fui-fieldset fui-choice"><legend class="fui-sr-only">Which version runs</legend><div class="fui-segmented">{segs}</div></fieldset>'
             f'{ver}<p class="fui-small fui-muted">Sends <code>{e(req).replace("/", "/<wbr>")}</code></p>')
 
 
 def run_params():
-    return ('<div class="fui-form-grid">' + field("p-ehr", "$ehr_id", input_("p-ehr", E1, extra='class="fui-input fui-mono" spellcheck="false"'),
+    return ('<div class="fui-form-grid">' + field("p-ehr", "ehr_id", input_("p-ehr", E1, extra='class="fui-input fui-mono" spellcheck="false"'),
                                                   help_="Numbers and true or false are sent as they are; quote a number to send it as text.", cls="fui-span-2") + "</div>")
 
 
 def page_stored_query_run():
-    body = sections(section("", run_form()), section("Parameters", run_params() + f'<div class="fui-add-row">{button("primary", "Run", "play", keys="Ctrl Enter")}</div>', count=1),
+    body = sections(section("Version", run_form()), section("Parameters", run_params() + f'<div class="fui-transform-run mk-run-row">{button("primary", "Run", "play", keys="Ctrl Enter")}</div>', count=1),
                     section("Results", quiet("Run the query to see its rows here.")))
     return sq_detail("run", body)
 
 
 def page_stored_query_run_answered():
-    body = sections(section("", run_form()), section("Parameters", run_params() + f'<div class="fui-add-row">{button("primary", "Run", "play", keys="Ctrl Enter")}</div>', count=1),
+    body = sections(section("Version", run_form()), section("Parameters", run_params() + f'<div class="fui-transform-run mk-run-row">{button("primary", "Run", "play", keys="Ctrl Enter")}</div>', count=1),
                     results_section())
     return sq_detail("run", body)
 
 
 def page_stored_query_run_invalid():
-    body = sections(section("", run_form("prefix", "1.1.0", True)), section("Parameters", run_params() + f'<div class="fui-add-row">{button("primary", "Run", "play", keys="Ctrl Enter")}</div>', count=1),
+    body = sections(section("Version", run_form("prefix", "1.1.0", True)), section("Parameters", run_params() + f'<div class="fui-transform-run mk-run-row">{button("primary", "Run", "play", keys="Ctrl Enter")}</div>', count=1),
                     section("Results", quiet("Nothing was sent: fix the version first.")))
     return sq_detail("run", body)
 
 
 def page_stored_query_versions():
-    rows = [f'<tr><th scope="row" data-role="title"><a class="fui-row-link" href="stored-query.html">{version_cell("1.1.0", current=True).replace("Version ", "")}</a></th>{td("Saved", ago("2026-10-08T14:22"), role="sub")}{td("Note", "Adds diastolic", role="meta-q")}</tr>',
-            f'<tr><th scope="row" data-role="title"><a class="fui-row-link" href="stored-query.html">{version_cell("1.0.0").replace("Version ", "")}</a></th>{td("Saved", ago("2026-09-02T10:15"), role="sub")}{td("Note", "First version", role="meta-q")}</tr>']
-    t = table("Versions", th("Version") + th("Saved") + th("Note"), rows)
+    rows = [f'<tr><th scope="row" data-role="title"><a class="fui-row-link" href="stored-query.html">{version_cell("1.1.0", current=True).replace("Version ", "")}</a></th>{td("Saved", ago("2026-10-08T14:22"), role="sub")}{td("Parameters", "<code>ehr_id</code>", role="meta-q")}</tr>',
+            f'<tr><th scope="row" data-role="title"><a class="fui-row-link" href="stored-query-version.html">{version_cell("1.0.0").replace("Version ", "")}</a></th>{td("Saved", ago("2026-09-02T10:15"), role="sub")}{td("Parameters", "<code>ehr_id</code>", role="meta-q")}</tr>']
+    t = table("Versions", th("Version") + th("Saved") + th("Parameters"), rows)
     return sq_detail("versions", sections(section("Versions", intro("Each version is its own immutable definition; Latest runs the highest.") + t, count=2)))
 
 
@@ -186,7 +209,7 @@ FROM EHR e
       AND OBSERVATION p[openEHR-EHR-OBSERVATION.pulse.v2]
       AND OBSERVATION t[openEHR-EHR-OBSERVATION.body_temperature.v2])
 WHERE o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude > 140
-  AND o/data[at0001]/events[at0006]/state[at0007]/items[at1000]/value/defining_code/code_string = 'at1001'
+  AND o/data[at0001]/events[at0006]/state[at0007]/items[at0008]/value/defining_code/code_string = 'at1001'
   AND NOT (p/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude > 100
     OR t/data[at0002]/events[at0003]/data[at0001]/items[at0004]/value/magnitude > 38)
 ORDER BY c/context/start_time/value DESC
@@ -199,13 +222,17 @@ def save_popover(conflict=False):
             + field("sv-ns", "Namespace", input_("sv-ns", "org.example.cardio", extra='class="fui-input fui-mono"'))
             + field("sv-n", "Name", input_("sv-n", "bp_latest", extra='class="fui-input fui-mono"'))
             + field("sv-v", "Version", input_("sv-v", "1.1.0" if conflict else "1.2.0", "Empty writes 1.0.0", extra='class="fui-input fui-mono"' + (' aria-invalid="true"' if conflict else "")), error=err)
-            + (f'<div class="fui-cluster">{button("secondary", "Use 1.2.0", small=True)}</div>' if conflict else "")
-            + '<p class="fui-small fui-muted">Saved versions: 1.0.0 and 1.1.0.</p>'
+            + (f'<div class="fui-cluster">{button("secondary", "Use 1.2.0", small=True)}</div>' if conflict else '<p class="fui-small fui-muted">Saved versions: 1.0.0 and 1.1.0.</p>')
             + f'<div class="fui-cluster">{button("secondary", "Cancel", keys="Esc")}{button("primary", "Save", "save", attrs="disabled" if conflict else "")}</div></div>')
 
 
-def q_header(running=False, save_open=False, conflict=False, aql=False):
-    run = (busy_button("primary", "Running") + button("secondary", "Cancel", "x")) if running else button("primary", "Run", "play", keys="Ctrl Enter")
+def q_header(running=False, save_open=False, conflict=False, aql=False, run_title=None):
+    if running:
+        more = (f'<span class="fui-anchor"><button type="button" class="fui-button fui-button-secondary fui-more" aria-haspopup="menu" aria-expanded="false" aria-label="More actions for the query">'
+                f'More{icon("chevron-down", "16")}</button></span>')
+        return page_heading("Query", actions=f'<div class="fui-action-group">{busy_button("primary", "Running")}{button("secondary", "Cancel", "x")}{more}</div>',
+                            subtitle="Build AQL from a template, or write it; run it against the CDR.")
+    run = button("primary", "Run", "play", keys="Ctrl Enter", attrs=f'title="{e(run_title)}"' if run_title else "")
     save = (f'<span class="fui-anchor">{button("secondary", "Save to the CDR", "save", attrs="aria-haspopup=" + chr(34) + "dialog" + chr(34) + " aria-expanded=" + chr(34) + ("true" if save_open else "false") + chr(34))}'
             f'{save_popover(conflict) if save_open else ""}</span>')
     return page_heading("Query", actions=f'<div class="fui-action-group">{run}{save}</div>', subtitle="Build AQL from a template, or write it; run it against the CDR.")
@@ -218,9 +245,9 @@ def q_page(tab, panel, header=None, overlay=None):
 
 def cond(n, label, path, op, value, unit=None, ops=(">", "≥", "=", "<", "≤", "≠"), coded=False):
     if coded:
-        val = select(f"cv{n}", [("at1000", "Standing · at1000"), ("at1001", "Sitting · at1001"), ("at1003", "Reclining · at1003"), ("at1002", "Lying · at1002")], value)
+        val = select(f"cv{n}", [("at1000", "Standing · at1000"), ("at1001", "Sitting · at1001"), ("at1002", "Reclining · at1002"), ("at1003", "Lying · at1003"), ("at1014", "Lying with tilt to left · at1014")], value)
     else:
-        val = (f'<div class="fui-input-group">{input_(f"cv{n}", value, extra="inputmode=" + chr(34) + "decimal" + chr(34))}<span class="fui-input-suffix">{unit}</span></div>' if unit
+        val = (f'<div class="fui-input-group">{input_(f"cv{n}", value, extra="inputmode=" + chr(34) + "decimal" + chr(34))}<span class="fui-input-suffix" title="UCUM {e(unit)}">{e(UNIT_WORD.get(unit, unit))}</span></div>' if unit
                else input_(f"cv{n}", value))
     return (f'<li class="fui-cond"><div class="fui-field"><label class="fui-label" for="cp{n}">Path</label>'
             f'{select(f"cp{n}", [("p", label)], "p")}<span class="fui-cond-path" title="{e(path)}">{e(path)}</span></div>'
@@ -255,12 +282,12 @@ def build_panel(results=None):
            + f'</div><div class="fui-add-row">{button("ghost", "Add a data point", "plus", small=True)}</div>')
     inner = group("any", [cond(3, "Pulse › Rate", "…/items[at0004]/value/magnitude", ">", "100", "/min"), cond(4, "Body temperature", "…/items[at0004]/value/magnitude", ">", "38", "Cel")],
                   not_=True, n=2)
-    conds = group("all", [cond(1, "Blood pressure › Systolic", SYS_PATH, ">", "140", "mm[Hg]"), cond(2, "Blood pressure › Position", "…/items[at1000]/value", "=", "at1001", ops=("=", "≠"), coded=True)],
+    conds = group("all", [cond(1, "Blood pressure › Systolic", SYS_PATH, ">", "140", "mm[Hg]"), cond(2, "Blood pressure › Position", "…/items[at0008]/value", "=", "at1001", ops=("=", "≠"), coded=True)],
                   nested=f"<li>{inner}</li>", n=1, remove=False)
     order = (f'<div class="fui-transform-options">{field("q-o", "Order by", select("q-o", [("t", "Context › Start time")], "t"))}'
              f'{field("q-d", "Direction", select("q-d", [("desc", "Newest first"), ("asc", "Oldest first")], "desc"))}{field("q-l", "Row limit", input_("q-l", "50", extra="inputmode=" + chr(34) + "numeric" + chr(34)))}</div>')
     aql = section("The AQL it builds", codeview("Built AQL", BUILT_AQL, lang="aql", what="the AQL", actions=False).replace(
-        '<span>15 lines</span>', '<span>15 lines</span>' + link_button("ghost", "Open in AQL", "query-aql.html", "arrow-right", small=True)))
+        '<span>15 lines</span>', '<span>15 lines</span>' + link_button("ghost", "Open in AQL", "query-aql-built.html", "arrow-right", small=True)))
     parts = [section("", opts), section("Data points", pts, count=3), section("Conditions", conds), section("Order and limit", order), aql]
     parts.append(results if results is not None else section("Results", quiet("Run the query to see its rows here.")))
     return sections(*parts)
@@ -279,22 +306,25 @@ def page_query_build_chart():
 
 
 def page_query_running():
-    return q_page("build", build_panel(section("Results", '<p class="fui-transform-empty"><span class="fui-spinner"><span class="fui-spinner-ring" aria-hidden="true"></span>Running against the CDR</span></p>')),
+    return q_page("build", build_panel(section("Results", '<p class="fui-transform-empty"><span class="fui-spinner"><span class="fui-spinner-ring" aria-hidden="true"></span>Running against the CDR</span> Edits to the query apply to the next run.</p>')),
                   header=q_header(running=True))
 
 
-def aql_panel(text=BP_AQL, diags=None, results=None, top="", param=("ehr_id", E1), dirty=False, pos="Ln 1, Col 1"):
-    ed = editor(text, lang="aql", lang_word="AQL", label="The AQL", diags=diags, dirty=dirty, pos=pos, tools=link_button("ghost", "Open in Build", "query.html", "list-tree", small=True))
+def aql_panel(text=BP_AQL, diags=None, results=None, top="", param=("ehr_id", E1), dirty=False, pos="Ln 1, Col 1", build="link"):
+    tools = {"link": link_button("ghost", "Open in Build", "query.html", "list-tree", small=True),
+             "disabled": '<button type="button" class="fui-button fui-button-ghost fui-button-small" disabled title="Fix the grammar error first">' + icon("list-tree", "16") + "Open in Build</button>",
+             "none": ""}[build]
+    ed = editor(text, lang="aql", lang_word="AQL", label="The AQL", diags=diags, dirty=dirty, pos=pos, tools=tools)
     if diags:
         rows = [("bad", d[1], ln, 3, d[2]) for ln, d in diags.items()]
         ed = (f'<div class="fui-editor-split">{ed}<section class="fui-card fui-panel" aria-label="Diagnostics"><div class="fui-panel-head"><h2 class="fui-card-title">'
               f'<span>Grammar check <span class="mk-count">· {len(rows)}</span></span></h2></div>{diag_list(rows, current=rows[0][2])}</section></div>')
-    pn, pv = param
-    params = ('<div class="fui-repeater"><div class="fui-repeater-head" aria-hidden="true"><span class="fui-label">Name</span><span class="fui-label">Value</span><span></span></div><div class="fui-repeater-row"><div class="fui-field"><label class="fui-sr-only" for="pn0">Name of parameter 1</label>'
+    pn, pv = param or ("", "")
+    params = "" if param is None else ('<div class="fui-repeater"><div class="fui-repeater-head" aria-hidden="true"><span class="fui-label">Name</span><span class="fui-label">Value</span><span></span></div><div class="fui-repeater-row"><div class="fui-field"><label class="fui-sr-only" for="pn0">Name of parameter 1</label>'
               + input_("pn0", pn, extra='class="fui-input fui-mono"') + '</div><div class="fui-field"><label class="fui-sr-only" for="pv0">Value of parameter 1</label>'
               + input_("pv0", pv, extra='class="fui-input fui-mono" spellcheck="false"') + "</div>" + icon_button("x", f"Remove the parameter {pn}") + "</div></div>"
               + f'<div class="fui-add-row">{button("ghost", "Add a parameter", "plus", small=True)}</div>')
-    parts = [section("", top + ed), section("Parameters", params, count=1)]
+    parts = [section("", top + ed)] + ([section("Parameters", params, count=1)] if params else [])
     parts.append(results if results is not None else section("Results", quiet("Run the query to see its rows here.")))
     return sections(*parts)
 
@@ -306,7 +336,8 @@ def page_query_aql(overlay=None):
 def page_query_aql_invalid():
     bad = BP_AQL.replace("CONTAINS OBSERVATION", "CONTAIN OBSERVATION")
     diags = {7: ("bad", "AQL-SYNTAX", "Expected CONTAINS, AND, OR or WHERE; found CONTAIN.")}
-    return q_page("aql", aql_panel(bad, diags, section("Results", quiet("Nothing was sent: the grammar check found 1 error.")), dirty=True, pos="Ln 7, Col 3"))
+    return q_page("aql", aql_panel(bad, diags, section("Results", quiet("Nothing was sent: the grammar check found 1 error.")), dirty=True, pos="Ln 7, Col 3", build="disabled"),
+                  header=q_header(run_title="The grammar check found 1 error; fix it before you run"))
 
 
 def page_query_aql_results():
@@ -324,4 +355,13 @@ def page_query_save_conflict():
 def page_query_cannot_build():
     top = notice("info", "info", "Opened here, not in Build: <code>hypertensive_ehrs</code> 1.0.0 uses <code>$systolic</code>, a parameter Build has no field for.")
     text = "SELECT DISTINCT e/ehr_id/value AS ehr_id\nFROM EHR e\n  CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2]\nWHERE o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude > $systolic"
-    return q_page("aql", aql_panel(text, top=f'<div class="mk-short-stack">{top}</div>', param=("systolic", "140")))
+    return q_page("aql", aql_panel(text, top=f'<div class="mk-short-stack">{top}</div>', param=("systolic", "140"), build="none"))
+
+
+def page_query_aql_built():
+    top = notice("info", "info", "The AQL Build made, as it runs; edits here leave Build behind.")
+    return q_page("aql", aql_panel(BUILT_AQL, top=f'<div class="mk-short-stack">{top}</div>', param=None, pos="Ln 1, Col 1"))
+
+
+def page_query_aql_new():
+    return q_page("aql", aql_panel("", param=None))

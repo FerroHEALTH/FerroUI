@@ -471,13 +471,13 @@ def menu(items, anchored=True, up=False, start=False, label=None, id_=None, shee
     return f'<div{i} role="menu" class="{cls}"{lab}>{head}<div class="fui-menu-items">{"".join(items)}</div>{c}</div>'
 
 
-def menu_item(label, glyph=None, keys=None, danger=False, href=None, focus=False, current=False, hover=False, desc=None, disabled=None):
+def menu_item(label, glyph=None, keys=None, danger=False, href=None, focus=False, current=False, hover=False, desc=None, disabled=None, desc_html=None):
     g = icon(glyph, "16") if glyph else ""
     k = kbd(keys) if keys else ""
     cls = "fui-menu-item" + (" fui-menu-danger" if danger else "") + (" mk-focus" if focus else "") + (" mk-hover" if hover else "")
     cur = ' aria-current="true"' if current else ""
     dis = f' aria-disabled="true" tabindex="-1" title="{e(disabled)}"' if disabled else ' tabindex="-1"'
-    d = f'<span class="fui-menu-item-desc">{e(desc)}</span>' if desc else ""
+    d = f'<span class="fui-menu-item-desc">{desc_html or e(desc)}</span>' if (desc or desc_html) else ""
     text = f'<span class="fui-menu-item-text"><span class="fui-menu-item-label">{label}</span>{d}</span>'
     if href and not disabled:
         return f'<a role="menuitem" href="{href}" class="{cls}"{cur}{dis}>{g}{text}{k}</a>'
@@ -497,7 +497,7 @@ def th(label, key=None, sort=None, num=False, title=None, cls=""):
         return f"<th scope=\"col\"{cls_attr}{t}>{label}</th>"
     aria = sort or "none"
     glyph = {"ascending": "arrow-up", "descending": "arrow-down", "none": "arrow-up-down"}[aria]
-    return f'<th scope="col"{cls_attr}{t} aria-sort="{aria}"><a href="#" class="fui-sort">{label}{icon(glyph, "12")}</a></th>'
+    return f'<th scope="col"{cls_attr}{t} aria-sort="{aria}"><button type="button" class="fui-sort">{label}{icon(glyph, "12")}</button></th>'
 
 
 def td(label, body, cls="", role=None):
@@ -523,6 +523,8 @@ def table(caption, head, rows, stack=True, scroll_label=None):
 
 
 def pager(label, total, size, page=1, sizes=(10, 25, 50)):
+    """`sizes=None`: the page size is set elsewhere (an options row), so the
+    pager carries only its steps."""
     """The pager says one thing in its numbers and is absent when every row
     fits on one page (review item 12)."""
     pages = max(1, -(-total // size))
@@ -548,12 +550,12 @@ def pager(label, total, size, page=1, sizes=(10, 25, 50)):
     )
     sz = "".join(
         f'<button type="button" class="fui-pager-size" aria-pressed="{"true" if s == size else "false"}">{s}</button>'
-        for s in sizes
+        for s in (sizes or ())
     )
+    szs = f'<div class="fui-pager-sizes"><span class="fui-muted">Rows per page</span>{sz}</div>' if sizes else ""
     return (
         f'<nav class="fui-pager" aria-label="{label}"><p role="status">{first}–{last} of {total}</p>'
-        f'<div class="fui-pager-steps">{steps}</div>'
-        f'<div class="fui-pager-sizes"><span class="fui-muted">Rows per page</span>{sz}</div></nav>'
+        f'<div class="fui-pager-steps">{steps}</div>{szs}</nav>'
     )
 
 
@@ -874,9 +876,15 @@ def health_dot(tone, label=None):
     return f'<span class="fui-dot fui-tone-{tone if tone != "muted" else "neutral"}{" is-muted" if tone == "muted" else ""}" role="img" aria-label="{e(label or word)}" title="{e(label or word)}"></span>'
 
 
-def sidebar(current, incidents=0, rail=False, tooltip=None, drawer=False, org=None, node=None):
+PROPOSED_NAV = ("sync", "Synchronisation", "refresh-cw", "sync-runs.html", None)
+
+
+def sidebar(current, incidents=0, rail=False, tooltip=None, drawer=False, org=None, node=None, proposed=False):
+    """`proposed`: a proposed screen, so the Console group shows the planned
+    Synchronisation entry it would live under."""
     groups = ""
-    for gid, title, entries in NAV:
+    nav = [(g, t, list(es) + ([PROPOSED_NAV] if proposed and g == "console" else [])) for g, t, es in NAV]
+    for gid, title, entries in nav:
         items = ""
         for key, label, glyph, href, count in entries:
             cur = ' aria-current="page"' if key == current and not org else (' aria-current="location"' if key == current else "")
@@ -973,7 +981,7 @@ def version_select(current=DEFAULT_ROOT, open_=False):
 
 def menu_version_group(current=DEFAULT_ROOT):
     """The version select inside the user menu, shown below 40 rem only."""
-    segs = "".join(f'<button type="submit" class="fui-segment" aria-pressed="{"true" if r == current else "false"}">{r}</button>' for r, _ in ROOTS)
+    segs = "".join(f'<button type="button" role="menuitemradio" class="fui-segment" aria-checked="{"true" if r == current else "false"}">{r}</button>' for r, _ in ROOTS)
     return (f'<div class="fui-menu-version"><div class="fui-menu-label" id="ver-label">FHIR version</div>'
             f'<div role="group" aria-labelledby="ver-label" class="fui-segmented">{segs}</div></div>')
 
@@ -982,7 +990,7 @@ def theme_group(theme):
     return ('<div class="fui-menu-label" id="theme-label">Theme</div>'
             '<div role="group" aria-labelledby="theme-label" class="fui-segmented">'
             + "".join(
-                f'<button type="submit" class="fui-segment" aria-pressed="{"true" if v == theme else "false"}">{icon(g, "14")}{w}</button>'
+                f'<button type="button" role="menuitemradio" class="fui-segment" aria-checked="{"true" if v == theme else "false"}">{icon(g, "14")}{w}</button>'
                 for v, w, g in (("light", "Light", "sun"), ("dark", "Dark", "moon"), ("system", "System", "monitor")))
             + "</div>")
 
@@ -997,9 +1005,9 @@ def operator_menu(open_=False, focus=None, theme="light", visitor=False, reader=
             theme_group(theme),
             menu_item("Keyboard shortcuts", "keyboard", keys="?", href="shortcuts.html"),
         ]
-        return menu(items, label="Visitor") if open_ else ""
+        return menu(items, label="Visitor", sheet=True) if open_ else ""
     who = "Demo Reader" if reader else OPERATOR
-    line = "Read only: this account has no editing permission" if reader else "May edit CodeSystem, ValueSet and ConceptMap"
+    line = "Read only: this account has no editing permission" if reader else "May edit code systems, value sets and concept maps"
     items = [
         f'<div class="fui-menu-header"><strong>{who}</strong><span>{line}</span></div>',
         MENU_SEP,
@@ -1010,25 +1018,27 @@ def operator_menu(open_=False, focus=None, theme="light", visitor=False, reader=
         MENU_SEP,
         menu_item("Sign out", "log-out", href="sign-in-signed-out.html", focus=(focus == "signout")),
     ]
-    return menu(items, label=who) if open_ else ""
+    return menu(items, label=who, sheet=True) if open_ else ""
 
 
 GATEWAY_STATUS = {
     "up": ("ok", "Server up"),
     "down": ("bad", "Server unreachable"),
     "unknown": ("warn", "Server unknown"),
+    "degraded": ("warn", "Server degraded"),
     "refused": ("bad", "Server refused 401"),
 }
 
 
 def topbar(status="up", search_value="", search_state=None, results=None, menu_open=False, menu_theme="light", menu_focus=None,
-           visitor=False, reader=False, version=DEFAULT_ROOT, version_open=False):
+           visitor=False, reader=False, version=DEFAULT_ROOT, version_open=False, dev=False):
     tone, word = GATEWAY_STATUS[status]
     search = search_control(search_value, search_state, results=results)
-    if visitor:
-        trigger = (f'<button type="button" class="fui-icon-button fui-operator-icon" aria-haspopup="menu" aria-expanded="{"true" if menu_open else "false"}" '
-                   f'aria-label="Visitor menu" title="Your preferences and the theme">{icon("circle-user", "18")}</button>')
-        signin = link_button("secondary", "Sign in", "sign-in.html", "log-in", small=True)
+    if visitor or dev:
+        # NOTE: a visitor, and a development console with no sign-in, carry no name: the icon and its chevron open the menu.
+        trigger = (f'<button type="button" class="fui-button fui-button-ghost fui-operator" aria-haspopup="menu" aria-expanded="{"true" if menu_open else "false"}" '
+                   f'aria-label="{"Visitor menu" if visitor else "Your preferences"}" title="Your preferences and the theme">{icon("circle-user", "16")}{icon("chevron-down", "14")}</button>')
+        signin = link_button("secondary", "Sign in", "sign-in.html", "log-in", small=True) if visitor else ""
     else:
         who = "Demo Reader" if reader else OPERATOR
         trigger = (f'<button type="button" class="fui-button fui-button-ghost fui-operator" aria-haspopup="menu" aria-expanded="{"true" if menu_open else "false"}" aria-controls="operator-menu">'
@@ -1051,12 +1061,13 @@ def dev_banner():
     view::status::banner), as the console shows it for profile = "development"."""
     return (
         f'<div class="fui-banner fui-tone-warn" role="note">{icon("triangle-alert", "16")}'
-        '<p><strong>Development deployment:</strong> this console has no <code>[oidc]</code> section and reaches a server with <code>FERROTERM_AUTH__ENABLED=false</code> on a loopback listener. Anyone who reaches it can change the written resources.</p></div>'
+        '<p><strong>Development deployment:</strong> this console has no sign-in, and the server it reaches has authentication switched off. Anyone who reaches it can change the stored resources. '
+        '<span class="fui-small fui-muted fui-wide-only">No <code>[oidc]</code> section; <code>FERROTERM_AUTH__ENABLED=false</code>.</span></p></div>'
     )
 
 
 def footer():
-    return '<footer class="fui-footer"><p>FerroTERM Console v0.1.8 · Cadasto B.V. · <a href="about.html">About</a></p></footer>'
+    return '<footer class="fui-footer"><p>FerroTERM Console 0.1.8 · Cadasto B.V. · <a href="about.html">About</a></p></footer>'
 
 
 def head(title, density="comfortable"):
@@ -1072,8 +1083,8 @@ def head(title, density="comfortable"):
 
 def shell(title, current, content, density="comfortable", status="up", overlay=None, search_value="",
           incidents=0, dock_html="", toast_html="", rail=False, rail_tip=None, drawer=False, search_state=None,
-          results=None, menu_open=False, menu_theme="light", menu_focus=None, banner=False, script="", org=None, node=None,
-          visitor=False, reader=False, version=DEFAULT_ROOT, version_open=False):
+          results=None, menu_open=False, menu_theme="system", menu_focus=None, banner=False, script="", org=None, node=None,
+          visitor=False, reader=False, version=DEFAULT_ROOT, version_open=False, dev=False, proposed=False):
     """A signed-in page; `overlay` is an open dialog drawn over the page,
     `dock_html` the docked bar at the foot of the main area."""
     ov = f'<div class="mk-scrim" aria-hidden="true"></div>{overlay}' if overlay else ""
@@ -1083,9 +1094,9 @@ def shell(title, current, content, density="comfortable", status="up", overlay=N
     return (
         head(title, density)
         + f'<body><div class="{cls}"><a href="#main" class="fui-skip">Skip to the page</a>'
-        + topbar(status, search_value, search_state, results, menu_open, menu_theme, menu_focus, visitor, reader, version, version_open)
+        + topbar(status, search_value, search_state, results, menu_open, menu_theme, menu_focus, visitor, reader, version, version_open, dev=dev)
         + (dev_banner() if banner else "")
-        + f'<div class="fui-body">{sidebar(current, incidents, rail, rail_tip, drawer, org, node)}{dr}<main id="main" class="fui-main"><div class="fui-column">{content}</div>{dock_html}</main></div>'
+        + f'<div class="fui-body">{sidebar(current, incidents, rail, rail_tip, drawer, org, node, proposed)}{dr}<main id="main" class="fui-main"><div class="fui-column">{content}</div>{dock_html}</main></div>'
         + footer()
         + toast_html
         + ov
@@ -1100,7 +1111,7 @@ def centred(title, content):
     )
 
 
-def action_group(primary, items, open_=False, label="More actions", split_items=None, split_open=False, hover=None):
+def action_group(primary, items, open_=False, label="More actions", split_items=None, split_open=False, hover=None, sheet=True):
     """F14 action_group: at most one primary action plus one More menu button;
     destructive items only in the menu, last, after a separator. With
     `split_items`, the primary is a split button whose menu holds variants
@@ -1109,7 +1120,7 @@ def action_group(primary, items, open_=False, label="More actions", split_items=
         sm = menu(split_items, label=f"{label}: variants", sheet=True) if split_open else ""
         primary = (f'<span class="fui-split-button">{primary}<span class="fui-anchor"><button type="button" class="fui-button fui-button-secondary fui-split-toggle" aria-haspopup="menu" '
                    f'aria-expanded="{"true" if split_open else "false"}" aria-label="{e(label)}: variants">{icon("chevron-down", "16")}</button>{sm}</span></span>')
-    m = menu(items, label=label, sheet=True) if open_ else ""
+    m = menu(items, label=label, sheet=sheet) if open_ else ""
     more = (f'<span class="fui-anchor"><button type="button" class="fui-button fui-button-secondary fui-more" aria-haspopup="menu" aria-expanded="{"true" if open_ else "false"}" aria-label="{e(label)}">'
             f'More{icon("chevron-down", "16")}</button>{m}</span>') if items else ""
     return f'<div class="fui-action-group">{primary}{more}</div>'
