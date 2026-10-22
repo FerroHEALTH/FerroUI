@@ -124,6 +124,10 @@ struct State {
     selected: Signal<Option<String>>,
     on_expand: Option<Callback<String>>,
     actions: Option<Callback<TreeNode, AnyView>>,
+    /// The element of each item drawn, by key; a row drawn again before
+    /// its old one is cleaned up comes later, so a key's last entry is the
+    /// one in the page.
+    drawn: StoredValue<Vec<(String, NodeRef<leptos::html::Li>)>>,
 }
 
 impl State {
@@ -146,6 +150,7 @@ impl State {
                 selected,
                 on_expand,
                 actions,
+                drawn: StoredValue::new(Vec::new()),
             },
             label,
         )
@@ -279,31 +284,38 @@ fn open(tree: State, key: &str) {
     }
 }
 
-/// Moves the keyboard focus to the element `id`.
-fn focus_element(id: &str) {
-    #[cfg(target_arch = "wasm32")]
-    {
-        use leptos::wasm_bindgen::JsCast as _;
-        let element = document()
-            .get_element_by_id(id)
-            .and_then(|element| element.dyn_into::<web_sys::HtmlElement>().ok());
-        if let Some(element) = element
-            && element.focus().is_err()
-        {
-            leptos::logging::warn!("the browser refused the focus on a tree item");
-        }
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    let _: &str = id;
+/// The element of the item `key` of `tree`, if it is drawn.
+fn drawn(tree: State, key: &str) -> Option<NodeRef<leptos::html::Li>> {
+    tree.drawn.with_value(|drawn| {
+        drawn
+            .iter()
+            .rev()
+            .find_map(|(drawn, item)| (drawn == key).then_some(*item))
+    })
 }
 
-/// Follows the link of the item whose element is `id`.
-fn follow(id: &str) {
+/// Moves the keyboard focus to the item `key` of `tree`.
+fn focus_item(tree: State, key: &str) {
+    let item = drawn(tree, key);
+    #[cfg(target_arch = "wasm32")]
+    if let Some(item) = item.and_then(|item| item.get_untracked())
+        && item.focus().is_err()
+    {
+        leptos::logging::warn!("the browser refused the focus on a tree item");
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    let _: Option<NodeRef<leptos::html::Li>> = item;
+}
+
+/// Follows the link of the item `key` of `tree`.
+fn follow(tree: State, key: &str) {
+    let item = drawn(tree, key);
     #[cfg(target_arch = "wasm32")]
     {
         use leptos::wasm_bindgen::JsCast as _;
-        let link = document()
-            .get_element_by_id(id)
+        // NOTE: the item's own row comes before its children, so its first link is its own.
+        let link = item
+            .and_then(|item| item.get_untracked())
             .and_then(|item| item.query_selector("a").ok().flatten())
             .and_then(|link| link.dyn_into::<web_sys::HtmlElement>().ok());
         if let Some(link) = link {
@@ -311,7 +323,7 @@ fn follow(id: &str) {
         }
     }
     #[cfg(not(target_arch = "wasm32"))]
-    let _: &str = id;
+    let _: Option<NodeRef<leptos::html::Li>> = item;
 }
 
 /// Returns the items under `parent` (the top for `None`) at `level`.
@@ -373,6 +385,20 @@ fn item(tree: State, node: &TreeNode, level: u16, focused: RwSignal<Option<Strin
     let key = node.key.clone();
     let id = item_id(tree.id, &key);
     let expandable = node.expandable;
+    let element = NodeRef::<leptos::html::Li>::new();
+    tree.drawn.update_value(|drawn| {
+        drawn.push((key.clone(), element));
+    });
+    {
+        let key = key.clone();
+        on_cleanup(move || {
+            tree.drawn.try_update_value(|drawn| {
+                if let Some(at) = drawn.iter().position(|(drawn, _)| *drawn == key) {
+                    drawn.remove(at);
+                }
+            });
+        });
+    }
     // NOTE: no specification governs this: our own design; a memo per item, so
     // opening one item never rebuilds the child list of another.
     let open = {
@@ -437,6 +463,7 @@ fn item(tree: State, node: &TreeNode, level: u16, focused: RwSignal<Option<Strin
             id=id
             role="treeitem"
             class="fui-tree-item"
+            node_ref=element
             aria-expanded=expanded
             aria-selected=move || selected().to_string()
             tabindex=stop
@@ -495,14 +522,14 @@ pub fn tree_view(tree: Tree) -> AnyView {
         event.prevent_default();
         match step {
             Move::Focus(key) => {
-                focus_element(&item_id(tree.id, &key));
+                focus_item(tree, &key);
                 focused.set(Some(key));
             }
             Move::Open(key) => open(tree, &key),
             Move::Close(key) => tree.expanded.update(|open| {
                 open.remove(&key);
             }),
-            Move::Follow(key) => follow(&item_id(tree.id, &key)),
+            Move::Follow(key) => follow(tree, &key),
         }
     };
     view! {

@@ -226,6 +226,7 @@ async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error
                 .find_all(By::Css("#gallery-tree [role='treeitem']"))
                 .await?;
             assert!(!items.is_empty(), "the tree shows its items");
+            crate::widgets::help_switch_journey(browser).await?;
         }
         "/templates/list" | "/templates/list-tabs" => {
             let rows = browser

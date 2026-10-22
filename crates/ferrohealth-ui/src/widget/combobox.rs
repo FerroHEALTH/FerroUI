@@ -332,6 +332,11 @@ impl State {
         self.active.set(Some(next));
     }
 
+    /// The row of the highlighted option while the list is open.
+    fn active_row(self) -> Option<usize> {
+        self.open.get().then(|| self.active.get()).flatten()
+    }
+
     /// The id of the highlighted option while the list is open.
     fn active_id(self) -> Option<String> {
         let at = self.active.get()?;
@@ -468,10 +473,10 @@ fn enhanced_view(combo: KeyedCombobox) -> AnyView {
     } = combo;
     let list_id = format!("{id}-list");
     let state = State::new(id.clone(), options, selected);
-    let revealed = list_id.clone();
+    let list = NodeRef::<leptos::html::Ul>::new();
     Effect::new(move |_| {
-        if let Some(option) = state.active_id() {
-            reveal(&revealed, &option);
+        if let Some(row) = state.active_row() {
+            reveal(list, row);
         }
     });
     let controls = list_id.clone();
@@ -509,6 +514,7 @@ fn enhanced_view(combo: KeyedCombobox) -> AnyView {
             <input type="hidden" name=name prop:value=move || selected.get().unwrap_or_default() />
             <ul
                 id=list_id
+                node_ref=list
                 role="listbox"
                 aria-label=label
                 class="fui-combobox-list"
@@ -542,17 +548,20 @@ fn enhanced_view(combo: KeyedCombobox) -> AnyView {
     .into_any()
 }
 
-/// Scrolls the list `list` so its option `option` is in sight.
-fn reveal(list: &str, option: &str) {
+/// Scrolls the list `list` so its row `row` is in sight.
+fn reveal(list: NodeRef<leptos::html::Ul>, row: usize) {
     #[cfg(target_arch = "wasm32")]
     {
         use leptos::wasm_bindgen::JsCast as _;
-        let found = |id: &str| {
-            document()
-                .get_element_by_id(id)
-                .and_then(|element| element.dyn_into::<web_sys::HtmlElement>().ok())
+        let Some(list) = list.get_untracked() else {
+            return;
         };
-        let (Some(list), Some(option)) = (found(list), found(option)) else {
+        let mut option = list.first_element_child();
+        for _ in 0..row {
+            option = option.and_then(|before| before.next_element_sibling());
+        }
+        let option = option.and_then(|option| option.dyn_into::<web_sys::HtmlElement>().ok());
+        let Some(option) = option else {
             return;
         };
         let top = option.offset_top();
@@ -566,7 +575,7 @@ fn reveal(list: &str, option: &str) {
         }
     }
     #[cfg(not(target_arch = "wasm32"))]
-    let _: (&str, &str) = (list, option);
+    let _: (NodeRef<leptos::html::Ul>, usize) = (list, row);
 }
 
 #[cfg(test)]

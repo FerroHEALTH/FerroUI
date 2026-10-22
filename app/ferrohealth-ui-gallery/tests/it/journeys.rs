@@ -625,6 +625,39 @@ async fn the_drawer_opens_takes_the_focus_and_closes_on_a_link() -> Result<(), B
     .await
 }
 
+#[tokio::test(flavor = "multi_thread")]
+async fn the_side_panel_opens_with_the_focus_on_its_close_button() -> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/ferrofed/overlays")).await?;
+        let opener = browser
+            .element(By::XPath("//button[normalize-space(.) = 'View access']"))
+            .await?;
+        let panel = browser.element(By::Id("access")).await?;
+        // The panel opens with no script; the focus moves once its island has
+        // hydrated, so a panel opened before that is closed and opened again.
+        until("the focus is on the panel's Close button", async || {
+            let active = browser.driver().active_element().await?;
+            let class = active.attr("class").await?.unwrap_or_default();
+            if class.contains("fui-side-panel-close") {
+                return Ok(true);
+            }
+            if panel.is_displayed().await? {
+                active.send_keys(Key::Escape).await?;
+            } else {
+                opener.click().await?;
+            }
+            Ok(false)
+        })
+        .await?;
+        browser.console_clean("the side panel").await
+    })
+    .await
+}
+
 /// The part of `Page.getLayoutMetrics` the reflow check reads.
 #[derive(Debug, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]

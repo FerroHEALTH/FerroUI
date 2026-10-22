@@ -2692,6 +2692,38 @@
     line-height: var(--leading-small);
   }
 
+  /* The help switch: a checkbox drawn as a switch beside its words, the
+     height of a small control. */
+  .fui-help-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: var(--control-small);
+    color: var(--ink);
+    font-size: var(--text-small);
+    line-height: var(--leading-small);
+    cursor: pointer;
+  }
+
+  .fui-help-switch > input.fui-switch {
+    margin: 0;
+  }
+
+  /* A help line under a form's switch: visually hidden while the switch is
+     off and still read, as `fui-sr-only` hides text (WCAG 2.2 technique
+     C7), so it shows with no script at all. */
+  form:has(.fui-help-switch > input:not(:checked)) .fui-explain {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
   /* A field's error line: the help's size in the refusal's colour. */
   .fui-error {
     color: var(--bad);

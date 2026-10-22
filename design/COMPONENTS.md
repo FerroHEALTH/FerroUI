@@ -222,6 +222,7 @@ Measured on the FerroPIX identifier domains table at 1440 px. Every console's ta
 | Tooltip above (`fui-tooltip-above`) | For controls at the foot of a canvas. |
 | Search result row (`fui-search-results`) | The dot or glyph, then the name over its line, the line on its own row so a tag at the end (an identifier) never clips it. Results are grouped by kind (`fui-search-results-group`), the first hit selected for Enter, and the panel ends with the way to the full results (`fui-search-results-more`); no hit says so with the way on (`fui-search-results-empty`). It is one overlay surface. A FerroFED creating_system_id resolves to its node's Routes tab. |
 | Self-description card (`fui-self-description`) | About's code card, with its own scroll, the scroll cue and token colours. |
+| Help switch (`fui-help-switch`, `fui-explain`) | One per form, "Explain these parameters": a native checkbox drawn as a switch (`role="switch"`), small text, at the end of the form's heading row. While it is off the form's help lines are visually hidden and still read; while it is on they show. A stylesheet rule does it, so it works with no script; a help line in no form with a switch always shows. |
 | Top-bar status pill | The product's state in two words, the same shape in every console: "Server up" (FerroPIX), "Gateway up" (FerroFED), "Bridge up" (FerroBRIDGE), then unreachable, unknown or refused 401. The version is in its tooltip, after the words, and on About, never in the pill (`fui-topbar-status`). |
 
 ### From FerroBRIDGE (B1 to B10), for every console

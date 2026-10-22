@@ -12,10 +12,10 @@ use ferrohealth_ui::style::Brand;
 use ferrohealth_ui::view::shell::{centred, lockup_plain, mark};
 use ferrohealth_ui::view::sign_in::{Basic, Notice, Provider, Retry, SignIn, State, sign_in};
 use leptos::prelude::*;
-use leptos_meta::{Stylesheet, Title};
+use leptos_meta::Stylesheet;
 use leptos_router::hooks::use_params_map;
 
-use crate::app::{brand_glyph, footer, product, theme_path};
+use crate::app::{brand_glyph, footer, theme_path};
 use crate::locale::{Msg, tr};
 
 /// Every state of the sign-in page the gallery draws, by the key its path
@@ -144,7 +144,7 @@ pub fn SignInPage() -> impl IntoView {
     });
     let (brand, key) = named.unwrap_or((Brand::Bridge, String::from("provider")));
     view! {
-        <Title text=format!("{} · {} · {}", tr(Msg::SignIn), brand.product(), product()) />
+        {super::title_in(tr(Msg::SignIn), Some(brand))}
         <Stylesheet id="brand-theme" href=theme_path(brand) />
         {centred(card(brand, &key), footer())}
     }

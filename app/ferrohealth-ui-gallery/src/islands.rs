@@ -21,9 +21,9 @@
     reason = "the #[island] macro writes an undocumented struct of each island's props as they cross to the browser"
 )]
 
+use ferrohealth_ui::view::help::HelpWords;
 use ferrohealth_ui::widget::combobox::ComboboxWords;
 use ferrohealth_ui::widget::dialog::ModalWords;
-use ferrohealth_ui::widget::help::HelpWords;
 use ferrohealth_ui::widget::side_panel::SidePanelWords;
 use ferrohealth_ui::widget::upload::UploadWords;
 use leptos::prelude::*;

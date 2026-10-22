@@ -201,6 +201,10 @@ and this project adheres to
   the views as its server children) switches them in place once it has
   hydrated; `widget::document::DocumentView`, `ViewChoice` and
   `view_switch` are its parts.
+- `widget::focus::focus_on_open`, the one focus directive
+  (`use:focus_on_open=selector`): as a popover or a dialog opens, it moves
+  the focus to the first control inside it that the selector names (#214).
+  The navigation drawer and the side panel use it.
 
 - The title row's action group (F14), `view::action`: `ActionGroup` with
   one optional primary `Action`, a split primary's `variants` menu, and the
@@ -291,6 +295,26 @@ and this project adheres to
   and a listed option's value is the console's own (#227). `Picker::id` and
   `Picker::name` are `String`, and `widget::help::help_line` takes a `&str`
   id.
+- The help switch is a native checkbox (`role="switch"`) and its help
+  lines show and hide by a stylesheet rule, with no signal, no context and
+  no script, so a reader shows the help before the page hydrates and with
+  no WebAssembly at all (#208). The module moves to `view::help`, since it
+  is a static view: `help_switch(id, words)` takes the switch's id, and
+  `HelpWords` holds its one `label` in place of `show` and `hide`;
+  `help_line`, `explained_field` and `explained_check_field` mark their line
+  `fui-explain`, which a form with a switch hides from sight (still read,
+  WCAG 2.2 technique C7) while the switch is off. A help line in no form
+  with a switch always shows, so the picker's help line follows the switch
+  of its form. This breaks the public API: a console replaces
+  `widget::help::*` with `view::help::*`, drops `provide_help()` and passes
+  `help_switch` an id.
+- The tabs, the picker, the tree and the combobox move the focus and reach
+  their elements through `NodeRef`s, no longer by an id lookup in the
+  document (#214).
+- The gallery derives the code-system field's typing from its choice in
+  place of an effect that wrote one signal from another, holds its constant
+  signals with `Signal::stored`, and takes every page's title from one
+  `<Title formatter>` at its root (#216); the titles read as before.
 - The document pane is a server view with an island over its views
   (#212): `widget::document::document_pane`, `document_pane_opening` and
   `DocumentPane` give way to `view::document::document_pane` and
@@ -482,6 +506,9 @@ and this project adheres to
 - `view::dialog::confirm_trigger`: open a confirmation from an action
   whose act is `widget::menu::Act::Dialog`, a title row's primary or an
   item of More (#153).
+- `widget::help::HelpShown` and `widget::help::provide_help`, and the
+  catalog message `help-hide` ("Hide help"): the switch keeps one label and
+  says on or off as a switch (#208).
 - `view::code::code_panel`, `view::code::code_lines`,
   `widget::document::document_pane`, `document_pane_opening` and
   `DocumentPane`, which the code viewer and `view::document::document_pane`

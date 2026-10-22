@@ -222,13 +222,8 @@ pub(crate) fn pick_or_typed_body(words: &Words, combo: ComboboxWords) -> AnyView
             .into_any(),
         ),
     });
-    let canonical_typing = RwSignal::new(false);
     let picked = RwSignal::new(None::<String>);
-    Effect::new(move |_| {
-        if picked.get().as_deref() == Some(ANOTHER) {
-            canonical_typing.set(true);
-        }
-    });
+    let canonical_typing = Signal::derive(move || picked.read().as_deref() == Some(ANOTHER));
     let offered = vec![
         ComboOption::new("http://loinc.org", words.get(Msg::Loinc)).detail("http://loinc.org"),
         ComboOption::new("http://snomed.info/sct", words.get(Msg::SnomedCt))
@@ -252,7 +247,7 @@ pub(crate) fn pick_or_typed_body(words: &Words, combo: ComboboxWords) -> AnyView
             <input id="pick-canonical" name="canonical" type="url" class=INPUT placeholder="http://example.org/fhir/CodeSystem/synthetic" aria-describedby=help_id("pick-canonical") />
         }
         .into_any(),
-        typing: canonical_typing.into(),
+        typing: canonical_typing,
         after: Some(
             view! {
                 <p id=help_id("pick-canonical") class="fui-help">
@@ -719,8 +714,8 @@ pub(crate) fn upload_body(words: &Words, upload: UploadWords) -> AnyView {
             words: upload,
         },
         source,
-        Signal::derive(|| false),
-        Signal::derive(|| None),
+        Signal::stored(false),
+        Signal::stored(None),
     )
     .into_any()
 }
@@ -749,18 +744,16 @@ pub(crate) fn editor_body(words: Words) -> AnyView {
     let text = RwSignal::new(String::from(crate::data::YAML));
     let ready = RwSignal::new(false);
     Effect::new(move |_| ready.set(true));
-    let marks = Signal::derive(|| {
-        vec![
-            LineMark {
-                line: 4,
-                kind: MarkKind::Warning,
-            },
-            LineMark {
-                line: 13,
-                kind: MarkKind::Error,
-            },
-        ]
-    });
+    let marks = Signal::stored(vec![
+        LineMark {
+            line: 4,
+            kind: MarkKind::Warning,
+        },
+        LineMark {
+            line: 13,
+            kind: MarkKind::Error,
+        },
+    ]);
     let field = code_editor(
         Editor {
             id: DRAFT,

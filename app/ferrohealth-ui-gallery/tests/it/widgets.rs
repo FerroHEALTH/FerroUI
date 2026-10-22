@@ -35,6 +35,79 @@ async fn attr(browser: &Browser, id: &str, name: &str) -> Result<Option<String>,
     Ok(browser.element(By::Id(id)).await?.attr(name).await?)
 }
 
+/// Whether the element `id` is drawn larger than the one pixel a visually
+/// hidden text takes.
+pub(crate) async fn in_sight(browser: &Browser, id: &str) -> Result<bool, Box<dyn Error>> {
+    let answer = browser
+        .driver()
+        .execute(
+            "const box = document.getElementById(arguments[0]).getBoundingClientRect();
+             return box.width > 1 && box.height > 1;",
+            vec![serde_json::Value::from(id)],
+        )
+        .await?;
+    Ok(serde_json::from_value(answer.json().clone())?)
+}
+
+/// Checks the help switch of the runner's form on the layouts page: the
+/// help lines hidden from sight and still named at first, shown with the
+/// switch on, hidden again with it off.
+pub(crate) async fn help_switch_journey(browser: &Browser) -> Result<(), Box<dyn Error>> {
+    let switch = browser
+        .element(By::Css("input#run-help[type='checkbox'][role='switch']"))
+        .await?;
+    assert_eq!(
+        None,
+        switch.attr("name").await?,
+        "the form submits nothing for it"
+    );
+    for help in ["run-count-help", "run-inactive-help", "run-value-set-help"] {
+        assert!(
+            !in_sight(browser, help).await?,
+            "{help} is hidden from sight at first"
+        );
+    }
+    assert_eq!(
+        Some(String::from("run-count-help")),
+        attr(browser, "run-count", "aria-describedby").await?,
+        "a hidden help line is still named"
+    );
+    browser
+        .driver()
+        .execute(
+            "arguments[0].scrollIntoView({block: 'center'});",
+            vec![switch.to_json()?],
+        )
+        .await?;
+    browser
+        .element(By::Css("label.fui-help-switch"))
+        .await?
+        .click()
+        .await?;
+    until("the help shows", async || {
+        in_sight(browser, "run-count-help").await
+    })
+    .await?;
+    assert!(switch.is_selected().await?, "the switch reads as on");
+    for help in ["run-inactive-help", "run-value-set-help"] {
+        assert!(
+            in_sight(browser, help).await?,
+            "{help} shows with the others"
+        );
+    }
+    assert_eq!(
+        Some(String::from("run-inactive-help")),
+        attr(browser, "run-inactive", "aria-describedby").await?,
+        "the control names its help on every render"
+    );
+    switch.click().await?;
+    until("the help hides again", async || {
+        Ok(!in_sight(browser, "run-count-help").await?)
+    })
+    .await?;
+    Ok(())
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn the_help_switch_shows_the_help_and_keeps_it_named() -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
@@ -43,47 +116,7 @@ async fn the_help_switch_shows_the_help_and_keeps_it_named() -> Result<(), Box<d
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
         browser.goto(&gallery.url("/ferroterm/layouts")).await?;
-        let help = browser.element(By::Id("run-count-help")).await?;
-        let hidden = async || -> Result<bool, Box<dyn Error>> {
-            Ok(help
-                .attr("class")
-                .await?
-                .is_some_and(|class| class.contains("fui-sr-only")))
-        };
-        assert!(hidden().await?, "visually hidden at first, still read");
-        assert_eq!(
-            Some(String::from("fui-help fui-sr-only")),
-            attr(browser, "run-inactive-help", "class").await?,
-            "the checkbox's help hides with the others"
-        );
-        assert_eq!(
-            Some(String::from("run-count-help")),
-            attr(browser, "run-count", "aria-describedby").await?
-        );
-        let switch = browser
-            .element(By::XPath(
-                "//button[normalize-space(.) = 'Explain these parameters']",
-            ))
-            .await?;
-        press_until("the help shows", &switch, async || Ok(!hidden().await?)).await?;
-        assert_eq!(
-            Some(String::from("true")),
-            switch.attr("aria-pressed").await?
-        );
-        assert_eq!(
-            Some(String::from("run-count-help")),
-            attr(browser, "run-count", "aria-describedby").await?,
-            "the control names its help on every render"
-        );
-        assert_eq!(
-            Some(String::from("fui-help")),
-            attr(browser, "run-inactive-help", "class").await?,
-            "the checkbox's help shows with the others"
-        );
-        assert_eq!(
-            Some(String::from("run-inactive-help")),
-            attr(browser, "run-inactive", "aria-describedby").await?
-        );
+        help_switch_journey(browser).await?;
         browser.console_clean("the help switch").await
     })
     .await

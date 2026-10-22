@@ -210,6 +210,26 @@ fn a_button_inside_a_field_keeps_its_own_width_at_the_start() {
 }
 
 #[test]
+fn a_forms_help_lines_show_by_its_switch_with_no_script() {
+    // WCAG 2.2 technique C7: hidden from sight while off, still read.
+    let rule = "  form:has(.fui-help-switch > input:not(:checked)) .fui-explain {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }";
+    assert!(
+        STYLESHEET.contains(rule),
+        "a help line would not follow its form's switch"
+    );
+}
+
+#[test]
 fn an_island_wrapper_draws_no_box_of_its_own() {
     assert!(
         STYLESHEET.contains("  leptos-island,\n  leptos-children {\n    display: contents;"),

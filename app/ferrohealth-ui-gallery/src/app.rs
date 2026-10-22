@@ -295,7 +295,7 @@ pub fn App() -> impl IntoView {
     let tag = SharedValue::new_str(locale_requested);
     provide_locale(gallery_locale(&tag));
     view! {
-        <Title text=product() />
+        <Title formatter=crate::pages::title_format(product()) text=String::new() />
         <Router>
             <Routes fallback=|| view! { <NotFound /> }>
                 <Route path=path!("/") view=Index />
@@ -771,10 +771,7 @@ fn Index() -> impl IntoView {
         </div>
     }
     .into_any();
-    view! {
-        <Title text=product() />
-        {centred(content, footer())}
-    }
+    centred(content, footer())
 }
 
 /// The page for a path the gallery does not serve: `404`, and the way back.
@@ -796,7 +793,7 @@ fn NotFound() -> impl IntoView {
         },
     );
     view! {
-        <Title text=format!("{} · {}", tr(Msg::NotFound), product()) />
+        <Title text=tr(Msg::NotFound) />
         {centred(view! { <div class="fui-card">{content}</div> }.into_any(), footer())}
     }
 }

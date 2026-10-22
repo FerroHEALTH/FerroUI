@@ -8,7 +8,8 @@
 //! It is an HTML popover, so a button anywhere opens it with no script, the
 //! browser closes it on Escape and on a press outside, and returns the
 //! focus to the button (HTML, the `popover` attribute). The browser half
-//! moves the focus to its Close button as it opens. Its body is built once
+//! moves the focus to its Close button as it opens, through the directive
+//! [`crate::widget::focus::focus_on_open`]. Its body is built once
 //! and kept, so a field in it keeps what was typed while it is closed.
 
 use std::borrow::Cow;
@@ -18,6 +19,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::i18n::{Text, tr};
 use crate::icon::{Glyph, icon};
+use crate::widget::focus::focus_on_open;
 
 /// What a side panel shows.
 #[derive(Debug)]
@@ -82,7 +84,6 @@ pub fn side_panel(panel: SidePanel) -> AnyView {
         body,
         words: SidePanelWords { close },
     } = panel;
-    let node = NodeRef::<leptos::html::Aside>::new();
     let title_id = format!("{id}-title");
     let labelled_by = title_id.clone();
     view! {
@@ -92,8 +93,7 @@ pub fn side_panel(panel: SidePanel) -> AnyView {
             role="dialog"
             aria-labelledby=labelled_by
             class="fui-side-panel"
-            node_ref=node
-            on:toggle=move |_| opened(node)
+            use:focus_on_open=".fui-side-panel-close"
         >
             <div class="fui-side-panel-head">
                 <h2 id=title_id class="fui-card-title">
@@ -115,30 +115,4 @@ pub fn side_panel(panel: SidePanel) -> AnyView {
         </aside>
     }
     .into_any()
-}
-
-/// Moves the focus to the panel's Close button, once it is open.
-fn opened(node: NodeRef<leptos::html::Aside>) {
-    #[cfg(target_arch = "wasm32")]
-    {
-        use leptos::wasm_bindgen::JsCast as _;
-        let Some(panel) = node.get_untracked() else {
-            return;
-        };
-        if !panel.matches(":popover-open").unwrap_or(false) {
-            return;
-        }
-        let close = panel
-            .query_selector(".fui-side-panel-close")
-            .ok()
-            .flatten()
-            .and_then(|button| button.dyn_into::<web_sys::HtmlElement>().ok());
-        if let Some(close) = close
-            && close.focus().is_err()
-        {
-            leptos::logging::warn!("the browser refused the focus on the side panel");
-        }
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    let _: NodeRef<leptos::html::Aside> = node;
 }
