@@ -226,6 +226,8 @@ pub struct IdentifierWords {
     pub copy: String,
     /// The copy button's own words.
     pub copied: CopyWords,
+    /// The hidden words a mask is heard as, around the open `value`.
+    pub masked: Phrase,
     /// The hidden words before a revealed value, around the open `label`.
     pub revealed: Phrase,
     /// The visible countdown, around the open `count`.
@@ -252,6 +254,10 @@ impl IdentifierWords {
             hide: tr(Text::IdentifierHide),
             copy: tr(Text::IdentifierCopy),
             copied: CopyWords::of_page(),
+            masked: Phrase::new(tr_with(
+                Text::IdentifierMasked,
+                &[("value", Phrase::open("value"))],
+            )),
             revealed: Phrase::new(tr_with(
                 Text::IdentifierRevealed,
                 &[("label", Phrase::open("label"))],
@@ -398,6 +404,7 @@ pub fn identifier(identifier: Identifier, on_reveal: Callback<()>) -> AnyView {
         hide,
         copy,
         copied,
+        masked: masked_heard,
         revealed,
         countdown,
         revealed_said,
@@ -420,7 +427,7 @@ pub fn identifier(identifier: Identifier, on_reveal: Callback<()>) -> AnyView {
         Reveal::Refused(why) => Some(refused.fill(&[("why", &why)])),
         _ => None,
     };
-    let mask_words = masked_words(&masked);
+    let mask_words = masked_heard.fill(&[("value", &masked.tail)]);
     let shown_words = ShownWords {
         revealed: revealed.fill(&[("label", &masked.domain.label)]),
         countdown,

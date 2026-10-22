@@ -19,7 +19,9 @@ use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::button::{Variant, label};
 use ferrohealth_ui::view::code::Gravity;
-use ferrohealth_ui::view::diagnostics::{FileFindings, Finding, Position, diagnostics_by_file};
+use ferrohealth_ui::view::diagnostics::{
+    DiagnosticsWords, FileFindings, Finding, Position, diagnostics_by_file,
+};
 use ferrohealth_ui::view::form::{
     ERROR, FIELD_FLOW, FORM, Field, INPUT, Inner, SELECT, SWITCH, TEXTAREA, action_field, check,
     check_field, chip_choices, columns, described_by, described_with_unit, error_id, field,
@@ -857,13 +859,18 @@ fn mapping_editor() -> AnyView {
     ])
     .open(Msg::DraftOf, &["name"]);
     let editor = EditorWords::of_page();
-    view! { <crate::islands::MappingEditor words editor /> }.into_any()
+    let diagnostics = DiagnosticsWords::of_page();
+    view! { <crate::islands::MappingEditor words editor diagnostics /> }.into_any()
 }
 
 /// The interactive part of [`mapping_editor`], hydrated as the island
 /// [`crate::islands::MappingEditor`]: the draft opened with a warning and
 /// an error, and the list beside it in step with the cursor.
-pub(crate) fn mapping_editor_body(words: &Words, editor: EditorWords) -> AnyView {
+pub(crate) fn mapping_editor_body(
+    words: &Words,
+    editor: EditorWords,
+    diagnostics: &DiagnosticsWords,
+) -> AnyView {
     let text = RwSignal::new(String::from(DRAFT_TEXT));
     let ready = RwSignal::new(false);
     Effect::new(move |_| ready.set(true));
@@ -933,7 +940,7 @@ pub(crate) fn mapping_editor_body(words: &Words, editor: EditorWords) -> AnyView
         move |typed| text.set(typed),
     );
     let title = words.get(Msg::Diagnostics);
-    let list = editor_diagnostics(&title, &findings, field, caret);
+    let list = editor_diagnostics(&title, &findings, diagnostics, field, caret);
     let side = panel_sections_card(
         title.clone(),
         panel_section(

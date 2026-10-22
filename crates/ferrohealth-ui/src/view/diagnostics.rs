@@ -18,7 +18,7 @@
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::i18n::{Text, tr, tr_with};
+use crate::i18n::{Phrase, Text, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::view::code::Gravity;
 
@@ -123,23 +123,41 @@ fn counts(file: &FileFindings) -> String {
     }
 }
 
-/// The words a row draws, looked up once for a whole list.
-struct RowWords {
+/// The words a diagnostics row draws, resolved on the server in the page's
+/// locale, so an island that draws the list carries no catalog.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DiagnosticsWords {
     /// The word of an error.
-    error: String,
+    pub error: String,
     /// The word of a warning.
-    warning: String,
+    pub warning: String,
     /// The place of a finding about the whole document.
-    whole: String,
+    pub whole: String,
+    /// The place of a finding, around the open `line` and `column`.
+    pub line: Phrase,
+    /// The mapping a finding belongs to, around the open `mapping`.
+    pub mapping: Phrase,
 }
 
-impl RowWords {
+impl DiagnosticsWords {
     /// The row words in the locale of the page being drawn.
-    fn of_page() -> Self {
+    #[must_use]
+    pub fn of_page() -> Self {
         Self {
             error: tr(Text::DiagnosticsError),
             warning: tr(Text::DiagnosticsWarning),
             whole: tr(Text::DiagnosticsWhole),
+            line: Phrase::new(tr_with(
+                Text::DiagnosticsLine,
+                &[
+                    ("line", Phrase::open("line")),
+                    ("column", Phrase::open("column")),
+                ],
+            )),
+            mapping: Phrase::new(tr_with(
+                Text::DiagnosticsMapping,
+                &[("mapping", Phrase::open("mapping"))],
+            )),
         }
     }
 }
@@ -150,7 +168,7 @@ impl RowWords {
 fn row(
     finding: &Finding,
     lines: &str,
-    words: &RowWords,
+    words: &DiagnosticsWords,
     current: Signal<Option<u32>>,
     on_line: Option<Callback<Position>>,
 ) -> AnyView {
@@ -167,10 +185,10 @@ fn row(
     let place = match finding.at {
         Some(at) => {
             let href = format!("{lines}{}", at.line);
-            let words = tr_with(
-                Text::DiagnosticsLine,
-                &[("line", at.line.into()), ("column", at.column.into())],
-            );
+            let words = words.line.fill(&[
+                ("line", &at.line.to_string()),
+                ("column", &at.column.to_string()),
+            ]);
             view! {
                 <a
                     class="fui-diag-where"
@@ -189,10 +207,7 @@ fn row(
         None => view! { <span class="fui-diag-where">{words.whole.clone()}</span> }.into_any(),
     };
     let mapping = finding.mapping.as_ref().map(|mapping| {
-        let words = tr_with(
-            Text::DiagnosticsMapping,
-            &[("mapping", mapping.clone().into())],
-        );
+        let words = words.mapping.fill(&[("mapping", mapping)]);
         view! { <span class="fui-diag-mapping">{words}</span> }
     });
     view! {
@@ -213,16 +228,16 @@ fn row(
 }
 
 /// Returns the rows of `file`, errors first, current while `current` names
-/// their line; `on_line` hears a click on a line link.
+/// their line, in `words`; `on_line` hears a click on a line link.
 pub(crate) fn rows(
     file: &FileFindings,
+    words: &DiagnosticsWords,
     current: Signal<Option<u32>>,
     on_line: Option<Callback<Position>>,
 ) -> AnyView {
-    let words = RowWords::of_page();
     ordered(&file.findings)
         .into_iter()
-        .map(|finding| row(finding, &file.lines, &words, current, on_line))
+        .map(|finding| row(finding, &file.lines, words, current, on_line))
         .collect_view()
         .into_any()
 }
@@ -231,7 +246,12 @@ pub(crate) fn rows(
 /// head: the list beside an editor or a code viewer of that file.
 #[must_use]
 pub fn diagnostics(label: &str, file: &FileFindings) -> AnyView {
-    let rows = rows(file, Signal::stored(file.current), None);
+    let rows = rows(
+        file,
+        &DiagnosticsWords::of_page(),
+        Signal::stored(file.current),
+        None,
+    );
     view! {
         <ul class="fui-diags" aria-label=label.to_owned()>
             {rows}
@@ -244,6 +264,7 @@ pub fn diagnostics(label: &str, file: &FileFindings) -> AnyView {
 /// rows under its head, the files with an error first.
 #[must_use]
 pub fn diagnostics_by_file(label: &str, files: &[FileFindings]) -> AnyView {
+    let words = DiagnosticsWords::of_page();
     let groups = ordered_files(files)
         .into_iter()
         .map(|file| {
@@ -257,7 +278,7 @@ pub fn diagnostics_by_file(label: &str, files: &[FileFindings]) -> AnyView {
                 .into_any(),
                 None => view! { <code>{name}</code> }.into_any(),
             };
-            let rows = rows(file, Signal::stored(file.current), None);
+            let rows = rows(file, &words, Signal::stored(file.current), None);
             view! {
                 <li>
                     <p class="fui-diags-file">

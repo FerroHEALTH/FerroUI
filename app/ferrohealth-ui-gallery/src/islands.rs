@@ -193,8 +193,10 @@ pub fn MappingEditor(
     words: Words,
     /// The code editor's own words, in the page's locale.
     editor: EditorWords,
+    /// The diagnostics list's own words, in the page's locale.
+    diagnostics: ferrohealth_ui::view::diagnostics::DiagnosticsWords,
 ) -> impl IntoView {
-    crate::pages::forms::mapping_editor_body(&words, editor)
+    crate::pages::forms::mapping_editor_body(&words, editor, &diagnostics)
 }
 
 /// The forms page's code editor of a new, empty file.
