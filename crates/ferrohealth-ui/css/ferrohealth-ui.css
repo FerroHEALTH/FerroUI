@@ -257,9 +257,9 @@
   }
 
   /* A heading wraps a long word, a German or Dutch compound, hyphenated in
-     the page's language where the browser knows its words and broken
-     anywhere where it does not, so it never widens the page (WCAG 2.2
-     SC 1.4.10). */
+     the page's language where the browser knows its words and broken where
+     the word alone cannot fit its line, so it never widens the page (WCAG
+     2.2 SC 1.4.10) and never splits a word that fits. */
   h1,
   h2,
   h3,
@@ -267,7 +267,7 @@
     margin: 0;
     font-weight: 600;
     hyphens: auto;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
 
   h1 {
@@ -2747,7 +2747,7 @@
     font-weight: 500;
     line-height: var(--leading-body);
     hyphens: auto;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
 
   /* Fields in one row share its width, each growing from 10rem, and the
@@ -12878,9 +12878,11 @@
     background: repeating-linear-gradient(to bottom, var(--warn) 0 6px, transparent 6px 10px);
   }
 
+  /* The head wraps: on a narrow card the actions move under the title
+     instead of squeezing it narrower than one of its words. */
   .fui-clause-head {
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--space-default);
     margin-bottom: 0.5rem;
