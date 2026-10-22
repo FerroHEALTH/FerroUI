@@ -264,13 +264,15 @@ async fn said(browser: &Browser) -> Result<String, Box<dyn Error>> {
 
 /// Follows the code editor's diagnostic of line `line`, beside it.
 async fn follow_diagnostic(browser: &Browser, line: u32) -> Result<(), Box<dyn Error>> {
-    browser
+    let place = browser
         .element(By::Css(format!(
             ".fui-editor-split a.fui-diag-where[href='#gallery-mapping-L{line}']"
         )))
-        .await?
-        .click()
         .await?;
+    // A row the page scrolled under the sticky top bar is scrolled back
+    // first, as a reader would, since WebDriver clicks it where it lies.
+    place.scroll_into_view().await?;
+    place.click().await?;
     Ok(())
 }
 
@@ -993,6 +995,40 @@ async fn the_table_header_sticks_below_the_top_bar_on_a_wide_screen() -> Result<
     .await
 }
 
+/// Asserts every table box of the tables page reads whole at 320 px.
+async fn table_boxes_read_whole(browser: &Browser) -> Result<(), Box<dyn Error>> {
+    // Every table reads whole at 320 px: a data table stacks its rows as
+    // cards, and the one that opts out fits its box. The record compare
+    // keeps its columns and scrolls inside its own box, a focusable region
+    // with the field column held at the start (view::compare::compare,
+    // WCAG 2.2 SC 1.4.10).
+    let regions = browser
+        .driver()
+        .find_all(By::Css(".fui-table-scroll"))
+        .await?;
+    assert!(regions.len() >= 6, "{} table boxes", regions.len());
+    for region in regions {
+        let class = region.attr("class").await?.unwrap_or_default();
+        if class
+            .split_whitespace()
+            .any(|name| name == "fui-compare-scroll")
+        {
+            assert_eq!(Some(String::from("0")), region.attr("tabindex").await?);
+            assert_eq!(Some(String::from("region")), region.attr("role").await?);
+            let field = region.find(By::Css("tbody th")).await?;
+            assert_eq!("sticky", field.css_value("position").await?);
+            continue;
+        }
+        let scroll = number(region.prop("scrollWidth").await?);
+        let client = number(region.prop("clientWidth").await?);
+        assert!(
+            scroll <= client + 1.0,
+            "a table box scrolls sideways at 320 px ({scroll} in {client})"
+        );
+    }
+    Ok(())
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn every_page_reflows_at_320_pixels_with_no_sideways_scroll() -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
@@ -1017,21 +1053,7 @@ async fn every_page_reflows_at_320_pixels_with_no_sideways_scroll() -> Result<()
                 "{path} scrolls sideways at 320 px: {metrics:?}"
             );
             if page == "/tables" {
-                // Every table reads whole at 320 px: a data table stacks its
-                // rows as cards, and the one that opts out fits its box.
-                let regions = browser
-                    .driver()
-                    .find_all(By::Css(".fui-table-scroll"))
-                    .await?;
-                assert!(regions.len() >= 6, "{} table boxes", regions.len());
-                for region in regions {
-                    let scroll = number(region.prop("scrollWidth").await?);
-                    let client = number(region.prop("clientWidth").await?);
-                    assert!(
-                        scroll <= client + 1.0,
-                        "a table box scrolls sideways at 320 px ({scroll} in {client})"
-                    );
-                }
+                table_boxes_read_whole(browser).await?;
                 let row = browser
                     .element(By::XPath(
                         "(//table[not(ancestor::*[contains(@class, 'fui-worklist')])])[1]/tbody/tr[1]",
@@ -1111,6 +1133,19 @@ async fn a_control_tabbed_to_above_the_fold_lands_below_the_sticky_top_bar()
         window(browser, 1440, 900).await?;
         browser.goto(&gallery.url("/ferroehr/forms")).await?;
         browser.element(By::Css("main h1")).await?;
+        // NOTE: Leptos 0.8 `#[island(lazy)]` hydrates after the page loads, and a
+        // masked identifier swaps its fallback link for its button then.
+        until("the identifiers have hydrated", async || {
+            let pending = browser
+                .driver()
+                .execute(
+                    "return document.querySelectorAll('.fui-identifier-press[hidden]').length;",
+                    vec![],
+                )
+                .await?;
+            Ok(*pending.json() == json!(0))
+        })
+        .await?;
         // From the foot of the page, the focus goes to the control after one
         // well above the fold without scrolling; Shift+Tab then moves to
         // that control, which the browser scrolls into view at the top.
