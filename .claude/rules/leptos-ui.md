@@ -163,12 +163,16 @@ when the server counted more than it sent, a listing with no stated total
 pages with Previous and Next alone (`OpenWindow`), the header is the small
 step in sentence case, a sortable header is a submit button in a `GET` form
 (a `POST` form for session state) with `aria-sort` on its header,
-numbers align right, and the table shows every row of its page, never in a
-box capped in height. From 64rem up the header sticks to the viewport just
-below the sticky top bar, inside the scroll padding (SC 2.4.11); below
-64rem, where a table can be wider than its card, it scrolls sideways inside
-the card, never the page (SC 1.4.10), and gives up the sticky header, which
-an overflow box would hold to itself. Pure CSS, no script.
+numbers align right, grouped in the page's language and never broken,
+and the table shows every row of its page, never in a box capped in
+height. From 64rem up the header sticks to the viewport just below the
+sticky top bar, inside the scroll padding (SC 2.4.11); below 64rem, where a
+table can be wider than its card, it scrolls sideways inside the card,
+never the page (SC 1.4.10), and gives up the sticky header, which an
+overflow box would hold to itself. A table no console bounds
+(`data_table_wide`, or any table with a code header) keeps its scroll box
+at every width and gives up the sticky header, so a query's result set
+never widens the page. Pure CSS, no script.
 
 ## 7. Accessibility
 
@@ -401,6 +405,11 @@ the lookup order: our own design; the message syntax is Project Fluent's.
   (a key name, a product name, SVG markup) is allowed with its reason in
   `scripts/checks/stray-literals.allow`. A console runs the same script over
   its own crate with a baseline that only shrinks while its strings move.
+- **A number is written in the page's language.** A number a message takes
+  is grouped by `i18n::number::format_number`, the formatter of every
+  catalog (a console sets it on its own), and a count drawn outside a
+  message by `i18n::number::grouped`; the marks are each catalog's
+  `number-group` and `number-decimal`.
 - **The layout leaves room for longer words.** No text sits in a fixed
   width; the gallery's pseudo-locale (`qps`) draws every library string
   accented and two fifths longer, and a change that moves a component's

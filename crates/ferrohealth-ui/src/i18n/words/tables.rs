@@ -22,6 +22,9 @@ texts! {
     ChangeSetting = "change-setting",
     /// The range of a listing with no total: `$nouns` opens it.
     OpenRangeOf = "open-range-of",
+    /// The range of a listing with no total whose page `$page` came back
+    /// empty past the first: it is past the last `$noun`.
+    OpenRangePast = "open-range-past",
     /// The pager's position: `$page` of `$pages`.
     PageOf = "page-of",
     /// The note when the server counted `$stated` rows and the listing holds `$held`.

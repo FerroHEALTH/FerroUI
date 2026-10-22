@@ -26,6 +26,7 @@ use std::borrow::Cow;
 
 use leptos::prelude::*;
 
+use crate::i18n::number::grouped;
 use crate::i18n::{Text, tr};
 use crate::icon::{Glyph, icon};
 use crate::view::button::Variant;
@@ -170,7 +171,7 @@ fn count(count: Count) -> Option<AnyView> {
         view! {
             <span class="fui-nav-count" class:is-long=long title=tooltip>
                 <span class="fui-nav-count-whole" aria-hidden="true">
-                    {shown.to_string()}
+                    {grouped(u64::from(shown))}
                 </span>
                 {short}
                 <span class="fui-sr-only">{words}</span>
@@ -520,7 +521,7 @@ mod nested {
             LOCATION
         };
         let total = children.len();
-        let count = total.to_string();
+        let count = crate::i18n::number::grouped(u64::try_from(total).unwrap_or(u64::MAX));
         let dot = dot(&parent);
         let word = word(&parent);
         let title = parent.label.clone();

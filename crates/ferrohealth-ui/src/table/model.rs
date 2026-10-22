@@ -412,10 +412,17 @@ impl OpenWindow {
         self.held >= self.size
     }
 
-    /// The range label with no total: "Value sets 26 to 50", or "No value
-    /// sets" when the page came back empty.
+    /// The range label with no total: "Value sets 26 to 50", "No value
+    /// sets" when the first page came back empty, or "Page 9 is past the
+    /// last value set." when a later one did, beside the Previous it offers.
     #[must_use]
     pub fn range_of(self, noun: Noun) -> String {
+        if self.held == 0 && self.page > 1 {
+            return tr_with(
+                Text::OpenRangePast,
+                &[("page", self.page.into()), ("noun", noun.word(1).into())],
+            );
+        }
         if self.held == 0 {
             return noun.empty();
         }
@@ -666,10 +673,13 @@ mod tests {
         );
         assert_eq!("Rows 26 to 37", second.range_of(rows));
         let past = OpenWindow::of(Paging { page: 9, size: 25 }, 0);
-        assert_eq!("No rows", past.range_of(rows));
+        assert_eq!("Page 9 is past the last row.", past.range_of(rows));
+        let empty = OpenWindow::of(Paging { page: 1, size: 25 }, 0);
+        assert_eq!("No rows", empty.range_of(rows));
         assert_eq!("EHRs", noun("ehrs").opening());
         assert_eq!("EHRs 1 to 25", first.range_of(noun("ehrs")));
-        assert_eq!("No EHRs", past.range_of(noun("ehrs")));
+        assert_eq!("No EHRs", empty.range_of(noun("ehrs")));
+        assert_eq!("Page 9 is past the last EHR.", past.range_of(noun("ehrs")));
     }
 
     #[test]

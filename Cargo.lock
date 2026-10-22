@@ -461,6 +461,7 @@ version = "0.3.1"
 dependencies = [
  "fluent-templates",
  "hydration_context",
+ "intl-memoizer",
  "leptos",
  "leptos_router",
  "serde",

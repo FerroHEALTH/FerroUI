@@ -21,6 +21,7 @@
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
+use crate::i18n::number::grouped;
 use crate::i18n::{Arg, Text, tr, tr_with};
 
 /// The most tabs a phone shows as a row; a longer row is a select there.
@@ -103,7 +104,7 @@ fn tab_link(tab: Tab, current: &str, draft: &str) -> AnyView {
     let count = tab.count.map(|count| {
         view! {
             <span class="fui-tab-count">
-                <span aria-hidden="true">{count.number.to_string()}</span>
+                <span aria-hidden="true">{grouped(count.number)}</span>
                 <span class="fui-sr-only">{count.words}</span>
             </span>
         }

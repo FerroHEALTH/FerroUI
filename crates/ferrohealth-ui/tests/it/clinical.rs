@@ -192,6 +192,25 @@ fn at_a_time_is_a_get_form_with_its_field_open_and_quiet_line() {
 }
 
 #[test]
+fn a_version_history_with_no_version_says_so_in_its_table() {
+    let table = html(|| {
+        version_history(VersionHistory {
+            caption: String::from("Versions"),
+            versions: vec![],
+            at_time: None,
+        })
+    });
+    assert!(
+        has(&table, "td", &[("colspan", "5")]),
+        "one row across the columns: {table}"
+    );
+    assert!(
+        table.contains("No version has been committed."),
+        "a phone reads the line too: {table}"
+    );
+}
+
+#[test]
 fn an_older_version_says_so_once_with_the_way_to_the_latest() {
     let shown = html(|| older_version("2", 3, "/compositions/c1"));
     assert!(shown.contains("You are reading version 2 of 3."), "{shown}");
@@ -629,6 +648,7 @@ fn pane(shown: Shown, switch: Switch) -> String {
         results_pane(ResultsPane {
             title: String::from("Results"),
             count: 6,
+            numeric: true,
             shown,
             switch,
             csv: String::from("/answer.csv"),
@@ -707,6 +727,77 @@ fn a_session_switch_posts_and_a_chart_keeps_its_inset() {
     );
     assert!(
         has(&shown, "div", &[("class", "fui-panel-body")]),
+        "{shown}"
+    );
+}
+
+/// A table pane over `count` rows, with or without a numeric column.
+fn answered(count: u64, numeric: bool) -> String {
+    html(move || {
+        results_pane(ResultsPane {
+            title: String::from("Results"),
+            count,
+            numeric,
+            shown: Shown::Chart,
+            switch: Switch::Url {
+                table: String::from("?shown=table"),
+                chart: String::from("?shown=chart"),
+            },
+            csv: String::from("/answer.csv"),
+            json: String::from("/answer.json"),
+            window: String::from("No rows."),
+            body: view! { <div class="fui-table-scroll">"table"</div> }.into_any(),
+        })
+    })
+}
+
+#[test]
+fn an_answer_with_no_row_offers_no_chart_and_no_export_and_says_why() {
+    let shown = answered(0, true);
+    assert!(!shown.contains("?shown=chart"), "no chart: {shown}");
+    assert!(
+        !has(&shown, "a", &[("href", "/answer.csv")])
+            && !has(&shown, "a", &[("href", "/answer.json")]),
+        "no export link: {shown}"
+    );
+    assert!(
+        has(&shown, "span", &[("aria-disabled", "true")]) && shown.contains("(unavailable)"),
+        "the exports stay as disabled controls: {shown}"
+    );
+    assert!(
+        shown.contains("There is nothing to chart or export: the query returned no rows."),
+        "the reason is visible text (design/COMPONENTS.md, R4): {shown}"
+    );
+    assert!(
+        !shown.contains("fui-panel-body"),
+        "the table shows: {shown}"
+    );
+}
+
+#[test]
+fn an_answer_with_no_numeric_column_offers_no_chart_and_says_why() {
+    let shown = answered(3, false);
+    assert!(!shown.contains("?shown=chart"), "no chart: {shown}");
+    assert!(
+        has(&shown, "a", &[("href", "/answer.csv")]),
+        "its rows export: {shown}"
+    );
+    assert!(
+        shown.contains("There is no chart: the answer has no numeric column."),
+        "{shown}"
+    );
+    assert!(
+        !shown.contains("fui-panel-body"),
+        "the table shows: {shown}"
+    );
+}
+
+#[test]
+fn a_results_count_is_grouped_and_never_breaks() {
+    let shown = answered(12_345_678_901, true);
+    assert!(shown.contains("· 12,345,678,901"), "{shown}");
+    assert!(
+        has(&shown, "span", &[("class", "fui-list-count")]),
         "{shown}"
     );
 }

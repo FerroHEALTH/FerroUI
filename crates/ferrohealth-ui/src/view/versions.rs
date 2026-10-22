@@ -183,7 +183,10 @@ pub fn at_time(at: AtTime) -> AnyView {
 }
 
 /// Returns the version history `history`: the table, then At a time under
-/// it with a hairline and a gap. Put it in a
+/// it.
+///
+/// A history with no version shows one quiet line in its table. At a time
+/// sits under the table with a hairline and a gap. Put it in a
 /// [`crate::view::surface::panel_section`], where the table runs edge to
 /// edge.
 #[must_use]
@@ -194,16 +197,22 @@ pub fn version_history(history: VersionHistory) -> AnyView {
         at_time: at,
     } = history;
     let columns = columns();
-    let rows = versions
-        .into_iter()
-        .map(|version| row(version, &columns))
-        .collect_view()
-        .into_any();
+    let body = if versions.is_empty() {
+        Body::Empty(view! { <span class="fui-muted">{tr(Text::VersionsNone)}</span> }.into_any())
+    } else {
+        Body::Rows(
+            versions
+                .into_iter()
+                .map(|version| row(version, &columns))
+                .collect_view()
+                .into_any(),
+        )
+    };
     let table = data_table(DataTable {
         caption: &caption,
         columns: &columns,
         sorting: crate::table::view::Sorting::default(),
-        body: Body::Rows(rows),
+        body,
     });
     let at = at.map(at_time);
     view! {

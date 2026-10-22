@@ -62,6 +62,10 @@ messages! {
     ClRegularity = "cl-regularity",
     /// `An answer as a chart`
     ClResultsChart = "cl-results-chart",
+    /// `An answer with no row`
+    ClResultsEmpty = "cl-results-empty",
+    /// `No rows, inside the query's own LIMIT 50.`
+    ClResultsEmptyWindow = "cl-results-empty-window",
     /// `An answer as a table`
     ClResultsTable = "cl-results-table",
     /// `Results`

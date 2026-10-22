@@ -35,7 +35,10 @@ fluent_templates::static_loader! {
         fallback_language: "en",
         // NOTE: Fluent's guide, "Bidirectionality": the isolation marks around a
         // placeable are for mixed-direction text; the English catalog draws none.
-        customise: |bundle| bundle.set_use_isolating(false),
+        customise: |bundle| {
+            bundle.set_use_isolating(false);
+            bundle.set_formatter(Some(ferrohealth_ui::i18n::number::format_number));
+        },
     };
 }
 

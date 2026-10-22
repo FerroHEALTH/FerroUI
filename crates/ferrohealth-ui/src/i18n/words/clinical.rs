@@ -46,6 +46,10 @@ texts! {
     ResultsExportCsv = "results-export-csv",
     /// The action that downloads a query's answer as JSON.
     ResultsExportJson = "results-export-json",
+    /// Why a query's answer has no chart: it has no numeric column.
+    ResultsNoChart = "results-no-chart",
+    /// Why a query's answer has no chart and no export: it has no row.
+    ResultsNoRows = "results-no-rows",
     /// The name of the Table or Chart switch.
     ResultsShowAs = "results-show-as",
     /// The segment that shows a query's answer as a table.
@@ -120,6 +124,8 @@ texts! {
     VersionsDeleted = "versions-deleted",
     /// The link from an older version to the latest.
     VersionsLatest = "versions-latest",
+    /// The one line of a version history with no version.
+    VersionsNone = "versions-none",
     /// The button that opens the version at a time.
     VersionsOpen = "versions-open",
     /// The notice over an older version: `$value` is its number, `$total` how many there are.

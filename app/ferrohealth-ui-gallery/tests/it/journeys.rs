@@ -1327,6 +1327,37 @@ async fn the_table_header_sticks_below_the_top_bar_on_a_wide_screen() -> Result<
     .await
 }
 
+#[tokio::test(flavor = "multi_thread")]
+async fn a_table_page_reads_whole_beside_the_sidebar_from_64rem() -> Result<(), Box<dyn Error>> {
+    // WCAG 2.2 SC 1.4.10: a listing, a query's result set and an empty
+    // answer never scroll the page sideways where the table box stops
+    // scrolling; the page's own width is the client width, a classic
+    // scrollbar left out.
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        for width in [1024, 1152, 1280] {
+            window(browser, width, 900).await?;
+            for page in ["/tables", "/clinical"] {
+                let path = format!("/ferrobridge{page}");
+                browser.goto(&gallery.url(&path)).await?;
+                browser.element(By::Css("main h1")).await?;
+                let root = browser.element(By::Css("html")).await?;
+                let scroll = number(root.prop("scrollWidth").await?);
+                let client = number(root.prop("clientWidth").await?);
+                assert!(
+                    scroll <= client + 1.0,
+                    "{path} scrolls sideways at {width} px ({scroll} in {client})"
+                );
+            }
+        }
+        browser.console_clean("the table pages from 64rem").await
+    })
+    .await
+}
+
 /// Asserts every table box of the tables page reads whole at 320 px.
 async fn table_boxes_read_whole(browser: &Browser) -> Result<(), Box<dyn Error>> {
     // Every table reads whole at 320 px: a data table stacks its rows as
