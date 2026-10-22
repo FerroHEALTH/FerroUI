@@ -25,6 +25,7 @@ mod editor;
 mod federation;
 mod fields;
 mod figures;
+mod filter;
 mod kbd;
 mod locale;
 mod markup;

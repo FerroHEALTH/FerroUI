@@ -28,8 +28,15 @@
 //! WebAssembly, and a tree in a form can post its open items as hidden
 //! fields. A console that keeps the open items in its address watches
 //! [`Tree::expanded`] with `Effect::watch` (the Leptos book,
-//! `reactivity/14_create_effect`). Keys are the console's data-derived ids,
-//! never positions.
+//! `reactivity/14_create_effect`).
+//!
+//! An item's key is the console's data-derived id, never a position, and is
+//! unique among its siblings. The tree addresses an item by its path key
+//! ([`path_key`]): the keys from the top to it, so the same concept under
+//! two parents (a polyhierarchy, as in SNOMED CT) is two items, each with
+//! its own id, its own fold, its own selection and its own place in the
+//! keyboard's walk. [`Tree::expanded`], [`Tree::selected`] and the open
+//! fields hold path keys; a top item's path key is its key.
 
 use std::collections::BTreeSet;
 
@@ -146,7 +153,8 @@ impl Edit {
 /// One item of a tree.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TreeNode {
-    /// The item's stable key, derived from its data.
+    /// The item's stable key, derived from its data and unique among its
+    /// siblings; the tree addresses the item by its [`path_key`].
     pub key: String,
     /// Its name.
     pub label: String,
@@ -424,12 +432,13 @@ pub struct Tree {
     pub editing: bool,
     /// The items at the top.
     pub nodes: Signal<Vec<TreeNode>>,
-    /// The keys of the open items; the server draws the tree as given.
+    /// The path keys ([`path_key`]) of the open items; the server draws
+    /// the tree as given.
     pub expanded: RwSignal<BTreeSet<String>>,
-    /// The key of the selected item; the items above it are its path.
+    /// The path key of the selected item; the items above it are its path.
     pub selected: Signal<Option<String>>,
     /// The name of the hidden fields that carry the open items in the
-    /// form around the tree, one field per key.
+    /// form around the tree, one field per path key.
     pub open_field: Option<String>,
     /// Its words, in the page's locale ([`TreeWords::of_page`]).
     pub words: TreeWords,
@@ -449,9 +458,9 @@ pub struct TreeData {
     pub editing: bool,
     /// The items at the top.
     pub nodes: Vec<TreeNode>,
-    /// The keys of the open items.
+    /// The path keys of the open items.
     pub open: BTreeSet<String>,
-    /// The key of the selected item.
+    /// The path key of the selected item.
     pub selected: Option<String>,
     /// The name of the hidden fields that carry the open items.
     pub open_field: Option<String>,
@@ -464,13 +473,13 @@ struct State {
     nodes: Signal<Vec<TreeNode>>,
     expanded: RwSignal<BTreeSet<String>>,
     selected: Signal<Option<String>>,
-    /// The keys of the items above the selected one.
+    /// The path keys of the items above the selected one.
     path: Memo<BTreeSet<String>>,
     editing: bool,
     /// Whether the page has hydrated, so a toggle with no link works.
     hydrated: RwSignal<bool>,
     words: StoredValue<TreeWords>,
-    /// The element of each item drawn, by key; a row drawn again before
+    /// The element of each item drawn, by path key; a row drawn again before
     /// its old one is cleaned up comes later, so a key's last entry is the
     /// one in the page.
     drawn: StoredValue<Vec<(String, NodeRef<leptos::html::Li>)>>,
@@ -479,9 +488,9 @@ struct State {
 /// One item in sight, in the order the keyboard walks them.
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Shown {
-    /// Its key.
+    /// Its path key.
     key: String,
-    /// Its parent's key.
+    /// Its parent's path key.
     parent: Option<String>,
     /// Whether it can open.
     expandable: bool,
@@ -501,16 +510,17 @@ fn in_sight(nodes: &[TreeNode], expanded: &BTreeSet<String>) -> Vec<Shown> {
         out: &mut Vec<Shown>,
     ) {
         for node in nodes {
-            let open = node.opens() && expanded.contains(&node.key);
+            let key = below(parent, &node.key);
+            let open = node.opens() && expanded.contains(&key);
             out.push(Shown {
-                key: node.key.clone(),
+                key: key.clone(),
                 parent: parent.map(str::to_owned),
                 expandable: node.opens(),
                 open,
                 link: node.href.is_some() && !node.removed,
             });
             if open {
-                walk(node.read(), Some(&node.key), expanded, out);
+                walk(node.read(), Some(&key), expanded, out);
             }
         }
     }
@@ -519,39 +529,109 @@ fn in_sight(nodes: &[TreeNode], expanded: &BTreeSet<String>) -> Vec<Shown> {
     out
 }
 
-/// The item `key` among `nodes` and the children read under them.
-fn find<'a>(nodes: &'a [TreeNode], key: &str) -> Option<&'a TreeNode> {
-    nodes.iter().find_map(|node| {
-        if node.key == key {
-            Some(node)
+/// The separator between the keys of a path key.
+const SEPARATOR: char = '/';
+
+/// The key `key` as one step of a path key: a `%` and the separator
+/// percent-encoded, so no key can be read as two.
+fn step(key: &str) -> String {
+    let mut out = String::with_capacity(key.len());
+    for character in key.chars() {
+        match character {
+            '%' => out.push_str("%25"),
+            SEPARATOR => out.push_str("%2F"),
+            other => out.push(other),
+        }
+    }
+    out
+}
+
+/// The path key of the item `key` under the item `parent`, or at the top
+/// for `None`.
+fn below(parent: Option<&str>, key: &str) -> String {
+    match parent {
+        Some(parent) => format!("{parent}{SEPARATOR}{}", step(key)),
+        None => step(key),
+    }
+}
+
+/// Returns the path key of the item reached by `keys`, from the top item's
+/// key to the item's own.
+///
+/// It is the keys joined by `/`, with a `%` and a `/` inside a key
+/// percent-encoded, so a key holding either still makes a distinct path
+/// key. A top item's path key is its key when the key holds neither.
+///
+/// # Examples
+///
+/// ```
+/// use ferrohealth_ui::widget::tree::path_key;
+///
+/// assert_eq!("SF-1000", path_key(&["SF-1000"]));
+/// assert_eq!("SF-1000/SF-1200", path_key(&["SF-1000", "SF-1200"]));
+/// assert_eq!("a%2Fb/c", path_key(&["a/b", "c"]));
+/// ```
+#[must_use]
+pub fn path_key<S: AsRef<str>>(keys: &[S]) -> String {
+    keys.iter().fold(String::new(), |path, key| {
+        if path.is_empty() {
+            step(key.as_ref())
         } else {
-            find(node.read(), key)
+            below(Some(&path), key.as_ref())
         }
     })
 }
 
-/// The children of the item `key` in `nodes`, or the top items for `None`.
-fn children_of(nodes: &[TreeNode], key: Option<&str>) -> Vec<TreeNode> {
-    match key {
+/// Returns the keys a path key `path` joins, from the top item's key: the
+/// inverse of [`path_key`], for a console reading the open fields a tree
+/// posts.
+///
+/// A `%` not followed by `25` or `2F` is kept as it is.
+#[must_use]
+pub fn path_keys(path: &str) -> Vec<String> {
+    if path.is_empty() {
+        return Vec::new();
+    }
+    path.split(SEPARATOR)
+        .map(|step| step.replace("%2F", "/").replace("%25", "%"))
+        .collect()
+}
+
+/// The item at the path key `path` among `nodes` and the children read
+/// under them.
+fn find<'a>(nodes: &'a [TreeNode], path: &str) -> Option<&'a TreeNode> {
+    let mut level = nodes;
+    let mut found = None;
+    for key in path_keys(path) {
+        let node = level.iter().find(|node| node.key == key)?;
+        level = node.read();
+        found = Some(node);
+    }
+    found
+}
+
+/// The children of the item at the path key `path` in `nodes`, or the top
+/// items for `None`.
+fn children_of(nodes: &[TreeNode], path: Option<&str>) -> Vec<TreeNode> {
+    match path {
         None => nodes.to_vec(),
-        Some(key) => find(nodes, key)
+        Some(path) => find(nodes, path)
             .map(|node| node.read().to_vec())
             .unwrap_or_default(),
     }
 }
 
-/// The keys of the items above the item `key` in `nodes`, from the top.
-fn path_to(nodes: &[TreeNode], key: &str) -> Option<Vec<String>> {
-    nodes.iter().find_map(|node| {
-        if node.key == key {
-            Some(Vec::new())
-        } else {
-            path_to(node.read(), key).map(|mut below| {
-                below.insert(0, node.key.clone());
-                below
-            })
-        }
-    })
+/// The path keys of the items above the item at the path key `path` in
+/// `nodes`, from the top, or `None` when no item is there.
+fn path_to(nodes: &[TreeNode], path: &str) -> Option<Vec<String>> {
+    find(nodes, path)?;
+    let keys = path_keys(path);
+    let above = keys.len().saturating_sub(1);
+    Some(
+        (1..=above)
+            .map(|depth| path_key(keys.get(..depth).unwrap_or_default()))
+            .collect(),
+    )
 }
 
 /// What a key press does to the tree.
@@ -703,38 +783,42 @@ fn from_an_item(event: &leptos::ev::KeyboardEvent) -> bool {
     }
 }
 
-/// Returns the items under `parent` (the top for `None`) at `level`.
+/// Returns the items under the item at the path key `parent` (the top for
+/// `None`) at `level`.
 fn items(
     tree: State,
     parent: Option<String>,
     level: u16,
     focused: RwSignal<Option<String>>,
 ) -> AnyView {
-    let each = move || {
-        tree.nodes
-            .with(|nodes| children_of(nodes, parent.as_deref()))
+    let each = {
+        let parent = parent.clone();
+        move || {
+            tree.nodes
+                .with(|nodes| children_of(nodes, parent.as_deref()))
+        }
     };
     view! {
         <For each=each key=|node: &TreeNode| node.key.clone() let:node>
-            {item(tree, &node, level, focused)}
+            {item(tree, &node, below(parent.as_deref(), &node.key), level, focused)}
         </For>
     }
     .into_any()
 }
 
-/// Returns the toggle that folds and unfolds the item `node`, out of the
-/// tab order (the arrow keys fold an item): a link to its
-/// [`TreeNode::toggle_href`], or a button that works once the page has
+/// Returns the toggle that folds and unfolds the item `node` at the path
+/// key `key`, out of the tab order (the arrow keys fold an item): a link to
+/// its [`TreeNode::toggle_href`], or a button that works once the page has
 /// hydrated; or a spacer for an item that cannot open.
 fn toggle(
     tree: State,
     node: &TreeNode,
+    key: String,
     open: impl Fn() -> bool + Clone + Send + Sync + 'static,
 ) -> AnyView {
     if !node.opens() {
         return view! { <span class="fui-tree-spacer" aria-hidden="true"></span> }.into_any();
     }
-    let key = node.key.clone();
     let label = node.label.clone();
     let name = {
         let open = open.clone();
@@ -861,7 +945,7 @@ fn edits(tree: State, node: &TreeNode) -> Option<AnyView> {
 }
 
 /// The loading row and the more row that end the open level of the item
-/// `key`, as the nodes of `tree` have it now.
+/// at the path key `key`, as the nodes of `tree` have it now.
 fn level_end(tree: State, key: &str) -> AnyView {
     let (unread, more) = tree.nodes.with(|nodes| {
         find(nodes, key).map_or((false, None), |node| match &node.children {
@@ -894,14 +978,15 @@ fn classes(each: &[Option<&str>]) -> String {
     each.iter().flatten().copied().collect::<Vec<_>>().join(" ")
 }
 
-/// Returns the row of the item `node`: its toggle, glyph, name, code, tag,
-/// inactive mark, count and actions.
+/// Returns the row of the item `node` at the path key `key`: its toggle,
+/// glyph, name, code, tag, inactive mark, count and actions.
 fn row(
     tree: State,
     node: &TreeNode,
+    key: String,
     open: impl Fn() -> bool + Clone + Send + Sync + 'static,
 ) -> AnyView {
-    let toggle = toggle(tree, node, open);
+    let toggle = toggle(tree, node, key, open);
     let glyph = node.mark.map(|mark| {
         let glyph = match mark {
             Mark::Folder => Glyph::FOLDER,
@@ -935,9 +1020,15 @@ fn row(
     .into_any()
 }
 
-/// Returns the item `node` at `level` and, while it is open, its children.
-fn item(tree: State, node: &TreeNode, level: u16, focused: RwSignal<Option<String>>) -> AnyView {
-    let key = node.key.clone();
+/// Returns the item `node` at the path key `key` and the level `level`
+/// and, while it is open, its children.
+fn item(
+    tree: State,
+    node: &TreeNode,
+    key: String,
+    level: u16,
+    focused: RwSignal<Option<String>>,
+) -> AnyView {
     let id = tree.id.with_value(|id| item_id(id, &key));
     let expandable = node.opens();
     let element = NodeRef::<leptos::html::Li>::new();
@@ -977,7 +1068,7 @@ fn item(tree: State, node: &TreeNode, level: u16, focused: RwSignal<Option<Strin
         move || {
             let at = focused.get().or_else(|| tree.selected.get()).or_else(|| {
                 tree.nodes
-                    .with(|nodes| nodes.first().map(|node| node.key.clone()))
+                    .with(|nodes| nodes.first().map(|node| step(&node.key)))
             });
             if at.as_deref() == Some(key.as_str()) {
                 "0"
@@ -986,7 +1077,7 @@ fn item(tree: State, node: &TreeNode, level: u16, focused: RwSignal<Option<Strin
             }
         }
     };
-    let row = row(tree, node, open);
+    let row = row(tree, node, key.clone(), open);
     let children = {
         let key = key.clone();
         move || {
@@ -1085,7 +1176,7 @@ pub fn tree_view(tree: Tree) -> AnyView {
             .or_else(|| {
                 state
                     .nodes
-                    .with_untracked(|nodes| nodes.first().map(|node| node.key.clone()))
+                    .with_untracked(|nodes| nodes.first().map(|node| step(&node.key)))
             })
         else {
             return;
@@ -1164,7 +1255,10 @@ pub fn tree_island(data: TreeData, words: TreeWords) -> AnyView {
 mod tests {
     use std::collections::BTreeSet;
 
-    use super::{Children, Move, TreeNode, children_of, in_sight, item_id, moved, path_to};
+    use super::{
+        Children, Move, TreeNode, children_of, find, in_sight, item_id, moved, path_key, path_keys,
+        path_to,
+    };
 
     fn nodes() -> Vec<TreeNode> {
         vec![
@@ -1181,25 +1275,106 @@ mod tests {
         let closed = in_sight(&nodes(), &BTreeSet::new());
         let keys: Vec<&str> = closed.iter().map(|item| item.key.as_str()).collect();
         assert_eq!(vec!["a", "b"], keys);
-        let open = BTreeSet::from([String::from("a"), String::from("a2")]);
+        let open = BTreeSet::from([String::from("a"), String::from("a/a2")]);
         let keys: Vec<String> = in_sight(&nodes(), &open)
             .into_iter()
             .map(|item| item.key)
             .collect();
         assert_eq!(
-            vec!["a", "a1", "a2", "b"],
+            vec!["a", "a/a1", "a/a2", "b"],
             keys,
             "an unread level shows no item"
         );
         assert_eq!(2, children_of(&nodes(), Some("a")).len());
-        assert!(children_of(&nodes(), Some("a2")).is_empty(), "not read yet");
+        assert!(
+            children_of(&nodes(), Some("a/a2")).is_empty(),
+            "not read yet"
+        );
     }
 
     #[test]
     fn the_path_is_every_item_above_the_selected_one() {
-        assert_eq!(Some(vec![String::from("a")]), path_to(&nodes(), "a2"));
+        assert_eq!(Some(vec![String::from("a")]), path_to(&nodes(), "a/a2"));
         assert_eq!(Some(Vec::new()), path_to(&nodes(), "b"));
         assert_eq!(None, path_to(&nodes(), "z"));
+        assert_eq!(None, path_to(&nodes(), "a2"), "a child is under its parent");
+    }
+
+    /// One concept under two parents, as SNOMED CT's polyhierarchy has it.
+    fn polyhierarchy() -> Vec<TreeNode> {
+        vec![
+            TreeNode::new("lung", "Disorder of lung").children(vec![
+                TreeNode::new("pneumonia", "Pneumonia")
+                    .children(vec![TreeNode::new("viral", "Viral")]),
+            ]),
+            TreeNode::new("infection", "Infectious disease").children(vec![
+                TreeNode::new("pneumonia", "Pneumonia")
+                    .children(vec![TreeNode::new("viral", "Viral")]),
+            ]),
+        ]
+    }
+
+    #[test]
+    fn a_concept_under_two_parents_is_two_items_each_with_its_own_fold_and_place() {
+        let open = BTreeSet::from([
+            String::from("lung"),
+            String::from("infection"),
+            String::from("lung/pneumonia"),
+        ]);
+        let shown = in_sight(&polyhierarchy(), &open);
+        let keys: Vec<&str> = shown.iter().map(|item| item.key.as_str()).collect();
+        assert_eq!(
+            vec![
+                "lung",
+                "lung/pneumonia",
+                "lung/pneumonia/viral",
+                "infection",
+                "infection/pneumonia",
+            ],
+            keys,
+            "the copy under infection stays closed"
+        );
+        assert_ne!(
+            item_id("t", "lung/pneumonia"),
+            item_id("t", "infection/pneumonia")
+        );
+        let focus = |key: &str| Some(Move::Focus(key.to_owned()));
+        assert_eq!(
+            focus("infection/pneumonia"),
+            moved("ArrowDown", "infection", &shown),
+            "Down from the second parent reaches its own copy"
+        );
+        assert_eq!(
+            focus("infection"),
+            moved("ArrowLeft", "infection/pneumonia", &shown),
+            "Left from the second copy reaches its own parent"
+        );
+        assert_eq!(
+            Some(Move::Open(String::from("infection/pneumonia"))),
+            moved("ArrowRight", "infection/pneumonia", &shown)
+        );
+        assert_eq!(
+            Some(vec![String::from("infection")]),
+            path_to(&polyhierarchy(), "infection/pneumonia")
+        );
+        assert_eq!(
+            Some("Viral"),
+            find(&polyhierarchy(), "infection/pneumonia/viral").map(|node| node.label.as_str())
+        );
+    }
+
+    #[test]
+    fn a_path_key_reads_back_whatever_its_keys_hold() {
+        for keys in [
+            vec!["a"],
+            vec!["a/b", "c"],
+            vec!["100%", "%2F", "x"],
+            vec!["/content[id0.1]", "/data[id2]/value"],
+        ] {
+            assert_eq!(keys, path_keys(&path_key(&keys)), "{keys:?}");
+        }
+        assert_ne!(path_key(&["a/b"]), path_key(&["a", "b"]));
+        assert_eq!(Vec::<String>::new(), path_keys(""));
     }
 
     #[test]
@@ -1207,8 +1382,8 @@ mod tests {
         let open = BTreeSet::from([String::from("a")]);
         let shown = in_sight(&nodes(), &open);
         let focus = |key: &str| Some(Move::Focus(key.to_owned()));
-        assert_eq!(focus("a1"), moved("ArrowDown", "a", &shown));
-        assert_eq!(focus("a"), moved("ArrowUp", "a1", &shown));
+        assert_eq!(focus("a/a1"), moved("ArrowDown", "a", &shown));
+        assert_eq!(focus("a"), moved("ArrowUp", "a/a1", &shown));
         assert_eq!(
             None,
             moved("ArrowUp", "a", &shown),
@@ -1217,13 +1392,13 @@ mod tests {
         assert_eq!(focus("b"), moved("End", "a", &shown));
         assert_eq!(focus("a"), moved("Home", "b", &shown));
         assert_eq!(
-            focus("a1"),
+            focus("a/a1"),
             moved("ArrowRight", "a", &shown),
             "into an open item"
         );
         assert_eq!(
-            Some(Move::Open(String::from("a2"))),
-            moved("ArrowRight", "a2", &shown)
+            Some(Move::Open(String::from("a/a2"))),
+            moved("ArrowRight", "a/a2", &shown)
         );
         assert_eq!(
             Some(Move::Close(String::from("a"))),
@@ -1231,16 +1406,16 @@ mod tests {
         );
         assert_eq!(
             focus("a"),
-            moved("ArrowLeft", "a1", &shown),
+            moved("ArrowLeft", "a/a1", &shown),
             "to the parent"
         );
         assert_eq!(
-            Some(Move::Follow(String::from("a1"))),
-            moved("Enter", "a1", &shown)
+            Some(Move::Follow(String::from("a/a1"))),
+            moved("Enter", "a/a1", &shown)
         );
         assert_eq!(
-            Some(Move::Open(String::from("a2"))),
-            moved(" ", "a2", &shown)
+            Some(Move::Open(String::from("a/a2"))),
+            moved(" ", "a/a2", &shown)
         );
         assert_eq!(None, moved("x", "a", &shown));
     }

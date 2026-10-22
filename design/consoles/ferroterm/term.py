@@ -71,10 +71,11 @@ def inactive_mark():
     return '<span class="fui-inactive-mark">Inactive</span>'
 
 
-def coding(display, code, system=None, inactive=False, inline=False, href=None):
+def coding(display, code, system=None, inactive=False, inline=False, href=None, current=False):
     d = e(display) if display else '<span class="fui-muted">no display</span>'
     if href:
-        d = f'<a class="fui-row-link" href="{href}">{d}</a>'
+        cur = ' aria-current="true"' if current else ""
+        d = f'<a class="fui-row-link" href="{href}"{cur}>{d}</a>'
     sysw = f'<span class="fui-coding-system">{e(system)}</span>' if system else ""
     mark = inactive_mark() if inactive else ""
     cls = "fui-coding" + (" fui-coding-inline" if inline else "") + (" is-inactive" if inactive else "")

@@ -63,6 +63,13 @@ pub fn display(code: &str) -> String {
 /// A canonical long enough to wrap on a phone.
 pub const LONG_CANONICAL: &str = "https://terminology.example.org/fhir/ValueSet/synthetic-respiratory-findings-for-the-ward-screens";
 
+/// A synthetic `urn:uuid:` canonical, with no slash to break after.
+pub const URN_CANONICAL: &str = "urn:uuid:3f1c2a9e-7b4d-4e8a-9c21-5d6b0e4f8a17";
+
+/// A synthetic composition's versioned uid as a code, too long for one
+/// line on a phone.
+pub const VERSIONED_UID: &str = "8849182c-82ad-4088-a07f-48ead4180515::ferroehr.example.org::12";
+
 /// The value sets of the coding card's table: the title and the canonical.
 pub const VALUE_SETS: &[(&str, &str)] = &[
     (

@@ -15,6 +15,13 @@ texts! {
     ClauseInclude = "clause-include",
     /// The name of an include clause, by its source `$title`.
     ClauseIncludeLabel = "clause-include-label",
+    /// A list of codes that ends before its last code: `$shown` the codes
+    /// it shows of `$total`.
+    CodesMore = "codes-more",
+    /// The link that reads the next page of codes: `$count` codes.
+    CodesMoreNext = "codes-more-next",
+    /// The link that reads the rest of the codes: `$count` codes.
+    CodesMoreRest = "codes-more-rest",
     /// The word of the inactive mark.
     CodingInactive = "coding-inactive",
     /// A coding with no display.

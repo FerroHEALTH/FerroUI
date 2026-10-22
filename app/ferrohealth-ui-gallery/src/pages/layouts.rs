@@ -29,7 +29,9 @@ use ferrohealth_ui::view::surface::{
     panel_sections_card, section_intro, split,
 };
 use ferrohealth_ui::widget::picker::{Picker, picker_field};
-use ferrohealth_ui::widget::tree::{Children, Tree, TreeKind, TreeNode, TreeWords, tree_view};
+use ferrohealth_ui::widget::tree::{
+    Children, Tree, TreeKind, TreeNode, TreeWords, path_key, tree_view,
+};
 use leptos::prelude::*;
 use leptos_router::hooks::use_query_map;
 
@@ -66,10 +68,18 @@ fn hierarchy(brand: &str, words: &Words) -> Vec<TreeNode> {
 }
 
 /// The children in `words` read under each item of `open` not read yet,
-/// as a console's server reads a level when it opens.
-fn read_children(brand: &str, words: &Words, nodes: &mut [TreeNode], open: &BTreeSet<String>) {
+/// as a console's server reads a level when it opens; `above` holds the
+/// keys of the items over `nodes`.
+fn read_children(
+    brand: &str,
+    words: &Words,
+    nodes: &mut [TreeNode],
+    above: &[String],
+    open: &BTreeSet<String>,
+) {
     for node in nodes.iter_mut() {
-        if node.children == Children::Unread && open.contains(&node.key) {
+        let keys = [above, std::slice::from_ref(&node.key)].concat();
+        if node.children == Children::Unread && open.contains(&path_key(&keys)) {
             let key = node.key.clone();
             node.children = Children::Read {
                 nodes: vec![
@@ -87,7 +97,7 @@ fn read_children(brand: &str, words: &Words, nodes: &mut [TreeNode], open: &BTre
                 more: None,
             };
         } else if let Children::Read { nodes, .. } = &mut node.children {
-            read_children(brand, words, nodes, open);
+            read_children(brand, words, nodes, &keys, open);
         }
     }
 }
@@ -103,26 +113,43 @@ fn read_hierarchy(
     fn toggles(
         brand: &str,
         nodes: &mut [TreeNode],
+        above: &[String],
         open: &BTreeSet<String>,
         selected: Option<&str>,
     ) {
         for node in nodes.iter_mut() {
+            let keys = [above, std::slice::from_ref(&node.key)].concat();
             if node.opens() {
+                let key = path_key(&keys);
                 let mut flipped = open.clone();
-                if !flipped.remove(&node.key) {
-                    flipped.insert(node.key.clone());
+                if !flipped.remove(&key) {
+                    flipped.insert(key);
                 }
                 node.toggle_href = Some(address(brand, &flipped, selected));
             }
             if let Children::Read { nodes, .. } = &mut node.children {
-                toggles(brand, nodes, open, selected);
+                toggles(brand, nodes, &keys, open, selected);
             }
         }
     }
     let mut nodes = hierarchy(brand, words);
-    read_children(brand, words, &mut nodes, open);
-    toggles(brand, &mut nodes, open, selected);
+    read_children(brand, words, &mut nodes, &[], open);
+    toggles(brand, &mut nodes, &[], open, selected);
     nodes
+}
+
+/// The keys from the top to the first item among `nodes` whose key is
+/// `key`.
+fn keys_to(nodes: &[TreeNode], key: &str) -> Option<Vec<String>> {
+    nodes.iter().find_map(|node| {
+        if node.key == key {
+            Some(vec![node.key.clone()])
+        } else if let Children::Read { nodes, .. } = &node.children {
+            keys_to(nodes, key).map(|below| [vec![node.key.clone()], below].concat())
+        } else {
+            None
+        }
+    })
 }
 
 /// The open items the address names (`?open=a,b`), the top item when it
@@ -268,7 +295,7 @@ pub(crate) fn concept_tree(
     let expanded = RwSignal::new(open_in(open));
     let brand = StoredValue::new(brand);
     let words = StoredValue::new(words);
-    let chosen = StoredValue::new(concept.clone());
+    let chosen = StoredValue::new(concept);
     let nodes = Memo::new(move |_| {
         expanded.with(|open| {
             brand.with_value(|brand| {
@@ -296,7 +323,14 @@ pub(crate) fn concept_tree(
         editing: false,
         nodes: nodes.into(),
         expanded,
-        selected: Signal::stored(concept),
+        selected: Signal::derive(move || {
+            chosen.with_value(|chosen| {
+                chosen
+                    .as_deref()
+                    .and_then(|code| nodes.with(|nodes| keys_to(nodes, code)))
+                    .map(|keys| path_key(&keys))
+            })
+        }),
         open_field: None,
         words: tree_words,
     })

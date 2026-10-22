@@ -23,6 +23,7 @@ use crate::table::filter::Find;
 use crate::table::model::PAGE_KEY;
 use crate::table::view::{hidden_fields, method};
 use crate::view::button::{Variant, label};
+use crate::view::coding::{MoreCodes, more_codes};
 use crate::view::form::INPUT;
 use crate::view::path::path;
 use crate::view::surface::definitions;
@@ -182,25 +183,19 @@ pub fn browser_find(find: Find<'_>) -> AnyView {
     .into_any()
 }
 
-/// One match of a search, and whether it is the one the browser reads.
-#[derive(Debug)]
-pub struct Match {
-    /// What it shows, such as an M2 coding with a row link.
-    pub body: AnyView,
-    /// Whether it is the concept in view.
-    pub selected: bool,
-}
-
 /// Returns the matches of a search, named `label`: one row each, the row
 /// the target, the one in view in the accent's tint.
+///
+/// Each match is what its row shows, such as an M2 coding with a row link.
+/// The match the browser reads marks its link `aria-current="true"`
+/// (WAI-ARIA 1.2), as [`crate::view::coding::Coding::current`] does, and
+/// its row takes the tint from that mark, so assistive technology hears
+/// "current" on the link a keyboard reaches.
 #[must_use]
-pub fn match_list(label: impl Into<String>, matches: Vec<Match>) -> AnyView {
+pub fn match_list(label: impl Into<String>, matches: Vec<AnyView>) -> AnyView {
     let rows = matches
         .into_iter()
-        .map(|each| {
-            let selected = each.selected.then_some("true");
-            view! { <li aria-selected=selected>{each.body}</li> }
-        })
+        .map(|each| view! { <li>{each}</li> })
         .collect_view();
     view! {
         <ul class="fui-match-list" aria-label=label.into()>
@@ -228,6 +223,9 @@ pub struct PathNode {
     pub flat_path: Option<String>,
     /// A coded node's value set, one M2 coding each.
     pub codes: Vec<AnyView>,
+    /// The more row after the codes, when the console's server pages a
+    /// large value set; the heading then counts its total.
+    pub more: Option<MoreCodes>,
     /// The query builder on this path.
     pub query: String,
 }
@@ -244,6 +242,7 @@ pub fn path_node(node: PathNode) -> BrowserPane {
         units,
         flat_path,
         codes,
+        more,
         query,
     } = node;
     let mut rows = vec![
@@ -264,17 +263,21 @@ pub fn path_node(node: PathNode) -> BrowserPane {
     let body = if codes.is_empty() {
         view! { <div class="fui-browser-body">{facts}</div> }.into_any()
     } else {
-        let heading = tr_with(Text::PathNodeValueSet, &[("count", codes.len().into())]);
+        let total = more
+            .as_ref()
+            .map_or_else(|| codes.len().into(), |more| more.total.into());
+        let heading = tr_with(Text::PathNodeValueSet, &[("count", total)]);
         let codes = codes
             .into_iter()
             .map(|code| view! { <li>{code}</li> })
             .collect_view();
+        let more = more.map(more_codes);
         view! {
             <div class="fui-browser-body fui-stack">
                 {facts}
                 <div>
                     <p class="fui-label">{heading}</p>
-                    <ul class="fui-code-list">{codes}</ul>
+                    <ul class="fui-code-list">{codes} {more}</ul>
                 </div>
             </div>
         }

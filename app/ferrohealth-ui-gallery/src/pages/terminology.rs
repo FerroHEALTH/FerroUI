@@ -22,7 +22,7 @@ use ferrohealth_ui::view::clause::{
     Clause, ClauseCode, ClauseIssue, ClauseKind, clause, clause_codes, clause_fields, clause_part,
     clauses,
 };
-use ferrohealth_ui::view::coding::{Coding, Layout, canonical, coding};
+use ferrohealth_ui::view::coding::{Coding, Layout, MoreCodes, canonical, coding};
 use ferrohealth_ui::view::form::{ERROR, Field, INPUT, SELECT, error_id};
 use ferrohealth_ui::view::mapping::{
     MapElement, Mapping, Relationship, map_element, map_elements, mapping_columns, mapping_row,
@@ -40,7 +40,7 @@ use crate::locale::{Msg, tr, tr_with};
 use crate::terminology_data::{
     ABDOMEN, BALLOT_ROOT, CHEST, CODE_SYSTEMS, COUGH, DEFAULT_ROOT, FEVER, FINDINGS, LEGACY,
     LEGACY_CHEST, LEGACY_COUGH, LONG_CANONICAL, MALAISE, MAPPINGS, ROOTS, SECURITY, SOFTWARE,
-    VALUE_SETS, WHEEZE, base, display, legacy_display,
+    URN_CANONICAL, VALUE_SETS, VERSIONED_UID, WHEEZE, base, display, legacy_display,
 };
 
 /// The id of the version select's menu.
@@ -103,11 +103,20 @@ fn codings() -> AnyView {
                     system: None,
                     inactive: false,
                     href: None,
+                    current: false,
                 },
                 Layout::Stacked,
             ),
         ),
         (tr(Msg::TmCanonical), canonical(LONG_CANONICAL)),
+        (
+            tr(Msg::TmVersionedUid),
+            coding(
+                Coding::new(VERSIONED_UID, tr(Msg::TmSyntheticEncounter)),
+                Layout::Stacked,
+            ),
+        ),
+        (tr(Msg::TmUrnCanonical), canonical(URN_CANONICAL)),
     ])
     .into_any();
     let columns = [Column::owned("title", tr(Msg::TmTitle)).role(Role::Title)];
@@ -140,6 +149,9 @@ fn findings_source() -> String {
     tr_with(Msg::TmFrom, &[("name", FINDINGS.into())])
 }
 
+/// How many codes the listed include holds, of which the page shows three.
+const LISTED: u32 = 40;
+
 /// A value set's clauses as its page reads them.
 fn clauses_read() -> AnyView {
     let source = findings_source();
@@ -154,7 +166,7 @@ fn clauses_read() -> AnyView {
         .into_any(),
         body: None,
         actions: None,
-        issue: None,
+        issues: Vec::new(),
     });
     let exclude = clause(Clause {
         kind: ClauseKind::Exclude,
@@ -168,13 +180,13 @@ fn clauses_read() -> AnyView {
         .into_any(),
         body: None,
         actions: None,
-        issue: None,
+        issues: Vec::new(),
     });
     let listed = clause(Clause {
         kind: ClauseKind::Include,
         title: source.clone().into_any(),
         source,
-        sentence: tr_with(Msg::TmIncludesCodes, &[("count", 3.into())]).into_any(),
+        sentence: tr_with(Msg::TmIncludesCodes, &[("count", LISTED.into())]).into_any(),
         body: Some(clause_codes(
             [COUGH, FEVER, MALAISE]
                 .into_iter()
@@ -187,9 +199,10 @@ fn clauses_read() -> AnyView {
                     remove: None,
                 })
                 .collect(),
+            Some(MoreCodes::of_page(3, LISTED, 25, "#codings")),
         )),
         actions: None,
-        issue: None,
+        issues: Vec::new(),
     });
     let section = panel_section(
         Some(SectionHead {
@@ -406,15 +419,16 @@ fn composed_include() -> AnyView {
                             remove: Some(remove_code(FEVER)),
                         },
                     ],
+                    None,
                 )}
             }
             .into_any(),
         ),
         actions: Some(remove_clause("c1")),
-        issue: Some(ClauseIssue {
+        issues: vec![ClauseIssue {
             key: String::from("vsd-3"),
             text: tr(Msg::TmVsd3),
-        }),
+        }],
     })
 }
 
@@ -445,12 +459,13 @@ fn composer() -> AnyView {
                             remove: Some(remove_code(WHEEZE)),
                         },
                     ],
+                    None,
                 )}
             }
             .into_any(),
         ),
         actions: Some(remove_clause("c2")),
-        issue: None,
+        issues: Vec::new(),
     });
     let adds = add_row(view! {
         <button type="submit" class=Variant::Ghost.small() name="add-clause" value="include">
