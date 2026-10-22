@@ -378,6 +378,48 @@ async fn templates_content(browser: &Browser, page: &str) -> Result<(), Box<dyn 
     Ok(())
 }
 
+/// Checks what the terminology page must show with no WebAssembly: the
+/// version select opens its menu of links, and every Remove and Add of the
+/// repeatable rows is a submit button of the form around it.
+async fn terminology_content(browser: &Browser) -> Result<(), Box<dyn Error>> {
+    // NOTE: leptos-ui.md §15.8: a `<details>` opens with no script, and each root is a link.
+    let select = browser
+        .element(By::Css("summary.fui-version-select"))
+        .await?;
+    select.click().await?;
+    let root = browser
+        .element(By::Css(
+            "#fhir-version a[role='menuitemradio'][href$='?fhir=R5']",
+        ))
+        .await?;
+    assert!(
+        root.is_displayed().await?,
+        "the version menu opens with no script"
+    );
+    select.click().await?;
+    let buttons = browser
+        .driver()
+        .find_all(By::Css(
+            "form [data-repeat='remove'], form [data-repeat='add']",
+        ))
+        .await?;
+    assert!(
+        buttons.len() >= 4,
+        "the composer's and the editor's rows post"
+    );
+    for button in buttons {
+        assert_eq!(
+            Some(String::from("submit")),
+            button.attr("type").await?,
+            "Remove and Add post the form"
+        );
+    }
+    browser
+        .element(By::Css(".fui-root-matrix td.is-none"))
+        .await?;
+    Ok(())
+}
+
 /// Checks what the overlays page must show with no WebAssembly: the More
 /// menu and the side panel open, and the legend's opener waits hidden.
 async fn overlays_content(browser: &Browser) -> Result<(), Box<dyn Error>> {
@@ -476,6 +518,7 @@ async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error
                 ))
                 .await?;
         }
+        "/terminology" => terminology_content(browser).await?,
         "/overlays" => overlays_content(browser).await?,
         "/charts" => colour_key(browser).await?,
         "/layouts" => {

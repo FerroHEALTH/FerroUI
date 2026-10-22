@@ -188,6 +188,8 @@ messages! {
     Templates = "templates",
     /// `TERM`
     Term = "term",
+    /// `Terminology`
+    Terminology = "terminology",
     /// `The code`
     TheCode = "the-code",
     /// `Timeout`

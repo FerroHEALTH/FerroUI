@@ -36,6 +36,7 @@ mod screenshots;
 mod stack;
 mod states;
 mod tabs_and_toasts;
+mod terminology;
 mod trees;
 mod widgets;
 

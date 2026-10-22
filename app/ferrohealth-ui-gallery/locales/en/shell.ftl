@@ -99,6 +99,7 @@ status = Status
 tables-paging = Tables and paging
 templates = Page templates
 term = TERM
+terminology = Terminology
 the-code = The code
 timeout = Timeout
 trees = Trees

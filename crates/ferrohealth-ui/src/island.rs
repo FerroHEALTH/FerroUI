@@ -8,7 +8,7 @@
 //! They are the toast region, the keyboard tabs, the navigation drawer, the
 //! menu and listbox behind every More, row menu and select button, the
 //! combobox, the picker field, the chart legend, the copy button, the
-//! side panel, the tree and the work-list.
+//! side panel, the tree, the work-list and the repeatable rows.
 //!
 //! An island is the only part of a page the browser hydrates (the Leptos
 //! book, "Guide: Islands"). Its props cross to the browser as JSON in the
@@ -355,6 +355,22 @@ pub fn Search(
     children: Children,
 ) -> impl IntoView {
     crate::widget::search::search_control(search, selected, open, children().into_any())
+}
+
+/// The repeatable rows `id`, named `label` (F7), around the rows, the
+/// blank row and Add the server drew as its children: Remove and Add post
+/// the console's form until the page hydrates, then work in place. A
+/// console draws it through [`crate::widget::repeat::repeat`].
+#[island]
+pub fn Repeater(
+    /// The list's id.
+    id: String,
+    /// The list's name, in the page's locale.
+    label: String,
+    /// The rows, the blank row and Add, drawn on the server.
+    children: Children,
+) -> impl IntoView {
+    crate::widget::repeat::repeater(id, label, children().into_any())
 }
 
 /// The date field `field` with its picker (R23, R25): a popover under the
