@@ -122,6 +122,23 @@ pub fn RunnerForm(
     crate::pages::layouts::runner_form_in(&brand, &words, help)
 }
 
+/// The forms page's masked identifiers, each row's reveal its own.
+#[island]
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "an island takes its props by value, as they arrive from the page"
+)]
+pub fn MaskedIdentifiers(
+    /// The rows: each identifier masked, where it starts.
+    rows: Vec<crate::pages::records::IdentifierRow>,
+    /// Its words, in the page's locale.
+    words: Words,
+    /// The masked identifier's own words, in the page's locale.
+    ident: ferrohealth_ui::widget::identifier::IdentifierWords,
+) -> impl IntoView {
+    crate::pages::records::identifiers_body(rows, &words, &ident)
+}
+
 /// The forms page's pick-or-type fields.
 #[island]
 #[expect(

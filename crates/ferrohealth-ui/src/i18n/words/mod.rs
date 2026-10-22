@@ -36,6 +36,7 @@ mod documents;
 mod error_page;
 mod language;
 mod preferences;
+mod records;
 mod refusals;
 mod shell;
 mod sign_in;
@@ -53,6 +54,7 @@ pub(super) const AREAS: &[(&str, &[crate::i18n::Text])] = &[
     ("error_page", error_page::ALL),
     ("language", language::ALL),
     ("preferences", preferences::ALL),
+    ("records", records::ALL),
     ("refusals", refusals::ALL),
     ("shell", shell::ALL),
     ("sign_in", sign_in::ALL),

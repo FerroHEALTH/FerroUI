@@ -24,6 +24,7 @@ mod kbd;
 mod locale;
 mod markup;
 mod preferences;
+mod records;
 mod render;
 mod search;
 mod shell;

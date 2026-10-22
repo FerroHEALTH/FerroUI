@@ -19,6 +19,7 @@ pub mod data;
 pub mod islands;
 pub mod locale;
 pub mod pages;
+pub mod records_data;
 pub mod search;
 
 #[cfg(not(target_arch = "wasm32"))]

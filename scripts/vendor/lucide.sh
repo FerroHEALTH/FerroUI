@@ -27,11 +27,11 @@ ICONS=(
   book-a book-x calendar chart-line check chevron-down chevron-left chevron-right
   chevron-up
   chevrons-left chevrons-right circle-alert circle-check circle-user
-  circle-x clipboard-copy clock code compass copy database download ellipsis eye
+  circle-x clipboard-copy clock code compass copy database download ellipsis equal-not eye eye-off
   file-clock file-code file-plus file-text files flask-conical folder
   folder-open folder-plus folder-search folder-x funnel gauge heart-pulse
   inbox info keyboard layers layout-dashboard link list-checks lock log-in
-  log-out menu monitor moon network panel-left-close panel-left-open
+  log-out menu minus monitor moon network panel-left-close panel-left-open
   panel-right pencil play plus
   radio-tower refresh-cw rotate-ccw rotate-ccw-clock route save search search-code search-x
   server server-crash settings shield-check shield-off sliders-horizontal

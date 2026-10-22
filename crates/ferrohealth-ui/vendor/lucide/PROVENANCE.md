@@ -7,7 +7,8 @@
   each file the release's own `icons/<name>.svg`, and the release's
   `LICENSE`.
 - **Release:** `1.51.0` (published 2026-10-03).
-- **Fetched:** 2026-10-18, by `scripts/vendor/lucide.sh`.
+- **Fetched:** 2026-10-18, by `scripts/vendor/lucide.sh`; `equal-not`, `eye-off` and
+  `minus` on 2026-10-22 from the same release.
 - **Licence:** ISC License, Copyright (c) 2026 Lucide Icons and Contributors,
   in `LICENSE` beside this file. The outlines are redistributed unchanged.
 - **Use:** `crates/ferrohealth-ui/src/icon.rs` carries each outline's inner

@@ -119,9 +119,17 @@ impl Glyph {
     pub const ELLIPSIS: Self = Self(
         r#"<circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" />"#,
     );
+    /// Lucide `equal-not`.
+    pub const EQUAL_NOT: Self = Self(
+        r#"<line x1="5" x2="19" y1="9" y2="9" /><line x1="5" x2="19" y1="15" y2="15" /><line x1="19" x2="5" y1="5" y2="19" />"#,
+    );
     /// Lucide `eye`.
     pub const EYE: Self = Self(
         r#"<path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" /><circle cx="12" cy="12" r="3" />"#,
+    );
+    /// Lucide `eye-off`.
+    pub const EYE_OFF: Self = Self(
+        r#"<path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49" /><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242" /><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143" /><path d="m2 2 20 20" />"#,
     );
     /// Lucide `file-clock`.
     pub const FILE_CLOCK: Self = Self(
@@ -220,6 +228,8 @@ impl Glyph {
     /// Lucide `menu`.
     pub const MENU: Self =
         Self(r#"<path d="M4 5h16" /><path d="M4 12h16" /><path d="M4 19h16" />"#);
+    /// Lucide `minus`.
+    pub const MINUS: Self = Self(r#"<path d="M5 12h14" />"#);
     /// Lucide `monitor`.
     pub const MONITOR: Self = Self(
         r#"<rect width="20" height="14" x="2" y="3" rx="2" /><line x1="8" x2="16" y1="21" y2="21" /><line x1="12" x2="12" y1="17" y2="21" />"#,
@@ -348,7 +358,7 @@ impl Glyph {
     pub const X: Self = Self(r#"<path d="M18 6 6 18" /><path d="m6 6 12 12" />"#);
 
     /// Every glyph, with the Lucide name of its vendored file.
-    pub const ALL: [(&str, Self); 90] = [
+    pub const ALL: [(&str, Self); 93] = [
         ("activity", Self::ACTIVITY),
         ("arrow-down", Self::ARROW_DOWN),
         ("arrow-left", Self::ARROW_LEFT),
@@ -380,7 +390,9 @@ impl Glyph {
         ("database", Self::DATABASE),
         ("download", Self::DOWNLOAD),
         ("ellipsis", Self::ELLIPSIS),
+        ("equal-not", Self::EQUAL_NOT),
         ("eye", Self::EYE),
+        ("eye-off", Self::EYE_OFF),
         ("file-clock", Self::FILE_CLOCK),
         ("file-code", Self::FILE_CODE),
         ("file-plus", Self::FILE_PLUS),
@@ -406,6 +418,7 @@ impl Glyph {
         ("log-in", Self::LOG_IN),
         ("log-out", Self::LOG_OUT),
         ("menu", Self::MENU),
+        ("minus", Self::MINUS),
         ("monitor", Self::MONITOR),
         ("moon", Self::MOON),
         ("network", Self::NETWORK),

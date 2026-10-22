@@ -43,6 +43,7 @@ mod overview;
 mod phone;
 mod preferences;
 mod rail;
+mod records;
 mod tables;
 mod upload;
 
@@ -60,6 +61,7 @@ const AREAS: &[&[&str]] = &[
     phone::STATES,
     preferences::STATES,
     rail::STATES,
+    records::STATES,
     tables::STATES,
     upload::STATES,
 ];
@@ -255,6 +257,7 @@ async fn every_state_is_captured_in_every_brand_light_and_dark() -> Result<(), B
                 menus::menu_states(browser, &gallery, brand, theme).await?;
                 keys::keys(browser, &gallery, brand, theme).await?;
                 preferences::preferences(browser, &gallery, brand, theme).await?;
+                records::records(browser, &gallery, brand, theme).await?;
             }
         }
         let missing = unwritten();

@@ -695,6 +695,7 @@ pub fn LayoutsPage() -> impl IntoView {
                 {sections.5}
                 {sections.6}
                 {sections.7}
+                {super::records::timeline_section()}
             },
         )}
     }

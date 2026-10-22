@@ -12,6 +12,7 @@ allow ^(ArrowUp|ArrowDown|ArrowLeft|ArrowRight|Home|End|Enter|Escape|Tab|PageUp|
 allow ^\(width                         # a CSS media query the browser code matches
 allow ^(Esc|Space|Ctrl|Control|Shift|Alt|Meta)$  # a key as printed on its cap and as aria-keyshortcuts names it
 allow ^Ctrl s$                          # a shortcut's keys, drawn as key caps
+allow ^j k \| up down$                 # a shortcut's keys, drawn as key caps
 allow ^(checkbox|radio|button|submit|reset|range|color|file|image)$   # the input types that take no typed text
 allow ^Ferro(BRIDGE|FED|EHR|TERM|PIX)$ # product names, the same in every language
 allow ^Cadasto B\.V\.$                  # the maker's legal name
@@ -21,11 +22,14 @@ allow ^M\{                              # SVG path data
 allow ^(Zz|Tt )$                        # the bytes a timestamp parser accepts
 allow ^\{\}T\{\}Z?$                     # the HTML machine form of a date-time
 allow ^\{id\}-L                         # an editor line's id
+allow ^(tbody|thead|tr\[data-key|a\[href\]) # the CSS selectors of the work-list's rows and controls, which the browser code reads
+allow ^\\u\{2013\}$                     # the en dash an absent compare value draws, hidden from a reader beside its word
 allow ^input:checked, select,           # the CSS selector of a preference's chosen control, which the browser code focuses
 allow ^month \{month\} of \{year\} has \{\} days$   # a refused date's diagnostic for a console's log; a reader sees the catalog's words
 
 # The gallery: the synthetic data it draws, and its server.
 skip app/ferrohealth-ui-gallery/src/data.rs     # the synthetic rows and documents the gallery draws as data
+skip app/ferrohealth-ui-gallery/src/records_data.rs  # the synthetic people, records and identifiers the record components draw as data
 skip app/ferrohealth-ui-gallery/src/server.rs   # the HTTP server: headers, policies, environment names, a malformed post's refusal
 allow ^SYN-[0-9]+$                      # the gallery's synthetic codes
 allow ^synthetic-node-[a-z]$            # a synthetic node's name, drawn as code

@@ -317,6 +317,19 @@ fn header(column: &Column, sorting: &Sorting<'_>) -> AnyView {
         .as_deref()
         .or(sorting.stated.filter(|_| leads))
         .map(str::to_owned);
+    if column.role == Role::Check {
+        // NOTE: leptos-ui.md §15.8: a select-all only script can work stays hidden until a
+        // work-list island shows it (`crate::widget::worklist`).
+        let name = label.clone();
+        return view! {
+            <th scope="col" title=title>
+                <span class="fui-sr-only">{label}</span>
+                <input type="checkbox" class="fui-select-all" aria-label=name hidden />
+            </th>
+        }
+        .attr("class", class)
+        .into_any();
+    }
     if column.role.hides_header() {
         return view! {
             <th scope="col" title=title>

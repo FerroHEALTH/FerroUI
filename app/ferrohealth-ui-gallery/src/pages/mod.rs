@@ -15,6 +15,7 @@ pub mod layouts;
 pub mod overlays;
 pub mod overview;
 pub mod preferences;
+pub mod records;
 pub mod sign_in;
 pub mod tables;
 pub mod templates;
