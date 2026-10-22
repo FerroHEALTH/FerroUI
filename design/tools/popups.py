@@ -16,7 +16,6 @@ import sys
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import chrome as browser  # noqa: E402
-import design_set  # noqa: E402
 
 PROBE = r"""(() => {
 const out = [];
@@ -49,21 +48,15 @@ for (const pop of document.querySelectorAll('.fui-listbox, .fui-menu, .fui-popov
 return out; })()"""
 
 
-def worker(site, chrome, session, slugs):
-    found = []
-    for slug in slugs:
-        for width, theme in ((1440, "light"), (1440, "dark"), (390, "light")):
-            browser.load(chrome, session, site.page_url(slug), width, theme=theme, still=True)
-            for hit in browser.evaluate(chrome, session, PROBE) or []:
-                found.append((slug, f"{width}-{theme}", *[str(x) for x in hit]))
-    return found
+LOADS = tuple({"width": width, "theme": theme, "still": True} for width, theme in ((1440, "light"), (1440, "dark"), (390, "light")))
+
+
+def measure(chrome, session, slug, load):
+    return [(slug, f"{load['width']}-{load['theme']}", *[str(x) for x in hit]) for hit in browser.evaluate(chrome, session, PROBE) or []]
 
 
 def main():
-    site, only = design_set.site_from_argv(__doc__)
-    slugs = [s for s in site.slugs() if not only or s in only]
-    findings = browser.run(site, "popups", slugs, worker)
-    return site.verdict("popups", findings, set(slugs))
+    return browser.main_one("popups", __doc__)
 
 
 if __name__ == "__main__":

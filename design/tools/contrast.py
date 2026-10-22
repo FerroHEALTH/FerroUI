@@ -14,7 +14,6 @@ import time
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import chrome as browser  # noqa: E402
-import design_set  # noqa: E402
 
 PROBE = r"""
 (() => {
@@ -58,22 +57,16 @@ PROBE = r"""
 """
 
 
-def worker(site, chrome, session, slugs):
-    found = []
-    for slug in slugs:
-        for theme in ("light", "dark"):
-            browser.load(chrome, session, site.page_url(slug), 1440, theme=theme, reduced_motion=True, still=True)
-            time.sleep(0.3)
-            for tag, ratio, need, text in browser.evaluate(chrome, session, PROBE) or []:
-                found.append((slug, theme, tag, f"{ratio} < {need}", text))
-    return found
+LOADS = tuple({"width": 1440, "theme": theme, "reduced_motion": True, "still": True} for theme in ("light", "dark"))
+
+
+def measure(chrome, session, slug, load):
+    time.sleep(0.3)
+    return [(slug, load["theme"], tag, f"{ratio} < {need}", text) for tag, ratio, need, text in browser.evaluate(chrome, session, PROBE) or []]
 
 
 def main():
-    site, only = design_set.site_from_argv(__doc__)
-    slugs = [s for s in site.slugs() if not only or s in only]
-    findings = browser.run(site, "contrast", slugs, worker)
-    return site.verdict("contrast", findings, set(slugs))
+    return browser.main_one("contrast", __doc__)
 
 
 if __name__ == "__main__":

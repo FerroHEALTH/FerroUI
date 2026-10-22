@@ -20,6 +20,8 @@
 # failed build leaves no stamp and a stale bundle is never measured.
 #
 # Usage: scripts/release/gallery-site.sh [--release]
+#   --release builds the wasm-release profile CI and the budget measure;
+#   without it, the fast wasm-dev profile the local journeys use.
 set -Eeuo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"

@@ -9,11 +9,21 @@
 #      for the root Cargo.toml after checkout, which hashFiles() at `if:` time
 #      cannot): fmt, clippy on the host and on wasm32, nextest with the
 #      contrast test, rustdoc, cargo-deny, the publish dry run.
-#   3. The gallery tier runs when the gallery exists: the release site bundle
-#      with its size budget and path check, then the browser journeys and the
-#      screenshot capture in Chrome for Testing.
+#   3. The gallery tier runs when the change reaches the gallery: the release
+#      site bundle with its size budget and path check, then the browser
+#      journeys and the screenshot capture in Chrome for Testing.
 #   4. The design tier builds the console design library's pages (design/)
-#      and runs its checks in headless Chrome, one job per design set.
+#      and runs its checks in headless Chrome, one job per design set the
+#      change reaches.
+#
+# What a change reaches is scripts/checks/affected.sh's answer over the
+# paths it touches (the `detect` job); a push to main and a manual run reach
+# everything. A merge-group run leaves out the per-file lints (zizmor,
+# actionlint, shellcheck, comment-style, todo-issues, rustfmt, lucide,
+# design-licence): a pull request enters the queue only with `conclusion`
+# green on its head, and the push to main runs them again over the merged
+# tree. Every job that builds, tests or renders the merged tree runs in the
+# queue.
 #
 # The `conclusion` job is the single required status check on main.
 name: CI
@@ -38,6 +48,7 @@ jobs:
   # ---- Tier 1 ---------------------------------------------------------------
   workflow-audit:
     name: zizmor
+    if: github.event_name != 'merge_group'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -58,6 +69,7 @@ jobs:
 
   workflow-lint:
     name: actionlint
+    if: github.event_name != 'merge_group'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -79,6 +91,7 @@ jobs:
 
   shellcheck:
     name: shellcheck
+    if: github.event_name != 'merge_group'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -96,9 +109,15 @@ jobs:
         run: bash scripts/release/milestone.sh --self-test
       - name: The crate version guard reads files past the pipe buffer and refuses a missing section
         run: bash scripts/checks/crate-version-guard.sh --self-test
+      - name: The change classifier, the local gate and the Chrome lock pass their self-tests
+        run: |
+          bash scripts/checks/affected.sh --self-test
+          bash scripts/fast.sh --self-test
+          bash scripts/chrome-lock.sh --self-test
 
   comment-style:
     name: comment-style
+    if: github.event_name != 'merge_group'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -141,6 +160,7 @@ jobs:
   # Every TODO(#N) names an open issue.
   todo-issues:
     name: todo-issues
+    if: github.event_name != 'merge_group'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -184,21 +204,63 @@ jobs:
     outputs:
       cargo: ${{ steps.find.outputs.cargo }}
       gallery: ${{ steps.find.outputs.gallery }}
+      design: ${{ steps.find.outputs.design }}
     steps:
+      # Two commits: a pull request's checkout is its merge commit, whose
+      # first parent is the base it merges into.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 2
       - id: find
+        env:
+          EVENT: ${{ github.event_name }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          QUEUE_BASE: ${{ github.event.merge_group.base_sha }}
+          QUEUE_HEAD: ${{ github.event.merge_group.head_sha }}
         run: |
           set -euo pipefail
-          if [ -f Cargo.toml ]; then echo "cargo=true"; else echo "cargo=false"; fi >> "$GITHUB_OUTPUT"
-          if [ -f app/ferrohealth-ui-gallery/Cargo.toml ]; then echo "gallery=true"; else echo "gallery=false"; fi >> "$GITHUB_OUTPUT"
+          case "$EVENT" in
+            pull_request)
+              git diff --name-only HEAD^1 HEAD > "$RUNNER_TEMP/changed"
+              ;;
+            merge_group)
+              # The compare API lists at most 300 files; a longer list reaches everything.
+              gh api "repos/$GH_REPO/compare/$QUEUE_BASE...$QUEUE_HEAD" --jq '.files[].filename' > "$RUNNER_TEMP/changed"
+              ;;
+          esac
+          if [ -f "$RUNNER_TEMP/changed" ] && [ "$(wc -l < "$RUNNER_TEMP/changed")" -lt 300 ]; then
+            echo "changed paths:"
+            sed 's/^/  /' "$RUNNER_TEMP/changed"
+            plan="$(bash scripts/checks/affected.sh < "$RUNNER_TEMP/changed")"
+          else
+            plan="$(bash scripts/checks/affected.sh --all)"
+          fi
+          echo "$plan"
+          get() { printf '%s\n' "$plan" | sed -n "s/^$1=//p"; }
+          {
+            if [ -f Cargo.toml ]; then echo "cargo=true"; else echo "cargo=false"; fi
+            if [ -f app/ferrohealth-ui-gallery/Cargo.toml ] && [ "$(get gallery)" = true ]; then
+              echo "gallery=true"
+            else
+              echo "gallery=false"
+            fi
+            # GitHub runs at most five macOS jobs at once on this plan, so a
+            # change that reaches one or two sets runs each console in two
+            # jobs (every other page in one), and a wider change one job per set.
+            get design | tr ' ' '\n' | jq -nRr '
+              [inputs | select(length > 0)]
+              | (length <= 2) as $halve
+              | map(if $halve and . != "templates" then {set: ., part: "1/2"}, {set: ., part: "2/2"} else {set: ., part: ""} end)
+              | "design=" + tojson'
+          } | tee -a "$GITHUB_OUTPUT"
 
   # ---- Tier 2 ---------------------------------------------------------------
   fmt:
     name: rustfmt
     needs: detect
-    if: needs.detect.outputs.cargo == 'true'
+    if: github.event_name != 'merge_group' && needs.detect.outputs.cargo == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -307,7 +369,7 @@ jobs:
   lucide:
     name: lucide
     needs: detect
-    if: needs.detect.outputs.cargo == 'true'
+    if: github.event_name != 'merge_group' && needs.detect.outputs.cargo == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -373,48 +435,24 @@ jobs:
           comment-summary-in-pr: on-failure
 
   # ---- Tier 3 ---------------------------------------------------------------
-  gallery-bundle:
-    name: gallery (site bundle and budget)
-    needs: detect
-    if: needs.detect.outputs.gallery == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-rust
-        with:
-          target: wasm32-unknown-unknown
-          cache-save-if: ${{ github.ref == 'refs/heads/main' }}
-      - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
-        with:
-          tool: cargo-leptos@0.3.11,wasm-bindgen@0.2.129
-      # Pinned and checked against their SHA-256, so cargo-leptos downloads
-      # neither itself.
-      - name: Install the Tailwind CSS CLI and wasm-opt
-        run: |
-          bash scripts/release/gallery-tools.sh "$RUNNER_TEMP/gallery-tools"
-          echo "$RUNNER_TEMP/gallery-tools/bin" >> "$GITHUB_PATH"
-      - run: bash scripts/release/gallery-site.sh --release
-      # The sizes go to the job summary; the step fails above the budget of
-      # .claude/rules/leptos-ui.md §12.
-      - run: bash scripts/checks/gallery-bundle.sh
-      - run: bash scripts/checks/gallery-paths.sh
-
-  # The journeys, the painted-colour check and the screenshot capture, in
-  # headless Chrome for Testing at the pinned release. A journey fails on
-  # any error the browser logs. The screenshots are uploaded for review.
-  gallery-browser:
-    name: gallery (browser)
+  # The release site bundle, then in headless Chrome for Testing at the
+  # pinned release, as two jobs side by side over a bundle each builds: the
+  # bundle's size budget and path check with the journeys and the
+  # painted-colour check, and the screenshot capture. A journey or a shot
+  # fails on any error the browser logs. The screenshots are uploaded for
+  # review.
+  gallery:
+    name: gallery (${{ matrix.part }})
     needs: detect
     if: needs.detect.outputs.gallery == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [journeys, capture]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -437,19 +475,28 @@ jobs:
           chrome-version: 155.0.8059.79
           install-chromedriver: true
       - run: bash scripts/release/gallery-site.sh --release
+      # The sizes go to the job summary; the step fails above the budget of
+      # .claude/rules/leptos-ui.md §12.
+      - if: matrix.part == 'journeys'
+        run: bash scripts/checks/gallery-bundle.sh
+      - if: matrix.part == 'journeys'
+        run: bash scripts/checks/gallery-paths.sh
       - name: Run the journeys
+        if: matrix.part == 'journeys'
         env:
           FERROUI_JOURNEYS: "1"
           FERROUI_CHROME: ${{ steps.chrome.outputs.chrome-path }}
           FERROUI_CHROMEDRIVER: ${{ steps.chrome.outputs.chromedriver-path }}
         run: cargo nextest run --locked -p ferrohealth-ui-gallery
       - name: Capture the screenshots
+        if: matrix.part == 'capture'
         env:
           FERROUI_SCREENSHOTS: "1"
           FERROUI_CHROME: ${{ steps.chrome.outputs.chrome-path }}
           FERROUI_CHROMEDRIVER: ${{ steps.chrome.outputs.chromedriver-path }}
         run: cargo nextest run --locked -p ferrohealth-ui-gallery -E 'test(every_page_is_captured)'
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      - if: matrix.part == 'capture'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: gallery-screenshots
           path: docs/screenshots/
@@ -459,6 +506,7 @@ jobs:
   # Every first-party file of the design library carries the SPDX lines.
   design-licence:
     name: design-licence
+    if: github.event_name != 'merge_group'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -469,14 +517,17 @@ jobs:
           persist-credentials: false
       - run: bash scripts/checks/spdx.sh design scripts/checks/spdx.sh
 
-  # The design pages of each set, built and checked: links, the BSN
-  # eleven-proof, plurals and one-sentence intros, then overflow and broken
-  # words, hover stability, contrast, selects, popups and forms in headless
-  # Chrome at the gallery's pinned release. macOS, because the approved renders and every
-  # baseline.tsv were drawn with its system font, which the overflow and
-  # broken-word checks measure.
+  # The design pages of each set the change reaches, built and checked:
+  # links, the BSN eleven-proof, plurals and one-sentence intros, then
+  # overflow and broken words, hover stability, contrast, selects, popups
+  # and forms, all read from one render of each page in headless Chrome at
+  # the gallery's pinned release. macOS, because the approved renders and
+  # every baseline.tsv were drawn with its system font, which the overflow
+  # and broken-word checks measure.
   design:
-    name: design (${{ matrix.set }})
+    name: design (${{ matrix.set }}${{ matrix.part && format(' {0}', matrix.part) || '' }})
+    needs: detect
+    if: needs.detect.outputs.design != '[]'
     runs-on: macos-15
     timeout-minutes: 30
     permissions:
@@ -484,7 +535,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        set: [templates, ferrobridge, ferroehr, ferrofed, ferropix, ferroterm]
+        include: ${{ fromJSON(needs.detect.outputs.design) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -501,6 +552,7 @@ jobs:
         env:
           FERROUI_CHROME: ${{ steps.chrome.outputs.chrome-path }}
           DESIGN_SET: ${{ matrix.set }}
+          FERROUI_DESIGN_PART: ${{ matrix.part }}
         run: bash design/tools/check.sh "$DESIGN_SET"
 
   # ---- The single required check --------------------------------------------
@@ -527,8 +579,7 @@ jobs:
       - publish-dry-run
       - crate-version-guard
       - dependency-review
-      - gallery-bundle
-      - gallery-browser
+      - gallery
       - design-licence
       - design
     if: always()

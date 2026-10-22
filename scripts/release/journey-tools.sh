@@ -2,8 +2,8 @@
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # Installs the browser the gallery's journeys and screenshots drive, Chrome
-# for Testing and its matching chromedriver, at the release the `gallery
-# (browser)` job of ci.yml pins, each zip checked against its pinned SHA-256
+# for Testing and its matching chromedriver, at the release the `gallery`
+# jobs of ci.yml pin, each zip checked against its pinned SHA-256
 # before it is unpacked (no specification governs this: our own design).
 #
 # The download URLs come from the Chrome for Testing JSON API, for the one

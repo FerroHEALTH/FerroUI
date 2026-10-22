@@ -53,7 +53,14 @@ default). The renders are never committed; the five consoles come to about
 design/tools/check.sh ferrobridge      # or all
 ```
 
-The checks are the ones CI runs, one job per set:
+The checks are the ones CI runs for each set a change reaches
+(`scripts/checks/affected.sh`); when a change reaches one or two sets, each
+console runs in two jobs (`FERROUI_DESIGN_PART=1/2` and `2/2`). After the build, `sweep.py` loads
+each page once per width, colour scheme and motion setting and runs every
+browser check over that load; each check also runs alone
+(`python3 design/tools/hover.py <set>`). `check.sh` and `render.sh` hold the
+machine-wide Chrome lock (`scripts/chrome-lock.sh`), so worktrees take
+turns.
 
 - **Build** (`build.py`): every internal link resolves to a page; no
   nine-digit run passes the BSN eleven-proof; no button-looking link leads

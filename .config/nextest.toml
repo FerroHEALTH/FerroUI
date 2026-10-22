@@ -8,5 +8,5 @@
 browser = { max-threads = 4 }
 
 [[profile.default.overrides]]
-filter = 'package(ferrohealth-ui-gallery) & (test(/^journeys::/) | test(/^widgets::/) | test(/^painted::/) | test(/^states::/) | test(/^screenshots::every_page/))'
+filter = 'package(ferrohealth-ui-gallery) & (test(/^journeys::/) | test(/^widgets::/) | test(/^painted::/) | test(/^states::/) | test(/^no_wasm::/) | test(/^tabs_and_toasts::/) | test(/^screenshots::(every_page|one_brand)/))'
 test-group = 'browser'

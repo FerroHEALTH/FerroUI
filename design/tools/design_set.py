@@ -11,6 +11,7 @@ common.py draws with it and one that keeps none draws with the library's.
 Output goes under design/out/<name>/, which git ignores: pages/ holds the
 HTML with its stylesheets and icons, renders/ the PNGs, and index.html the
 contact sheet."""
+import hashlib
 import importlib
 import os
 import shutil
@@ -57,7 +58,9 @@ class Site:
         self.pages_dir = os.path.join(self.out, "pages")
         self.renders_dir = os.path.join(self.out, "renders")
         cache = os.environ.get("XDG_CACHE_HOME") or os.path.join(os.path.expanduser("~"), ".cache")
-        self.state_dir = os.environ.get("MOCKUP_STATE_DIR") or os.path.join(cache, "ferroui-design", name)
+        # NOTE: no specification governs this: our own design; each checkout keeps its own browser profiles, so two worktrees never share one.
+        checkout = hashlib.sha256(REPO.encode()).hexdigest()[:12]
+        self.state_dir = os.environ.get("MOCKUP_STATE_DIR") or os.path.join(cache, "ferroui-design", checkout, name)
         for path in (TOOLS, TEMPLATES, self.src):
             if path in sys.path:
                 sys.path.remove(path)
@@ -136,6 +139,21 @@ def chrome_binary():
         if found:
             return found
     raise SystemExit("no Chrome found: set FERROUI_CHROME to the browser binary")
+
+
+def in_part(slugs):
+    """The slugs of the part FERROUI_DESIGN_PART names, `k/n` for every nth
+    slug from the kth (CI checks a large set in two jobs), else all."""
+    part = os.environ.get("FERROUI_DESIGN_PART")
+    if not part:
+        return slugs
+    try:
+        k, n = (int(x) for x in part.split("/"))
+    except ValueError:
+        raise SystemExit(f"FERROUI_DESIGN_PART={part!r} is not k/n")
+    if not 1 <= k <= n:
+        raise SystemExit(f"FERROUI_DESIGN_PART={part!r} names no part")
+    return slugs[k - 1::n]
 
 
 def site_from_argv(usage):

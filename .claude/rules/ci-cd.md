@@ -23,16 +23,62 @@ Actions Security Cheat Sheet, SLSA v1.0, OpenSSF Scorecard, and Sigstore.
   run --workspace --locked` plus `cargo test --doc --locked`; `cargo doc` with
   `RUSTDOCFLAGS=-D warnings`; `cargo deny check`; `cargo publish -p
   ferrohealth-ui --dry-run --locked`; the crate-version guard and
-  `dependency-review-action` on pull requests), and the gallery tier (the
-  release bundle with the path and size checks of
-  `scripts/checks/gallery-bundle.sh`, then the journeys and the screenshot
-  capture in Chrome for Testing, the screenshots uploaded as an artifact).
-  The design tier builds the pages of `design/` and runs `design/tools/check.sh`
-  per design set on macOS with Chrome at the gallery's release, and
-  `design-licence` holds every design file to the SPDX lines
-  (`scripts/checks/spdx.sh`). The contrast test runs inside nextest. The
-  `conclusion` job is the single
-  required status check on `main`.
+  `dependency-review-action` on pull requests), and the gallery tier (two
+  jobs side by side, each over its own release bundle: the path and size
+  checks of `scripts/checks/gallery-bundle.sh` with the journeys, and the
+  screenshot capture in Chrome for Testing, the screenshots uploaded as an
+  artifact). The design tier builds the pages of `design/` and runs
+  `design/tools/check.sh` per design set on macOS with Chrome at the
+  gallery's release, every browser check reading one render of each page
+  (`design/tools/sweep.py`); when a change reaches at most two sets, each
+  console runs as two jobs (`FERROUI_DESIGN_PART`), since GitHub runs at
+  most five macOS jobs at once; `design-licence` holds every design file to the
+  SPDX lines (`scripts/checks/spdx.sh`). The contrast test runs inside
+  nextest. The `conclusion` job is the single required status check on
+  `main`: it passes when every job it needs passed or was skipped.
+- **What a change reaches** is `scripts/checks/affected.sh`'s answer over
+  the paths it touches, read by the `detect` job: a pull request's merge
+  commit against its base, a merge group against the queue's base, and
+  everything on a push to `main` or a manual run. The gallery job runs when
+  the crates, the gallery, the workspace manifests or the gallery scripts
+  change; a design set runs when its own sources, its brand's theme, the
+  shared design tools, templates and stylesheets, or the crate's stylesheet
+  change. Markdown reaches neither. The CI workflow, its actions and the
+  classifier itself reach everything, so a change to the gate runs the
+  whole gate. Each rule of the table has a case in its `--self-test`.
+- **The merge queue reruns what a merge can break**: clippy, nextest and
+  the doctests, rustdoc, cargo-deny, the publish dry run, the gallery job
+  and the design sets the group reaches. It leaves out the per-file lints
+  (zizmor, actionlint, shellcheck, comment-style, todo-issues, rustfmt,
+  lucide, design-licence): a pull request joins the queue only with
+  `conclusion` green on its head, those lints read each file alone, and the
+  push to `main` runs every one of them again over the merged tree.
+- **The Rust build cache** is `Swatinem/rust-cache` inside
+  `actions-rust-lang/setup-rust-toolchain`, both pinned by commit, through
+  `.github/actions/setup-rust` in every job that compiles; only `main`
+  saves it, and rustfmt, cargo-deny and the publish dry run restore none.
+
+## The local gate and the CI gate
+
+`scripts/fast.sh` is the local gate: rustfmt, clippy on the reached
+packages (wasm32 only when browser code changed), nextest and the doctests,
+the journeys of the touched area against the gallery built with the fast
+`wasm-dev` profile, and `design/tools/check.sh` for each reached design set.
+It reads the same table as `detect`, from the merge base with `origin/main`
+to the working tree. It never runs the screenshot capture; capture only the
+pages a change touches with `FERROUI_SCREENSHOT_PAGES`. CI is the full
+gate: the release bundle and its budget, every journey, the capture, and
+every reached design set.
+
+The browser steps hold one machine-wide lock (`scripts/chrome-lock.sh`, a
+`mkdir` lock under `$TMPDIR` with a stale timeout), so parallel worktrees
+queue for Chrome instead of crashing it. `design/tools/check.sh` and
+`render.sh` take it themselves; wrap any other browser run:
+`scripts/chrome-lock.sh env FERROUI_SCREENSHOTS=1 cargo nextest run …`.
+
+A compile cache makes a fresh worktree's first build much faster. sccache
+works (`build.rustc-wrapper` in your own `~/.cargo/config.toml`); the
+repository neither needs nor configures one.
 - `.github/workflows/codeql.yml`: CodeQL over the `actions` language and Rust.
 - `.github/workflows/scorecard.yml`: OpenSSF Scorecard, published to the
   OpenSSF API and to code scanning.
@@ -64,7 +110,8 @@ Actions Security Cheat Sheet, SLSA v1.0, OpenSSF Scorecard, and Sigstore.
 - **A publishing lane restores no build cache.**
 
 Run `zizmor --min-severity=low .github/`, `actionlint` and `shellcheck
---severity=style` by hand before pushing a workflow or script change. A
+--severity=style` by hand before pushing a workflow or script change, and
+the `--self-test` of every script you touch. A
 finding is fixed, or carries a `# zizmor: ignore[audit]` or `# shellcheck
 disable=SCnnnn` with its reason on the line it names; no `.shellcheckrc`
 exists.
