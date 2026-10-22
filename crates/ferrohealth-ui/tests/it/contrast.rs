@@ -336,18 +336,18 @@ fn a_brand_sets_its_accent_alone() {
 
 #[test]
 fn a_preview_accent_is_the_accent_of_its_theme() {
-    for brand in Brand::ALL {
-        let css = strip_comments(brand.theme());
+    for brand in std::iter::once(None).chain(Brand::ALL.into_iter().map(Some)) {
+        let css = strip_comments(brand.map_or(STYLESHEET, Brand::theme));
         let previews = colours(&block(&css, BLOCKS[0].1));
-        let [(_, light), (_, dark), _] = themes(Some(brand)).try_into().expect("three themes");
+        let [(_, light), (_, dark), _] = themes(brand).try_into().expect("three themes");
         for (name, theme) in PREVIEW.into_iter().zip([light, dark]) {
-            if let Some(preview) = previews.get(name) {
-                assert_eq!(
-                    Some(preview),
-                    theme.get("accent"),
-                    "{brand:?}: --{name} is the accent of its theme, so the accent pairs hold it"
-                );
-            }
+            let preview = previews.get(name);
+            assert!(preview.is_some(), "{brand:?} sets no --{name}");
+            assert_eq!(
+                preview,
+                theme.get("accent"),
+                "{brand:?}: --{name} is the accent of its theme, so the accent pairs hold it"
+            );
         }
     }
 }

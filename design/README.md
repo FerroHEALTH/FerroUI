@@ -4,7 +4,7 @@
 # The console design library
 
 This directory holds the approved design of the FerroHEALTH consoles: the
-component specification, the console stylesheet, the brand themes, the
+component specification, the capture scaffolding, the brand themes, the
 reference templates and every page of the five console mockups (FerroPIX,
 FerroFED, FerroBRIDGE, FerroTERM and the FerroEHR viewer). It is the
 source of truth for FerroUI 0.3.0: the library's components are built to
@@ -13,15 +13,16 @@ match it.
 | Path | What it is |
 |---|---|
 | `COMPONENTS.md` | The specification: the family rules, the templates T1 to T3 and About, the table, and every component (R1 to R29, F1 to F14, B1 to B10, M1 to M6, E1 to E8 and the additions). |
-| `css/ferroui-console.css` | The console component layer the mockups draw with, over the crate's `crates/ferrohealth-ui/css/ferrohealth-ui.css`. Rules prefixed `mk-` are capture scaffolding, never component API. |
+| `css/ferroui-console.css` | The capture scaffolding the mockups draw with, over the crate's `crates/ferrohealth-ui/css/ferrohealth-ui.css`: an open dialog, menu or picker drawn in the page, and a hover or focus held still. Every rule is prefixed `mk-` and is never component API. |
 | `themes/` | One brand file per console: its accents and the two preview accents Your preferences draws. |
 | `templates/` | The reference templates' page table (`catalog.py`), manifest and the library's helpers (`common.py`, `data.py`). |
 | `consoles/<console>/` | One console's page modules, its manifest (`pages.py`), its page table (`catalog.py`), the words of its contact sheet (`console.py`), its brand icons (`assets/`) and its `baseline.tsv`. |
 | `tools/` | The shared tools: the build with its markup checks, the renderer, the browser checks (overflow, hover, contrast, selects, popups, forms), the contact sheet, and the sync. |
 
-The mockups draw with the crate's own base stylesheet, copied beside the
-pages at build time, so a mockup shows what a console ships. The library's
-own copy of `ferrohealth-ui.css` is never kept here.
+The mockups draw with the crate's own stylesheet, copied beside the pages
+at build time, so a mockup shows what a console ships. It holds every
+component rule and the family rules as CSS; the library's own copy of
+`ferrohealth-ui.css` is never kept here.
 
 `COMPONENTS.md` keeps the words of the design folder it came from, so its
 "What is in this folder" table and its commands name that folder's layout.
@@ -95,7 +96,8 @@ where the approved renders were drawn.
 A component change lands in this order:
 
 1. `COMPONENTS.md`, the specification;
-2. `css/ferroui-console.css`, and a theme file when a brand changes;
+2. the crate's `crates/ferrohealth-ui/css/ferrohealth-ui.css`, and a theme
+   file when a brand changes (`themes/` here and the crate's `themes/`);
 3. every console that draws the component, re-rendered with
    `design/tools/render.sh all`, each changed image looked at, and checked
    with `design/tools/check.sh all`.
@@ -113,8 +115,10 @@ this directory's copy in one command:
 python3 design/tools/sync.py ~/Downloads
 ```
 
-The sync copies the specification, the stylesheet, the themes and every
-console's page modules; drops a module that is identical to the shared one
+The sync copies the specification, the themes and every console's page
+modules; it copies no stylesheet, and says so, since a revised layer is
+merged by hand into the crate's stylesheet (its component rules) and
+`css/ferroui-console.css` (its `mk-` rules); drops a module that is identical to the shared one
 it would shadow; turns each console's `build.py` into `catalog.py` and its
 `index.py` into `console.py`, keeping a `route_pages()` beside the page
 table; and adds the SPDX lines. It keeps each

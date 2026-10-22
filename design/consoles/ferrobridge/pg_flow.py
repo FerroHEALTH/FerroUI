@@ -50,7 +50,7 @@ def tnode(kind, g, x, y, name, line, tone, label, w, h=H, cls="", href="#", mono
     body = (f'<title>{e(label)}</title><rect class="fui-tnode-box" width="{w}" height="{h}" rx="8"/><rect class="fui-tnode-bar" width="4" height="{h - 16}" x="0" y="8" rx="2"/>'
             f'<g class="fui-tnode-glyph">{glyph(g, 14, h / 2 - 9)}</g>'
             f'<text class="fui-tnode-name{m}" x="42" y="{h / 2 - 4}">{e(fit(name, int((w - 50) / 6.4)))}</text>'
-            f'{dot}<text class="fui-tnode-line" x="{lx}" y="{h / 2 + 14}">{e(fit(line, int((w - lx - 8) / 5.5)))}</text>')
+            f'{dot}<text class="fui-tnode-line" x="{lx}" y="{h / 2 + 14}">{e(fit(line, int((w - lx - 8) / 6.0)))}</text>')
     return (f'<g class="fui-tnode fui-tnode-{kind} fui-tone-{t}{extra}" transform="translate({x} {y})">'
             f'<a class="fui-tnode-link" href="{href}" aria-label="{e(label)}">{body}</a></g>')
 

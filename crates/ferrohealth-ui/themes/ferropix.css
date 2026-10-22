@@ -36,7 +36,7 @@
 }
 
 /* The accents the theme previews in Your preferences draw, one per theme,
-   whatever theme the page itself is in (shared library). */
+   whatever theme the page itself is in. */
 :root {
   --preview-accent-light: #6b21a8;
   --preview-accent-dark: #c084fc;
