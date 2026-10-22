@@ -148,6 +148,61 @@ pub const FHIRCONNECT: &str = "FHIRconnect";
 /// The codes of the two synthetic findings on [`MAPPING`].
 pub const FINDING_CODES: [&str; 2] = ["FC-201", "FC-114"];
 
+/// The path of the synthetic draft the code editor holds.
+pub const DRAFT_PATH: &str = "fhirconnect/gallery-weight.context.yml";
+
+/// The synthetic draft as it was opened: a note that holds markup, which a
+/// form posts as typed, and one line long enough to scroll sideways.
+pub const DRAFT_OPENED: &str = "grammar: FHIRConnect/v1.0.0
+type: context
+metadata:
+  name: gallery-weight.context
+  version: 1.0.0
+  note: \"Kept as typed: </textarea> & <b> stay text.\"
+spec:
+  system: FHIR
+  version: R4
+context:
+  profile:
+    url: \"http://example.org/fhir/StructureDefinition/gallery-weight-with-a-canonical-long-enough-to-run-past-the-editor\"
+  template:
+    id: \"gallery.template.v1\"
+  start: \"gallery_archetype\"
+  retries: 3
+";
+
+/// The synthetic draft the code editor holds: [`DRAFT_OPENED`] with its
+/// retries changed into words, which a check refuses.
+pub const DRAFT_TEXT: &str = "grammar: FHIRConnect/v1.0.0
+type: context
+metadata:
+  name: gallery-weight.context
+  version: 1.0.0
+  note: \"Kept as typed: </textarea> & <b> stay text.\"
+spec:
+  system: FHIR
+  version: R4
+context:
+  profile:
+    url: \"http://example.org/fhir/StructureDefinition/gallery-weight-with-a-canonical-long-enough-to-run-past-the-editor\"
+  template:
+    id: \"gallery.template.v1\"
+  start: \"gallery_archetype\"
+  retries: three
+";
+
+/// The draft's findings: its code, line and column.
+pub const DRAFT_FINDINGS: [(&str, u32, u32); 2] = [("FC-114", 6, 3), ("FC-201", 16, 12)];
+
+/// The mapping the draft's findings belong to.
+pub const DRAFT_MAPPING: &str = "gallery_weight";
+
+/// The code of a finding about the whole of the draft.
+pub const WHOLE_FINDING: &str = "FC-100";
+
+/// The mapping the findings on [`MAPPING`] belong to.
+pub const CONTEXT_MAPPING: &str = "gallery_context";
+
 /// The file names the four language viewers carry in their heads.
 pub const FILE_NAMES: [&str; 4] = [
     "fhirconnect/gallery.context.yml",

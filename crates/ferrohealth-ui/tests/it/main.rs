@@ -19,6 +19,7 @@
 mod console;
 mod contrast;
 mod dock;
+mod editor;
 mod fields;
 mod figures;
 mod kbd;

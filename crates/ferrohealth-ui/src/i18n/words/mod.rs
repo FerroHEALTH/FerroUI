@@ -32,7 +32,9 @@ macro_rules! texts {
 mod charts;
 mod controls;
 mod date;
+mod diagnostics;
 mod documents;
+mod editor;
 mod error_page;
 mod language;
 mod preferences;
@@ -50,7 +52,9 @@ pub(super) const AREAS: &[(&str, &[crate::i18n::Text])] = &[
     ("charts", charts::ALL),
     ("controls", controls::ALL),
     ("date", date::ALL),
+    ("diagnostics", diagnostics::ALL),
     ("documents", documents::ALL),
+    ("editor", editor::ALL),
     ("error_page", error_page::ALL),
     ("language", language::ALL),
     ("preferences", preferences::ALL),
@@ -72,11 +76,11 @@ mod tests {
 
     /// The names of the placeables the library's messages take.
     const PLACEABLES: &[&str] = &[
-        "accent", "action", "chart", "code", "count", "date", "day", "days", "document",
-        "earliest", "file", "filter", "first", "from", "held", "key", "kinds", "label", "language",
-        "last", "latest", "limit", "month", "note", "noun", "nouns", "page", "pages", "range",
-        "shown", "size", "stated", "status", "summary", "tab", "time", "title", "to", "total",
-        "value", "weekday", "what", "why", "words", "year",
+        "accent", "action", "chart", "code", "column", "count", "date", "day", "days", "document",
+        "earliest", "errors", "file", "filter", "first", "from", "held", "key", "kinds", "label",
+        "language", "last", "latest", "limit", "line", "mapping", "month", "note", "noun", "nouns",
+        "page", "pages", "range", "shown", "size", "stated", "status", "summary", "tab", "time",
+        "title", "to", "total", "value", "warnings", "weekday", "what", "why", "words", "year",
     ];
 
     /// The ids of the messages the catalog file at `path` defines.

@@ -44,6 +44,8 @@ messages! {
     Canonical = "canonical",
     /// `A canonical and a clause are what a save needs.`
     CanonicalClauseWhatSaveNeeds = "canonical-clause-what-save-needs",
+    /// `Check`
+    Check = "check",
     /// `Choose a code system`
     ChooseCodeSystem = "choose-code-system",
     /// `Choose from the list`
@@ -64,6 +66,8 @@ messages! {
     ClientId = "client-id",
     /// `Its client secret`
     ClientSecret = "client-secret",
+    /// `Code editor`
+    CodeEditor = "code-editor",
     /// `Code system`
     CodeSystem = "code-system",
     /// `A code system this server holds, or the canonical of another.`
@@ -92,8 +96,12 @@ messages! {
     DaysUnit = "days-unit",
     /// `Defer until`
     DeferUntil = "defer-until",
+    /// `Diagnostics by file`
+    DiagnosticsByFile = "diagnostics-by-file",
     /// `Download the whole configuration as TOML`
     DownloadWholeConfigurationToml = "download-whole-configuration-toml",
+    /// The label of the draft of the file `$name`.
+    DraftOf = "draft-of",
     /// The heading of the card of the two editor headers.
     EditorHeaders = "editor-headers",
     /// `An editor that reloads`
@@ -178,10 +186,16 @@ messages! {
     Milliseconds = "milliseconds",
     /// `namespace`
     Namespace = "namespace",
+    /// `New mapping`
+    NewMapping = "new-mapping",
+    /// `The new mapping file`
+    NewMappingFile = "new-mapping-file",
     /// `The new secret`
     NewSecret = "new-secret",
     /// `Next Monday`
     NextMonday = "next-monday",
+    /// `metadata.note is no key of the grammar: it is kept and never read.`
+    NoteKeptNeverRead = "note-kept-never-read",
     /// `Observation status`
     ObservationStatus = "observation-status",
     /// `The one this server resolves to`
@@ -194,6 +208,8 @@ messages! {
     Primary = "primary",
     /// `Primary, disabled`
     PrimaryDisabled = "primary-disabled",
+    /// `The file names no profile the bridge knows.`
+    ProfileUnknown = "profile-unknown",
     /// `Read it again`
     ReadAgain = "read-again",
     /// The reload count: read `$count` times again.
@@ -206,6 +222,8 @@ messages! {
     Replace = "replace",
     /// `Retention`
     Retention = "retention",
+    /// `retries must be a whole number, such as 3.`
+    RetriesMustBeNumber = "retries-must-be-number",
     /// `A reveal inside a reveal`
     RevealInsideReveal = "reveal-inside-reveal",
     /// `Row limit`
@@ -270,6 +288,8 @@ messages! {
     Ucum = "ucum",
     /// `Upload`
     Upload = "upload",
+    /// `UTF-8 · LF`
+    Utf8Lf = "utf-8-lf",
     /// `Version 1`
     Version1 = "version-1",
     /// `A version this server holds, or another one you type.`
@@ -280,4 +300,6 @@ messages! {
     WhereGatewayReachesMember = "where-gateway-reaches-member",
     /// `Why you save it, one line`
     WhyYouSaveOneLine = "why-you-save-one-line",
+    /// `YAML · FHIRconnect context`
+    YamlFhirconnectContext = "yaml-fhirconnect-context",
 }

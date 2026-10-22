@@ -24,6 +24,7 @@
 use ferrohealth_ui::view::help::HelpWords;
 use ferrohealth_ui::widget::combobox::ComboboxWords;
 use ferrohealth_ui::widget::dialog::ModalWords;
+use ferrohealth_ui::widget::editor::EditorWords;
 use ferrohealth_ui::widget::upload::UploadWords;
 use leptos::prelude::*;
 
@@ -178,6 +179,37 @@ pub fn DraftEditor(
     words: Words,
 ) -> impl IntoView {
     crate::pages::forms::editor_body(words)
+}
+
+/// The forms page's code editor beside its diagnostics, in step with its
+/// cursor.
+#[island]
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "an island takes its props by value, as they arrive from the page"
+)]
+pub fn MappingEditor(
+    /// Its words, in the page's locale.
+    words: Words,
+    /// The code editor's own words, in the page's locale.
+    editor: EditorWords,
+) -> impl IntoView {
+    crate::pages::forms::mapping_editor_body(&words, editor)
+}
+
+/// The forms page's code editor of a new, empty file.
+#[island]
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "an island takes its props by value, as they arrive from the page"
+)]
+pub fn NewMappingEditor(
+    /// Its words, in the page's locale.
+    words: Words,
+    /// The code editor's own words, in the page's locale.
+    editor: EditorWords,
+) -> impl IntoView {
+    crate::pages::forms::new_mapping_body(&words, editor)
 }
 
 /// The forms page's editor inside a reloading transition.

@@ -747,6 +747,47 @@ async fn forms_post_and_submit_with_the_webassembly_withheld() -> Result<(), Box
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn the_code_editor_posts_its_draft_unchanged_with_the_webassembly_withheld()
+-> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        withhold_the_webassembly(browser).await?;
+        browser.goto(&gallery.url("/ferrobridge/forms")).await?;
+        let draft = browser.element(By::Id("gallery-mapping")).await?;
+        assert_eq!(
+            Some(String::from(ferrohealth_ui_gallery::data::DRAFT_TEXT)),
+            draft.prop("value").await?,
+            "the server wrote the draft into its text area, markup and all"
+        );
+        let check = browser
+            .element(By::XPath(
+                "//form[.//textarea[@id = 'gallery-mapping']]//button[@type = 'submit']",
+            ))
+            .await?;
+        browser.click_and_load(&check).await?;
+        browser.at(&gallery.url("/draft")).await?;
+        browser.element(By::Id("received")).await?;
+        let received = browser
+            .driver()
+            .execute(
+                "return document.getElementById('received').textContent;",
+                Vec::new(),
+            )
+            .await?;
+        assert_eq!(
+            Some(ferrohealth_ui_gallery::data::DRAFT_TEXT),
+            received.json().as_str(),
+            "the server received the draft unchanged"
+        );
+        leave(browser, "the code editor's post").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn popovers_open_with_the_webassembly_withheld() -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
         return Ok(());

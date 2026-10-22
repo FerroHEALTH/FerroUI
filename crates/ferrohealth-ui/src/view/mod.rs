@@ -6,7 +6,7 @@
 //! They are the title row's action group, the shell, the page templates,
 //! the surfaces, the status marks, the buttons and fields, the help switch,
 //! the tag, the tabs as links, the empty and loading states, the refusal, the error
-//! page, the code viewer, the document pane, the sign-in card, Your
+//! page, the code viewer, the diagnostics list, the document pane, the sign-in card, Your
 //! preferences, the confirmation dialog, the popover form, the timestamp,
 //! the record compare and the timeline.
 //! Each is a plain function
@@ -25,6 +25,7 @@ pub mod change;
 pub mod chart;
 pub mod code;
 pub mod compare;
+pub mod diagnostics;
 pub mod dialog;
 pub mod dock;
 pub mod document;

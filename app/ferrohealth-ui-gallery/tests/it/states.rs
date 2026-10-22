@@ -35,6 +35,7 @@ mod charts;
 mod combobox;
 mod dates;
 mod document;
+mod editor;
 mod fields;
 mod keys;
 mod layouts;
@@ -54,6 +55,7 @@ const AREAS: &[&[&str]] = &[
     combobox::STATES,
     dates::STATES,
     document::STATES,
+    editor::STATES,
     fields::STATES,
     keys::STATES,
     layouts::STATES,
@@ -251,6 +253,7 @@ async fn every_state_is_captured_in_every_brand_light_and_dark() -> Result<(), B
                 layouts::layouts(browser, &gallery, brand, theme).await?;
                 combobox::combobox_states(browser, &gallery, brand, theme).await?;
                 fields::field_states(browser, &gallery, brand, theme).await?;
+                editor::editor(browser, &gallery, brand, theme).await?;
                 dates::date_states(browser, &gallery, brand, theme).await?;
                 tables::compact(browser, &gallery, brand, theme).await?;
                 rail::rail(browser, &gallery, brand, theme).await?;

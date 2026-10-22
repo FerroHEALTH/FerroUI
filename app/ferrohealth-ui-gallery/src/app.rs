@@ -76,6 +76,10 @@ pub const PAGED_LISTINGS: [&str; 2] = ["files", "ehrs"];
 /// the browser's session alone and never in a URL.
 pub const PAGING_COOKIE: &str = "gallery-paging-";
 
+/// The path of the route the code editor's form posts its draft to, which
+/// answers with the draft it received.
+pub const DRAFT_ROUTE: &str = "/draft";
+
 /// The path of the route the sidebar's Collapse and Expand post to.
 pub const SIDEBAR_ROUTE: &str = "/sidebar";
 

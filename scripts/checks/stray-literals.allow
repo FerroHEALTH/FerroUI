@@ -24,6 +24,7 @@ allow ^\{\}T\{\}Z?$                     # the HTML machine form of a date-time
 allow ^\{id\}-L                         # an editor line's id
 allow ^(tbody|thead|tr\[data-key|a\[href\]) # the CSS selectors of the work-list's rows and controls, which the browser code reads
 allow ^\\u\{2013\}$                     # the en dash an absent compare value draws, hidden from a reader beside its word
+allow ^fui-mark-(error|warning) is-current$   # the classes of a marked line the cursor is on
 allow ^input:checked, select,           # the CSS selector of a preference's chosen control, which the browser code focuses
 allow ^month \{month\} of \{year\} has \{\} days$   # a refused date's diagnostic for a console's log; a reader sees the catalog's words
 
@@ -37,6 +38,7 @@ allow ^https?://                        # a URL
 allow ^/[a-z_/]+$                       # a path, drawn as code
 allow ^Practitioner/                    # a FHIR reference, the synthetic operator's
 allow ^file-L$                          # an editor line's id prefix
+allow ^(#\{MAPPING_DRAFT\}|code#file)-L$   # a diagnostic's link to a line, before its number
 allow ^[0-9]{4}-[0-9]{2}-[0-9]{2}T      # an RFC 3339 instant, drawn as data
 allow ^2026-10-1\{index\}T              # the same, made per row
 allow ^[0-9a-f]{8}-[0-9a-f-]+           # an identifier in the UUID form
