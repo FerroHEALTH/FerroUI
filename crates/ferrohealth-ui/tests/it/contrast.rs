@@ -227,8 +227,13 @@ const BLOCKS: [(&str, &str); 3] = [
     ),
 ];
 
+/// The accents a brand file declares for the theme previews in Your
+/// preferences, outside its three theme blocks: the light one and the dark one.
+const PREVIEW: [&str; 2] = ["preview-accent-light", "preview-accent-dark"];
+
 /// The three themes of `brand`: the stylesheet's roles with the brand laid
-/// over them, block by block.
+/// over them, block by block, without the preview accents, which no theme
+/// paints with.
 fn themes(brand: Option<Brand>) -> Vec<(String, BTreeMap<String, Rgba>)> {
     let base = strip_comments(STYLESHEET);
     let over = brand.map(|brand| strip_comments(brand.theme()));
@@ -239,6 +244,7 @@ fn themes(brand: Option<Brand>) -> Vec<(String, BTreeMap<String, Rgba>)> {
             if let Some(over) = &over {
                 theme.extend(colours(&block(over, selector)));
             }
+            theme.retain(|name, _| !PREVIEW.contains(&name.as_str()));
             let label = match brand {
                 Some(brand) => format!("{} {name}", brand.product()),
                 None => format!("default {name}"),
@@ -314,6 +320,8 @@ fn a_brand_sets_its_accent_alone() {
         "accent-ink",
         "accent-tint",
         "focus",
+        PREVIEW[0],
+        PREVIEW[1],
     ];
     for brand in Brand::ALL {
         for (_, selector) in BLOCKS {
@@ -321,6 +329,24 @@ fn a_brand_sets_its_accent_alone() {
             assert!(!set.is_empty(), "{brand:?} sets {selector}");
             for name in set.keys() {
                 assert!(allowed.contains(&name.as_str()), "{brand:?} sets --{name}");
+            }
+        }
+    }
+}
+
+#[test]
+fn a_preview_accent_is_the_accent_of_its_theme() {
+    for brand in Brand::ALL {
+        let css = strip_comments(brand.theme());
+        let previews = colours(&block(&css, BLOCKS[0].1));
+        let [(_, light), (_, dark), _] = themes(Some(brand)).try_into().expect("three themes");
+        for (name, theme) in PREVIEW.into_iter().zip([light, dark]) {
+            if let Some(preview) = previews.get(name) {
+                assert_eq!(
+                    Some(preview),
+                    theme.get("accent"),
+                    "{brand:?}: --{name} is the accent of its theme, so the accent pairs hold it"
+                );
             }
         }
     }

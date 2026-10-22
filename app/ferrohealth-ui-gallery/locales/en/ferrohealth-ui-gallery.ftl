@@ -21,6 +21,7 @@ signed-gallery = Signed in to the gallery
 library-v0-1-7 = Library v0.1.7
 brand = Brand
 term = TERM
+pix = PIX
 ehr = EHR
 fed = FED
 bridge = BRIDGE

@@ -199,6 +199,8 @@ messages! {
     Brand = "brand",
     /// `TERM`
     Term = "term",
+    /// `PIX`
+    Pix = "pix",
     /// `EHR`
     Ehr = "ehr",
     /// `FED`
