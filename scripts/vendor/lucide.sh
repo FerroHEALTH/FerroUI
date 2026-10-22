@@ -24,12 +24,13 @@ dir="$root/crates/ferrohealth-ui/vendor/lucide"
 
 ICONS=(
   activity arrow-down arrow-left arrow-right arrow-up arrow-up-down ban bell
-  book-a book-x chart-line check chevron-down chevron-left chevron-right
+  book-a book-x calendar chart-line check chevron-down chevron-left chevron-right
+  chevron-up
   chevrons-left chevrons-right circle-alert circle-check circle-user
   circle-x clipboard-copy clock code compass copy database download ellipsis eye
   file-clock file-code file-plus file-text files flask-conical folder
   folder-open folder-plus folder-search folder-x funnel gauge heart-pulse
-  inbox info keyboard layers layout-dashboard link list-checks log-in
+  inbox info keyboard layers layout-dashboard link list-checks lock log-in
   log-out menu monitor moon network panel-left-close panel-left-open
   panel-right pencil play plus
   radio-tower refresh-cw rotate-ccw rotate-ccw-clock route save search search-code search-x

@@ -24,6 +24,7 @@ use ferrohealth_ui::view::surface::{
     page_header, stack, stat_card, stat_card_marked, stat_grid, titled_panel, well,
 };
 use ferrohealth_ui::view::tabs::{Tab, binder};
+use ferrohealth_ui::view::tag::{Tag, tag};
 use ferrohealth_ui::view::theme_switch::{density_switch, locale_switch, theme_switch};
 use ferrohealth_ui::view::time::timestamp;
 use ferrohealth_ui::widget::action_menu::{Act, Action, Item, Menu};
@@ -190,7 +191,7 @@ fn buttons() -> AnyView {
     .into_any()
 }
 
-/// The status marks: pills, badges, chips and status indicators.
+/// The status marks: pills, badges, chips, tags and status indicators.
 fn marks_card() -> AnyView {
     let pills = Tone::ALL
         .into_iter()
@@ -204,6 +205,13 @@ fn marks_card() -> AnyView {
         .into_iter()
         .map(chip)
         .collect_view();
+    let tags = view! {
+        {tag(tr(Msg::FhirR4))}
+        {Tag::new(tr(Msg::FhirConnect)).code("fhirconnect").view()}
+        {Tag::new(tr(Msg::ReadOperation)).code("r").view()}
+        {Tag::new("1.1.0").mono().view()}
+        {Tag::new(tr(Msg::Directory)).locked().title(tr(Msg::FromDirectory)).view()}
+    };
     let statuses = view! {
         {status(Tone::Ok, Glyph::CIRCLE_CHECK, &tr(Msg::Serving), Some(tr(Msg::R4)))}
         {status(Tone::Warn, Glyph::TRIANGLE_ALERT, &tr(Msg::Degraded), Some(tr(Msg::N13LanesDown)))}
@@ -215,6 +223,7 @@ fn marks_card() -> AnyView {
             {cluster(pills)}
             {cluster(badges)}
             {cluster(chips)}
+            {cluster(tags)}
             {cluster(statuses)}
         },
     )

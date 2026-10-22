@@ -8,7 +8,7 @@ skip crates/ferrohealth-ui/src/highlight/   # tokenizers: grammar keywords and t
 skip crates/ferrohealth-ui/src/icon.rs      # the vendored Lucide outlines and their names
 skip crates/ferrohealth-ui/src/i18n.rs      # the catalog mechanism: message ids and diagnostics
 
-allow ^(ArrowUp|ArrowDown|ArrowLeft|ArrowRight|Home|End|Enter|Escape|Tab)$   # UI Events KeyboardEvent.key values
+allow ^(ArrowUp|ArrowDown|ArrowLeft|ArrowRight|Home|End|Enter|Escape|Tab|PageUp|PageDown)$   # UI Events KeyboardEvent.key values
 allow ^\(width                         # a CSS media query the browser code matches
 allow ^(Esc|Space|Ctrl|Control|Shift|Alt|Meta)$  # a key as printed on its cap and as aria-keyshortcuts names it
 allow ^Ctrl s$                          # a shortcut's keys, drawn as key caps
@@ -21,6 +21,7 @@ allow ^M\{                              # SVG path data
 allow ^(Zz|Tt )$                        # the bytes a timestamp parser accepts
 allow ^\{\}T\{\}Z?$                     # the HTML machine form of a date-time
 allow ^\{id\}-L                         # an editor line's id
+allow ^month \{month\} of \{year\} has \{\} days$   # a refused date's diagnostic for a console's log; a reader sees the catalog's words
 
 # The gallery: the synthetic data it draws, and its server.
 skip app/ferrohealth-ui-gallery/src/data.rs     # the synthetic rows and documents the gallery draws as data

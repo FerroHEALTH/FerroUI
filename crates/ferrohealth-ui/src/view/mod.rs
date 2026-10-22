@@ -5,7 +5,7 @@
 //!
 //! They are the title row's action group, the shell, the page templates,
 //! the surfaces, the status marks, the buttons and fields, the help switch,
-//! the tabs as links, the empty and loading states, the refusal, the error
+//! the tag, the tabs as links, the empty and loading states, the refusal, the error
 //! page, the code viewer, the document pane, the sign-in card, the theme
 //! switch, the confirmation dialog, the popover form and the timestamp.
 //! Each is a plain function
@@ -42,6 +42,7 @@ pub mod sign_in;
 pub mod status;
 pub mod surface;
 pub mod tabs;
+pub mod tag;
 pub mod template;
 pub mod theme_switch;
 pub mod time;

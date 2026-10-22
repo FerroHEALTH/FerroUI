@@ -15,8 +15,12 @@
 //! title row's action group with More open by the pointer and the keyboard,
 //! the split button's variants, a row menu and the select button's listbox,
 //! with the action group, More's bottom sheet and the listbox's at 390 px,
-//! the document pane switched to its raw view, and the states of the keys
-//! ([`crate::key_states`]).
+//! the document pane switched to its raw view, the states of the keys
+//! ([`crate::key_states`]), every state of the date picker (open, a day
+//! hovered, the keyboard focus, a time, the quick choices, the month
+//! chooser, a range half chosen and whole, an invalid typed date, and the
+//! phone's sheet), and the fields with a part inside their edge with one
+//! focused.
 //!
 //! Each state is written as `states/<brand>/<state>.png` and its `-dark`
 //! twin under the screenshots folder, every brand in the light and the
@@ -39,7 +43,7 @@ use crate::journeys::window;
 use crate::stack::Gallery;
 
 /// Every state, by the name its images take.
-pub(crate) const STATES: [&str; 85] = [
+pub(crate) const STATES: [&str; 97] = [
     "hover-nav",
     "focus-nav",
     "hover-stat",
@@ -125,6 +129,18 @@ pub(crate) const STATES: [&str; 85] = [
     "dock-path-390",
     "legend-open",
     "shortcut-hint",
+    "date-open",
+    "date-hover",
+    "date-keyboard",
+    "date-time",
+    "date-quick",
+    "date-months",
+    "date-range-half",
+    "date-range",
+    "date-invalid",
+    "date-sheet",
+    "date-sheet-range",
+    "edge-parts",
 ];
 
 /// The viewport the states are taken in.
@@ -972,6 +988,120 @@ async fn rail(
     Ok(())
 }
 
+/// Writes the viewport as `state` with the picker `picker` in its middle.
+async fn picker_shot(
+    browser: &Browser,
+    brand: Brand,
+    theme: &str,
+    state: &str,
+    picker: &WebElement,
+) -> Result<(), Box<dyn Error>> {
+    browser
+        .driver()
+        .execute(
+            "arguments[0].scrollIntoView({block: 'center'});",
+            vec![picker.to_json()?],
+        )
+        .await?;
+    shot_of_view(browser, brand, theme, state).await
+}
+
+/// Loads the forms page of `brand` afresh, so each state starts from the
+/// fields as the server drew them.
+async fn forms_afresh(
+    browser: &Browser,
+    gallery: &Gallery,
+    brand: Brand,
+) -> Result<(), Box<dyn Error>> {
+    browser
+        .goto(&gallery.url(&format!("/{}/forms", brand.key())))
+        .await?;
+    crate::dates::calendar(browser, "audit-from").await?;
+    Ok(())
+}
+
+/// Every state of the date picker, as the design's states sheet draws it,
+/// then the phone's sheet at 390 px, then the fields with a part inside
+/// their edge, one focused.
+async fn date_states(
+    browser: &Browser,
+    gallery: &Gallery,
+    brand: Brand,
+    theme: &str,
+) -> Result<(), Box<dyn Error>> {
+    forms_afresh(browser, gallery, brand).await?;
+    let picker = crate::dates::open_picker(browser, "audit-from").await?;
+    picker_shot(browser, brand, theme, "date-open", &picker).await?;
+    let day = picker
+        .find(By::Css("button[data-day='2026-10-08']"))
+        .await?;
+    hover(browser, &day).await?;
+    picker_shot(browser, brand, theme, "date-hover", &picker).await?;
+    away(browser).await?;
+    let start = picker
+        .find(By::Css("button[data-day='2026-10-14']"))
+        .await?;
+    focus(browser, &start).await?;
+    start.send_keys(Key::Right).await?;
+    let next = picker
+        .find(By::Css("button[data-day='2026-10-15']"))
+        .await?;
+    next.send_keys(Key::Right).await?;
+    picker_shot(browser, brand, theme, "date-keyboard", &picker).await?;
+    picker
+        .find(By::Css("button.fui-datepicker-title"))
+        .await?
+        .click()
+        .await?;
+    picker.find(By::Css(".fui-datepicker-months")).await?;
+    picker_shot(browser, brand, theme, "date-months", &picker).await?;
+    escape(browser).await?;
+    let at = browser.element(By::Id("row-at")).await?;
+    at.send_keys("2026-10-14 08:30").await?;
+    let timed = crate::dates::open_picker(browser, "row-at").await?;
+    timed.find(By::Css(".fui-datepicker-time")).await?;
+    picker_shot(browser, brand, theme, "date-time", &timed).await?;
+    escape(browser).await?;
+    let defer = crate::dates::open_picker(browser, "defer-until").await?;
+    picker_shot(browser, brand, theme, "date-quick", &defer).await?;
+    escape(browser).await?;
+    let from = browser.element(By::Id("audit-from")).await?;
+    from.clear().await?;
+    from.send_keys("2026-10-41").await?;
+    let invalid = crate::dates::open_picker(browser, "audit-from").await?;
+    picker_shot(browser, brand, theme, "date-invalid", &invalid).await?;
+    escape(browser).await?;
+    forms_afresh(browser, gallery, brand).await?;
+    let range = crate::dates::open_range(browser).await?;
+    picker_shot(browser, brand, theme, "date-range", &range).await?;
+    range
+        .find(By::Css("button[data-day='2026-10-15']"))
+        .await?
+        .click()
+        .await?;
+    let end = range.find(By::Css("button[data-day='2026-10-19']")).await?;
+    hover(browser, &end).await?;
+    picker_shot(browser, brand, theme, "date-range-half", &range).await?;
+    escape(browser).await?;
+    window(browser, 390, 844).await?;
+    forms_afresh(browser, gallery, brand).await?;
+    crate::dates::open_picker(browser, "audit-from").await?;
+    shot_of_view(browser, brand, theme, "date-sheet").await?;
+    escape(browser).await?;
+    crate::dates::open_range(browser).await?;
+    shot_of_view(browser, brand, theme, "date-sheet-range").await?;
+    escape(browser).await?;
+    window(browser, WIDTH, HEIGHT).await?;
+    let edge = browser
+        .element(By::XPath(
+            "//input[@id = 'edge-timeout']/ancestor::section[contains(@class, 'fui-card')]",
+        ))
+        .await?;
+    let timeout = browser.element(By::Id("edge-timeout")).await?;
+    focus(browser, &timeout).await?;
+    shot_of(browser, brand, theme, "edge-parts", &edge).await
+}
+
 /// The tables page in the compact density, its cookie set for the one shot.
 async fn compact(
     browser: &Browser,
@@ -1021,6 +1151,7 @@ async fn every_state_is_captured_in_every_brand_light_and_dark() -> Result<(), B
                 layouts(browser, &gallery, brand, theme).await?;
                 combobox_states(browser, &gallery, brand, theme).await?;
                 field_states(browser, &gallery, brand, theme).await?;
+                date_states(browser, &gallery, brand, theme).await?;
                 compact(browser, &gallery, brand, theme).await?;
                 rail(browser, &gallery, brand, theme).await?;
                 phone(browser, &gallery, brand, theme).await?;

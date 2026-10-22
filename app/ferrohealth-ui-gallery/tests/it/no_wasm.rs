@@ -163,6 +163,51 @@ async fn colour_key(browser: &Browser) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+/// Checks the forms page's date fields with no WebAssembly: a date field
+/// is its typed text with the calendar disabled and saying to type the
+/// date (R23), and a range shows its From and To fields in its button's
+/// place (R22).
+async fn date_fields(browser: &Browser) -> Result<(), Box<dyn Error>> {
+    let from = browser.element(By::Id("audit-from")).await?;
+    assert_eq!(Some(String::from("2026-10-14")), from.prop("value").await?);
+    let calendar = from.find(By::XPath("following-sibling::button")).await?;
+    assert!(!calendar.is_enabled().await?, "the calendar is disabled");
+    assert!(
+        calendar
+            .attr("aria-label")
+            .await?
+            .is_some_and(|name| name.starts_with("Type the date")),
+        "the calendar's name says to type the date"
+    );
+    assert!(
+        browser
+            .element(By::Id("audit-range-from"))
+            .await?
+            .is_displayed()
+            .await?
+    );
+    assert!(
+        browser
+            .element(By::Id("audit-range-to"))
+            .await?
+            .is_displayed()
+            .await?
+    );
+    Ok(())
+}
+
+/// Checks the forms page with no WebAssembly: the combobox's native select,
+/// the editor's text and the date fields.
+async fn forms_content(browser: &Browser) -> Result<(), Box<dyn Error>> {
+    // The combobox's native select stands until its island hydrates,
+    // so finding it proves the WebAssembly was withheld.
+    browser.element(By::Css("select#choose-system")).await?;
+    let draft = browser.element(By::Id("gallery-draft")).await?;
+    let held = draft.prop("value").await?.unwrap_or_default();
+    assert!(!held.is_empty(), "the editor shows its text");
+    date_fields(browser).await
+}
+
 /// Checks what a brand's page at `page` must show with no WebAssembly,
 /// beyond its heading and its navigation.
 async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error>> {
@@ -189,14 +234,7 @@ async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error
                 ))
                 .await?;
         }
-        "/forms" => {
-            // The combobox's native select stands until its island hydrates,
-            // so finding it proves the WebAssembly was withheld.
-            browser.element(By::Css("select#choose-system")).await?;
-            let draft = browser.element(By::Id("gallery-draft")).await?;
-            let held = draft.prop("value").await?.unwrap_or_default();
-            assert!(!held.is_empty(), "the editor shows its text");
-        }
+        "/forms" => forms_content(browser).await?,
         "/tables" => {
             browser.text("p", "1-25 of 137").await?;
             let rows = browser
@@ -530,6 +568,24 @@ async fn forms_post_and_submit_with_the_webassembly_withheld() -> Result<(), Box
         out.click().await?;
         browser
             .at(&gallery.url("/sign-in/ferrofed/signed-out"))
+            .await?;
+        // A history filter's range posts its From and To fields as typed.
+        browser.goto(&gallery.url("/ferropix/forms")).await?;
+        let from = browser.element(By::Id("audit-range-from")).await?;
+        from.clear().await?;
+        from.send_keys("2026-10-01").await?;
+        let to = browser.element(By::Id("audit-range-to")).await?;
+        to.clear().await?;
+        to.send_keys("2026-10-07").await?;
+        browser
+            .element(By::XPath(
+                "//form[@id = 'date-range']//button[@type = 'submit']",
+            ))
+            .await?
+            .click()
+            .await?;
+        browser
+            .at(&gallery.url("/ferropix/forms?from=2026-10-01&to=2026-10-07#date-range"))
             .await?;
         leave(browser, "the forms").await
     })

@@ -205,6 +205,51 @@ and this project adheres to
   (`use:focus_on_open=selector`): as a popover or a dialog opens, it moves
   the focus to the first control inside it that the selector names (#214).
   The navigation drawer and the side panel use it.
+- The date picker (#157, R25): the island `island::DatePicker` over
+  `widget::date::date_field`, a popover under its field from 40 rem and a
+  bottom sheet over a scrim below it, at the full width with one month and
+  both arrows. It draws one month with a month and year chooser behind its
+  title, the field's quick choices (`QuickChoice`, from
+  `calendar::Quick`) or a time row, and Today, Clear, Cancel and Apply. It
+  follows the WAI-ARIA date picker dialog pattern: every day is named by
+  its full date, the arrows move a day or a week, Page Up and Page Down a
+  month (with Shift a year), Home and End the week's ends, Escape closes
+  and puts the focus back on the field. Days, months and arrows past the
+  field's `calendar::Bounds` are disabled, so a field that forbids the
+  future offers no later month. A typed text that is no date, or a date
+  outside the bounds, marks the field invalid, says why under it, and
+  disables Apply. The week starts on the console's `first_day`, from the
+  reader's preference cookie (family rule 9). Every word arrives as
+  `widget::date::DateWords::of_page`, resolved on the server: a sentence
+  that names a chosen day is an `i18n::Phrase`, and a range's day count is
+  chosen with its plural on the server.
+- The date range of a history filter (#157, R22): the island
+  `island::DateRangePicker` over `widget::date::date_range`, one secondary
+  button naming the range that opens two months with the presets beside
+  them (`RangePreset::of_page` over `calendar::Preset`). "Last 7 days" holds
+  today and the six days before it, and the picker's line counts the days.
+  Apply writes the From and To fields and submits the filter's form. With
+  no WebAssembly the From and To fields show in the button's place and post
+  with the form.
+- `calendar`, the days a date field counts in: `Day` (crossing to the
+  browser as its `YYYY-MM-DD` text), `Month`, `Weekday`, `Clock`, `Moment`,
+  `Bounds`, `Quick` and `Preset`, and `Day::parse` and `Moment::parse`,
+  which a console's server calls on a posted value to refuse it for the
+  same reason the picker does (`calendar::NotADay`).
+- The tag (#184, R2): `view::tag::tag` and `view::tag::Tag`, a kind, a
+  format, an owner or a namespace as a short word on one line, read as
+  text. `Tag::code` adds the raw code as a quiet hint in the code face,
+  `Tag::glyph` a glyph hidden from assistive technology, `Tag::mono` the
+  code face for a version, and `Tag::locked` F4's lock tag. The gallery's
+  overview draws each form.
+- A part inside a field's edge (#185, R10): `view::form::Field::leading`
+  and `Field::trailing` take an `Inner`: words (`Inner::Text`), a unit
+  (`Inner::Unit`, named in the control's description through
+  `form::described_with_unit` and `form::unit_id`) or a button
+  (`Inner::Button`, with `form::INNER_BUTTON`). The input and its parts
+  share one edge and one focus ring.
+- The Lucide `calendar`, `chevron-up` and `lock` glyphs (`Glyph::CALENDAR`,
+  `Glyph::CHEVRON_UP`, `Glyph::LOCK`).
 
 - The title row's action group (F14), `view::action`: `ActionGroup` with
   one optional primary `Action`, a split primary's `variants` menu, and the
@@ -438,6 +483,25 @@ and this project adheres to
   chips stay hidden until the page hydrates, so none offers a press that
   does nothing; the figures table reads as before. `view::chart::line_svg`
   draws the same markup as before.
+- The date field (#157, R23): a console's own `<input type="date">` and
+  `<input type="datetime-local">` give way to `island::DatePicker`, a text
+  input written year first (`YYYY-MM-DD`, or `YYYY-MM-DD HH:MM` with
+  `with_time`) with its format stated after its label and the calendar
+  behind a button inside its edge. The typed text is the field's value, so
+  the form posts it with no script; until the WebAssembly runs the button
+  is disabled and its name says to type the date. The gallery's date and
+  date-time inputs moved to it.
+- `.fui-input-group` draws the field's one edge, its ground and its focus
+  ring (`:focus-within`), and the input inside it draws none (#185, R10).
+  Its prefix (`fui-input-prefix`), suffix (`fui-input-suffix`) and button
+  (`fui-input-toggle`) sit beside the typed text, no longer over it, so a
+  long unit never covers what was typed. An invalid or disabled input marks
+  the whole group. A console that wrote the group by hand keeps its markup.
+- `view::surface::chip` is for a short code, such as a path or a scope; a
+  kind, a format, an owner or a namespace is a tag (#184).
+- The date picker's phone sheet takes the full width for a range too: the
+  range's own placement no longer outranks the sheet's below 40 rem, and the
+  foot's buttons centre their words (#157).
 
 - The top bar is one struct (#151): `view::shell::topbar(TopBar { sidebar,
   lockup, search, end })` draws the drawer button, the lockup, the search

@@ -192,3 +192,87 @@ error-status = { $words } · { $status }
 error-detail = Technical detail
 error-time = Time
 error-request = Request id
+
+## The date field and its picker
+
+date-format = YYYY-MM-DD
+date-time-format = YYYY-MM-DD HH:MM
+date-format-hint = (YYYY-MM-DD)
+date-time-format-hint = (YYYY-MM-DD HH:MM)
+date-choose = Choose a date
+date-needs-script = Type the date: the calendar opens once the page has loaded
+date-previous-month = Previous month
+date-next-month = Next month
+date-previous-year = Previous year
+date-next-year = Next year
+date-choose-month = Choose the month and year, now { $title }
+date-back-to-days = Back to the days
+date-months-of = Months of { $year }
+date-month-title = { $month } { $year }
+date-day-name = { $weekday } { $day } { $month } { $year }
+date-today = Today
+date-clear = Clear
+date-cancel = Cancel
+date-apply = Apply
+date-time = Time
+date-time-hint = (24 h)
+date-hours = Hours
+date-minutes = Minutes
+date-quick = Quick choices
+date-ranges = Ranges
+date-any = Any date
+date-range-words = { $from } to { $to }
+date-range-half = From { $from }: now choose the end.
+date-range-full = { $from } to { $to } · { $days }.
+date-days =
+    { $count ->
+        [one] { $count } day
+       *[other] { $count } days
+    }
+date-type-format = Type a date as YYYY-MM-DD.
+date-type-format-time = Type a date and time as YYYY-MM-DD HH:MM.
+date-month-length =
+    { $month } has { $count ->
+        [one] { $count } day
+       *[other] { $count } days
+    }
+date-not-a-day = { $value } is not a date: { $why }.
+date-no-month = { $value } is not a date: there is no month { $month }.
+date-not-a-time = { $value } is not a time of day: type it as HH:MM.
+date-not-format = { $value } is not written as YYYY-MM-DD.
+date-not-format-time = { $value } is not written as YYYY-MM-DD HH:MM.
+date-before = { $value } is before { $earliest }, the earliest date allowed.
+date-after = { $value } is after { $latest }, the latest date allowed.
+preset-today = Today
+preset-last-days =
+    Last { $count ->
+        [one] day
+       *[other] { $count } days
+    }
+preset-this-month = This month
+month-1 = January
+month-2 = February
+month-3 = March
+month-4 = April
+month-5 = May
+month-6 = June
+month-7 = July
+month-8 = August
+month-9 = September
+month-10 = October
+month-11 = November
+month-12 = December
+weekday-monday = Monday
+weekday-tuesday = Tuesday
+weekday-wednesday = Wednesday
+weekday-thursday = Thursday
+weekday-friday = Friday
+weekday-saturday = Saturday
+weekday-sunday = Sunday
+weekday-short-monday = Mo
+weekday-short-tuesday = Tu
+weekday-short-wednesday = We
+weekday-short-thursday = Th
+weekday-short-friday = Fr
+weekday-short-saturday = Sa
+weekday-short-sunday = Su

@@ -560,6 +560,56 @@ messages! {
     SaveDraftReloadSetBridge = "save-draft-reload-set-bridge",
     /// `Keep the draft until`
     KeepDraftUntil = "keep-draft-until",
+    /// `Actions between`
+    ActionsBetween = "actions-between",
+    /// `Back in the queue on { $day }.`
+    BackInQueueOn = "back-in-queue-on",
+    /// `Base address`
+    BaseAddress = "base-address",
+    /// `Date fields`
+    DateFields = "date-fields",
+    /// `Days after today are not offered.`
+    DaysAfterTodayNotOffered = "days-after-today-not-offered",
+    /// `days`
+    DaysUnit = "days-unit",
+    /// `Defer until`
+    DeferUntil = "defer-until",
+    /// `FHIRconnect`
+    FhirConnect = "fhir-connect",
+    /// `FHIR R4`
+    FhirR4 = "fhir-r4",
+    /// `Inside the field's edge`
+    FieldEdgeParts = "field-edge-parts",
+    /// `From`
+    FromDay = "from-day",
+    /// `From the care services directory`
+    FromDirectory = "from-directory",
+    /// `In a week`
+    InAWeek = "in-a-week",
+    /// `In 3 days`
+    InThreeDays = "in-three-days",
+    /// `ms`
+    Milliseconds = "milliseconds",
+    /// `Next Monday`
+    NextMonday = "next-monday",
+    /// `Read`
+    ReadOperation = "read-operation",
+    /// `Retention`
+    Retention = "retention",
+    /// `Row limit`
+    RowLimit = "row-limit",
+    /// `rows`
+    RowsUnit = "rows-unit",
+    /// `Set by the deployment.`
+    SetByDeployment = "set-by-deployment",
+    /// `Show the actions`
+    ShowActions = "show-actions",
+    /// `To`
+    ToDay = "to-day",
+    /// `Tomorrow`
+    Tomorrow = "tomorrow",
+    /// `Type a whole number.`
+    TypeWholeNumber = "type-whole-number",
     /// `Bundle, JSON`
     BundleJson = "bundle-json",
     /// `Composition format`
@@ -1691,8 +1741,8 @@ mod tests {
         let english = fluent_templates::langid!("en");
         // Every placeable a message names, so each formats whole.
         let args: HashMap<Cow<'static, str>, FluentValue<'static>> = [
-            "bytes", "count", "format", "index", "kept", "kind", "line", "lines", "member", "mode",
-            "name", "place", "query", "row", "total", "value", "version",
+            "bytes", "count", "day", "format", "index", "kept", "kind", "line", "lines", "member",
+            "mode", "name", "place", "query", "row", "total", "value", "version",
         ]
         .into_iter()
         .map(|name| (Cow::Borrowed(name), FluentValue::from(3)))

@@ -858,6 +858,18 @@
     color: var(--ink);
   }
 
+  /* An icon button that cannot be used, such as a picker's arrow past the
+     field's last allowed month: faded, no pointer, no hover ground. */
+  .fui-icon-button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .fui-icon-button:disabled:hover {
+    background: transparent;
+    color: var(--muted);
+  }
+
   .fui-body {
     display: flex;
     flex: 1;
@@ -5127,6 +5139,25 @@
     white-space: nowrap;
   }
 
+  /* A tag's raw code after its word: quiet, in the code face. */
+  .fui-tag-code {
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-weight: 400;
+  }
+
+  /* An identifier-like tag (a version, an RM type) in the code face. */
+  .fui-tag.fui-tag-mono {
+    font-family: var(--font-mono);
+    font-weight: 400;
+  }
+
+  .fui-tag > .fui-icon {
+    flex: none;
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+
   /* ---- R3. Binder tabs, joined to their panel (review round 1, item 5) ---- */
 
   /* The tabs of a card divider: the inactive ones sit behind on the sunken
@@ -5871,26 +5902,101 @@
     }
   }
 
-  /* ---- R10. A field with its control inside: the eye toggle ---- */
+  /* ---- R10. A field with its control inside: one edge round the input and
+     its prefix, suffix or button, which sit beside the typed text and never
+     over it ---- */
 
   .fui-input-group {
-    position: relative;
     display: flex;
+    min-width: 0;
+    min-height: var(--control);
     align-items: center;
+    gap: 0.25rem;
+    border: 1px solid var(--edge-control);
+    border-radius: var(--radius-control);
+    background: var(--surface-raised);
+    padding-inline-end: 0.25rem;
+    transition: border-color var(--motion-state) ease-out;
+  }
+
+  .fui-input-group:hover {
+    border-color: var(--ink);
+  }
+
+  .fui-input-group:focus-within {
+    border-color: var(--focus);
+    outline: 2px solid var(--focus);
+    outline-offset: 0;
+  }
+
+  .fui-input-group:has(> .fui-input[aria-invalid="true"]) {
+    border-color: var(--bad);
+  }
+
+  .fui-input-group:has(> .fui-input:disabled) {
+    border-color: var(--edge-control);
+    background: var(--surface-sunken);
   }
 
   .fui-input-group > .fui-input {
-    padding-inline-end: 2.5rem;
+    flex: 1 1 auto;
+    align-self: stretch;
+    min-height: calc(var(--control) - 2px);
+    border: 0;
+    background: transparent;
+  }
+
+  .fui-input-group > .fui-input:focus-visible {
+    outline: 0;
+  }
+
+  .fui-input-prefix,
+  .fui-input-suffix {
+    flex: none;
+    color: var(--muted);
+    font-size: var(--text-small);
+    line-height: var(--leading-body);
+    white-space: nowrap;
+  }
+
+  .fui-input-prefix {
+    padding-inline-start: 0.75rem;
+  }
+
+  .fui-input-prefix + .fui-input {
+    padding-inline-start: 0.125rem;
+  }
+
+  .fui-input-group > .fui-input:has(+ :is(.fui-input-suffix, .fui-input-toggle)) {
+    padding-inline-end: 0.25rem;
+  }
+
+  .fui-input-suffix {
+    padding-inline-end: 0.5rem;
   }
 
   .fui-input-group > .fui-input-toggle {
-    position: absolute;
-    inset-inline-end: 0.25rem;
     width: 1.875rem;
     height: 1.875rem;
   }
 
-  .fui-input-toggle[aria-pressed="true"] {
+  .fui-input-group > .fui-input-toggle:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: -2px;
+  }
+
+  .fui-input-toggle:disabled {
+    color: var(--muted);
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .fui-input-toggle:disabled:hover {
+    background: transparent;
+  }
+
+  .fui-input-toggle[aria-pressed="true"],
+  .fui-input-toggle[aria-expanded="true"] {
     background: var(--accent-tint);
     color: var(--accent);
   }
@@ -5899,6 +6005,19 @@
 
   .fui-date > .fui-input {
     font-variant-numeric: tabular-nums;
+  }
+
+  /* A range's From and To fields, which show in place of its button until
+     the page's WebAssembly runs. */
+  .fui-date-range-fields {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: start;
+    gap: var(--space-default);
+  }
+
+  .fui-date-range-fields > .fui-field {
+    flex: 1 1 10rem;
   }
 
   /* ---- R24. The page title line and the deployment's mode badge ---- */
@@ -5963,6 +6082,15 @@
   /* A wide range picker opens towards the start from the field's end. */
   .fui-date-field > .fui-datepicker.fui-datepicker-range {
     inset: calc(100% + 0.25rem) 0 auto auto;
+  }
+
+  /* A picker that would run past the screen's edge opens the other way. */
+  .fui-date-field > .fui-datepicker.is-end {
+    inset: calc(100% + 0.25rem) 0 auto auto;
+  }
+
+  .fui-date-field > .fui-datepicker.fui-datepicker-range.is-start {
+    inset: calc(100% + 0.25rem) auto auto 0;
   }
 
   .fui-datepicker {
@@ -6141,6 +6269,16 @@
     background: var(--surface-sunken);
   }
 
+  .fui-datepicker-cell:disabled {
+    color: var(--muted);
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .fui-datepicker-cell:disabled:hover {
+    background: transparent;
+  }
+
   .fui-datepicker-cell[aria-current="date"] {
     box-shadow: inset 0 0 0 1px var(--accent);
     color: var(--accent);
@@ -6248,10 +6386,19 @@
     display: none;
   }
 
+  /* A range's later month keeps a back arrow for the phone, where it is the
+     one month shown; from 40 rem the earlier month's arrow does that job. */
+  .fui-datepicker-phone-prev {
+    visibility: hidden;
+  }
+
   /* A phone: the same picker as a bottom sheet over a scrim, one month,
      larger days, the presets as a row. */
   @media (width < 40rem) {
-    .fui-date-field > .fui-datepicker {
+    .fui-date-field > .fui-datepicker,
+    .fui-date-field > .fui-datepicker.is-end,
+    .fui-date-field > .fui-datepicker.fui-datepicker-range,
+    .fui-date-field > .fui-datepicker.fui-datepicker-range.is-start {
       position: fixed;
       inset: auto 0 0 0;
       width: auto;
@@ -6308,8 +6455,13 @@
       max-width: none;
     }
 
+    .fui-datepicker-pair .fui-datepicker-phone-prev {
+      visibility: visible;
+    }
+
     .fui-datepicker-foot .fui-button {
       min-height: 2.75rem;
+      align-items: center;
     }
   }
 
@@ -8004,21 +8156,8 @@
     }
   }
 
-  /* F3's companion: a unit after a number field (ms, s, rows). NEW (FerroFED). */
-  .fui-input-suffix {
-    position: absolute;
-    inset: 0 0.75rem 0 auto;
-    display: flex;
-    align-items: center;
-    color: var(--muted);
-    font-size: var(--text-small);
-    line-height: var(--leading-body);
-    pointer-events: none;
-  }
-
-  .fui-input-group:has(> .fui-input-suffix) > .fui-input {
-    padding-inline-end: 2.5rem;
-  }
+  /* F3's companion, a unit after a number field (ms, s, rows), is R10's
+     suffix (`fui-input-suffix`). */
 
   @media (width < 40rem) {
     .fui-worklist-tools > .fui-field.fui-field-grow {
