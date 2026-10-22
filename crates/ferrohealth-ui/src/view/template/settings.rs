@@ -20,6 +20,7 @@ use leptos::prelude::*;
 use crate::i18n::{Text, tr};
 use crate::icon::{Glyph, icon};
 use crate::view::action::ActionGroup;
+use crate::view::replica::{Replica, replica_line};
 use crate::view::surface::{Header, page_heading};
 use crate::view::tabs::{TabRow, joined};
 use crate::widget::copy::KeyHintWords;
@@ -84,6 +85,9 @@ pub struct SettingsPage {
     pub tabs: Option<TabRow>,
     /// The tab's settings.
     pub settings: Vec<Setting>,
+    /// The replica that answered, for a replicated product's reference
+    /// page (F6), drawn as one quiet line under the header.
+    pub replica: Option<Replica>,
 }
 
 /// Returns a settings page (T3): its header with the mode badge of a
@@ -97,6 +101,7 @@ pub fn settings_page(page: SettingsPage) -> AnyView {
         source,
         tabs,
         settings,
+        replica,
     } = page;
     let managed = matches!(source, Source::Managed(_));
     let (badge, revision, intro, panel_actions) = match source {
@@ -112,6 +117,7 @@ pub fn settings_page(page: SettingsPage) -> AnyView {
         }
     };
     let heading = page_heading(Header { badge, ..header }, actions).into_any();
+    let replica = replica.map(replica_line);
     let rows = settings
         .into_iter()
         .map(|setting| setting_row(setting, managed))
@@ -123,6 +129,7 @@ pub fn settings_page(page: SettingsPage) -> AnyView {
     };
     view! {
         {heading}
+        {replica}
         <div class="fui-stack">{revision} {section}</div>
     }
     .into_any()

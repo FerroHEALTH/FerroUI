@@ -50,6 +50,7 @@ pub mod shortcuts;
 pub mod side_panel;
 pub mod tabs;
 pub mod toast;
+pub mod topology;
 pub mod tree;
 pub mod upload;
 pub mod version;

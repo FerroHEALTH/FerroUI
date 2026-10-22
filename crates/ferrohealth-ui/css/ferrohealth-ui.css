@@ -8272,6 +8272,95 @@
     line-height: var(--leading-small);
   }
 
+  /* ---- F5 and F6 drawn by the library. A node's protocol term sits
+     quietly after its state; the replica line sits under the page header,
+     closer to it than to the first card, its words wrapping as a unit. ---- */
+  .fui-fanout-item.is-excluded .fui-fanout-error {
+    color: var(--muted);
+  }
+
+  .fui-fanout-term {
+    color: var(--muted);
+    font-size: var(--text-micro);
+    line-height: var(--leading-micro);
+  }
+
+  .fui-fanout-term > code {
+    font-size: inherit;
+    line-height: inherit;
+  }
+
+  .fui-page-header:has(+ .fui-replica-line) {
+    margin-block-end: 0.5rem;
+  }
+
+  .fui-page-header + .fui-replica-line {
+    display: flex;
+    margin-block: 0 1.5rem;
+  }
+
+  /* ---- F9 drawn by the library: the canvas scrolls inside its frame, so
+     the zoom cluster and the minimap stay put while it pans; a zoomed
+     drawing takes the width its attributes give it, never a style. ---- */
+  .fui-topology-scroll {
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+
+  .fui-topology-scroll:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .fui-topology-scroll:has(> .is-zoomed) {
+    max-height: 70vh;
+  }
+
+  .fui-topology-scroll > .fui-pipeline-stage {
+    justify-content: center;
+  }
+
+  .fui-topology-scroll > .fui-pipeline-stage > .fui-topology-svg {
+    width: auto;
+    max-width: 100%;
+    height: auto;
+  }
+
+  .fui-topology-scroll > .fui-pipeline-stage.is-zoomed {
+    width: max-content;
+    justify-content: start;
+  }
+
+  .fui-topology-scroll > .fui-pipeline-stage.is-zoomed > .fui-topology-svg {
+    max-width: none;
+  }
+
+  /* A cluster control names itself above it only under the pointer or
+     the focus, paint only (family rule 3). */
+  .fui-topology-zoom .fui-tooltip {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .fui-topology-zoom .fui-anchor:is(:hover, :focus-within) > .fui-tooltip {
+    visibility: visible;
+  }
+
+  .fui-tree-fold {
+    display: inline-flex;
+    flex: none;
+    color: var(--muted);
+  }
+
+  .fui-tree-fold:hover {
+    color: var(--ink);
+  }
+
+  .fui-topology-list .fui-tree-name > a:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
   /* ---- F7. NEW (FerroFED). Repeatable rows: a list of the same few fields
      (a query parameter, an endpoint of a member), each row removable by
      its own labelled button at its end, and one Add button under the
@@ -8557,8 +8646,12 @@
     box-shadow: inset 0 0 0 1.5px var(--muted);
   }
 
-  .fui-sidebar-rail .fui-nav-tree {
-    display: none;
+  /* The rail leaves the nested section out; the drawer below 48 rem keeps
+     it, whatever the rail's state. */
+  @media (width >= 48rem) {
+    .fui-sidebar-rail .fui-nav-tree {
+      display: none;
+    }
   }
 
   /* ---- F12. NEW (FerroFED). A state in words with its dot (the shape

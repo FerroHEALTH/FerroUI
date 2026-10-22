@@ -27,7 +27,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
-journey_modules="configuration journeys no_wasm operations painted records states tabs_and_toasts terminology widgets"
+journey_modules="configuration federation journeys no_wasm operations painted records states tabs_and_toasts terminology widgets"
 
 # The design sets: the templates first, then every console with a pages.py.
 design_sets() {

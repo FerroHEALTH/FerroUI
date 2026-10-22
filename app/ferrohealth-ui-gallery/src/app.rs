@@ -81,6 +81,10 @@ pub const PAGING_COOKIE: &str = "gallery-paging-";
 /// answers with the draft it received.
 pub const DRAFT_ROUTE: &str = "/draft";
 
+/// The path of the route the topology's Probe now posts to, which sends
+/// the browser back where it came from.
+pub const PROBE_ROUTE: &str = "/probe";
+
 /// The path of the route the sidebar's Collapse and Expand post to.
 pub const SIDEBAR_ROUTE: &str = "/sidebar";
 
@@ -328,6 +332,11 @@ pub fn App() -> impl IntoView {
                         path=path!("terminology")
                         view=crate::pages::terminology::TerminologyPage
                     />
+                    <Route path=path!("federation") view=crate::pages::federation::FederationPage />
+                    <Route
+                        path=path!("federation/:part")
+                        view=crate::pages::federation::FederationPart
+                    />
                     <Route path=path!("preferences") view=crate::pages::preferences::PreferencesPage />
                     <Route
                         path=path!("preferences/:section")
@@ -450,8 +459,27 @@ macro_rules! entries {
                 exact: true,
                 count: None,
             },
+            Entry {
+                href: concat!("/", $key, "/federation"),
+                label: tr(Msg::Federation).into(),
+                glyph: Glyph::NETWORK,
+                exact: false,
+                count: None,
+            },
         ]
     };
+}
+
+/// The `href` of the federation entry of `brand`, the nested sidebar
+/// section's place.
+const fn federation_entry(brand: Brand) -> &'static str {
+    match brand {
+        Brand::Bridge => "/ferrobridge/federation",
+        Brand::Fed => "/ferrofed/federation",
+        Brand::Ehr => "/ferroehr/federation",
+        Brand::Term => "/ferroterm/federation",
+        Brand::Pix => "/ferropix/federation",
+    }
 }
 
 /// The page template entries of the brand `key`.
@@ -754,6 +782,7 @@ fn brand_shell(brand: Brand, back: String, search: Option<&str>, fhir: Option<&s
             action: String::from(SIDEBAR_ROUTE),
             back: back.clone(),
         }),
+        nest: crate::pages::federation::nest(brand, &back, federation_entry(brand)),
     });
     let theme = use_context::<InForce>().map_or(Theme::System, |in_force| in_force.0);
     // A name as long as a FHIR user reference gets, so the top bar shows how
