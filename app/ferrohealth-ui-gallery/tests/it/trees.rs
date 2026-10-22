@@ -190,3 +190,49 @@ async fn the_folder_tree_walks_past_its_actions_and_the_path_tree_follows_a_node
     })
     .await
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_matches_and_the_value_set_of_a_path_node_are_m2_codings() -> Result<(), Box<dyn Error>>
+{
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/ferroterm/trees")).await?;
+        let matches = browser
+            .driver()
+            .find_all(By::Css(".fui-match-list > li"))
+            .await?;
+        assert!(!matches.is_empty(), "the search shows its matches");
+        for each in matches {
+            let link = each
+                .find(By::Css(
+                    ".fui-coding.fui-coding-inline .fui-coding-display a.fui-row-link",
+                ))
+                .await?;
+            assert!(
+                !link.text().await?.is_empty(),
+                "a match is an M2 coding over its link"
+            );
+            each.find(By::Css(".fui-coding-code")).await?;
+        }
+        let codes = browser
+            .driver()
+            .find_all(By::Css(".fui-code-list > li .fui-coding"))
+            .await?;
+        assert!(!codes.is_empty(), "the path node's value set is M2 codings");
+        assert!(
+            browser
+                .driver()
+                .find_all(By::Css(
+                    ".fui-match-list .fui-tree-code, .fui-code-list .fui-tree-code"
+                ))
+                .await?
+                .is_empty(),
+            "no code beside a display of the gallery's own"
+        );
+        browser.console_clean("the trees page's codings").await
+    })
+    .await
+}
