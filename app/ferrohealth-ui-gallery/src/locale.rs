@@ -275,14 +275,10 @@ messages! {
     AnsweredSyntheticReplicaGallery1 = "answered-synthetic-replica-gallery-1",
     /// `Bounded, scrollable and highlighted, never at the page's full height.`
     BoundedScrollableHighlightedNeverPage = "bounded-scrollable-highlighted-never-page",
-    /// `The mapping file, numbered`
-    MappingFileNumbered = "mapping-file-numbered",
     /// `A diagnostic links to its line:`
     DiagnosticLinksLine = "diagnostic-links-line",
     /// `line 13`
     Line13 = "line-13",
-    /// `Numbered lines`
-    NumberedLines = "numbered-lines",
     /// `AQL`
     Aql = "aql",
     /// `A query, AQL`
@@ -303,6 +299,24 @@ messages! {
     Observation = "observation",
     /// `Document pane`
     DocumentPane = "document-pane",
+    /// `The key retries is not in the context schema.`
+    FindingRetries = "finding-retries",
+    /// `The anchor start is read again as the fallback.`
+    FindingStartTwice = "finding-start-twice",
+    /// `console`
+    OwnerConsole = "owner-console",
+    /// `SHA-256 of the bytes the gallery serves`
+    DigestOfBytes = "digest-of-bytes",
+    /// `The mapping file`
+    TheMappingFile = "the-mapping-file",
+    /// `Panel sections`
+    PanelSections = "panel-sections",
+    /// `Each part of a panel is a section under its heading, a hairline between.`
+    PanelSectionsIntro = "panel-sections-intro",
+    /// `Spacing steps`
+    SpacingSteps = "spacing-steps",
+    /// `Add a step`
+    AddStep = "add-step",
     /// `Value`
     Value = "value",
     /// `72.5 beats/min`

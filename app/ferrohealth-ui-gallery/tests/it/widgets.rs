@@ -642,3 +642,59 @@ async fn the_tree_keeps_its_open_items_in_the_address_across_a_reload() -> Resul
     })
     .await
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_document_views_switch_in_place_once_the_island_hydrates() -> Result<(), Box<dyn Error>>
+{
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/ferroehr/code")).await?;
+        browser
+            .element(By::Css(".fui-document-views.is-live"))
+            .await?;
+        let highlighted = browser.element(By::Id("document-highlighted")).await?;
+        let raw = browser.element(By::Id("document-raw")).await?;
+        assert!(
+            highlighted.is_displayed().await?,
+            "the highlighted view opens"
+        );
+        assert!(!raw.is_displayed().await?, "the raw view waits");
+        browser
+            .element(By::Css(".fui-document-switch a[data-view='raw']"))
+            .await?
+            .click()
+            .await?;
+        until("the raw view shows in place", async || {
+            Ok(raw.is_displayed().await? && !highlighted.is_displayed().await?)
+        })
+        .await?;
+        let url = browser.driver().current_url().await?;
+        assert!(
+            url.fragment().is_none(),
+            "no jump and no history entry: {url}"
+        );
+        assert_eq!(
+            Some(String::from("true")),
+            browser
+                .element(By::Css(".fui-document-switch a[data-view='raw']"))
+                .await?
+                .attr("aria-current")
+                .await?
+        );
+        let rendered = browser.element(By::Id("document-rendered")).await?;
+        browser
+            .element(By::Css(".fui-document-switch a[data-view='rendered']"))
+            .await?
+            .click()
+            .await?;
+        until("the rendered view shows", async || {
+            Ok(rendered.is_displayed().await? && !raw.is_displayed().await?)
+        })
+        .await?;
+        browser.console_clean("the document views").await
+    })
+    .await
+}

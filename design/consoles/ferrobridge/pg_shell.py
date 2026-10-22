@@ -299,7 +299,7 @@ def page_about():
     acts = copy_button("Copy", "the info document") + button("secondary", "Download", "download", small=True)
     doc = (f'<section class="fui-card fui-panel mk-options-card"><div class="fui-panel-head"><h2 class="fui-card-title"><span>The bridge\'s info document</span></h2><div class="fui-actions">{acts}</div></div>'
            f'<div class="fui-panel-body fui-stack"><p class="fui-small fui-muted">What the bridge answers at <code>GET /health/info</code>: its version, build, pins and lanes.</p>'
-           f'<div class="fui-code-panel fui-self-description" role="region" aria-label="The info document" tabindex="0"><pre>{json_html(INFO_DOC)}</pre></div></div></section>')
+           f'<div class="fui-code-panel fui-self-description fui-scroll-cue" role="region" aria-label="The info document" tabindex="0"><pre>{json_html(INFO_DOC)}</pre></div></div></section>')
     console = (f'<section class="fui-card fui-panel"><div class="fui-panel-head"><h2 class="fui-card-title"><span>This console</span></h2></div>'
                + tpl.settings_panel(console_rows(), 'Set in <code>ferrobridge-console.toml</code> · read at start') + "</section>")
     content = (page_heading("About", subtitle="The console, the bridge it reads, and the manufacturer.")

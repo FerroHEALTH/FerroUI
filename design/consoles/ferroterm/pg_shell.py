@@ -307,7 +307,7 @@ def page_about():
     acts = copy_button("Copy", "the CapabilityStatement") + button("secondary", "Download", "download", small=True)
     doc = (f'<section class="fui-card fui-panel mk-options-card"><div class="fui-panel-head"><h2 class="fui-card-title"><span>The CapabilityStatement of FHIR R4</span></h2><div class="fui-actions">{acts}</div></div>'
            f'<div class="fui-panel-body fui-stack"><p class="fui-small fui-muted">What the R4 root declares at <code>GET /r4/metadata</code>; <a href="server.html">Server</a> compares the four roots.</p>'
-           f'<div class="fui-code-panel fui-self-description" role="region" aria-label="The CapabilityStatement" tabindex="0"><pre>{json_html(CAPABILITY)}</pre></div></div></section>')
+           f'<div class="fui-code-panel fui-self-description fui-scroll-cue" role="region" aria-label="The CapabilityStatement" tabindex="0"><pre>{json_html(CAPABILITY)}</pre></div></div></section>')
     content = (page_heading("About", subtitle="The console, the server it reads, and the manufacturer.")
                + f'<div class="fui-stack"><div class="fui-grid fui-grid-start">{vers}{maker}</div>{doc}</div>')
     return shell("About", "about", content)

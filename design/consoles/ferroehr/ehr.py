@@ -263,7 +263,7 @@ def codeview(title, text, lang="json", meta="", label=None, what="the document",
     acts = (copy_button("Copy", what) + icon_button("download", f"Download {what}")) if actions else ""
     head = (f'<!--cvh--><div class="fui-codeview-head"><span class="fui-codeview-path"><!--cvp-->{title}<!--/cvp--></span>'
             f'<span class="fui-codeview-meta"><!--cvm-->{meta}<span>{plural(n, "line")}</span>{acts}<!--/cvm--></span></div><!--/cvh-->')
-    return (f'<div class="fui-codeview">{head}<div class="fui-code-panel fui-code-panel-numbered" role="region" aria-label="{e(label or title)}, one numbered line per line" tabindex="0">'
+    return (f'<div class="fui-codeview">{head}<div class="fui-code-panel fui-code-panel-numbered fui-scroll-cue" role="region" aria-label="{e(label or title)}, one numbered line per line" tabindex="0">'
             f'<pre>{code_lines(text, lang, current, diags)}</pre></div></div>')
 
 

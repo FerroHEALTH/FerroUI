@@ -335,7 +335,7 @@ def code_card(title, text, what, intro=""):
     acts = copy_button("Copy", what) + button("secondary", "Download", "download", small=True)
     i = f'<p class="fui-small fui-muted">{intro}</p>' if intro else ""
     return (f'<section class="fui-card fui-panel mk-options-card"><div class="fui-panel-head"><h2 class="fui-card-title"><span>{title}</span></h2><div class="fui-actions">{acts}</div></div>'
-            f'<div class="fui-panel-body fui-stack">{i}<div class="fui-code-panel fui-self-description" role="region" aria-label="{e(title)}" tabindex="0"><pre>{json_html(text)}</pre></div></div></section>')
+            f'<div class="fui-panel-body fui-stack">{i}<div class="fui-code-panel fui-self-description fui-scroll-cue" role="region" aria-label="{e(title)}" tabindex="0"><pre>{json_html(text)}</pre></div></div></section>')
 
 
 def page_about():

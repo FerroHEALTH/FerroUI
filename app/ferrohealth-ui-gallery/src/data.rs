@@ -112,6 +112,50 @@ context:
   fallback: *start
 ";
 
+/// The path of the synthetic mapping file the code viewer shows.
+pub const MAPPING_PATH: &str = "fhirconnect/gallery.context.yml";
+
+/// The synthetic mapping file the code viewer shows: the context with one
+/// line long enough to scroll sideways.
+pub const MAPPING: &str = "grammar: FHIRConnect/v1.0.0
+type: context
+metadata:
+  name: gallery.context   # a synthetic mapping
+  version: 1.0.0
+  description: \"A synthetic context whose one long line runs past the right edge of the viewer, so the box scrolls sideways under its cue and never wraps inside a token.\"
+spec:
+  system: FHIR
+  version: R4
+context:
+  profile:
+    url: \"http://example.org/fhir/StructureDefinition/gallery\"
+  template:
+    id: \"gallery.template.v1\"
+  archetypes:
+    - \"gallery_archetype\"
+  start: &start \"gallery_archetype\"
+  retries: 3
+  enabled: true
+  fallback: *start
+";
+
+/// The short digest of [`MAPPING`], as a viewer's head shows it.
+pub const MAPPING_DIGEST: &str = "SHA-256 5712e3f7…f2e0e3fa";
+
+/// The language tag of a mapping file.
+pub const FHIRCONNECT: &str = "FHIRconnect";
+
+/// The codes of the two synthetic findings on [`MAPPING`].
+pub const FINDING_CODES: [&str; 2] = ["FC-201", "FC-114"];
+
+/// The file names the four language viewers carry in their heads.
+pub const FILE_NAMES: [&str; 4] = [
+    "fhirconnect/gallery.context.yml",
+    "fhir/Observation/gallery-1.json",
+    "openehr/gallery.composition.xml",
+    "aql/gallery.query.aql",
+];
+
 /// A synthetic FHIR resource, the JSON the code panel shows.
 pub const JSON: &str = r#"{
   "resourceType": "Observation",

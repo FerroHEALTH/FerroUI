@@ -4,9 +4,9 @@
 //! The surfaces a page is built from.
 //!
 //! They are the page header with its trail and meta line, the editor's
-//! header, the card and the panel with its header action, the stat card, the
-//! definition grids, the well, the chip, the disclosure, and the stack,
-//! grid, cluster and split that lay them out.
+//! header, the card and the panel with its header action, the sections of a
+//! tab panel (B10), the stat card, the definition grids, the well, the chip,
+//! the disclosure, and the stack, grid, cluster and split that lay them out.
 
 use std::borrow::Cow;
 
@@ -294,6 +294,9 @@ pub fn panel(body: impl IntoView + 'static) -> impl IntoView {
 
 /// Returns a panel: a card whose first row holds its title and actions.
 ///
+/// It stands on a page of its own; inside a tab panel the parts are
+/// [`panel_section`]s, never a card in the panel.
+///
 /// `title` and `actions` sit over `body`, which runs to the card's edges (a table, a list). Pass a
 /// `body` with its own padding through [`panel_body`] when it is prose.
 #[must_use]
@@ -339,6 +342,97 @@ pub fn card_action(href: impl Into<String>, label: impl Into<String>) -> AnyView
 pub fn panel_body(body: impl IntoView + 'static) -> impl IntoView {
     let body = body.into_any();
     view! { <div class="fui-panel-body">{body}</div> }
+}
+
+/// What a panel section's heading row shows.
+#[derive(Debug, Default)]
+pub struct SectionHead {
+    /// The section's title, a level-three heading in the page outline.
+    pub title: String,
+    /// The count after the title, muted after a middle dot, when the
+    /// section holds a list.
+    pub count: Option<u64>,
+    /// The section's actions at the row's end.
+    pub actions: Option<AnyView>,
+}
+
+/// Returns the parts of a tab panel, `sections` drawn by [`panel_section`],
+/// one above the other with a hairline between (B10).
+///
+/// The tab panel is their one frame: no part is a card inside it, on a
+/// desktop or on a phone.
+#[must_use]
+pub fn panel_sections(sections: impl IntoView + 'static) -> AnyView {
+    let sections = sections.into_any();
+    view! { <div class="fui-panel">{sections}</div> }.into_any()
+}
+
+/// Returns `sections` drawn by [`panel_section`] in a card of their own,
+/// named `label`, for a page with no tabs: the card is their one frame.
+#[must_use]
+pub fn panel_sections_card(label: impl Into<String>, sections: impl IntoView + 'static) -> AnyView {
+    let sections = sections.into_any();
+    view! {
+        <section class="fui-card fui-panel" aria-label=label.into()>
+            {sections}
+        </section>
+    }
+    .into_any()
+}
+
+/// Returns one part of a tab panel (B10): its heading row, when it has
+/// one, over `body`, with a hairline above it after the first part.
+///
+/// The heading row holds the title, the count and the actions. A table, a
+/// diagnostics list or a code viewer in `body` runs edge to edge to the
+/// panel's frame; prose keeps the section's inset. Each title is a real
+/// heading in the page outline (WCAG 2.2 SC 1.3.1). No specification
+/// governs the layout: our own design.
+#[must_use]
+pub fn panel_section(head: Option<SectionHead>, body: impl IntoView + 'static) -> AnyView {
+    let body = body.into_any();
+    let head = head.map(
+        |SectionHead {
+             title,
+             count,
+             actions,
+         }| {
+            let title = match count {
+                Some(count) => crate::view::template::list::counted(title, count),
+                None => title.into_any(),
+            };
+            let actions = actions.map(|actions| view! { <div class="fui-actions">{actions}</div> });
+            view! {
+                <div class="fui-panel-section-head">
+                    <h3 class="fui-panel-section-title">{title}</h3>
+                    {actions}
+                </div>
+            }
+        },
+    );
+    view! { <section class="fui-panel-section">{head} {body}</section> }.into_any()
+}
+
+/// Returns the one sentence under a section's heading that says what the
+/// section holds.
+#[must_use]
+pub fn section_intro(sentence: impl Into<String>) -> AnyView {
+    view! { <p class="fui-small fui-muted fui-section-intro">{sentence.into()}</p> }.into_any()
+}
+
+/// Returns the row of Add buttons under a list of rows in a section.
+#[must_use]
+pub fn add_row(buttons: impl IntoView + 'static) -> AnyView {
+    let buttons = buttons.into_any();
+    view! { <div class="fui-cluster fui-add-row">{buttons}</div> }.into_any()
+}
+
+/// Returns a file beside its diagnostics in a tab panel: `file`, a
+/// [`crate::view::code::code_viewer`] with its head, and `side`, a
+/// [`panel_section`], split by a hairline and stacked under 64 rem.
+#[must_use]
+pub fn source_split(file: AnyView, side: AnyView) -> AnyView {
+    view! { <div class="fui-panel fui-source-split">{file} {side}</div> }.into_any()
 }
 
 /// What a stat card shows.

@@ -12,8 +12,11 @@ use ferrohealth_ui::theme::Theme;
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::button::{Variant, link_button};
 use ferrohealth_ui::view::chart::{LineChart, Series};
-use ferrohealth_ui::view::code::{code_lines, code_panel};
+use ferrohealth_ui::view::code::{
+    Code, CodeHead, Digest, Gravity, LineDiagnostic, code_card, code_section, code_viewer,
+};
 use ferrohealth_ui::view::dialog::{Confirmation, confirm_dialog, confirm_trigger};
+use ferrohealth_ui::view::document::{Document, document_pane};
 use ferrohealth_ui::view::empty::{empty_state, skeleton};
 use ferrohealth_ui::view::form::{
     ERROR, Field, INPUT, SELECT, action_field, described_by, error_id, field, help_id, keyed_check,
@@ -24,12 +27,13 @@ use ferrohealth_ui::view::shell::{Footer, footer, lockup, mark};
 use ferrohealth_ui::view::sign_in::{Basic, Notice, Provider, SignIn, sign_in};
 use ferrohealth_ui::view::status::{badge, banner, pill, status};
 use ferrohealth_ui::view::surface::{
-    Header, Stat, definitions, page_header, page_heading, stat_card,
+    Header, SectionHead, Stat, add_row, definitions, page_header, page_heading, panel_section,
+    panel_sections, section_intro, source_split, stat_card,
 };
 use ferrohealth_ui::view::tabs::{Tab, link_tabs};
 use ferrohealth_ui::view::theme_switch::{theme_switch, theme_toggle};
 use ferrohealth_ui::widget::chart::line_chart;
-use ferrohealth_ui::widget::document::{DocumentPane, document_pane_opening};
+use ferrohealth_ui::widget::document::DocumentView;
 use ferrohealth_ui::widget::editor::{Editor, code_editor};
 use ferrohealth_ui::widget::help::explained_check_field;
 use ferrohealth_ui::widget::nav::{Entry, Group, sidebar};
@@ -252,13 +256,226 @@ fn a_refusal_lists_its_issues_with_their_text_and_counts_the_silent_ones() {
     );
 }
 
+/// A code viewer's text: a long line, a current line and two findings.
+fn code(text: &str) -> Code {
+    Code {
+        label: String::from("The <file>"),
+        language: Language::Yaml,
+        text: text.to_owned(),
+        ids: Some(String::from("f-L")),
+        current: Some(2),
+        diagnostics: vec![
+            LineDiagnostic {
+                line: 1,
+                gravity: Gravity::Error,
+                code: String::from("FC-<1>"),
+                message: String::from("An <unknown> key."),
+            },
+            LineDiagnostic {
+                line: 3,
+                gravity: Gravity::Warning,
+                code: String::from("FC-2"),
+                message: String::from("A key read twice."),
+            },
+        ],
+    }
+}
+
 #[test]
-fn a_code_panel_escapes_its_text_and_numbers_its_lines_for_a_link() {
-    let panel = html(|| code_panel("The answer", Language::Json, "{\"a\": \"</pre>\"}").into_any());
-    assert!(panel.contains("&lt;/pre&gt;"), "{panel}");
-    assert!(panel.contains(r#"role="region""#), "{panel}");
-    let lines = html(|| code_lines("The file", Language::Yaml, "a: 1\nb: 2", "L").into_any());
-    assert!(lines.contains(r#"id="L2""#), "{lines}");
+fn a_code_viewer_escapes_its_text_numbers_its_lines_and_draws_each_finding_under_its_line() {
+    let viewer = html(|| code_viewer(None, &code("a: \"</pre>\"\nb: 2\nc: 3\n")));
+    assert!(viewer.contains("&lt;/pre&gt;"), "{viewer}");
+    assert!(
+        !viewer.contains("<unknown>") && !viewer.contains("FC-<1>"),
+        "{viewer}"
+    );
+    assert!(viewer.contains("An &lt;unknown&gt; key."), "{viewer}");
+    assert!(
+        has(
+            &viewer,
+            "span",
+            &[("id", "f-L1"), ("class", "fui-code-line fui-mark-error")]
+        ),
+        "{viewer}"
+    );
+    assert!(
+        has(
+            &viewer,
+            "span",
+            &[("id", "f-L2"), ("class", "fui-code-line is-current")]
+        ),
+        "{viewer}"
+    );
+    assert!(
+        !viewer.contains(r#"id="f-L4""#),
+        "a final line break opens no line: {viewer}"
+    );
+    let first = viewer.find(r#"id="f-L1""#).unwrap_or(usize::MAX);
+    let finding = viewer.find("fui-code-diag fui-tone-bad").unwrap_or(0);
+    let second = viewer.find(r#"id="f-L2""#).unwrap_or(0);
+    assert!(
+        first < finding && finding < second,
+        "the finding sits under its line: {viewer}"
+    );
+    assert!(
+        has(
+            &viewer,
+            "span",
+            &[("class", "fui-code-diag fui-tone-warn"), ("role", "note")]
+        ),
+        "{viewer}"
+    );
+    assert!(
+        has(
+            &viewer,
+            "div",
+            &[
+                (
+                    "class",
+                    "fui-code-panel fui-code-panel-numbered fui-scroll-cue"
+                ),
+                ("role", "region"),
+                ("tabindex", "0"),
+                ("aria-label", "The &lt;file&gt;, one numbered line per line"),
+            ]
+        ),
+        "{viewer}"
+    );
+    assert!(!viewer.contains("fui-codeview-head"), "no head: {viewer}");
+    assert!(!viewer.contains("style="), "{viewer}");
+}
+
+#[test]
+fn a_code_card_names_its_path_in_its_head_with_the_tags_the_count_and_the_digest() {
+    let card = html(|| {
+        code_card(
+            CodeHead {
+                title: String::from("fhirconnect/a <b>.yml"),
+                tags: vec![String::from("FHIRconnect")],
+                digest: Some(Digest {
+                    text: String::from("SHA-256 5712…"),
+                    title: String::from("SHA-256 of the bytes"),
+                }),
+                actions: None,
+            },
+            &code("a: 1\nb: 2\nc: 3"),
+        )
+    });
+    assert!(
+        has(&card, "h2", &[("class", "fui-codeview-path")])
+            && card.contains("fhirconnect/<wbr>a &lt;b&gt;.yml"),
+        "the path is the title and breaks after its slash alone: {card}"
+    );
+    assert!(
+        has(&card, "section", &[("class", "fui-card fui-codeview-card")]),
+        "{card}"
+    );
+    assert!(
+        card.contains(r#"<span class="fui-tag">FHIRconnect</span>"#),
+        "{card}"
+    );
+    assert!(card.contains("3 lines"), "{card}");
+    assert!(
+        has(
+            &card,
+            "span",
+            &[
+                ("class", "fui-codeview-sha"),
+                ("title", "SHA-256 of the bytes")
+            ]
+        ),
+        "{card}"
+    );
+}
+
+#[test]
+fn a_code_section_carries_the_head_in_its_heading_row_and_the_viewer_has_none() {
+    let section = html(|| {
+        code_section(
+            CodeHead {
+                title: String::from("Source"),
+                ..CodeHead::default()
+            },
+            &code("a: 1"),
+        )
+    });
+    assert!(
+        section.contains(r#"<h3 class="fui-panel-section-title">Source</h3>"#),
+        "{section}"
+    );
+    assert!(section.contains("1 line<"), "{section}");
+    assert!(!section.contains("fui-codeview-head"), "{section}");
+    assert!(section.contains(r#"class="fui-codeview""#), "{section}");
+}
+
+#[test]
+fn panel_sections_draw_a_heading_row_with_its_count_and_no_card_of_their_own() {
+    let panel = html(|| {
+        panel_sections(view! {
+            {panel_section(
+                Some(SectionHead {
+                    title: String::from("Models <x>"),
+                    count: Some(3),
+                    actions: Some(view! { <a href="/add">"Add"</a> }.into_any()),
+                }),
+                view! {
+                    {section_intro("One <sentence>.")}
+                    {add_row(view! { <button type="button">"Add"</button> })}
+                },
+            )}
+            {panel_section(None, view! { <p>"Prose"</p> })}
+        })
+    });
+    assert!(panel.starts_with(r#"<div class="fui-panel">"#), "{panel}");
+    assert!(
+        !panel.contains("fui-card"),
+        "never a card in the panel: {panel}"
+    );
+    assert_eq!(2, tags(&panel, "section").len(), "{panel}");
+    assert!(panel.contains("Models &lt;x&gt;"), "{panel}");
+    assert!(
+        panel.contains(r#"<span class="fui-list-count">· 3</span>"#),
+        "{panel}"
+    );
+    assert!(has(&panel, "div", &[("class", "fui-actions")]), "{panel}");
+    assert!(panel.contains("One &lt;sentence&gt;."), "{panel}");
+    assert!(
+        has(
+            &panel,
+            "p",
+            &[("class", "fui-small fui-muted fui-section-intro")]
+        ),
+        "{panel}"
+    );
+    assert!(
+        has(&panel, "div", &[("class", "fui-cluster fui-add-row")]),
+        "{panel}"
+    );
+    assert_eq!(
+        1,
+        tags(&panel, "h3").len(),
+        "a section with no head draws no heading: {panel}"
+    );
+    let split = html(|| {
+        source_split(
+            code_viewer(
+                Some(CodeHead {
+                    title: String::from("a.yml"),
+                    ..CodeHead::default()
+                }),
+                &code("a: 1"),
+            ),
+            panel_section(None, "Diagnostics".into_any()),
+        )
+    });
+    assert!(
+        split.starts_with(r#"<div class="fui-panel fui-source-split">"#),
+        "{split}"
+    );
+    assert!(
+        has(&split, "h3", &[("class", "fui-codeview-path")]) && split.contains(">a.yml<"),
+        "{split}"
+    );
 }
 
 #[test]
@@ -282,39 +499,88 @@ fn a_page_heading_in_the_body_face_writes_no_class_on_its_title() {
     );
 }
 
-#[test]
-fn a_document_pane_opens_on_the_view_it_is_given_and_offers_rendered_only_when_available() {
-    let pane = |rendered_available: bool| {
-        html(move || {
-            document_pane_opening(
-                DocumentPane {
-                    id: "doc",
-                    label: "Composition".into(),
-                    formats: Vec::new(),
-                    format: Signal::stored("json"),
-                    text: Signal::stored(String::from("{\"a\": 1}")),
-                    language: Signal::stored(Language::Json),
-                    rendered: Some(view! { <p>"A reading"</p> }.into_any()),
-                },
-                "raw",
-                Signal::stored(rendered_available),
-                |_| {},
-            )
+/// A document pane over `text`, opening on `opening`, with a rendered view
+/// when `rendered`.
+fn pane(opening: DocumentView, rendered: bool) -> String {
+    page_html(move || {
+        document_pane(Document {
+            id: String::from("doc"),
+            label: String::from("Composition"),
+            formats: vec![
+                (String::from("?format=json"), String::from("JSON")),
+                (String::from("?format=xml"), String::from("XML")),
+            ],
+            format: 0,
+            language: Language::Json,
+            text: String::from("{\"a\": \"</pre>\"}"),
+            opening,
+            rendered: rendered.then(|| view! { <p>"A reading"</p> }.into_any()),
         })
-    };
-    let raw = pane(true);
-    assert!(raw.contains(r#"id="doc-highlighted""#), "{raw}");
+    })
+}
+
+#[test]
+fn a_document_pane_draws_every_view_on_the_server_each_reached_by_a_link() {
+    let raw = pane(DocumentView::Raw, true);
+    for view in ["highlighted", "raw", "rendered"] {
+        assert!(
+            has(
+                &raw,
+                "div",
+                &[
+                    ("id", &format!("doc-{view}")),
+                    ("data-view", view),
+                    ("class", "fui-document-view")
+                ]
+            ),
+            "the {view} view is drawn: {raw}"
+        );
+        assert!(
+            has(
+                &raw,
+                "a",
+                &[("href", &format!("#doc-{view}")), ("data-view", view)]
+            ),
+            "a link reaches the {view} view: {raw}"
+        );
+    }
+    assert!(
+        has(&raw, "a", &[("data-view", "raw"), ("aria-current", "true")]),
+        "{raw}"
+    );
+    assert!(has(&raw, "div", &[("data-shown", "raw")]), "{raw}");
+    assert!(
+        raw.contains("<leptos-island"),
+        "the switch is an island: {raw}"
+    );
+    assert!(
+        raw.contains("<leptos-children"),
+        "the views are its server children: {raw}"
+    );
+    assert!(raw.contains("&lt;/pre&gt;"), "{raw}");
+    assert!(!raw.contains("</pre>\""), "{raw}");
     assert!(
         has(
             &raw,
-            "button",
-            &[("data-choice", "raw"), ("aria-pressed", "true")]
+            "a",
+            &[("href", "?format=json"), ("aria-current", "true")]
         ),
         "{raw}"
     );
-    assert!(raw.contains(r#"data-choice="rendered""#), "{raw}");
-    let plain = pane(false);
-    assert!(!plain.contains(r#"data-choice="rendered""#), "{plain}");
+    assert!(
+        !raw.contains("<button"),
+        "no control works only with script: {raw}"
+    );
+}
+
+#[test]
+fn a_document_pane_with_no_rendered_view_offers_none_and_opens_highlighted() {
+    let plain = pane(DocumentView::Rendered, false);
+    assert!(!plain.contains(r#"data-view="rendered""#), "{plain}");
+    assert!(
+        has(&plain, "div", &[("data-shown", "highlighted")]),
+        "{plain}"
+    );
 }
 
 #[test]

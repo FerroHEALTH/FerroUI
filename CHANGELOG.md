@@ -110,9 +110,54 @@ and this project adheres to
   page a listing that keeps its position out of the URL through a form whose
   buttons carry `page` and `size` to the console's route (`PostTo`), so the
   position never reaches a URL or the history and no row is an island prop.
+- Panel sections (B10, #159): `view::surface::panel_sections` and
+  `panel_section` draw a tab panel's parts, each a heading row (a
+  level-three title, a count after a middle dot, actions) over its body,
+  with a hairline between parts and no card inside the panel. A table, a
+  diagnostics list or a code viewer in a section runs edge to edge.
+  `panel_sections_card` holds the sections on a page with no tabs,
+  `source_split` puts a file beside its diagnostics (stacked under 64 rem),
+  and `section_intro` and `add_row` are the editor parts that sit in a
+  section. The gallery's layouts page shows a panel of three sections.
+- The code viewer (B1, #160): `view::code::code_viewer`, `code_card` and
+  `code_section`, over `Code`, `CodeHead`, `Digest`, `LineDiagnostic` and
+  `Gravity`. The head names the path as its title in the prose font,
+  breaking only after a slash, with its tags, the line count and the short
+  digest; the lines are numbered, a current line takes `is-current`, and
+  each diagnostic sits under its line in the bad or warn tone and stays in
+  view while the line scrolls. In a panel section the section's heading
+  row is the viewer's one head. `highlight::line_html` writes one line's
+  tokens. Copy joins the head with the copy island (#220).
+- The scroll cue is one class, `fui-scroll-cue`: a thin scrollbar and a
+  soft shadow on the clipped edge that goes at the end. The code viewer and
+  About's self-description card take it.
+- The document pane works without WebAssembly (#212):
+  `view::document::document_pane` over `Document` draws the format choice
+  as links and every view (highlighted in the code viewer, raw, and the
+  console's rendered view) on the server, each reached by its link. The
+  island `island::DocumentViews` (props `Serialize + DeserializeOwned`,
+  the views as its server children) switches them in place once it has
+  hydrated; `widget::document::DocumentView`, `ViewChoice` and
+  `view_switch` are its parts.
 
 ### Changed
 
+- The document pane is a server view with an island over its views
+  (#212): `widget::document::document_pane`, `document_pane_opening` and
+  `DocumentPane` give way to `view::document::document_pane` and
+  `Document`. A console passes the format links and the text of the format
+  in force where it passed signals and an `on_format` callback, and the
+  view to open as a `DocumentView`. The pane's Copy is absent until the
+  copy island lands (#220).
+- `view::code::code_panel` and `code_lines` give way to the code viewer
+  (#160): `code_viewer(None, &code)` is the bare box, its lines always
+  numbered, and `Code::ids` names the line ids `code_lines` took.
+- Inside a tab panel, `view::surface::titled_panel`, `panel_body` and a
+  `card` give way to `panel_section` (#159); `titled_panel` stays for a
+  card that stands on a page of its own.
+- The code viewer's path (`fui-codeview-path`) is the head's title in the
+  prose font at the title weight, no longer bold mono, recorded in
+  `design/COMPONENTS.md` B1.
 - `view::surface::page_heading` draws the trail's back arrow, so below
   40 rem the trail is one back link to the parent (R6), and a state badge
   beside the title from the new `Header::badge` (R24). `Header` is no
@@ -231,6 +276,10 @@ and this project adheres to
 
 ### Removed
 
+- `view::code::code_panel`, `view::code::code_lines`,
+  `widget::document::document_pane`, `document_pane_opening` and
+  `DocumentPane`, which the code viewer and `view::document::document_pane`
+  replace (#160, #212).
 - `view::surface::page_heading_live` (#210): a view function takes no
   reactive title. A console calls `page_heading` with the title its server
   knows when it renders.

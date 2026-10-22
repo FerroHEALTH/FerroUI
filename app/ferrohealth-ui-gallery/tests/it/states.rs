@@ -11,7 +11,8 @@
 //! help switch on, the picker open on its input, the tree walked by the
 //! keyboard, the search box focused, the tables in the compact density, the
 //! compact stat tiles and the stacked timestamps of a phone at 320 and
-//! 390 px, and the disabled fields inside a well at 1440 and 390 px.
+//! 390 px, the disabled fields inside a well at 1440 and 390 px, and the
+//! document pane switched to its raw view.
 //!
 //! Each state is written as `states/<brand>/<state>.png` and its `-dark`
 //! twin under the screenshots folder, every brand in the light and the
@@ -34,7 +35,7 @@ use crate::journeys::window;
 use crate::stack::Gallery;
 
 /// Every state, by the name its images take.
-pub(crate) const STATES: [&str; 48] = [
+pub(crate) const STATES: [&str; 49] = [
     "hover-nav",
     "focus-nav",
     "hover-stat",
@@ -83,6 +84,7 @@ pub(crate) const STATES: [&str; 48] = [
     "pick-or-type-typed",
     "pick-or-type-combobox-typed",
     "disabled-well-390",
+    "document-raw",
 ];
 
 /// The viewport the states are taken in.
@@ -231,6 +233,33 @@ async fn shot_of_view(
     browser.settled().await?;
     let png = browser.driver().screenshot_as_png().await?;
     write(brand, state, theme, &png)
+}
+
+/// The document pane switched in place to its raw view.
+async fn document(
+    browser: &Browser,
+    gallery: &Gallery,
+    brand: Brand,
+    theme: &str,
+) -> Result<(), Box<dyn Error>> {
+    browser
+        .goto(&gallery.url(&format!("/{}/code", brand.key())))
+        .await?;
+    browser
+        .element(By::Css(".fui-document-views.is-live"))
+        .await?;
+    browser
+        .element(By::Css(".fui-document-switch a[data-view='raw']"))
+        .await?
+        .click()
+        .await?;
+    let raw = browser.element(By::Id("document-raw")).await?;
+    until("the raw view shows", async || {
+        Ok(raw.is_displayed().await?)
+    })
+    .await?;
+    let pane = browser.element(By::Css(".fui-document")).await?;
+    shot_of(browser, brand, theme, "document-raw", &pane).await
 }
 
 /// The pointer and focus states of the overview.
@@ -810,6 +839,7 @@ async fn every_state_is_captured_in_every_brand_light_and_dark() -> Result<(), B
                 field_states(browser, &gallery, brand, theme).await?;
                 compact(browser, &gallery, brand, theme).await?;
                 phone(browser, &gallery, brand, theme).await?;
+                document(browser, &gallery, brand, theme).await?;
             }
         }
         let missing = unwritten();

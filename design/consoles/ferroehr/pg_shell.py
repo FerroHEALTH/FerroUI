@@ -285,7 +285,7 @@ def page_about():
     acts = copy_button("Copy", "the conformance manifest") + button("secondary", "Download", "download", small=True)
     doc = (f'<section class="fui-card fui-panel mk-options-card"><div class="fui-panel-head"><h2 class="fui-card-title"><span>The conformance manifest</span></h2><div class="fui-actions">{acts}</div></div>'
            f'<div class="fui-panel-body fui-stack"><p class="fui-small fui-muted">What the CDR answers at <code>OPTIONS /ferroehr/<wbr>rest/<wbr>openehr/<wbr>v1</code>; <code>/demographic</code> is the ITS-REST demographic API, still in development.</p>'
-           f'<div class="fui-code-panel fui-self-description" role="region" aria-label="The conformance manifest" tabindex="0"><pre>{json_html(MANIFEST)}</pre></div></div></section>')
+           f'<div class="fui-code-panel fui-self-description fui-scroll-cue" role="region" aria-label="The conformance manifest" tabindex="0"><pre>{json_html(MANIFEST)}</pre></div></div></section>')
     content = (page_heading("About", subtitle="The viewer, the CDR it reads, and the manufacturer.")
                + f'<div class="fui-stack"><div class="fui-grid fui-grid-start">{vers}{maker}</div>{doc}</div>')
     return shell("About", "about", content)

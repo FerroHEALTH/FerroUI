@@ -2407,7 +2407,7 @@ def capability_card():
     acts = copy_button("Copy", "the CapabilityStatement") + button("secondary", "Download", "download", small=True)
     return (f'<section class="fui-card fui-panel mk-options-card"><div class="fui-panel-head"><h2 class="fui-card-title"><span>The CapabilityStatement</span></h2><div class="fui-actions">{acts}</div></div>'
             f'<div class="fui-panel-body fui-stack"><p class="fui-small fui-muted">What the server declares at <code>GET [base]/metadata</code>, as every FHIR client reads it.</p>'
-            f'<div class="fui-code-panel fui-self-description" role="region" aria-label="The CapabilityStatement" tabindex="0"><pre>{json_html(CAPABILITY)}</pre></div></div></section>')
+            f'<div class="fui-code-panel fui-self-description fui-scroll-cue" role="region" aria-label="The CapabilityStatement" tabindex="0"><pre>{json_html(CAPABILITY)}</pre></div></div></section>')
 
 
 CAPABILITY = """{
