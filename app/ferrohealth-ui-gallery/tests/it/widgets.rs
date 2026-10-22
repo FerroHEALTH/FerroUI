@@ -441,13 +441,12 @@ async fn the_search_box_submits_and_the_density_switch_posts() -> Result<(), Box
             .await?;
         browser.goto(&gallery.url("/ferroterm")).await?;
         crate::journeys::hydrated_tabs(browser).await?;
-        browser
+        let compact = browser
             .element(By::XPath(
                 "//button[@name = 'density' and @value = 'compact']",
             ))
-            .await?
-            .click()
             .await?;
+        browser.click_and_load(&compact).await?;
         browser
             .element(By::Css(r#"html[data-density="compact"]"#))
             .await?;
@@ -456,13 +455,12 @@ async fn the_search_box_submits_and_the_density_switch_posts() -> Result<(), Box
                 "//button[@value = 'compact' and @aria-pressed = 'true']",
             ))
             .await?;
-        browser
+        let comfortable = browser
             .element(By::XPath(
                 "//button[@name = 'density' and @value = 'comfortable']",
             ))
-            .await?
-            .click()
             .await?;
+        browser.click_and_load(&comfortable).await?;
         browser
             .element(By::Css(r#"html[data-density="comfortable"]"#))
             .await?;
@@ -480,35 +478,38 @@ async fn the_open_pager_steps_with_no_total() -> Result<(), Box<dyn Error>> {
     with_browser(async |browser| {
         browser.goto(&gallery.url("/ferroehr/tables")).await?;
         let posted = "nav[aria-label='Pages of the EHRs, in the page']";
-        // The posted pager reloads the page, so each step is found afresh.
-        browser
-            .element(By::Css(format!("{posted} [data-page='next']")))
-            .await?
-            .click()
-            .await?;
-        browser.text("p", "EHRs 26 to 50").await?;
-        browser
-            .element(By::Css(format!("{posted} [data-page='prev']")))
-            .await?
-            .click()
-            .await?;
-        until("the first page shows", async || {
-            let status = browser
-                .driver()
-                .find(By::Css(format!("{posted} [role='status']")))
+        let linked = "nav[aria-label='Pages of the EHRs, as links']";
+        let step = async |pager: &str, key: &str| -> Result<(), Box<dyn Error>> {
+            let control = browser
+                .element(By::Css(format!("{pager} [data-page='{key}']")))
                 .await?;
-            // NOTE: WebDriver, "stale element reference": a status the posted page
-            // replaced is gone, so the new page has not shown yet and the wait goes on.
-            Ok(status.text().await.is_ok_and(|text| text == "EHRs 1 to 25"))
-        })
-        .await?;
-        let linked = browser
-            .element(By::Css(
-                "nav[aria-label='Pages of the EHRs, as links'] a[data-page='next']",
-            ))
-            .await?;
-        linked.click().await?;
-        browser.text("p", "EHRs 26 to 50").await?;
+            browser.click_and_load(&control).await
+        };
+        let range = async |pager: &str| -> Result<String, Box<dyn Error>> {
+            Ok(browser
+                .element(By::Css(format!("{pager} [role='status']")))
+                .await?
+                .text()
+                .await?)
+        };
+        step(posted, "next").await?;
+        assert_eq!(
+            "EHRs 26 to 50",
+            range(posted).await?,
+            "Next posts the page after"
+        );
+        step(posted, "prev").await?;
+        assert_eq!(
+            "EHRs 1 to 25",
+            range(posted).await?,
+            "Previous posts the page before"
+        );
+        step(linked, "next").await?;
+        assert_eq!(
+            "EHRs 26 to 50",
+            range(linked).await?,
+            "the linked Next leads on"
+        );
         browser.console_clean("the open pager").await
     })
     .await
