@@ -455,7 +455,7 @@ fn identifier_rows() -> Vec<IdentifierRow> {
                 key: each.key.to_owned(),
                 masked,
                 start,
-                refuses: each.key == "ssn",
+                refuses: matches!(each.key, "ssn" | "rrn"),
             })
         })
         .collect()
@@ -531,7 +531,7 @@ pub(crate) fn identifiers_body(
                 Start::Refused => Reveal::Refused(words.get(Msg::RecordsRefusedWhy)),
                 Start::Expired => Reveal::Expired,
             });
-            let live = each.start == Start::Masked;
+            let live = each.start != Start::Busy;
             let answered = answer(&each, words);
             let on_reveal = Callback::new(move |()| {
                 if live {
