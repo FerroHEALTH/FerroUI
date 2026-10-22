@@ -446,21 +446,24 @@ async fn the_open_pager_steps_with_no_total() -> Result<(), Box<dyn Error>> {
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
         browser.goto(&gallery.url("/ferroehr/tables")).await?;
-        let pager = browser
-            .element(By::Css("nav[aria-label='Pages of the EHRs, in the page']"))
+        let posted = "nav[aria-label='Pages of the EHRs, in the page']";
+        // The posted pager reloads the page, so each step is found afresh.
+        browser
+            .element(By::Css(format!("{posted} [data-page='next']")))
+            .await?
+            .click()
             .await?;
-        let next = pager.find(By::Css("[data-page='next']")).await?;
-        let status = pager.find(By::Css("[role='status']")).await?;
-        press_until("the next page shows", &next, async || {
-            Ok(status.text().await? == "EHRs 26 to 50")
-        })
-        .await?;
-        pager
-            .find(By::Css("[data-page='prev']"))
+        browser.text("p", "EHRs 26 to 50").await?;
+        browser
+            .element(By::Css(format!("{posted} [data-page='prev']")))
             .await?
             .click()
             .await?;
         until("the first page shows", async || {
+            let status = browser
+                .driver()
+                .find(By::Css(format!("{posted} [role='status']")))
+                .await?;
             Ok(status.text().await? == "EHRs 1 to 25")
         })
         .await?;

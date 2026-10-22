@@ -30,8 +30,8 @@ the Authoring Practices (`spec-adherence.md`).
   browser storage. Data arrives as props; theme persistence, URL policy and
   the router base are each console's.
 - **No patient identifier in a URL.** A listing that can show patient data
-  keeps its page, size and sort in the page (`StateSource::Session`,
-  `widget::pager::session_pager`).
+  keeps its page, size and sort out of the URL: its forms post them
+  (`StateSource::Session`, `table::pager::post_pager`).
 - **No user-visible string outside the catalogs** (owner, 2026-10-19). Every
   word a component draws itself is a message of the library's Fluent
   catalog, every word a console draws is a message of the console's, and a
@@ -151,8 +151,10 @@ lock picks its wasm-bindgen and the CLI that must equal it
 
 ## 6. Tables and paging (one model)
 
-`table::model` is the arithmetic, `table::view` the data table and the link
-pager, `widget::pager` the session pager. Page and size are read
+`table::model` is the arithmetic, `table::view` the data table, its cells and
+the list card, `table::pager` the link pager and the `POST` pager, and
+`table::filter` the find field: every sort, filter and step is a link or a
+form, so a listing works with no WebAssembly and no row is an island prop. Page and size are read
 defensively (`?page=` 1-based, `?size=` with choices 25, 50, 100, clamped to
 200), the range label names the rows on the page ("1-25 of 312", a short
 last page "301-312 of 312"), a step that cannot be taken stays visible as a
@@ -160,7 +162,8 @@ disabled control and says "(unavailable)" in visually hidden text, one
 pager row holds the range, the steps and the sizes, the range names the listing's noun and says
 when the server counted more than it sent, a listing with no stated total
 pages with Previous and Next alone (`OpenWindow`), the header is the small
-step in sentence case, a sortable header is a link with `aria-sort`,
+step in sentence case, a sortable header is a submit button in a `GET` form
+(a `POST` form for session state) with `aria-sort` on its header,
 numbers align right, and the table shows every row of its page, never in a
 box capped in height. From 64rem up the header sticks to the viewport just
 below the sticky top bar, inside the scroll padding (SC 2.4.11); below

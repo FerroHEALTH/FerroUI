@@ -11,7 +11,8 @@
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::table::model::{Paging, Window};
-use ferrohealth_ui::table::view::{Body, Column, DataTable, Listing, data_table, link_pager};
+use ferrohealth_ui::table::pager::{Listing, link_pager};
+use ferrohealth_ui::table::view::{Body, Column, DataTable, Role, Sorting, data_table};
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::button::{Variant, label, link_button};
 use ferrohealth_ui::view::error_page::{Detail, ErrorPage, Status, Way, error_page};
@@ -121,6 +122,7 @@ fn columns() -> [Column; 4] {
         sortable: false,
         mono: false,
         title: None,
+        role: Role::default(),
     };
     [
         column("location", Msg::ColumnLocation, false),
@@ -136,8 +138,7 @@ fn table(rows: &[Location]) -> AnyView {
     data_table(DataTable {
         caption: &tr(Msg::Locations),
         columns: &columns(),
-        sort: None,
-        sort_href: &|_| String::new(),
+        sorting: Sorting::default(),
         body: Body::Rows(body),
     })
     .into_any()
@@ -167,6 +168,7 @@ fn short_card(tabs: bool) -> ListCard {
     ListCard {
         title: tr(Msg::Locations),
         count: Some(5),
+        order: None,
         tabs,
         actions: None,
         body: table(&rows),
@@ -259,6 +261,7 @@ fn list_many() -> AnyView {
         card: ListCard {
             title: tr(Msg::Locations),
             count: Some(30),
+            order: None,
             tabs: None,
             actions: None,
             body: table(&shown),
@@ -283,6 +286,7 @@ fn list_empty_page() -> AnyView {
         card: ListCard {
             title: tr(Msg::Locations),
             count: Some(0),
+            order: None,
             tabs: None,
             actions: None,
             body: list_empty(

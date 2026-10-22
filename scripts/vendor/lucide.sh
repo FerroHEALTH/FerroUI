@@ -26,7 +26,7 @@ ICONS=(
   activity arrow-down arrow-left arrow-right arrow-up arrow-up-down ban bell
   book-a book-x chart-line check chevron-down chevron-left chevron-right
   chevrons-left chevrons-right circle-alert circle-check circle-user
-  circle-x clipboard-copy clock code compass copy database download eye
+  circle-x clipboard-copy clock code compass copy database download ellipsis eye
   file-clock file-code file-plus file-text files flask-conical folder
   folder-open folder-plus folder-search folder-x funnel gauge heart-pulse
   inbox info layers layout-dashboard link list-checks log-in

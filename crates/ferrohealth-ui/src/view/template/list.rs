@@ -70,6 +70,12 @@ pub struct ListCard {
     /// How many items the header row counts after the title, when the list
     /// states it.
     pub count: Option<u64>,
+    /// The words of an order of several keys, stated beside the count ("Sorted
+    /// by grade, then score, then the longest wait"): one arrow on one column
+    /// cannot say it, and the leading column still carries the arrow
+    /// (`design/COMPONENTS.md`, T1, the documented exception). The tabs of a
+    /// tabbed card carry no order.
+    pub order: Option<String>,
     /// The binder tabs over the card, when the list has two or more real
     /// views; they carry the title and the count, so the card draws no
     /// header row of its own.
@@ -184,6 +190,7 @@ pub fn list_card(card: ListCard) -> AnyView {
     let ListCard {
         title,
         count,
+        order,
         tabs,
         actions,
         body,
@@ -212,6 +219,7 @@ pub fn list_card(card: ListCard) -> AnyView {
                         }}
                     </span>
                 </h2>
+                {order.map(|order| view! { <p class="fui-sort-note">{order}</p> })}
                 <div class="fui-actions">{actions}</div>
             </div>
             {body}

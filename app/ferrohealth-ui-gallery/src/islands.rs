@@ -77,18 +77,6 @@ pub fn FormatSegments(
     crate::pages::overview::format_segments(children().into_any())
 }
 
-/// The tables page's rows paged in the page's own state.
-#[island]
-pub fn SessionTable() -> impl IntoView {
-    crate::pages::tables::session_rows()
-}
-
-/// The tables page's pager with no stated total, in the page's own state.
-#[island]
-pub fn OpenSessionPager() -> impl IntoView {
-    crate::pages::tables::open_session_pager()
-}
-
 /// The layouts page's concept tree, which keeps its open items in the
 /// address.
 #[island]

@@ -1087,6 +1087,24 @@ messages! {
     NounMappingFiles = "noun-mapping-files",
     /// `The noun of the EHRs, by count, with its empty and opening forms.`
     NounEhrs = "noun-ehrs",
+    /// `Find a mapping file`
+    FindFile = "find-file",
+    /// `Actions for $name`
+    ActionsFor = "actions-for",
+    /// `More actions`
+    MoreActions = "more-actions",
+    /// `Select $name`
+    SelectFile = "select-file",
+    /// `Mapping files to review`
+    ReviewFiles = "review-files",
+    /// `Sorted by state, then lines, then name`
+    ReviewOrder = "review-order",
+    /// `Mapping files to review, sorted by state, then lines, then name`
+    ReviewCaption = "review-caption",
+    /// `The noun of a file's lines, by count, with its empty and opening forms.`
+    NounLines = "noun-lines",
+    /// `Selected`
+    SelectedColumn = "selected-column",
     /// The combobox label of the clause at `$place`.
     ClauseCodeSystem = "clause-code-system",
     /// The filter's count: `$kept` of the `$total` files kept.

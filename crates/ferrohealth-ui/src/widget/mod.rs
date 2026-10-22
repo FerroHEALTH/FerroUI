@@ -21,7 +21,6 @@ pub mod editor;
 pub mod filter;
 pub mod help;
 pub mod nav;
-pub mod pager;
 pub mod pick_or_type;
 pub mod picker;
 pub mod segmented;

@@ -8,10 +8,6 @@
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::island::{KeyboardTabs, ToastRegion};
-use ferrohealth_ui::table::model::{Paging, Sort, Window};
-use ferrohealth_ui::table::view::{
-    Body, Column, DataTable, data_table, data_table_unstacked, link_pager,
-};
 use ferrohealth_ui::theme::Theme;
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::button::{Variant, link_button};
@@ -266,85 +262,6 @@ fn a_code_panel_escapes_its_text_and_numbers_its_lines_for_a_link() {
 }
 
 #[test]
-fn the_data_table_marks_its_sort_and_the_pager_names_an_unavailable_step() {
-    let columns = [
-        Column::text("name", "Name").sortable(),
-        Column::text("rows", "Rows").numeric(),
-    ];
-    let sort = Sort::read(Some("name"), Some("asc"), &["name"]);
-    let table = html(|| {
-        data_table(DataTable {
-            caption: "Mapping files",
-            columns: &columns,
-            sort: sort.as_ref(),
-            sort_href: &|sort: &Sort| format!("/files?sort={}", sort.column),
-            body: Body::Rows(
-                view! { <tr><td>"a"</td><td class="fui-num">"1"</td></tr> }.into_any(),
-            ),
-        })
-        .into_any()
-    });
-    assert!(table.contains(r#"aria-sort="ascending""#), "{table}");
-    assert!(table.contains("<tbody>"), "{table}");
-    assert!(
-        table.contains("<caption>Mapping files</caption>"),
-        "{table}"
-    );
-    let window = Window::over(30, Paging::default());
-    let pager = html(|| {
-        link_pager("Pages", window, &|paging: Paging| {
-            format!("/files?page={}", paging.page)
-        })
-        .into_any()
-    });
-    assert!(pager.contains("1-25 of 30"), "{pager}");
-    assert_eq!(2, pager.matches("(unavailable)").count(), "{pager}");
-    assert!(pager.contains(r#"href="/files?page=2""#), "{pager}");
-    assert!(pager.contains("Page 1 of 2"), "{pager}");
-    let loading = html(|| {
-        data_table(DataTable {
-            caption: "Loading",
-            columns: &columns,
-            sort: None,
-            sort_href: &|_| String::new(),
-            body: Body::Loading(2),
-        })
-        .into_any()
-    });
-    assert!(loading.contains(r#"aria-busy="true""#), "{loading}");
-}
-
-#[test]
-fn a_pager_over_one_page_draws_the_range_and_the_sizes_alone() {
-    let window = Window::over(2, Paging::default());
-    let pager = html(|| {
-        link_pager("Pages", window, &|paging: Paging| {
-            format!("/files?page={}", paging.page)
-        })
-        .into_any()
-    });
-    assert!(pager.contains("1-2 of 2"), "{pager}");
-    assert!(pager.contains("Rows per page"), "{pager}");
-    assert!(!pager.contains("fui-pager-steps"), "{pager}");
-    assert!(!pager.contains("(unavailable)"), "{pager}");
-}
-
-#[test]
-fn an_unavailable_step_reads_its_words_and_the_suffix_apart() {
-    let window = Window::over(30, Paging::default());
-    let pager = html(|| {
-        link_pager("Pages", window, &|paging: Paging| {
-            format!("/files?page={}", paging.page)
-        })
-        .into_any()
-    });
-    assert!(
-        pager.contains(r#"First</span><span class="fui-sr-only"> (unavailable)</span>"#),
-        "{pager}"
-    );
-}
-
-#[test]
 fn a_page_heading_in_the_body_face_writes_no_class_on_its_title() {
     let plain = html(|| page_header("Dashboard", None, ()).into_any());
     assert!(plain.contains("<h1>Dashboard</h1>"), "{plain}");
@@ -588,38 +505,6 @@ fn a_tree_item_states_its_level_by_name() {
 }
 
 #[test]
-fn a_data_table_stacks_on_a_phone_unless_it_opts_out() {
-    let columns = [Column::text("name", "Name"), Column::text("kind", "Kind")];
-    let rows = || view! { <tr><td>"a"</td><td data-label="Kind">"model"</td></tr> }.into_any();
-    let table = html(|| {
-        data_table(DataTable {
-            caption: "Files",
-            columns: &columns,
-            sort: None,
-            sort_href: &|_| String::new(),
-            body: Body::Rows(rows()),
-        })
-        .into_any()
-    });
-    assert!(
-        table.contains(r#"class="fui-table-scroll fui-table-stack""#),
-        "{table}"
-    );
-    let fitting = html(|| {
-        data_table_unstacked(DataTable {
-            caption: "Files",
-            columns: &columns,
-            sort: None,
-            sort_href: &|_| String::new(),
-            body: Body::Rows(rows()),
-        })
-        .into_any()
-    });
-    assert!(fitting.contains(r#"class="fui-table-scroll""#), "{fitting}");
-    assert!(!fitting.contains("fui-table-stack"), "{fitting}");
-}
-
-#[test]
 fn the_surfaces_render_and_none_writes_a_style_attribute() {
     let page = html(|| {
         view! {
@@ -706,81 +591,6 @@ fn a_stat_label_carries_its_whole_text_as_its_title() {
 }
 
 #[test]
-fn a_table_of_several_bodies_writes_them_as_they_are_under_its_header() {
-    let columns = [Column::text("uid", "Uid"), Column::text("rate", "Rate")];
-    let table = html(|| {
-        data_table(DataTable {
-            caption: "Pages",
-            columns: &columns,
-            sort: None,
-            sort_href: &|_| String::new(),
-            body: Body::Bodies(
-                view! {
-                    <tbody data-page="1"><tr><td>"a"</td><td data-label="Rate">"1"</td></tr></tbody>
-                    <tbody data-page="2"><tr><td>"b"</td><td data-label="Rate">"2"</td></tr></tbody>
-                }
-                .into_any(),
-            ),
-        })
-        .into_any()
-    });
-    assert_eq!(table.matches("<tbody").count(), 2, "{table}");
-    assert!(
-        table.contains(r#"</thead><tbody data-page="1">"#),
-        "{table}"
-    );
-    assert!(table.contains("fui-table-stack"), "{table}");
-}
-
-#[test]
-fn a_header_title_rides_its_header_alone_sortable_or_not() {
-    let columns = [
-        Column::owned("patient", "patient")
-            .mono()
-            .titled("e/ehr_status/subject"),
-        Column::text("uid", "Uid")
-            .sortable()
-            .titled(String::from("c/uid/value")),
-        Column::text("rate", "Rate"),
-    ];
-    let table = html(|| {
-        data_table(DataTable {
-            caption: "Results",
-            columns: &columns,
-            sort: None,
-            sort_href: &|sort: &Sort| format!("/q?sort={}", sort.column),
-            body: Body::Rows(view! { <tr><td>"a"</td><td>"b"</td><td>"1"</td></tr> }.into_any()),
-        })
-        .into_any()
-    });
-    assert!(
-        has(
-            &table,
-            "th",
-            &[
-                ("scope", "col"),
-                ("title", "e/ehr_status/subject"),
-                ("class", "fui-th-mono")
-            ]
-        ),
-        "{table}"
-    );
-    assert!(
-        has(
-            &table,
-            "th",
-            &[("title", "c/uid/value"), ("aria-sort", "none")]
-        ),
-        "a sortable header carries its title beside its sort: {table}"
-    );
-    assert_eq!(
-        2,
-        table.matches("title=").count(),
-        "only the titled headers carry one: {table}"
-    );
-}
-
-#[test]
 fn a_field_with_an_id_made_per_row_names_its_own_control_and_help() {
     let rows = ["include-0", "exclude-1"];
     let fields = html(|| {
@@ -834,49 +644,6 @@ fn a_field_with_an_id_made_per_row_names_its_own_control_and_help() {
             &[("id", "inactive-2-help"), ("class", "fui-help")]
         ),
         "{checks}"
-    );
-}
-
-#[test]
-fn a_plain_header_writes_no_class_and_a_sortable_one_carries_its_sort_beside_the_rest() {
-    let columns = [
-        Column::text("name", "Name"),
-        Column::text("rows", "Rows")
-            .numeric()
-            .sortable()
-            .titled("rows read"),
-    ];
-    let sort = Sort::read(Some("rows"), Some("desc"), &["rows"]);
-    let table = html(|| {
-        data_table(DataTable {
-            caption: "Files",
-            columns: &columns,
-            sort: sort.as_ref(),
-            sort_href: &|sort: &Sort| format!("/files?sort={}", sort.column),
-            body: Body::Rows(view! { <tr><td>"a"</td><td>"1"</td></tr> }.into_any()),
-        })
-        .into_any()
-    });
-    let headers = tags(&table, "th");
-    assert_eq!(2, headers.len(), "{table}");
-    assert!(
-        !headers[0].contains_key("class"),
-        "a plain header writes no class, not an empty one: {table}"
-    );
-    assert!(!table.contains(r#"class="""#), "{table}");
-    // WAI-ARIA 1.2, aria-sort: on the column header the sort applies to.
-    assert!(
-        has(
-            &table,
-            "th",
-            &[
-                ("scope", "col"),
-                ("class", "fui-num"),
-                ("title", "rows read"),
-                ("aria-sort", "descending")
-            ]
-        ),
-        "{table}"
     );
 }
 

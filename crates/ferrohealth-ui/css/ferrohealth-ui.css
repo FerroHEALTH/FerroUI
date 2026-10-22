@@ -2359,15 +2359,16 @@
 
     /* A cell whose value is a timestamp keeps the label's column while the
        value fits beside it, and moves the whole value under the label when
-       it does not, since a timestamp never breaks (WCAG 2.2 SC 1.4.10). */
-    .fui-table-stack .fui-table tbody [data-label]:has(> .fui-time) {
+       it does not, since a timestamp never breaks (WCAG 2.2 SC 1.4.10), whether
+       it is the cell's child or the one node a cell helper wraps it in. */
+    .fui-table-stack .fui-table tbody [data-label]:has(> .fui-time, > :where(span) > .fui-time) {
       display: flex;
       flex-wrap: wrap;
       align-items: baseline;
       gap: 0 0.75rem;
     }
 
-    .fui-table-stack .fui-table tbody [data-label]:has(> .fui-time)::before {
+    .fui-table-stack .fui-table tbody [data-label]:has(> .fui-time, > :where(span) > .fui-time)::before {
       flex: 0 0 max(6rem, 35%);
     }
 
@@ -12510,13 +12511,59 @@
     text-overflow: ellipsis;
   }
 
-  /* A column sort is a button: it sorts in place and goes nowhere. */
+  /* A column sort is the submit button of a GET form that carries the
+     sort, so a page sorts with no script; the form adds no box. */
   button.fui-sort {
     border: 0;
     background: none;
     padding: 0;
+    color: inherit;
     font: inherit;
     cursor: pointer;
+  }
+
+  .fui-sort-form {
+    display: contents;
+  }
+
+  /* The forms a pager's buttons submit hold only hidden fields: no box. */
+  .fui-pager-form {
+    display: contents;
+  }
+
+  /* The card header row states a multi-key order beside the count, the
+     actions at the end. */
+  .fui-list-head > .fui-sort-note {
+    margin: 0;
+    margin-inline-end: auto;
+  }
+
+  /* A row's checkbox sits on the row's first line, at its start, in every
+     stacked table; in a work-list card it leads the first line. */
+  @media (width < 40rem) {
+    .fui-table-stack .fui-table tbody tr:has(> td.fui-row-check) {
+      position: relative;
+      padding-inline-start: calc(var(--space-loose) + 1.75rem);
+    }
+
+    .fui-table-stack .fui-table tbody tr > td.fui-row-check {
+      position: absolute;
+      inset-block-start: 0.625rem;
+      inset-inline-start: var(--space-loose);
+      padding: 0;
+      width: auto;
+    }
+
+    .fui-worklist .fui-table-stack .fui-table tbody tr:has(> td.fui-row-check) {
+      padding-inline-start: 0.75rem;
+    }
+
+    .fui-worklist .fui-table-stack .fui-table tbody tr > td.fui-row-check {
+      position: static;
+      order: 0;
+      flex: 0 0 auto;
+      width: auto;
+    }
   }
 
   /* A loading bar in a number column sits at the column's end. */

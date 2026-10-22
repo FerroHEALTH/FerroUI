@@ -59,6 +59,7 @@ fn list(total: Option<u64>, filters: ActiveFilters, tabs: bool) -> String {
             card: ListCard {
                 title: String::from("Locations"),
                 count: total,
+                order: None,
                 tabs: tabs.then(|| view! { <nav class="fui-tabs">"tabs"</nav> }.into_any()),
                 actions: None,
                 body: view! { <table class="fui-table"></table> }.into_any(),

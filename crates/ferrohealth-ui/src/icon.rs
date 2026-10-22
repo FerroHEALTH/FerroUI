@@ -108,6 +108,10 @@ impl Glyph {
     pub const DOWNLOAD: Self = Self(
         r#"<path d="M12 15V3" /><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="m7 10 5 5 5-5" />"#,
     );
+    /// Lucide `ellipsis`.
+    pub const ELLIPSIS: Self = Self(
+        r#"<circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" />"#,
+    );
     /// Lucide `eye`.
     pub const EYE: Self = Self(
         r#"<path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" /><circle cx="12" cy="12" r="3" />"#,
@@ -321,7 +325,7 @@ impl Glyph {
     pub const X: Self = Self(r#"<path d="M18 6 6 18" /><path d="m6 6 12 12" />"#);
 
     /// Every glyph, with the Lucide name of its vendored file.
-    pub const ALL: [(&str, Self); 83] = [
+    pub const ALL: [(&str, Self); 84] = [
         ("activity", Self::ACTIVITY),
         ("arrow-down", Self::ARROW_DOWN),
         ("arrow-left", Self::ARROW_LEFT),
@@ -350,6 +354,7 @@ impl Glyph {
         ("copy", Self::COPY),
         ("database", Self::DATABASE),
         ("download", Self::DOWNLOAD),
+        ("ellipsis", Self::ELLIPSIS),
         ("eye", Self::EYE),
         ("file-clock", Self::FILE_CLOCK),
         ("file-code", Self::FILE_CODE),

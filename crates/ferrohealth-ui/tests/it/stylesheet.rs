@@ -221,11 +221,40 @@ fn an_island_wrapper_draws_no_box_of_its_own() {
 }
 
 #[test]
+fn a_sort_form_and_a_pager_form_add_no_box() {
+    assert!(
+        STYLESHEET.contains("  .fui-sort-form {\n    display: contents;"),
+        "the header lays out as its sort button alone"
+    );
+    assert!(
+        STYLESHEET.contains("  .fui-pager-form {\n    display: contents;"),
+        "the pager keeps its row with its forms inside"
+    );
+}
+
+#[test]
 fn a_cards_rhythm_reaches_through_an_islands_wrapper() {
     assert!(
         STYLESHEET.contains(
             "  .fui-card > * + *,\n  .fui-card > :where(leptos-island, leptos-children) > * + *,\n  .fui-card > * + :where(leptos-island, leptos-children) > :where(:first-child) {"
         ),
         "the parts an island draws in a card would lose the space between them"
+    );
+}
+
+#[test]
+fn a_phone_row_keeps_its_checkbox_on_its_first_line() {
+    // design/COMPONENTS.md, § The table: a row's checkbox sits on its first line.
+    assert!(
+        STYLESHEET.contains(
+            "    .fui-table-stack .fui-table tbody tr > td.fui-row-check {\n      position: absolute;"
+        ),
+        "a stacked row's checkbox hangs at the start of its first line"
+    );
+    assert!(
+        STYLESHEET.contains(
+            "    .fui-worklist .fui-table-stack .fui-table tbody tr > td.fui-row-check {\n      position: static;\n      order: 0;"
+        ),
+        "a work-list row's checkbox leads its first line"
     );
 }

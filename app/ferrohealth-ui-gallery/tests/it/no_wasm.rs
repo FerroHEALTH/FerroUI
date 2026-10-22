@@ -244,7 +244,7 @@ async fn links_lead_on_with_the_webassembly_withheld() -> Result<(), Box<dyn Err
                 "#sidebar a[aria-current='page'][href='/ferrobridge/tables']",
             ))
             .await?;
-        // The link pager and the sortable header are links.
+        // The link pager is links, and the sortable header a GET form.
         browser
             .element(By::XPath(
                 "//nav[@aria-label = 'Pages of the mapping files']//a[contains(., 'Next')]",
@@ -254,7 +254,7 @@ async fn links_lead_on_with_the_webassembly_withheld() -> Result<(), Box<dyn Err
             .await?;
         browser.text("p", "26-50 of 137").await?;
         browser
-            .element(By::XPath("//th[contains(., 'Lines')]//a"))
+            .element(By::XPath("(//table)[1]//th[contains(., 'Lines')]//button"))
             .await?
             .click()
             .await?;
@@ -382,6 +382,60 @@ async fn popovers_open_with_the_webassembly_withheld() -> Result<(), Box<dyn Err
         browser.follow("Documents").await?;
         browser.at(&gallery.url("/ferroehr/code")).await?;
         leave(browser, "the popovers").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_listing_filters_sorts_and_pages_with_the_webassembly_withheld()
+-> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        withhold_the_webassembly(browser).await?;
+        browser.goto(&gallery.url("/ferropix/tables")).await?;
+        let find = browser.element(By::Id("gallery-find")).await?;
+        find.send_keys("synthetic-01").await?;
+        find.send_keys(Key::Enter).await?;
+        until("the filter is in the URL", async || {
+            Ok(browser
+                .driver()
+                .current_url()
+                .await?
+                .as_str()
+                .contains("q=synthetic-01"))
+        })
+        .await?;
+        browser.text("p", "1-10 of 10").await?;
+        browser
+            .element(By::XPath("(//table)[1]//th[contains(., 'Lines')]//button"))
+            .await?
+            .click()
+            .await?;
+        until("the sort keeps the filter", async || {
+            let url = browser.driver().current_url().await?;
+            Ok(url.as_str().contains("sort=lines") && url.as_str().contains("q=synthetic-01"))
+        })
+        .await?;
+        browser
+            .element(By::XPath(
+                "//th[@aria-sort = 'ascending' and contains(., 'Lines')]",
+            ))
+            .await?;
+        let before = browser.driver().current_url().await?;
+        let next = By::XPath(
+            "//nav[@aria-label = 'Pages of the mapping files, in the page']//button[contains(., 'Next')]",
+        );
+        browser.element(next).await?.click().await?;
+        browser.text("p", "26-50 of 137").await?;
+        let after = browser.driver().current_url().await?;
+        assert!(
+            !after.as_str().contains("page=") && after.path() == before.path(),
+            "the session pager posts and the URL names no position: {after}"
+        );
+        leave(browser, "the listing").await
     })
     .await
 }

@@ -495,7 +495,10 @@ def th(label, key=None, sort=None, num=False, title=None, cls=""):
         return f"<th scope=\"col\"{cls_attr}{t}>{label}</th>"
     aria = sort or "none"
     glyph = {"ascending": "arrow-up", "descending": "arrow-down", "none": "arrow-up-down"}[aria]
-    return f'<th scope="col"{cls_attr}{t} aria-sort="{aria}"><button type="button" class="fui-sort">{label}{icon(glyph, "12")}</button></th>'
+    order = "desc" if aria == "ascending" else "asc"
+    return (f'<th scope="col"{cls_attr}{t} aria-sort="{aria}"><form method="get" class="fui-sort-form">'
+            f'<input type="hidden" name="order" value="{order}" />'
+            f'<button type="submit" class="fui-sort" name="sort" value="{e(key)}">{label}{icon(glyph, "12")}</button></form></th>')
 
 
 def td(label, body, cls="", role=None, unit=None):
