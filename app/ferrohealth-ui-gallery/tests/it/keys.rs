@@ -385,7 +385,7 @@ async fn on_a_phone_the_dock_stacks_its_decisions_primary_first_at_the_foot()
                     r"const top = (css) => document.querySelector(css).getBoundingClientRect().top;
                     const dock = document.querySelector('.fui-dock').getBoundingClientRect();
                     const save = document.querySelector('button[value=save]').getBoundingClientRect();
-                    return [top('button[value=save]'), top('button[value=discard]'), dock.bottom, window.innerHeight, save.width / dock.width];",
+                    return [top('button[value=save]'), top('button[value=discard]'), dock.bottom, document.documentElement.clientHeight, save.width / dock.width];",
                     vec![],
                 )
                 .await?
