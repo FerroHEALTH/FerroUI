@@ -23,7 +23,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::i18n::{Text, tr};
 use crate::view::kbd::{ShortcutGroup, shortcut_keys};
-use crate::widget::dialog::{Modal, Width, modal_dialog};
+use crate::widget::dialog::{Modal, ModalWords, Width, modal_dialog};
 
 /// The id of the legend's dialog; its heading is `shortcuts-title`.
 pub const LEGEND_ID: &str = "shortcuts";
@@ -38,6 +38,9 @@ pub struct LegendWords {
     pub intro: String,
     /// The word between the alternative keys of one shortcut.
     pub or: String,
+    /// The button that dismisses the legend, "Close": it only shows
+    /// information, so there is nothing to cancel.
+    pub close: String,
 }
 
 impl LegendWords {
@@ -48,6 +51,7 @@ impl LegendWords {
             title: tr(Text::KeyboardShortcuts),
             intro: tr(Text::ShortcutsIntro),
             or: tr(Text::KeysOr),
+            close: tr(Text::Close),
         }
     }
 }
@@ -62,7 +66,12 @@ pub fn shortcut_legend(
     open: Signal<bool>,
     on_dismiss: Callback<()>,
 ) -> AnyView {
-    let LegendWords { title, intro, or } = words;
+    let LegendWords {
+        title,
+        intro,
+        or,
+        close,
+    } = words;
     let groups = groups
         .into_iter()
         .zip(1_u32..)
@@ -99,6 +108,7 @@ pub fn shortcut_legend(
             }
             .into_any(),
             actions: ().into_any(),
+            words: ModalWords { cancel: close },
         },
         open,
         on_dismiss,

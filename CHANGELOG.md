@@ -257,7 +257,8 @@ and this project adheres to
   listing's foot, over `Shortcut` and `ShortcutGroup`; `aria_keys` writes
   them for `aria-keyshortcuts`. `widget::shortcuts::shortcut_legend` is
   the legend dialog a console's signal opens over the page, which returns
-  the focus when it closes, with its words in `LegendWords`. The library
+  the focus when it closes, with its words in `LegendWords`; its dismiss
+  button says Close (`LegendWords::close`), as it only informs. The library
   binds no key: `typing`, `chorded` and `phone_layout` are the tests a
   console's listener asks first, and below 40 rem no key cap, hint or
   legend shows.

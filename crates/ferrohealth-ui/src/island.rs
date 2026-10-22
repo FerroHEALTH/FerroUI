@@ -275,8 +275,6 @@ pub fn ChartLegend(
 ) -> impl IntoView {
     crate::widget::chart::legend(plot, label, entries, gap)
 }
-}
-
 
 /// The top bar's search box `search`, its answer under it, the server's
 /// children, open when `open`, Enter following the hit `selected`. A
