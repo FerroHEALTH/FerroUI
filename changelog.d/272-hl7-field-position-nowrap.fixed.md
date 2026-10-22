@@ -1,0 +1,1 @@
+- The HL7 v2 viewer keeps a field position on one line on a phone, where `MSH-10` broke at its hyphen.

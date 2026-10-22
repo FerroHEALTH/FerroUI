@@ -1,0 +1,1 @@
+- Following a diagnostic's line link keeps the code editor's gutter in view; the editor scrolled sideways by the gutter's width before.

@@ -1,0 +1,1 @@
+- A diagnostics file head with a link holds the link's cover to itself, so it no longer lies over controls outside the list.
