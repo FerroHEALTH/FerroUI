@@ -151,7 +151,7 @@ pub struct Flow {
 /// height, a row's height and the room above the first row, in the
 /// drawing's units.
 const LANE: f64 = 200.0;
-const GAP: f64 = 80.0;
+const GAP: f64 = 100.0;
 const CARD: f64 = 56.0;
 const HUB: f64 = 72.0;
 const ROW: f64 = 66.0;

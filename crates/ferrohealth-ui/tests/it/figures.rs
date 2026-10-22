@@ -48,10 +48,7 @@ fn the_stacked_bar_is_an_image_named_by_its_sentence_and_the_legend_prints_each_
     assert_eq!(3, shown.matches("<rect").count(), "{shown}");
     assert!(shown.contains(r#"x="80.00%""#), "{shown}");
     assert_eq!(2, shown.matches("fui-funnel-cut").count(), "{shown}");
-    for figure in [
-        "<dd class=\"fui-num\">80</dd>",
-        "<dd class=\"fui-num\">5</dd>",
-    ] {
+    for figure in ["<dd>80</dd>", "<dd>5</dd>"] {
         assert!(shown.contains(figure), "{figure}: {shown}");
     }
     assert!(!shown.contains("style="), "{shown}");
@@ -63,7 +60,7 @@ fn a_run_with_nothing_refused_draws_no_segment_and_keeps_its_zero_in_the_legend(
     assert_eq!(2, shown.matches("<rect").count(), "{shown}");
     assert!(!shown.contains("fui-funnel-part fui-tone-bad"), "{shown}");
     assert!(shown.contains("fui-funnel-swatch fui-tone-bad"), "{shown}");
-    assert!(shown.contains("<dd class=\"fui-num\">0</dd>"), "{shown}");
+    assert!(shown.contains("<dd>0</dd>"), "{shown}");
 }
 
 #[test]

@@ -225,12 +225,12 @@ fn flow_card(
 }
 
 /// An edge of a flow.
-fn flow_edge(from: &str, to: &str, state: FlowState, label: Option<Msg>) -> FlowEdge {
+fn flow_edge(from: &str, to: &str, state: FlowState, label: Option<String>) -> FlowEdge {
     FlowEdge {
         from: from.to_owned(),
         to: to.to_owned(),
         state,
-        label: label.map(tr),
+        label,
     }
 }
 
@@ -347,8 +347,8 @@ fn bridge_flow(problems: bool) -> AnyView {
         flow_edge("senders", "hl7", hl7, None),
         flow_edge("facade", "hub", FlowState::Up, None),
         flow_edge("hl7", "hub", hl7, None),
-        flow_edge("hub", "cdr", cdr, Some(Msg::FlowNoAnswerLabel)),
-        flow_edge("hub", "term", term, Some(Msg::FlowAnswers503)),
+        flow_edge("hub", "cdr", cdr, Some(tr(Msg::FlowNoAnswerLabel))),
+        flow_edge("hub", "term", term, Some(String::from("503"))),
     ];
     let (id, title, foot) = if problems {
         (

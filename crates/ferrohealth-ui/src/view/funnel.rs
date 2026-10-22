@@ -125,7 +125,7 @@ pub fn funnel(funnel: &Funnel) -> AnyView {
                         <span class=swatch aria-hidden="true"></span>
                         {part.label.clone()}
                     </dt>
-                    <dd class="fui-num">{part.figure.clone()}</dd>
+                    <dd>{part.figure.clone()}</dd>
                 </div>
             }
         })
