@@ -182,6 +182,7 @@ macro_rules! messages {
 
 // The areas, one file each, kept in alphabetical order.
 mod charts;
+mod clinical;
 mod code;
 mod dock;
 mod forms;
@@ -200,6 +201,7 @@ mod trees;
 /// Every area's messages.
 const AREAS: &[&[Msg]] = &[
     charts::ALL,
+    clinical::ALL,
     code::ALL,
     dock::ALL,
     forms::ALL,

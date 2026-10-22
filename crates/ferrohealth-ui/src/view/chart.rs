@@ -596,17 +596,21 @@ pub fn figures(chart: &LineChart, words: FiguresWords) -> impl IntoView + use<> 
         })
         .collect_view();
     let caption = caption.fill(&[("chart", &chart.label)]);
+    // NOTE: CSS 2.1 § 17.5.2: a table ignores its 1 px width, so the box that hides it
+    // is a block around it, which keeps it out of the page's scroll width.
     view! {
-        <table class="fui-sr-only">
-            <caption>{caption}</caption>
-            <thead>
-                <tr>
-                    <th scope="col">{x}</th>
-                    {heads}
-                </tr>
-            </thead>
-            <tbody>{rows}</tbody>
-        </table>
+        <div class="fui-sr-only">
+            <table>
+                <caption>{caption}</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">{x}</th>
+                        {heads}
+                    </tr>
+                </thead>
+                <tbody>{rows}</tbody>
+            </table>
+        </div>
     }
 }
 

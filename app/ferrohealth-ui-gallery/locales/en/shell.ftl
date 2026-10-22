@@ -14,6 +14,7 @@ bridge = BRIDGE
 bridge-serves-no-mapping-file = The bridge serves no mapping file yet.
 charts = Charts
 choose-one-server-holds = Choose one this server holds
+clinical-records = Clinical records
 code = Code
 components = Components
 concept = Concept

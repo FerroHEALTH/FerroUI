@@ -12526,7 +12526,8 @@
     gap: var(--space-default);
   }
 
-  .fui-at-time > .fui-field {
+  .fui-at-time > .fui-field,
+  .fui-at-time > :where(leptos-island, leptos-children) > .fui-field {
     margin: 0;
     min-width: 0;
     flex: 0 1 18rem;

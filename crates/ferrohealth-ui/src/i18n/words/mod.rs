@@ -30,6 +30,7 @@ macro_rules! texts {
 
 // The areas, one file each, kept in alphabetical order.
 mod charts;
+mod clinical;
 mod controls;
 mod date;
 mod diagnostics;
@@ -52,6 +53,7 @@ mod trees;
 #[cfg(test)]
 pub(super) const AREAS: &[(&str, &[crate::i18n::Text])] = &[
     ("charts", charts::ALL),
+    ("clinical", clinical::ALL),
     ("controls", controls::ALL),
     ("date", date::ALL),
     ("diagnostics", diagnostics::ALL),

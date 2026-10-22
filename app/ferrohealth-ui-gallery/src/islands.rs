@@ -147,6 +147,21 @@ pub fn MaskedIdentifiers(
     crate::pages::records::identifiers_body(&brand, rows, &words, &ident)
 }
 
+/// The clinical records page's subject identifier, its Reveal its own.
+#[island(lazy)]
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "an island takes its props by value, as they arrive from the page"
+)]
+pub fn SubjectIdentifier(
+    /// The key of the brand whose page it is on.
+    brand: String,
+    /// The masked identifier's own words, in the page's locale.
+    ident: ferrohealth_ui::widget::identifier::IdentifierWords,
+) -> impl IntoView {
+    crate::pages::clinical::subject_identifier(&brand, ident)
+}
+
 /// The forms page's pick-or-type fields.
 #[island]
 #[expect(

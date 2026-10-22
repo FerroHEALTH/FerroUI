@@ -314,6 +314,7 @@ pub fn App() -> impl IntoView {
                     <Route path=path!("charts") view=crate::pages::charts::ChartsPage />
                     <Route path=path!("layouts") view=crate::pages::layouts::LayoutsPage />
                     <Route path=path!("operations") view=crate::pages::operations::OperationsPage />
+                    <Route path=path!("clinical") view=crate::pages::clinical::ClinicalPage />
                     <Route path=path!("preferences") view=crate::pages::preferences::PreferencesPage />
                     <Route
                         path=path!("preferences/:section")
@@ -412,6 +413,13 @@ macro_rules! entries {
                 href: concat!("/", $key, "/trees"),
                 label: tr(Msg::Trees).into(),
                 glyph: Glyph::FOLDER_OPEN,
+                exact: true,
+                count: None,
+            },
+            Entry {
+                href: concat!("/", $key, "/clinical"),
+                label: tr(Msg::ClinicalRecords).into(),
+                glyph: Glyph::HEART_PULSE,
                 exact: true,
                 count: None,
             },

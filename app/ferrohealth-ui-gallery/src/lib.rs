@@ -15,6 +15,7 @@
 //! gallery: our own design.
 
 pub mod app;
+pub mod clinical_data;
 pub mod data;
 pub mod islands;
 pub mod locale;

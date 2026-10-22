@@ -32,6 +32,7 @@ use crate::stack::Gallery;
 
 // The areas, one file each, kept in alphabetical order.
 mod charts;
+mod clinical;
 mod combobox;
 mod dates;
 mod document;
@@ -53,6 +54,7 @@ mod upload;
 /// Every area's states.
 const AREAS: &[&[&str]] = &[
     charts::STATES,
+    clinical::STATES,
     combobox::STATES,
     dates::STATES,
     document::STATES,
@@ -251,6 +253,7 @@ async fn every_state_is_captured_in_every_brand_light_and_dark() -> Result<(), B
                 // The areas in alphabetical order, so two new areas land on
                 // different lines (`scripts/checks/mod-order.sh`).
                 charts::charts(browser, &gallery, brand, theme).await?;
+                clinical::clinical(browser, &gallery, brand, theme).await?;
                 combobox::combobox_states(browser, &gallery, brand, theme).await?;
                 dates::date_states(browser, &gallery, brand, theme).await?;
                 document::document(browser, &gallery, brand, theme).await?;

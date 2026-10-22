@@ -29,6 +29,7 @@ allow ^input:checked, select,           # the CSS selector of a preference's cho
 allow ^month \{month\} of \{year\} has \{\} days$   # a refused date's diagnostic for a console's log; a reader sees the catalog's words
 
 # The gallery: the synthetic data it draws, and its server.
+skip app/ferrohealth-ui-gallery/src/clinical_data.rs  # the synthetic record the clinical record parts draw as data
 skip app/ferrohealth-ui-gallery/src/data.rs     # the synthetic rows and documents the gallery draws as data
 skip app/ferrohealth-ui-gallery/src/records_data.rs  # the synthetic people, records and identifiers the record components draw as data
 skip app/ferrohealth-ui-gallery/src/trees_data.rs  # the synthetic code systems, directory and template the trees draw as data
