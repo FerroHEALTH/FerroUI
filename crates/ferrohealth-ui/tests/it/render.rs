@@ -11,7 +11,6 @@ use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::island::{
     Combobox, CopyButton, KeyboardTabs, PickerField, SidePanel, ToastRegion,
 };
-use ferrohealth_ui::theme::Theme;
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::action::{ActionGroup, action_button, action_group};
 use ferrohealth_ui::view::button::{Variant, link_button};
@@ -35,7 +34,6 @@ use ferrohealth_ui::view::surface::{
     panel_sections, section_intro, source_split, stat_card,
 };
 use ferrohealth_ui::view::tabs::{Tab, binder};
-use ferrohealth_ui::view::theme_switch::theme_switch;
 use ferrohealth_ui::widget::action_menu::{
     Act, Action, Choice, Item, Listbox, Menu, Pick, listbox, row_menu,
 };
@@ -68,24 +66,6 @@ pub(crate) fn page_html(view: impl FnOnce() -> AnyView) -> String {
         hydration_context::SsrSharedContext::new(),
     )));
     owner.with(|| view().to_html())
-}
-
-#[test]
-fn the_theme_switch_posts_and_marks_the_theme_in_force_by_more_than_colour() {
-    let switch = html(|| {
-        theme_switch(Theme::Dark, String::from("/theme"), String::from("/files")).into_any()
-    });
-    assert!(switch.contains(r#"action="/theme""#), "{switch}");
-    assert_eq!(
-        1,
-        switch.matches(r#"aria-pressed="true""#).count(),
-        "{switch}"
-    );
-    assert_eq!(3, switch.matches(r#"name="theme""#).count(), "{switch}");
-    assert!(
-        switch.contains(Glyph::CHECK.markup()),
-        "a check on the pressed one: {switch}"
-    );
 }
 
 #[test]

@@ -78,11 +78,12 @@ which your server writes from its own cookie or setting (`theme::Theme`).
   `form` (field, check), `tabs` (binder tabs
   joined to their panel), `popover` (the anchored popover form), `empty`, `refusal` (an error
   with its issues), `code` (highlighted panel and numbered lines),
-  `theme_switch`, `dialog` (a popover confirmation), `shell` (skip link,
+  `preferences` (Your preferences: its three tabs, each preference a plain
+  form post), `dialog` (a popover confirmation), `shell` (skip link,
   top bar, footer, centred page) and `sign_in` (the R19 card in every
   state, with the provider's action and an optional basic form).
 - `island`: the ready islands, `ToastRegion`, `NavDrawer`, `UserMenuButton`,
-  `KeyboardTabs` and `TabSelect`, each taking its words as props. Every
+  `KeyboardTabs`, `TabSelect` and `PreferenceForm`, each taking its words as props. Every
   widget takes the words it draws as a `*Words` struct its `of_page()`
   resolves on the server, so no island carries a catalog.
 - `widget`: the interactive components as functions you call inside an
@@ -139,8 +140,23 @@ assert_eq!(lang, "en-GB");
 A page that provides no locale draws English. Catalog the console's own
 strings the same way: a `fluent_templates::static_loader!` over the
 console's own `locales/`, looked up with `Locale::lookup`, so the console's
-words follow the same choice. `view::theme_switch::locale_switch` is the
-language switch, each choice named in its own language.
+words follow the same choice. The language preference on Your preferences
+(`view::preferences::language_select`) names each choice in its own
+language.
+
+## Your preferences
+
+`view::preferences::preferences_page` draws the page behind the operator's
+name: Appearance, Language and region (Reading in FerroEHR) and Keyboard,
+each a route of yours. Every preference is its own cookie, named by its
+`theme::Preference::COOKIE`, and posts as a plain form to the route you
+name, so the page works with no WebAssembly. You keep the cookie
+(`SameSite=Lax`, `Secure`, one year), return to the tab saying which one
+you kept (`saved`), read them all with `theme::Preferences::read` as you
+render, and write `data-theme`, `data-density`, `data-motion` and
+`data-hints` on `<html>`. The library writes no cookie. Your own
+preferences go inside the three tabs (`own`), built with
+`preference_row`, `select_preference` and `switch_preference`.
 
 ## Licence
 

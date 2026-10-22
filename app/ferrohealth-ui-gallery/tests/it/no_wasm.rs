@@ -255,6 +255,83 @@ async fn forms_content(browser: &Browser) -> Result<(), Box<dyn Error>> {
     date_fields(browser).await
 }
 
+/// Checks that the tab of Your preferences at `page` offers its
+/// preferences as plain forms, each posted by its Save button.
+async fn preferences_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error>> {
+    let control = match page {
+        "/preferences" => "form.fui-preference-form input[type='radio'][name='theme']",
+        "/preferences/language" => "form.fui-preference-form select[name='week-start']",
+        _ => "form.fui-preference-form select[name='hints']",
+    };
+    browser.element(By::Css(control)).await?;
+    let save = browser
+        .element(By::Css("form.fui-preference-form button[type='submit']"))
+        .await?;
+    assert!(
+        save.is_displayed().await?,
+        "a preference posts through its Save button before the page hydrates"
+    );
+    if page == "/preferences/language" {
+        browser
+            .element(By::Css("form.fui-menu-form input[name='language']"))
+            .await?;
+    }
+    browser
+        .element(By::Css("button[popovertarget='preferences-reset']"))
+        .await?;
+    Ok(())
+}
+
+/// Chooses the compact density on Your preferences through its Save button,
+/// then resets every preference through the confirmation.
+async fn preferences_post_and_reset(
+    browser: &Browser,
+    gallery: &Gallery,
+) -> Result<(), Box<dyn Error>> {
+    browser.goto(&gallery.url("/ferrofed/preferences")).await?;
+    press(
+        browser,
+        By::XPath("//label[contains(@class, 'fui-choice-card')][input[@value = 'compact']]"),
+    )
+    .await?;
+    let save = browser
+        .element(By::XPath(
+            "//form[contains(@class, 'fui-preference-form')][.//input[@value = 'compact']]//button[@type = 'submit']",
+        ))
+        .await?;
+    browser.click_and_load(&save).await?;
+    browser
+        .at(&gallery.url("/ferrofed/preferences?saved=density"))
+        .await?;
+    browser
+        .element(By::Css(".fui-setting-saved[role='status']"))
+        .await?;
+    browser
+        .element(By::Css(r#"html[data-density="compact"]"#))
+        .await?;
+    press(
+        browser,
+        By::Css("button[popovertarget='preferences-reset']"),
+    )
+    .await?;
+    let confirm = browser
+        .element(By::XPath(
+            "//div[@id = 'preferences-reset']//button[@type = 'submit']",
+        ))
+        .await?;
+    until("the reset dialog opens", async || {
+        Ok(confirm.is_displayed().await?)
+    })
+    .await?;
+    browser.click_and_load(&confirm).await?;
+    browser
+        .element(By::Css(
+            r#"html[data-density="comfortable"][data-theme="system"]"#,
+        ))
+        .await?;
+    Ok(())
+}
+
 /// Checks what a brand's page at `page` must show with no WebAssembly,
 /// beyond its heading and its navigation.
 async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error>> {
@@ -314,6 +391,9 @@ async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error
                 .await?;
             assert!(!items.is_empty(), "the tree shows its items");
             crate::widgets::help_switch_journey(browser).await?;
+        }
+        "/preferences" | "/preferences/language" | "/preferences/keyboard" => {
+            preferences_content(browser, page).await?;
         }
         "/templates/list" | "/templates/list-tabs" => {
             let rows = browser
@@ -384,10 +464,11 @@ async fn every_page_keeps_its_content_with_the_webassembly_withheld() -> Result<
                 let current = browser
                     .element(By::Css("#sidebar a[aria-current='page']"))
                     .await?;
-                assert_eq!(
-                    Some(path.clone()),
-                    current.attr("href").await?,
-                    "the navigation marks {path}"
+                // A section's entry (Your preferences) marks each of its tabs.
+                let marked = current.attr("href").await?.unwrap_or_default();
+                assert!(
+                    marked == path || path.starts_with(&format!("{marked}/")),
+                    "the navigation marks {path}, not {marked}"
                 );
                 browser.element(By::Css("footer")).await?;
                 page_content(browser, page).await?;
@@ -575,7 +656,8 @@ async fn forms_post_and_submit_with_the_webassembly_withheld() -> Result<(), Box
             .await?;
         answer_and_dock(browser, &gallery).await?;
         // The user menu opens as a popover, its theme posts, and the page
-        // comes back in the choice; so does the density switch.
+        // comes back in the choice; so does the density on Your preferences,
+        // posted by its Save button.
         browser.goto(&gallery.url("/ferrofed")).await?;
         browser
             .element(By::Css("button[popovertarget='user-menu']"))
@@ -593,15 +675,7 @@ async fn forms_post_and_submit_with_the_webassembly_withheld() -> Result<(), Box
         browser
             .element(By::Css(r#"html[data-theme="dark"]"#))
             .await?;
-        let compact = browser
-            .element(By::XPath(
-                "//button[@name = 'density' and @value = 'compact']",
-            ))
-            .await?;
-        browser.click_and_load(&compact).await?;
-        browser
-            .element(By::Css(r#"html[data-density="compact"]"#))
-            .await?;
+        preferences_post_and_reset(browser, &gallery).await?;
         // The sidebar's Collapse posts, and the page comes back as the rail.
         let collapse = browser
             .element(By::XPath("//button[@name = 'sidebar' and @value = 'rail']"))

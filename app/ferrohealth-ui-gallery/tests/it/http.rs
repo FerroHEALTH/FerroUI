@@ -100,7 +100,7 @@ async fn a_path_the_gallery_does_not_serve_answers_404() -> Result<(), Box<dyn E
 async fn a_theme_choice_is_kept_in_a_cookie_and_returns_to_the_gallery_alone()
 -> Result<(), Box<dyn Error>> {
     let post = |body: &'static str| {
-        Request::post("/theme")
+        Request::post("/preference")
             .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
             .body(Body::from(body))
     };
@@ -160,6 +160,107 @@ async fn the_sidebar_choice_is_kept_in_its_cookie_and_sign_out_leads_to_the_sign
     assert!(
         body.contains("fui-sidebar fui-sidebar-rail"),
         "the server draws the rail the cookie asks for"
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn a_preference_kept_on_your_preferences_returns_saying_which() -> Result<(), Box<dyn Error>>
+{
+    let (parts, _) = send(form(
+        "/preference",
+        "back=%2Fferropix%2Fpreferences&density=compact",
+    )?)
+    .await?;
+    assert_eq!(StatusCode::SEE_OTHER, parts.status);
+    assert_eq!(
+        "/ferropix/preferences?saved=density",
+        parts.headers[header::LOCATION]
+    );
+    let cookie = parts.headers[header::SET_COOKIE].to_str()?;
+    assert!(cookie.starts_with("gallery-density=compact;"), "{cookie}");
+    assert!(cookie.contains("SameSite=Lax"), "{cookie}");
+    assert!(cookie.contains("Max-Age=31536000"), "one year: {cookie}");
+    let (parts, _) = send(form(
+        "/preference",
+        "back=%2Fferropix%2Fpreferences&hide=off&hide=on",
+    )?)
+    .await?;
+    let cookie = parts.headers[header::SET_COOKIE].to_str()?;
+    assert!(
+        cookie.starts_with("gallery-hide=on;"),
+        "a checked switch's on follows its off: {cookie}"
+    );
+    let (parts, _) = send(form("/preference", "back=%2F&theme=dark&density=compact")?).await?;
+    assert_eq!(
+        StatusCode::BAD_REQUEST,
+        parts.status,
+        "one preference a post"
+    );
+    let (parts, _) = send(form("/preference", "back=%2F")?).await?;
+    assert_eq!(StatusCode::BAD_REQUEST, parts.status, "no preference");
+    let (_, body) = send(
+        Request::get("/ferropix/preferences?saved=density")
+            .header(
+                header::COOKIE,
+                "gallery-density=compact; gallery-motion=reduce; gallery-hints=never",
+            )
+            .body(Body::empty())?,
+    )
+    .await?;
+    assert!(body.contains(r#"data-density="compact""#), "{body}");
+    assert!(body.contains(r#"data-motion="reduce""#), "{body}");
+    assert!(body.contains(r#"data-hints="never""#), "{body}");
+    assert_eq!(1, body.matches("fui-setting-saved").count(), "{body}");
+    Ok(())
+}
+
+#[tokio::test]
+async fn reset_to_defaults_clears_every_preference_cookie() -> Result<(), Box<dyn Error>> {
+    let (parts, _) = send(form(
+        "/preferences/reset",
+        "back=%2Fferroehr%2Fpreferences%2Fkeyboard",
+    )?)
+    .await?;
+    assert_eq!(StatusCode::SEE_OTHER, parts.status);
+    assert_eq!(
+        "/ferroehr/preferences/keyboard",
+        parts.headers[header::LOCATION]
+    );
+    let cleared = parts
+        .headers
+        .get_all(header::SET_COOKIE)
+        .iter()
+        .map(|cookie| cookie.to_str().map(str::to_owned))
+        .collect::<Result<Vec<_>, _>>()?;
+    for name in [
+        "theme",
+        "density",
+        "motion",
+        "language",
+        "week-start",
+        "hints",
+        "reveal",
+        "hide",
+    ] {
+        assert!(
+            cleared
+                .iter()
+                .any(|cookie| cookie.starts_with(&format!("gallery-{name}=;"))
+                    && cookie.contains("Max-Age=0")),
+            "{name}: {cleared:?}"
+        );
+    }
+    Ok(())
+}
+
+#[tokio::test]
+async fn a_tab_your_preferences_lacks_answers_404() -> Result<(), Box<dyn Error>> {
+    let (parts, _) = get("/ferrofed/preferences/account").await?;
+    assert_eq!(
+        StatusCode::NOT_FOUND,
+        parts.status,
+        "there is no fourth tab"
     );
     Ok(())
 }

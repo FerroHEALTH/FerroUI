@@ -582,14 +582,90 @@ texts! {
     ThemeDark = "theme-dark",
     /// The theme the operating system asks for.
     ThemeSystem = "theme-system",
-    /// The accessible name of the theme switch.
+    /// The name of the theme choice, in the user menu and Your preferences.
     ThemeSwitch = "theme-switch",
     /// The default density.
     DensityComfortable = "density-comfortable",
     /// The compact density.
     DensityCompact = "density-compact",
-    /// The accessible name of the density switch.
+    /// The name of the density choice in Your preferences.
     DensitySwitch = "density-switch",
+    /// Motion as the operating system asks for it, the default.
+    MotionSystem = "motion-system",
+    /// Motion always reduced.
+    MotionReduce = "motion-reduce",
+    /// Shortcut hints on wide screens with a keyboard, the default.
+    HintsWide = "hints-wide",
+    /// Shortcut hints on every wide screen.
+    HintsAlways = "hints-always",
+    /// No shortcut hints.
+    HintsNever = "hints-never",
+    /// The week starting on the language's `$weekday`, the default.
+    WeekStartLanguage = "week-start-language",
+    /// The accessible name of Your preferences' tabs.
+    PreferencesSections = "preferences-sections",
+    /// The Appearance tab.
+    PreferencesAppearance = "preferences-appearance",
+    /// The Language and region tab.
+    PreferencesLanguageRegion = "preferences-language-region",
+    /// The Language and region tab as FerroEHR names it.
+    PreferencesReading = "preferences-reading",
+    /// The Keyboard tab.
+    PreferencesKeyboard = "preferences-keyboard",
+    /// The line under Your preferences' title.
+    PreferencesIntro = "preferences-intro",
+    /// What the theme governs.
+    PreferencesThemeDesc = "preferences-theme-desc",
+    /// The light theme's card: the brand's `$accent` on white.
+    PreferencesThemeLightNote = "preferences-theme-light-note",
+    /// The dark theme's card: the brand's `$accent` on ink.
+    PreferencesThemeDarkNote = "preferences-theme-dark-note",
+    /// The system theme's card.
+    PreferencesThemeSystemNote = "preferences-theme-system-note",
+    /// What the density governs.
+    PreferencesDensityDesc = "preferences-density-desc",
+    /// The comfortable density's card.
+    PreferencesDensityComfortableNote = "preferences-density-comfortable-note",
+    /// The compact density's card.
+    PreferencesDensityCompactNote = "preferences-density-compact-note",
+    /// The motion preference.
+    PreferencesMotion = "preferences-motion",
+    /// What the motion preference governs.
+    PreferencesMotionDesc = "preferences-motion-desc",
+    /// What the language governs.
+    PreferencesLanguageDesc = "preferences-language-desc",
+    /// The language choice that follows the browser.
+    PreferencesLanguageBrowser = "preferences-language-browser",
+    /// The `$language` the browser asks for, under its choice.
+    PreferencesLanguageBrowserNote = "preferences-language-browser-note",
+    /// The first-day-of-the-week preference.
+    PreferencesWeek = "preferences-week",
+    /// What the first day of the week governs.
+    PreferencesWeekDesc = "preferences-week-desc",
+    /// The shortcut hints preference.
+    PreferencesHints = "preferences-hints",
+    /// What the shortcut hints preference governs.
+    PreferencesHintsDesc = "preferences-hints-desc",
+    /// The row that leads to the shortcut legend.
+    PreferencesShortcuts = "preferences-shortcuts",
+    /// What the shortcut legend holds.
+    PreferencesShortcutsDesc = "preferences-shortcuts-desc",
+    /// The link to the shortcut legend.
+    PreferencesShortcutsOpen = "preferences-shortcuts-open",
+    /// The button that posts a preference before the page has hydrated.
+    PreferencesSave = "preferences-save",
+    /// The mark of a preference just kept.
+    PreferencesSaved = "preferences-saved",
+    /// The line at the foot of Your preferences.
+    PreferencesFoot = "preferences-foot",
+    /// The button that asks to reset every preference.
+    PreferencesReset = "preferences-reset",
+    /// The question of the reset dialog.
+    PreferencesResetTitle = "preferences-reset-title",
+    /// What a reset does and leaves alone.
+    PreferencesResetBody = "preferences-reset-body",
+    /// The reset dialog's confirming button.
+    PreferencesResetConfirm = "preferences-reset-confirm",
     /// The primary button variant, as the gallery names it.
     VariantPrimary = "variant-primary",
     /// The secondary button variant.
@@ -985,11 +1061,11 @@ mod tests {
 
     /// The names of the placeables the library's messages take.
     const PLACEABLES: &[&str] = &[
-        "action", "chart", "code", "count", "date", "day", "days", "document", "earliest", "file",
-        "filter", "first", "from", "held", "key", "kinds", "label", "last", "latest", "limit",
-        "month", "note", "noun", "nouns", "page", "pages", "range", "shown", "size", "stated",
-        "status", "summary", "tab", "time", "title", "to", "total", "value", "weekday", "what",
-        "why", "words", "year",
+        "accent", "action", "chart", "code", "count", "date", "day", "days", "document",
+        "earliest", "file", "filter", "first", "from", "held", "key", "kinds", "label", "language",
+        "last", "latest", "limit", "month", "note", "noun", "nouns", "page", "pages", "range",
+        "shown", "size", "stated", "status", "summary", "tab", "time", "title", "to", "total",
+        "value", "weekday", "what", "why", "words", "year",
     ];
 
     /// The ids of the messages the catalog file at `path` defines.

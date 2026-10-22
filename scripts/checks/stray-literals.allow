@@ -21,6 +21,7 @@ allow ^M\{                              # SVG path data
 allow ^(Zz|Tt )$                        # the bytes a timestamp parser accepts
 allow ^\{\}T\{\}Z?$                     # the HTML machine form of a date-time
 allow ^\{id\}-L                         # an editor line's id
+allow ^input:checked, select,           # the CSS selector of a preference's chosen control, which the browser code focuses
 allow ^month \{month\} of \{year\} has \{\} days$   # a refused date's diagnostic for a console's log; a reader sees the catalog's words
 
 # The gallery: the synthetic data it draws, and its server.

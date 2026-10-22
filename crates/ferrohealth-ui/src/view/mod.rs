@@ -6,8 +6,8 @@
 //! They are the title row's action group, the shell, the page templates,
 //! the surfaces, the status marks, the buttons and fields, the help switch,
 //! the tag, the tabs as links, the empty and loading states, the refusal, the error
-//! page, the code viewer, the document pane, the sign-in card, the theme
-//! switch, the confirmation dialog, the popover form and the timestamp.
+//! page, the code viewer, the document pane, the sign-in card, Your
+//! preferences, the confirmation dialog, the popover form and the timestamp.
 //! Each is a plain function
 //! returning its typed view, never a `#[component]`: a component
 //! writes a props type and a builder the browser bundle carries for each,
@@ -34,6 +34,7 @@ pub mod kbd;
 pub mod layout;
 pub mod notice;
 pub mod popover;
+pub mod preferences;
 pub mod refusal;
 pub mod search;
 pub mod segmented;
@@ -44,5 +45,4 @@ pub mod surface;
 pub mod tabs;
 pub mod tag;
 pub mod template;
-pub mod theme_switch;
 pub mod time;

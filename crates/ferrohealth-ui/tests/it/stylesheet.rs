@@ -400,3 +400,40 @@ fn a_shown_toast_keeps_the_page_foot_clear() {
         "a toast would cover the footer"
     );
 }
+
+#[test]
+fn a_preference_form_adds_no_box_and_its_cards_take_the_phone_row() {
+    assert!(
+        STYLESHEET.contains("  .fui-preference-form {\n    display: contents;"),
+        "the control and its Save button lay out in the row's control column"
+    );
+    assert!(
+        STYLESHEET.contains(
+            "    .fui-setting-control:has(.fui-choice-cards),\n    .fui-choice-cards {\n      width: 100%;"
+        ),
+        "the preview cards reach the phone row through the preference's form"
+    );
+}
+
+#[test]
+fn reduce_motion_chosen_in_your_preferences_stills_the_page_as_the_system_does() {
+    // NOTE: WCAG 2.2 SC 2.3.3: motion from an interaction can be turned off.
+    assert!(
+        STYLESHEET.contains(
+            "  :root[data-motion=\"reduce\"] *,\n  :root[data-motion=\"reduce\"] *::before,\n  :root[data-motion=\"reduce\"] *::after {\n    animation-duration: 0.01ms !important;"
+        ),
+        "the preference reduces motion"
+    );
+    assert!(
+        STYLESHEET.contains(
+            "  :root[data-motion=\"reduce\"] .fui-setting-row .fui-setting-saved {\n    animation: none;"
+        ),
+        "a cut fade would hide Saved at once"
+    );
+    assert!(
+        STYLESHEET.contains(
+            "  @media (prefers-reduced-motion: reduce) {\n    .fui-setting-row .fui-setting-saved {\n      animation: none;"
+        ),
+        "a cut fade would hide Saved at once"
+    );
+}

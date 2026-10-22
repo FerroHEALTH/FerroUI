@@ -13,7 +13,6 @@ use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::button::{Variant, label, link_button};
 use ferrohealth_ui::view::empty::{Busy, busy, empty_quiet, empty_state, skeleton, spinner};
-use ferrohealth_ui::view::form::field;
 use ferrohealth_ui::view::layout::divided_list;
 use ferrohealth_ui::view::notice::{Announce, notice};
 use ferrohealth_ui::view::refusal::{Issue, Refusal, Severity, fault, refusal};
@@ -25,7 +24,6 @@ use ferrohealth_ui::view::surface::{
 };
 use ferrohealth_ui::view::tabs::{Tab, binder};
 use ferrohealth_ui::view::tag::{Tag, tag};
-use ferrohealth_ui::view::theme_switch::{density_switch, locale_switch, theme_switch};
 use ferrohealth_ui::view::time::timestamp;
 use ferrohealth_ui::widget::action_menu::{Act, Action, Item, Menu};
 use ferrohealth_ui::widget::segmented::segmented;
@@ -80,7 +78,7 @@ fn overview_actions() -> ActionGroup {
                 Some(Glyph::SLIDERS_HORIZONTAL),
                 tr(Msg::SwitchToCompact),
                 Act::Post {
-                    action: String::from(crate::app::DENSITY_ROUTE),
+                    action: String::from(crate::app::PREFERENCE_ROUTE),
                     fields: vec![
                         (String::from("density"), String::from("compact")),
                         (String::from("back"), back),
@@ -617,42 +615,6 @@ fn states() -> AnyView {
     .into_any()
 }
 
-/// The theme, density and language switches, each a plain form that posts.
-fn settings() -> AnyView {
-    let theme = use_context::<crate::app::InForce>()
-        .map_or(ferrohealth_ui::theme::Theme::System, |in_force| in_force.0);
-    let density = use_context::<crate::app::DensityInForce>()
-        .map_or_else(ferrohealth_ui::theme::Density::default, |in_force| {
-            in_force.0
-        });
-    let back = brand_page("").unwrap_or_else(|| String::from("/"));
-    let back = back.trim_end_matches('/').to_owned();
-    card(
-        tr(Msg::Settings),
-        ferrohealth_ui::view::form::columns(view! {
-            {field(
-                "settings-theme",
-                tr(Msg::Theme),
-                None,
-                theme_switch(theme, String::from(crate::app::THEME_ROUTE), back.clone()),
-            )}
-            {field(
-                "settings-density",
-                tr(Msg::Density),
-                None,
-                density_switch(density, String::from(crate::app::DENSITY_ROUTE), back.clone()),
-            )}
-            {field(
-                "settings-language",
-                tr(Msg::Language),
-                Some(tr(Msg::PseudoLocaleDrawsEveryLibrary).clone()),
-                locale_switch(&crate::locale::choices(), String::from(crate::app::LOCALE_ROUTE), back),
-            )}
-        }),
-    )
-    .into_any()
-}
-
 /// Every icon the library vendors, each with its name.
 fn icons() -> AnyView {
     let all = Glyph::ALL
@@ -699,7 +661,6 @@ pub fn OverviewPage() -> impl IntoView {
         facts(),
         tab_sets(),
         segments(),
-        settings(),
         refusals(),
         states(),
         icons(),
@@ -718,7 +679,6 @@ pub fn OverviewPage() -> impl IntoView {
                 {sections.6}
                 {sections.7}
                 {sections.8}
-                {sections.9}
             },
         )}
     }

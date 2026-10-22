@@ -19,10 +19,10 @@ use ferrohealth_ui::view::form::{INPUT, field};
 use ferrohealth_ui::view::kbd::{Shortcut, ShortcutGroup, kbd, shortcut_hint};
 use ferrohealth_ui::view::layout::divided_list;
 use ferrohealth_ui::view::popover::{PopoverForm, popover_form};
+use ferrohealth_ui::view::preferences::{Post, language_select};
 use ferrohealth_ui::view::surface::{
     card, chip, cluster, definitions, grid, page_header, panel, split, stack,
 };
-use ferrohealth_ui::view::theme_switch::locale_select;
 use ferrohealth_ui::widget::action_menu::{
     Act, Action, Choice, Item, Listbox, Menu, Pick, listbox, row_menu,
 };
@@ -248,11 +248,15 @@ fn menus() -> AnyView {
             },
         ],
     });
-    let language = locale_select(
+    let language = language_select(
         "language-list",
+        &crate::app::preferences_of(&crate::app::cookies_requested()).language,
         &crate::locale::choices(),
-        crate::app::LOCALE_ROUTE,
-        &here,
+        &ferrohealth_ui::i18n::Locale::english(),
+        &Post {
+            action: String::from(crate::app::PREFERENCE_ROUTE),
+            back: here.clone(),
+        },
     );
     card(
         tr(Msg::MenusAndSelects),

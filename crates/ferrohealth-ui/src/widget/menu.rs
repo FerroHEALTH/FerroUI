@@ -25,7 +25,15 @@ use leptos::prelude::*;
 use crate::i18n::{Text, tr};
 use crate::icon::{Glyph, icon};
 use crate::theme::Theme;
-use crate::view::theme_switch::glyph;
+
+/// The glyph a theme is drawn with.
+const fn glyph(theme: Theme) -> Glyph {
+    match theme {
+        Theme::Light => Glyph::SUN,
+        Theme::Dark => Glyph::MOON,
+        Theme::System => Glyph::MONITOR,
+    }
+}
 
 /// The theme choice the menu posts.
 #[derive(Debug, Clone, PartialEq, Eq)]

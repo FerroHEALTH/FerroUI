@@ -16,7 +16,7 @@ use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::island::ToastRegion;
 use ferrohealth_ui::style::Brand;
 use ferrohealth_ui::table::model::Paging;
-use ferrohealth_ui::theme::{Density, Theme};
+use ferrohealth_ui::theme::{Preferences, Theme, cookie};
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::segmented::segmented_links;
 use ferrohealth_ui::view::shell::{Footer, Shell, TopBar, centred, lockup, mark, shell, topbar};
@@ -46,23 +46,23 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// The path of the library's stylesheet the server serves.
 pub const STYLESHEET: &str = "/ferrohealth-ui.css";
 
-/// The path of the route a theme choice posts to.
-pub const THEME_ROUTE: &str = "/theme";
+/// The path of the route every preference posts to, its value under its
+/// cookie's name: Your preferences, the user menu's theme and the
+/// overview's density.
+pub const PREFERENCE_ROUTE: &str = "/preference";
 
-/// The name of the cookie the theme choice is kept in.
-pub const THEME_COOKIE: &str = "gallery-theme";
+/// The path of the route Reset to defaults posts to.
+pub const RESET_ROUTE: &str = "/preferences/reset";
 
-/// The path of the route a density choice posts to.
-pub const DENSITY_ROUTE: &str = "/density";
+/// What the gallery puts before each preference's cookie name
+/// ([`ferrohealth_ui::theme::Preference::COOKIE`]), so `gallery-theme` keeps
+/// the theme.
+pub const COOKIE_PREFIX: &str = "gallery-";
 
-/// The name of the cookie the density choice is kept in.
-pub const DENSITY_COOKIE: &str = "gallery-density";
-
-/// The path of the route a language choice posts to.
-pub const LOCALE_ROUTE: &str = "/locale";
-
-/// The name of the cookie the language choice is kept in.
-pub const LOCALE_COOKIE: &str = "gallery-locale";
+/// The gallery's own preferences, shown in FerroPIX's Appearance as a
+/// console's own rows: how long a revealed identifier stays, and whether
+/// leaving the page hides it.
+pub const OWN_PREFERENCES: [&str; 2] = ["reveal", "hide"];
 
 /// The path of the route a session listing's pager posts its page and size
 /// to.
@@ -103,28 +103,33 @@ pub fn brand_of(path: &str) -> Brand {
         .unwrap_or(Brand::Bridge)
 }
 
+/// The preferences the `Cookie` header value `cookies` keeps, each under
+/// its cookie's name after [`COOKIE_PREFIX`].
+#[must_use]
+pub fn preferences_of(cookies: &str) -> Preferences {
+    Preferences::read(cookies, COOKIE_PREFIX)
+}
+
 /// The theme the `Cookie` header value `cookies` names, the system theme for
 /// none.
 #[must_use]
 pub fn theme_of(cookies: &str) -> Theme {
-    cookie(cookies, THEME_COOKIE)
-        .and_then(Theme::parse)
-        .unwrap_or_default()
+    preferences_of(cookies).theme
 }
 
-/// The density the `Cookie` header value `cookies` names, the comfortable
-/// density for none.
-#[must_use]
-pub fn density_of(cookies: &str) -> Density {
-    cookie(cookies, DENSITY_COOKIE)
-        .and_then(Density::parse)
-        .unwrap_or_default()
-}
-
-/// The locale the `Cookie` header value `cookies` names, English for none.
+/// The locale the language preference names: the pseudo-locale when it is
+/// chosen, and English, the language the gallery serves every browser, for
+/// anything else.
 #[must_use]
 pub fn locale_of(cookies: &str) -> Locale {
-    gallery_locale(cookie(cookies, LOCALE_COOKIE).unwrap_or_default())
+    gallery_locale(preferences_of(cookies).language.tag().unwrap_or_default())
+}
+
+/// The value of the gallery's own preference `name`, one of
+/// [`OWN_PREFERENCES`], that the `Cookie` header value `cookies` keeps.
+#[must_use]
+pub fn own_of<'a>(cookies: &'a str, name: &str) -> Option<&'a str> {
+    cookie(cookies, &format!("{COOKIE_PREFIX}{name}"))
 }
 
 /// The paging of the session listing `listing` that the `Cookie` header
@@ -155,17 +160,6 @@ pub fn session_paging(listing: &'static str) -> Paging {
     }
 }
 
-/// The value of the cookie `name` in the `Cookie` header value `cookies`.
-fn cookie<'a>(cookies: &'a str, name: &str) -> Option<&'a str> {
-    // NOTE: RFC 6265 §5.4: cookies arrive as `name=value` pairs joined by `; `, and
-    // a value that names no choice is the choice not made.
-    cookies
-        .split(';')
-        .filter_map(|pair| pair.trim().split_once('='))
-        .find(|(key, _)| *key == name)
-        .map(|(_, value)| value)
-}
-
 /// The whole HTML document the server renders around [`App`], in the theme
 /// the request's cookie names and with the theme file of the brand its path
 /// names.
@@ -179,12 +173,21 @@ pub fn document(options: LeptosOptions) -> impl IntoView {
         .and_then(|value| value.to_str().ok())
         .unwrap_or_default()
         .to_owned();
-    let theme = theme_of(&cookies).key();
-    let density = density_of(&cookies).key();
+    let preferences = preferences_of(&cookies);
+    let theme = preferences.theme.key();
+    let density = preferences.density.key();
+    let motion = preferences.motion.key();
+    let hints = preferences.hints.key();
     let lang = locale_of(&cookies).tag();
     view! {
         <!DOCTYPE html>
-        <html lang=lang data-theme=theme data-density=density>
+        <html
+            lang=lang
+            data-theme=theme
+            data-density=density
+            data-motion=motion
+            data-hints=hints
+        >
             <head>
                 <meta charset="utf-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -233,15 +236,17 @@ fn rail_requested() -> bool {
     }
 }
 
-/// The density the request names, decided as the theme is.
-fn density_requested() -> Density {
+/// The `Cookie` header of the request the server draws; empty in the
+/// browser, which never draws a server-only page.
+#[must_use]
+pub fn cookies_requested() -> String {
     #[cfg(not(target_arch = "wasm32"))]
     {
-        density_of(&request_cookies())
+        request_cookies()
     }
     #[cfg(target_arch = "wasm32")]
     {
-        Density::default()
+        String::new()
     }
 }
 
@@ -275,10 +280,6 @@ fn request_cookies() -> String {
 #[derive(Debug, Clone, Copy)]
 pub struct InForce(pub Theme);
 
-/// The density in force, shared with the pages.
-#[derive(Debug, Clone, Copy)]
-pub struct DensityInForce(pub Density);
-
 /// The root component: the routes, the toast region and the title.
 ///
 /// It runs on the server alone: the gallery renders in islands mode, so
@@ -290,8 +291,6 @@ pub fn App() -> impl IntoView {
     // the hydrating page serialized, so both halves draw the same page.
     let theme = *SharedValue::new_str(theme_requested);
     provide_context(InForce(theme));
-    let density = *SharedValue::new_str(density_requested);
-    provide_context(DensityInForce(density));
     let tag = SharedValue::new_str(locale_requested);
     provide_locale(gallery_locale(&tag));
     view! {
@@ -310,6 +309,11 @@ pub fn App() -> impl IntoView {
                     <Route path=path!("overlays/access") view=crate::pages::overlays::AccessPage />
                     <Route path=path!("charts") view=crate::pages::charts::ChartsPage />
                     <Route path=path!("layouts") view=crate::pages::layouts::LayoutsPage />
+                    <Route path=path!("preferences") view=crate::pages::preferences::PreferencesPage />
+                    <Route
+                        path=path!("preferences/:section")
+                        view=crate::pages::preferences::PreferencesPage
+                    />
                     <Route
                         path=path!("templates/:variant")
                         view=crate::pages::templates::TemplatePage
@@ -446,6 +450,13 @@ macro_rules! templates {
                 label: tr(Msg::NavSettingsManaged).into(),
                 glyph: Glyph::SLIDERS_HORIZONTAL,
                 exact: true,
+                count: None,
+            },
+            Entry {
+                href: concat!("/", $key, "/preferences"),
+                label: tr(Msg::NavPreferences).into(),
+                glyph: Glyph::CIRCLE_USER,
+                exact: false,
                 count: None,
             },
             Entry {
@@ -690,10 +701,10 @@ fn brand_shell(brand: Brand, back: String, search: Option<&str>) -> AnyView {
         name: Some(operator.clone()),
         who: operator,
         line: tr(Msg::GalleryOperatorLine),
-        preferences: format!("/{}", brand.key()),
+        preferences: format!("/{}/preferences", brand.key()),
         theme: ThemeChoice {
             current: theme,
-            action: String::from(THEME_ROUTE),
+            action: String::from(PREFERENCE_ROUTE),
             back,
         },
         choices: Some(choices),
@@ -777,7 +788,11 @@ fn Index() -> impl IntoView {
 
 /// The page for a path the gallery does not serve: `404`, and the way back.
 #[component]
-fn NotFound() -> impl IntoView {
+#[expect(
+    clippy::must_use_candidate,
+    reason = "the #[component] macro drops a #[must_use] from the function it writes"
+)]
+pub(crate) fn NotFound() -> impl IntoView {
     #[cfg(not(target_arch = "wasm32"))]
     if let Some(response) = use_context::<leptos_axum::ResponseOptions>() {
         response.set_status(http::StatusCode::NOT_FOUND);

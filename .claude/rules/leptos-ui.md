@@ -210,9 +210,13 @@ entry, and a new role joins the contrast test in the change that adds it.
   no cookie it follows the system. The top bar carries no theme control
   (family rule 5): the user menu (`widget::menu::user_menu`) holds the
   three choices as `menuitemradio` submit buttons of one plain form, and
-  Your preferences holds the theme switch; the console answers the post
-  with the page in the new theme, kept in the same cookie, never browser
-  storage.
+  Your preferences (`view::preferences`) holds the theme as preview cards;
+  the console answers the post with the page in the new theme, kept in the
+  same cookie, never browser storage. Each family preference is its own
+  cookie (`theme::Preference::COOKIE`), and the console writes reduced
+  motion and the shortcut hints on `<html>` as `data-motion` and
+  `data-hints`, which the stylesheet reads beside
+  `prefers-reduced-motion`.
 - Six steps of type (`--text-display` to `--text-micro`), each written
   with its leading (`--leading-display` to `--leading-micro`), and four of
   space (`--space-tight` to `--space-section`), the compact density under
@@ -354,7 +358,8 @@ the lookup order: our own design; the message syntax is Project Fluent's.
 - **A console catalogs its own strings the same way**: its own
   `static_loader!` over its own `locales/`, looked up through
   `Locale::lookup` so its words follow the same choice, and the language
-  switch is `view::theme_switch::locale_switch`.
+  choice is the language preference of Your preferences
+  (`view::preferences::language_select`).
 - **A console hands a component its words made at run time.** Every
   label, title, legend, placeholder and noun a component takes accepts a
   `String` from the console's catalog. Words a component must look up as

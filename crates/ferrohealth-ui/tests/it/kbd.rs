@@ -133,6 +133,20 @@ fn the_legend_is_a_dialog_listing_each_group_of_keys_and_words() {
 
 #[test]
 fn no_key_cap_or_hint_shows_on_a_phone_but_the_legend_keeps_its_keys() {
-    let rule = "  @media (width < 40rem), (hover: none) and (pointer: coarse) {\n    .fui-kbd:not(.fui-shortcuts .fui-kbd),\n    .fui-shortcut-hint {\n      display: none !important;";
-    assert!(STYLESHEET.contains(rule), "a key shows on a phone");
+    let rule = "  @media (width < 40rem) {\n    .fui-kbd:not(.fui-shortcuts .fui-kbd),\n    .fui-shortcut-hint {\n      display: none !important;";
+    assert!(
+        STYLESHEET.contains(rule),
+        "a key shows on a phone, whatever the preference"
+    );
+    let touch = "  @media (hover: none) and (pointer: coarse) {\n    :root:not([data-hints=\"always\"]) :is(.fui-kbd:not(.fui-shortcuts .fui-kbd), .fui-shortcut-hint) {\n      display: none !important;";
+    assert!(
+        STYLESHEET.contains(touch),
+        "a key shows on a touch-only device unless the reader asked for every wide screen"
+    );
+}
+
+#[test]
+fn the_shortcut_hints_preference_never_takes_every_hint_but_the_legend_s_away() {
+    let never = "  :root[data-hints=\"never\"] :is(.fui-kbd:not(.fui-shortcuts .fui-kbd), .fui-shortcut-hint) {\n    display: none !important;";
+    assert!(STYLESHEET.contains(never), "Never keeps the hints");
 }

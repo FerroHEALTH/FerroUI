@@ -351,6 +351,17 @@
       scroll-behavior: auto !important;
     }
   }
+
+  /* The same for a reader who chose Reduce motion in Your preferences,
+     which the console writes as data-motion on <html>. */
+  :root[data-motion="reduce"] *,
+  :root[data-motion="reduce"] *::before,
+  :root[data-motion="reduce"] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 @layer components {
@@ -5124,12 +5135,24 @@
   /* A phone has no keyboard: below 40 rem, and on a touch-only device,
      every key hint goes, in a button, a tab, a label, a menu, a field or a
      listing's foot. The legend dialog is the full reference and keeps its
-     keys; the shortcuts themselves stay announced by aria-keyshortcuts. */
-  @media (width < 40rem), (hover: none) and (pointer: coarse) {
+     keys; the shortcuts themselves stay announced by aria-keyshortcuts.
+     The Shortcut hints preference, written as data-hints on <html>, keeps
+     them on a wide touch screen (always) or takes them away (never). */
+  @media (width < 40rem) {
     .fui-kbd:not(.fui-shortcuts .fui-kbd),
     .fui-shortcut-hint {
       display: none !important;
     }
+  }
+
+  @media (hover: none) and (pointer: coarse) {
+    :root:not([data-hints="always"]) :is(.fui-kbd:not(.fui-shortcuts .fui-kbd), .fui-shortcut-hint) {
+      display: none !important;
+    }
+  }
+
+  :root[data-hints="never"] :is(.fui-kbd:not(.fui-shortcuts .fui-kbd), .fui-shortcut-hint) {
+    display: none !important;
   }
 
   /* ---- R2. The tag: a short name in the UI face (domains, channels) ---- */
@@ -6631,6 +6654,24 @@
   @keyframes fui-saved-fade {
     0%, 70% { opacity: 1; }
     100% { opacity: 0; }
+  }
+
+  /* With reduced motion the saved mark stays, since a fade cut to nothing
+     would never show it. */
+  @media (prefers-reduced-motion: reduce) {
+    .fui-setting-row .fui-setting-saved {
+      animation: none;
+    }
+  }
+
+  :root[data-motion="reduce"] .fui-setting-row .fui-setting-saved {
+    animation: none;
+  }
+
+  /* The form of one preference adds no box: its control and its Save
+     button lay out in the row's control column. */
+  .fui-preference-form {
+    display: contents;
   }
 
   /* A capture shows the saved mark at its full strength. */
@@ -13658,7 +13699,7 @@
 
   /* On a phone the preview cards' column takes the content width. */
   @media (width < 40rem) {
-    .fui-setting-control:has(> .fui-choice-cards),
+    .fui-setting-control:has(.fui-choice-cards),
     .fui-choice-cards {
       width: 100%;
     }
