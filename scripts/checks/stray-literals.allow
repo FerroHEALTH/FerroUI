@@ -31,6 +31,7 @@ allow ^month \{month\} of \{year\} has \{\} days$   # a refused date's diagnosti
 # The gallery: the synthetic data it draws, and its server.
 skip app/ferrohealth-ui-gallery/src/data.rs     # the synthetic rows and documents the gallery draws as data
 skip app/ferrohealth-ui-gallery/src/records_data.rs  # the synthetic people, records and identifiers the record components draw as data
+skip app/ferrohealth-ui-gallery/src/trees_data.rs  # the synthetic code systems, directory and template the trees draw as data
 skip app/ferrohealth-ui-gallery/src/server.rs   # the HTTP server: headers, policies, environment names, a malformed post's refusal
 allow ^SYN-[0-9]+$                      # the gallery's synthetic codes
 allow ^synthetic-node-[a-z]$            # a synthetic node's name, drawn as code

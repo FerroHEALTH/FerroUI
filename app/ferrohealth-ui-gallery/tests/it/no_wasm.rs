@@ -464,6 +464,7 @@ async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error
             assert!(!items.is_empty(), "the tree shows its items");
             crate::widgets::help_switch_journey(browser).await?;
         }
+        "/trees" => trees_content(browser).await?,
         "/preferences" | "/preferences/language" | "/preferences/keyboard" => {
             preferences_content(browser, page).await?;
         }
@@ -615,6 +616,23 @@ async fn links_lead_on_with_the_webassembly_withheld() -> Result<(), Box<dyn Err
             .at(&gallery.url("/ferroehr/layouts?concept=SYN-110"))
             .await?;
         browser.text("h2", "SYN-110").await?;
+        // A tree folds by its toggle's link, and the server reads the level.
+        browser
+            .goto(&gallery.url("/ferroterm/trees?open=SF-1000&concept=SF-1000"))
+            .await?;
+        browser
+            .element(By::Css(
+                "#trees-deep a.fui-tree-toggle[aria-label='Expand Finding of the skin']",
+            ))
+            .await?
+            .click()
+            .await?;
+        browser.text("a", "Rash").await?;
+        browser
+            .element(By::Css(
+                "#trees-deep a.fui-tree-toggle[aria-label='Collapse Finding of the skin']",
+            ))
+            .await?;
         // The side panel's opener leads to its content's own page.
         browser.goto(&gallery.url("/ferrofed/overlays")).await?;
         browser
@@ -630,6 +648,35 @@ async fn links_lead_on_with_the_webassembly_withheld() -> Result<(), Box<dyn Err
         leave(browser, "the links").await
     })
     .await
+}
+
+/// The trees page with no WebAssembly: every tree draws its items, the
+/// concept browser's toggles are links, and the edit's actions are submit
+/// buttons of its form.
+async fn trees_content(browser: &Browser) -> Result<(), Box<dyn Error>> {
+    for tree in [
+        "trees-deep",
+        "trees-long",
+        "trees-directory",
+        "trees-directory-edit",
+        "trees-paths",
+    ] {
+        let items = browser
+            .driver()
+            .find_all(By::Css(format!("#{tree} [role='treeitem']")))
+            .await?;
+        assert!(!items.is_empty(), "the tree {tree} shows its items");
+    }
+    browser
+        .element(By::Css("#trees-deep a.fui-tree-toggle[href*='open=']"))
+        .await?;
+    browser.text("li", "Reading the children").await?;
+    browser
+        .element(By::Css(
+            "form #trees-directory-edit button[type='submit'][name='rename'][value='follow-up']",
+        ))
+        .await?;
+    Ok(())
 }
 
 /// Follows a hit of the search's answer and saves through the docked bar,

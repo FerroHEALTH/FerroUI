@@ -21,6 +21,7 @@
 //! a form posts.
 
 pub mod action;
+pub mod browser;
 pub mod button;
 pub mod change;
 pub mod chart;
@@ -41,6 +42,7 @@ pub mod kbd;
 pub mod layout;
 pub mod load_report;
 pub mod notice;
+pub mod path;
 pub mod popover;
 pub mod preferences;
 pub mod refusal;

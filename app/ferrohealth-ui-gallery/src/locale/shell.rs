@@ -190,6 +190,8 @@ messages! {
     TheCode = "the-code",
     /// `Timeout`
     Timeout = "timeout",
+    /// `Trees`
+    Trees = "trees",
     /// `Try again`
     TryAgain = "try-again",
     /// `Value`

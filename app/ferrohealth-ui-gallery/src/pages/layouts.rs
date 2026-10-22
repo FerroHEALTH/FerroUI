@@ -29,7 +29,7 @@ use ferrohealth_ui::view::surface::{
     panel_sections_card, section_intro, split,
 };
 use ferrohealth_ui::widget::picker::{Picker, picker_field};
-use ferrohealth_ui::widget::tree::{Tree, TreeNode, tree_view_collapsing};
+use ferrohealth_ui::widget::tree::{Children, Tree, TreeKind, TreeNode, TreeWords, tree_view};
 use leptos::prelude::*;
 use leptos_router::hooks::use_query_map;
 
@@ -58,33 +58,71 @@ fn hierarchy(brand: &str, words: &Words) -> Vec<TreeNode> {
     vec![
         concept(brand, "SYN-100", &words.get(Msg::SyntheticFinding)).children(vec![
             concept(brand, "SYN-110", &words.get(Msg::SyntheticFindingArm)),
-            concept(brand, "SYN-120", &words.get(Msg::SyntheticFindingLeg)).expandable(),
+            concept(brand, "SYN-120", &words.get(Msg::SyntheticFindingLeg)).unread(),
         ]),
-        concept(brand, "SYN-200", &words.get(Msg::SyntheticProcedure)).expandable(),
+        concept(brand, "SYN-200", &words.get(Msg::SyntheticProcedure)).unread(),
         concept(brand, "SYN-300", &words.get(Msg::SyntheticBodySite)),
     ]
 }
 
-/// The children in `words` read when the item `key` opens, the first time.
-fn read_children(brand: &str, words: &Words, nodes: &mut [TreeNode], key: &str) {
+/// The children in `words` read under each item of `open` not read yet,
+/// as a console's server reads a level when it opens.
+fn read_children(brand: &str, words: &Words, nodes: &mut [TreeNode], open: &BTreeSet<String>) {
     for node in nodes.iter_mut() {
-        if node.key == key && node.children.is_empty() {
-            node.children = vec![
-                concept(
-                    brand,
-                    &format!("{key}-1"),
-                    &words.get(Msg::SyntheticChildReadOpening),
-                ),
-                concept(
-                    brand,
-                    &format!("{key}-2"),
-                    &words.get(Msg::AnotherSyntheticChild),
-                ),
-            ];
-        } else {
-            read_children(brand, words, &mut node.children, key);
+        if node.children == Children::Unread && open.contains(&node.key) {
+            let key = node.key.clone();
+            node.children = Children::Read {
+                nodes: vec![
+                    concept(
+                        brand,
+                        &format!("{key}-1"),
+                        &words.get(Msg::SyntheticChildReadOpening),
+                    ),
+                    concept(
+                        brand,
+                        &format!("{key}-2"),
+                        &words.get(Msg::AnotherSyntheticChild),
+                    ),
+                ],
+                more: None,
+            };
+        } else if let Children::Read { nodes, .. } = &mut node.children {
+            read_children(brand, words, nodes, open);
         }
     }
+}
+
+/// The hierarchy of the brand `brand` in `words` with the items `open`
+/// read, each toggle a link to the page with its item opened or closed.
+fn read_hierarchy(
+    brand: &str,
+    words: &Words,
+    open: &BTreeSet<String>,
+    selected: Option<&str>,
+) -> Vec<TreeNode> {
+    fn toggles(
+        brand: &str,
+        nodes: &mut [TreeNode],
+        open: &BTreeSet<String>,
+        selected: Option<&str>,
+    ) {
+        for node in nodes.iter_mut() {
+            if node.opens() {
+                let mut flipped = open.clone();
+                if !flipped.remove(&node.key) {
+                    flipped.insert(node.key.clone());
+                }
+                node.toggle_href = Some(address(brand, &flipped, selected));
+            }
+            if let Children::Read { nodes, .. } = &mut node.children {
+                toggles(brand, nodes, open, selected);
+            }
+        }
+    }
+    let mut nodes = hierarchy(brand, words);
+    read_children(brand, words, &mut nodes, open);
+    toggles(brand, &mut nodes, open, selected);
+    nodes
 }
 
 /// The open items the address names (`?open=a,b`), the top item when it
@@ -153,7 +191,13 @@ fn browser() -> AnyView {
             (tr(Msg::Parent), or_none(String::new()).into_any()),
         ])}
     };
-    let tree = view! { <crate::islands::ConceptTree brand concept open words=tree_words() /> };
+    let tree = view! { <crate::islands::ConceptTree
+        brand
+        concept
+        open
+        words=tree_words()
+        tree=TreeWords::of_page()
+    /> };
     card(
         tr(Msg::ThreePanesTree),
         three_panes(
@@ -206,55 +250,56 @@ fn runner_words() -> Words {
     ])
 }
 
-/// The hierarchy of the brand `brand` in `words`, with the concept `concept` selected
-/// and the items `open` names open, keeping its open items in the address
+/// The hierarchy of the brand `brand` in `words` and `tree_words`, with the concept
+/// `concept` selected and the items `open` names open, keeping its open items in the address
 /// as they change.
+///
+/// The tree's items follow its open items, each level read as it opens,
+/// and an `Effect::watch` keeps the address in step (the Leptos book,
+/// `reactivity/14_create_effect`).
 pub(crate) fn concept_tree(
     brand: String,
     concept: Option<String>,
     open: Option<String>,
     words: Words,
+    tree_words: TreeWords,
 ) -> AnyView {
-    let selected = Signal::stored(concept);
-    let opened = open_in(open);
-    let mut first = hierarchy(&brand, &words);
-    for key in &opened {
-        read_children(&brand, &words, &mut first, key);
-    }
     let label = words.get(Msg::SyntheticHierarchy);
-    let words = StoredValue::new(words);
-    let nodes = RwSignal::new(first);
-    let expanded = RwSignal::new(opened);
+    let expanded = RwSignal::new(open_in(open));
     let brand = StoredValue::new(brand);
-    let remember = move || {
-        let url = brand.with_value(|brand| {
-            address(
-                brand,
-                &expanded.get_untracked(),
-                selected.get_untracked().as_deref(),
-            )
-        });
-        replace_address(&url);
-    };
-    tree_view_collapsing(
-        Tree {
-            id: "gallery-tree",
-            label: label.into(),
-            nodes: nodes.into(),
-            expanded,
-            selected,
-            on_expand: Some(Callback::new(move |key: String| {
-                brand.with_value(|brand| {
-                    words.with_value(|words| {
-                        nodes.update(|nodes| read_children(brand, words, nodes, &key));
-                    });
-                });
-                remember();
-            })),
-            actions: None,
+    let words = StoredValue::new(words);
+    let chosen = StoredValue::new(concept.clone());
+    let nodes = Memo::new(move |_| {
+        expanded.with(|open| {
+            brand.with_value(|brand| {
+                words.with_value(|words| {
+                    chosen
+                        .with_value(|chosen| read_hierarchy(brand, words, open, chosen.as_deref()))
+                })
+            })
+        })
+    });
+    Effect::watch(
+        move || expanded.get(),
+        move |open, _, _| {
+            let url = brand.with_value(|brand| {
+                chosen.with_value(|chosen| address(brand, open, chosen.as_deref()))
+            });
+            replace_address(&url);
         },
-        Callback::new(move |_key: String| remember()),
-    )
+        false,
+    );
+    tree_view(Tree {
+        id: String::from("gallery-tree"),
+        label,
+        kind: TreeKind::Concept,
+        editing: false,
+        nodes: nodes.into(),
+        expanded,
+        selected: Signal::stored(concept),
+        open_field: None,
+        words: tree_words,
+    })
 }
 
 /// Replaces the page's address with `url`, keeping the page and its

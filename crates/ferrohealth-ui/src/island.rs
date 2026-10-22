@@ -8,7 +8,7 @@
 //! They are the toast region, the keyboard tabs, the navigation drawer, the
 //! menu and listbox behind every More, row menu and select button, the
 //! combobox, the picker field, the chart legend, the copy button, the
-//! side panel and the work-list.
+//! side panel, the tree and the work-list.
 //!
 //! An island is the only part of a page the browser hydrates (the Leptos
 //! book, "Guide: Islands"). Its props cross to the browser as JSON in the
@@ -381,6 +381,21 @@ pub fn DateRangePicker(
     range: crate::widget::date::DateRange,
 ) -> impl IntoView {
     crate::widget::date::date_range(range)
+}
+
+/// The tree `tree` (M1, E4, E5): its items fold in place and the keyboard
+/// walks them; an unread level and every fold with no WebAssembly follow
+/// the toggle's link, which the console's server answers. It is lazy: under
+/// `cargo leptos --split` its code loads from its own chunks.
+#[island(lazy)]
+pub fn TreeView(
+    /// The tree, its items and its open and selected items as the server
+    /// drew them.
+    tree: crate::widget::tree::TreeData,
+    /// Its words ([`crate::widget::tree::TreeWords::of_page`]).
+    words: crate::widget::tree::TreeWords,
+) -> impl IntoView {
+    crate::widget::tree::tree_island(tree, words)
 }
 
 /// The form of one preference in Your preferences, posting its control

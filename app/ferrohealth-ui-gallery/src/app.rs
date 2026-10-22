@@ -323,6 +323,7 @@ pub fn App() -> impl IntoView {
                         path=path!("templates/:variant")
                         view=crate::pages::templates::TemplatePage
                     />
+                    <Route path=path!("trees") view=crate::pages::trees::TreesPage />
                 </ParentRoute>
             </Routes>
         </Router>
@@ -404,6 +405,13 @@ macro_rules! entries {
                 href: concat!("/", $key, "/operations"),
                 label: tr(Msg::Operations).into(),
                 glyph: Glyph::FLASK_CONICAL,
+                exact: true,
+                count: None,
+            },
+            Entry {
+                href: concat!("/", $key, "/trees"),
+                label: tr(Msg::Trees).into(),
+                glyph: Glyph::FOLDER_OPEN,
                 exact: true,
                 count: None,
             },

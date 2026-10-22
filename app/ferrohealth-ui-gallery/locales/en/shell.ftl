@@ -100,6 +100,7 @@ templates = Page templates
 term = TERM
 the-code = The code
 timeout = Timeout
+trees = Trees
 try-again = Try again
 value = Value
 version = Version

@@ -104,8 +104,10 @@ pub fn ConceptTree(
     open: Option<String>,
     /// Its words, in the page's locale.
     words: Words,
+    /// The tree's own words, in the page's locale.
+    tree: ferrohealth_ui::widget::tree::TreeWords,
 ) -> impl IntoView {
-    crate::pages::layouts::concept_tree(brand, concept, open, words)
+    crate::pages::layouts::concept_tree(brand, concept, open, words, tree)
 }
 
 /// The layouts page's runner form: its help switch and the fields it

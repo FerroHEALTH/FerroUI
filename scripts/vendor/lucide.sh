@@ -35,7 +35,7 @@ ICONS=(
   panel-right pencil play plus
   radio-tower refresh-cw rotate-ccw rotate-ccw-clock route save search search-code search-x
   server server-crash settings shield-check shield-off sliders-horizontal
-  square-terminal sun tags trash triangle-alert upload user-plus users x
+  square-terminal sun tags trash triangle-alert undo upload user-plus users x
 )
 
 die() {
