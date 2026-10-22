@@ -11,6 +11,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-22
+
 ### Added
 
 - Binder tabs joined to their panel (R3, #152): `view::tabs::binder(label,
@@ -313,6 +315,43 @@ and this project adheres to
   binds no key: `typing`, `chorded` and `phone_layout` are the tests a
   console's listener asks first, and below 40 rem no key cap, hint or
   legend shows.
+- Your preferences as library views: `view::preferences::preferences_page`
+  draws exactly three tabs, Appearance (theme and density as R28 radio
+  preview cards drawing both themes' preview accents, reduce motion),
+  Language and region (`reading: true` names it Reading, as FerroEHR does;
+  the language as an R29 select with each language in its own name, the
+  first day of the week) and Keyboard (shortcut hints and the legend,
+  hidden below 40 rem through `data-tab="keyboard"`). A console passes the
+  preferences it read, its routes and the cookie name it just kept
+  (`saved`), and puts its own preferences inside the three tabs (`own`)
+  with `preference_row`, `select_preference` and `switch_preference`.
+  Every preference is a plain form post that works with no WebAssembly
+  (the new `island::PreferenceForm` posts on change once hydrated and
+  returns the focus to the row just saved); Saved has a fixed slot that
+  never moves its control; Reset to defaults asks first and posts to the
+  console's route. The library writes no cookie (#158).
+- `theme::Preference` (each preference's cookie name, cookie value and
+  parse, a missing or unknown value read as the default), the new
+  preferences `Motion`, `WeekStart`, `Hints` and `Language`,
+  `theme::Preferences` with `Preferences::read` over a `Cookie` header, and
+  `theme::cookie` (#158).
+- The stylesheet reads `data-motion="reduce"` as `prefers-reduced-motion`
+  does and `data-hints="always"` or `"never"` for the key hints; write both
+  on `<html>` from their cookies. Under reduced motion the Saved mark stays
+  instead of fading (#158).
+- `island::CopyButton` and `island::SidePanel`, the ready islands of the copy
+  button and the side panel, with their words as props (`CopyWords`,
+  `SidePanelWords`). The side panel's opener (`widget::side_panel::Opener`)
+  is a link to the content's own route until the page hydrates, then the
+  button that opens the panel; the panel moves the focus to its Close button
+  as it opens and returns it to the opener as it closes (#220).
+- Copy in the code viewer's head (`CodeHead::copy`, the id of its button) and
+  in the document pane, which copies the document in the format in force (#220).
+- `Glyph::name` and `Glyph::named`, and serde for `Glyph` (as its Lucide
+  name) and for `view::button::Variant`, so an island can take either as a
+  prop (#220).
+- The crate docs name the widgets that share state with a console's code
+  (editor, filter, pager, dialog, tree, upload, help) as island parts (#220).
 
 ### Changed
 
@@ -528,42 +567,15 @@ and this project adheres to
   search, and `SearchBox`'s fields are `String`s, since the box is an
   island and its props cross to the browser: a console fills the new
   fields or takes `..SearchBox::default()`.
-
-### Fixed
-
-- The picker's select (`widget::picker::picker_field`) follows its value
-  through `prop:value` on the select, so it always shows the value's
-  choice, also after the reader has chosen by hand (#206). The server marks
-  the initial choice with a static `selected` and writes the value into the
-  input, so a page posts it before it hydrates, and the choices are a keyed
-  list. The "another" choice no longer starts with U+0000, which the HTML
-  parser turns into U+FFFD, so choosing it keeps the value in the input
-  where it wrote U+FFFD and "another" before. The gallery's runner form has
-  a button that sets the value from the console's side.
-- `scripts/checks/crate-version-guard.sh` reads each file into a variable
-  before it searches it, so a reader that stops at its first match no
-  longer kills `git show` with SIGPIPE, which `pipefail` reported as a
-  missing changelog section or a failed lock read once the file outgrew the
-  pipe buffer (#203). Its `--self-test`, run in CI, checks a changelog and a
-  lock over 64 KB twenty times and a changelog without the section.
-- The gallery's state capture lists the card-header action's hover and
-  focus (`hover-card-action`, `focus-card-action`), so their images are
-  committed for every brand, light and dark, and the screenshot guard no
-  longer rejects them after a capture run (#201). The capture now refuses to
-  write a state its list does not name and fails when it did not write
-  every listed state.
-- The editor's text area carries its text in the page the server draws,
-  escaped, so a form posts it before or without the WebAssembly; before,
-  it arrived empty and only the highlight layer showed the text.
-- The top bar's end fits its row with a classic scrollbar, which takes
-  15 px from the layout viewport on Linux and Windows (#234). At a 640 px
-  window the user menu's button ran 4 to 12 px past the 625 px viewport,
-  so the page scrolled sideways (WCAG 2.2 SC 1.4.10). Below 48 rem, where
-  the top bar wraps, the operator's name is now visually hidden, as it was
-  below 40 rem, and stays the button's accessible name and title; the end
-  keeps its parts' width and the lockup's name gives way with an ellipsis.
-  The user menu sheet's journey measures the sheet against the layout
-  viewport (`clientWidth`, `clientHeight`) instead of the window.
+- The copy button and a setting's key hint are hidden until the page
+  hydrates, in place of disabled; with no WebAssembly the text they copy
+  stays on the page as selectable text, and the key hint shows its key as
+  text. A console that built a `CodeHead` with a struct literal adds
+  `copy: None` or the id of its Copy button (#220).
+- `widget::side_panel::SidePanel` takes `id` and `title` as `String` and an
+  `opener: Opener`, and draws its opener itself; its scrolling body's id is
+  `id` and `-body`. Below 40 rem the panel is a sheet over the whole layout
+  viewport, scrollbar excluded, with its body filling it (#220).
 
 ### Removed
 
@@ -616,6 +628,53 @@ and this project adheres to
 - `view::layout::action_bar` and its `fui-action-bar` class, the actions at
   the foot of a card: the page's decision goes in the docked decision bar,
   `view::dock::decision_bar` (#145).
+- `view::theme_switch` and its `theme_switch`, `density_switch`,
+  `locale_switch` and `locale_select`: Your preferences
+  (`view::preferences`) replaces the segmented switches, and
+  `view::preferences::language_select` the language select. A console
+  draws `preferences_page` behind the user menu's Your preferences link and
+  answers its posts (#158).
+- `widget::side_panel::side_panel_trigger` and `SidePanel::body_id`: the
+  panel draws its own opener, and its body's id follows from its own (#220).
+
+### Fixed
+
+- The picker's select (`widget::picker::picker_field`) follows its value
+  through `prop:value` on the select, so it always shows the value's
+  choice, also after the reader has chosen by hand (#206). The server marks
+  the initial choice with a static `selected` and writes the value into the
+  input, so a page posts it before it hydrates, and the choices are a keyed
+  list. The "another" choice no longer starts with U+0000, which the HTML
+  parser turns into U+FFFD, so choosing it keeps the value in the input
+  where it wrote U+FFFD and "another" before. The gallery's runner form has
+  a button that sets the value from the console's side.
+- `scripts/checks/crate-version-guard.sh` reads each file into a variable
+  before it searches it, so a reader that stops at its first match no
+  longer kills `git show` with SIGPIPE, which `pipefail` reported as a
+  missing changelog section or a failed lock read once the file outgrew the
+  pipe buffer (#203). Its `--self-test`, run in CI, checks a changelog and a
+  lock over 64 KB twenty times and a changelog without the section.
+- The gallery's state capture lists the card-header action's hover and
+  focus (`hover-card-action`, `focus-card-action`), so their images are
+  committed for every brand, light and dark, and the screenshot guard no
+  longer rejects them after a capture run (#201). The capture now refuses to
+  write a state its list does not name and fails when it did not write
+  every listed state.
+- The editor's text area carries its text in the page the server draws,
+  escaped, so a form posts it before or without the WebAssembly; before,
+  it arrived empty and only the highlight layer showed the text.
+- The top bar's end fits its row with a classic scrollbar, which takes
+  15 px from the layout viewport on Linux and Windows (#234). At a 640 px
+  window the user menu's button ran 4 to 12 px past the 625 px viewport,
+  so the page scrolled sideways (WCAG 2.2 SC 1.4.10). Below 48 rem, where
+  the top bar wraps, the operator's name is now visually hidden, as it was
+  below 40 rem, and stays the button's accessible name and title; the end
+  keeps its parts' width and the lockup's name gives way with an ellipsis.
+  The user menu sheet's journey measures the sheet against the layout
+  viewport (`clientWidth`, `clientHeight`) instead of the window.
+- The About page's Copy works: it is the copy island, where it was a button
+  drawn on the server alone that never turned on (#220).
+- The native select and the combobox input draw their chevron at the size of the 16 px Lucide chevron a select button draws, 10 by 5 px on screen; it was 12 by 6 (#255).
 
 ## [0.2.2] - 2026-10-21
 
@@ -1257,7 +1316,8 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/FerroHEALTH/FerroUI/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/FerroHEALTH/FerroUI/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/FerroHEALTH/FerroUI/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/FerroHEALTH/FerroUI/compare/v0.1.7...v0.2.0
