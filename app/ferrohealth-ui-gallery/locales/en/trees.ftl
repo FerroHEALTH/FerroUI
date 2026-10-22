@@ -52,7 +52,6 @@ trees-hierarchy = Hierarchy
 trees-hierarchy-of-findings = The hierarchy of Synthetic clinical findings
 trees-hierarchy-of-national = The hierarchy of Synthetic national findings
 trees-in-edit = Folders, in an edit
-trees-inactive = Inactive
 trees-items = { $count ->
     [one] { $count } item
    *[other] { $count } items

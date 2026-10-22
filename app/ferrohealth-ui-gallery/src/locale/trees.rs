@@ -90,8 +90,6 @@ messages! {
     TreesHierarchyOfNational = "trees-hierarchy-of-national",
     /// `Folders, in an edit`
     TreesInEdit = "trees-in-edit",
-    /// `Inactive`
-    TreesInactive = "trees-inactive",
     /// `{ $count } items`
     TreesItems = "trees-items",
     /// `Laboratory result report`

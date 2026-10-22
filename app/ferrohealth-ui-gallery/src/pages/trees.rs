@@ -21,6 +21,7 @@ use ferrohealth_ui::view::browser::{
     BrowserPane, Heading, Match, Panes, PathNode, browser, browser_find, match_list, pane_body,
     path_node,
 };
+use ferrohealth_ui::view::coding::{Coding, Layout, coding, inactive_mark};
 use ferrohealth_ui::view::path::archetype;
 use ferrohealth_ui::view::surface::{
     Crumb, Header, SectionHead, definitions, page_heading, panel_section, section_intro, stack,
@@ -117,17 +118,10 @@ fn open_in(query: Option<String>) -> BTreeSet<String> {
     )
 }
 
-/// A row of a search's matches: the display as the row's link, then its
-/// code.
+/// A row of a search's matches: an inline M2 coding, its display the
+/// row's link.
 fn found(href: String, display: String, code: &str) -> AnyView {
-    view! {
-        <a class="fui-row-link" href=href>
-            {display}
-        </a>
-        " "
-        <code class="fui-tree-code">{code.to_owned()}</code>
-    }
-    .into_any()
+    coding(Coding::new(code, display).href(href), Layout::Inline)
 }
 
 /// The search pane, searching for `value` in a field `id`, with `matches`.
@@ -174,9 +168,7 @@ fn concept_pane(
     facts: Vec<(String, AnyView)>,
 ) -> BrowserPane {
     let read = tr_with(Msg::TreesReadFrom, &[("version", version.into())]);
-    let mark = inactive.then(|| {
-        view! { <span class="fui-inactive-mark">{tr(Msg::TreesInactive)}</span> }
-    });
+    let mark = inactive.then(inactive_mark);
     BrowserPane::new(
         tr(Msg::TreesTheConcept),
         pane_body(view! {
@@ -536,14 +528,7 @@ fn path_browser() -> AnyView {
     };
     let codes = POSITION_CODES
         .into_iter()
-        .map(|(words, code)| {
-            view! {
-                {tr(words)}
-                " "
-                <code class="fui-tree-code">{code}</code>
-            }
-            .into_any()
-        })
+        .map(|(words, code)| coding(Coding::new(code, tr(words)), Layout::Inline))
         .collect();
     let node = path_node(PathNode {
         name: tr(Msg::TreesPosition),

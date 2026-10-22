@@ -16,6 +16,7 @@ use ferrohealth_ui::island::DatePicker;
 use ferrohealth_ui::table::view::{Body, Column, DataTable, Role, cell, data_table, title_cell};
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::chart::{ACCENT, INFO, LineChart, Series};
+use ferrohealth_ui::view::coding::{Coding, Layout, coding};
 use ferrohealth_ui::view::conditions::{
     Choice, Condition, ConditionGroup, Match, Operand, condition_groups,
 };
@@ -294,8 +295,11 @@ fn quantity((magnitude, unit, ucum): Quantity) -> Value {
 }
 
 /// A coded value's value.
-fn coded((display, code, _): Coded) -> Value {
-    Value::Text(format!("{display} · {code}"))
+fn coded((display, code, terminology): Coded) -> Value {
+    Value::Coded(coding(
+        Coding::new(code, display).system(terminology),
+        Layout::Inline,
+    ))
 }
 
 /// An element `label` holding `value`.
