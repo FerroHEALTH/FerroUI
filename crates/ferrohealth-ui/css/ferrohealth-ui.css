@@ -5475,7 +5475,9 @@
     inset-inline: 0 auto;
   }
 
-  .fui-menu-anchored > * + * {
+  .fui-menu-anchored > * + *,
+  .fui-menu-anchored > :where(leptos-island, leptos-children) > * + *,
+  .fui-menu-anchored > * + :where(leptos-island, leptos-children) > :where(:first-child) {
     margin-block-start: 0;
   }
 
@@ -6329,7 +6331,9 @@
     padding: 0.875rem var(--space-loose) 0;
   }
 
-  .fui-setting-card > * + * {
+  .fui-setting-card > * + *,
+  .fui-setting-card > :where(leptos-island, leptos-children) > * + *,
+  .fui-setting-card > * + :where(leptos-island, leptos-children) > :where(:first-child) {
     margin-block-start: 0;
   }
 
@@ -6930,7 +6934,9 @@
   }
 
   .fui-identifier-shown > *,
-  .fui-identifier-tools > * {
+  .fui-identifier-tools > *,
+  .fui-identifier-shown > :where(leptos-island, leptos-children) > *,
+  .fui-identifier-tools > :where(leptos-island, leptos-children) > * {
     white-space: nowrap;
   }
 
@@ -7189,7 +7195,9 @@
     padding: 0.75rem var(--space-loose) var(--space-loose);
   }
 
-  .fui-popover > * + * {
+  .fui-popover > * + *,
+  .fui-popover > :where(leptos-island, leptos-children) > * + *,
+  .fui-popover > * + :where(leptos-island, leptos-children) > :where(:first-child) {
     margin-block-start: 0.75rem;
   }
 
@@ -9580,7 +9588,8 @@
   }
 
   @media (width < 40rem) {
-    .fui-dock-actions > * {
+    .fui-dock-actions > *,
+    .fui-dock-actions > :where(leptos-island, leptos-children) > * {
       flex: 1 1 100%;
     }
   }
