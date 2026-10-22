@@ -25,6 +25,7 @@ pub(super) const STATES: &[&str] = &[
     "toasts",
     "popover-form",
     "popover-form-390",
+    "side-panel-390",
     "drawer-open",
 ];
 
@@ -159,6 +160,15 @@ pub(super) async fn overlays(
         overlay(browser, brand, theme, state, By::XPath(opener), By::Id(id)).await?;
     }
     raised_toasts(browser, brand, theme).await?;
+    phone_overlays(browser, brand, theme).await
+}
+
+/// The overlays that open differently on a phone, 390 px wide.
+async fn phone_overlays(
+    browser: &Browser,
+    brand: Brand,
+    theme: &str,
+) -> Result<(), Box<dyn Error>> {
     window(browser, 390, HEIGHT).await?;
     overlay(
         browser,
@@ -167,6 +177,15 @@ pub(super) async fn overlays(
         "popover-form-390",
         By::XPath("//button[@popovertarget = 'save-query']"),
         By::Id("save-query"),
+    )
+    .await?;
+    overlay(
+        browser,
+        brand,
+        theme,
+        "side-panel-390",
+        By::XPath("//button[@popovertarget = 'access']"),
+        By::Id("access"),
     )
     .await?;
     overlay(

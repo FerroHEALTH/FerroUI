@@ -66,6 +66,7 @@ fn viewer() -> AnyView {
                 text: String::from(MAPPING_DIGEST),
                 title: tr(Msg::DigestOfBytes),
             }),
+            copy: Some(String::from("file-copy")),
             actions: None,
         },
         &Code {

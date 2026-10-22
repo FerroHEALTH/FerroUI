@@ -10,6 +10,7 @@
 
 use crate::locale::{Msg, Words, tr, tr_with};
 use ferrohealth_ui::icon::{Glyph, icon};
+use ferrohealth_ui::island::SidePanel;
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::action::{ActionGroup, action_group};
 use ferrohealth_ui::view::button::{Variant, label};
@@ -19,7 +20,7 @@ use ferrohealth_ui::view::kbd::{Shortcut, ShortcutGroup, kbd, shortcut_hint};
 use ferrohealth_ui::view::layout::divided_list;
 use ferrohealth_ui::view::popover::{PopoverForm, popover_form};
 use ferrohealth_ui::view::surface::{
-    card, chip, cluster, definitions, grid, page_header, split, stack,
+    card, chip, cluster, definitions, grid, page_header, panel, split, stack,
 };
 use ferrohealth_ui::view::theme_switch::locale_select;
 use ferrohealth_ui::widget::action_menu::{
@@ -27,9 +28,7 @@ use ferrohealth_ui::widget::action_menu::{
 };
 use ferrohealth_ui::widget::dialog::{Modal, ModalWords, Width, modal_dialog};
 use ferrohealth_ui::widget::shortcuts::{LegendWords, shortcut_legend};
-use ferrohealth_ui::widget::side_panel::{
-    SidePanel, SidePanelWords, side_panel, side_panel_trigger,
-};
+use ferrohealth_ui::widget::side_panel::{Opener, SidePanelWords};
 use ferrohealth_ui::widget::toast::{Toast, ToastAction, ToastLink, raise};
 use leptos::prelude::*;
 
@@ -415,9 +414,10 @@ fn rename_modal(renaming: RwSignal<bool>, words: &Words, modal: ModalWords) -> A
     .into_any()
 }
 
-/// The side panel a button opens, holding the session's access.
-fn panel() -> AnyView {
-    let body = stack(view! {
+/// The session's access, which the side panel holds and its own page
+/// shows.
+fn access_body() -> AnyView {
+    stack(view! {
         {definitions(vec![
             (tr(Msg::Signed), tr(Msg::SyntheticOperator).into_any()),
             (tr(Msg::Method), tr(Msg::OpenidConnect).into_any()),
@@ -432,30 +432,40 @@ fn panel() -> AnyView {
             },
         )}
     })
-    .into_any();
+    .into_any()
+}
+
+/// The route of the access page of the brand whose page is drawn.
+fn access_route() -> String {
+    let root =
+        crate::app::route_brand().map_or_else(String::new, |brand| format!("/{}", brand.key()));
+    format!("{root}/overlays/access")
+}
+
+/// The side panel a button opens, holding the session's access; with no
+/// WebAssembly its opener leads to the access page.
+fn side_panel_card() -> AnyView {
+    let opener = Opener {
+        label: tr(Msg::ViewAccess),
+        glyph: Some(Glyph::SHIELD_CHECK),
+        variant: Variant::Secondary,
+        href: access_route(),
+    };
     card(
         tr(Msg::SidePanel),
         view! {
             <p class="fui-muted">{tr(Msg::ContentNoNavigationFromEnd)}</p>
-            {side_panel_trigger("access", Variant::Secondary.class(), Glyph::SHIELD_CHECK, tr(Msg::ViewAccess))}
-            <crate::islands::AccessPanel title=tr(Msg::Access) words=SidePanelWords::of_page()>
-                {body}
-            </crate::islands::AccessPanel>
+            <SidePanel
+                id=String::from("access")
+                title=tr(Msg::Access)
+                opener=opener
+                words=SidePanelWords::of_page()
+            >
+                {access_body()}
+            </SidePanel>
         },
     )
     .into_any()
-}
-
-/// The side panel `access` titled `title`, holding `body`, which the
-/// server drew, in the panel's own `words`.
-pub(crate) fn access_panel(title: String, words: SidePanelWords, body: AnyView) -> AnyView {
-    side_panel(SidePanel {
-        id: "access",
-        body_id: "access-drawer",
-        title: title.into(),
-        body,
-        words,
-    })
 }
 
 /// A button per tone that raises a toast in it, drawn by the island
@@ -703,6 +713,22 @@ fn hide(id: &str) {
     let _: &str = id;
 }
 
+/// The access page: the side panel's content as a page of its own, where
+/// the panel's opener leads with no WebAssembly.
+#[component]
+#[expect(
+    clippy::must_use_candidate,
+    reason = "the #[component] macro drops a #[must_use] from the function it writes"
+)]
+pub fn AccessPage() -> impl IntoView {
+    let header = page_header(tr(Msg::Access), None, ActionGroup::none()).into_any();
+    view! {
+        {super::title(tr(Msg::Access))}
+        {header}
+        {panel(access_body())}
+    }
+}
+
 /// The overlays page.
 #[component]
 #[expect(
@@ -719,7 +745,7 @@ pub fn OverlaysPage() -> impl IntoView {
     let sections = (
         confirmations(),
         modals(),
-        panel(),
+        side_panel_card(),
         toasts(),
         popover(),
         shortcuts(),

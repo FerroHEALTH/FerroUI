@@ -103,15 +103,17 @@ async fn document_views(browser: &Browser) -> Result<(), Box<dyn Error>> {
     browser
         .element(By::Css("#document-highlighted .fui-tok-tag"))
         .await?;
-    assert!(
-        browser
-            .driver()
-            .find_all(By::Css(".fui-document button"))
-            .await?
-            .is_empty(),
-        "no control in the pane works only with script"
-    );
-    Ok(())
+    for button in browser
+        .driver()
+        .find_all(By::Css(".fui-document button"))
+        .await?
+    {
+        assert!(
+            !button.is_displayed().await?,
+            "no control in the pane that works only with script shows"
+        );
+    }
+    copy_waits(browser, "document-copy").await
 }
 
 /// Scrolls the element `by` names to the middle of the viewport, clear of
@@ -146,6 +148,51 @@ async fn more_opens(browser: &Browser) -> Result<(), Box<dyn Error>> {
         .await?;
     assert!(item.is_displayed().await?, "More opens with no script");
     more.click().await?;
+    Ok(())
+}
+
+/// Checks that the side panel's opener is a link to its content's route,
+/// and the button that opens it in place waits for the WebAssembly.
+async fn side_panel_floor(browser: &Browser) -> Result<(), Box<dyn Error>> {
+    let link = browser
+        .element(By::Css("a[href$='/overlays/access']"))
+        .await?;
+    assert!(link.is_displayed().await?, "the opener is a link");
+    let button = browser
+        .element(By::Css(
+            "button[popovertarget='access'][aria-controls='access']",
+        ))
+        .await?;
+    assert!(
+        !button.is_displayed().await?,
+        "the panel's button waits for the WebAssembly"
+    );
+    Ok(())
+}
+
+/// Checks that a setting's key reads as text and its copy button waits
+/// for the WebAssembly.
+async fn key_hint_floor(browser: &Browser) -> Result<(), Box<dyn Error>> {
+    let key = browser
+        .element(By::Css(".fui-key-hint.is-text code"))
+        .await?;
+    let text = key.prop("textContent").await?.unwrap_or_default();
+    assert!(!text.is_empty(), "the key reads as text");
+    let hint = browser.element(By::Css("button.fui-key-hint")).await?;
+    assert!(
+        hint.attr("hidden").await?.is_some(),
+        "the key's copy button waits for the WebAssembly"
+    );
+    Ok(())
+}
+
+/// Checks that the Copy button `id` waits hidden, its text on the page.
+async fn copy_waits(browser: &Browser, id: &str) -> Result<(), Box<dyn Error>> {
+    let copy = browser.element(By::Id(id)).await?;
+    assert!(
+        !copy.is_displayed().await?,
+        "{id} waits for the WebAssembly"
+    );
     Ok(())
 }
 
@@ -247,9 +294,11 @@ async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error
             let shown = text_of(browser, By::Id("document-highlighted")).await?;
             assert!(!shown.is_empty(), "the document pane shows its document");
             document_views(browser).await?;
+            copy_waits(browser, "file-copy").await?;
         }
         "/overlays" => {
             more_opens(browser).await?;
+            side_panel_floor(browser).await?;
             let opener = browser.element(By::Id("open-shortcuts")).await?;
             assert!(
                 !opener.is_displayed().await?,
@@ -287,7 +336,7 @@ async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error
             browser.element(By::Css(".fui-stepper a[href]")).await?;
         }
         "/templates/settings" => {
-            browser.element(By::Css(".fui-key-hint code")).await?;
+            key_hint_floor(browser).await?;
             browser.text("p", "Set in").await?;
         }
         "/templates/settings-managed" => {
@@ -295,6 +344,7 @@ async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error
         }
         "/templates/about" => {
             browser.element(By::Css("a[download]")).await?;
+            copy_waits(browser, "about-copy").await?;
             let shown = text_of(browser, By::Css(".fui-self-description")).await?;
             assert!(!shown.is_empty(), "the self-description shows");
         }
@@ -447,6 +497,18 @@ async fn links_lead_on_with_the_webassembly_withheld() -> Result<(), Box<dyn Err
             .at(&gallery.url("/ferroehr/layouts?concept=SYN-110"))
             .await?;
         browser.text("h2", "SYN-110").await?;
+        // The side panel's opener leads to its content's own page.
+        browser.goto(&gallery.url("/ferrofed/overlays")).await?;
+        browser
+            .element(By::Css("a[href='/ferrofed/overlays/access']"))
+            .await?
+            .click()
+            .await?;
+        browser
+            .at(&gallery.url("/ferrofed/overlays/access"))
+            .await?;
+        browser.text("h1", "Access").await?;
+        browser.text("dd", "Synthetic operator").await?;
         leave(browser, "the links").await
     })
     .await

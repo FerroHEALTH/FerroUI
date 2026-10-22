@@ -17,12 +17,13 @@ use leptos::prelude::*;
 use crate::highlight::Language;
 use crate::i18n::{Text, tr};
 use crate::icon::{Glyph, icon};
+use crate::island::CopyButton;
 use crate::view::action::ActionGroup;
 use crate::view::button::Variant;
 use crate::view::code::self_description;
 use crate::view::shell::MAKER;
 use crate::view::surface::{Header, card, definitions, page_heading};
-use crate::widget::copy::{CopyWords, copy_button};
+use crate::widget::copy::CopyWords;
 
 /// A fact's link: its words and where it leads.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -97,13 +98,9 @@ fn self_description_card(document: SelfDescription) -> AnyView {
         download,
     } = document;
     let panel = self_description(&title, language, &text).into_any();
-    // TODO(#220): the copy button is the library's copy island.
-    let copy = copy_button(
-        copy_id,
-        tr(Text::DocumentCopy),
-        Signal::stored(text),
-        CopyWords::of_page(),
-    )
+    let copy = view! {
+        <CopyButton id=copy_id label=tr(Text::DocumentCopy) text=text words=CopyWords::of_page() />
+    }
     .into_any();
     view! {
         <section class="fui-card fui-panel">

@@ -5,7 +5,8 @@
 //! formats, shown highlighted, raw or rendered.
 //!
 //! The formats are links the console answers with the document in that
-//! format, the one in force marked current. The views are drawn on the
+//! format, the one in force marked current, and Copy puts the document in
+//! that format on the clipboard ([`crate::island::CopyButton`]). The views are drawn on the
 //! server, every one of them: the highlighted view is the code viewer
 //! (B1), the raw view the text as it stands, and the rendered view the
 //! console's own drawing, when it has one. The view switch is the island
@@ -17,9 +18,10 @@ use leptos::prelude::*;
 
 use crate::highlight::Language;
 use crate::i18n::{Text, tr, tr_with};
-use crate::island::DocumentViews;
+use crate::island::{CopyButton, DocumentViews};
 use crate::view::code::{Code, code_viewer};
 use crate::view::segmented::segmented_links;
+use crate::widget::copy::CopyWords;
 use crate::widget::document::{DocumentView, ViewChoice};
 
 /// What a document pane shows.
@@ -110,6 +112,7 @@ pub fn document_pane(document: Document) -> AnyView {
         Text::DocumentRawRegion,
         &[("document", label.clone().into())],
     );
+    let copied = text.clone();
     let raw = view! {
         <div class="fui-code-panel fui-scroll-cue" role="region" aria-label=raw_label tabindex="0">
             <pre>{text}</pre>
@@ -128,15 +131,21 @@ pub fn document_pane(document: Document) -> AnyView {
         })}
     }
     .into_any();
-    // TODO(#220): the copy island copies the text in force.
     let switch_label = tr(Text::DocumentView);
     let pane_id = id.clone();
+    let copy_id = format!("{id}-copy");
     view! {
         <section class="fui-document" id=pane_id aria-label=label>
             {choice}
             <DocumentViews id=id label=switch_label views=views opening=opening>
                 {drawn}
             </DocumentViews>
+            <CopyButton
+                id=copy_id
+                label=tr(Text::DocumentCopy)
+                text=copied
+                words=CopyWords::of_page()
+            />
         </section>
     }
     .into_any()

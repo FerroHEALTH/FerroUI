@@ -8,7 +8,9 @@
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::i18n::Phrase;
 use ferrohealth_ui::icon::Glyph;
-use ferrohealth_ui::island::{Combobox, KeyboardTabs, PickerField, ToastRegion};
+use ferrohealth_ui::island::{
+    Combobox, CopyButton, KeyboardTabs, PickerField, SidePanel, ToastRegion,
+};
 use ferrohealth_ui::theme::Theme;
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::action::{ActionGroup, action_button, action_group};
@@ -39,10 +41,12 @@ use ferrohealth_ui::widget::action_menu::{
 };
 use ferrohealth_ui::widget::chart::{ChartWords, line_chart};
 use ferrohealth_ui::widget::combobox::{ComboOption, ComboboxWords};
+use ferrohealth_ui::widget::copy::CopyWords;
 use ferrohealth_ui::widget::document::DocumentView;
 use ferrohealth_ui::widget::editor::{Editor, code_editor};
 use ferrohealth_ui::widget::pick_or_type::{PickOrType, Picker, pick_or_type};
 use ferrohealth_ui::widget::picker::{self, picker_field};
+use ferrohealth_ui::widget::side_panel::{Opener, SidePanelWords};
 use ferrohealth_ui::widget::tabs::tab_panels;
 use ferrohealth_ui::widget::toast::{Flash, RegionWords, ToastLink};
 use ferrohealth_ui::widget::tree::{Tree, TreeNode, tree_view};
@@ -233,11 +237,20 @@ fn a_code_card_names_its_path_in_its_head_with_the_tags_the_count_and_the_digest
                     text: String::from("SHA-256 5712…"),
                     title: String::from("SHA-256 of the bytes"),
                 }),
+                copy: Some(String::from("file-copy")),
                 actions: None,
             },
             &code("a: 1\nb: 2\nc: 3"),
         )
     });
+    assert!(
+        has(
+            &card,
+            "button",
+            &[("id", "file-copy"), ("type", "button"), ("hidden", "")]
+        ),
+        "Copy is the copy island in the head, hidden until it works: {card}"
+    );
     assert!(
         has(&card, "h2", &[("class", "fui-codeview-path")])
             && card.contains("fhirconnect/<wbr>a &lt;b&gt;.yml"),
@@ -444,9 +457,14 @@ fn a_document_pane_draws_every_view_on_the_server_each_reached_by_a_link() {
         ),
         "{raw}"
     );
+    let buttons = tags(&raw, "button");
     assert!(
-        !raw.contains("<button"),
-        "no control works only with script: {raw}"
+        buttons.iter().all(|button| button.contains_key("hidden")),
+        "no control that works only with script shows before it works: {raw}"
+    );
+    assert!(
+        has(&raw, "button", &[("id", "doc-copy"), ("hidden", "")]),
+        "Copy copies the document in the format in force: {raw}"
     );
 }
 
@@ -1831,5 +1849,150 @@ fn the_combobox_and_picker_islands_draw_their_native_floor_on_the_server() {
             r#"<p id="run-value-set-help" class="fui-help fui-explain">The set to expand.</p>"#
         ),
         "{picker}"
+    );
+}
+
+/// The copy button's words, as a test gives them.
+fn copy_words() -> CopyWords {
+    CopyWords {
+        copied: String::from("Copied"),
+        said_copied: String::from("Copied to the clipboard."),
+        said_refused: String::from("Copy failed."),
+        refused: String::from("The browser refused."),
+    }
+}
+
+#[test]
+fn the_copy_island_waits_hidden_and_leaves_its_text_to_the_page() {
+    let copy = html(|| {
+        view! {
+            <CopyButton
+                id=String::from("about-copy")
+                label=String::from("Copy <it>")
+                text=String::from("{\"name\": \"<x>\"}")
+                words=copy_words()
+            />
+        }
+        .into_any()
+    });
+    assert!(copy.contains("<leptos-island"), "{copy}");
+    assert!(
+        has(
+            &copy,
+            "button",
+            &[
+                ("id", "about-copy"),
+                ("type", "button"),
+                ("class", "fui-button fui-button-secondary fui-button-small"),
+                ("hidden", "")
+            ]
+        ),
+        "§15.8: with no WebAssembly no Copy shows: {copy}"
+    );
+    assert!(copy.contains("Copy &lt;it&gt;"), "{copy}");
+    assert!(
+        !copy.contains("<x>"),
+        "the text crosses to the browser escaped: {copy}"
+    );
+    assert!(
+        has(
+            &copy,
+            "span",
+            &[("class", "fui-sr-only"), ("role", "status")]
+        ),
+        "a live region says what came of a press: {copy}"
+    );
+}
+
+#[test]
+fn the_side_panel_island_opens_from_a_link_to_its_route_until_it_hydrates() {
+    let panel = page_html(|| {
+        view! {
+            <SidePanel
+                id=String::from("access")
+                title=String::from("Access <now>")
+                opener=Opener {
+                    label: String::from("View access"),
+                    glyph: Some(Glyph::SHIELD_CHECK),
+                    variant: Variant::Secondary,
+                    href: String::from("/session/access"),
+                }
+                words=SidePanelWords { close: String::from("Close") }
+            >
+                <p>"Signed in as a synthetic operator."</p>
+            </SidePanel>
+        }
+        .into_any()
+    });
+    assert!(panel.contains("<leptos-island"), "{panel}");
+    let links = tags(&panel, "a");
+    let link = links
+        .iter()
+        .find(|link| link.get("href").map(String::as_str) == Some("/session/access"))
+        .expect("the opener is a link to the content's route");
+    assert!(
+        !link.contains_key("hidden"),
+        "the link shows with no WebAssembly: {panel}"
+    );
+    assert!(
+        has(
+            &panel,
+            "button",
+            &[
+                ("type", "button"),
+                ("popovertarget", "access"),
+                ("aria-controls", "access"),
+                ("hidden", "")
+            ]
+        ),
+        "the button that opens it in place waits for the WebAssembly: {panel}"
+    );
+    assert!(
+        has(
+            &panel,
+            "aside",
+            &[
+                ("id", "access"),
+                ("popover", "auto"),
+                ("role", "dialog"),
+                ("aria-labelledby", "access-title"),
+                ("class", "fui-side-panel")
+            ]
+        ),
+        "{panel}"
+    );
+    assert!(
+        panel.contains(r#"<h2 id="access-title" class="fui-card-title">Access &lt;now&gt;</h2>"#),
+        "{panel}"
+    );
+    assert!(
+        has(
+            &panel,
+            "button",
+            &[
+                ("class", "fui-icon-button fui-side-panel-close"),
+                ("popovertarget", "access"),
+                ("popovertargetaction", "hide"),
+                ("aria-label", "Close")
+            ]
+        ),
+        "{panel}"
+    );
+    assert!(
+        has(
+            &panel,
+            "div",
+            &[("id", "access-body"), ("class", "fui-side-panel-body")]
+        ),
+        "{panel}"
+    );
+    assert!(
+        panel.contains("<leptos-children"),
+        "the body is the server's: {panel}"
+    );
+    assert!(
+        panel.contains(r#"\"glyph\":\"shield-check\""#)
+            || panel.contains("&quot;glyph&quot;:&quot;shield-check&quot;"),
+        "the glyph crosses as its Lucide name: {panel}"
     );
 }
