@@ -8873,6 +8873,14 @@
     stroke-width: 1.5;
   }
 
+  /* Unreachable on a card is a cross drawn as two strokes (family rule 12). */
+  .fui-tdot.fui-tdot-cross {
+    fill: none;
+    stroke: var(--tone);
+    stroke-width: 2.2;
+    stroke-linecap: round;
+  }
+
   .fui-traffic {
     fill: var(--accent);
     stroke: var(--surface-raised);
@@ -11249,6 +11257,38 @@
     }
   }
 
+  /* B7 drawn by the library: the bars are SVG, each length an attribute. */
+  svg.fui-funnel-bar {
+    display: block;
+    width: 100%;
+  }
+
+  rect.fui-funnel-part.fui-tone-ok {
+    fill: var(--ok-dot);
+  }
+
+  rect.fui-funnel-part.fui-tone-neutral {
+    fill: var(--neutral-dot);
+  }
+
+  rect.fui-funnel-part.fui-tone-bad {
+    fill: var(--bad-dot);
+  }
+
+  .fui-funnel-cut {
+    stroke: var(--surface-raised);
+    stroke-width: 2;
+  }
+
+  svg.fui-barlist-track {
+    display: block;
+    width: 100%;
+  }
+
+  rect.fui-barlist-fill {
+    fill: var(--accent);
+  }
+
   /* ---- B8 HL7 v2 message viewer: segments, fields by position (FerroBRIDGE, for every console) ---- */
 
   .fui-hl7-raw {
@@ -11440,6 +11480,42 @@
     .fui-pipeline-list {
       display: block;
     }
+  }
+
+  /* B9 drawn by the library: two layers of one size, the edges an image
+     and the cards over them; a hovered or focused card shows its path and
+     the pulse, paint only, and the other edges fade. */
+  .fui-pipeline-stage {
+    display: grid;
+  }
+
+  .fui-pipeline-stage > svg {
+    grid-area: 1 / 1;
+  }
+
+  .fui-pipeline-cards {
+    pointer-events: none;
+  }
+
+  .fui-pipeline-cards .fui-tnode {
+    pointer-events: auto;
+  }
+
+  .fui-pipeline-path {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .fui-pipeline-card:has(.fui-tnode-link:is(:hover, :focus-visible)) .fui-pipeline-path {
+    visibility: visible;
+  }
+
+  .fui-pipeline-card:has(.fui-tnode-link:hover) .fui-tnode-box {
+    stroke: var(--ink);
+  }
+
+  .fui-pipeline-stage:has(.fui-tnode-link:is(:hover, :focus-visible)) .fui-pipeline-edges {
+    opacity: 0.3;
   }
 
   /* ---- B10 Panel section: a tab panel's parts, a heading and a hairline, never a card in a card (FerroBRIDGE, for every console) ---- */

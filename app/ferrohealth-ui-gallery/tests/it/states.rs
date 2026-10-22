@@ -31,6 +31,7 @@ use crate::journeys::window;
 use crate::stack::Gallery;
 
 // The areas, one file each, kept in alphabetical order.
+mod charts;
 mod combobox;
 mod dates;
 mod document;
@@ -49,6 +50,7 @@ mod upload;
 
 /// Every area's states.
 const AREAS: &[&[&str]] = &[
+    charts::STATES,
     combobox::STATES,
     dates::STATES,
     document::STATES,
@@ -258,6 +260,7 @@ async fn every_state_is_captured_in_every_brand_light_and_dark() -> Result<(), B
                 keys::keys(browser, &gallery, brand, theme).await?;
                 preferences::preferences(browser, &gallery, brand, theme).await?;
                 records::records(browser, &gallery, brand, theme).await?;
+                charts::charts(browser, &gallery, brand, theme).await?;
             }
         }
         let missing = unwritten();

@@ -20,6 +20,7 @@ mod console;
 mod contrast;
 mod dock;
 mod fields;
+mod figures;
 mod kbd;
 mod locale;
 mod markup;
