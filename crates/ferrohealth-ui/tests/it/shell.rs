@@ -343,7 +343,7 @@ fn menu_html(name: Option<&str>, sign_out: bool) -> String {
                 action: String::from("/theme"),
                 back: String::from("/files"),
             },
-            choices: Some(Choices {
+            choices: vec![Choices {
                 label: String::from("FHIR version"),
                 choices: vec![
                     Choice {
@@ -357,7 +357,7 @@ fn menu_html(name: Option<&str>, sign_out: bool) -> String {
                         chosen: false,
                     },
                 ],
-            }),
+            }],
             shortcuts: Some(String::from("/shortcuts")),
             sign_out: sign_out.then(|| String::from("/sign-out")),
         })

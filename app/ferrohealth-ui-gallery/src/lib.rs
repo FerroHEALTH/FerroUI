@@ -25,6 +25,7 @@ pub mod search;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod server;
+pub mod terminology_data;
 pub mod trees_data;
 
 /// Hydrates the islands of the page the server rendered. Each island takes

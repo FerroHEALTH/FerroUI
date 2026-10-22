@@ -46,6 +46,7 @@ mod shell;
 mod sign_in;
 mod tables;
 mod templates;
+mod terminology;
 mod theme;
 mod trees;
 
@@ -69,6 +70,7 @@ pub(super) const AREAS: &[(&str, &[crate::i18n::Text])] = &[
     ("sign_in", sign_in::ALL),
     ("tables", tables::ALL),
     ("templates", templates::ALL),
+    ("terminology", terminology::ALL),
     ("theme", theme::ALL),
     ("trees", trees::ALL),
 ];

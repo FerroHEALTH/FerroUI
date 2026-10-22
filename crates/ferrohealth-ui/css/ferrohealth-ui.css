@@ -8317,6 +8317,18 @@
     border-color: color-mix(in srgb, var(--accent) 45%, transparent);
   }
 
+  /* The island's list and the wrapper that keeps a row and its error line
+     together, so Remove takes both; neither draws a box, so the rows lay
+     out as the list's own children. */
+  .fui-repeat,
+  .fui-repeat-rows {
+    min-width: 0;
+  }
+
+  .fui-repeat-item {
+    display: contents;
+  }
+
   @media (width < 40rem) {
     .fui-repeater-head {
       display: none;
@@ -12228,6 +12240,12 @@
      answered. The first column stays while the rest scroll sideways. ---- */
   .fui-root-matrix th[scope="col"] {
     vertical-align: bottom;
+  }
+
+  /* The matrix scrolls sideways in its own box at every width, so its
+     header keeps to the top of that box, never under the top bar. */
+  .fui-root-matrix thead th {
+    top: 0;
   }
 
   .fui-root-head {

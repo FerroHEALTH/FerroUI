@@ -90,8 +90,10 @@ pub struct UserMenu {
     pub preferences: String,
     /// The theme choice.
     pub theme: ThemeChoice,
-    /// A group the menu holds below 40 rem alone, if the top bar has one.
-    pub choices: Option<Choices>,
+    /// The groups the menu holds below 40 rem alone, one per control the
+    /// top bar shows from 40 rem up (a brand, the FHIR version of
+    /// [`crate::widget::version::VersionSelect::choices`]), in order.
+    pub choices: Vec<Choices>,
     /// The link to the keyboard shortcuts, shown from 40 rem up (family
     /// rule 6), if the console has them.
     pub shortcuts: Option<String>,
@@ -176,10 +178,15 @@ fn theme_group(id: &str, theme: ThemeChoice) -> impl IntoView + use<> {
     }
 }
 
-/// Returns the group `choices` as `menuitemradio` links, the one in force
-/// checked, shown below 40 rem alone.
-fn choices_group(id: &str, choices: Choices) -> impl IntoView + use<> {
-    let label_id = format!("{id}-choices");
+/// Returns the group `choices`, the menu's group number `at`, as
+/// `menuitemradio` links, the one in force checked, shown below 40 rem
+/// alone.
+fn choices_group(id: &str, at: usize, choices: Choices) -> impl IntoView + use<> {
+    let label_id = if at == 0 {
+        format!("{id}-choices")
+    } else {
+        format!("{id}-choices-{at}")
+    };
     let links = choices
         .choices
         .into_iter()
@@ -243,7 +250,12 @@ pub fn user_menu(menu: UserMenu) -> AnyView {
         None,
         "fui-menu-item",
     );
-    let choices = menu.choices.map(|choices| choices_group(menu.id, choices));
+    let choices = menu
+        .choices
+        .into_iter()
+        .enumerate()
+        .map(|(at, choices)| choices_group(menu.id, at, choices))
+        .collect_view();
     let theme = theme_group(menu.id, menu.theme);
     let shortcuts = menu.shortcuts.map(|href| {
         link_item(

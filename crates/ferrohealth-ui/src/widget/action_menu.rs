@@ -247,6 +247,13 @@ pub enum Trigger {
         /// The words of the choice in force.
         value: String,
     },
+    /// The top bar's version select showing `value`, opening a menu of
+    /// `menuitemradio` choices ([`crate::widget::version`]); its name is
+    /// its tooltip too.
+    Version {
+        /// The version in view, such as "R4".
+        value: String,
+    },
 }
 
 impl Trigger {
@@ -539,6 +546,7 @@ pub fn menu_button(
     // so they appear once it runs, reading whether the menu is already open.
     Effect::new(move || ready.set(Some(browser::prepare(details, list))));
     let listbox = trigger.is_listbox();
+    let version = matches!(trigger, Trigger::Version { .. });
     let (anchor, trigger_class, popup_class, role, haspopup) = if listbox {
         (
             "fui-select-anchor",
@@ -554,16 +562,21 @@ pub fn menu_button(
             Trigger::More { .. } | Trigger::Select { .. } => {
                 "fui-button fui-button-secondary fui-more"
             }
+            Trigger::Version { .. } => "fui-version-select",
         };
         (
-            "fui-anchor",
+            if version {
+                "fui-anchor fui-version-anchor"
+            } else {
+                "fui-anchor"
+            },
             trigger_class,
             "fui-menu fui-menu-compact fui-menu-anchored fui-menu-sheet",
             "menu",
             "menu",
         )
     };
-    let title = matches!(trigger, Trigger::Row).then(|| name.clone());
+    let title = matches!(trigger, Trigger::Row | Trigger::Version { .. }).then(|| name.clone());
     let face = match trigger {
         Trigger::More { words } => view! {
             {words}
@@ -575,6 +588,11 @@ pub fn menu_button(
         Trigger::Select { value } => view! {
             <span>{value}</span>
             {icon(Glyph::CHEVRON_DOWN, "16")}
+        }
+        .into_any(),
+        Trigger::Version { value } => view! {
+            {value}
+            {icon(Glyph::CHEVRON_DOWN, "14")}
         }
         .into_any(),
     };
@@ -645,7 +663,7 @@ mod browser {
         /// menu item that is not disabled.
         pub(super) fn walked(list: &web_sys::HtmlElement) -> Vec<web_sys::HtmlElement> {
             let Ok(found) = list.query_selector_all(
-                "[role='menuitem']:not([aria-disabled='true']), [role='option']",
+                "[role='menuitem']:not([aria-disabled='true']), [role='menuitemradio'], [role='option']",
             ) else {
                 return Vec::new();
             };
@@ -903,7 +921,7 @@ mod browser {
                 .and_then(|target| target.dyn_into::<web_sys::Element>().ok())
                 .and_then(|target| {
                     target
-                        .closest("[role='menuitem'], [role='option']")
+                        .closest("[role='menuitem'], [role='menuitemradio'], [role='option']")
                         .ok()
                         .flatten()
                 });

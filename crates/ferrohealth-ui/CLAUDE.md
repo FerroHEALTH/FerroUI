@@ -55,7 +55,7 @@ diffing, the form submitter, file inputs and the base path.
   function: `ToastRegion`, `NavDrawer`, `UserMenuButton`, `KeyboardTabs`,
   `KeyHint`, `DocumentViews`, `TabSelect`, `Search`, `MenuButton`, `Combobox`,
   `PickerField`, `ChartLegend`, `DatePicker`, `DateRangePicker`, `CopyButton`,
-  `SidePanel`, `PreferenceForm`, `TreeView`, `WorkList`. `DatePicker` and
+  `SidePanel`, `PreferenceForm`, `TreeView`, `WorkList`, `Repeater`. `DatePicker` and
   `DateRangePicker` are `#[island(lazy)]`, measured on #262 (72105 bytes of
   brotli-compressed WebAssembly out of every page that draws no date
   picker; `leptos-ui.md` §12, §15.8). The module's `#![expect]` lines cover what

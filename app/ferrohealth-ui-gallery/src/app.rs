@@ -24,6 +24,7 @@ use ferrohealth_ui::view::status::{Reach, StatusPill, banner, status_pill};
 use ferrohealth_ui::widget::menu::{Choice, Choices, ThemeChoice, UserMenu, user_menu};
 use ferrohealth_ui::widget::nav::{Count, Entry, Group, Rail, Sidebar, sidebar};
 use ferrohealth_ui::widget::toast::RegionWords;
+use ferrohealth_ui::widget::version::{VersionSelect, version_select};
 use leptos::prelude::*;
 use leptos_meta::{Stylesheet, Title, provide_meta_context};
 use leptos_router::components::{Outlet, ParentRoute, Route, Router, Routes};
@@ -315,6 +316,10 @@ pub fn App() -> impl IntoView {
                     <Route path=path!("layouts") view=crate::pages::layouts::LayoutsPage />
                     <Route path=path!("operations") view=crate::pages::operations::OperationsPage />
                     <Route path=path!("clinical") view=crate::pages::clinical::ClinicalPage />
+                    <Route
+                        path=path!("terminology")
+                        view=crate::pages::terminology::TerminologyPage
+                    />
                     <Route path=path!("preferences") view=crate::pages::preferences::PreferencesPage />
                     <Route
                         path=path!("preferences/:section")
@@ -406,6 +411,13 @@ macro_rules! entries {
                 href: concat!("/", $key, "/operations"),
                 label: tr(Msg::Operations).into(),
                 glyph: Glyph::FLASK_CONICAL,
+                exact: true,
+                count: None,
+            },
+            Entry {
+                href: concat!("/", $key, "/terminology"),
+                label: tr(Msg::Terminology).into(),
+                glyph: Glyph::BOOK_A,
                 exact: true,
                 count: None,
             },
@@ -687,17 +699,27 @@ fn BrandShell() -> impl IntoView {
     let at = Memo::new(move |_| {
         let brand = params.with(|params| params.get_str("brand").and_then(Brand::parse));
         let search = query.with(|query| query.get("search"));
-        (brand, location.pathname.get(), search)
+        let fhir = query.with(|query| query.get(crate::pages::terminology::version_key()));
+        (brand, location.pathname.get(), search, fhir)
     });
     move || match at.get() {
-        (Some(brand), back, search) => brand_shell(brand, back, search.as_deref()),
-        (None, _, _) => view! { <NotFound /> }.into_any(),
+        (Some(brand), back, search, fhir) => {
+            brand_shell(brand, back, search.as_deref(), fhir.as_deref())
+        }
+        (None, _, _, _) => view! { <NotFound /> }.into_any(),
     }
 }
 
+/// The FHIR version select (M3) the top bar of the page at `back` carries,
+/// `chosen` in view: the terminology page's alone.
+fn fhir_version(back: &str, chosen: Option<&str>) -> Option<VersionSelect> {
+    back.ends_with("/terminology")
+        .then(|| crate::pages::terminology::version_select(back, chosen))
+}
+
 /// The shell of `brand`'s pages, whose theme switch returns to `back`, its
-/// search in the state `search` names.
-fn brand_shell(brand: Brand, back: String, search: Option<&str>) -> AnyView {
+/// search in the state `search` names and its FHIR version `fhir`.
+fn brand_shell(brand: Brand, back: String, search: Option<&str>, fhir: Option<&str>) -> AnyView {
     let lockup = lockup(
         "/",
         mark(brand_glyph(brand)),
@@ -722,7 +744,9 @@ fn brand_shell(brand: Brand, back: String, search: Option<&str>) -> AnyView {
     // A name as long as a FHIR user reference gets, so the top bar shows how
     // it gives way; the synthetic operator the gallery is signed in as.
     let operator = String::from("Practitioner/synthetic-terminologist-on-call");
-    let choices = brand_choices(brand, &back);
+    let version = fhir_version(&back, fhir);
+    let mut choices = vec![brand_choices(brand, &back)];
+    choices.extend(version.as_ref().map(VersionSelect::choices));
     let menu = user_menu(UserMenu {
         id: "user-menu",
         label: operator.clone(),
@@ -735,7 +759,7 @@ fn brand_shell(brand: Brand, back: String, search: Option<&str>) -> AnyView {
             action: String::from(PREFERENCE_ROUTE),
             back,
         },
-        choices: Some(choices),
+        choices,
         shortcuts: Some(format!("/{}/overlays", brand.key())),
         sign_out: Some(format!("{SIGN_OUT_ROUTE}/{}", brand.key())),
     });
@@ -749,6 +773,7 @@ fn brand_shell(brand: Brand, back: String, search: Option<&str>) -> AnyView {
     });
     let end = view! {
         <span class="fui-wide-only">{switch}</span>
+        {version.map(version_select)}
         {pill}
         {menu}
     }

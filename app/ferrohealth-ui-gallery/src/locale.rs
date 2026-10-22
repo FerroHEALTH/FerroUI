@@ -196,6 +196,7 @@ mod shell;
 mod sign_in;
 mod tables;
 mod templates;
+mod terminology;
 mod trees;
 
 /// Every area's messages.
@@ -215,6 +216,7 @@ const AREAS: &[&[Msg]] = &[
     sign_in::ALL,
     tables::ALL,
     templates::ALL,
+    terminology::ALL,
     trees::ALL,
 ];
 
