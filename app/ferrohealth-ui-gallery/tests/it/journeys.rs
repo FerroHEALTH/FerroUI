@@ -303,7 +303,8 @@ async fn the_url_pager_and_sort_are_links_and_the_session_pager_stays_out_of_the
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn the_theme_toggle_swaps_in_place_and_the_choice_is_kept() -> Result<(), Box<dyn Error>> {
+async fn the_theme_toggle_posts_the_other_theme_and_the_choice_is_kept()
+-> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
         return Ok(());
     }
@@ -318,11 +319,6 @@ async fn the_theme_toggle_swaps_in_place_and_the_choice_is_kept() -> Result<(), 
             )
             .await?;
         browser.goto(&gallery.url("/ferrofed")).await?;
-        hydrated_tabs(browser).await?;
-        browser
-            .driver()
-            .execute("window.notReloaded = true;", vec![])
-            .await?;
         let to_dark = browser.element(By::Id("theme-to-dark")).await?;
         assert!(
             to_dark.is_displayed().await?,
@@ -332,15 +328,7 @@ async fn the_theme_toggle_swaps_in_place_and_the_choice_is_kept() -> Result<(), 
         browser
             .element(By::Css(r#"html[data-theme="dark"]"#))
             .await?;
-        let kept = browser
-            .driver()
-            .execute("return window.notReloaded === true;", vec![])
-            .await?;
-        assert_eq!(
-            &serde_json::Value::Bool(true),
-            kept.json(),
-            "swapped with no reload"
-        );
+        browser.at(&gallery.url("/ferrofed")).await?;
         let to_light = browser.element(By::Id("theme-to-light")).await?;
         until("the sun shows in the dark theme", async || {
             Ok(to_light.is_displayed().await?)

@@ -8,20 +8,17 @@
 //! Left and Right move between the tabs and wrap, Home and End go to the
 //! first and the last, and the panel of the selected tab is shown. Before
 //! the page hydrates the first panel shows and the others are hidden; the
-//! link tabs of [`crate::view::tabs`] keep their state in the URL instead.
-
-use std::borrow::Cow;
+//! link tabs of [`crate::view::tabs`] keep their state in the URL instead,
+//! and are what a page uses where every panel must be reachable with no
+//! WebAssembly.
+//!
+//! The panels are drawn on the server by [`tab_panels`], every one of them,
+//! the ones not chosen hidden, and handed to the island
+//! [`crate::island::KeyboardTabs`] as its children; the island draws the
+//! tab list and shows the panel of the tab chosen. The panels' content never
+//! reaches the WebAssembly.
 
 use leptos::prelude::*;
-
-/// One tab and its panel.
-#[derive(Debug)]
-pub struct Panel {
-    /// The tab's words.
-    pub label: Cow<'static, str>,
-    /// The panel.
-    pub body: AnyView,
-}
 
 /// The id of tab `index` of the tabs `prefix`.
 fn tab_id(prefix: &str, index: usize) -> String {
@@ -47,63 +44,106 @@ pub fn moved(key: &str, current: usize, count: usize) -> Option<usize> {
     }
 }
 
-/// Returns the keyboard tabs named `label`, whose ids start with `prefix`,
-/// over `panels`.
+/// Returns the panels of the keyboard tabs `prefix`, one per body in
+/// `bodies`, the first shown and the others hidden.
 #[must_use]
-pub fn tabs(label: impl Into<String>, prefix: &'static str, panels: Vec<Panel>) -> impl IntoView {
-    let label = label.into();
+pub fn tab_panels(prefix: &str, bodies: Vec<AnyView>) -> AnyView {
+    bodies
+        .into_iter()
+        .enumerate()
+        .map(|(index, body)| {
+            view! {
+                <div
+                    role="tabpanel"
+                    id=panel_id(prefix, index)
+                    class="fui-tab-panel"
+                    aria-labelledby=tab_id(prefix, index)
+                    hidden=index != 0
+                    tabindex="0"
+                >
+                    {body}
+                </div>
+            }
+        })
+        .collect_view()
+        .into_any()
+}
+
+/// Returns the tab list named `label` of the keyboard tabs `prefix`, one tab
+/// per word in `tabs`, above `panels`, which [`tab_panels`] drew.
+///
+/// Choosing a tab shows its panel and hides the others. A console draws it
+/// as the island [`crate::island::KeyboardTabs`].
+#[must_use]
+pub fn tab_list(label: String, prefix: String, tabs: Vec<String>, panels: AnyView) -> AnyView {
     let selected = RwSignal::new(0_usize);
-    let count = panels.len();
+    let count = tabs.len();
+    let prefix = StoredValue::new(prefix);
     let on_key = move |event: leptos::ev::KeyboardEvent| {
         let Some(next) = moved(&event.key(), selected.get_untracked(), count) else {
             return;
         };
         event.prevent_default();
         selected.set(next);
-        focus(&tab_id(prefix, next));
+        prefix.with_value(|prefix| focus(&tab_id(prefix, next)));
     };
-    let (buttons, bodies): (Vec<_>, Vec<_>) = panels
+    Effect::new(move |_| {
+        let chosen = selected.get();
+        prefix.with_value(|prefix| show(prefix, chosen, count));
+    });
+    let buttons = tabs
         .into_iter()
         .enumerate()
-        .map(|(index, panel)| {
+        .map(|(index, words)| {
             let is = move || selected.get() == index;
-            let button = view! {
-                <button
-                    type="button"
-                    role="tab"
-                    id=tab_id(prefix, index)
-                    class="fui-tab"
-                    aria-controls=panel_id(prefix, index)
-                    aria-selected=move || is().to_string()
-                    tabindex=move || if is() { "0" } else { "-1" }
-                    on:click=move |_| selected.set(index)
-                >
-                    {panel.label}
-                </button>
-            };
-            let body = view! {
-                <div
-                    role="tabpanel"
-                    id=panel_id(prefix, index)
-                    class="fui-tab-panel"
-                    aria-labelledby=tab_id(prefix, index)
-                    hidden=move || !is()
-                    tabindex="0"
-                >
-                    {panel.body}
-                </div>
-            };
-            (button, body)
+            prefix.with_value(|prefix| {
+                view! {
+                    <button
+                        type="button"
+                        role="tab"
+                        id=tab_id(prefix, index)
+                        class="fui-tab"
+                        aria-controls=panel_id(prefix, index)
+                        aria-selected=move || is().to_string()
+                        tabindex=move || if is() { "0" } else { "-1" }
+                        on:click=move |_| selected.set(index)
+                    >
+                        {words}
+                    </button>
+                }
+            })
         })
-        .unzip();
+        .collect_view();
     view! {
         <div>
             <div role="tablist" aria-label=label class="fui-tabs" on:keydown=on_key>
                 {buttons}
             </div>
-            {bodies}
+            {panels}
         </div>
     }
+    .into_any()
+}
+
+/// Shows panel `chosen` of the `count` panels of the tabs `prefix` and hides
+/// the others.
+fn show(prefix: &str, chosen: usize, count: usize) {
+    #[cfg(target_arch = "wasm32")]
+    {
+        use leptos::wasm_bindgen::JsCast as _;
+        // NOTE: leptos_macro 0.8 `src/lib.rs`, island limitation 1: the panels are the
+        // island's server children, out of reach of a node reference, so they are found by id.
+        for index in 0..count {
+            if let Some(panel) = document()
+                .get_element_by_id(&panel_id(prefix, index))
+                .and_then(|element| element.dyn_into::<web_sys::HtmlElement>().ok())
+            {
+                panel.set_hidden(index != chosen);
+            }
+        }
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    let _: (&str, usize, usize) = (prefix, chosen, count);
 }
 
 /// Moves the focus to the element `id`.

@@ -23,7 +23,9 @@ include = ["src/**", "css/**", "themes/**", "locales/**", "vendor/**", "tests/**
 # `hydrate` alike, whichever the console's own leptos dependency turns on
 # (features unify per build), and defines no server function.
 [dependencies]
-leptos.workspace = true
+# `islands`: the island macro's props derive names `leptos::serde`, which the
+# feature re-exports; it changes nothing else in a hydrated or client page.
+leptos = { workspace = true, features = ["islands"] }
 leptos_router.workspace = true
 serde.workspace = true
 fluent-templates.workspace = true
@@ -59,6 +61,7 @@ web-sys = { version = "0.3.85", default-features = false, features = [
 [dev-dependencies]
 leptos = { workspace = true, features = ["ssr"] }
 leptos_router = { workspace = true, features = ["ssr"] }
+hydration_context.workspace = true
 
 [lints]
 workspace = true

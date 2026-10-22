@@ -449,13 +449,54 @@ pub fn provide_locale(locale: Locale) {
     provide_context(locale);
 }
 
-/// The locale of the page being drawn, English when the console provided
-/// none.
+thread_local! {
+    /// The locale an island draws in, which the browser entry sets once.
+    static PAGE: std::cell::RefCell<Option<Locale>> = const { std::cell::RefCell::new(None) };
+}
+
+/// Makes `locale` the locale every island on the page draws in, in the
+/// browser.
+///
+/// An island hydrates on its own, out of reach of the context the server's
+/// page tree provided, so the console's browser entry calls this once
+/// before `leptos::mount::hydrate_islands`, with the locale it builds from
+/// [`document_lang`], the tag the server wrote as `<html lang>`. On the
+/// server it does nothing: there every island is drawn inside the page tree
+/// and reads the locale [`provide_locale`] gave it.
+pub fn provide_page_locale(locale: Locale) {
+    #[cfg(target_arch = "wasm32")]
+    PAGE.with(|page| *page.borrow_mut() = Some(locale));
+    #[cfg(not(target_arch = "wasm32"))]
+    drop(locale);
+}
+
+/// The tag of the page's `<html lang>`, in the browser; `None` on the
+/// server and for a page that names none.
+#[must_use]
+pub fn document_lang() -> Option<String> {
+    #[cfg(target_arch = "wasm32")]
+    {
+        document()
+            .document_element()
+            .and_then(|root| root.get_attribute("lang"))
+            .filter(|tag| !tag.is_empty())
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        None
+    }
+}
+
+/// The locale of the page being drawn: the one the page tree provides, the
+/// one the browser entry gave the islands, and English when there is
+/// neither.
 #[must_use]
 pub fn locale() -> Locale {
     // NOTE: no specification governs this: our own design; a page that names no
     // locale, or a string rendered outside a page tree, draws the reference one.
-    use_context::<Locale>().unwrap_or_default()
+    use_context::<Locale>()
+        .or_else(|| PAGE.with(|page| page.borrow().clone()))
+        .unwrap_or_default()
 }
 
 /// Declares the library's messages: each variant names one message of the

@@ -224,6 +224,15 @@
     box-sizing: border-box;
   }
 
+  /* The elements Leptos islands mode wraps an island and its children in
+     draw no box of their own, so a flex or grid parent lays out what an
+     island draws as its own children; each container's rhythm between its
+     children reaches through them too. */
+  leptos-island,
+  leptos-children {
+    display: contents;
+  }
+
   html {
     background: var(--surface);
     -webkit-text-size-adjust: 100%;
@@ -748,7 +757,8 @@
     gap: var(--space-default);
   }
 
-  .fui-topbar-end > * {
+  .fui-topbar-end > *,
+  .fui-topbar-end > :where(leptos-island, leptos-children) > * {
     flex-shrink: 0;
   }
 
@@ -940,7 +950,9 @@
      unbroken line inside it (a URL, a scrolling code box): a grid item's
      automatic minimum is its content, which would widen the page. */
   .fui-stack > *,
-  .fui-grid > * {
+  .fui-grid > *,
+  .fui-stack > :where(leptos-island, leptos-children) > *,
+  .fui-grid > :where(leptos-island, leptos-children) > * {
     min-width: 0;
   }
 
@@ -1640,7 +1652,9 @@
     padding: var(--space-loose);
   }
 
-  .fui-card > * + * {
+  .fui-card > * + *,
+  .fui-card > :where(leptos-island, leptos-children) > * + *,
+  .fui-card > * + :where(leptos-island, leptos-children) > :where(:first-child) {
     margin-block-start: 0.75rem;
   }
 
@@ -1865,7 +1879,9 @@
     padding: 0;
   }
 
-  .fui-panel > * + * {
+  .fui-panel > * + *,
+  .fui-panel > :where(leptos-island, leptos-children) > * + *,
+  .fui-panel > * + :where(leptos-island, leptos-children) > :where(:first-child) {
     margin-block-start: 0;
   }
 
@@ -2678,7 +2694,8 @@
     gap: 0.75rem;
   }
 
-  .fui-field-flow > * {
+  .fui-field-flow > *,
+  .fui-field-flow > :where(leptos-island, leptos-children) > * {
     min-width: 0;
     flex: 1 1 10rem;
   }
@@ -3312,7 +3329,9 @@
     text-align: start;
   }
 
-  .fui-sign-in > * + * {
+  .fui-sign-in > * + *,
+  .fui-sign-in > :where(leptos-island, leptos-children) > * + *,
+  .fui-sign-in > * + :where(leptos-island, leptos-children) > :where(:first-child) {
     margin-block-start: 0;
   }
 
@@ -3367,7 +3386,9 @@
     line-height: var(--leading-micro);
   }
 
-  .fui-menu > * + * {
+  .fui-menu > * + *,
+  .fui-menu > :where(leptos-island, leptos-children) > * + *,
+  .fui-menu > * + :where(leptos-island, leptos-children) > :where(:first-child) {
     margin-block-start: 0.75rem;
   }
 
@@ -3402,7 +3423,9 @@
     width: min(48rem, calc(100vw - 2rem));
   }
 
-  .fui-dialog > * + * {
+  .fui-dialog > * + *,
+  .fui-dialog > :where(leptos-island, leptos-children) > * + *,
+  .fui-dialog > * + :where(leptos-island, leptos-children) > :where(:first-child) {
     margin-block-start: 0.75rem;
   }
 
@@ -3503,7 +3526,9 @@
     white-space: pre-line;
   }
 
-  .fui-alert > * + * {
+  .fui-alert > * + *,
+  .fui-alert > :where(leptos-island, leptos-children) > * + *,
+  .fui-alert > * + :where(leptos-island, leptos-children) > :where(:first-child) {
     margin-block-start: var(--space-default);
   }
 
@@ -3835,7 +3860,9 @@
     display: none;
   }
 
-  .fui-modal-body > * + * {
+  .fui-modal-body > * + *,
+  .fui-modal-body > :where(leptos-island, leptos-children) > * + *,
+  .fui-modal-body > * + :where(leptos-island, leptos-children) > :where(:first-child) {
     margin-block-start: 0.75rem;
   }
 
@@ -3893,7 +3920,9 @@
     padding: var(--space-loose);
   }
 
-  .fui-side-panel-body > * + * {
+  .fui-side-panel-body > * + *,
+  .fui-side-panel-body > :where(leptos-island, leptos-children) > * + *,
+  .fui-side-panel-body > * + :where(leptos-island, leptos-children) > :where(:first-child) {
     margin-block-start: 0.75rem;
   }
 

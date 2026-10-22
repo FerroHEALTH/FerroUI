@@ -37,30 +37,72 @@ the Authoring Practices (`spec-adherence.md`).
   catalog, every word a console draws is a message of the console's, and a
   new language is a catalog file with no code change (§13).
 
-## 1. Two tiers
+## 1. The interaction contract and the three parts
+
+Every component follows one interaction contract (owner, 2026-10-22,
+#196), so the consoles behave alike and every page keeps working when its
+WebAssembly has not loaded:
+
+1. **Native elements first:** `<dialog>`, the `popover` attribute,
+   `<details>`, plain links, and GET and POST forms.
+2. **Behaviour in Rust compiled to WebAssembly**, in islands (§15): menus
+   and sheets, keyboard tabs, the date picker, toasts with actions, the
+   reveal countdown, live polling, topology pan and zoom, work-list focus,
+   and the YAML and AQL editor.
+3. **Every page works without the WebAssembly:** complete server-rendered
+   HTML, and a link or a form behind every important action. The gallery's
+   no-WebAssembly journey (`tests/it/no_wasm.rs`) loads every page with the
+   bundle refused and holds its content, links, forms and popovers to it.
+4. **No hand-written JavaScript and no npm:** only the `wasm-bindgen` glue
+   and the island loader Leptos writes, no JavaScript library, and the
+   editor is a light Rust editor. The strict CSP and the budget (§12) stay.
+
+**The mode is Leptos islands** (book `islands`; decided on #196). Hydrating
+the whole page was measured and rejected (§12): it ships every page's code,
+and the data its server components read a second time as hydration state,
+where islands ship only the interactive parts and only their props reach
+the browser. A console sets the `leptos` feature `islands`, calls
+`leptos::mount::hydrate_islands()` from its browser entry, and writes
+`<HydrationScripts options islands=true/>` in its shell. The islands router
+is revisited when Leptos ships it stable (§15.6). The library has three
+parts:
 
 - **`view`: static view functions.** Plain functions returning a typed view,
   never a `#[component]` (a component writes a props type and a builder the
-  bundle carries for each) and never taking a reactive prop. They render the
-  same on the server, in a hydrated page, under client-side rendering, and
-  through `to_html()` into a string a read-only screen draws with
-  `inner_html`. What they need to behave they get from the browser: a
-  `popover` opens and closes with no script, a `<details>` folds, a form
-  posts.
-- **`widget`: the interactive components**, each where interaction needs
-  browser code (the drawer's focus, keyboard tabs, toasts, the session pager,
-  the table filter, the highlighted editor). Browser-only calls run inside an
-  event handler or an `Effect`, behind `#[cfg(target_arch = "wasm32")]`, so
-  the first paint is the server's and hydration matches it.
+  bundle carries for each) and never taking a reactive prop. They are drawn
+  on the server alone, and through `to_html()` into a string a read-only
+  screen draws with `inner_html`. What they need to behave they get from the
+  browser: a `popover` opens and closes with no script, a `<details>` folds,
+  a form posts.
+- **`island`: the library's islands**, each a small `#[island]` over its
+  widget function that owns its state and takes its words as props: the
+  toast region, the navigation drawer, the keyboard tabs. Never an island
+  around a whole page section. The module's `#![expect]` lines cover what
+  the island macro writes (a forgotten view state, an undocumented props
+  struct, a dropped `#[must_use]`).
+- **`widget`: the interactive components as functions** a page calls inside
+  an island: one of the library's own, or a console's own island where the
+  widget shares state with the console's code (an editor and the check that
+  runs as you type, a filter and the list it filters). Browser-only calls
+  run inside an event handler or an `Effect`, behind
+  `#[cfg(target_arch = "wasm32")]`, so the first paint is the server's and
+  hydration matches it.
 - **A console's screens are erased sections** (`.into_any()`): a monolithic
   `view!` over nested views blows rustc's layout recursion. The library's
   `shell` and `centred` take and return `AnyView` for that reason.
 
+A widget that still looks its words up as it draws reads the page's locale
+in the browser from `i18n::provide_page_locale`, which a console's browser
+entry calls with the tag of `<html lang>` (`i18n::document_lang`) before
+`hydrate_islands`, so both halves draw the same words until the widget
+takes its words as props (§15.4).
+
 ## 2. Render-mode agnostic
 
 The library compiles under `csr`, `ssr` and `hydrate` alike, with
-`leptos = { default-features = false }`; the console's own Leptos
-dependency turns the mode on and features unify. A console chooses its
+`leptos = { default-features = false, features = ["islands"] }` (the
+feature re-exports serde for the island macro and changes nothing else);
+the console's own Leptos dependency turns the mode on and features unify. A console chooses its
 halves by compilation target, never by a Cargo `ssr`/`hydrate` feature pair,
 so a workspace `--all-features` build never enables both. The browser half
 asks for the lowest `web-sys` and `wasm-bindgen-futures` the library's
@@ -164,9 +206,9 @@ entry, and a new role joins the contrast test in the change that adds it.
 - The theme is `data-theme` (`light`, `dark`, `system`) on `<html>`, written
   by the console's server from its cookie, so the first paint is right; with
   no cookie it follows the system. Every top bar carries the one theme
-  toggle (`theme_toggle`), a moon in light and a sun in dark, which posts
-  with no script and, hydrated, swaps the theme in place while the console
-  persists it in the same cookie; never browser storage. The three-way
+  toggle (`view::theme_switch::theme_toggle`), a moon in light and a sun in
+  dark, a plain form post the console answers with the page in the new
+  theme, kept in the same cookie; never browser storage. The three-way
   choice belongs in a settings form.
 - Six steps of type (`--text-display` to `--text-micro`), each written
   with its leading (`--leading-display` to `--leading-micro`), and four of
@@ -243,22 +285,36 @@ WebAssembly is over the number below, which the script reads from this table.
 
 | Measure | Budget |
 |---|---|
-| WebAssembly, brotli-compressed | 716800 bytes |
+| WebAssembly, brotli-compressed | 552960 bytes |
 
-The budget is 700 KiB, 6% over the 673607 bytes the 0.1.7 gallery
-measured (2026-10-19, cargo-leptos 0.3.11, wasm-bindgen 0.2.129,
-Rust 1.98.1), which was 53325 bytes over 0.1.6's 620282 and 18247 over the
-640 KiB budget before it. 0.1.7 draws every word a component draws itself
-from a Fluent catalog (`fluent-templates` 0.15.1): the bundle carries the
-Fluent parser, which reads the embedded catalogs once, the CLDR plural
-rules a catalog selects a form by, the language identifiers, and the
-English catalog, and the gallery adds its pseudo-locale. The plural rules
-are what lets a new language be a catalog file with no code change, so
-the bytes buy the readiness the owner asked for. 0.1.5 measured 606243
-bytes, 0.1.1 518566 and 0.1.0 325387; a console's own bundle
-carries only the components it uses. A change
-that needs more raises it here, in its own pull request, with the measured
-size and the reason.
+The budget is 540 KiB, 29% over the 427449 bytes the gallery measured in
+islands mode (#196, 2026-10-22, cargo-leptos 0.3.11, wasm-bindgen 0.2.129,
+wasm-opt version_133, Rust 1.99.1). The headroom is for the 0.3.0
+components still to come (the date picker, the editor's keys, the
+topology), which add islands; moving each widget's words to props takes
+the Fluent catalog back out of the browser. The spike of #196 measured
+the same gallery both ways (bytes):
+
+| Build | WebAssembly raw | gzip -9 | brotli -q 11 | JS glue raw / brotli |
+|---|---:|---:|---:|---:|
+| Whole page hydrated (0.2.2) | 2455510 | 943813 | 685903 | 25423 / 6276 |
+| Islands, spike (whole sections) | 1527677 | 613353 | 460744 | 25391 / 6325 |
+| Islands, as landed | 1389712 | 564473 | 427449 | 22469 / 5817 |
+
+Time to interactive on the forms page, Chrome for Testing with the CPU
+slowed 4x (the mid-tier phone rate) and the bundle served locally, the
+median of seven loads: 315 ms hydrated, 277 ms in islands. On a 1.6 Mbps
+link the brotli download alone is about 3.4 s hydrated and 2.3 s in
+islands, which is where a phone feels the difference. The budget before
+islands was 700 KiB over the 673607 bytes the 0.1.7 gallery measured,
+the Fluent catalogs of 0.1.7 included; 0.1.5 measured 606243, 0.1.1
+518566 and 0.1.0 325387.
+
+**A console keeps its own budget**, in its own `leptos-ui.md`, over its own
+bundle, which carries only the islands it draws: FerroBRIDGE's is 458752
+bytes of brotli-compressed WebAssembly. A change that needs more raises
+the budget here, in its own pull request, with the measured size and the
+reason.
 
 ## 13. Strings and locales
 

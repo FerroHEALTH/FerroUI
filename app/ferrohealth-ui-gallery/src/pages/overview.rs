@@ -7,6 +7,7 @@
 
 use crate::locale::{Msg, tr, tr_with};
 use ferrohealth_ui::icon::{Glyph, icon};
+use ferrohealth_ui::island::KeyboardTabs;
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::button::{Variant, label, link_button};
 use ferrohealth_ui::view::empty::{Busy, busy, empty_quiet, empty_state, skeleton, spinner};
@@ -24,7 +25,7 @@ use ferrohealth_ui::view::tabs::{KeyedTab, Tab, keyed_tabs, link_tabs};
 use ferrohealth_ui::view::theme_switch::{density_switch, locale_switch, theme_switch};
 use ferrohealth_ui::view::time::timestamp;
 use ferrohealth_ui::widget::segmented::segmented;
-use ferrohealth_ui::widget::tabs::{Panel, tabs};
+use ferrohealth_ui::widget::tabs::tab_panels;
 use leptos::prelude::*;
 
 /// The formats the segmented control offers, in the page's locale.
@@ -393,24 +394,23 @@ fn tab_sets() -> AnyView {
         "status",
     )
     .into_any();
-    let keyboard = tabs(
-        tr(Msg::Answer),
+    let panels = tab_panels(
         "answer",
         vec![
-            Panel {
-                label: tr(Msg::Table).into(),
-                body: view! { <p>{tr(Msg::RowsAnswerTable)}</p> }.into_any(),
-            },
-            Panel {
-                label: tr(Msg::Raw).into(),
-                body: view! { <p>{tr(Msg::AnswerServerSent)}</p> }.into_any(),
-            },
-            Panel {
-                label: tr(Msg::Request).into(),
-                body: view! { <p>{tr(Msg::WhatConsoleAsked)}</p> }.into_any(),
-            },
+            view! { <p>{tr(Msg::RowsAnswerTable)}</p> }.into_any(),
+            view! { <p>{tr(Msg::AnswerServerSent)}</p> }.into_any(),
+            view! { <p>{tr(Msg::WhatConsoleAsked)}</p> }.into_any(),
         ],
-    )
+    );
+    let keyboard = view! {
+        <KeyboardTabs
+            label=tr(Msg::Answer)
+            prefix=String::from("answer")
+            tabs=vec![tr(Msg::Table), tr(Msg::Raw), tr(Msg::Request)]
+        >
+            {panels}
+        </KeyboardTabs>
+    }
     .into_any();
     card(
         tr(Msg::Tabs),
@@ -424,13 +424,28 @@ fn tab_sets() -> AnyView {
     .into_any()
 }
 
-/// The segmented controls: bound to state, and as links.
-fn segments() -> AnyView {
+/// The segmented control bound to state at the head of the cluster of
+/// `others`, and the line that follows it.
+pub(crate) fn format_segments(others: AnyView) -> AnyView {
     let format = RwSignal::new("json");
     let chosen = segmented(tr(Msg::Format), &formats(), format.into(), move |key| {
         format.set(key);
     })
     .into_any();
+    view! {
+        {cluster(view! {
+            {chosen}
+            {others}
+        })}
+        <p class="fui-muted">
+            {move || tr_with(Msg::ShownAs, &[("format", format.get().to_uppercase().into())])}
+        </p>
+    }
+    .into_any()
+}
+
+/// The segmented controls: bound to state, and as links.
+fn segments() -> AnyView {
     let as_links = segmented_links(
         tr(Msg::Detail),
         vec![
@@ -455,16 +470,10 @@ fn segments() -> AnyView {
     card(
         tr(Msg::SegmentedControls),
         view! {
-            {cluster(
-                view! {
-                    {chosen}
-                    {as_links}
-                    {posted}
-                },
-            )}
-            <p class="fui-muted">
-                {move || tr_with(Msg::ShownAs, &[("format", format.get().to_uppercase().into())])}
-            </p>
+            <crate::islands::FormatSegments>
+                {as_links}
+                {posted}
+            </crate::islands::FormatSegments>
         },
     )
     .into_any()

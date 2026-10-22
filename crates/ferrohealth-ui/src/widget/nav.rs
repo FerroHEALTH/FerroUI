@@ -6,17 +6,17 @@
 //! below it.
 //!
 //! The drawer is an HTML popover the top bar's button opens, so the browser
-//! opens it, closes it on Escape and returns the focus to the button before
-//! the page has hydrated and with no script. The browser code adds what HTML
-//! leaves out: the focus moves into the drawer as it opens, and the drawer
-//! closes when one of its links is followed (WCAG 2.2 SC 2.4.3). The entries
-//! are the router's links, which mark themselves `aria-current="page"`, so
-//! the mark follows a client-side navigation.
+//! opens it, closes it on Escape and returns the focus to the button with
+//! no script. The island [`crate::island::NavDrawer`] adds what HTML leaves
+//! out: the focus moves into the drawer as it opens, and the drawer closes
+//! when one of its links is followed (WCAG 2.2 SC 2.4.3). The entries are
+//! plain links the server draws, the current page marked
+//! `aria-current="page"`, so following one loads the page, with or without
+//! WebAssembly.
 
 use std::borrow::Cow;
 
 use leptos::prelude::*;
-use leptos_router::components::A;
 
 use crate::i18n::{Text, tr};
 use crate::icon::{Glyph, icon};
@@ -50,27 +50,47 @@ pub struct Group {
     pub entries: Vec<Entry>,
 }
 
-/// Returns the entry `entry`, marked while it is the page, or a page under
-/// it unless it is exact.
-fn entry(entry: Entry) -> impl IntoView {
-    let exact = entry.exact;
+/// Whether the entry leading to `href` marks the page at `current`: on its
+/// own path, or on a path under it too unless it is `exact`.
+#[must_use]
+pub fn marks(href: &str, exact: bool, current: &str) -> bool {
+    let current = current.split(['?', '#']).next().unwrap_or_default();
+    let current = current
+        .strip_suffix('/')
+        .filter(|path| !path.is_empty())
+        .unwrap_or(current);
+    current == href
+        || (!exact
+            && current
+                .strip_prefix(href)
+                .is_some_and(|rest| rest.starts_with('/') || href.ends_with('/')))
+}
+
+/// Returns the entry `entry`, marked while `current` is its page, or a
+/// page under it unless it is exact.
+fn entry(entry: Entry, current: &str) -> impl IntoView + use<> {
+    let here = marks(entry.href, entry.exact, current).then_some("page");
     view! {
         <li>
-            <A href=entry.href exact=exact attr:class="fui-nav-entry">
+            <a href=entry.href class="fui-nav-entry" aria-current=here>
                 {icon(entry.glyph, "16")}
                 {entry.label}
-            </A>
+            </a>
         </li>
     }
 }
 
-/// Returns the group `group`, its heading naming its list; nothing for a
-/// group with no entry.
-fn group(group: Group) -> Option<impl IntoView> {
+/// Returns the group `group`, its entries marked against `current`, its
+/// heading naming its list; nothing for a group with no entry.
+fn group(group: Group, current: &str) -> Option<impl IntoView + use<>> {
     if group.entries.is_empty() {
         return None;
     }
-    let entries = group.entries.into_iter().map(entry).collect_view();
+    let entries = group
+        .entries
+        .into_iter()
+        .map(|each| entry(each, current))
+        .collect_view();
     Some(view! {
         <p id=group.id class="fui-nav-group">
             {group.title}
@@ -81,14 +101,41 @@ fn group(group: Group) -> Option<impl IntoView> {
     })
 }
 
-/// Returns the navigation `id`, named `label`, of `groups`, which the
-/// button of [`crate::view::shell::drawer_button`] opens as a drawer.
+/// Returns the navigation `id`, named `label`, of `groups`, the page at the
+/// path `current` marked, which the button of
+/// [`crate::view::shell::drawer_button`] opens as a drawer.
+///
+/// The groups are drawn on the server and handed to the island
+/// [`crate::island::NavDrawer`], which carries the drawer's behaviour.
 #[must_use]
-pub fn sidebar(id: &'static str, label: impl Into<String>, groups: Vec<Group>) -> AnyView {
+pub fn sidebar(
+    id: &'static str,
+    label: impl Into<String>,
+    groups: Vec<Group>,
+    current: &str,
+) -> AnyView {
     let label = label.into();
+    let close = tr(Text::Close);
+    let groups = groups
+        .into_iter()
+        .map(|each| group(each, current))
+        .collect_view();
+    view! {
+        <crate::island::NavDrawer id=id.to_owned() label close>
+            {groups}
+        </crate::island::NavDrawer>
+    }
+    .into_any()
+}
+
+/// Returns the drawer `id`, named `label`, around `entries`, its close
+/// button saying `close`, with the drawer's behaviour. A console draws it
+/// through [`sidebar`].
+#[must_use]
+pub fn drawer(id: String, label: String, close: String, entries: AnyView) -> AnyView {
     let nav = NodeRef::<leptos::html::Nav>::new();
-    let groups = groups.into_iter().map(group).collect_view();
-    let close = format!("{} fui-drawer-only", Variant::Ghost.class());
+    let button = format!("{} fui-drawer-only", Variant::Ghost.class());
+    let target = id.clone();
     view! {
         <nav
             id=id
@@ -99,11 +146,11 @@ pub fn sidebar(id: &'static str, label: impl Into<String>, groups: Vec<Group>) -
             on:toggle=move |_| drawer::opened(nav)
             on:click=move |event| drawer::followed(nav, &event)
         >
-            <button type="button" class=close popovertarget=id popovertargetaction="hide">
+            <button type="button" class=button popovertarget=target popovertargetaction="hide">
                 {icon(Glyph::X, "16")}
-                {tr(Text::Close)}
+                {close}
             </button>
-            {groups}
+            {entries}
         </nav>
     }
     .into_any()
@@ -162,5 +209,37 @@ mod drawer {
         }
         #[cfg(not(target_arch = "wasm32"))]
         let _: (NodeRef<leptos::html::Nav>, &leptos::ev::MouseEvent) = (nav, event);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::marks;
+
+    #[test]
+    fn an_entry_marks_its_own_page_and_the_pages_under_it() {
+        assert!(marks("/ferrofed/tables", true, "/ferrofed/tables"));
+        assert!(
+            marks("/ferrofed/tables", true, "/ferrofed/tables?page=2"),
+            "a query names the same page"
+        );
+        assert!(
+            marks("/ferrofed/tables", true, "/ferrofed/tables/"),
+            "a trailing slash names the same page"
+        );
+        assert!(
+            !marks("/ferrofed", true, "/ferrofed/tables"),
+            "an exact entry marks its own page alone"
+        );
+        assert!(
+            marks("/files", false, "/files/synthetic-007"),
+            "a section marks the pages under it"
+        );
+        assert!(
+            !marks("/files", false, "/filestore"),
+            "a longer name is no page under it"
+        );
+        assert!(marks("/", true, "/"), "the root marks itself");
+        assert!(!marks("/", true, "/ferrofed"));
     }
 }

@@ -16,13 +16,18 @@ never publish under it.
 
 ## What the library is
 
-- **Two tiers.** `view` holds static view functions (plain functions, no
-  reactive props, no `#[component]`) that render the same on the server, in a
-  hydrated page, under client-side rendering, and through `to_html()` into a
-  string a read-only screen draws with `inner_html`. `widget` holds the few
-  interactive components (navigation drawer, keyboard tabs, toasts, session
-  pager, table filter, highlighted editor), whose browser code runs only in
-  handlers and effects behind `#[cfg(target_arch = "wasm32")]`.
+- **Islands, in three parts.** A console renders in Leptos islands mode
+  (decided on #196, with the measurements in `crates/ferrohealth-ui/CLAUDE.md`):
+  the server draws every page whole and the browser hydrates only its
+  islands. `view` holds static view functions (plain functions, no reactive
+  props, no `#[component]`) drawn on the server alone, and through
+  `to_html()` into a string a read-only screen draws with `inner_html`.
+  `island` holds the ready islands (toast region, navigation drawer,
+  keyboard tabs), whose props, words included, are plain data the server
+  resolved. `widget` holds the interactive components as functions a page
+  calls inside an island, whose browser code runs only in handlers and
+  effects behind `#[cfg(target_arch = "wasm32")]`. Every page works with no
+  WebAssembly: a link or a form is behind every important action.
 - **One table model** (`table`): page and size read defensively and clamped,
   the row window, the range label, `aria-sort` sorting, and the state source
   `Url` or `Session` (a screen that can show patient data keeps its position
@@ -66,8 +71,9 @@ the workspace pins decides.
 - `crates/ferrohealth-ui`: the library. `src/` (`view`, `widget`, `table`,
   `highlight`, `icon`, `tone`, `theme`, `style`), `css/`, `themes/`,
   `vendor/lucide/`, `tests/it/` (contrast, stylesheet rules, rendering).
-- `app/ferrohealth-ui-gallery`: the gallery, server rendered and hydrated
-  by target (never by Cargo feature), with its browser journeys and
+- `app/ferrohealth-ui-gallery`: the gallery, server rendered with its
+  islands hydrated, its halves chosen by target (never by Cargo feature),
+  with its browser journeys (the no-WebAssembly journey among them) and
   screenshots under `tests/it/` (`FERROUI_JOURNEYS=1`,
   `FERROUI_SCREENSHOTS=1`) and the images under `docs/screenshots/`.
 - `design/`: the approved console design and the source of truth for
@@ -91,6 +97,10 @@ the workspace pins decides.
 - **A component follows the design in `design/`** (`.claude/rules/console-design.md`):
   a change lands in `design/COMPONENTS.md` and the stylesheet first, then
   every console is re-rendered and checked, then the Rust follows.
+- **Every component follows the interaction contract** (`design/COMPONENTS.md`
+  § Interaction, `crates/ferrohealth-ui/CLAUDE.md`): native elements first,
+  behaviour in Rust compiled to WebAssembly in islands, every page working
+  without the WebAssembly, no hand-written JavaScript.
 - **The component rules are `.claude/rules/leptos-ui.md`.** Each product's
   own `leptos-ui.md` keeps only what is particular to it and points here.
 - **The authorities are the specifications**: WCAG 2.2, WAI-ARIA 1.2 and the

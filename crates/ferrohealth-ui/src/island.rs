@@ -1,0 +1,78 @@
+// SPDX-FileCopyrightText: Cadasto B.V.
+// SPDX-License-Identifier: BUSL-1.1
+
+//! The library's islands: the widgets that own their state and need nothing
+//! from a console's code, each ready to place in a page Leptos renders in
+//! islands mode.
+//!
+//! An island is the only part of a page the browser hydrates (the Leptos
+//! book, "Guide: Islands"). Its props cross to the browser as JSON in the
+//! page, so they are plain data, and the words it draws are among them,
+//! resolved on the server in the page's locale. Each island here is
+//! a thin wrapper over its widget function in [`crate::widget`], so a
+//! console that needs the widget beside state of its own calls that function
+//! inside an island of its own instead.
+#![expect(
+    clippy::must_use_candidate,
+    reason = "the #[island] macro drops a #[must_use] from the function it writes"
+)]
+#![expect(
+    missing_docs,
+    reason = "the #[island] macro writes an undocumented struct of each island's props as they cross to the browser"
+)]
+#![expect(
+    clippy::mem_forget,
+    reason = "the island macro of leptos_macro 0.8 keeps each hydrated island alive by forgetting its view state, in the browser entry it writes"
+)]
+
+use leptos::prelude::*;
+
+use crate::widget::toast::{Flash, RegionWords};
+
+/// The toast region, which draws `flash` as the page arrives and every
+/// toast [`crate::widget::toast::raise`] shows after. A console draws it
+/// once, in its shell.
+#[island]
+pub fn ToastRegion(
+    /// The words it draws, in the page's locale
+    /// ([`RegionWords::of_page`]).
+    words: RegionWords,
+    /// The toasts the server shows as the page arrives.
+    flash: Vec<Flash>,
+) -> impl IntoView {
+    crate::widget::toast::toast_region(words, flash)
+}
+
+/// The keyboard tabs `prefix`, named `label`, one tab per word in `tabs`,
+/// over the panels [`crate::widget::tabs::tab_panels`] drew as its
+/// children.
+#[island]
+pub fn KeyboardTabs(
+    /// The tab list's name, in the page's locale.
+    label: String,
+    /// The prefix of every tab's and panel's id.
+    prefix: String,
+    /// Each tab's words, in the page's locale.
+    tabs: Vec<String>,
+    /// The panels, drawn on the server.
+    children: Children,
+) -> impl IntoView {
+    crate::widget::tabs::tab_list(label, prefix, tabs, children().into_any())
+}
+
+/// The navigation drawer `id`, named `label`, around the entries the
+/// server drew as its children, its close button saying `close`. A console
+/// draws it through [`crate::widget::nav::sidebar`].
+#[island]
+pub fn NavDrawer(
+    /// The navigation's id, which the drawer button opens.
+    id: String,
+    /// The navigation's name, in the page's locale.
+    label: String,
+    /// The close button's words, in the page's locale.
+    close: String,
+    /// The groups of entries, drawn on the server.
+    children: Children,
+) -> impl IntoView {
+    crate::widget::nav::drawer(id, label, close, children().into_any())
+}

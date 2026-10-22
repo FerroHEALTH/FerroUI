@@ -8,8 +8,7 @@
 //! operator menu and the theme menu are in the top bar, the drawer is the
 //! navigation on a narrow screen.
 
-use crate::locale::{Msg, tr, tr_in, tr_with};
-use ferrohealth_ui::i18n::locale;
+use crate::locale::{Msg, tr, tr_with};
 use ferrohealth_ui::icon::{Glyph, icon};
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::button::{Variant, label};
@@ -21,33 +20,20 @@ use ferrohealth_ui::view::surface::{
 };
 use ferrohealth_ui::widget::dialog::{Modal, Width, modal_dialog};
 use ferrohealth_ui::widget::side_panel::{SidePanel, side_panel, side_panel_trigger};
-use ferrohealth_ui::widget::toast::use_toasts;
+use ferrohealth_ui::widget::toast::raise;
 use leptos::prelude::*;
 
 /// The confirmation dialogs a trigger opens with no script: the plain one
-/// and the danger one, whose confirm raises a toast.
+/// and the danger one, whose confirm, the island
+/// [`crate::islands::ConfirmAndToast`], raises a toast.
 fn confirmations() -> AnyView {
-    let toasts = use_toasts();
-    let confirm = move |id: &'static str, text: String| {
-        move |_| {
-            if let Some(toasts) = toasts {
-                toasts.push(Tone::Ok, text.clone());
-            }
-            hide(id);
-        }
-    };
     let plain = confirm_dialog(
         Confirmation {
             id: "reload-set",
             title: tr(Msg::ReloadTheSet).into(),
             message: tr(Msg::FilesDiskCompileReplaceRunning).into(),
         },
-        view! {
-            <button type="button" class=Variant::Primary.class() on:click=confirm("reload-set", tr(Msg::SetReloaded))>
-                {icon(Glyph::REFRESH_CW, "16")}
-                {tr(Msg::Reload)}
-            </button>
-        },
+        view! { <crate::islands::ConfirmAndToast dialog="reload-set".to_owned() danger=false /> },
     )
     .into_any();
     let danger = danger_dialog(
@@ -56,17 +42,7 @@ fn confirmations() -> AnyView {
             title: tr(Msg::DeleteTheFile).into(),
             message: tr(Msg::SyntheticFileGoesGoodRunning).into(),
         },
-        view! {
-            <button
-                type="button"
-                id="confirm-delete-file"
-                class=Variant::Destructive.class()
-                on:click=confirm("delete-file", tr(Msg::SyntheticFileWasDeleted))
-            >
-                {icon(Glyph::TRASH, "16")}
-                {tr(Msg::Delete)}
-            </button>
-        },
+        view! { <crate::islands::ConfirmAndToast dialog="delete-file".to_owned() danger=true /> },
     )
     .into_any();
     card(
@@ -88,13 +64,55 @@ fn confirmations() -> AnyView {
     .into_any()
 }
 
+/// The confirm button of the confirmation dialog `dialog`, the danger one
+/// when `danger`: it raises a toast and closes the dialog.
+pub(crate) fn confirm_and_toast(dialog: String, danger: bool) -> AnyView {
+    let (said, class, glyph, words) = if danger {
+        (
+            tr(Msg::SyntheticFileWasDeleted),
+            Variant::Destructive.class(),
+            Glyph::TRASH,
+            tr(Msg::Delete),
+        )
+    } else {
+        (
+            tr(Msg::SetReloaded),
+            Variant::Primary.class(),
+            Glyph::REFRESH_CW,
+            tr(Msg::Reload),
+        )
+    };
+    let id = format!("confirm-{dialog}");
+    view! {
+        <button
+            type="button"
+            id=id
+            class=class
+            on:click=move |_| {
+                raise(Tone::Ok, said.clone());
+                hide(&dialog);
+            }
+        >
+            {icon(glyph, "16")}
+            {words}
+        </button>
+    }
+    .into_any()
+}
+
+/// The modal dialogs a signal opens, drawn by the island
+/// [`crate::islands::ModalDialogs`].
+fn modals() -> AnyView {
+    card(
+        tr(Msg::ModalDialogs),
+        view! { <crate::islands::ModalDialogs /> },
+    )
+    .into_any()
+}
+
 /// The modal dialog a signal opens: a row's Delete names the row, and a
 /// wide form.
-fn modals() -> AnyView {
-    let toasts = use_toasts();
-    // The page's locale is read here: the toast is raised in a handler,
-    // where no page tree is in reach.
-    let locale = locale();
+pub(crate) fn modal_dialogs() -> AnyView {
     let pending = RwSignal::new(None::<&'static str>);
     let renaming = RwSignal::new(false);
     let rows = ["synthetic-007.model.yml", "synthetic-011.extension.yml"]
@@ -121,7 +139,9 @@ fn modals() -> AnyView {
         Modal {
             id: "delete-row",
             title: Signal::derive(move || {
-                let row = pending.get().map_or_else(|| tr(Msg::TheFile), str::to_owned);
+                let row = pending
+                    .get()
+                    .map_or_else(|| tr(Msg::TheFile), str::to_owned);
                 tr_with(Msg::DeleteRow, &[("row", row.into())])
             }),
             danger: true,
@@ -136,8 +156,8 @@ fn modals() -> AnyView {
                     id="confirm-delete-row"
                     class=Variant::Destructive.class()
                     on:click=move |_| {
-                        if let (Some(toasts), Some(row)) = (toasts, pending.get_untracked()) {
-                            toasts.push(Tone::Ok, tr_in(&locale, Msg::RowDeleted, &[("row", row.into())]));
+                        if let Some(row) = pending.get_untracked() {
+                            raise(Tone::Ok, tr_with(Msg::RowDeleted, &[("row", row.into())]));
                         }
                         pending.set(None);
                     }
@@ -153,17 +173,14 @@ fn modals() -> AnyView {
     )
     .into_any();
     let rename = rename_modal(renaming);
-    card(
-        tr(Msg::ModalDialogs),
-        view! {
-            {divided_list(Some(tr(Msg::Files).into()), rows)}
-            <button type="button" class=Variant::Secondary.class() id="open-rename" on:click=move |_| renaming.set(true)>
-                {label(Some(Glyph::PENCIL), tr(Msg::RenameTheFile))}
-            </button>
-            {delete}
-            {rename}
-        },
-    )
+    view! {
+        {divided_list(Some(tr(Msg::Files).into()), rows)}
+        <button type="button" class=Variant::Secondary.class() id="open-rename" on:click=move |_| renaming.set(true)>
+            {label(Some(Glyph::PENCIL), tr(Msg::RenameTheFile))}
+        </button>
+        {delete}
+        {rename}
+    }
     .into_any()
 }
 
@@ -228,27 +245,31 @@ fn panel() -> AnyView {
         view! {
             <p class="fui-muted">{tr(Msg::ContentNoNavigationFromEnd)}</p>
             {side_panel_trigger("access", Variant::Secondary.class(), Glyph::SHIELD_CHECK, tr(Msg::ViewAccess))}
-            {side_panel(SidePanel {
-                id: "access",
-                body_id: "access-drawer",
-                title: tr(Msg::Access).into(),
-                body,
-            })}
+            <crate::islands::AccessPanel>{body}</crate::islands::AccessPanel>
         },
     )
     .into_any()
 }
 
-/// A button per tone that raises a toast in it.
+/// The side panel `access`, holding `body`, which the server drew.
+pub(crate) fn access_panel(body: AnyView) -> AnyView {
+    side_panel(SidePanel {
+        id: "access",
+        body_id: "access-drawer",
+        title: tr(Msg::Access).into(),
+        body,
+    })
+}
+
+/// A button per tone that raises a toast in it, drawn by the island
+/// [`crate::islands::ToastButtons`].
 fn toasts() -> AnyView {
-    let toasts = use_toasts();
-    let raise = move |tone: Tone, text: String| {
-        move |_| {
-            if let Some(toasts) = toasts {
-                toasts.push(tone, text.clone());
-            }
-        }
-    };
+    card(tr(Msg::Toasts), view! { <crate::islands::ToastButtons /> }).into_any()
+}
+
+/// A button per tone that raises a toast in it.
+pub(crate) fn toast_buttons() -> AnyView {
+    let raise = move |tone: Tone, text: String| move |_| raise(tone, text.clone());
     let buttons = [
         (Tone::Ok, tr(Msg::Success), tr(Msg::SavedSetReloaded)),
         (Tone::Info, tr(Msg::Information), tr(Msg::SetReloadsBackground)),
@@ -264,7 +285,7 @@ fn toasts() -> AnyView {
         }
     })
     .collect_view();
-    card(tr(Msg::Toasts), cluster(buttons)).into_any()
+    cluster(buttons).into_any()
 }
 
 /// Closes the popover `id`.

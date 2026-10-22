@@ -154,6 +154,12 @@ const ANOTHER: &str = "another";
 /// combobox, or typed behind the last option, each control with its own
 /// label, and a button back to the list.
 fn pick_or_typed() -> AnyView {
+    card(tr(Msg::PickType), view! { <crate::islands::PickOrTyped /> }).into_any()
+}
+
+/// The interactive part of [`pick_or_typed`], hydrated as the island
+/// [`crate::islands::PickOrTyped`].
+pub(crate) fn pick_or_typed_body() -> AnyView {
     let version_typing = RwSignal::new(false);
     let select = view! {
         <select
@@ -238,11 +244,7 @@ fn pick_or_typed() -> AnyView {
             .into_any(),
         ),
     });
-    card(
-        tr(Msg::PickType),
-        view! { <form method="post" action="#" class=FORM>{version} {canonical}</form> },
-    )
-    .into_any()
+    view! { <form method="post" action="#" class=FORM>{version} {canonical}</form> }.into_any()
 }
 
 /// The id of the editor's text area.
@@ -392,28 +394,16 @@ fn per_row() -> AnyView {
     .into_any()
 }
 
-/// One combobox per clause, its id made from the clause's place, each
-/// described by its own help line.
-fn clause_pickers(systems: &[(&'static str, String, &'static str)]) -> AnyView {
-    (1..=2)
+/// One combobox per clause, the island [`crate::islands::ClausePicker`],
+/// its id made from the clause's place, each described by its own help
+/// line.
+fn clause_pickers() -> AnyView {
+    (1_u8..=2)
         .map(|place| {
-            let id = format!("clause-{place}-system");
-            let help = format!("{id}-help");
-            let offered = systems
-                .iter()
-                .map(|(value, label, url)| ComboOption::new(*value, label.clone()).detail(*url))
-                .collect();
+            let help = format!("clause-{place}-system-help");
             view! {
                 <div class="fui-field">
-                    {keyed_combobox(KeyedCombobox {
-                        id: id.clone(),
-                        name: format!("clause{place}"),
-                        label: tr_with(Msg::ClauseCodeSystem, &[("place", place.into())]),
-                        placeholder: tr(Msg::ChooseCodeSystem),
-                        options: offered,
-                        selected: RwSignal::new(None),
-                        described_by: Some(help.clone()),
-                    })}
+                    <crate::islands::ClausePicker place />
                     <p id=help class="fui-help">
                         {tr(Msg::SystemClauseDrawsCodesFrom)}
                     </p>
@@ -424,11 +414,10 @@ fn clause_pickers(systems: &[(&'static str, String, &'static str)]) -> AnyView {
         .into_any()
 }
 
-/// A long list to choose from, filtered as the reader types, beside a group
-/// with its heading, a checkbox on the controls' line, and a disabled save
-/// that names its reason.
-fn choosing() -> AnyView {
-    let systems = [
+/// The code systems the comboboxes offer: each value, its words and its
+/// canonical.
+fn systems() -> [(&'static str, String, &'static str); 12] {
+    [
         ("loinc", tr(Msg::Loinc), "http://loinc.org"),
         ("snomed", tr(Msg::SnomedCt), "http://snomed.info/sct"),
         ("ucum", tr(Msg::Ucum), "http://unitsofmeasure.org"),
@@ -457,27 +446,55 @@ fn choosing() -> AnyView {
             tr(Msg::SyntheticGalleryCodes),
             "http://example.org/fhir/CodeSystem/gallery-synthetic",
         ),
-    ];
-    let options = systems
+    ]
+}
+
+/// The options of [`systems`].
+fn system_options() -> Vec<ComboOption> {
+    systems()
         .iter()
         .map(|(value, label, url)| ComboOption::new(*value, label.clone()).detail(*url))
-        .collect();
-    let chosen = RwSignal::new(Some(String::from("snomed")));
-    let clauses = clause_pickers(&systems);
+        .collect()
+}
+
+/// The combobox of the clause at `place`.
+pub(crate) fn clause_picker(place: u8) -> AnyView {
+    let id = format!("clause-{place}-system");
+    keyed_combobox(KeyedCombobox {
+        id: id.clone(),
+        name: format!("clause{place}"),
+        label: tr_with(Msg::ClauseCodeSystem, &[("place", u32::from(place).into())]),
+        placeholder: tr(Msg::ChooseCodeSystem),
+        options: system_options(),
+        selected: RwSignal::new(None),
+        described_by: Some(format!("{id}-help")),
+    })
+}
+
+/// The combobox of the code system, SNOMED CT chosen.
+pub(crate) fn system_picker() -> AnyView {
+    combobox(Combobox {
+        id: "choose-system",
+        name: "system",
+        label: tr(Msg::CodeSystem).into(),
+        placeholder: tr(Msg::ChooseCodeSystem).into(),
+        options: system_options(),
+        selected: RwSignal::new(Some(String::from("snomed"))),
+    })
+}
+
+/// A long list to choose from, filtered as the reader types, beside a group
+/// with its heading, a checkbox on the controls' line, and a disabled save
+/// that names its reason.
+fn choosing() -> AnyView {
+    let clauses = clause_pickers();
     let code = view! { <input id="choose-code" name="code" type="text" class=INPUT placeholder="22298006" /> };
     let active = view! { <input id="choose-active" name="active" type="checkbox" checked=true /> };
     card(
         tr(Msg::Combobox),
         view! {
             <div class=FORM>
-                {combobox(Combobox {
-                    id: "choose-system",
-                    name: "system",
-                    label: tr(Msg::CodeSystem).into(),
-                    placeholder: tr(Msg::ChooseCodeSystem).into(),
-                    options,
-                    selected: chosen,
-                })}
+                <crate::islands::SystemPicker />
                 <fieldset class="fui-fieldset">
                     <legend class="fui-sr-only">{tr(Msg::Clauses)}</legend>
                     {clauses}
@@ -665,22 +682,25 @@ fn long_label() -> AnyView {
 
 /// The upload field: a file dropped or chosen, read into the text area.
 fn upload() -> AnyView {
+    card(tr(Msg::Upload), view! { <crate::islands::UploadField /> }).into_any()
+}
+
+/// The interactive part of [`upload`], hydrated as the island
+/// [`crate::islands::UploadField`].
+pub(crate) fn upload_body() -> AnyView {
     let source = RwSignal::new(String::new());
-    card(
-        tr(Msg::Upload),
-        upload_field(
-            Upload {
-                id: "gallery-upload",
-                label: tr(Msg::OperationalTemplate).into(),
-                choose: tr(Msg::ChooseOptFile).into(),
-                accept: &[".opt", ".xml"],
-                max_bytes: 2 * 1024 * 1024,
-                placeholder: "<?xml version=\"1.0\" encoding=\"UTF-8\"?>".into(),
-            },
-            source,
-            Signal::derive(|| false),
-            Signal::derive(|| None),
-        ),
+    upload_field(
+        Upload {
+            id: "gallery-upload",
+            label: tr(Msg::OperationalTemplate).into(),
+            choose: tr(Msg::ChooseOptFile).into(),
+            accept: &[".opt", ".xml"],
+            max_bytes: 2 * 1024 * 1024,
+            placeholder: "<?xml version=\"1.0\" encoding=\"UTF-8\"?>".into(),
+        },
+        source,
+        Signal::derive(|| false),
+        Signal::derive(|| None),
     )
     .into_any()
 }
@@ -688,6 +708,16 @@ fn upload() -> AnyView {
 /// The highlighted editor over the synthetic YAML, with two diagnostics
 /// marking and linking to their lines, and the bytes it holds.
 fn editor() -> AnyView {
+    card(
+        tr(Msg::HighlightedEditor),
+        view! { <crate::islands::DraftEditor /> },
+    )
+    .into_any()
+}
+
+/// The interactive part of [`editor`], hydrated as the island
+/// [`crate::islands::DraftEditor`].
+pub(crate) fn editor_body() -> AnyView {
     let text = RwSignal::new(String::from(crate::data::YAML));
     let ready = RwSignal::new(false);
     Effect::new(move |_| ready.set(true));
@@ -752,23 +782,19 @@ fn editor() -> AnyView {
         }
     })
     .collect_view();
-    card(
-        tr(Msg::HighlightedEditor),
-        view! {
-            {Field::new(DRAFT, tr(Msg::File))
-                .after(view! {
-                    <p class="fui-help" role="status">
-                        {size}
-                    </p>
-                })
-                .view(field)}
-            <ul class="fui-issues">{diagnostics}</ul>
-        },
-    )
+    view! {
+        {Field::new(DRAFT, tr(Msg::File))
+            .after(view! {
+                <p class="fui-help" role="status">
+                    {size}
+                </p>
+            })
+            .view(field)}
+        <ul class="fui-issues">{diagnostics}</ul>
+    }
     .into_any()
 }
 
-/// The filter over a list of synthetic file names.
 /// Waits most of a second in the browser, so a reload keeps its old view on
 /// screen long enough to type into; on the server it waits not at all.
 #[cfg_attr(
@@ -803,6 +829,16 @@ async fn pause() {
 /// the editor must hold no reactive value of its own. Its text, marks and
 /// editable state are the page's.
 fn reloading_editor() -> AnyView {
+    card(
+        tr(Msg::EditorReloads),
+        view! { <crate::islands::ReloadingEditor /> },
+    )
+    .into_any()
+}
+
+/// The interactive part of [`reloading_editor`], hydrated as the island
+/// [`crate::islands::ReloadingEditor`].
+pub(crate) fn reloading_editor_body() -> AnyView {
     let reloads = RwSignal::new(0_u32);
     let text = RwSignal::new(String::from("{\n  \"synthetic\": true\n}\n"));
     let marks = Signal::stored(Vec::<LineMark>::new());
@@ -835,26 +871,30 @@ fn reloading_editor() -> AnyView {
             }
         })
     };
-    card(
-        tr(Msg::EditorReloads),
-        view! {
-            <div class="fui-cluster">
-                <button
-                    id="reload-draft"
-                    type="button"
-                    class=Variant::Secondary.class()
-                    on:click=move |_| reloads.update(|count| *count = count.saturating_add(1))
-                >
-                    {tr(Msg::ReadAgain)}
-                </button>
-            </div>
-            <Transition fallback=|| ()>{drawn}</Transition>
-        },
-    )
+    view! {
+        <div class="fui-cluster">
+            <button
+                id="reload-draft"
+                type="button"
+                class=Variant::Secondary.class()
+                on:click=move |_| reloads.update(|count| *count = count.saturating_add(1))
+            >
+                {tr(Msg::ReadAgain)}
+            </button>
+        </div>
+        <Transition fallback=|| ()>{drawn}</Transition>
+    }
     .into_any()
 }
 
+/// The filter over a list of synthetic file names.
 fn filter() -> AnyView {
+    card(tr(Msg::Filter), view! { <crate::islands::FileFilter /> }).into_any()
+}
+
+/// The interactive part of [`filter`], hydrated as the island
+/// [`crate::islands::FileFilter`].
+pub(crate) fn filter_body() -> AnyView {
     let words = RwSignal::new(String::new());
     let names: Vec<String> = crate::data::rows()
         .into_iter()
@@ -882,19 +922,16 @@ fn filter() -> AnyView {
             ],
         )
     });
-    card(
-        tr(Msg::Filter),
-        view! {
-            {table_filter("gallery-filter", tr(Msg::FilterFiles), words, count)}
-            <ul class="fui-divided" aria-label=tr(Msg::Files)>
-                <For each=move || kept.get() key=|name| name.clone() let:name>
-                    <li>
-                        <code>{name}</code>
-                    </li>
-                </For>
-            </ul>
-        },
-    )
+    view! {
+        {table_filter("gallery-filter", tr(Msg::FilterFiles), words, count)}
+        <ul class="fui-divided" aria-label=tr(Msg::Files)>
+            <For each=move || kept.get() key=|name| name.clone() let:name>
+                <li>
+                    <code>{name}</code>
+                </li>
+            </For>
+        </ul>
+    }
     .into_any()
 }
 

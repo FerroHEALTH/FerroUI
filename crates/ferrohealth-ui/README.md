@@ -17,10 +17,28 @@ ferrohealth-ui = "=0.1.7"
 Pin the version exactly: a console moves its pin after looking at its own
 screens.
 
-## Render modes
+## Islands
 
-The crate has no features. It compiles under `csr`, `ssr` and `hydrate`,
-whichever your own `leptos` dependency turns on.
+The crate has no features of its own. It turns on the `leptos` feature
+`islands` and compiles under `csr`, `ssr` and `hydrate`, whichever your own
+`leptos` dependency turns on. A console renders in Leptos islands mode: the
+server draws every page whole, and the browser hydrates only its islands.
+Set the `islands` feature, write `<HydrationScripts options islands=true/>`
+in your shell, and hydrate from your browser entry, which names this crate
+so its islands are linked into your WebAssembly:
+
+```text
+#[wasm_bindgen]
+pub fn hydrate() {
+    ferrohealth_ui::i18n::provide_page_locale(your_locale(
+        &ferrohealth_ui::i18n::document_lang().unwrap_or_default(),
+    ));
+    leptos::mount::hydrate_islands();
+}
+```
+
+Every page works with no WebAssembly: the HTML is complete, and every
+important action is a link or a form.
 
 ## The stylesheet and a theme
 
@@ -58,9 +76,13 @@ which your server writes from its own cookie or setting (`theme::Theme`).
   panel and numbered lines), `theme_switch`, `menu`, `dialog`
   (a popover confirmation), `shell` (skip link, top bar, footer, centred
   page) and `sign_in` (a basic form, a provider button, or both).
-- `widget`: `nav` (the sidebar and drawer), `tabs` (keyboard tabs), `toast`,
-  `editor` (the highlighted overlay editor with line marks), `pager` (the
-  session pager) and `filter`.
+- `island`: the ready islands, `ToastRegion`, `NavDrawer` and
+  `KeyboardTabs`, each taking its words as props.
+- `widget`: the interactive components as functions you call inside an
+  island: `nav` (the sidebar, plain links with the page marked, inside its
+  drawer island), `tabs` (the panels for `KeyboardTabs`), `toast` (`raise`
+  from any island), `editor` (the highlighted overlay editor with line
+  marks), `pager` (the session pager), `filter` and the rest.
 - `table`: the paging and sorting model (`Paging`, `Window`, `Sort`,
   `StateSource`) and the data table with its link pager.
 - `highlight::html(language, text, lines, marked)`, `icon::icon(glyph, size)`,
@@ -88,8 +110,8 @@ theme toggle's name, an empty listing's range) comes from a Fluent catalog
 under `locales/`, one directory per language. English is the one catalog
 that ships, and every lookup falls back to it; a language joins as one
 catalog file, with no code change. Choose the locale once per render, at the
-root of the page tree, on the server and in the hydrating browser alike, and
-write it as `<html lang>`:
+root of the page tree on the server, and write it as `<html lang>`; an
+island takes the words it draws as props the server resolved:
 
 ```rust
 use ferrohealth_ui::i18n::{Locale, locale, provide_locale};
