@@ -24,7 +24,6 @@
 use ferrohealth_ui::view::help::HelpWords;
 use ferrohealth_ui::widget::combobox::ComboboxWords;
 use ferrohealth_ui::widget::dialog::ModalWords;
-use ferrohealth_ui::widget::side_panel::SidePanelWords;
 use ferrohealth_ui::widget::upload::UploadWords;
 use leptos::prelude::*;
 
@@ -56,19 +55,6 @@ pub fn ModalDialogs(
     modal: ModalWords,
 ) -> impl IntoView {
     crate::pages::overlays::modal_dialogs(words, modal)
-}
-
-/// The overlays page's side panel, around the body the server drew.
-#[island]
-pub fn AccessPanel(
-    /// The panel's title, in the page's locale.
-    title: String,
-    /// The panel's own words, in the page's locale.
-    words: SidePanelWords,
-    /// The body, drawn on the server.
-    children: Children,
-) -> impl IntoView {
-    crate::pages::overlays::access_panel(title, words, children().into_any())
 }
 
 /// The overlays page's buttons that raise a toast in each tone.

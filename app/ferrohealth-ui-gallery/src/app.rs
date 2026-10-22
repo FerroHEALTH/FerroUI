@@ -307,6 +307,7 @@ pub fn App() -> impl IntoView {
                     <Route path=path!("tables") view=crate::pages::tables::TablesPage />
                     <Route path=path!("code") view=crate::pages::code::CodePage />
                     <Route path=path!("overlays") view=crate::pages::overlays::OverlaysPage />
+                    <Route path=path!("overlays/access") view=crate::pages::overlays::AccessPage />
                     <Route path=path!("charts") view=crate::pages::charts::ChartsPage />
                     <Route path=path!("layouts") view=crate::pages::layouts::LayoutsPage />
                     <Route

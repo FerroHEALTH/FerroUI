@@ -421,8 +421,18 @@ fn a_setting_names_its_key_with_a_labelled_copy_button() {
         "R15: a labelled button the keyboard reaches once hydrated: {page}"
     );
     assert!(
-        page.contains("<code>telemetry.&lt;format&gt;</code>"),
-        "{page}"
+        has(
+            &page,
+            "button",
+            &[("class", "fui-key-hint"), ("hidden", "")]
+        ),
+        "§15.8: the button waits for the WebAssembly: {page}"
+    );
+    assert!(
+        page.contains(
+            r#"<span class="fui-key-hint is-text"><code>telemetry.&lt;format&gt;</code></span>"#
+        ),
+        "until then the key is selectable text: {page}"
     );
     assert!(
         page.contains(r#"<span class="fui-setting-label">Format"#),
@@ -536,6 +546,10 @@ fn the_about_page_writes_the_console_version_in_the_footer_form() {
             &[("href", "/about/document.json"), ("download", "")]
         ),
         "Download is a link that works with no script: {page}"
+    );
+    assert!(
+        has(&page, "button", &[("id", "about-copy"), ("hidden", "")]),
+        "Copy is the copy island, hidden until it works: {page}"
     );
     let foot = html(|| footer(release).into_any());
     assert!(

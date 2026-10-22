@@ -10,6 +10,7 @@
 //! it: an icon never carries meaning alone (WCAG 2.2 SC 1.1.1, SC 1.4.1).
 
 use leptos::prelude::*;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 /// The inner markup of one Lucide outline, drawn on a 24 by 24 grid with a
 /// two-unit round stroke in the current colour.
@@ -441,6 +442,46 @@ impl Glyph {
     ];
 }
 
+impl Glyph {
+    /// The Lucide name of the glyph's vendored file, as [`Glyph::ALL`]
+    /// lists it.
+    #[must_use]
+    pub fn name(self) -> Option<&'static str> {
+        Self::ALL
+            .iter()
+            .find(|(_, glyph)| *glyph == self)
+            .map(|(name, _)| *name)
+    }
+
+    /// The glyph whose vendored file Lucide names `name`, if the crate
+    /// holds it.
+    #[must_use]
+    pub fn named(name: &str) -> Option<Self> {
+        Self::ALL
+            .iter()
+            .find(|(held, _)| *held == name)
+            .map(|(_, glyph)| *glyph)
+    }
+}
+
+// NOTE: leptos-ui.md §15.2; an island's glyph prop crosses to the browser as its Lucide name.
+impl Serialize for Glyph {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let name = self
+            .name()
+            .ok_or_else(|| serde::ser::Error::custom("a glyph that Glyph::ALL does not list"))?;
+        serializer.serialize_str(name)
+    }
+}
+
+impl<'de> Deserialize<'de> for Glyph {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let name = std::borrow::Cow::<'de, str>::deserialize(deserializer)?;
+        Self::named(&name)
+            .ok_or_else(|| serde::de::Error::custom(format!("no Lucide glyph named {name}")))
+    }
+}
+
 /// Returns `glyph` as an inline SVG `size` pixels square, hidden from
 /// assistive technology.
 ///
@@ -502,6 +543,15 @@ mod tests {
             .expect("the opening tag ends on its own line");
         let (body, _) = body.split_once("</svg>").expect("the outline closes");
         body.lines().map(str::trim).collect()
+    }
+
+    #[test]
+    fn a_glyph_crosses_to_the_browser_as_its_lucide_name() {
+        let json = serde_json::to_string(&Glyph::SHIELD_CHECK).expect("a listed glyph serializes");
+        assert_eq!(r#""shield-check""#, json);
+        let back: Glyph = serde_json::from_str(&json).expect("its name reads back");
+        assert_eq!(Glyph::SHIELD_CHECK, back);
+        assert!(serde_json::from_str::<Glyph>(r#""no-such-glyph""#).is_err());
     }
 
     #[test]

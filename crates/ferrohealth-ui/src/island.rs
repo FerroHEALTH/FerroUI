@@ -7,7 +7,8 @@
 //!
 //! They are the toast region, the keyboard tabs, the navigation drawer, the
 //! menu and listbox behind every More, row menu and select button, the
-//! combobox, the picker field and the chart legend.
+//! combobox, the picker field, the chart legend, the copy button and the
+//! side panel.
 //!
 //! An island is the only part of a page the browser hydrates (the Leptos
 //! book, "Guide: Islands"). Its props cross to the browser as JSON in the
@@ -101,6 +102,51 @@ pub fn KeyHint(
     words: crate::widget::copy::KeyHintWords,
 ) -> impl IntoView {
     crate::widget::copy::key_hint(key, words)
+}
+
+/// The copy button `id` saying `label`, putting `text` on the clipboard
+/// when pressed ([`crate::widget::copy`]). The server draws it hidden, so
+/// with no WebAssembly the text stays on the page to select.
+#[island]
+pub fn CopyButton(
+    /// The button's id.
+    id: String,
+    /// Its words, in the page's locale, such as "Copy".
+    label: String,
+    /// The text it copies, which the page already shows.
+    text: String,
+    /// The words it draws itself, in the page's locale
+    /// ([`crate::widget::copy::CopyWords::of_page`]).
+    words: crate::widget::copy::CopyWords,
+) -> impl IntoView {
+    crate::widget::copy::copy_button(id, label, Signal::stored(text), words)
+}
+
+/// The side panel `id` headed `title`, around the body the server drew as
+/// its children, and its `opener`: a link to the content's own route until
+/// the page hydrates, then the button that opens the panel
+/// ([`crate::widget::side_panel`]).
+#[island]
+pub fn SidePanel(
+    /// The panel's id.
+    id: String,
+    /// The heading, in the page's locale.
+    title: String,
+    /// What opens it, with the route of its content.
+    opener: crate::widget::side_panel::Opener,
+    /// The words it draws itself, in the page's locale
+    /// ([`crate::widget::side_panel::SidePanelWords::of_page`]).
+    words: crate::widget::side_panel::SidePanelWords,
+    /// The body, drawn on the server.
+    children: Children,
+) -> impl IntoView {
+    crate::widget::side_panel::side_panel(crate::widget::side_panel::SidePanel {
+        id,
+        title,
+        opener,
+        body: children().into_any(),
+        words,
+    })
 }
 
 /// The phone's select over binder tabs, named `label`, on the choice that

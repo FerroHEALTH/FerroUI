@@ -626,35 +626,186 @@ async fn the_drawer_opens_takes_the_focus_and_closes_on_a_link() -> Result<(), B
     .await
 }
 
+/// Waits until the keyboard focus is on the side panel's Close button.
+async fn focus_on_close(browser: &Browser) -> Result<(), Box<dyn Error>> {
+    until("the focus is on the panel's Close button", async || {
+        let active = browser.driver().active_element().await?;
+        let class = active.attr("class").await?.unwrap_or_default();
+        Ok(class.contains("fui-side-panel-close"))
+    })
+    .await
+}
+
+/// Waits until the keyboard focus is back on the side panel's opener.
+async fn focus_on_opener(browser: &Browser) -> Result<(), Box<dyn Error>> {
+    until("the focus is back on the panel's opener", async || {
+        let active = browser.driver().active_element().await?;
+        Ok(active.attr("aria-controls").await?.as_deref() == Some("access"))
+    })
+    .await
+}
+
+/// Opens the side panel from `opener`, waits for the focus on its Close
+/// button, and returns the panel.
+async fn open_panel(browser: &Browser, opener: &WebElement) -> Result<WebElement, Box<dyn Error>> {
+    let panel = browser.element(By::Id("access")).await?;
+    opener.click().await?;
+    until("the panel opens", async || Ok(panel.is_displayed().await?)).await?;
+    focus_on_close(browser).await?;
+    Ok(panel)
+}
+
 #[tokio::test(flavor = "multi_thread")]
-async fn the_side_panel_opens_with_the_focus_on_its_close_button() -> Result<(), Box<dyn Error>> {
+async fn the_side_panel_takes_the_focus_to_its_close_button_and_gives_it_back()
+-> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
         return Ok(());
     }
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
+        window(browser, 1440, 900).await?;
         browser.goto(&gallery.url("/ferrofed/overlays")).await?;
         let opener = browser
-            .element(By::XPath("//button[normalize-space(.) = 'View access']"))
+            .element(By::Css(
+                "button[popovertarget='access'][aria-controls='access']",
+            ))
             .await?;
-        let panel = browser.element(By::Id("access")).await?;
-        // The panel opens with no script; the focus moves once its island has
-        // hydrated, so a panel opened before that is closed and opened again.
-        until("the focus is on the panel's Close button", async || {
-            let active = browser.driver().active_element().await?;
-            let class = active.attr("class").await?.unwrap_or_default();
-            if class.contains("fui-side-panel-close") {
-                return Ok(true);
-            }
-            if panel.is_displayed().await? {
-                active.send_keys(Key::Escape).await?;
-            } else {
-                opener.click().await?;
-            }
-            Ok(false)
+        // The button shows once the island has hydrated, and its link hides.
+        until("the panel's button shows", async || {
+            Ok(opener.is_displayed().await?)
         })
         .await?;
+        let link = browser
+            .element(By::Css("a[href='/ferrofed/overlays/access']"))
+            .await?;
+        assert!(
+            !link.is_displayed().await?,
+            "the link gives way to the button"
+        );
+        let panel = open_panel(browser, &opener).await?;
+        browser
+            .driver()
+            .active_element()
+            .await?
+            .send_keys(Key::Escape)
+            .await?;
+        until("Escape closes the panel", async || {
+            Ok(!panel.is_displayed().await?)
+        })
+        .await?;
+        focus_on_opener(browser).await?;
+        let panel = open_panel(browser, &opener).await?;
+        browser
+            .element(By::Css("#access .fui-side-panel-close"))
+            .await?
+            .click()
+            .await?;
+        until("Close closes the panel", async || {
+            Ok(!panel.is_displayed().await?)
+        })
+        .await?;
+        focus_on_opener(browser).await?;
         browser.console_clean("the side panel").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_side_panel_is_a_sheet_the_size_of_the_viewport_on_a_phone()
+-> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        window(browser, 390, 844).await?;
+        browser.goto(&gallery.url("/ferropix/overlays")).await?;
+        let opener = browser
+            .element(By::Css(
+                "button[popovertarget='access'][aria-controls='access']",
+            ))
+            .await?;
+        until("the panel's button shows", async || {
+            Ok(opener.is_displayed().await?)
+        })
+        .await?;
+        opener.scroll_into_view().await?;
+        open_panel(browser, &opener).await?;
+        // NOTE: CSSOM View, `clientWidth`: a classic scrollbar narrows the root's client box.
+        let measured = browser
+            .driver()
+            .execute(
+                "const root = document.documentElement;
+                 const panel = document.getElementById('access').getBoundingClientRect();
+                 const body = document.getElementById('access-body').getBoundingClientRect();
+                 return [panel.left, panel.top, panel.right, panel.bottom,
+                         root.clientWidth, root.clientHeight, body.bottom];",
+                Vec::new(),
+            )
+            .await?;
+        let [left, top, right, bottom, width, height, body]: [f64; 7] =
+            serde_json::from_value(measured.json().clone())?;
+        assert!(
+            left.abs() < 1.0 && top.abs() < 1.0,
+            "the sheet starts at the corner"
+        );
+        assert!(
+            (right - width).abs() < 1.0,
+            "the sheet is the viewport's width: {right} against {width}"
+        );
+        assert!(
+            (bottom - height).abs() < 1.0,
+            "the sheet is the viewport's height: {bottom} against {height}"
+        );
+        assert!(
+            (bottom - body).abs() < 1.0,
+            "the body fills the sheet, with nothing below it: {body} against {bottom}"
+        );
+        browser.console_clean("the phone's side panel").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn copy_puts_the_text_on_the_clipboard_and_says_so() -> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser
+            .driver()
+            .cdp()
+            .send_raw(
+                "Browser.grantPermissions",
+                json!({ "permissions": ["clipboardReadWrite", "clipboardSanitizedWrite"] }),
+            )
+            .await?;
+        browser.goto(&gallery.url("/ferrobridge/code")).await?;
+        let copy = browser.element(By::Id("file-copy")).await?;
+        until("Copy shows once it works", async || {
+            Ok(copy.is_displayed().await?)
+        })
+        .await?;
+        copy.scroll_into_view().await?;
+        copy.click().await?;
+        until("Copy says the text is copied", async || {
+            Ok(copy.text().await? == "Copied")
+        })
+        .await?;
+        let held = browser
+            .driver()
+            .execute_async(
+                "navigator.clipboard.readText().then(arguments[0], () => arguments[0](null));",
+                Vec::new(),
+            )
+            .await?;
+        assert_eq!(
+            Some(ferrohealth_ui_gallery::data::MAPPING),
+            held.json().as_str(),
+            "the clipboard holds the file"
+        );
+        browser.console_clean("the copy button").await
     })
     .await
 }

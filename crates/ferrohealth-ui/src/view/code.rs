@@ -22,7 +22,9 @@ use leptos::prelude::*;
 use crate::highlight::{self, Language};
 use crate::i18n::{Text, tr, tr_with};
 use crate::icon::{Glyph, icon};
+use crate::island::CopyButton;
 use crate::view::surface::{SectionHead, panel_section};
+use crate::widget::copy::CopyWords;
 
 /// How grave a finding on a line is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -82,8 +84,10 @@ pub struct CodeHead {
     pub tags: Vec<String>,
     /// The short digest, when the console has one.
     pub digest: Option<Digest>,
-    /// The actions at the head's end, such as Download.
-    // TODO(#220): Copy joins the head as the library's copy island.
+    /// The id of the head's Copy button, which copies the text; `None`
+    /// draws none.
+    pub copy: Option<String>,
+    /// The actions at the head's end, after Copy, such as Download.
     pub actions: Option<AnyView>,
 }
 
@@ -177,14 +181,25 @@ fn code_box(code: &Code) -> AnyView {
     .into_any()
 }
 
-/// Returns the head's meta: its tags, the line count of `text`, its digest
-/// and its actions.
+/// Returns the head's meta: its tags, the line count of `text`, its digest,
+/// the Copy button `copy` over `text` and its actions.
 fn meta(
     tags: Vec<String>,
     text: &str,
     digest: Option<Digest>,
+    copy: Option<String>,
     actions: Option<AnyView>,
 ) -> AnyView {
+    let copy = copy.map(|id| {
+        view! {
+            <CopyButton
+                id=id
+                label=tr(Text::DocumentCopy)
+                text=text.to_owned()
+                words=CopyWords::of_page()
+            />
+        }
+    });
     let tags = tags.into_iter().map(crate::view::tag::tag).collect_view();
     let lines = tr_with(Text::CodeLines, &[("count", line_count(text).into())]);
     let digest = digest.map(|Digest { text, title }| {
@@ -196,7 +211,7 @@ fn meta(
     });
     view! {
         <span class="fui-codeview-meta">
-            {tags} <span>{lines}</span> {digest} {actions}
+            {tags} <span>{lines}</span> {digest} {copy} {actions}
         </span>
     }
     .into_any()
@@ -226,9 +241,10 @@ pub fn code_viewer(head: Option<CodeHead>, code: &Code) -> AnyView {
              title,
              tags,
              digest,
+             copy,
              actions,
          }| {
-            let meta = meta(tags, &code.text, digest, actions);
+            let meta = meta(tags, &code.text, digest, copy, actions);
             view! {
                 <div class="fui-codeview-head">
                     <h3 class="fui-codeview-path">{path(&title)}</h3>
@@ -249,10 +265,11 @@ pub fn code_card(head: CodeHead, code: &Code) -> AnyView {
         title,
         tags,
         digest,
+        copy,
         actions,
     } = head;
     let name = title.clone();
-    let meta = meta(tags, &code.text, digest, actions);
+    let meta = meta(tags, &code.text, digest, copy, actions);
     let body = code_box(code);
     view! {
         <section class="fui-card fui-codeview-card" aria-label=name>
@@ -277,9 +294,10 @@ pub fn code_section(head: CodeHead, code: &Code) -> AnyView {
         title,
         tags,
         digest,
+        copy,
         actions,
     } = head;
-    let meta = meta(tags, &code.text, digest, actions);
+    let meta = meta(tags, &code.text, digest, copy, actions);
     let viewer = code_viewer(None, code);
     panel_section(
         Some(SectionHead {

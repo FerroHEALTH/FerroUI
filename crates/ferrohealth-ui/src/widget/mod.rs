@@ -11,6 +11,17 @@
 //! only inside an event handler or an effect, behind
 //! `#[cfg(target_arch = "wasm32")]`, so it renders the same on the server
 //! and in the browser, and its first paint is the server's. None fetches.
+//!
+//! The widgets that own their state are ready islands. The others are
+//! island parts: each takes a signal, a callback or a closure that ties it
+//! to the console's own state, which no island prop can carry, so a console
+//! calls it inside an island of its own. They are the code editor
+//! ([`editor::code_editor`]), the list filter ([`filter::table_filter`]),
+//! the pager whose steps the console draws ([`crate::table::pager::pager`],
+//! as a session pager does), the modal dialog ([`dialog::modal_dialog`]),
+//! the tree ([`tree::tree_view`]), the upload field
+//! ([`upload::upload_field`]) and the help switch with the fields it
+//! explains ([`crate::view::help`]).
 
 pub mod action_menu;
 pub mod chart;

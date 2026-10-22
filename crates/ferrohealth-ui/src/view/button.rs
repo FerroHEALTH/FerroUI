@@ -9,12 +9,13 @@
 //! with `aria-describedby`, so a reader who reaches the button hears why.
 
 use leptos::prelude::*;
+use serde::{Deserialize, Serialize};
 
 use crate::i18n::{Text, tr};
 use crate::icon::{Glyph, icon};
 
 /// What a button is for, which sets how much it stands out.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum Variant {
     /// The one action a screen is for.
     Primary,

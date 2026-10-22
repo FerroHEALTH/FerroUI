@@ -7,9 +7,11 @@
 //! It is a small secondary button with the `copy` glyph. Pressed, it writes
 //! the text with the browser's asynchronous clipboard (W3C Clipboard API and
 //! events, `writeText`), then reads "Copied" with a check for two seconds,
-//! or says the browser refused; a polite live region announces either. The
-//! server draws it disabled, and it turns on once the page has hydrated, so
-//! a press before then is never lost silently.
+//! or says the browser refused; a polite live region announces either. A
+//! page draws it through [`crate::island::CopyButton`]. The server draws it
+//! hidden and it shows once the page has hydrated, so with no WebAssembly
+//! the text it copies stays on the page as selectable text and no button
+//! offers what only script can do (`leptos-ui.md` §15.8).
 
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -94,7 +96,7 @@ pub fn copy_button(
                 type="button"
                 id=id
                 class=Variant::Secondary.small()
-                disabled=move || !hydrated.get()
+                hidden=move || !hydrated.get()
                 on:click=press
             >
                 {move || match state.get() {
@@ -164,9 +166,9 @@ impl KeyHintWords {
 ///
 /// It sits on the setting's label line. The stylesheet shows it while the
 /// row is hovered or holds the focus, and always below 40 rem, where no
-/// pointer hovers; it keeps its room while hidden, so nothing moves. The
-/// server draws it disabled and it turns on once the page has hydrated, as
-/// the copy button does; the key reads as text before then.
+/// pointer hovers; it keeps its room while hidden, so nothing moves. Until
+/// the page has hydrated the key is selectable text in the hint's place
+/// and the button is hidden, as the copy button is.
 #[must_use]
 pub fn key_hint(key: String, words: KeyHintWords) -> impl IntoView {
     let KeyHintWords {
@@ -192,13 +194,17 @@ pub fn key_hint(key: String, words: KeyHintWords) -> impl IntoView {
             icon(Glyph::COPY, "12")
         }
     };
+    let text = key.clone();
     view! {
+        <span class="fui-key-hint is-text" hidden=move || hydrated.get()>
+            <code>{text}</code>
+        </span>
         <button
             type="button"
             class="fui-key-hint"
             aria-label=label
             title=title
-            disabled=move || !hydrated.get()
+            hidden=move || !hydrated.get()
             on:click=press
         >
             <code>{key}</code>

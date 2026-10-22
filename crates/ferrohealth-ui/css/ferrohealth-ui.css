@@ -3868,16 +3868,16 @@
 
   /* ---- The side panel ---- */
 
-  /* A panel from the inline end, full height, the full width below 40 rem. */
+  /* A panel from the inline end, full height; below 40 rem a sheet over the
+     whole viewport. Its edges are the viewport's, so it is sized to the
+     layout viewport, scrollbar excluded, with nothing showing under it. */
   .fui-side-panel {
-    width: 100vw;
-    max-width: 100vw;
-    height: 100dvh;
+    width: auto;
+    max-width: none;
+    height: auto;
     max-height: none;
     margin: 0;
-    margin-inline-start: auto;
     border: 0;
-    border-inline-start: 1px solid var(--edge);
     background: var(--surface-raised);
     box-shadow: var(--shadow-overlay);
     padding: 0;
@@ -3886,7 +3886,7 @@
 
   .fui-side-panel:popover-open {
     position: fixed;
-    inset: 0 0 0 auto;
+    inset: 0;
     display: flex;
     flex-direction: column;
   }
@@ -3894,6 +3894,11 @@
   @media (width >= 40rem) {
     .fui-side-panel {
       width: 24rem;
+      border-inline-start: 1px solid var(--edge);
+    }
+
+    .fui-side-panel:popover-open {
+      inset-inline-start: auto;
     }
   }
 
@@ -3916,6 +3921,7 @@
 
   .fui-side-panel-body {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
     padding: var(--space-loose);
   }
@@ -4210,8 +4216,14 @@
   }
 
   .fui-document-views {
+    order: 1;
     flex: 1 0 100%;
     min-width: 0;
+  }
+
+  /* Copy ends the row of the switches, above the views. */
+  .fui-document .fui-copy {
+    margin-inline-start: auto;
   }
 
   /* A view a link targets keeps its switch in sight above it. */
@@ -10022,6 +10034,11 @@
   .fui-setting-row:is(:hover, :focus-within) .fui-key-hint,
   .fui-key-hint:focus-visible {
     opacity: 1;
+  }
+
+  /* Until the page hydrates the key is text to select, with no button. */
+  .fui-key-hint.is-text {
+    cursor: text;
   }
 
   /* A long key keeps to one line and scrolls inside the hint. */
