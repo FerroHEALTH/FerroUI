@@ -122,6 +122,14 @@ document-view = View
 document-copy = Copy
 document-highlighted-region = { $document }, highlighted
 document-raw-region = { $document }, raw
+code-lines =
+    { $count ->
+        [one] { $count } line
+       *[other] { $count } lines
+    }
+code-region = { $code }, one numbered line per line
+code-error = Error:
+code-warning = Warning:
 copy-copied = Copied
 copy-said-copied = Copied to the clipboard.
 copy-said-refused = Copy failed: the browser refused the clipboard.

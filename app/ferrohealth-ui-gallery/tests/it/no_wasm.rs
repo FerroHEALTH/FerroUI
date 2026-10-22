@@ -65,6 +65,55 @@ async fn text_of(browser: &Browser, by: By) -> Result<String, Box<dyn Error>> {
     Ok(browser.element(by).await?.text().await?.trim().to_owned())
 }
 
+/// Reaches each view of the code page's document pane through its link,
+/// and its other format through the format's link.
+async fn document_views(browser: &Browser) -> Result<(), Box<dyn Error>> {
+    let highlighted = browser.element(By::Id("document-highlighted")).await?;
+    let raw = browser.element(By::Id("document-raw")).await?;
+    assert!(
+        !raw.is_displayed().await?,
+        "the raw view waits for its link"
+    );
+    browser
+        .element(By::Css(".fui-document-switch a[data-view='raw']"))
+        .await?
+        .click()
+        .await?;
+    until("the raw view shows by its link", async || {
+        Ok(raw.is_displayed().await? && !highlighted.is_displayed().await?)
+    })
+    .await?;
+    let rendered = browser.element(By::Id("document-rendered")).await?;
+    browser
+        .element(By::Css(".fui-document-switch a[data-view='rendered']"))
+        .await?
+        .click()
+        .await?;
+    until("the rendered view shows by its link", async || {
+        Ok(rendered.is_displayed().await? && !raw.is_displayed().await?)
+    })
+    .await?;
+    browser
+        .element(By::XPath(
+            "//nav[contains(@class, 'fui-segmented')]/a[text() = 'XML']",
+        ))
+        .await?
+        .click()
+        .await?;
+    browser
+        .element(By::Css("#document-highlighted .fui-tok-tag"))
+        .await?;
+    assert!(
+        browser
+            .driver()
+            .find_all(By::Css(".fui-document button"))
+            .await?
+            .is_empty(),
+        "no control in the pane works only with script"
+    );
+    Ok(())
+}
+
 /// Checks what a brand's page at `page` must show with no WebAssembly,
 /// beyond its heading and its navigation.
 async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error>> {
@@ -98,6 +147,7 @@ async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error
         "/code" => {
             let shown = text_of(browser, By::Id("document-highlighted")).await?;
             assert!(!shown.is_empty(), "the document pane shows its document");
+            document_views(browser).await?;
         }
         "/overlays" => {
             browser

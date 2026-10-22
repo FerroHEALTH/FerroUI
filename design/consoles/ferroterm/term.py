@@ -195,7 +195,7 @@ def codeview(title, text, meta="", label=None):
     head = (f'<div class="fui-codeview-head"><span class="fui-codeview-path">{title}</span>'
             f'<span class="fui-codeview-meta">{meta}<span>{n} lines</span>{copy_button("Copy", "the JSON")}'
             f'{icon_button("download", "Download the JSON")}</span></div>')
-    return (f'<div class="fui-codeview">{head}<div class="fui-code-panel fui-code-panel-numbered" role="region" aria-label="{e(label or title)}, one numbered line per line" tabindex="0">'
+    return (f'<div class="fui-codeview">{head}<div class="fui-code-panel fui-code-panel-numbered fui-scroll-cue" role="region" aria-label="{e(label or title)}, one numbered line per line" tabindex="0">'
             f'<pre>{json_lines(text)}</pre></div></div>')
 
 

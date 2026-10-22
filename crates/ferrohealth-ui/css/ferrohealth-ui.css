@@ -4203,20 +4203,38 @@
 
   /* ---- The document pane ---- */
 
+  /* The format links and the view switch share a row over the views. */
   .fui-document {
-    display: grid;
-    gap: 0.75rem;
-  }
-
-  .fui-document-tools {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--space-default);
+    gap: 0.75rem;
   }
 
-  .fui-document-copy {
-    margin-inline-start: auto;
+  .fui-document-views {
+    flex: 1 0 100%;
+    min-width: 0;
+  }
+
+  /* A view a link targets keeps its switch in sight above it. */
+  .fui-document-view {
+    scroll-margin-block-start: 4rem;
+  }
+
+  .fui-document-view > .fui-codeview,
+  .fui-document-view > .fui-code-panel {
+    border: 1px solid var(--edge);
+    border-radius: var(--radius-card);
+    overflow: hidden;
+  }
+
+  .fui-document-view > .fui-code-panel {
+    overflow: auto;
+  }
+
+  .fui-document-view pre {
+    white-space: pre;
+    overflow-wrap: normal;
   }
 
   .fui-document-rendered {
@@ -4225,8 +4243,33 @@
     padding: 0.75rem;
   }
 
-  .fui-document-body > pre {
-    white-space: pre;
+  /* The view chosen shows and the others hide. */
+  .fui-document-views[data-shown="highlighted"] .fui-document-view:not([data-view="highlighted"]),
+  .fui-document-views[data-shown="raw"] .fui-document-view:not([data-view="raw"]),
+  .fui-document-views[data-shown="rendered"] .fui-document-view:not([data-view="rendered"]) {
+    display: none;
+  }
+
+  /* With no WebAssembly a view's link targets it, and the view targeted
+     shows in place of the chosen one, its segment marked. */
+  .fui-document-views:not(.is-live):has(.fui-document-view:target) .fui-document-view:not(:target) {
+    display: none;
+  }
+
+  .fui-document-views:not(.is-live) .fui-document-view:target {
+    display: block;
+  }
+
+  .fui-document:has(.fui-document-views:not(.is-live) .fui-document-view:target) .fui-document-switch > .fui-segment[aria-current="true"] {
+    background: transparent;
+    color: var(--muted);
+  }
+
+  .fui-document:has(.fui-document-views:not(.is-live) [data-view="highlighted"]:target) .fui-document-switch > .fui-segment[data-view="highlighted"],
+  .fui-document:has(.fui-document-views:not(.is-live) [data-view="raw"]:target) .fui-document-switch > .fui-segment[data-view="raw"],
+  .fui-document:has(.fui-document-views:not(.is-live) [data-view="rendered"]:target) .fui-document-switch > .fui-segment[data-view="rendered"] {
+    background: var(--accent);
+    color: var(--accent-ink);
   }
 
   /* ==== The console layer: the family rules as CSS and the class of every
@@ -9851,6 +9894,18 @@
     min-width: 0;
   }
 
+  /* A viewer card in a grid row is as tall as the row; its box fills it, so
+     the card ends in code, never in an empty band. */
+  .fui-grid > .fui-codeview-card {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .fui-codeview-card > .fui-codeview,
+  .fui-codeview-card > .fui-codeview > .fui-code-panel {
+    flex: 1 1 auto;
+  }
+
   .fui-codeview-head {
     display: flex;
     flex-wrap: wrap;
@@ -9860,12 +9915,14 @@
     border-bottom: 1px solid var(--edge);
   }
 
+  /* The path is the head's title: the prose font at the title weight, never
+     bold mono, breaking only after a slash. */
   .fui-codeview-path {
-    font-family: var(--font-mono);
-    font-size: var(--text-small);
+    margin: 0;
+    font-size: var(--text-body);
     line-height: var(--leading-body);
     font-weight: 600;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
 
   .fui-codeview-meta {
@@ -9971,7 +10028,7 @@
      own end covers once you reach it (the background-attachment local and
      scroll pair), so the cue shows only while there is more to the side. */
 
-  .fui-codeview .fui-code-panel,
+  .fui-scroll-cue,
   .fui-mapping-editor .fui-editor,
   .fui-transform-pane .fui-code-panel,
   .fui-transform-pane .fui-editor,

@@ -258,3 +258,66 @@ fn a_phone_row_keeps_its_checkbox_on_its_first_line() {
         "a work-list row's checkbox leads its first line"
     );
 }
+
+#[test]
+fn a_document_view_a_link_targets_shows_until_the_island_takes_over() {
+    assert!(
+        STYLESHEET.contains(
+            "  .fui-document-views:not(.is-live):has(.fui-document-view:target) .fui-document-view:not(:target) {\n    display: none;"
+        ),
+        "with no WebAssembly the view a link targets replaces the chosen one"
+    );
+    assert!(
+        STYLESHEET.contains(
+            "  .fui-document-views:not(.is-live) .fui-document-view:target {\n    display: block;"
+        ),
+        "the targeted view shows"
+    );
+}
+
+#[test]
+fn every_clipping_code_pane_takes_the_one_scroll_cue_class() {
+    let cue = STYLESHEET
+        .find("  .fui-scroll-cue,\n")
+        .expect("the scroll cue is one class");
+    let rule = &STYLESHEET[cue..cue + 600];
+    assert!(
+        rule.contains("scrollbar-width: thin;"),
+        "a thin scrollbar: {rule}"
+    );
+    assert!(
+        rule.contains("no-repeat local") && rule.contains("no-repeat scroll"),
+        "the shadow on the clipped edge goes at the end: {rule}"
+    );
+}
+
+#[test]
+fn a_code_viewers_path_is_a_title_in_the_prose_font() {
+    let at = STYLESHEET
+        .find("  .fui-codeview-path {")
+        .expect("the path's rule");
+    let rule = &STYLESHEET[at..at + STYLESHEET[at..].find('}').unwrap_or(0)];
+    assert!(!rule.contains("font-mono"), "never bold mono: {rule}");
+    assert!(
+        rule.contains("font-weight: 600;"),
+        "the title weight: {rule}"
+    );
+    assert!(
+        !rule.contains("overflow-wrap: anywhere"),
+        "a path breaks after a slash, never inside a name: {rule}"
+    );
+}
+
+#[test]
+fn a_viewer_a_table_and_a_list_of_findings_in_a_section_reach_both_edges() {
+    for part in ["fui-table-scroll", "fui-diags", "fui-codeview"] {
+        let rule = format!("  .fui-panel-section > .{part} {{\n");
+        let at = STYLESHEET
+            .find(&rule)
+            .unwrap_or_else(|| panic!("{part} in a section"));
+        assert!(
+            STYLESHEET[at..at + 200].contains("margin-inline: calc(var(--space-loose) * -1);"),
+            "{part} runs edge to edge in a section"
+        );
+    }
+}

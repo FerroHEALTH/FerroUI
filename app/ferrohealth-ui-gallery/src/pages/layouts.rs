@@ -10,16 +10,22 @@
 use std::collections::BTreeSet;
 
 use crate::locale::{Msg, tr};
+use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::view::button::{Variant, label};
+use ferrohealth_ui::view::change::{Change, change_table};
 use ferrohealth_ui::view::chart::proportion;
+use ferrohealth_ui::view::code::{Code, CodeHead, Gravity, LineDiagnostic, code_section};
 use ferrohealth_ui::view::form::{FORM, INPUT, MEDIUM, NARROW, PROSE, SELECT, field, help_id};
 use ferrohealth_ui::view::layout::{
     FieldRow, Gap, Pane, bullet_list, divided_list, field_row, main_aside, master_detail, stack_at,
     three_panes, tile_list,
 };
 use ferrohealth_ui::view::status::pill;
-use ferrohealth_ui::view::surface::{card, definitions, or_none, page_header, split};
+use ferrohealth_ui::view::surface::{
+    SectionHead, add_row, card, definitions, or_none, page_header, panel_section,
+    panel_sections_card, section_intro, split,
+};
 use ferrohealth_ui::widget::help::{
     explained_check_field, explained_field, help_switch, provide_help,
 };
@@ -515,6 +521,87 @@ fn fieldset_in_card() -> AnyView {
     .into_any()
 }
 
+/// A panel of three sections (B10): a table, a list and a code viewer,
+/// each running to the panel's edges under its heading row.
+fn sections_panel() -> AnyView {
+    let staged = [
+        Change {
+            key: String::from("members.node-a.base"),
+            from: Some(String::from("https://node-a.example.org/")),
+            to: Some(String::from("https://node-a2.example.org/")),
+        },
+        Change {
+            key: String::from("routing.timeout"),
+            from: Some(String::from("30s")),
+            to: None,
+        },
+    ];
+    let table = panel_section(
+        Some(SectionHead {
+            title: tr(Msg::StagedChanges),
+            count: Some(2),
+            actions: None,
+        }),
+        change_table(tr(Msg::StagedConfigurationAgainstRunningOne), &staged),
+    );
+    let steps = [
+        tr(Msg::Tight),
+        tr(Msg::Default),
+        tr(Msg::Loose),
+        tr(Msg::Section),
+    ]
+    .into_iter()
+    .map(IntoAny::into_any)
+    .collect();
+    let list = panel_section(
+        Some(SectionHead {
+            title: tr(Msg::SpacingSteps),
+            count: Some(4),
+            actions: None,
+        }),
+        view! {
+            {section_intro(tr(Msg::PanelSectionsIntro))}
+            {divided_list(None, steps)}
+            {add_row(
+                view! {
+                    <button type="button" class=Variant::Ghost.small()>
+                        {tr(Msg::AddStep)}
+                    </button>
+                },
+            )}
+        },
+    );
+    let [path, ..] = crate::data::FILE_NAMES;
+    let source = code_section(
+        CodeHead {
+            title: String::from(path),
+            tags: vec![tr(Msg::Yaml)],
+            ..CodeHead::default()
+        },
+        &Code {
+            label: tr(Msg::MappingFileYaml),
+            language: Language::Yaml,
+            text: String::from(crate::data::YAML),
+            ids: None,
+            current: None,
+            diagnostics: vec![LineDiagnostic {
+                line: 19,
+                gravity: Gravity::Warning,
+                code: String::from(crate::data::FINDING_CODES[1]),
+                message: tr(Msg::FindingStartTwice),
+            }],
+        },
+    );
+    panel_sections_card(
+        tr(Msg::PanelSections),
+        view! {
+            {table}
+            {list}
+            {source}
+        },
+    )
+}
+
 /// The layouts page.
 #[component]
 #[expect(
@@ -529,6 +616,7 @@ pub fn LayoutsPage() -> impl IntoView {
     )
     .into_any();
     let sections = (
+        sections_panel(),
         browser(),
         listing(),
         card(
@@ -554,6 +642,7 @@ pub fn LayoutsPage() -> impl IntoView {
                 {sections.4}
                 {sections.5}
                 {sections.6}
+                {sections.7}
             },
         )}
     }

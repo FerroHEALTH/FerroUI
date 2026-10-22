@@ -58,7 +58,6 @@ inner_html_files=(
   "crates/ferrohealth-ui/src/view/chart.rs"
   "crates/ferrohealth-ui/src/view/code.rs"
   "crates/ferrohealth-ui/src/widget/chart.rs"
-  "crates/ferrohealth-ui/src/widget/document.rs"
   "crates/ferrohealth-ui/src/widget/editor.rs"
 )
 

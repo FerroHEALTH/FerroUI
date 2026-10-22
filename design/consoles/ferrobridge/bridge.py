@@ -138,7 +138,7 @@ def codeview(path, text, diags=(), current=None, lang="fhirconnect", owner="cons
             f'<span class="fui-codeview-meta">{lang_tag(lang)}{owner_tag(owner)}<span>{n} lines</span>'
             f'<span class="fui-codeview-sha" title="SHA-256 of the bytes the bridge serves">SHA-256 {e(sha)}</span>'
             f'{copy_button("Copy", "the file")}</span></div>')
-    return (f'<div class="fui-codeview">{head}<div class="fui-code-panel fui-code-panel-numbered" role="region" aria-label="{e(label or path)}, one numbered line per line" tabindex="0">'
+    return (f'<div class="fui-codeview">{head}<div class="fui-code-panel fui-code-panel-numbered fui-scroll-cue" role="region" aria-label="{e(label or path)}, one numbered line per line" tabindex="0">'
             f'<pre>{code_lines(text, diags, current)}</pre></div></div>')
 
 

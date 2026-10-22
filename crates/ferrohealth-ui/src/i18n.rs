@@ -687,6 +687,16 @@ texts! {
     DocumentHighlightedRegion = "document-highlighted-region",
     /// The raw view of the `$document`.
     DocumentRawRegion = "document-raw-region",
+    /// A code viewer's line count, by `$count`.
+    CodeLines = "code-lines",
+    /// The accessible name of a code viewer's box: `$code` is its name.
+    CodeRegion = "code-region",
+    /// The word before an error drawn under its line, for assistive
+    /// technology.
+    CodeError = "code-error",
+    /// The word before a warning drawn under its line, for assistive
+    /// technology.
+    CodeWarning = "code-warning",
     /// The copy button once the text is on the clipboard.
     CopyCopied = "copy-copied",
     /// The announcement of a copy.
@@ -809,9 +819,9 @@ mod tests {
 
     /// The names of the placeables the library's messages take.
     const PLACEABLES: &[&str] = &[
-        "chart", "count", "date", "document", "file", "filter", "first", "held", "key", "kinds",
-        "last", "limit", "note", "noun", "nouns", "page", "pages", "range", "shown", "size",
-        "stated", "status", "summary", "time", "total", "what", "words",
+        "chart", "code", "count", "date", "document", "file", "filter", "first", "held", "key",
+        "kinds", "last", "limit", "note", "noun", "nouns", "page", "pages", "range", "shown",
+        "size", "stated", "status", "summary", "time", "total", "what", "words",
     ];
 
     /// The ids of the messages the catalog file at `path` defines.

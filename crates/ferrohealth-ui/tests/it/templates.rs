@@ -500,7 +500,10 @@ fn the_about_page_writes_the_console_version_in_the_footer_form() {
             &page,
             "div",
             &[
-                ("class", "fui-code-panel fui-self-description"),
+                (
+                    "class",
+                    "fui-code-panel fui-self-description fui-scroll-cue"
+                ),
                 ("role", "region"),
                 ("tabindex", "0")
             ]

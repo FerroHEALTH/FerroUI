@@ -214,21 +214,35 @@ pub fn html(
             out.push('"');
         }
         out.push('>');
-        for token in line {
-            match token.kind.class() {
-                Some(class) => {
-                    out.push_str("<span class=\"");
-                    out.push_str(class);
-                    out.push_str("\">");
-                    escape(&token.text, &mut out);
-                    out.push_str("</span>");
-                }
-                None => escape(&token.text, &mut out),
-            }
-        }
+        push_tokens(&line, &mut out);
         out.push_str("</span>");
     }
     out
+}
+
+/// Returns the tokens of one line, as [`lines`] cut them, as HTML: each
+/// classed token a `<span>` of its class, every character escaped.
+#[must_use]
+pub fn line_html(line: &[Token]) -> String {
+    let mut out = String::new();
+    push_tokens(line, &mut out);
+    out
+}
+
+/// Appends the tokens `line` to `out` as escaped, classed HTML.
+fn push_tokens(line: &[Token], out: &mut String) {
+    for token in line {
+        match token.kind.class() {
+            Some(class) => {
+                out.push_str("<span class=\"");
+                out.push_str(class);
+                out.push_str("\">");
+                escape(&token.text, out);
+                out.push_str("</span>");
+            }
+            None => escape(&token.text, out),
+        }
+    }
 }
 
 /// Appends `text` to `out` with the five characters HTML gives meaning to
@@ -311,7 +325,7 @@ fn quoted(chars: &mut Peekable<Chars<'_>>) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{Kind, Language, Lines, html, lines, tokens};
+    use super::{Kind, Language, Lines, html, line_html, lines, tokens};
 
     #[test]
     fn every_language_reads_back_as_its_input() {
@@ -364,6 +378,15 @@ mod tests {
         assert_eq!(
             "<span class=\"fui-code-line\">x &amp; &#39;y&#39;</span>",
             html(Language::Plain, "x & 'y'", Lines::default(), |_| None)
+        );
+    }
+
+    #[test]
+    fn a_line_writes_its_tokens_escaped_and_classed() {
+        let cut = lines(Language::Yaml, "a: \"<b>\"");
+        assert_eq!(
+            "<span class=\"fui-tok-key\">a</span>: <span class=\"fui-tok-string\">&quot;&lt;b&gt;&quot;</span>",
+            line_html(cut.first().map_or(&[][..], Vec::as_slice))
         );
     }
 

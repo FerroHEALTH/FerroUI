@@ -29,12 +29,6 @@ pub fn RequestsChart() -> impl IntoView {
     crate::pages::charts::requests_chart()
 }
 
-/// The code page's document pane.
-#[island]
-pub fn ObservationDocument() -> impl IntoView {
-    crate::pages::code::observation_document()
-}
-
 /// The confirm button of a confirmation dialog, which raises a toast.
 #[island]
 pub fn ConfirmAndToast(

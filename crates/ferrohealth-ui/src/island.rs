@@ -60,6 +60,30 @@ pub fn KeyboardTabs(
     crate::widget::tabs::tab_list(label, prefix, tabs, children().into_any())
 }
 
+/// The view switch of the document pane `id`, named `label`, one link per
+/// choice in `views`, over the views the server drew as its children; the
+/// view `opening` shows first. A console draws it through
+/// [`crate::view::document::document_pane`].
+#[island]
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "an island takes its props by value, as they arrive from the page"
+)]
+pub fn DocumentViews(
+    /// The pane's id, which each view's id starts with.
+    id: String,
+    /// The switch's name, in the page's locale.
+    label: String,
+    /// The views offered, each with its words in the page's locale.
+    views: Vec<crate::widget::document::ViewChoice>,
+    /// The view shown first.
+    opening: crate::widget::document::DocumentView,
+    /// The views, drawn on the server.
+    children: Children,
+) -> impl IntoView {
+    crate::widget::document::view_switch(&id, label, views, opening, children().into_any())
+}
+
 /// The key hint of a setting, copying its `key` when pressed (R15). The
 /// settings template draws it on each setting's label line.
 #[island]
