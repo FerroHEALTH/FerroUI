@@ -495,7 +495,8 @@ pub fn identifier(identifier: Identifier, on_reveal: Callback<()>) -> AnyView {
 /// once the page has hydrated.
 ///
 /// The busy twin is `aria-disabled` and takes no press, so it can hold the
-/// focus Reveal hands it while the server answers.
+/// focus Reveal hands it while the server answers; it is out of the tab
+/// order, since there is nothing to do on it.
 fn reveal_press(
     state: RwSignal<Reveal>,
     on_reveal: Callback<()>,
@@ -529,6 +530,7 @@ fn reveal_press(
                 class:is-away=move || !busy()
                 aria-busy="true"
                 aria-disabled="true"
+                tabindex="-1"
                 node_ref=focus.busy
             >
                 <span class="fui-spinner-ring" aria-hidden="true"></span>

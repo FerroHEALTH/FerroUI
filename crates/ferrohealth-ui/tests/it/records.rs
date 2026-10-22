@@ -646,9 +646,13 @@ fn the_copy_button_waits_in_an_inert_face_while_masked() {
         has(
             &drawn,
             "button",
-            &[("aria-busy", "true"), ("aria-disabled", "true")]
+            &[
+                ("aria-busy", "true"),
+                ("aria-disabled", "true"),
+                ("tabindex", "-1")
+            ]
         ),
-        "the busy twin takes no press: {drawn}"
+        "the busy twin takes no press and no tab stop: {drawn}"
     );
     assert!(drawn.contains(">Copy</button>"), "{drawn}");
     let faces: Vec<_> = tags(&drawn, "span")
