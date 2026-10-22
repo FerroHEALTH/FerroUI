@@ -30,7 +30,8 @@ ferrohealth-ui = "=0.3.0"
 
 Serve `ferrohealth_ui::style::STYLESHEET` and your brand's `Brand::theme()`
 as two stylesheets of your own origin, and write `data-theme` on `<html>`.
-The crate README has the details.
+The crate README has the details, and [`docs/consoles.md`](docs/consoles.md)
+is the guide for a console repository building on the library.
 
 ## Accessibility
 
