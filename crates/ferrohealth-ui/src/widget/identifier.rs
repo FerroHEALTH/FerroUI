@@ -24,6 +24,10 @@
 //! 1.2, `status`), the reveal is a toggle with `aria-pressed`, and the
 //! three faces (masked, revealed, the busy round trip) share one reserved
 //! slot, so revealing, counting down and hiding move nothing around it.
+//! When a face goes away with the keyboard focus in it, the focus moves to
+//! the button of the face that takes its place: Reveal to its busy twin,
+//! then to Hide, and Hide, a refusal or the end of the countdown back to
+//! Reveal, so the focus is never dropped to the page (WCAG 2.2 SC 2.4.3).
 //! [`identifier_static`] is the listing form, with no control.
 //!
 //! No specification governs the component: our own design.
@@ -398,6 +402,8 @@ pub fn identifier(identifier: Identifier, on_reveal: Callback<()>) -> AnyView {
     Effect::new(move |_| hydrated.set(true));
     let total = StoredValue::new(0_u32);
     count_down(state, total);
+    let focus = Focus::default();
+    focus.follow(state);
     let IdentifierWords {
         reveal,
         revealing,
@@ -437,7 +443,13 @@ pub fn identifier(identifier: Identifier, on_reveal: Callback<()>) -> AnyView {
         copied,
     };
     view! {
-        <span class="fui-identifier" id=id>
+        <span
+            class="fui-identifier"
+            id=id
+            node_ref=focus.root
+            on:focusin=move |_| focus.entered()
+            on:focusout=move |event| focus.left(&event)
+        >
             {domain_part(&masked.domain, show_domain)}
             <span class="fui-identifier-slot">
                 <span class="fui-identifier-face" class:is-away=shown inert=shown>
@@ -450,7 +462,7 @@ pub fn identifier(identifier: Identifier, on_reveal: Callback<()>) -> AnyView {
                         {icon(Glyph::EYE, "14")}
                         {reveal.clone()}
                     </a>
-                    {reveal_press(state, on_reveal, reveal, revealing, hydrated)}
+                    {reveal_press(state, on_reveal, reveal, revealing, hydrated, focus)}
                     <span
                         class="fui-identifier-expired"
                         class:is-away=move || state.get() != Reveal::Expired
@@ -458,7 +470,7 @@ pub fn identifier(identifier: Identifier, on_reveal: Callback<()>) -> AnyView {
                         {expired}
                     </span>
                 </span>
-                {revealed_face(state, total, shown_words)}
+                {revealed_face(state, total, shown_words, focus.hide)}
             </span>
             <span class="fui-sr-only" role="status">
                 {move || said.get()}
@@ -481,12 +493,16 @@ pub fn identifier(identifier: Identifier, on_reveal: Callback<()>) -> AnyView {
 
 /// Returns the Reveal button and its busy twin, which share one place, shown
 /// once the page has hydrated.
+///
+/// The busy twin is `aria-disabled` and takes no press, so it can hold the
+/// focus Reveal hands it while the server answers.
 fn reveal_press(
     state: RwSignal<Reveal>,
     on_reveal: Callback<()>,
     reveal: String,
     revealing: String,
     hydrated: RwSignal<bool>,
+    focus: Focus,
 ) -> AnyView {
     let busy = move || state.get() == Reveal::Busy;
     let press = move |_| {
@@ -501,6 +517,7 @@ fn reveal_press(
                 class:is-away=busy
                 aria-pressed="false"
                 disabled=busy
+                node_ref=focus.reveal
                 on:click=press
             >
                 {icon(Glyph::EYE, "14")}
@@ -511,7 +528,8 @@ fn reveal_press(
                 class=Variant::Secondary.small()
                 class:is-away=move || !busy()
                 aria-busy="true"
-                disabled
+                aria-disabled="true"
+                node_ref=focus.busy
             >
                 <span class="fui-spinner-ring" aria-hidden="true"></span>
                 {revealing}
@@ -539,7 +557,12 @@ struct ShownWords {
 
 /// Returns the revealed face of the slot: the value with its countdown,
 /// Hide and Copy, away and inert while nothing is revealed.
-fn revealed_face(state: RwSignal<Reveal>, total: StoredValue<u32>, words: ShownWords) -> AnyView {
+fn revealed_face(
+    state: RwSignal<Reveal>,
+    total: StoredValue<u32>,
+    words: ShownWords,
+    hide_ref: NodeRef<leptos::html::Button>,
+) -> AnyView {
     let ShownWords {
         revealed: revealed_words,
         countdown,
@@ -587,6 +610,7 @@ fn revealed_face(state: RwSignal<Reveal>, total: StoredValue<u32>, words: ShownW
                     class=format!("{} fui-identifier-reveal", Variant::Secondary.small())
                     aria-pressed="true"
                     disabled=move || !shown()
+                    node_ref=hide_ref
                     on:click=move |_| state.set(Reveal::Masked)
                 >
                     {icon(Glyph::EYE_OFF, "14")}
@@ -609,6 +633,130 @@ fn revealed_face(state: RwSignal<Reveal>, total: StoredValue<u32>, words: ShownW
         </span>
     }
     .into_any()
+}
+
+/// Which face of the slot shows, for the focus.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Face {
+    /// Masked, refused or hidden again: Reveal shows.
+    Masked,
+    /// The round trip: the busy twin shows.
+    Busy,
+    /// The value shows, with Hide.
+    Shown,
+}
+
+impl Face {
+    /// The face `reveal` shows.
+    const fn of(reveal: &Reveal) -> Self {
+        match reveal {
+            Reveal::Busy => Self::Busy,
+            Reveal::Shown(_) => Self::Shown,
+            Reveal::Masked | Reveal::Refused(_) | Reveal::Expired => Self::Masked,
+        }
+    }
+}
+
+/// The elements the focus moves between as the faces change, and whether
+/// the identifier last held it.
+#[derive(Debug, Clone, Copy)]
+struct Focus {
+    /// The identifier.
+    root: NodeRef<leptos::html::Span>,
+    /// The Reveal button.
+    reveal: NodeRef<leptos::html::Button>,
+    /// Reveal's busy twin.
+    busy: NodeRef<leptos::html::Button>,
+    /// The Hide button.
+    hide: NodeRef<leptos::html::Button>,
+    /// Whether the focus was last inside the identifier: set as it enters,
+    /// cleared only as it moves to another element, since a button the
+    /// face takes away drops it to the page with no element to name.
+    held: StoredValue<bool>,
+}
+
+impl Default for Focus {
+    fn default() -> Self {
+        Self {
+            root: NodeRef::new(),
+            reveal: NodeRef::new(),
+            busy: NodeRef::new(),
+            hide: NodeRef::new(),
+            held: StoredValue::new(false),
+        }
+    }
+}
+
+impl Focus {
+    /// Notes that the focus entered the identifier.
+    fn entered(self) {
+        self.held.set_value(true);
+    }
+
+    /// Notes that the focus left the identifier for another element.
+    fn left(self, event: &leptos::ev::FocusEvent) {
+        #[cfg(target_arch = "wasm32")]
+        {
+            use leptos::wasm_bindgen::JsCast as _;
+            let Some(root) = self.root.get_untracked() else {
+                return;
+            };
+            if let Some(target) = event
+                .related_target()
+                .and_then(|target| target.dyn_into::<web_sys::Node>().ok())
+                && !root.contains(Some(&target))
+            {
+                self.held.set_value(false);
+            }
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        let _: (Self, &leptos::ev::FocusEvent) = (self, event);
+    }
+
+    /// Moves the focus to the button of each face `state` turns to, when
+    /// the focus is in the identifier or was dropped to the page from it.
+    fn follow(self, state: RwSignal<Reveal>) {
+        let face = Memo::new(move |_| Face::of(&state.get()));
+        Effect::new(move |last: Option<Face>| {
+            let now = face.get();
+            if last.is_some_and(|last| last != now) {
+                let target = match now {
+                    Face::Masked => self.reveal,
+                    Face::Busy => self.busy,
+                    Face::Shown => self.hide,
+                };
+                self.hand_to(target);
+            }
+            now
+        });
+    }
+
+    /// Focuses `target` once the faces have changed, if the identifier
+    /// holds the focus.
+    fn hand_to(self, target: NodeRef<leptos::html::Button>) {
+        #[cfg(target_arch = "wasm32")]
+        request_animation_frame(move || {
+            let (Some(root), Some(target)) = (self.root.get_untracked(), target.get_untracked())
+            else {
+                return;
+            };
+            let held = match document().active_element() {
+                Some(active) => {
+                    root.contains(Some(&active))
+                        || (self.held.get_value()
+                            && document().body().is_some_and(|body| {
+                                AsRef::<web_sys::Element>::as_ref(&body) == &active
+                            }))
+                }
+                None => self.held.get_value(),
+            };
+            if held && target.focus().is_err() {
+                leptos::logging::warn!("the browser refused the focus on an identifier's button");
+            }
+        });
+        #[cfg(not(target_arch = "wasm32"))]
+        let _: (Self, NodeRef<leptos::html::Button>) = (self, target);
+    }
 }
 
 /// The text the revealed face holds while nothing is revealed, so the

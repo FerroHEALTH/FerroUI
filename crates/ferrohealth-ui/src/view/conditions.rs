@@ -14,7 +14,8 @@
 //! and Add a group close each group.
 //!
 //! Every control is a field of the console's own form, which wraps the
-//! groups: the choices post as they stand, and Remove, Add a condition and
+//! groups: the choices post as they stand (a chosen value its select does
+//! not list stays chosen, said to be not in the list), and Remove, Add a condition and
 //! Add a group are submit buttons naming what they act on, so the builder
 //! works with no WebAssembly (`leptos-ui.md` §15.8). No specification
 //! governs the builder: our own design; the query it builds is the
@@ -126,9 +127,23 @@ pub struct ConditionGroup {
 }
 
 /// Returns the options of `choice` as `<option>`s, the chosen one selected.
+///
+/// A chosen value no option holds leads as an option of its own, selected
+/// and said to be not in the list, so the select shows and posts the value
+/// the condition has rather than its first option; an empty one chooses
+/// nothing.
 fn options(choice: Choice) -> AnyView {
     let Choice { options, chosen } = choice;
-    options
+    let unlisted =
+        (!chosen.is_empty() && !options.iter().any(|(value, _)| *value == chosen)).then(|| {
+            let words = tr_with(Text::CondNotListed, &[("value", Arg::from(chosen.clone()))]);
+            view! {
+                <option value=chosen.clone() selected=true>
+                    {words}
+                </option>
+            }
+        });
+    let listed = options
         .into_iter()
         .map(|(value, words)| {
             let selected = value == chosen;
@@ -138,8 +153,12 @@ fn options(choice: Choice) -> AnyView {
                 </option>
             }
         })
-        .collect_view()
-        .into_any()
+        .collect_view();
+    view! {
+        {unlisted}
+        {listed}
+    }
+    .into_any()
 }
 
 /// Returns the select `id` holding `choice`.

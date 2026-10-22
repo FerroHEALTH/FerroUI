@@ -6,7 +6,10 @@
 //! under the list.
 //!
 //! A row's Remove is its last control; on a phone the fields stack and
-//! Remove stays on the row's first line, beside the first field. M4's
+//! Remove stays on the row's first line, beside the first field. A row the
+//! list keeps ends in a disabled lock, hidden from a reader, and says why
+//! in a visible line under it, never in a tooltip alone (F13's rule for a
+//! disabled item). M4's
 //! filter rows and M6's target rows are F7 rows ([`Fields::Three`]).
 //!
 //! Remove and Add are submit buttons of the console's form, so with no
@@ -72,8 +75,8 @@ pub enum RowEnd {
         /// The value it submits, the row's key.
         value: String,
     },
-    /// A row the list keeps: a disabled lock that says `reason` as its
-    /// name and tooltip, such as a property the editor writes itself.
+    /// A row the list keeps: a disabled lock at its end and `reason` as a
+    /// visible line under it, such as a property the editor writes itself.
     Kept {
         /// Why the row cannot be removed.
         reason: String,
@@ -155,21 +158,12 @@ fn row_end(end: RowEnd, form: Option<String>) -> AnyView {
             }
             .into_any()
         }
-        RowEnd::Kept { reason } => {
-            let title = reason.clone();
-            view! {
-                <button
-                    type="button"
-                    class="fui-icon-button"
-                    disabled=true
-                    aria-label=reason
-                    title=title
-                >
-                    {icon(Glyph::LOCK, "16")}
-                </button>
-            }
-            .into_any()
+        RowEnd::Kept { .. } => view! {
+            <button type="button" class="fui-icon-button" disabled=true aria-hidden="true">
+                {icon(Glyph::LOCK, "16")}
+            </button>
         }
+        .into_any(),
     }
 }
 
@@ -181,10 +175,17 @@ fn row(row: RepeatRow, fields: Fields, form: Option<String>) -> AnyView {
         end,
         after,
     } = row;
+    let kept = match &end {
+        RowEnd::Kept { reason } => {
+            Some(view! { <p class="fui-help fui-repeat-kept">{reason.clone()}</p> })
+        }
+        RowEnd::Remove { .. } => None,
+    };
     let end = row_end(end, form);
     view! {
         <div class="fui-repeat-item" data-row=key>
             <div class=fields.row()>{inside} {end}</div>
+            {kept}
             {after}
         </div>
     }

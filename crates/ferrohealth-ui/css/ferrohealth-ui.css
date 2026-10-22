@@ -4638,7 +4638,9 @@
   }
 
   .fui-compare-stacked-rows dd {
+    min-width: 0;
     margin: 0;
+    overflow-wrap: anywhere;
   }
 
   /* The table from 64 rem, the stacked form below it. */
@@ -4712,6 +4714,48 @@
 
   .fui-compare-lead {
     display: block;
+  }
+
+  /* A record's title in the stacked form wraps inside its segment, and a
+     long leading title inside its line, so the choice never widens the
+     page (WCAG 2.2 SC 1.4.10). */
+  .fui-compare-stacked .fui-segment {
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .fui-compare-stacked p {
+    overflow-wrap: anywhere;
+  }
+
+  /* Past five other records, each record is a disclosure of its own: the
+     title over its quiet line in the summary, the fields inside it, the
+     rows flush with the disclosure's edge. */
+  .fui-compare-records {
+    display: grid;
+    gap: var(--space-default);
+  }
+
+  .fui-compare-record > summary {
+    overflow-wrap: anywhere;
+  }
+
+  .fui-compare-record > summary .fui-compare-sub {
+    display: block;
+    color: var(--muted);
+    font-size: var(--text-small);
+    line-height: var(--leading-small);
+    font-weight: 400;
+  }
+
+  .fui-compare-record > summary + div {
+    padding: 0;
+  }
+
+  .fui-compare-record .fui-compare-stacked-rows {
+    border: 0;
+    border-radius: 0 0 var(--radius-card) var(--radius-card);
   }
 
   @media (width >= 64rem) {
@@ -4909,6 +4953,16 @@
     list-style: none;
   }
 
+  /* A windowed timeline's foot: how many events show, then the link to
+     the older ones, wrapping between the two. */
+  .fui-timeline-more {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.75rem;
+    margin: var(--space-default) 0 0;
+  }
+
   /* The rail runs behind the dots, from the first to the last. */
   .fui-timeline::before {
     content: "";
@@ -4943,6 +4997,14 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 0.25rem 0.625rem;
+  }
+
+  /* A long event code, title, actor or reason wraps inside the event, so
+     the timeline never widens the page (WCAG 2.2 SC 1.4.10); the time
+     keeps to one line. */
+  :is(.fui-timeline-code, .fui-timeline-title, .fui-timeline-meta, .fui-timeline-reason) {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .fui-timeline-title {
@@ -4999,6 +5061,7 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 0.375rem 0.5rem;
+    max-width: 100%;
   }
 
   /* The masked value in the code face: the mask glyphs muted, the tail
@@ -5069,6 +5132,8 @@
      revealing, counting down and hiding move nothing around it. */
   .fui-identifier-slot {
     display: inline-grid;
+    grid-template-columns: minmax(0, auto);
+    max-width: 100%;
   }
 
   .fui-identifier-face {
@@ -5518,11 +5583,18 @@
   /* ---- R2. The tag: a short name in the UI face (domains, channels) ---- */
 
   /* The chip keeps the code face for an id; a name (a domain, a channel,
-     a kind) is a tag in the UI face (review round 1, item 10). */
+     a kind) is a tag in the UI face (review round 1, item 10). A tag
+     stays on one line while it fits; one wider than its box (a canonical
+     URL, an OID) wraps between its words and breaks inside a word only
+     where the word alone is wider, so it never widens the page (WCAG 2.2
+     SC 1.4.10). In a row it keeps its width and gives none to a
+     neighbour, as a word that never broke did. */
   .fui-tag {
     display: inline-flex;
+    flex-shrink: 0;
     align-items: center;
     gap: var(--space-tight);
+    max-width: 100%;
     border: 1px solid var(--edge);
     border-radius: var(--radius-control);
     background: var(--surface-sunken);
@@ -5531,7 +5603,8 @@
     font-size: var(--text-micro);
     line-height: 1.125rem;
     font-weight: 500;
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   /* A tag's raw code after its word: quiet, in the code face. */
@@ -7718,6 +7791,14 @@
     white-space: nowrap;
   }
 
+  /* A revealed value longer than its row breaks anywhere inside it, so
+     it never widens the page (WCAG 2.2 SC 1.4.10). */
+  .fui-identifier-shown > .fui-identifier-value {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
   .fui-identifier-expired {
     color: var(--muted);
     font-size: var(--text-micro);
@@ -8814,6 +8895,11 @@
 
   .fui-repeat-item {
     display: contents;
+  }
+
+  /* Why a kept row cannot be removed, under it. */
+  .fui-repeat-kept {
+    margin: 0;
   }
 
   @media (width < 40rem) {
@@ -11673,8 +11759,10 @@
   }
 
   .fui-rowgraph-name .fui-muted {
+    min-width: 0;
     font-family: var(--font-sans);
     font-weight: 400;
+    overflow-wrap: anywhere;
   }
 
   .fui-rowgraph-fields {
@@ -11709,6 +11797,21 @@
 
   .fui-rowgraph-fields dd {
     font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+
+  /* No value and an empty text never look alike: NULL in the code face,
+     an empty text in muted words. */
+  .fui-rowgraph-null {
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-micro);
+    line-height: var(--leading-body);
+  }
+
+  .fui-rowgraph-empty {
+    color: var(--muted);
+    font-style: italic;
   }
 
   .fui-concept-zero {
@@ -11726,7 +11829,7 @@
   }
 
   /* On a phone each column stacks over its value, which keeps the full
-     width, so an id never breaks inside. */
+     width, so an id breaks inside only where it alone is wider. */
   @media (width < 40rem) {
     .fui-rowgraph-fields {
       grid-template-columns: minmax(0, 1fr);
@@ -13177,6 +13280,7 @@
      value row; a value keeps its unit; a null flavour is said in words. ---- */
   .fui-reading {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 0;
   }
 
@@ -13196,6 +13300,17 @@
     border-inline-start: 2px solid var(--edge);
   }
 
+  /* Past four levels a cluster indents no further: a dashed hairline over
+     it sets it apart, so a deep document never runs off a phone (WCAG 2.2
+     SC 1.4.10). */
+  .fui-reading-section .fui-reading-section.is-deep {
+    margin-inline-start: 0;
+    padding-inline-start: 0;
+    border-inline-start: 0;
+    border-top: 1px dashed var(--edge-strong);
+    padding-top: 0.375rem;
+  }
+
   .fui-reading-title {
     display: flex;
     flex-wrap: wrap;
@@ -13205,6 +13320,7 @@
     font-size: var(--text-body);
     font-weight: 600;
     line-height: var(--leading-body);
+    overflow-wrap: anywhere;
   }
 
   .fui-reading-section .fui-reading-section > .fui-reading-title {
@@ -13254,11 +13370,13 @@
     color: var(--muted);
     font-size: var(--text-small);
     line-height: var(--leading-body);
+    overflow-wrap: anywhere;
   }
 
   .fui-reading-rows dd {
     margin: 0;
     min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .fui-reading-value {
@@ -13525,9 +13643,10 @@
   }
 
   /* ---- E8 Scope grant: one SMART scope parsed. The raw scope in mono,
-     never broken; what it delegates in words; the operations it permits as
-     tags, an absent one muted and struck, so the grant never rests on
-     colour; a broad grant carries the warn mark. ---- */
+     breaking only after a slash, a dot or a query mark; what it delegates
+     in words; the operations it permits as tags, an absent one muted and
+     struck, so the grant never rests on colour; the search constraint that
+     narrows it; a broad grant carries the warn mark. ---- */
   .fui-scopes {
     display: grid;
     margin: 0;
@@ -13549,10 +13668,25 @@
   }
 
   .fui-scope-raw {
+    min-width: 0;
     font-family: var(--font-mono);
     font-size: var(--text-small);
     line-height: var(--leading-small);
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .fui-scope-constraint {
+    min-width: 0;
+    color: var(--muted);
+    font-size: var(--text-small);
+    line-height: var(--leading-small);
+  }
+
+  .fui-scope-constraint > code {
+    color: var(--ink);
+    font-family: var(--font-mono);
+    overflow-wrap: anywhere;
   }
 
   .fui-scope-reads {

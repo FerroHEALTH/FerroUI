@@ -22,7 +22,7 @@ use ferrohealth_ui::view::conditions::{
 };
 use ferrohealth_ui::view::reading::{Element, Level, Reading, Section, Value, reading};
 use ferrohealth_ui::view::results::{ResultsPane, Shown, Switch, results_pane};
-use ferrohealth_ui::view::scope::{Grant, Scope, ScopeGrant, scope_grants};
+use ferrohealth_ui::view::scope::{Grant, ScopeGrant, scope_grants};
 use ferrohealth_ui::view::subject::{Subject, SubjectLine, subject_line};
 use ferrohealth_ui::view::surface::{
     Crumb, Header, SectionHead, page_heading, panel_section, panel_sections_card, stack,
@@ -621,22 +621,13 @@ fn results(brand: &str) -> AnyView {
     .into_any()
 }
 
-/// The scopes an app holds: two narrow, one broad, one malformed and one
-/// the grammar takes and the CDR refuses.
+/// The scopes an app holds: an identity and a launch context, three
+/// narrow (one constrained), one broad, one malformed and one the grammar
+/// takes and the CDR refuses.
 fn scopes() -> AnyView {
     let mut grants = SCOPES
         .iter()
-        .map(|(raw, resource, broad)| ScopeGrant {
-            raw: (*raw).to_owned(),
-            grant: match Scope::parse(raw) {
-                Ok(scope) => Grant::Granted {
-                    scope,
-                    resource: (*resource).to_owned(),
-                    broad: *broad,
-                },
-                Err(error) => Grant::Refused(error.expected()),
-            },
-        })
+        .map(|(raw, resource, broad)| ScopeGrant::read(*raw, |_| ((*resource).to_owned(), *broad)))
         .collect::<Vec<_>>();
     grants.push(ScopeGrant {
         raw: String::from(FOREIGN),

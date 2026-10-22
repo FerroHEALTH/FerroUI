@@ -17,7 +17,7 @@ use leptos::prelude::*;
 use crate::i18n::{Phrase, Text, tr_with};
 
 /// A date, `YYYY-MM-DD`, its parts checked against the calendar.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 struct Date {
     /// The year, 0 to 9999.
     year: u32,
@@ -328,6 +328,34 @@ impl TimeWords {
             )),
         }
     }
+}
+
+/// The moment `raw` names, as a key that orders moments in time: an
+/// instant moved to UTC, a date-time with no offset as it stands and a
+/// date at its start, to the millisecond; `None` for anything that is no
+/// date-time.
+///
+/// Two instants of different offsets order by when they happened
+/// (`10:00+02:00` before `09:30Z`), which their text does not.
+#[must_use]
+pub(crate) fn moment(raw: &str) -> Option<(u32, u32, u32, u32, u32, u32)> {
+    let (date, clock) = match Parsed::parse(raw)? {
+        Parsed::Date(date) => (date, None),
+        Parsed::Local(date, clock) | Parsed::Instant(date, clock) => (date, Some(clock)),
+    };
+    let (minute, second, millis) = clock.map_or((0, 0, 0), |clock| {
+        let millis = clock.fraction.as_deref().map_or(0, |digits| {
+            digits
+                .bytes()
+                .chain(std::iter::repeat(b'0'))
+                .take(3)
+                .fold(0, |sum, digit| {
+                    sum * 10 + u32::from(digit.saturating_sub(b'0'))
+                })
+        });
+        (clock.minute, clock.second.unwrap_or(0), millis)
+    });
+    Some((date.year, date.month, date.day, minute, second, millis))
 }
 
 /// The reading form of `raw`: `2026-10-18 23:18:37 UTC` for the instant

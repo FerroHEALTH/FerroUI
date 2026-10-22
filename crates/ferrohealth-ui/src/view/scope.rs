@@ -3,12 +3,17 @@
 
 //! The SMART scope grant (E8).
 //!
-//! One scope parsed: the raw scope in mono, never broken; the compartment
+//! One scope parsed: the raw scope in mono, breaking only after a slash,
+//! a dot, a question mark, an ampersand, an equals sign or a bar, so a
+//! long one never widens the page (WCAG 2.2 SC 1.4.10); the compartment
 //! and the resource in words; the five operations as marks, a permitted
 //! one ticked and an absent one struck through as `<del>` with "not
-//! permitted" said after it, so the grant never rests on colour; a broad
-//! grant carries the warn badge Broad access. A malformed scope is the bad
-//! tone with what the grammar expected.
+//! permitted" said after it, so the grant never rests on colour; the
+//! search constraint that narrows it, so the grant never reads wider than
+//! it is; a broad grant carries the warn badge Broad access. A scope that
+//! asks for no resource ([`Request`]: identity, launch context or a
+//! refresh token) says what it asks for. A malformed scope is the bad tone
+//! with what the grammar expected.
 //!
 //! [`Scope::parse`] reads the grammar of SMART App Launch 2.2.0, "Scopes
 //! and Launch Context", § SMART's scopes are used to grant access: a
@@ -20,13 +25,18 @@
 //! and a SMART on openEHR resource (`composition-<template>`,
 //! `template-<template>`, `aql-<query>`, openEHR ITS-REST, SMART on
 //! openEHR, § 8.1 Resource scopes) both parse; the permissions follow the
-//! last dot, since a template id holds dots. Which resources a server
-//! knows and which grants are broad are the console's. The look is our
-//! own design.
+//! last dot, since a template id holds dots. [`Request::parse`] reads the
+//! scopes of the same chapter that ask for no resource: `openid` and
+//! `fhirUser` (§ Scopes for requesting identity data), `launch` and
+//! `launch/<resource>` with its optional `?role=` (§ Scopes for requesting
+//! context data), and `online_access` and `offline_access` (§ Scopes for
+//! requesting a refresh token). [`ScopeGrant::read`] reads a raw scope
+//! either way. Which resources a server knows and which grants are broad
+//! are the console's. The look is our own design.
 
 use leptos::prelude::*;
 
-use crate::i18n::{Text, tr};
+use crate::i18n::{Text, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::tone::Tone;
 
@@ -253,6 +263,98 @@ impl Scope {
     }
 }
 
+/// A SMART scope that asks for no resource: an identity, a launch
+/// context or a refresh token (SMART App Launch 2.2.0, Scopes and Launch
+/// Context).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Request {
+    /// `openid`: who the user is, by OpenID Connect.
+    OpenId,
+    /// `fhirUser`: the user as a FHIR resource.
+    FhirUser,
+    /// `launch`: the context of the EHR that launched the app.
+    Launch,
+    /// `launch/<resource>`: a resource in context at launch, with the
+    /// role it plays when the scope names one.
+    LaunchContext {
+        /// The resource type as the scope writes it, in lower case
+        /// (`patient`, `encounter`).
+        resource: String,
+        /// The role after `?role=`, when the scope names one.
+        role: Option<String>,
+    },
+    /// `online_access`: a refresh token while the user stays online.
+    OnlineAccess,
+    /// `offline_access`: a refresh token that outlasts the session.
+    OfflineAccess,
+}
+
+impl Request {
+    /// Reads `raw` as a scope that asks for no resource; `None` for any
+    /// other scope.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ferrohealth_ui::view::scope::Request;
+    ///
+    /// assert_eq!(Some(Request::OpenId), Request::parse("openid"));
+    /// let patient = Request::LaunchContext { resource: "patient".into(), role: None };
+    /// assert_eq!(Some(patient), Request::parse("launch/patient"));
+    /// assert_eq!(None, Request::parse("patient/Observation.rs"));
+    /// ```
+    #[must_use]
+    pub fn parse(raw: &str) -> Option<Self> {
+        match raw {
+            "openid" => return Some(Self::OpenId),
+            "fhirUser" => return Some(Self::FhirUser),
+            "launch" => return Some(Self::Launch),
+            "online_access" => return Some(Self::OnlineAccess),
+            "offline_access" => return Some(Self::OfflineAccess),
+            _ => {}
+        }
+        let context = raw.strip_prefix("launch/")?;
+        let (resource, role) = match context.split_once('?') {
+            Some((resource, query)) => (resource, Some(query.strip_prefix("role=")?)),
+            None => (context, None),
+        };
+        let plain = |text: &str| !text.is_empty() && !text.contains(['/', '?', '&', '=']);
+        (plain(resource) && role.is_none_or(plain)).then(|| Self::LaunchContext {
+            resource: resource.to_owned(),
+            role: role.map(str::to_owned),
+        })
+    }
+
+    /// What the scope asks for, in the page's locale.
+    #[must_use]
+    pub fn words(&self) -> String {
+        match self {
+            Self::OpenId => tr(Text::ScopeOpenid),
+            Self::FhirUser => tr(Text::ScopeFhirUser),
+            Self::Launch => tr(Text::ScopeLaunch),
+            Self::LaunchContext {
+                resource,
+                role: None,
+            } => tr_with(
+                Text::ScopeLaunchContext,
+                &[("what", resource.clone().into())],
+            ),
+            Self::LaunchContext {
+                resource,
+                role: Some(role),
+            } => tr_with(
+                Text::ScopeLaunchRole,
+                &[
+                    ("what", resource.clone().into()),
+                    ("label", role.clone().into()),
+                ],
+            ),
+            Self::OnlineAccess => tr(Text::ScopeOnlineAccess),
+            Self::OfflineAccess => tr(Text::ScopeOfflineAccess),
+        }
+    }
+}
+
 /// How the console reads one scope.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Grant {
@@ -265,6 +367,8 @@ pub enum Grant {
         /// Whether the grant is broad, which the warn badge says.
         broad: bool,
     },
+    /// A scope that asks for no resource, which says what it asks for.
+    Request(Request),
     /// A scope the console refuses: why, in one sentence, such as what the
     /// grammar expected ([`ScopeError::expected`]) or what the server
     /// takes instead.
@@ -278,6 +382,66 @@ pub struct ScopeGrant {
     pub raw: String,
     /// How the console reads it.
     pub grant: Grant,
+}
+
+impl ScopeGrant {
+    /// Reads the scope `raw`: a [`Request`] as itself, a clinical data
+    /// scope as granted with the resource words and the breadth
+    /// `describe` gives it, and anything else as refused with what the
+    /// grammar expected.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ferrohealth_ui::view::scope::{Grant, ScopeGrant};
+    ///
+    /// let read = ScopeGrant::read("fhirUser", |_| (String::new(), false));
+    /// assert!(matches!(read.grant, Grant::Request(_)));
+    /// let read = ScopeGrant::read("patient/Observation.rs", |_| ("Observations".into(), false));
+    /// assert!(matches!(read.grant, Grant::Granted { .. }));
+    /// ```
+    #[must_use]
+    pub fn read(raw: impl Into<String>, describe: impl FnOnce(&Scope) -> (String, bool)) -> Self {
+        let raw = raw.into();
+        let grant = match Request::parse(&raw) {
+            Some(request) => Grant::Request(request),
+            None => match Scope::parse(&raw) {
+                Ok(scope) => {
+                    let (resource, broad) = describe(&scope);
+                    Grant::Granted {
+                        scope,
+                        resource,
+                        broad,
+                    }
+                }
+                Err(error) => Grant::Refused(error.expected()),
+            },
+        };
+        Self { raw, grant }
+    }
+}
+
+/// Returns `text` with a break opportunity after each slash, dot, question
+/// mark, ampersand, equals sign and bar, so a long scope breaks there.
+fn breakable(text: &str) -> AnyView {
+    let mut out = Vec::new();
+    let mut part = String::new();
+    for c in text.chars() {
+        part.push(c);
+        if matches!(c, '/' | '.' | '?' | '&' | '=' | '|') {
+            let done = std::mem::take(&mut part);
+            out.push(view! { {done}<wbr /> }.into_any());
+        }
+    }
+    if !part.is_empty() {
+        out.push(part.into_any());
+    }
+    out.collect_view().into_any()
+}
+
+/// Returns the raw scope `raw` in the code face, breakable.
+fn raw_view(raw: &str) -> AnyView {
+    view! { <code class="fui-scope-raw">{breakable(raw)}</code> }.into_any()
 }
 
 /// Returns one operation mark: ticked when permitted, struck through as
@@ -311,23 +475,42 @@ fn grant_view(grant: ScopeGrant) -> AnyView {
                 .map(|each| operation(each, scope.operations.permits(each)))
                 .collect_view();
             let reads = format!("{} · {resource}", scope.compartment.words());
+            let constraint = scope.constraint.map(|constraint| {
+                view! {
+                    <span class="fui-scope-constraint">
+                        {tr(Text::ScopeOnlyWhere)}
+                        " "
+                        <code>{breakable(&constraint)}</code>
+                    </span>
+                }
+            });
             let badge = broad
                 .then(|| view! { <span class=Tone::Warn.badge()>{tr(Text::ScopeBroad)}</span> });
             view! {
                 <li class="fui-scope">
-                    <code class="fui-scope-raw">{raw}</code>
+                    {raw_view(&raw)}
                     <span class="fui-scope-reads">
                         <span>{reads}</span>
                         <span class="fui-scope-ops">{marks}</span>
+                        {constraint}
                         {badge}
                     </span>
                 </li>
             }
             .into_any()
         }
+        Grant::Request(request) => view! {
+            <li class="fui-scope">
+                {raw_view(&raw)}
+                <span class="fui-scope-reads">
+                    <span>{request.words()}</span>
+                </span>
+            </li>
+        }
+        .into_any(),
         Grant::Refused(why) => view! {
             <li class="fui-scope is-refused">
-                <code class="fui-scope-raw">{raw}</code>
+                {raw_view(&raw)}
                 <span class="fui-scope-reads">
                     <span class="fui-small fui-tone-bad">{icon(Glyph::CIRCLE_X, "14")}
                         " "

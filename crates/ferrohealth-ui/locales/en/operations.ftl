@@ -11,3 +11,5 @@ rows-count =
         [one] { $count } row
        *[other] { $count } rows
     }
+rows-empty = empty text
+rows-null = NULL

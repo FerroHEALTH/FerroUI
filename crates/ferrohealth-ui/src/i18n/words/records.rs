@@ -23,6 +23,8 @@ texts! {
     CompareLeadingValue = "compare-leading-value",
     /// The line under the stacked compare's switch: `$title` is the leading record.
     CompareMarkedAgainst = "compare-marked-against",
+    /// The caption of a compare with no other record: `$label` is its caption.
+    CompareNoOthers = "compare-no-others",
     /// The legend of the stacked compare's switch.
     CompareRecordToRead = "compare-record-to-read",
     /// The Copy button of a revealed identifier.
@@ -51,6 +53,10 @@ texts! {
     IdentifierRevealing = "identifier-revealing",
     /// The summary of a timeline event's details.
     TimelineDetails = "timeline-details",
+    /// The link to a timeline's older events.
+    TimelineOlder = "timeline-older",
     /// The label before a timeline event's reason.
     TimelineReason = "timeline-reason",
+    /// What a windowed timeline shows: `$shown` of `$total` events.
+    TimelineShown = "timeline-shown",
 }

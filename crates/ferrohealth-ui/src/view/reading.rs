@@ -12,7 +12,12 @@
 //! (family rule 12; openEHR RM, Data Types Information Model, § Null
 //! flavours, `ELEMENT.null_flavour`). A nested `CLUSTER` is indented with a
 //! hairline edge, and its heading is one level below its parent's, so the
-//! page outline follows the document (WCAG 2.2 SC 1.3.1). Bookkeeping is
+//! page outline follows the document (WCAG 2.2 SC 1.3.1); past
+//! [`INDENTED`] levels a cluster is set apart by a dashed hairline over it
+//! and indents no further, so a deep document never runs off a phone. A
+//! reader hears a heading's title and its node id as two phrases and a
+//! quantity's UCUM code after its unit, which the eye reads in the
+//! tooltip. A long label or value wraps inside its row. Bookkeeping is
 //! folded away and says so once in a foot. No specification governs the
 //! look: our own design.
 
@@ -111,6 +116,10 @@ pub struct Reading {
     pub folded: Option<AnyView>,
 }
 
+/// How many levels of nested clusters indent; a deeper cluster sits at the
+/// deepest indent, set apart by a dashed hairline.
+pub const INDENTED: usize = 4;
+
 /// Returns the archetype node id `id`, an archetype id or an ADL 2 HRID,
 /// in mono as the quiet hint after a heading: it breaks only after a dot,
 /// never inside a segment, and the whole id is its tooltip.
@@ -146,12 +155,14 @@ fn value_view(value: Value) -> AnyView {
             ucum,
         } => {
             let tooltip = tr_with(Text::ReadingUcum, &[("code", Arg::from(ucum))]);
+            let said = format!(", {tooltip}");
             view! {
                 <span class="fui-reading-value">{magnitude}</span>
                 " "
                 <span class="fui-reading-unit" title=tooltip>
                     {unit}
                 </span>
+                <span class="fui-sr-only">{said}</span>
             }
             .into_any()
         }
@@ -160,8 +171,15 @@ fn value_view(value: Value) -> AnyView {
     }
 }
 
-/// Returns the heading `title` at `level`, its node hint after it.
+/// Returns the heading `title` at `level`, its node hint after it, a
+/// hidden comma between the two so a reader hears two phrases.
 fn heading(level: Level, title: String, node: Option<AnyView>) -> AnyView {
+    let node = node.map(|node| {
+        view! {
+            <span class="fui-sr-only">", "</span>
+            {node}
+        }
+    });
     match level {
         Level::Two => view! { <h2 class="fui-reading-title">{title}{node}</h2> }.into_any(),
         Level::Three => view! { <h3 class="fui-reading-title">{title}{node}</h3> }.into_any(),
@@ -171,8 +189,9 @@ fn heading(level: Level, title: String, node: Option<AnyView>) -> AnyView {
     }
 }
 
-/// Returns the section `section` with its heading at `level`.
-fn section_view(section: Section, level: Level) -> AnyView {
+/// Returns the section `section` with its heading at `level`, nested
+/// `depth` clusters deep.
+fn section_view(section: Section, level: Level, depth: usize) -> AnyView {
     let Section {
         title,
         node,
@@ -195,10 +214,11 @@ fn section_view(section: Section, level: Level) -> AnyView {
     });
     let nested = sections
         .into_iter()
-        .map(|inner| section_view(inner, level.deeper()))
+        .map(|inner| section_view(inner, level.deeper(), depth.saturating_add(1)))
         .collect_view();
+    let deep = depth > INDENTED;
     view! {
-        <section class="fui-reading-section">
+        <section class="fui-reading-section" class:is-deep=deep>
             {heading(level, title, node.map(archetype))}
             {rows}
             {nested}
@@ -218,7 +238,7 @@ pub fn reading(reading: Reading) -> AnyView {
     } = reading;
     let sections = sections
         .into_iter()
-        .map(|section| section_view(section, level))
+        .map(|section| section_view(section, level, 0))
         .collect_view();
     let folded = folded.map(|folded| {
         view! {

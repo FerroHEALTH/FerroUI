@@ -101,13 +101,26 @@ fn a_tag_is_its_words_on_one_line_with_a_quiet_code_and_a_hidden_glyph() {
 }
 
 #[test]
-fn a_tag_never_breaks_inside_itself() {
-    assert!(
-        STYLESHEET.contains(
-            "    font-weight: 500;\n    white-space: nowrap;\n  }\n\n  /* A tag's raw code"
-        ),
-        "the tag keeps to one line"
-    );
+fn a_tag_keeps_to_one_line_while_it_fits_and_never_widens_the_page() {
+    // NOTE: WCAG 2.2 SC 1.4.10: a tag holding a canonical URL or an OID wraps inside its
+    // box; in a row it keeps its width, as a word that never broke did.
+    let rule = STYLESHEET
+        .split("\n  .fui-tag {\n")
+        .nth(1)
+        .and_then(|rest| rest.split("\n  }").next())
+        .expect("the tag's rule");
+    for declaration in [
+        "flex-shrink: 0;",
+        "max-width: 100%;",
+        "white-space: normal;",
+        "overflow-wrap: anywhere;",
+    ] {
+        assert!(
+            rule.contains(declaration),
+            "the tag lacks {declaration}: {rule}"
+        );
+    }
+    assert!(!rule.contains("nowrap"), "the tag may wrap: {rule}");
 }
 
 #[test]

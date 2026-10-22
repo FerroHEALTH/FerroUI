@@ -15,8 +15,11 @@
 //! scrolls sideways inside its card, never the page (SC 1.4.10), with the
 //! field and the leading record held at the start. The stacked form reads
 //! one record at a time under a choice of radios, which the stylesheet
-//! answers with no script. No specification governs the layout: our own
-//! design.
+//! answers with no script; past [`STACKED_MAX`] other records it lists
+//! every record as a disclosure that opens with no script, so no record is
+//! out of reach on a phone. A compare with no other record says so instead
+//! of saying every field agrees. No specification governs the layout: our
+//! own design.
 
 use leptos::prelude::*;
 
@@ -112,7 +115,7 @@ pub struct Compare<'a> {
     pub fields: &'a [CompareField],
     /// The record the others are marked against.
     pub leading: &'a CompareRecord,
-    /// The other records, one to five of them.
+    /// The other records, any number of them.
     pub others: &'a [CompareRecord],
     /// The verdict on a field (by key) of the other record at an index.
     pub verdict: &'a dyn Fn(&str, usize) -> Verdict,
@@ -195,9 +198,15 @@ fn all_agree(rows: &[Row<'_>]) -> bool {
     })
 }
 
-/// The caption: the console's, or the console's saying every field agrees.
+/// The caption: the console's, the console's saying there is no other
+/// record, or the console's saying every field agrees.
 fn caption(table: &Compare<'_>, rows: &[Row<'_>]) -> String {
-    if all_agree(rows) {
+    if table.others.is_empty() {
+        tr_with(
+            Text::CompareNoOthers,
+            &[("label", table.caption.to_owned().into())],
+        )
+    } else if all_agree(rows) {
         tr_with(
             Text::CompareAllAgree,
             &[("label", table.caption.to_owned().into())],
@@ -354,19 +363,22 @@ fn drawn_table(table: &Compare<'_>, pair: bool) -> AnyView {
     .into_any()
 }
 
-/// The most other records the stacked form offers.
+/// The most other records the stacked form offers as a choice; past it,
+/// each record is a disclosure of its own.
 pub const STACKED_MAX: usize = crate::view::segmented::REVEAL_MAX;
 
 /// Returns the compare `table` one record at a time, for a phone.
 ///
-/// A choice of the other records leads, `shown` chosen first, and the
-/// chosen record's fields follow, marked against the leading record, whose
-/// value follows each one that differs.
+/// A choice of the other records leads, `shown` chosen first (the last
+/// record when `shown` is past the end), and the chosen record's fields
+/// follow, marked against the leading record, whose value follows each one
+/// that differs.
 ///
 /// The choice is a native radio group the stylesheet answers, so it works
-/// with no script. It offers the first [`STACKED_MAX`] other records; the
-/// table form shows any more. Every mark sits at the end of its value's
-/// line, so the marks read as one column.
+/// with no script. Past [`STACKED_MAX`] other records every record is a
+/// native disclosure instead, `shown` open, so every record is offered
+/// with no script. Every mark sits at the end of its value's line, so the
+/// marks read as one column.
 #[must_use]
 pub fn compare_stacked(table: Compare<'_>, shown: usize) -> AnyView {
     stacked(&table, shown, false)
@@ -388,12 +400,42 @@ pub fn compare_pair(table: Compare<'_>, shown: usize) -> AnyView {
 /// The stacked form; `pair` hides it from 64 rem, where the table shows.
 fn stacked(table: &Compare<'_>, shown: usize, pair: bool) -> AnyView {
     let rows = rows(table);
-    let offered = table.others.len().min(STACKED_MAX);
+    let shown = shown.min(table.others.len().saturating_sub(1));
     let name = format!("{}-read", table.id);
+    let class = if pair {
+        "fui-compare-stacked"
+    } else {
+        "fui-compare-stacked fui-compare-alone"
+    };
+    if table.others.is_empty() {
+        let none = tr_with(
+            Text::CompareNoOthers,
+            &[("label", table.caption.to_owned().into())],
+        );
+        return view! {
+            <div class=class>
+                <p class="fui-small fui-muted">{none}</p>
+            </div>
+        }
+        .into_any();
+    }
+    let against = tr_with(
+        Text::CompareMarkedAgainst,
+        &[("title", table.leading.title.clone().into())],
+    );
+    if table.others.len() > STACKED_MAX {
+        let records = disclosures(table, &rows, shown, &name);
+        return view! {
+            <div class=class>
+                <p class="fui-small fui-muted">{against}</p>
+                <div class="fui-compare-records">{records}</div>
+            </div>
+        }
+        .into_any();
+    }
     let segments = table
         .others
         .iter()
-        .take(offered)
         .enumerate()
         .map(|(index, record)| {
             let id = format!("{name}-{index}");
@@ -418,60 +460,13 @@ fn stacked(table: &Compare<'_>, shown: usize, pair: bool) -> AnyView {
     let parts = table
         .others
         .iter()
-        .take(offered)
         .enumerate()
         .map(|(other, record)| {
-            let lines = rows
-                .iter()
-                .map(|row| {
-                    let verdict = row.verdicts.get(other).copied().unwrap_or(Verdict::Unmarked);
-                    let differs = verdict == Verdict::Differ;
-                    let value = value_of(record, row.index);
-                    let leading = differs.then(|| {
-                        let lead = value_of(table.leading, row.index).unwrap_or_else(none);
-                        view! {
-                            <span class="fui-small fui-muted fui-compare-lead">
-                                {tr_with(Text::CompareLeadingValue, &[("title", table.leading.title.clone().into())])}
-                                " "
-                                {lead}
-                            </span>
-                        }
-                        .into_any()
-                    });
-                    view! {
-                        <div class:fui-compare-row-differ=differs>
-                            <dt>{row.field.label.clone()}</dt>
-                            <dd>
-                                <span class="fui-compare-cell">
-                                    <span class="fui-compare-value">{value}</span>
-                                    {mark(verdict)}
-                                </span>
-                                {leading}
-                            </dd>
-                        </div>
-                    }
-                    .into_any()
-                })
-                .collect_view()
-        .into_any();
-            view! {
-                <div class="fui-revealed">
-                    <dl class="fui-compare-stacked-rows">{lines}</dl>
-                </div>
-            }
-            .into_any()
+            view! { <div class="fui-revealed">{record_rows(table, &rows, other, record)}</div> }
+                .into_any()
         })
         .collect_view()
         .into_any();
-    let class = if pair {
-        "fui-compare-stacked"
-    } else {
-        "fui-compare-stacked fui-compare-alone"
-    };
-    let against = tr_with(
-        Text::CompareMarkedAgainst,
-        &[("title", table.leading.title.clone().into())],
-    );
     view! {
         <div class=class>
             <div class="fui-reveal">
@@ -485,6 +480,78 @@ fn stacked(table: &Compare<'_>, shown: usize, pair: bool) -> AnyView {
         </div>
     }
     .into_any()
+}
+
+/// Returns every other record of `table` as a native disclosure, one open
+/// at a time, `shown` open first.
+fn disclosures(table: &Compare<'_>, rows: &[Row<'_>], shown: usize, name: &str) -> AnyView {
+    table
+        .others
+        .iter()
+        .enumerate()
+        .map(|(other, record)| {
+            let sub = record
+                .sub
+                .clone()
+                .map(|sub| view! { <span class="fui-compare-sub">{sub}</span> });
+            view! {
+                <details class="fui-disclosure fui-compare-record" name=name.to_owned() open=other == shown>
+                    <summary>
+                        <span class="fui-compare-title">{record.title.clone()}</span>
+                        {sub}
+                    </summary>
+                    <div>{record_rows(table, rows, other, record)}</div>
+                </details>
+            }
+            .into_any()
+        })
+        .collect_view()
+        .into_any()
+}
+
+/// Returns the fields of `record`, the other record at index `other`, as
+/// the stacked form reads them: each marked against the leading record,
+/// whose value follows each one that differs.
+fn record_rows(
+    table: &Compare<'_>,
+    rows: &[Row<'_>],
+    other: usize,
+    record: &CompareRecord,
+) -> AnyView {
+    let lines = rows
+        .iter()
+        .map(|row| {
+            let verdict = row.verdicts.get(other).copied().unwrap_or(Verdict::Unmarked);
+            let differs = verdict == Verdict::Differ;
+            let value = value_of(record, row.index);
+            let leading = differs.then(|| {
+                let lead = value_of(table.leading, row.index).unwrap_or_else(none);
+                view! {
+                    <span class="fui-small fui-muted fui-compare-lead">
+                        {tr_with(Text::CompareLeadingValue, &[("title", table.leading.title.clone().into())])}
+                        " "
+                        {lead}
+                    </span>
+                }
+                .into_any()
+            });
+            view! {
+                <div class:fui-compare-row-differ=differs>
+                    <dt>{row.field.label.clone()}</dt>
+                    <dd>
+                        <span class="fui-compare-cell">
+                            <span class="fui-compare-value">{value}</span>
+                            {mark(verdict)}
+                        </span>
+                        {leading}
+                    </dd>
+                </div>
+            }
+            .into_any()
+        })
+        .collect_view()
+        .into_any();
+    view! { <dl class="fui-compare-stacked-rows">{lines}</dl> }.into_any()
 }
 
 #[cfg(test)]

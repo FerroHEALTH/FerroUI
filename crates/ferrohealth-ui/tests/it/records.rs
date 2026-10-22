@@ -10,7 +10,7 @@ use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::compare::{
     Compare, CompareField, CompareRecord, Verdict, compare, compare_pair, compare_stacked,
 };
-use ferrohealth_ui::view::timeline::{Event, timeline};
+use ferrohealth_ui::view::timeline::{Event, Window, timeline, timeline_window};
 use ferrohealth_ui::widget::identifier::{
     Domain, Identifier, IdentifierWords, Masked, Reveal, identifier, identifier_list,
     identifier_static,
@@ -308,6 +308,98 @@ fn a_compare_escapes_what_it_is_given() {
     assert!(table.contains("&lt;b&gt;field"), "{table}");
 }
 
+/// The stacked compare of a leading record and `count` others, `shown`
+/// read first.
+fn stacked_of(count: usize, shown: usize) -> String {
+    html(|| {
+        let fields = fields();
+        let leading = record("lead", "Source zero", &[Some("Alpha"), None, Some("SYN-1")]);
+        let others: Vec<CompareRecord> = (1..=count)
+            .map(|index| {
+                record(
+                    &format!("r{index}"),
+                    &format!("Source {index}"),
+                    &[Some("Alpha"), None, Some("SYN-2")],
+                )
+            })
+            .collect();
+        compare_stacked(
+            Compare {
+                id: "many",
+                caption: "Records of one person",
+                fields: &fields,
+                leading: &leading,
+                others: &others,
+                verdict: &verdict,
+                differ_first: false,
+            },
+            shown,
+        )
+    })
+}
+
+#[test]
+fn the_stacked_form_offers_every_record_past_five_as_disclosures() {
+    // NOTE: WCAG 2.2 SC 1.4.10: below 64 rem the stacked form is the only form, so it
+    // reaches every record, each a native disclosure that opens with no script.
+    let many = stacked_of(7, 2);
+    let disclosures = tags(&many, "details");
+    assert_eq!(7, disclosures.len(), "one per other record: {many}");
+    assert!(
+        disclosures
+            .iter()
+            .all(|each| each.get("name").is_some_and(|name| name == "many-read")),
+        "one at a time: {many}"
+    );
+    let open: Vec<usize> = disclosures
+        .iter()
+        .enumerate()
+        .filter(|(_, each)| each.contains_key("open"))
+        .map(|(index, _)| index)
+        .collect();
+    assert_eq!(vec![2], open, "the record shown first opens: {many}");
+    assert!(
+        many.contains("Source 7"),
+        "the seventh record is offered: {many}"
+    );
+    assert!(!many.contains(r#"type="radio""#), "{many}");
+}
+
+#[test]
+fn a_shown_record_past_the_end_reads_the_last_one() {
+    let few = stacked_of(3, 9);
+    let radios = tags(&few, "input");
+    assert_eq!(
+        Some(&String::new()),
+        radios.get(2).and_then(|radio| radio.get("checked")),
+        "the last record is chosen: {few}"
+    );
+    let many = stacked_of(7, 40);
+    let disclosures = tags(&many, "details");
+    assert!(
+        disclosures
+            .get(6)
+            .is_some_and(|last| last.contains_key("open")),
+        "the last record opens: {many}"
+    );
+}
+
+#[test]
+fn a_compare_with_no_other_record_says_so_and_never_that_all_agree() {
+    let table = drawn(0, false, false);
+    assert!(
+        table.contains("Records of one person: no other record to compare"),
+        "{table}"
+    );
+    assert!(!table.contains("every field agrees"), "{table}");
+    let stacked = stacked_of(0, 0);
+    assert!(
+        stacked.contains("Records of one person: no other record to compare"),
+        "{stacked}"
+    );
+    assert!(!stacked.contains("<fieldset"), "no empty choice: {stacked}");
+}
+
 /// An event at `at` of `kind`.
 fn event(key: &str, at: &str, kind: &str) -> Event {
     Event {
@@ -411,6 +503,81 @@ fn fifty_events_draw_whole_with_no_cap() {
     assert_eq!(50, tags(&list, "li").len());
 }
 
+#[test]
+fn events_sort_by_the_moment_they_name_whatever_their_offsets() {
+    // 10:00+02:00 is 08:00 UTC, before 09:30Z, though its text sorts after it.
+    let list = html(|| {
+        timeline(
+            "History",
+            &[
+                event("east", "2026-01-01T10:00:00+02:00", "linked"),
+                event("utc", "2026-01-01T09:30:00Z", "merged"),
+                event("west", "2026-01-01T05:00:00-05:00", "split"),
+                event("odd", "yesterday", "noted"),
+            ],
+        )
+    });
+    let order: Vec<String> = tags(&list, "li")
+        .iter()
+        .filter_map(|li| li.get("data-key").cloned())
+        .collect();
+    assert_eq!(
+        vec!["west", "utc", "east", "odd"],
+        order,
+        "newest first by the instant, no date-time last: {list}"
+    );
+}
+
+#[test]
+fn a_windowed_timeline_shows_its_newest_and_links_to_the_older() {
+    let events: Vec<Event> = (0..12)
+        .map(|index| {
+            event(
+                &format!("e{index:02}"),
+                &format!("2026-01-01T08:{index:02}:00Z"),
+                "version",
+            )
+        })
+        .collect();
+    let list = html(|| {
+        timeline_window(
+            "History",
+            &events,
+            Window {
+                limit: 5,
+                total: Some(3120),
+                older: "/history?events=all",
+            },
+        )
+    });
+    let keys: Vec<String> = tags(&list, "li")
+        .iter()
+        .filter_map(|li| li.get("data-key").cloned())
+        .collect();
+    assert_eq!(vec!["e11", "e10", "e09", "e08", "e07"], keys, "{list}");
+    assert!(list.contains("The newest 5 of 3"), "{list}");
+    assert!(
+        has(&list, "a", &[("href", "/history?events=all")]),
+        "{list}"
+    );
+    let whole = html(|| {
+        timeline_window(
+            "History",
+            &events,
+            Window {
+                limit: 20,
+                total: None,
+                older: "/history",
+            },
+        )
+    });
+    assert_eq!(12, tags(&whole, "li").len(), "{whole}");
+    assert!(
+        !whole.contains("fui-timeline-more"),
+        "nothing older: {whole}"
+    );
+}
+
 /// The words of a masked identifier.
 fn words() -> IdentifierWords {
     IdentifierWords::of_page()
@@ -470,8 +637,18 @@ fn the_copy_button_waits_in_an_inert_face_while_masked() {
         .filter(|button| button.contains_key("disabled"))
         .count();
     assert_eq!(
-        3, disabled,
-        "the busy twin, Hide and Copy are disabled while masked: {drawn}"
+        2, disabled,
+        "Hide and Copy are disabled while masked: {drawn}"
+    );
+    // NOTE: WAI-ARIA APG, "Focusability of disabled controls": the busy twin takes no
+    // press but can hold the focus Reveal hands it (WCAG 2.2 SC 2.4.3).
+    assert!(
+        has(
+            &drawn,
+            "button",
+            &[("aria-busy", "true"), ("aria-disabled", "true")]
+        ),
+        "the busy twin takes no press: {drawn}"
     );
     assert!(drawn.contains(">Copy</button>"), "{drawn}");
     let faces: Vec<_> = tags(&drawn, "span")
@@ -493,7 +670,11 @@ fn the_copy_button_waits_in_an_inert_face_while_masked() {
 fn a_reveal_under_way_is_busy_and_a_refusal_is_a_line_in_words() {
     let busy = masked_identifier(Reveal::Busy);
     assert!(
-        has(&busy, "button", &[("aria-busy", "true"), ("disabled", "")]),
+        has(
+            &busy,
+            "button",
+            &[("aria-busy", "true"), ("aria-disabled", "true")]
+        ),
         "{busy}"
     );
     let refused = masked_identifier(Reveal::Refused(String::from("the limit is reached")));
@@ -502,6 +683,23 @@ fn a_reveal_under_way_is_busy_and_a_refusal_is_a_line_in_words() {
         "{refused}"
     );
     assert!(has(&refused, "span", &[("role", "status")]), "{refused}");
+}
+
+#[test]
+fn a_long_revealed_value_breaks_inside_its_row() {
+    // NOTE: WCAG 2.2 SC 1.4.10: a long value breaks inside the slot, never widening the page.
+    let rule = ferrohealth_ui::style::STYLESHEET
+        .split("\n  .fui-identifier-shown > .fui-identifier-value {\n")
+        .nth(1)
+        .and_then(|rest| rest.split("\n  }").next())
+        .expect("the revealed value's rule");
+    assert!(rule.contains("white-space: normal;"), "{rule}");
+    assert!(rule.contains("overflow-wrap: anywhere;"), "{rule}");
+    assert!(
+        ferrohealth_ui::style::STYLESHEET
+            .contains("  .fui-identifier-slot {\n    display: inline-grid;\n    grid-template-columns: minmax(0, auto);\n    max-width: 100%;"),
+        "the slot never grows past its row"
+    );
 }
 
 #[test]
