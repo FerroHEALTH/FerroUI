@@ -26,7 +26,7 @@ pub enum Value {
     /// Words, as the document holds them.
     Text(String),
     /// A quantity: its magnitude as the document writes it, its unit as a
-    /// person reads it ("mm Hg") and its UCUM code ("mm[Hg]"), which the
+    /// person reads it ("mm Hg") and its UCUM code (`mm[Hg]`), which the
     /// unit carries as its tooltip.
     Quantity {
         /// The magnitude.
