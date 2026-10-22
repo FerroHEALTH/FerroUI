@@ -11,7 +11,7 @@
 //! files in a directory named by its BCP 47 tag beside `locales/en/`.
 
 /// Declares one area's messages: each constant names one message of the
-/// catalog by its id, and the area's `ALL` lists them for [`AREAS`].
+/// catalog by its id, and the area's `ALL` lists them for `AREAS`.
 macro_rules! texts {
     ($($(#[$meta:meta])+ $name:ident = $id:literal,)+) => {
         #[expect(
