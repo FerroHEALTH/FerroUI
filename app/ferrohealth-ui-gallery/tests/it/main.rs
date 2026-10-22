@@ -30,6 +30,7 @@ mod keys;
 mod menus;
 mod no_wasm;
 mod painted;
+mod records;
 mod screenshots;
 mod stack;
 mod states;

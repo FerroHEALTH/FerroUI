@@ -1230,6 +1230,7 @@ pub fn FormsPage() -> impl IntoView {
             {sections.2}
             {reloading}
             {sections.3}
+            {super::records::identifiers_section()}
             {long}
         })}
         {dock}

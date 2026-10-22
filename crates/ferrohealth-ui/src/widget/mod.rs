@@ -20,8 +20,10 @@
 //! the pager whose steps the console draws ([`crate::table::pager::pager`],
 //! as a session pager does), the modal dialog ([`dialog::modal_dialog`]),
 //! the tree ([`tree::tree_view`]), the upload field
-//! ([`upload::upload_field`]) and the help switch with the fields it
-//! explains ([`crate::view::help`]).
+//! ([`upload::upload_field`]), the help switch with the fields it
+//! explains ([`crate::view::help`]), the masked identifier with its reveal
+//! ([`identifier::identifier`]) and the work-list with a console's own Enter
+//! ([`worklist::worklist`]).
 
 pub mod action_menu;
 pub mod chart;
@@ -33,6 +35,7 @@ pub mod document;
 pub mod editor;
 pub mod filter;
 pub mod focus;
+pub mod identifier;
 pub mod menu;
 pub mod nav;
 pub mod pick_or_type;
@@ -46,3 +49,4 @@ pub mod tabs;
 pub mod toast;
 pub mod tree;
 pub mod upload;
+pub mod worklist;

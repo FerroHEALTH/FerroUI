@@ -418,7 +418,10 @@ async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error
                 ))
                 .await?;
         }
-        "/forms" => forms_content(browser).await?,
+        "/forms" => {
+            forms_content(browser).await?;
+            crate::records::identifiers_floor(browser).await?;
+        }
         "/tables" => {
             browser.text("p", "1-25 of 137").await?;
             let rows = browser
@@ -426,6 +429,7 @@ async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error
                 .find_all(By::XPath("(//table)[1]/tbody/tr"))
                 .await?;
             assert_eq!(25, rows.len(), "the first table shows its page");
+            crate::records::worklist_floor(browser).await?;
         }
         "/code" => {
             let shown = text_of(browser, By::Id("document-highlighted")).await?;

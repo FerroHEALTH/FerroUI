@@ -747,6 +747,8 @@ pub fn TablesPage() -> impl IntoView {
             {sections.8}
             {sections.9}
             {sections.6}
+            {super::records::compare_section()}
+            {super::records::worklist_section()}
         })}
     }
 }

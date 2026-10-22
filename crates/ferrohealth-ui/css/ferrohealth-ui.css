@@ -4498,6 +4498,70 @@
     }
   }
 
+  /* The table form at every width (view::compare::compare): fixed
+     columns, so a value revealed or hidden in a cell moves nothing; the
+     table scrolls sideways inside its own box, never the page (WCAG 2.2
+     SC 1.4.10), with the field and the leading record held at the start. */
+  .fui-table-scroll.fui-compare-scroll {
+    overflow-x: auto;
+  }
+
+  .fui-compare-scroll > .fui-compare {
+    table-layout: fixed;
+  }
+
+  .fui-compare-col-field {
+    width: 10rem;
+  }
+
+  .fui-compare-col {
+    width: 14rem;
+  }
+
+  .fui-compare-scroll > .fui-compare :is(thead th:first-child, tbody th) {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    width: auto;
+    white-space: normal;
+  }
+
+  .fui-compare-scroll > .fui-compare tbody th {
+    background: var(--surface-raised);
+  }
+
+  .fui-compare-scroll > .fui-compare .fui-compare-leading {
+    position: sticky;
+    left: 10rem;
+    z-index: 1;
+    background-color: var(--surface-raised);
+  }
+
+  .fui-compare-scroll > .fui-compare th.fui-compare-leading {
+    background-image: linear-gradient(var(--accent-tint), var(--accent-tint));
+  }
+
+  .fui-compare-scroll > .fui-compare thead th {
+    white-space: normal;
+  }
+
+  /* The stacked form alone (view::compare::compare_stacked) shows at
+     every width; every mark ends its value's line, so the agree, differ
+     and absent marks read as one column. */
+  .fui-compare-stacked-rows .fui-compare-cell > .fui-compare-mark {
+    margin-inline-start: auto;
+  }
+
+  .fui-compare-lead {
+    display: block;
+  }
+
+  @media (width >= 64rem) {
+    .fui-compare-stacked.fui-compare-alone {
+      display: grid;
+    }
+  }
+
   /* ---- 2. The score breakdown (view::score) ---- */
 
   .fui-score {
@@ -4742,10 +4806,31 @@
     color: var(--muted);
   }
 
-  .fui-timeline-reason::before {
+  .fui-timeline-reason:not(:has(> .fui-timeline-reason-label))::before {
     content: "Reason: ";
     color: var(--muted);
     font-weight: 500;
+  }
+
+  /* The library's own label before the reason, in the page's words. */
+  .fui-timeline-reason-label {
+    font-weight: 500;
+  }
+
+  /* The raw event code after the kind: a quiet hint in the code face. */
+  .fui-timeline-code {
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-micro);
+    line-height: var(--leading-micro);
+  }
+
+  /* The identifiers an event concerns, masked, on one wrapping line. */
+  .fui-timeline-identifiers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.75rem;
+    margin-block-start: 0.25rem;
   }
 
   /* ---- 4. The masked identifier with its reveal (widget::identifier) ---- */
@@ -4818,6 +4903,63 @@
   /* The static listing form: the domain chip and the mask alone. */
   .fui-identifier-static {
     gap: 0.375rem;
+  }
+
+  /* The reserved slot: the masked face and the revealed face share one
+     grid cell, the one not shown kept invisible at its size, so
+     revealing, counting down and hiding move nothing around it. */
+  .fui-identifier-slot {
+    display: inline-grid;
+  }
+
+  .fui-identifier-face {
+    display: inline-flex;
+    flex-wrap: wrap;
+    grid-area: 1 / 1;
+    align-items: center;
+    gap: 0.375rem 0.5rem;
+  }
+
+  .fui-identifier-press {
+    display: inline-grid;
+  }
+
+  .fui-identifier-press > * {
+    grid-area: 1 / 1;
+  }
+
+  .fui-identifier-press[hidden] {
+    display: none;
+  }
+
+  .fui-identifier .is-away {
+    visibility: hidden;
+  }
+
+  .fui-identifier-reveal {
+    white-space: nowrap;
+  }
+
+  /* A revealed value keeps the room of a common identifier, so the
+     countdown beside it stays put while the seconds change. */
+  .fui-identifier-face .fui-identifier-value {
+    min-width: 12ch;
+  }
+
+  .fui-identifier-refused {
+    display: flex;
+    flex-basis: 100%;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  /* A record's identifiers, one per line, each with its domain. */
+  .fui-identifier-list {
+    display: grid;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
   }
 
   /* ---- 5. The keyboard shortcut legend (widget::shortcuts, view::kbd) ---- */
@@ -4966,6 +5108,33 @@
       position: static;
       border: 0;
       padding-inline: 0;
+    }
+  }
+
+  /* The work-list island adds no box of its own. */
+  .fui-worklist-grid {
+    display: contents;
+  }
+
+  /* One focus outline round the whole focused row, its row menu
+     included (WCAG 2.2 SC 2.4.7). */
+  .fui-worklist .fui-table tbody tr:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: -2px;
+  }
+
+  .fui-select-all {
+    width: 1rem;
+    height: 1rem;
+    margin: 0.125rem 0 0;
+    accent-color: var(--accent);
+  }
+
+  /* A row the keys move to is scrolled clear of the sticky foot
+     (WCAG 2.2 SC 2.4.11). */
+  @media (width >= 40rem) {
+    html:has(.fui-worklist-foot) {
+      scroll-padding-bottom: 7rem;
     }
   }
 

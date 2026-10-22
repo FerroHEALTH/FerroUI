@@ -7,8 +7,8 @@
 //!
 //! They are the toast region, the keyboard tabs, the navigation drawer, the
 //! menu and listbox behind every More, row menu and select button, the
-//! combobox, the picker field, the chart legend, the copy button and the
-//! side panel.
+//! combobox, the picker field, the chart legend, the copy button, the
+//! side panel and the work-list.
 //!
 //! An island is the only part of a page the browser hydrates (the Leptos
 //! book, "Guide: Islands"). Its props cross to the browser as JSON in the
@@ -147,6 +147,22 @@ pub fn SidePanel(
         body: children().into_any(),
         words,
     })
+}
+
+/// The work-list around the data table the server drew as its children,
+/// its rows from [`crate::widget::worklist::row`]: the keys move the
+/// focused row and Enter follows its row link ([`crate::widget::worklist`]).
+#[island]
+pub fn WorkList(
+    /// The data table and the rows, drawn on the server.
+    children: Children,
+) -> impl IntoView {
+    let focused = RwSignal::new(None);
+    let on_open = Callback::new(|key: String| crate::widget::worklist::follow(&key));
+    crate::widget::worklist::worklist(
+        crate::widget::worklist::WorkList { focused, on_open },
+        children().into_any(),
+    )
 }
 
 /// The phone's select over binder tabs, named `label`, on the choice that
