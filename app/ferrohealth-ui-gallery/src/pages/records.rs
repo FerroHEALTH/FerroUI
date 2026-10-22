@@ -241,7 +241,7 @@ pub fn worklist_section() -> AnyView {
     let [_, _, b, domains, grade, waiting, _] = &columns;
     let open = crate::app::route_brand().map_or_else(
         || String::from("/"),
-        |brand| format!("/{}/templates", brand.key()),
+        |brand| format!("/{}/layouts", brand.key()),
     );
     let pairs = pairs();
     let total = u64::try_from(pairs.len()).unwrap_or(u64::MAX);
@@ -486,8 +486,9 @@ pub fn identifiers_section() -> AnyView {
     });
     let rows = identifier_rows();
     let words = identifier_words();
+    let brand = crate::app::route_brand().map_or_else(String::new, |brand| brand.key().to_owned());
     let island = view! {
-        <crate::islands::MaskedIdentifiers rows words ident=IdentifierWords::of_page() />
+        <crate::islands::MaskedIdentifiers brand rows words ident=IdentifierWords::of_page() />
     }
     .into_any();
     titled_panel(
@@ -516,11 +517,11 @@ fn answer(row: &IdentifierRow, words: &crate::locale::Words) -> Reveal {
 /// draws: each row's state its own, the reveal answered after a short
 /// pause as a server would.
 pub(crate) fn identifiers_body(
+    brand: &str,
     rows: Vec<IdentifierRow>,
     words: &crate::locale::Words,
     ident: &IdentifierWords,
 ) -> AnyView {
-    let brand = crate::app::route_brand().map_or_else(String::new, |brand| brand.key().to_owned());
     let body = rows
         .into_iter()
         .map(|each| {

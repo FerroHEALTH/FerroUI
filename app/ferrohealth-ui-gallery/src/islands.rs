@@ -129,6 +129,8 @@ pub fn RunnerForm(
     reason = "an island takes its props by value, as they arrive from the page"
 )]
 pub fn MaskedIdentifiers(
+    /// The key of the brand whose page it is on.
+    brand: String,
     /// The rows: each identifier masked, where it starts.
     rows: Vec<crate::pages::records::IdentifierRow>,
     /// Its words, in the page's locale.
@@ -136,7 +138,7 @@ pub fn MaskedIdentifiers(
     /// The masked identifier's own words, in the page's locale.
     ident: ferrohealth_ui::widget::identifier::IdentifierWords,
 ) -> impl IntoView {
-    crate::pages::records::identifiers_body(rows, &words, &ident)
+    crate::pages::records::identifiers_body(&brand, rows, &words, &ident)
 }
 
 /// The forms page's pick-or-type fields.

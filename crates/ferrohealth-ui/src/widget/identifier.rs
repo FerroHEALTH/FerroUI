@@ -409,8 +409,8 @@ pub fn identifier(identifier: Identifier, on_reveal: Callback<()>) -> AnyView {
     let shown = move || matches!(state.get(), Reveal::Shown(_));
     let said = Memo::new(move |_| match state.get() {
         Reveal::Shown(revealed) if revealed.seconds <= ANNOUNCE_AT => left_said.clone(),
-        Reveal::Shown(_) => {
-            let seconds = total.get_value().to_string();
+        Reveal::Shown(revealed) => {
+            let seconds = total.get_value().max(revealed.seconds).to_string();
             revealed_said.fill(&[("count", &seconds)])
         }
         Reveal::Expired => hidden_said.clone(),

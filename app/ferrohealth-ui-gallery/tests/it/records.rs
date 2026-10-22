@@ -179,7 +179,7 @@ async fn the_work_list_moves_its_focused_row_by_the_keys_and_opens_it() -> Resul
         assert_eq!(20, selected.len(), "the select-all selects every row");
         focus_first_row(browser).await?;
         press(browser, Key::Enter).await?;
-        browser.at(&gallery.url("/ferropix/templates")).await?;
+        browser.at(&gallery.url("/ferropix/layouts")).await?;
         Ok(())
     })
     .await
