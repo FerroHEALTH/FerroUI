@@ -19,7 +19,9 @@ brand icons in src/). The sync:
   copy it would shadow; turns build.py into catalog.py (its page table and
   any route_pages(), without the checks) and index.py into console.py (the
   contact sheet's words); copies the icons to assets/;
-- adds the SPDX lines to every file that lacks them.
+- adds the SPDX lines to every file that lacks them;
+- fails when a synced source names a path on one machine (a home or
+  temporary directory), which builds only there.
 
 Each console directory is replaced whole except its baseline.tsv. The
 repository's own tools (build, checks, chrome, design_set, render, the
@@ -172,6 +174,20 @@ def sync_console(root, product, brand, title):
         write(os.path.join(dst, f), text)
 
 
+def local_paths():
+    """Every synced source line that names a path on one machine."""
+    import checks
+
+    found = []
+    for base in (os.path.join(DESIGN, "consoles"), os.path.join(DESIGN, "templates")):
+        for dirpath, _, files in sorted(os.walk(base)):
+            for f in sorted(files):
+                if f.endswith(".py"):
+                    path = os.path.join(dirpath, f)
+                    found += [f"{os.path.relpath(path, DESIGN)}:{n}" for n in checks.local_paths(read(path))]
+    return found
+
+
 def main():
     if len(sys.argv) != 2:
         raise SystemExit(__doc__)
@@ -180,6 +196,9 @@ def main():
     for product, (brand, title) in CONSOLES.items():
         sync_console(root, product, brand, title)
     print(f"synced {len(CONSOLES)} consoles and the library from {root}")
+    local = local_paths()
+    if local:
+        raise SystemExit("a synced source reads a path on one machine, so it builds nowhere else; fix it in the design folder:\n  " + "\n  ".join(local))
     for path in ("tools", "templates", "consoles"):
         same = filecmp.dircmp(os.path.join(DESIGN, path), os.path.join(DESIGN, path))
         del same

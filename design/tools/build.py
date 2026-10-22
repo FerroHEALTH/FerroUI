@@ -9,7 +9,8 @@ the singular, every intro is one sentence (a settings panel's two: what
 the tab governs, then how a change takes effect), and no live page links
 to a planned screen. A set's route-only pages (the catalog's route_pages(),
 FerroFED's r-…) are built and checked the same way, and links may lead to
-them, but no browser check or render reads them. Exits 1 on a finding the
+them, but no browser check or render reads them. No page source may
+name a path on one machine (a home or temporary directory). Exits 1 on a finding the
 set's baseline does not hold.
 
 Usage: build.py <set> [slug ...]   (a set is `templates` or a console name)"""
@@ -46,6 +47,10 @@ def main():
     routes = catalog.route_pages() if hasattr(catalog, "route_pages") else {}
     problems += [("manifest", f"{s} is both a page and a route-only page") for s in routes if s in slugs]
     every = slugs + sorted(s for s in routes if s not in slugs)
+    for name in sorted(os.listdir(site.src)):
+        if name.endswith(".py"):
+            with open(os.path.join(site.src, name), encoding="utf-8") as fh:
+                problems += [("manifest", f"{name}:{n} reads a path on one machine") for n in checks.local_paths(fh.read())]
     site.copy_assets()
     exempt = set(getattr(site.console, "EXEMPT_CHECKS", ()))
     html_of = {}

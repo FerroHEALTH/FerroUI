@@ -17,6 +17,16 @@ PLURALS = (
 INTRO_CLASSES = ("fui-page-subtitle", "fui-settings-panel-intro", "fui-small fui-muted fui-section-intro")
 
 
+# A path on one machine (a home directory, a temporary or private
+# directory) in a page source: a page that reads it builds only there.
+LOCAL_PATH = re.compile(r"""["'](?:/Users/|/home/|/private/|/tmp/|/var/folders/|~/|[A-Za-z]:\\\\)""")
+
+
+def local_paths(text):
+    """The line numbers of every quoted machine-local path in a source."""
+    return [n for n, line in enumerate(text.splitlines(), 1) if LOCAL_PATH.search(line)]
+
+
 def bsn_valid(digits):
     """The BSN eleven-proof: the weighted digit sum is a multiple of 11."""
     weights = [9, 8, 7, 6, 5, 4, 3, 2, -1]

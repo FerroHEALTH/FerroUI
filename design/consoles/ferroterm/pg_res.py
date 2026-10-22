@@ -11,7 +11,7 @@ from common import (
     MENU_SEP, action_group, badge, button, busy_button, e, empty_quiet, empty_state, field, icon, link_button, menu, menu_item,
     notice, page_heading, refusal, select, shell, table, tabbed, tabs, td, th, when,
 )
-from data import (CODE_SYSTEMS, CONCEPT_MAPS, FINDINGS, LEGACY, LEGACY_MAPPINGS, REL_WORD, SF, SF_HISTORY, VALUE_SETS)
+from data import (R4_GENDER_V2_MAP, R4_MIMETYPES, CODE_SYSTEMS, CONCEPT_MAPS, FINDINGS, LEGACY, LEGACY_MAPPINGS, REL_WORD, SF, SF_HISTORY, VALUE_SETS)
 from parts import skeleton_lines
 from term import (canon, clause, codeview, coding, facts, inactive_mark, load_report, plural, quiet, relation, section, sections, source_tag, state, status_mark)
 
@@ -120,15 +120,8 @@ def cs_header(name="Synthetic clinical findings", url=SF, status="active", line=
     return page_heading(name, actions=ag, subtitle=f"{canon(url)} · {line}", crumbs=[("Code systems", "code-systems.html")], badge=status_mark(status))
 
 
-PKG = "/Users/ruben.talstra/RustroverProjects/FerroBRIDGE/tools/fhir-codegen/vendor/hl7.fhir.r4.core/package"
-
-
-def package_json(name):
-    """A resource from the vendored HL7 FHIR R4 core package, as the server
-    serves it from its resource directory, less the narrative."""
-    with open(f"{PKG}/{name}.json", encoding="utf-8") as fh:
-        doc = json.load(fh)
-    doc.pop("text", None)
+def package_json(doc):
+    """A resource of the HL7 FHIR R4 core package, as data.py holds it."""
     return json.dumps(doc, indent=2, ensure_ascii=False)
 
 
@@ -567,7 +560,7 @@ def page_value_set_loaded():
 
 
 def page_value_set_loaded_json():
-    cv = codeview("ValueSet/mimetypes", package_json("ValueSet-mimetypes"), '<span class="fui-tag">FHIR R4</span>', "The ValueSet as JSON")
+    cv = codeview("ValueSet/mimetypes", package_json(R4_MIMETYPES), '<span class="fui-tag">FHIR R4</span>', "The ValueSet as JSON")
     return vs_page("json", cv, mime_header(), MIME_TABS, title=MIME[1])
 
 
@@ -728,5 +721,5 @@ def page_concept_map_loaded_overview():
 
 
 def page_concept_map_loaded_json():
-    cv = codeview("ConceptMap/cm-administrative-gender-v2", package_json("ConceptMap-cm-administrative-gender-v2"), '<span class="fui-tag">FHIR R4</span>', "The ConceptMap as JSON")
+    cv = codeview("ConceptMap/cm-administrative-gender-v2", package_json(R4_GENDER_V2_MAP), '<span class="fui-tag">FHIR R4</span>', "The ConceptMap as JSON")
     return cm_page("json", cv, gender_header(), GENDER_TABS, title=GENDER[1])
