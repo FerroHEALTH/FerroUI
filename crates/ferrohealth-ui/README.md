@@ -90,8 +90,8 @@ which your server writes from its own cookie or setting (`theme::Theme`).
   form post), `dialog` (a popover confirmation), `shell` (skip link,
   top bar, footer, centred page) and `sign_in` (the R19 card in every
   state, with the provider's action and an optional basic form).
-- `island`: the ready islands, `ToastRegion`, `NavDrawer`, `UserMenuButton`,
-  `KeyboardTabs`, `TabSelect` and `PreferenceForm`, each taking its words as props. Every
+- `island`: the ready islands, such as `ToastRegion`, `NavDrawer` and
+  `KeyboardTabs` (the module lists them all), each taking its words as props. Every
   widget takes the words it draws as a `*Words` struct its `of_page()`
   resolves on the server, so no island carries a catalog.
 - `widget`: the interactive components as functions you call inside an

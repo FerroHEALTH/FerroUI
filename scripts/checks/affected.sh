@@ -27,8 +27,6 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
-journey_modules="configuration federation journeys no_wasm operations painted records states tabs_and_toasts terminology widgets"
-
 # The design sets: the templates first, then every console with a pages.py.
 design_sets() {
   local f sets="templates"
@@ -136,13 +134,20 @@ classify() {
       crates/*)
         rust=true lib=true app=true wasm=true gallery=true journeys_all=true
         ;;
+      app/ferrohealth-ui-gallery/tests/it/*/*)
+        rust=true app=true gallery=true journeys_all=true
+        ;;
       app/ferrohealth-ui-gallery/tests/it/*.rs)
+        # Every module of tests/it/ is a journey module that runs whole, but
+        # the harness every journey uses and the two that open no browser,
+        # so a new module needs no line here.
         rust=true app=true gallery=true
         module="${path##*/}"
         module="${module%.rs}"
-        case " $journey_modules " in
-          *" $module "*) modules="$modules $module" ;;
-          *) case "$module" in http | screenshots) ;; *) journeys_all=true ;; esac ;;
+        case "$module" in
+          browser | main | stack) journeys_all=true ;;
+          http | screenshots) ;;
+          *) modules="$modules $module" ;;
         esac
         ;;
       app/*)
@@ -219,6 +224,10 @@ self_test() {
   expect "a widget reaches no design set" 'crates/ferrohealth-ui/src/widget/toast.rs\n' "design="
   expect "a journey module runs whole" 'app/ferrohealth-ui-gallery/tests/it/widgets.rs\n' "journeys=test(/every_page_of_every_brand_loads|every_page_keeps_its_content|^widgets::/)"
   expect "the test harness runs every journey" 'app/ferrohealth-ui-gallery/tests/it/browser.rs\n' "journeys=all"
+  expect "the gallery server runs every journey" 'app/ferrohealth-ui-gallery/tests/it/stack.rs\n' "journeys=all"
+  expect "a journey module no list names runs whole" 'app/ferrohealth-ui-gallery/tests/it/dates.rs\n' "journeys=test(/every_page_of_every_brand_loads|every_page_keeps_its_content|^dates::/)"
+  expect "a state area runs every journey" 'app/ferrohealth-ui-gallery/tests/it/states/overview.rs\n' "journeys=all"
+  expect "the HTTP tests open no browser" 'app/ferrohealth-ui-gallery/tests/it/http.rs\n' "journeys="
   expect "a library test skips the gallery's wasm" 'crates/ferrohealth-ui/tests/it/contrast.rs\n' "wasm=false"
   expect "the stylesheet reaches every set" 'crates/ferrohealth-ui/css/ferrohealth-ui.css\n' "design=$every"
   expect "the stylesheet reaches the page-wide journeys" 'crates/ferrohealth-ui/css/ferrohealth-ui.css\n' "journeys=test(/every_page_of_every_brand_loads|every_page_keeps_its_content|every_page|reflow|^painted::/)"

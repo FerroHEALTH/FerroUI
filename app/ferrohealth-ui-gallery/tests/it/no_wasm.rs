@@ -607,7 +607,7 @@ async fn every_page_keeps_its_content_with_the_webassembly_withheld() -> Result<
         }
         only_the_bundle_refused(browser, "the front page").await?;
         for brand in Brand::ALL {
-            for page in PAGES {
+            for &page in PAGES {
                 let path = format!("/{}{page}", brand.key());
                 browser.goto(&gallery.url(&path)).await?;
                 let heading = text_of(browser, By::Css("main h1")).await?;

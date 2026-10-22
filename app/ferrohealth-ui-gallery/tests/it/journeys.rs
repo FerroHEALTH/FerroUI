@@ -15,34 +15,35 @@ use crate::browser::{Browser, until, with_browser};
 use crate::journeys_enabled;
 use crate::stack::Gallery;
 
-/// The pages of a brand, after its key.
-pub(crate) const PAGES: [&str; 27] = [
+/// The pages of a brand, after its key, in ascending order
+/// (`scripts/checks/mod-order.sh`).
+pub(crate) const PAGES: &[&str] = &[
     "",
-    "/forms",
-    "/tables",
+    "/charts",
+    "/clinical",
     "/code",
     "/configuration",
     "/configuration/provisioned",
-    "/overlays",
-    "/charts",
+    "/federation",
+    "/forms",
     "/layouts",
     "/operations",
-    "/clinical",
-    "/terminology",
-    "/federation",
+    "/overlays",
     "/preferences",
-    "/preferences/language",
     "/preferences/keyboard",
-    "/templates/list",
-    "/templates/list-many",
-    "/templates/list-empty",
-    "/templates/list-tabs",
+    "/preferences/language",
+    "/tables",
+    "/templates/about",
     "/templates/detail",
+    "/templates/forbidden",
+    "/templates/list",
+    "/templates/list-empty",
+    "/templates/list-many",
+    "/templates/list-tabs",
+    "/templates/not-found",
     "/templates/settings",
     "/templates/settings-managed",
-    "/templates/about",
-    "/templates/forbidden",
-    "/templates/not-found",
+    "/terminology",
     "/trees",
 ];
 
@@ -107,7 +108,7 @@ async fn every_page_of_every_brand_loads_with_no_console_error() -> Result<(), B
         browser.text("p", "Choose a brand").await?;
         browser.console_clean("the front page").await?;
         for brand in Brand::ALL {
-            for page in PAGES {
+            for &page in PAGES {
                 let path = format!("/{}{page}", brand.key());
                 browser.goto(&gallery.url(&path)).await?;
                 browser.element(By::Css("main h1")).await?;
@@ -1043,7 +1044,7 @@ async fn every_page_reflows_at_320_pixels_with_no_sideways_scroll() -> Result<()
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
         window(browser, 320, 800).await?;
-        for page in PAGES {
+        for &page in PAGES {
             let path = format!("/ferroehr{page}");
             browser.goto(&gallery.url(&path)).await?;
             browser.element(By::Css("main h1")).await?;

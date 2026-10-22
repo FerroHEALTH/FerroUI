@@ -52,11 +52,9 @@ diffing, the form submitter, file inputs and the base path.
 
 - `view`: plain functions, drawn on the server alone.
 - `island`: the ready islands, each a thin `#[island]` over its widget
-  function: `ToastRegion`, `NavDrawer`, `UserMenuButton`, `KeyboardTabs`,
-  `KeyHint`, `DocumentViews`, `TabSelect`, `Search`, `MenuButton`, `Combobox`,
-  `PickerField`, `ChartLegend`, `DatePicker`, `DateRangePicker`, `CopyButton`,
-  `CommitCountdown`, `SidePanel`, `PreferenceForm`, `TopologyKeys`, `TreeView`,
-  `WorkList`, `Repeater`. `DatePicker` and
+  function. The module is the list of them; no other file names them all,
+  so two pull requests that each add an island touch different lines
+  (`.claude/rules/parallel-prs.md`). `DatePicker` and
   `DateRangePicker` are `#[island(lazy)]`, measured on #262 (72105 bytes of
   brotli-compressed WebAssembly out of every page that draws no date
   picker; `leptos-ui.md` §12, §15.8). The module's `#![expect]` lines cover what

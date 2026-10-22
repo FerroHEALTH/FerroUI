@@ -63,6 +63,21 @@ different components off each other's lines. Each one has a check.
   file, `tests/it/main.rs` and the `view`, `widget` and `island` lists
   included, is in ascending order of its name, so two new modules land on
   different lines. Check: `scripts/checks/mod-order.sh`.
+- **The journeys' page list is a slice in alphabetical order.** `PAGES` in
+  `app/ferrohealth-ui-gallery/tests/it/journeys.rs` is a `&[&str]`, so no
+  length changes with a page, and holds one page per line in ascending
+  order, so two new pages land on different lines. Check:
+  `scripts/checks/mod-order.sh`, which also refuses a sized array.
+- **`affected.sh` names no journey module.** Every module of
+  `app/ferrohealth-ui-gallery/tests/it/` runs whole when its file changes;
+  the script names only the harness (`browser`, `main`, `stack`), which runs
+  every journey, and the two modules that open no browser (`http`,
+  `screenshots`). A new journey module needs no line there. Check: the
+  script's `--self-test`.
+- **No file lists the islands.** `crates/ferrohealth-ui/src/island.rs` is
+  the list: each island is a `#[island]` function there, and its module doc,
+  the crate's `CLAUDE.md` and its `README.md` point at the module instead of
+  naming every island. Review-enforced.
 
 ## On a conflict anyway
 

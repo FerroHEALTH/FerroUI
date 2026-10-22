@@ -5,11 +5,9 @@
 //! from a console's code, each ready to place in a page Leptos renders in
 //! islands mode.
 //!
-//! They are the toast region, the keyboard tabs, the navigation drawer, the
-//! menu and listbox behind every More, row menu and select button, the
-//! combobox, the picker field, the chart legend, the copy button, the
-//! commit-confirm countdown, the side panel, the topology, the tree, the
-//! work-list and the repeatable rows.
+//! Each island is a `#[island]` function of this module, and this module is
+//! the only list of them, so two changes that each add one touch different
+//! lines.
 //!
 //! An island is the only part of a page the browser hydrates (the Leptos
 //! book, "Guide: Islands"). Its props cross to the browser as JSON in the
