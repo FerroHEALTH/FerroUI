@@ -141,3 +141,36 @@ size-bytes =
     }
 size-kib = { $count } KiB
 size-mib = { $count } MiB
+
+## Page templates
+
+filter-showing = Showing
+filter-showing-of = Showing { $shown } of { $total }
+filter-remove = Remove the filter { $filter }
+filter-clear = Clear filters
+key-copy = Copy the key { $key }
+key-copy-title = Copy the key
+next-start = Next start
+config-set-in = Set in
+config-read-at-start = read at start
+config-how = How configuration works
+stepper-previous = Previous { $what }
+stepper-next = Next { $what }
+about-versions = Versions
+about-manufacturer = Manufacturer
+about-console = Console
+about-made-by = Made by
+about-licence = Licence
+about-support = Support
+about-documentation = Documentation
+download = Download
+
+## The error page
+
+error-forbidden = Not allowed
+error-not-found = Not found
+error-fault = Fault
+error-status = { $words } · { $status }
+error-detail = Technical detail
+error-time = Time
+error-request = Request id

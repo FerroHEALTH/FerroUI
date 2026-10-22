@@ -23,7 +23,7 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 dir="$root/crates/ferrohealth-ui/vendor/lucide"
 
 ICONS=(
-  activity arrow-down arrow-left arrow-right arrow-up arrow-up-down bell
+  activity arrow-down arrow-left arrow-right arrow-up arrow-up-down ban bell
   book-a book-x chart-line check chevron-down chevron-left chevron-right
   chevrons-left chevrons-right circle-alert circle-check circle-user
   circle-x clipboard-copy clock code compass copy database download eye

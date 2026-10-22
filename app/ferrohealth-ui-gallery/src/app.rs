@@ -235,6 +235,7 @@ pub fn App() -> impl IntoView {
             <Routes fallback=|| view! { <NotFound /> }>
                 <Route path=path!("/") view=Index />
                 <Route path=path!("/sign-in/:brand/:variant") view=crate::pages::sign_in::SignInPage />
+                <Route path=path!("/fault/:brand") view=crate::pages::templates::FaultPage />
                 <ParentRoute path=path!("/:brand") view=BrandShell>
                     <Route path=path!("") view=crate::pages::overview::OverviewPage />
                     <Route path=path!("forms") view=crate::pages::forms::FormsPage />
@@ -243,6 +244,10 @@ pub fn App() -> impl IntoView {
                     <Route path=path!("overlays") view=crate::pages::overlays::OverlaysPage />
                     <Route path=path!("charts") view=crate::pages::charts::ChartsPage />
                     <Route path=path!("layouts") view=crate::pages::layouts::LayoutsPage />
+                    <Route
+                        path=path!("templates/:variant")
+                        view=crate::pages::templates::TemplatePage
+                    />
                 </ParentRoute>
             </Routes>
         </Router>
@@ -317,6 +322,80 @@ macro_rules! entries {
     };
 }
 
+/// The page template entries of the brand `key`.
+macro_rules! templates {
+    ($key:literal) => {
+        vec![
+            Entry {
+                href: concat!("/", $key, "/templates/list"),
+                label: tr(Msg::NavList).into(),
+                glyph: Glyph::LIST_CHECKS,
+                exact: true,
+            },
+            Entry {
+                href: concat!("/", $key, "/templates/list-many"),
+                label: tr(Msg::NavListMany).into(),
+                glyph: Glyph::LIST_CHECKS,
+                exact: true,
+            },
+            Entry {
+                href: concat!("/", $key, "/templates/list-empty"),
+                label: tr(Msg::NavListEmpty).into(),
+                glyph: Glyph::INBOX,
+                exact: true,
+            },
+            Entry {
+                href: concat!("/", $key, "/templates/list-tabs"),
+                label: tr(Msg::NavListTabs).into(),
+                glyph: Glyph::LIST_CHECKS,
+                exact: true,
+            },
+            Entry {
+                href: concat!("/", $key, "/templates/detail"),
+                label: tr(Msg::NavDetail).into(),
+                glyph: Glyph::FILE_TEXT,
+                exact: true,
+            },
+            Entry {
+                href: concat!("/", $key, "/templates/settings"),
+                label: tr(Msg::NavSettings).into(),
+                glyph: Glyph::SETTINGS,
+                exact: true,
+            },
+            Entry {
+                href: concat!("/", $key, "/templates/settings-managed"),
+                label: tr(Msg::NavSettingsManaged).into(),
+                glyph: Glyph::SLIDERS_HORIZONTAL,
+                exact: true,
+            },
+            Entry {
+                href: concat!("/", $key, "/templates/about"),
+                label: tr(Msg::NavAbout).into(),
+                glyph: Glyph::INFO,
+                exact: true,
+            },
+            Entry {
+                href: concat!("/", $key, "/templates/forbidden"),
+                label: tr(Msg::NavForbidden).into(),
+                glyph: Glyph::SHIELD_OFF,
+                exact: true,
+            },
+            Entry {
+                href: concat!("/", $key, "/templates/not-found"),
+                label: tr(Msg::NavNotFound).into(),
+                glyph: Glyph::COMPASS,
+                exact: true,
+            },
+            Entry {
+                href: concat!("/fault/", $key),
+                label: tr(Msg::NavFault).into(),
+                glyph: Glyph::SERVER_CRASH,
+                exact: true,
+            },
+        ]
+    };
+}
+
 /// The sign-in entries of the brand `key`.
 macro_rules! sign_ins {
     ($key:literal) => {
@@ -343,21 +422,47 @@ macro_rules! sign_ins {
     };
 }
 
-/// The navigation groups of `brand`: its pages and its sign-in cards. The
-/// brand itself is chosen in the top bar, so the navigation marks one page.
-fn navigation(brand: Brand) -> [Group; 2] {
-    let (pages, signs): (Vec<Entry>, Vec<Entry>) = match brand {
-        Brand::Bridge => (entries!("ferrobridge"), sign_ins!("ferrobridge")),
-        Brand::Fed => (entries!("ferrofed"), sign_ins!("ferrofed")),
-        Brand::Ehr => (entries!("ferroehr"), sign_ins!("ferroehr")),
-        Brand::Term => (entries!("ferroterm"), sign_ins!("ferroterm")),
-        Brand::Pix => (entries!("ferropix"), sign_ins!("ferropix")),
+/// The navigation groups of `brand`: its pages, its page templates and
+/// its sign-in cards. The brand itself is chosen in the top bar, so the
+/// navigation marks one page.
+fn navigation(brand: Brand) -> [Group; 3] {
+    let (pages, layouts, signs): (Vec<Entry>, Vec<Entry>, Vec<Entry>) = match brand {
+        Brand::Bridge => (
+            entries!("ferrobridge"),
+            templates!("ferrobridge"),
+            sign_ins!("ferrobridge"),
+        ),
+        Brand::Fed => (
+            entries!("ferrofed"),
+            templates!("ferrofed"),
+            sign_ins!("ferrofed"),
+        ),
+        Brand::Ehr => (
+            entries!("ferroehr"),
+            templates!("ferroehr"),
+            sign_ins!("ferroehr"),
+        ),
+        Brand::Term => (
+            entries!("ferroterm"),
+            templates!("ferroterm"),
+            sign_ins!("ferroterm"),
+        ),
+        Brand::Pix => (
+            entries!("ferropix"),
+            templates!("ferropix"),
+            sign_ins!("ferropix"),
+        ),
     };
     [
         Group {
             id: "nav-components",
             title: tr(Msg::Components).into(),
             entries: pages,
+        },
+        Group {
+            id: "nav-templates",
+            title: tr(Msg::Templates).into(),
+            entries: layouts,
         },
         Group {
             id: "nav-sign-in",

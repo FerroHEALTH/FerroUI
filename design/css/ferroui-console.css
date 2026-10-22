@@ -1205,45 +1205,12 @@
 
   /* Configuration rows: the compact revision line, the key hint, a row in
      draft. */
-  .mk-revision-compact {
-    padding-block: 0.5rem;
-  }
-
-  .mk-revision-compact > p {
-    margin: 0;
-    font-size: var(--text-small);
-  }
-
-  .mk-key-hint {
-    display: inline-flex;
-    opacity: 0;
-    overflow-wrap: break-word;
-    word-break: normal;
-    border: 0;
-    font: inherit;
-    cursor: pointer;
-    width: fit-content;
-    align-items: center;
-    gap: 0.25rem;
-    margin-block-start: 0.25rem;
-    border-radius: var(--radius-control);
-    background: var(--surface-sunken);
-    padding: 0 0.375rem;
-    color: var(--muted);
-    font-size: 0.75rem;
-  }
-
-  .fui-setting-row:is(:hover, :focus-within, .mk-hover) .mk-key-hint,
-  .mk-key-hint.is-shown,
-  .mk-key-hint:focus-visible {
+  .fui-setting-row.mk-hover .fui-key-hint,
+  .fui-key-hint.is-shown {
     opacity: 1;
   }
 
-  .mk-key-hint > code {
-    font-size: 0.75rem;
-  }
-
-  .fui-setting-row:has(.mk-key-hint.is-shown) {
+  .fui-setting-row:has(.fui-key-hint.is-shown) {
     background: var(--surface-sunken);
   }
 
@@ -1382,33 +1349,9 @@
     grid-template-columns: repeat(auto-fill, minmax(min(19rem, 100%), 1fr));
   }
 
-  /* The TOML key beside the label, on the label's line, so the hint reserves
-     no line of its own (NEW (FerroFED)). */
-  .fui-setting-label .mk-key-hint {
-    margin: 0 0 0 0.5rem;
-    font-weight: 400;
-    vertical-align: 0.0625rem;
-  }
-
-  /* Phones have no hover: the key's copy button is always shown there, so
-     touch reaches it. */
-  @media (width < 40rem) {
-    .fui-setting-label .mk-key-hint {
-      opacity: 1;
-    }
-  }
 
   /* The OPTIONS document on About (NEW (FerroFED)): its own scroll, never
      the page's; on a phone it scrolls sideways inside its box. */
-  .mk-options-code {
-    max-height: 24rem;
-    max-width: 100%;
-  }
-
-  .mk-options-code > pre {
-    white-space: pre;
-    overflow-wrap: normal;
-  }
 
   /* Node › Routes. */
   .mk-routes-intro {
@@ -1525,21 +1468,6 @@
 
   /* ---- Library items from the FerroBRIDGE fixer ---- */
 
-  /* A key hint keeps its room (nothing moves on hover) and wraps inside
-     its column instead of running past it. */
-  .mk-key-hint {
-    max-width: 100%;
-    flex-wrap: wrap;
-  }
-
-  /* A long key never breaks inside a segment: it keeps to one line and
-     scrolls inside the hint. */
-  .mk-key-hint > code {
-    min-width: 0;
-    overflow-x: auto;
-    white-space: nowrap;
-    scrollbar-width: none;
-  }
 
   /* ---- Library items from the FerroPIX and FerroFED reviews ---- */
 
@@ -1592,7 +1520,7 @@
   }
 
   /* A key hint beside its label stays inside the label's column. */
-  .fui-setting-label .mk-key-hint {
+  .fui-setting-label .fui-key-hint {
     max-width: calc(100% - 0.5rem);
   }
 

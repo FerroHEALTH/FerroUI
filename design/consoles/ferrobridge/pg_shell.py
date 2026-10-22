@@ -231,20 +231,20 @@ def status_page(code, glyph, title, body, actions, current="dashboard", status_=
 
 
 def page_forbidden():
-    return status_page("403 · Not allowed", "ban", "This view needs the operator scope",
+    return status_page("Not allowed · 403", "ban", "This view needs the operator scope",
                        "You are signed in as Demo Operator, but your access token carries no operator scope, so the bridge's operator API refused it. Ask your identity provider's administrator for the scope, then sign in again. "
                        '<span class="fui-small fui-muted">The scope is <code>__ferrobridge.operator</code>, set as <code>[auth] product_scope</code>.</span>',
                        button("primary", "Sign in again", "log-in") + link_button("secondary", "Dashboard", "dashboard.html"), current="mappings")
 
 
 def page_not_found():
-    return status_page("404 · Not found", "compass", "No mapping file at this path",
+    return status_page("Not found · 404", "compass", "No mapping file at this path",
                        "The bridge reads no file <code>fhirconnect/<wbr>synthetic_immunization.context.yml</code>. It may be mistyped, or the file was removed and the set reloaded. Every file is listed on the Mapping set.",
                        link_button("primary", "Every mapping file", "mappings-files.html", "files") + link_button("secondary", "Dashboard", "dashboard.html"), current="mappings")
 
 
 def page_unreadable():
-    content = (f'<div class="fui-status-page"><span class="fui-empty-glyph">{icon("server-crash", "24")}</span><p class="fui-status-page-code">500 · Fault</p>'
+    content = (f'<div class="fui-status-page"><span class="fui-empty-glyph">{icon("server-crash", "24")}</span><p class="fui-status-page-code">Fault · 500</p>'
                f'<h1>The console cannot read its sessions</h1><p>It cannot tell whether you are signed in, so it shows nothing. Ask whoever runs ferrobridge-console to restart it; the bridge keeps serving its clients meanwhile.</p>'
                f'<div class="fui-actions">{link_button("primary", "Try again", "dashboard.html", "refresh-cw")}</div></div>')
     return centred("Fault", content)
@@ -299,7 +299,7 @@ def page_about():
     acts = copy_button("Copy", "the info document") + button("secondary", "Download", "download", small=True)
     doc = (f'<section class="fui-card fui-panel mk-options-card"><div class="fui-panel-head"><h2 class="fui-card-title"><span>The bridge\'s info document</span></h2><div class="fui-actions">{acts}</div></div>'
            f'<div class="fui-panel-body fui-stack"><p class="fui-small fui-muted">What the bridge answers at <code>GET /health/info</code>: its version, build, pins and lanes.</p>'
-           f'<div class="fui-code-panel mk-options-code" role="region" aria-label="The info document" tabindex="0"><pre>{json_html(INFO_DOC)}</pre></div></div></section>')
+           f'<div class="fui-code-panel fui-self-description" role="region" aria-label="The info document" tabindex="0"><pre>{json_html(INFO_DOC)}</pre></div></div></section>')
     console = (f'<section class="fui-card fui-panel"><div class="fui-panel-head"><h2 class="fui-card-title"><span>This console</span></h2></div>'
                + tpl.settings_panel(console_rows(), 'Set in <code>ferrobridge-console.toml</code> · read at start') + "</section>")
     content = (page_heading("About", subtitle="The console, the bridge it reads, and the manufacturer.")

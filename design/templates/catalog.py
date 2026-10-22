@@ -119,7 +119,7 @@ def page_about():
     doc = (f'<section class="fui-card fui-panel mk-options-card"><div class="fui-panel-head"><h2 class="fui-card-title"><span>The self-description</span></h2>'
            f'<div class="fui-actions">{button("secondary", "Copy", "copy", small=True)}{button("secondary", "Download", "download", small=True)}</div></div>'
            f'<div class="fui-panel-body fui-stack"><p class="fui-small fui-muted">What the server declares, as every client reads it.</p>'
-           f'<div class="fui-code-panel mk-options-code" role="region" aria-label="The self-description" tabindex="0"><pre>{json_html(DOC)}</pre></div></div></section>')
+           f'<div class="fui-code-panel fui-self-description" role="region" aria-label="The self-description" tabindex="0"><pre>{json_html(DOC)}</pre></div></div></section>')
     return shell("About", "about", page_heading("About", subtitle="The console, the server it reads, and the manufacturer.") + f'<div class="fui-stack"><div class="fui-grid fui-grid-start">{v}{m}</div>{doc}</div>')
 
 

@@ -1581,7 +1581,7 @@ CFG_INTRO = {
 
 
 def compact_strip(n="7", at="2026-10-14", by="Demo Steward", reason=D_.REVISIONS[0]["reason"]):
-    return (f'<div class="fui-revision mk-revision-compact">{icon("file-text", "16")}<p><strong>Revision {n}</strong> · applied {at} by {by} · '
+    return (f'<div class="fui-revision fui-revision-compact">{icon("file-text", "16")}<p><strong>Revision {n}</strong> · applied {at} by {by} · '
             f'<span class="fui-pill fui-tone-ok" title="{e("Running since " + at + ": " + reason)}">In step</span></p></div>')
 
 
@@ -1592,7 +1592,7 @@ def file_line():
 
 def key_hint(k, show=False):
     # NOTE: the library's copyable key hint; unused until FerroPIX's configuration module names its keys.
-    return f'<button type="button" class="mk-key-hint{" is-shown" if show else ""}" aria-label="Copy the key {e(k)}" title="Copy the key"><code>{e(k)}</code>{icon("copy", "12")}</button>'
+    return f'<button type="button" class="fui-key-hint{" is-shown" if show else ""}" aria-label="Copy the key {e(k)}" title="Copy the key"><code>{e(k)}</code>{icon("copy", "12")}</button>'
 
 
 def srow(label, desc, value, restart=False, control=None, edit=False, error=None, changed=None):
@@ -2257,13 +2257,13 @@ def status_page(code, glyph, title, body, actions, current="dashboard", tone_sta
 
 
 def page_forbidden():
-    return status_page("403 · Not allowed", "ban", "Rotating the sealing key needs the key custodian scope",
+    return status_page("Not allowed · 403", "ban", "Rotating the sealing key needs the key custodian scope",
                        "You are signed in as Demo Steward, steward and administrator; the key custodian scope is held by the security officer. Ask them, or go back to Configuration.",
                        link_button("primary", "Back to Configuration", "configuration.html", "arrow-left") + link_button("secondary", "Dashboard", "dashboard.html"), current="configuration")
 
 
 def page_not_found():
-    return status_page("404 · Not found", "compass", "No patient with this person id",
+    return status_page("Not found · 404", "compass", "No patient with this person id",
                        "FerroPIX does not know the person id 0199c2f1" + "⁠…⁠" + "f0f0: it may be mistyped. A merged person still opens and leads to the survivor.",
                        link_button("primary", "Search for a patient", "search.html", "search") + link_button("secondary", "Dashboard", "dashboard.html"), current="search")
 
@@ -2409,7 +2409,7 @@ def capability_card():
     acts = copy_button("Copy", "the CapabilityStatement") + button("secondary", "Download", "download", small=True)
     return (f'<section class="fui-card fui-panel mk-options-card"><div class="fui-panel-head"><h2 class="fui-card-title"><span>The CapabilityStatement</span></h2><div class="fui-actions">{acts}</div></div>'
             f'<div class="fui-panel-body fui-stack"><p class="fui-small fui-muted">What the server declares at <code>GET [base]/metadata</code>, as every FHIR client reads it.</p>'
-            f'<div class="fui-code-panel mk-options-code" role="region" aria-label="The CapabilityStatement" tabindex="0"><pre>{json_html(CAPABILITY)}</pre></div></div></section>')
+            f'<div class="fui-code-panel fui-self-description" role="region" aria-label="The CapabilityStatement" tabindex="0"><pre>{json_html(CAPABILITY)}</pre></div></div></section>')
 
 
 CAPABILITY = """{

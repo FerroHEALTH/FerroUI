@@ -33,6 +33,17 @@ pub struct Footer {
     pub about: &'static str,
 }
 
+impl Footer {
+    /// The product and its version in the one form the footer and the
+    /// About page both write, such as "FerroBRIDGE Console 0.0.12".
+    #[must_use]
+    pub fn release(self) -> String {
+        // NOTE: no specification governs this: our own design; the product's
+        // name and its version are data, drawn as they stand in every locale.
+        format!("{} {}", self.product, self.version)
+    }
+}
+
 /// The parts of a signed-in page.
 #[derive(Debug)]
 pub struct Shell {
@@ -161,38 +172,16 @@ pub fn topbar_with(
     .into_any()
 }
 
-/// How the footer's About link is followed.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum About {
-    /// By the console's router, as every other link.
-    #[default]
-    Routed,
-    /// By a full page load (`rel="external"`), for an About page the server
-    /// renders once and the router could not draw.
-    FullLoad,
-}
-
-/// Returns the one line at the foot of every page: the product, its
-/// version, its maker and the About page.
+/// Returns the one line at the foot of every page: the product and its
+/// version ([`Footer::release`]), its maker and the About page.
 #[must_use]
 pub fn footer(footer: Footer) -> impl IntoView {
-    footer_about(footer, About::Routed)
-}
-
-/// Returns the footer [`footer`] draws, its About link followed as `about`
-/// says.
-#[must_use]
-pub fn footer_about(footer: Footer, about: About) -> impl IntoView {
-    let rel = (about == About::FullLoad).then_some("external");
+    let about = footer.about;
+    let line = format!("{} · {MAKER} · ", footer.release());
     view! {
         <footer class="fui-footer">
             <p>
-                // NOTE: no specification governs this: our own design; the product's
-                // name and its version are data, drawn as they stand in every locale.
-                {footer.product} " " {format!("v{}", footer.version)} {format!(" · {MAKER} · ")}
-                <a href=footer.about rel=rel>
-                    {tr(Text::FooterAbout)}
-                </a>
+                {line} <a href=about>{tr(Text::FooterAbout)}</a>
             </p>
         </footer>
     }
@@ -205,15 +194,8 @@ pub fn footer_about(footer: Footer, about: About) -> impl IntoView {
 /// view type stays shallow (rustc's layout recursion limit).
 #[must_use]
 pub fn shell(shell: Shell) -> AnyView {
-    shell_about(shell, About::Routed)
-}
-
-/// Returns the page [`shell`] draws, its footer's About link followed as
-/// `about` says.
-#[must_use]
-pub fn shell_about(shell: Shell, about: About) -> AnyView {
     let skip = skip_link().into_any();
-    let foot = footer_about(shell.footer, about).into_any();
+    let foot = footer(shell.footer).into_any();
     view! {
         <div class="fui-page">
             {skip} {shell.topbar} {shell.banner} <div class="fui-body">
@@ -230,14 +212,7 @@ pub fn shell_about(shell: Shell, about: About) -> AnyView {
 /// does not serve, a fault) above the footer.
 #[must_use]
 pub fn centred(content: AnyView, footer_text: Footer) -> AnyView {
-    centred_about(content, footer_text, About::Routed)
-}
-
-/// Returns the page [`centred`] draws, its footer's About link followed as
-/// `about` says.
-#[must_use]
-pub fn centred_about(content: AnyView, footer_text: Footer, about: About) -> AnyView {
-    let foot = footer_about(footer_text, about).into_any();
+    let foot = footer(footer_text).into_any();
     view! {
         <div class="fui-page">
             <main id=MAIN_ID class="fui-centred">

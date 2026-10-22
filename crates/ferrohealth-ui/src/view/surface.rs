@@ -4,7 +4,7 @@
 //! The surfaces a page is built from.
 //!
 //! They are the page header with its trail and meta line, the editor's
-//! header, the card and the panel with its header action, the stat card, the table card, the
+//! header, the card and the panel with its header action, the stat card, the
 //! definition grids, the well, the chip, the disclosure, and the stack,
 //! grid, cluster and split that lay them out.
 
@@ -37,7 +37,7 @@ impl Crumb {
 }
 
 /// What a page header shows.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Default)]
 pub struct Header {
     /// The page's title, also the trail's last, current, crumb.
     pub title: String,
@@ -47,73 +47,108 @@ pub struct Header {
     pub crumbs: Vec<Crumb>,
     /// Whether the title is drawn in the code face, for an identifier.
     pub mono: bool,
+    /// The state of what the page shows, beside its title (a state, a pill
+    /// or a mode badge), when it has one.
+    pub badge: Option<AnyView>,
+}
+
+/// How a page's trail ends.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Trail {
+    /// With the page itself, the current crumb, after its ancestors.
+    Here,
+    /// With the thing an editor edits or the list a new thing joins, so
+    /// the trail never ends with the editor itself.
+    Parent,
 }
 
 /// Returns the header that opens a page: the trail of its ancestors when it
-/// has one, its title with `actions` at the far end, and its subtitle line.
+/// has one, its title with its badge and `actions` at the far end, and its
+/// subtitle line.
 ///
 /// The trail is a `nav` named "Breadcrumb" holding an ordered list, the
 /// current page last and marked `aria-current="page"`, the separators hidden
 /// from assistive technology (WAI-ARIA Authoring Practices, the breadcrumb
-/// pattern).
+/// pattern). Below 40 rem it is one back link to the parent, the title
+/// under it saying where you are.
 #[must_use]
 pub fn page_heading(header: Header, actions: impl IntoView) -> impl IntoView {
-    let title = header.title.clone();
-    heading(header, Signal::stored(title), actions)
+    heading(header, Trail::Here, actions)
 }
 
-/// Returns the header [`page_heading`] draws, its title following `title`.
-///
-/// The title and the trail's current crumb follow the signal, so a page
-/// whose route names the thing it shows keeps its heading true when the
-/// route changes under client-side navigation; `header.title` is not read.
-#[must_use]
-pub fn page_heading_live(
-    header: Header,
-    title: Signal<String>,
-    actions: impl IntoView,
-) -> impl IntoView {
-    heading(header, title, actions)
+/// Returns a crumb's link, with the arrow it shows as a back link.
+fn crumb_link(crumb: Crumb) -> impl IntoView {
+    view! {
+        <a href=crumb.href>
+            <span class="fui-crumb-back" aria-hidden="true">
+                {icon(Glyph::ARROW_LEFT, "14")}
+            </span>
+            {crumb.label}
+        </a>
+    }
 }
 
-/// The header both [`page_heading`] and [`page_heading_live`] draw.
-fn heading(header: Header, title: Signal<String>, actions: impl IntoView) -> impl IntoView {
+/// Returns the separator after a crumb, hidden from assistive technology.
+fn crumb_sep() -> impl IntoView {
+    view! {
+        <span class="fui-crumb-sep" aria-hidden="true">
+            "/"
+        </span>
+    }
+}
+
+/// Returns the trail `crumbs` ending as `trail` says, after them the
+/// current page `title` when it ends there.
+fn trail_of(crumbs: Vec<Crumb>, trail: Trail, title: &str) -> AnyView {
+    let last = crumbs.len().saturating_sub(1);
+    let links = crumbs
+        .into_iter()
+        .enumerate()
+        .map(|(at, crumb)| {
+            let sep = (trail == Trail::Here || at < last).then(crumb_sep);
+            view! { <li>{crumb_link(crumb)} {sep}</li> }
+        })
+        .collect_view();
+    match trail {
+        Trail::Here => view! {
+            <nav class="fui-crumbs" aria-label=tr(Text::Breadcrumb)>
+                <ol>{links} <li aria-current="page">{title.to_owned()}</li></ol>
+            </nav>
+        }
+        .into_any(),
+        Trail::Parent => view! {
+            <nav class="fui-crumbs is-parent" aria-label=tr(Text::Breadcrumb)>
+                <ol>{links}</ol>
+            </nav>
+        }
+        .into_any(),
+    }
+}
+
+/// The header [`page_heading`] and [`editor_heading`] draw.
+fn heading(header: Header, trail: Trail, actions: impl IntoView) -> impl IntoView {
     let Header {
+        title,
         subtitle,
         crumbs,
         mono,
-        ..
+        badge,
     } = header;
-    let trail = (!crumbs.is_empty()).then(|| {
-        let links = crumbs
-            .into_iter()
-            .map(|crumb| {
-                view! {
-                    <li>
-                        <a href=crumb.href>{crumb.label}</a>
-                        <span class="fui-crumb-sep" aria-hidden="true">
-                            "/"
-                        </span>
-                    </li>
-                }
-            })
-            .collect_view();
-        view! {
-            <nav class="fui-crumbs" aria-label=tr(Text::Breadcrumb)>
-                <ol>{links} <li aria-current="page">{move || title.get()}</li></ol>
-            </nav>
-        }
-    });
+    let trail = (!crumbs.is_empty()).then(|| trail_of(crumbs, trail, &title));
     // Two arms, so a title in the body face writes no `class` attribute.
     let h1 = if mono {
-        view! { <h1 class="fui-page-title-mono">{move || title.get()}</h1> }.into_any()
+        view! { <h1 class="fui-page-title-mono">{title}</h1> }.into_any()
     } else {
-        view! { <h1>{move || title.get()}</h1> }.into_any()
+        view! { <h1>{title}</h1> }.into_any()
+    };
+    let title_line = match badge {
+        Some(badge) => view! { <div class="fui-page-title-line">{h1} {badge}</div> }.into_any(),
+        None => h1,
     };
     view! {
         <header class="fui-page-header">
             {trail} <div class="fui-page-heading">
-                {h1}
+                {title_line}
                 <div class="fui-actions">{actions}</div>
             </div>
             {subtitle.map(|line| view! { <p class="fui-page-subtitle">{line}</p> })}
@@ -159,8 +194,7 @@ impl Mode {
     }
 }
 
-/// The title of an editor in `mode`, such as "New code system" or "Edit
-/// Vital signs".
+/// The title of an editor in `mode`, such as "New code system" or "Edit".
 ///
 /// It is the console's `message` with `$mode` set to `new` or `edit` and
 /// `$name` to the name of the thing changed (empty while creating).
@@ -171,11 +205,13 @@ impl Mode {
 /// code-system-editor =
 ///     { $mode ->
 ///         [new] New code system
-///        *[edit] Edit { $name }
+///        *[edit] Edit
 ///     }
 /// ```
 ///
-/// A console writes the same words as the document's title.
+/// The heading's trail names the thing edited, so the title need not; a
+/// console whose document title must name it words a second message with
+/// `$name`.
 #[must_use]
 pub fn editor_title(message: Message, mode: &Mode) -> String {
     let name = match mode {
@@ -188,8 +224,11 @@ pub fn editor_title(message: Message, mode: &Mode) -> String {
 /// Returns the header that opens an editor in `mode`, so a reader tells from
 /// the heading whether the form creates or changes.
 ///
-/// It is [`page_heading`] with its title and the trail's current crumb from
-/// [`editor_title`].
+/// Its title is [`editor_title`]: "New code system" while creating, and
+/// the console's words for a change ("Edit") while editing. Its trail never
+/// ends with the editor: pass in `header.crumbs` the list a new thing
+/// joins, or the trail down to the thing edited, that thing last, and on a
+/// phone that last crumb is the back link.
 ///
 /// `header.title` and `header.mono` are not read: the title is a sentence,
 /// so it is drawn in the body face even around an identifier.
@@ -201,12 +240,13 @@ pub fn editor_heading(
     actions: impl IntoView + 'static,
 ) -> AnyView {
     let title = editor_title(message, mode);
-    page_heading(
+    heading(
         Header {
             title,
             mono: false,
             ..header
         },
+        Trail::Parent,
         actions,
     )
     .into_any()
@@ -369,20 +409,6 @@ pub fn stat_card_marked(stat: Stat, mark: impl IntoView + 'static) -> impl IntoV
     }
     .into_any();
     stat_frame(stat.href, inner)
-}
-
-/// Returns `table` in a box named `label` that shows every row.
-///
-/// On a wide screen the header sticks below the top bar; on a narrow one the
-/// box scrolls sideways, focusable so the keyboard scrolls it (WCAG 2.2
-/// SC 1.4.10, SC 2.1.1).
-#[must_use]
-pub fn table_card(label: impl Into<String>, table: impl IntoView) -> impl IntoView {
-    view! {
-        <div class="fui-table-scroll" role="region" aria-label=label.into() tabindex="0">
-            {table}
-        </div>
-    }
 }
 
 /// Returns a compact definition grid: each label beside its value from

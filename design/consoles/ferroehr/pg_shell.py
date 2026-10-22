@@ -249,13 +249,13 @@ def status_page(code, glyph, title, body, actions, current="dashboard", reader=F
 
 
 def page_forbidden():
-    return status_page("403 · Not allowed", "ban", "The audit log needs the admin role",
+    return status_page("Not allowed · 403", "ban", "The audit log needs the admin role",
                        "You are signed in as Demo Clinician with the user role, and the CDR shows the audit log only to the admin role.",
                        link_button("primary", "Dashboard", "dashboard.html", "arrow-left") + link_button("secondary", "Your access", "access.html", "key-round"), current="audit", reader=True)
 
 
 def page_not_found():
-    return status_page("404 · Not found", "compass", "No such screen",
+    return status_page("Not found · 404", "compass", "No such screen",
                        "The viewer has no page at <code>/ehr/<wbr>0199c2a4</code>. EHRs live under <code>/ehrs</code>.",
                        link_button("primary", "EHRs", "ehrs.html", "database") + link_button("secondary", "Dashboard", "dashboard.html"), current="")
 
@@ -285,7 +285,7 @@ def page_about():
     acts = copy_button("Copy", "the conformance manifest") + button("secondary", "Download", "download", small=True)
     doc = (f'<section class="fui-card fui-panel mk-options-card"><div class="fui-panel-head"><h2 class="fui-card-title"><span>The conformance manifest</span></h2><div class="fui-actions">{acts}</div></div>'
            f'<div class="fui-panel-body fui-stack"><p class="fui-small fui-muted">What the CDR answers at <code>OPTIONS /ferroehr/<wbr>rest/<wbr>openehr/<wbr>v1</code>; <code>/demographic</code> is the ITS-REST demographic API, still in development.</p>'
-           f'<div class="fui-code-panel mk-options-code" role="region" aria-label="The conformance manifest" tabindex="0"><pre>{json_html(MANIFEST)}</pre></div></div></section>')
+           f'<div class="fui-code-panel fui-self-description" role="region" aria-label="The conformance manifest" tabindex="0"><pre>{json_html(MANIFEST)}</pre></div></div></section>')
     content = (page_heading("About", subtitle="The viewer, the CDR it reads, and the manufacturer.")
                + f'<div class="fui-stack"><div class="fui-grid fui-grid-start">{vers}{maker}</div>{doc}</div>')
     return shell("About", "about", content)

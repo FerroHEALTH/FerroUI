@@ -64,7 +64,58 @@ and this project adheres to
   the skills `/new-component` and `/leptos-check` walk a component and a
   review against the rules.
 
+- The page templates as server views (#154), `view::template`: T1
+  `list::list_page` with its card and header row (`list_card`, the count
+  muted after a middle dot), the summary strip and the toolbar only past
+  ten items (the toolbar also for a list with no stated end), the active
+  filter chips with "Showing 7 of 21" and Clear filters as links (R14), and
+  `list_empty`, one quiet line with the title row's action as a text link;
+  T2 `detail::detail_page` and `detail::stepper`, previous and next of a
+  queue as links (R5); T3 `settings::settings_page` over a `Source`: a
+  file-only configuration with its one quiet line ("Set in … · read at
+  start · How configuration works"), no mode badge and no Next start
+  marker, or a managed one with its mode badge, revision line
+  (`revision_line`), panel intro and actions; `setting_row`, each
+  configuration key a labelled copy button (R15, `island::KeyHint`); and
+  `about::about_page`, the Versions and Manufacturer cards and the
+  self-description capped at 24 rem with Copy and Download.
+- The error page (#187), `view::error_page::error_page` (R20): the status in
+  words before its number ("Not allowed · 403"), the title naming the
+  error, the body, a quiet hint, the ways on as links, and the time and
+  request id in a closed disclosure, in the shell or in the centred layout.
+- `view::shell::Footer::release`, the product and its version in the one
+  form the footer and the About page both write ("FerroBRIDGE Console
+  0.0.12"); `view::code::self_description`; `widget::copy::key_hint` and
+  `KeyHintWords`; the Lucide `ban` glyph.
+- The classes `fui-key-hint`, `fui-list-count`, `fui-revision-compact` and
+  `fui-self-description`, lifted from the mockups' scaffolding into the
+  crate's stylesheet and named in `design/COMPONENTS.md`.
+- The gallery's Page templates group: every template, the 403 and 404 in
+  the shell and the 500 in the centred layout, in every brand.
+
 ### Changed
+
+- `view::surface::page_heading` draws the trail's back arrow, so below
+  40 rem the trail is one back link to the parent (R6), and a state badge
+  beside the title from the new `Header::badge` (R24). `Header` is no
+  longer `Clone`, `PartialEq` or `Eq`; a console that builds it with every
+  field adds `badge: None`. `page_header` draws through it unchanged.
+- `view::surface::editor_heading` ends its trail with the list a new thing
+  joins or with the thing edited, never with the editor (`fui-crumbs
+  is-parent`), and its title is the console's words alone: a console's
+  editor message reads `[new] New code system *[edit] Edit` and passes the
+  thing edited as the last crumb.
+- The footer writes the product and its version without the "v"
+  ("FerroBRIDGE Console 0.0.12 · Cadasto B.V. · About"), the form the
+  About page shows.
+- T3's setting rows are `template::settings::setting_row`;
+  `view::layout::field_row` and `keyed_field_row` stay the form grid's row
+  of fields, unchanged.
+- The design's error pages say the status in words before its number on
+  every console.
+- The filter chip's remove control may be a link (`.fui-filter-chip > a`).
+- `.claude/rules/leptos-ui.md` §11: an editor's title is "New <thing>" or
+  "Edit", and its trail ends with the resource.
 
 - The console layer of the approved design moves into
   `css/ferrohealth-ui.css` (#150): the class of every console component in
@@ -140,6 +191,14 @@ and this project adheres to
 
 ### Removed
 
+- `view::surface::page_heading_live` (#210): a view function takes no
+  reactive title. A console calls `page_heading` with the title its server
+  knows when it renders.
+- `view::surface::table_card`, which the list card replaces:
+  `template::list::list_card`.
+- `view::shell::About`, `footer_about`, `shell_about` and `centred_about`:
+  with no client router an About link is a plain link; call `footer`,
+  `shell` and `centred`.
 - `widget::theme::theme_toggle`, the toggle that swapped the theme in
   place. `view::theme_switch::theme_toggle` is the toggle: a plain form
   post the console answers with the page in the new theme.

@@ -236,20 +236,20 @@ def status_page(code, glyph, title, body, actions, current="dashboard", status_=
 
 
 def page_forbidden():
-    return status_page("403 · Not allowed", "ban", "This account cannot edit value sets",
+    return status_page("Not allowed · 403", "ban", "This account cannot edit value sets",
                        "You are signed in as Demo Reader, and this account may not edit value sets. You can still read the value set and preview an expansion.</p>"
                        '<p class="fui-small fui-muted">Needs the scope <code>user/ValueSet.cud</code>.',
                        link_button("primary", "Back to the value set", "value-set.html", "arrow-left") + button("secondary", "Sign in again", "log-in"), current="valuesets", reader=True)
 
 
 def page_not_found():
-    return status_page("404 · Not found", "compass", "No such screen",
+    return status_page("Not found · 404", "compass", "No such screen",
                        "The console has no page at <code>/valueset/<wbr>synthetic-respiratory</code>. Value sets live under <code>/valuesets</code>.",
                        link_button("primary", "Value sets", "value-sets.html", "layers") + link_button("secondary", "Dashboard", "dashboard.html"), current="")
 
 
 def page_unreadable():
-    content = (f'<div class="fui-status-page"><span class="fui-empty-glyph">{icon("server-crash", "24")}</span><p class="fui-status-page-code">500 · Fault</p>'
+    content = (f'<div class="fui-status-page"><span class="fui-empty-glyph">{icon("server-crash", "24")}</span><p class="fui-status-page-code">Fault · 500</p>'
                f'<h1>The console cannot read its sessions</h1><p>It cannot tell whether you are signed in, so it shows nothing. Ask whoever runs the console to restart it; the terminology server keeps answering its clients meanwhile.</p>'
                f'<div class="fui-actions">{link_button("primary", "Try again", "dashboard.html", "refresh-cw")}</div></div>')
     return centred("Fault", content)
@@ -307,7 +307,7 @@ def page_about():
     acts = copy_button("Copy", "the CapabilityStatement") + button("secondary", "Download", "download", small=True)
     doc = (f'<section class="fui-card fui-panel mk-options-card"><div class="fui-panel-head"><h2 class="fui-card-title"><span>The CapabilityStatement of FHIR R4</span></h2><div class="fui-actions">{acts}</div></div>'
            f'<div class="fui-panel-body fui-stack"><p class="fui-small fui-muted">What the R4 root declares at <code>GET /r4/metadata</code>; <a href="server.html">Server</a> compares the four roots.</p>'
-           f'<div class="fui-code-panel mk-options-code" role="region" aria-label="The CapabilityStatement" tabindex="0"><pre>{json_html(CAPABILITY)}</pre></div></div></section>')
+           f'<div class="fui-code-panel fui-self-description" role="region" aria-label="The CapabilityStatement" tabindex="0"><pre>{json_html(CAPABILITY)}</pre></div></div></section>')
     content = (page_heading("About", subtitle="The console, the server it reads, and the manufacturer.")
                + f'<div class="fui-stack"><div class="fui-grid fui-grid-start">{vers}{maker}</div>{doc}</div>')
     return shell("About", "about", content)

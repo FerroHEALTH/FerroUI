@@ -114,6 +114,43 @@ async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error
                 .await?;
             assert!(!items.is_empty(), "the tree shows its items");
         }
+        "/templates/list" | "/templates/list-tabs" => {
+            let rows = browser
+                .driver()
+                .find_all(By::Css(".fui-worklist tbody tr"))
+                .await?;
+            assert_eq!(5, rows.len(), "the list shows its five locations");
+        }
+        "/templates/list-many" => {
+            browser.element(By::Css(".fui-filter-chip a[href]")).await?;
+            browser.element(By::Css(".fui-list-foot a[href]")).await?;
+        }
+        "/templates/list-empty" => {
+            browser
+                .element(By::Css(".fui-transform-empty a[href]"))
+                .await?;
+        }
+        "/templates/detail" => {
+            browser.element(By::Css(".fui-crumbs a[href]")).await?;
+            browser.element(By::Css(".fui-stepper a[href]")).await?;
+        }
+        "/templates/settings" => {
+            browser.element(By::Css(".fui-key-hint code")).await?;
+            browser.text("p", "Set in").await?;
+        }
+        "/templates/settings-managed" => {
+            browser.element(By::Css(".fui-revision-compact")).await?;
+        }
+        "/templates/about" => {
+            browser.element(By::Css("a[download]")).await?;
+            let shown = text_of(browser, By::Css(".fui-self-description")).await?;
+            assert!(!shown.is_empty(), "the self-description shows");
+        }
+        "/templates/forbidden" | "/templates/not-found" => {
+            browser
+                .element(By::Css(".fui-status-page a.fui-button-primary[href]"))
+                .await?;
+        }
         other => return Err(format!("no content check for the page {other:?}").into()),
     }
     Ok(())

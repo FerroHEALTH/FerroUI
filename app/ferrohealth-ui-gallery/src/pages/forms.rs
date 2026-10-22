@@ -936,15 +936,19 @@ pub(crate) fn filter_body() -> AnyView {
 }
 
 /// The header of an editor that creates a file and of one that edits a
-/// file: the title and the trail's last crumb say which.
+/// file: the title says which, and the trail ends with the list a new file
+/// joins or with the file edited.
 fn editor_headers() -> AnyView {
-    let crumbs = || vec![Crumb::new(tr(Msg::MappingFilesCrumb), String::from("#"))];
     let header = |mode: Mode| {
+        let mut crumbs = vec![Crumb::new(tr(Msg::MappingFilesCrumb), String::from("#"))];
+        if let Mode::Editing(name) = &mode {
+            crumbs.push(Crumb::new(name.clone(), String::from("#")));
+        }
         well(editor_heading(
             message(Msg::FileEditor),
             &mode,
             Header {
-                crumbs: crumbs(),
+                crumbs,
                 ..Header::default()
             },
             (),

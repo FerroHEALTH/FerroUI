@@ -504,7 +504,7 @@ all-files = All files
 editor-headers = Editor headers
 file-editor = { $mode ->
         [new] New mapping file
-       *[edit] Edit { $name }
+       *[edit] Edit
     }
 mapping-files-crumb = Mapping files
 hierarchy-in-table = A hierarchy in a table
@@ -519,3 +519,89 @@ hierarchy-leaf-b1x = A leaf of that twig
 hierarchy-deep = Nine levels down, at the deepest step
 lists-laid-out = Lists laid out by a layout class
 fieldset-under-title = A fieldset under a card's title
+
+## Page templates
+
+templates = Page templates
+nav-list = T1 List
+nav-list-many = T1 Many items
+nav-list-empty = T1 Empty
+nav-list-tabs = T1 With tabs
+nav-detail = T2 Detail
+nav-settings = T3 From a file
+nav-settings-managed = T3 Managed
+nav-about = About
+nav-forbidden = Error 403
+nav-not-found = Error 404
+nav-fault = Error 500
+about-intro = The console, the server it reads, and the manufacturer.
+about-title = About
+access-log = Access log
+active = Active
+add-first-location = Add the first location
+add-unit = Add unit
+added = Added
+all-units = All units
+audit = Audit
+best-effort = Best effort
+best-effort-desc = A caller may ask for a partial answer.
+column-id = Id
+column-location = Location
+column-state = State
+column-units = Units
+degraded-count = { $count } degraded
+edit-word = Edit
+fault-body = It cannot tell whether you are signed in, so it shows nothing. Ask whoever runs the console to restart it; the server keeps answering its clients meanwhile.
+fault-title = The console cannot read its sessions
+filter-reachable = State: reachable
+find-location = Location name or id
+forbidden-body = You are signed in as Demo Operator, but your access token carries no operator scope, so the server refused it. Ask your identity provider's administrator for the scope, then sign in again.
+forbidden-title = This view needs the operator scope
+general = General
+how-settings-work = How settings work
+limits = Limits
+licence-name = Business Source License 1.1
+locatie-noord = Locatie Noord
+location-of = Location 1 of 5
+location-subtitle = Location loc-n · 3 units
+location-word = location
+location-word-title = Location
+locations = Locations
+locations-count = { $count ->
+        [one] { $count } location
+       *[other] { $count } locations
+    }
+managed-badge = Managed
+mode-desc = Which units a request asks.
+mode-setting = Mode
+nearest = nearest
+new-location = New location
+no-location = No location takes part yet.
+not-found-template-body = The gallery knows no location loc-x. It may be mistyped, or the location was removed; every location is listed on Locations.
+not-found-title = No location at this address
+offered = offered
+queue-steps = Previous and next
+retries = Retries
+retries-desc = How often a failed call is tried again.
+revision-line = Revision 7 · applied 2026-10-14 by Demo Steward · in step
+scope-is = The scope is
+self-description = The self-description
+self-description-line = What the server declares, as every client reads it.
+server = Server
+settings-intro = Example content: deployment-wide settings, one section per tab.
+settings-panel-intro = How calls behave. Changes apply at once unless a row says Next start.
+settings-sections = Settings sections
+settings-tab = Settings
+show = Show
+sign-in-again = Sign in again
+standing = Standing
+state-degraded = Degraded
+state-excluded = Excluded
+state-reachable = Reachable
+template-example = Example content: the template's parts, not a product's.
+the-book = The FerroBRIDGE book
+timeout = Timeout
+timeout-desc = How long one call may take, 200 to 10,000 ms.
+timeout-value = 2,500 ms
+try-again = Try again
+units = Units

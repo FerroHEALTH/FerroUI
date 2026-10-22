@@ -22,3 +22,4 @@ mod locale;
 mod markup;
 mod render;
 mod stylesheet;
+mod templates;

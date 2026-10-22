@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The copy button: puts a text on the clipboard and says so.
+//! The copy button and a setting's key hint: each puts a text on the
+//! clipboard and says so.
 //!
 //! It is a small secondary button with the `copy` glyph. Pressed, it writes
 //! the text with the browser's asynchronous clipboard (W3C Clipboard API and
@@ -11,8 +12,9 @@
 //! a press before then is never lost silently.
 
 use leptos::prelude::*;
+use serde::{Deserialize, Serialize};
 
-use crate::i18n::{Text, tr};
+use crate::i18n::{Text, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::view::button::Variant;
 
@@ -20,10 +22,6 @@ use crate::view::button::Variant;
 pub const COPIED_MS: u64 = 2000;
 
 /// What the copy button says.
-#[cfg_attr(
-    not(target_arch = "wasm32"),
-    expect(dead_code, reason = "the browser half alone sets a copy's outcome")
-)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum State {
     /// Ready to copy.
@@ -101,6 +99,85 @@ pub fn copy_button(
                         }
                     })
             }}
+        </span>
+    }
+}
+
+/// The words a key hint draws, resolved on the server in the page's
+/// locale, so the island carries no catalog.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct KeyHintWords {
+    /// The button's name: "Copy the key" and the key.
+    pub label: String,
+    /// The button's tooltip.
+    pub title: String,
+    /// What the live region says once the key is copied.
+    pub copied: String,
+    /// What the live region says when the browser refuses.
+    pub refused: String,
+}
+
+impl KeyHintWords {
+    /// The words of the hint of `key` in the locale of the page being drawn.
+    #[must_use]
+    pub fn of_page(key: &str) -> Self {
+        Self {
+            label: tr_with(Text::KeyCopy, &[("key", key.into())]),
+            title: tr(Text::KeyCopyTitle),
+            copied: tr(Text::CopySaidCopied),
+            refused: tr(Text::CopySaidRefused),
+        }
+    }
+}
+
+/// Returns the key hint of a setting: its TOML `key` in the code face, a
+/// button named "Copy the key" and the key that copies it when pressed
+/// (R15); a page draws it through [`crate::island::KeyHint`].
+///
+/// It sits on the setting's label line. The stylesheet shows it while the
+/// row is hovered or holds the focus, and always below 40 rem, where no
+/// pointer hovers; it keeps its room while hidden, so nothing moves. The
+/// server draws it disabled and it turns on once the page has hydrated, as
+/// the copy button does; the key reads as text before then.
+#[must_use]
+pub fn key_hint(key: String, words: KeyHintWords) -> impl IntoView {
+    let KeyHintWords {
+        label,
+        title,
+        copied: said_copied,
+        refused: said_refused,
+    } = words;
+    let state = RwSignal::new(State::Ready);
+    let hydrated = RwSignal::new(false);
+    Effect::new(move |_| hydrated.set(true));
+    let copied = key.clone();
+    let press = move |_| write(&copied, state);
+    let said = move || match state.get() {
+        State::Ready => String::new(),
+        State::Copied => said_copied.clone(),
+        State::Refused => said_refused.clone(),
+    };
+    let glyph = move || {
+        if state.get() == State::Copied {
+            icon(Glyph::CHECK, "12")
+        } else {
+            icon(Glyph::COPY, "12")
+        }
+    };
+    view! {
+        <button
+            type="button"
+            class="fui-key-hint"
+            aria-label=label
+            title=title
+            disabled=move || !hydrated.get()
+            on:click=press
+        >
+            <code>{key}</code>
+            {glyph}
+        </button>
+        <span class="fui-sr-only" role="status">
+            {said}
         </span>
     }
 }

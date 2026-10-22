@@ -138,11 +138,11 @@ fn the_footer_draws_its_version_as_data_in_every_locale() {
         let page = render(Some(locale), || footer(text.clone()).into_any());
         assert!(page.contains("FerroUI Gallery"), "{page}");
         assert!(
-            page.contains(">v0.1.8<") || page.contains("v0.1.8"),
-            "{page}"
+            page.contains("FerroUI Gallery 0.1.8 · "),
+            "the About page's form, the product then its version: {page}"
         );
         assert!(
-            !page.contains("[v0.1.8"),
+            !page.contains("[0.1.8"),
             "the version never goes through a catalog: {page}"
         );
     }

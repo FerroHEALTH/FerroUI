@@ -93,6 +93,11 @@ fn shots() -> Vec<Shot> {
                 ready: "main h1",
             });
         }
+        shots.push(Shot {
+            image: format!("{}/fault", brand.key()),
+            path: format!("/fault/{}", brand.key()),
+            ready: ".fui-status-page h1",
+        });
         for variant in SIGN_INS {
             shots.push(Shot {
                 image: format!("{}/sign-in-{variant}", brand.key()),
