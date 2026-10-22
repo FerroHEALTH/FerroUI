@@ -97,10 +97,11 @@ async fn more_walks_by_the_keyboard_skips_a_disabled_item_and_returns_the_focus(
         })
         .await?;
         assert!(is_open(browser, "overlays-more").await?);
-        assert_eq!(
-            Some(String::from("true")),
-            more.attr("aria-expanded").await?
-        );
+        // The toggle event that says More opened fires after the key.
+        until("More says it is open", async || {
+            Ok(more.attr("aria-expanded").await?.as_deref() == Some("true"))
+        })
+        .await?;
         press(browser, Key::Down).await?;
         assert_eq!(
             "Delete the file\u{2026}",
@@ -218,7 +219,9 @@ async fn the_listbox_opens_on_its_choice_and_a_choice_follows_its_link()
         let select = hydrated_trigger(browser, "version-list").await?;
         select.click().await?;
         until("the listbox opens on the choice in force", async || {
-            Ok(focused_words(browser).await?.starts_with("1.1.0"))
+            let active = browser.driver().active_element().await?;
+            Ok(active.attr("role").await?.as_deref() == Some("option")
+                && active.attr("aria-selected").await?.as_deref() == Some("true"))
         })
         .await?;
         press(browser, Key::Down).await?;

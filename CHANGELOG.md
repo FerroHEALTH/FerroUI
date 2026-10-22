@@ -237,13 +237,11 @@ and this project adheres to
 - The combobox's listbox is a keyed `<For>` over the shown options, keyed
   by the option's value, with the empty state outside it, so moving the
   highlight changes only that option's attributes and no row is drawn
-  again (#207). `KeyedCombobox` carries its `no_match` words
-  (`widget::combobox::no_match()`), and `ComboOption` is `Serialize` and
-  `Deserialize`.
+  again (#207). `ComboOption` is `Serialize` and `Deserialize`.
 - The chart's legend is a static key in the server HTML, each swatch beside
   its series' name, and becomes a toggle per series once its island
   hydrates, so a sighted reader keeps the colour key with no WebAssembly
-  (#227). `widget::chart::line_chart(&chart)` draws the plot and the table
+  (#227). `widget::chart::line_chart(&chart, words)` draws the plot and the table
   on the server and takes no `shown` signal; the legend is
   `island::ChartLegend` (`widget::chart::legend`).
 - The picker's "another" choice is its select's last option, marked
