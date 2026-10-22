@@ -59,14 +59,11 @@ fn every_class_a_component_writes_is_defined_in_the_stylesheet() {
 
 #[test]
 fn every_size_of_type_names_a_step_of_the_scale() {
-    // NOTE: no specification governs this: our own design; a size of 0 sets no type, it takes
-    // the words of a pill cut to its shape off the line and leaves them its accessible name.
     let off_scale: Vec<&str> = STYLESHEET
         .lines()
         .map(str::trim)
         .filter(|line| line.starts_with("font-size:"))
         .filter(|line| !line.contains("var(--text-") && !line.contains("inherit"))
-        .filter(|line| *line != "font-size: 0;")
         .collect();
     assert!(off_scale.is_empty(), "sizes off the scale: {off_scale:?}");
 }

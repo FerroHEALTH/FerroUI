@@ -16,61 +16,12 @@ use crate::icon::{Glyph, icon};
 use crate::theme::{Density, Theme};
 
 /// The glyph a theme is drawn with.
-const fn glyph(theme: Theme) -> Glyph {
+pub(crate) const fn glyph(theme: Theme) -> Glyph {
     match theme {
         Theme::Light => Glyph::SUN,
         Theme::Dark => Glyph::MOON,
         Theme::System => Glyph::MONITOR,
     }
-}
-
-/// The id of the toggle's button that switches to the dark theme.
-pub const TO_DARK: &str = "theme-to-dark";
-
-/// The id of the toggle's button that switches to the light theme.
-pub const TO_LIGHT: &str = "theme-to-light";
-
-/// Returns the theme toggle of a top bar: one 32 px icon button showing a
-/// moon in the light theme and a sun in the dark one, which posts the other
-/// theme to `action` with the page `back` to return to.
-///
-/// The form holds both buttons and the stylesheet shows the one that leads
-/// away from the theme on screen, read from `data-theme` on `<html>` and,
-/// for the system theme, from `prefers-color-scheme`, so the right glyph
-/// shows on the first paint with no script and no cookie. The console's
-/// route keeps the choice and answers with the page in the new theme.
-#[must_use]
-pub fn theme_toggle(action: String, back: String) -> AnyView {
-    let to_dark = tr(Text::ThemeToDark);
-    let to_light = tr(Text::ThemeToLight);
-    view! {
-        <form method="post" action=action class="fui-theme-toggle">
-            <input type="hidden" name="back" value=back />
-            <button
-                type="submit"
-                id=TO_DARK
-                name="theme"
-                value=Theme::Dark.key()
-                class="fui-icon-button fui-theme-to-dark"
-                aria-label=to_dark.clone()
-                title=to_dark
-            >
-                {icon(Glyph::MOON, "16")}
-            </button>
-            <button
-                type="submit"
-                id=TO_LIGHT
-                name="theme"
-                value=Theme::Light.key()
-                class="fui-icon-button fui-theme-to-light"
-                aria-label=to_light.clone()
-                title=to_light
-            >
-                {icon(Glyph::SUN, "16")}
-            </button>
-        </form>
-    }
-    .into_any()
 }
 
 /// Returns the theme switch for the theme `current`, posting to `action`

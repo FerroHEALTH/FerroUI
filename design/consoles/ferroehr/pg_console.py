@@ -606,19 +606,19 @@ def sign_in_card(notice_html="", state_=None, form_error=None):
     basic = (f'<form class="fui-stack" method="post" action="dashboard.html">{err}{field("u", "Username", input_("u", uval, extra="autocomplete=" + chr(34) + "username" + chr(34) + off))}'
              f'{field("pw", "Password", input_("pw", "", type_="password", extra="autocomplete=" + chr(34) + "current-password" + chr(34) + off + (" aria-invalid=" + chr(34) + "true" + chr(34) if form_error else "")))}'
              f'{button("secondary", "Sign in with a CDR account", "key-round", type_="submit", attrs=off.strip())}</form>')
-    dep = '<p class="fui-small fui-muted mk-sign-in-line">Evaluation deployment: synthetic data only. Ask the operator for an account.</p>'
+    dep = '<p class="fui-small fui-muted fui-sign-in-line">Evaluation deployment: synthetic data only. Ask the operator for an account.</p>'
     mark = lockup().replace('<a href="dashboard.html" class="fui-lockup">', '<span class="fui-lockup">', 1).replace("</span></a>", "</span></span>", 1)
     return (
         f'<div class="fui-card fui-sign-in"><div class="fui-sign-in-lockup">{mark}</div>'
-        '<h1 class="mk-sign-in-title">Sign in</h1>'
-        + notice_html + oidc + '<p class="fui-small fui-muted mk-sign-in-line">or</p>' + basic + dep
+        '<h1 class="fui-sign-in-title">Sign in</h1>'
+        + notice_html + oidc + '<p class="fui-small fui-muted fui-sign-in-line">or</p>' + basic + dep
         + '<div class="fui-sign-in-links"><a href="https://ferroehr.eu/docs/latest/" rel="external noopener">The FerroEHR book</a></div></div>'
         '<p class="fui-sign-in-caption">The viewer of the FerroEHR clinical data repository.</p>'
     )
 
 
 def sign_in_page(**kw):
-    return centred("Sign in", f'<div class="fui-stack mk-sign-in-stack">{sign_in_card(**kw)}</div>')
+    return centred("Sign in", f'<div class="fui-stack fui-sign-in-stack">{sign_in_card(**kw)}</div>')
 
 
 def n(tone, role, text):

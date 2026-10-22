@@ -980,6 +980,13 @@ GATEWAY_STATUS = {
 }
 
 
+def status_pill(tone, word, detail):
+    """The top bar's status pill (F12): its shape and its words, which stay its
+    accessible name below 64 rem; the tooltip holds the words and the detail."""
+    tip = f"{word} · {detail}" if detail else word
+    return f'<span class="fui-pill fui-tone-{tone} fui-topbar-status" title="{e(tip)}"><span class="fui-roomy-text">{e(word)}</span></span>'
+
+
 def topbar(status="up", search_value="", search_state=None, results=None, menu_open=False, menu_theme="light", menu_focus=None):
     tone, word = GATEWAY_STATUS[status]
     search = search_control(search_value, search_state, results=results)
@@ -992,8 +999,8 @@ def topbar(status="up", search_value="", search_state=None, results=None, menu_o
     )
     # The theme lives in the user menu and Your preferences; the top bar
     # carries no toggle (owner, family-wide).
-    title = ' title="FerroFED 0.0.12 · answered by replica gateway-0"' if status == "up" else ""
-    end = f'<span class="fui-pill fui-tone-{tone} fui-roomy-only"{title}>{word}</span>{operator}'
+    detail = "FerroFED 0.0.12 · answered by replica gateway-0" if status == "up" else ""
+    end = f'{status_pill(tone, word, detail)}{operator}'
     drawer = f'<button type="button" class="fui-icon-button fui-drawer-only" popovertarget="sidebar" aria-controls="sidebar" aria-label="Menu">{icon("menu", "18")}</button>'
     return (
         f'<header class="fui-topbar"><div class="fui-topbar-row">{drawer}{lockup()}<div class="fui-topbar-middle">{search}</div>'

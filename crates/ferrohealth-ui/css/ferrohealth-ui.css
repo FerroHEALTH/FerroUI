@@ -786,9 +786,8 @@
     white-space: nowrap;
   }
 
-  /* A status pill in the end keeps its full words: a pill cut to its dot
-     says nothing. A console shows it from the width where the row has room
-     for it (`fui-roomy-only`). */
+  /* A status pill in the end draws its shape before its words; below 64 rem
+     the top bar's status keeps the shape alone (`fui-topbar-status`). */
   .fui-topbar-end .fui-pill::before {
     display: inline-block;
     margin-inline-end: 0.375rem;
@@ -885,32 +884,6 @@
   .fui-icon-button[aria-expanded="true"] {
     background: var(--surface-sunken);
     color: var(--ink);
-  }
-
-  /* The theme toggle: of its two buttons, the one that leads away from the
-     theme on screen shows, read from data-theme and, for the system theme,
-     from the system's preference, so the first paint is right. */
-  .fui-theme-toggle {
-    display: inline-flex;
-  }
-
-  .fui-theme-to-light,
-  :root[data-theme="dark"] .fui-theme-to-dark {
-    display: none;
-  }
-
-  :root[data-theme="dark"] .fui-theme-to-light {
-    display: inline-flex;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"], [data-theme="dark"]) .fui-theme-to-dark {
-      display: none;
-    }
-
-    :root:not([data-theme="light"], [data-theme="dark"]) .fui-theme-to-light {
-      display: inline-flex;
-    }
   }
 
   .fui-body {
@@ -3313,12 +3286,9 @@
   }
 
   /* The operator's name in the top bar reads in the ink. */
-  .fui-topbar-end > .fui-button-ghost {
+  .fui-topbar-end > .fui-button-ghost,
+  .fui-topbar-end .fui-operator {
     color: var(--ink);
-  }
-
-  .fui-sign-out {
-    width: 100%;
   }
 
   /* The sign-in card, after FerroEHR's: a compact column, the lockup centred
@@ -6910,6 +6880,12 @@
       overflow: visible;
     }
 
+    /* A rail that draws no tooltip box of its own, its entries named by their
+       title, scrolls as the full sidebar does, so its foot stays in reach. */
+    .fui-sidebar.fui-sidebar-rail:not(:has(.fui-tooltip)) {
+      overflow-y: auto;
+    }
+
     .fui-sidebar-rail .fui-nav-entry {
       position: relative;
       justify-content: center;
@@ -7264,6 +7240,25 @@
   .fui-segment:focus-visible {
     outline: 2px solid var(--focus);
     outline-offset: -4px;
+  }
+
+  /* ---- R19. The sign-in page: the card and its caption in one centred
+     column, the title and the lines centred in the card. ---- */
+  .fui-sign-in-stack {
+    justify-items: center;
+  }
+
+  .fui-sign-in-title {
+    margin: 0;
+    font-size: var(--text-heading);
+    line-height: var(--leading-heading);
+    font-weight: 600;
+    text-align: center;
+  }
+
+  .fui-sign-in-line {
+    margin: 0;
+    text-align: center;
   }
 
   /* ---- R19. A sign-in caption that keeps to the card ---- */
@@ -8836,6 +8831,11 @@
     min-width: 0;
   }
 
+  /* An item's words: one line, the menu fitted to the longest. */
+  .fui-menu-item-label {
+    min-width: 0;
+  }
+
   .fui-menu-item-desc {
     color: var(--muted);
     font-size: var(--text-micro);
@@ -8898,6 +8898,43 @@
   .fui-menu-cancel,
   .fui-menu-sheet-title {
     display: none;
+  }
+
+  /* A form inside a menu (the theme choice, Sign out) draws no box: its
+     label, its group and its button are the menu's own rows. */
+  .fui-menu-theme,
+  .fui-menu-form {
+    display: contents;
+  }
+
+  /* The user menu is a popover in the top layer, so it is placed under the
+     top bar's end, where its button sits; below 40 rem it is the sheet. */
+  @media (width >= 40rem) {
+    .fui-menu.fui-menu-anchored.fui-user-menu:popover-open {
+      position: fixed;
+      inset: calc(var(--bar) / 2 + 1.25rem) var(--space-loose) auto auto;
+    }
+  }
+
+  /* From 40 rem up the operator's button gives way in the end through its
+     anchor: its name ends in an ellipsis, and the button's title carries all
+     of it. Below 40 rem the name is hidden, so the end keeps its parts'
+     width and the lockup's name gives way. */
+  @media (width >= 40rem) {
+    .fui-topbar-end .fui-anchor:has(> .fui-operator > .fui-operator-name) {
+      min-width: 0;
+      flex-shrink: 1;
+    }
+  }
+
+  @media (width < 40rem) {
+    .fui-topbar-end {
+      min-width: max-content;
+    }
+  }
+
+  .fui-anchor > .fui-operator {
+    min-width: 0;
   }
 
   /* The trigger says the menu is open. */
@@ -12399,19 +12436,30 @@
     box-shadow: inset 0 0 0 1.5px var(--muted);
   }
 
-  /* Below 64 rem the top bar's status keeps its shape: the words leave
-     the line and stay the pill's accessible name and tooltip. */
+  /* Below 64 rem the top bar's status keeps its shape: its words are
+     visually hidden, as `fui-sr-only` hides text, and stay the pill's
+     accessible name and its tooltip (F12). */
   @media (width < 64rem) {
-    .fui-topbar-end .fui-pill.fui-roomy-only {
-      display: inline-flex !important;
+    .fui-topbar-end .fui-topbar-status {
+      position: relative;
       gap: 0;
       padding: 0.4375rem;
-      font-size: 0;
-      line-height: 0;
     }
 
-    .fui-topbar-end .fui-pill.fui-roomy-only::before {
+    .fui-topbar-end .fui-topbar-status::before {
       margin: 0;
+    }
+
+    .fui-roomy-text {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      padding: 0;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+      border: 0;
     }
   }
 

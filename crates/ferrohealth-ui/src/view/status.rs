@@ -59,3 +59,77 @@ pub fn banner(tone: Tone, glyph: Glyph, title: impl Into<String>, body: &str) ->
     }
     .into_any()
 }
+
+/// The state of the product a console reaches, as the top bar's status pill
+/// shows it: a shape, a colour and a word together (family rule 12, F12).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Reach {
+    /// It answered: a filled dot.
+    Up,
+    /// It answered with a fault: a diamond.
+    Degraded,
+    /// Its state is not known: a diamond.
+    Unknown,
+    /// It did not answer: a cross.
+    Unreachable,
+    /// It answered and refused the console, such as a `401`: a cross.
+    Refused,
+    /// The console does not probe it: a hollow ring.
+    NotProbed,
+}
+
+impl Reach {
+    /// Every state, in the order the gallery shows them.
+    pub const ALL: [Self; 6] = [
+        Self::Up,
+        Self::Degraded,
+        Self::Unknown,
+        Self::Unreachable,
+        Self::Refused,
+        Self::NotProbed,
+    ];
+
+    /// The tone the state is drawn in, whose pill draws its shape.
+    #[must_use]
+    pub const fn tone(self) -> Tone {
+        match self {
+            Self::Up => Tone::Ok,
+            Self::Degraded | Self::Unknown => Tone::Warn,
+            Self::Unreachable | Self::Refused => Tone::Bad,
+            Self::NotProbed => Tone::Neutral,
+        }
+    }
+}
+
+/// What the top bar's status pill says.
+#[derive(Debug, Clone)]
+pub struct StatusPill {
+    /// The product's state.
+    pub reach: Reach,
+    /// The state in two words with a capital, such as "Bridge up" or
+    /// "Bridge refused 401".
+    pub words: String,
+    /// What the tooltip adds after the words, such as the version and the
+    /// address the console reaches; never drawn in the pill itself.
+    pub detail: Option<String>,
+}
+
+/// Returns the top bar's status pill: the state's shape and its words, with
+/// the words and the detail in its tooltip.
+///
+/// From 64 rem up the words show beside the shape. Below it the pill keeps
+/// its shape alone, and the words stay in the page, visually hidden, as its
+/// accessible name and in its tooltip (F12).
+#[must_use]
+pub fn status_pill(pill: StatusPill) -> impl IntoView + use<> {
+    let class = format!("{} fui-topbar-status", pill.reach.tone().pill());
+    let tooltip = match pill.detail {
+        Some(detail) => format!("{} · {detail}", pill.words),
+        None => pill.words.clone(),
+    };
+    view! {
+        <span class=class title=tooltip>
+            <span class="fui-roomy-text">{pill.words}</span>
+        </span>
+    }
+}

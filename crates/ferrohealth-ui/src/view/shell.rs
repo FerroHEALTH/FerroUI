@@ -1,12 +1,16 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The chrome around every page: the skip link, the top bar with the
-//! lockup, the body with the navigation beside the page, and the footer
-//! that names the product, its version and its maker.
+//! The chrome around every page.
 //!
-//! The navigation itself, which marks the current page and behaves as a
-//! drawer below the first breakpoint, is [`crate::widget::nav`].
+//! It holds the skip link, the top bar with the drawer button, the lockup,
+//! the search box, the status pill and the user menu, the body with the
+//! navigation beside the page and the dock at the foot of the main area,
+//! and the footer that names the product, its version and its maker.
+//!
+//! The navigation itself, which marks the current page, folds to a rail
+//! and behaves as a drawer below the first breakpoint, is
+//! [`crate::widget::nav`]; the user menu is [`crate::widget::menu`].
 
 use std::borrow::Cow;
 
@@ -55,6 +59,9 @@ pub struct Shell {
     pub sidebar: AnyView,
     /// The page.
     pub content: AnyView,
+    /// The docked bar at the foot of the main area (R4), such as an
+    /// editor's reason and its Review changes, if the page has one.
+    pub dock: Option<AnyView>,
     /// What the footer names.
     pub footer: Footer,
 }
@@ -113,6 +120,25 @@ pub fn lockup(
     }
 }
 
+/// Returns the lockup [`lockup`] draws as plain text that leads nowhere,
+/// for a page shown before sign-in.
+#[must_use]
+pub fn lockup_plain(
+    mark: impl IntoView,
+    name: impl Into<String>,
+    word: impl Into<String>,
+) -> impl IntoView {
+    let (name, word) = (name.into(), word.into());
+    view! {
+        <span class="fui-lockup">
+            {mark}
+            <span class="fui-lockup-name">
+                {name} " " <span class="fui-lockup-accent">{word}</span>
+            </span>
+        </span>
+    }
+}
+
 /// Returns the button that opens the navigation drawer `sidebar_id`, shown
 /// below the first breakpoint alone.
 #[must_use]
@@ -130,42 +156,39 @@ pub fn drawer_button(sidebar_id: &'static str) -> impl IntoView {
     }
 }
 
-/// Returns the top bar: `start` (the drawer button and the lockup) and, at
-/// the far end, `end` (the status, the theme switch, the operator).
-#[must_use]
-pub fn topbar(start: impl IntoView + 'static, end: impl IntoView + 'static) -> AnyView {
-    let start = start.into_any();
-    let end = end.into_any();
-    view! {
-        <header class="fui-topbar">
-            <div class="fui-topbar-row">
-                {start} <div class="fui-topbar-end">{end}</div>
-            </div>
-        </header>
-    }
-    .into_any()
+/// What the top bar holds, start to end.
+#[derive(Debug)]
+pub struct TopBar {
+    /// The id of the navigation the drawer button opens below 48 rem.
+    pub sidebar: &'static str,
+    /// The lockup, from [`lockup`].
+    pub lockup: AnyView,
+    /// The search box in the free width between the two ends, from
+    /// [`crate::view::search::search_box`], if the console has one.
+    pub search: Option<AnyView>,
+    /// The end: the status pill from [`crate::view::status::status_pill`],
+    /// any control of the console's own, and the user menu from
+    /// [`crate::widget::menu::user_menu`], last.
+    pub end: AnyView,
 }
 
-/// Returns the top bar as [`topbar`] draws it, with `middle` (a search box,
-/// from [`crate::view::search::search_box`]) in the free width between the
-/// two ends, centred.
+/// Returns the top bar: the drawer button, the lockup, the search box and,
+/// at the far end, the status pill and the user menu.
 ///
-/// Below 48 rem the middle wraps onto its own row under the lockup, so a
-/// 320 px screen never scrolls sideways (WCAG 2.2 SC 1.4.10).
+/// It carries no theme control: the theme is set in the user menu and in
+/// Your preferences (family rule 5). Below 48 rem the search wraps onto its
+/// own row under the lockup, so a 320 px screen never scrolls sideways
+/// (WCAG 2.2 SC 1.4.10).
 #[must_use]
-pub fn topbar_with(
-    start: impl IntoView + 'static,
-    middle: impl IntoView + 'static,
-    end: impl IntoView + 'static,
-) -> AnyView {
-    let start = start.into_any();
-    let middle = middle.into_any();
-    let end = end.into_any();
+pub fn topbar(bar: TopBar) -> AnyView {
+    let drawer = drawer_button(bar.sidebar).into_any();
+    let search = bar
+        .search
+        .map(|search| view! { <div class="fui-topbar-middle">{search}</div> });
     view! {
         <header class="fui-topbar">
             <div class="fui-topbar-row">
-                {start} <div class="fui-topbar-middle">{middle}</div>
-                <div class="fui-topbar-end">{end}</div>
+                {drawer} {bar.lockup} {search} <div class="fui-topbar-end">{bar.end}</div>
             </div>
         </header>
     }
@@ -201,6 +224,7 @@ pub fn shell(shell: Shell) -> AnyView {
             {skip} {shell.topbar} {shell.banner} <div class="fui-body">
                 {shell.sidebar} <main id=MAIN_ID class="fui-main">
                     <div class="fui-column">{shell.content}</div>
+                    {shell.dock}
                 </main>
             </div> {foot}
         </div>

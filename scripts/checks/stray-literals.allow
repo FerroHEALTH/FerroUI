@@ -8,7 +8,7 @@ skip crates/ferrohealth-ui/src/highlight/   # tokenizers: grammar keywords and t
 skip crates/ferrohealth-ui/src/icon.rs      # the vendored Lucide outlines and their names
 skip crates/ferrohealth-ui/src/i18n.rs      # the catalog mechanism: message ids and diagnostics
 
-allow ^(ArrowUp|ArrowDown|ArrowLeft|ArrowRight|Home|End|Enter|Escape)$   # UI Events KeyboardEvent.key values
+allow ^(ArrowUp|ArrowDown|ArrowLeft|ArrowRight|Home|End|Enter|Escape|Tab)$   # UI Events KeyboardEvent.key values
 allow ^Ferro(BRIDGE|FED|EHR|TERM|PIX)$ # product names, the same in every language
 allow ^Cadasto B\.V\.$                  # the maker's legal name
 allow ^(start|middle|end)$              # SVG text-anchor keywords

@@ -33,7 +33,8 @@ use tower_http::set_header::SetResponseHeaderLayer;
 
 use crate::app::{
     DENSITY_COOKIE, DENSITY_ROUTE, LOCALE_COOKIE, LOCALE_ROUTE, PAGED_LISTINGS, PAGING_COOKIE,
-    PAGING_ROUTE, STYLESHEET as STYLESHEET_PATH, THEME_COOKIE, THEME_ROUTE,
+    PAGING_ROUTE, SIDEBAR_COOKIE, SIDEBAR_ROUTE, SIGN_OUT_ROUTE, STYLESHEET as STYLESHEET_PATH,
+    THEME_COOKIE, THEME_ROUTE,
 };
 
 /// The name cargo-leptos gives the site bundle's files under `pkg/`.
@@ -64,6 +65,8 @@ pub fn router(options: LeptosOptions) -> axum::Router {
         .route(DENSITY_ROUTE, post(choose_density))
         .route(LOCALE_ROUTE, post(choose_locale))
         .route(PAGING_ROUTE, post(choose_paging))
+        .route(SIDEBAR_ROUTE, post(choose_sidebar))
+        .route(&format!("{SIGN_OUT_ROUTE}/{{brand}}"), post(sign_out))
         .leptos_routes_with_context(&options, routes, provide_request_nonce, {
             let options = options.clone();
             move || crate::app::document(options.clone())
@@ -172,6 +175,33 @@ async fn choose_density(Form(choice): Form<DensityChoice>) -> Response {
             .into_response();
     };
     kept(DENSITY_COOKIE, density.key(), &choice.back)
+}
+
+/// What the sidebar's Collapse or Expand posts.
+#[derive(Debug, serde::Deserialize)]
+struct SidebarChoice {
+    /// `rail` to fold the navigation, `full` to unfold it.
+    sidebar: String,
+    /// The page to return to.
+    back: String,
+}
+
+/// Keeps the sidebar's state a plain form post chose in its cookie and
+/// sends the browser back to the page it came from.
+async fn choose_sidebar(Form(choice): Form<SidebarChoice>) -> Response {
+    if !matches!(choice.sidebar.as_str(), "rail" | "full") {
+        return (StatusCode::BAD_REQUEST, "the sidebar is not rail or full").into_response();
+    }
+    kept(SIDEBAR_COOKIE, &choice.sidebar, &choice.back)
+}
+
+/// Signs the gallery's synthetic operator out: it holds no session, so it
+/// sends the browser to the brand's signed-out page.
+async fn sign_out(Path(brand): Path<String>) -> Response {
+    let Some(brand) = Brand::parse(&brand) else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+    Redirect::to(&format!("/sign-in/{}/signed-out", brand.key())).into_response()
 }
 
 /// What a language choice posts.

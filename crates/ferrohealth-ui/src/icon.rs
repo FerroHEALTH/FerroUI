@@ -178,6 +178,10 @@ impl Glyph {
     /// Lucide `info`.
     pub const INFO: Self =
         Self(r#"<circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" />"#);
+    /// Lucide `keyboard`.
+    pub const KEYBOARD: Self = Self(
+        r#"<path d="M10 8h.01" /><path d="M12 12h.01" /><path d="M14 8h.01" /><path d="M16 12h.01" /><path d="M18 8h.01" /><path d="M6 8h.01" /><path d="M7 16h10" /><path d="M8 12h.01" /><rect width="20" height="16" x="2" y="4" rx="2" />"#,
+    );
     /// Lucide `layers`.
     pub const LAYERS: Self = Self(
         r#"<path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z" /><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12" /><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17" />"#,
@@ -216,6 +220,14 @@ impl Glyph {
     /// Lucide `network`.
     pub const NETWORK: Self = Self(
         r#"<rect x="16" y="16" width="6" height="6" rx="1" /><rect x="2" y="16" width="6" height="6" rx="1" /><rect x="9" y="2" width="6" height="6" rx="1" /><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3" /><path d="M12 12V8" />"#,
+    );
+    /// Lucide `panel-left-close`.
+    pub const PANEL_LEFT_CLOSE: Self = Self(
+        r#"<rect width="18" height="18" x="3" y="3" rx="2" /><path d="M9 3v18" /><path d="m16 15-3-3 3-3" />"#,
+    );
+    /// Lucide `panel-left-open`.
+    pub const PANEL_LEFT_OPEN: Self = Self(
+        r#"<rect width="18" height="18" x="3" y="3" rx="2" /><path d="M9 3v18" /><path d="m14 9 3 3-3 3" />"#,
     );
     /// Lucide `panel-right`.
     pub const PANEL_RIGHT: Self =
@@ -325,7 +337,7 @@ impl Glyph {
     pub const X: Self = Self(r#"<path d="M18 6 6 18" /><path d="m6 6 12 12" />"#);
 
     /// Every glyph, with the Lucide name of its vendored file.
-    pub const ALL: [(&str, Self); 84] = [
+    pub const ALL: [(&str, Self); 87] = [
         ("activity", Self::ACTIVITY),
         ("arrow-down", Self::ARROW_DOWN),
         ("arrow-left", Self::ARROW_LEFT),
@@ -372,6 +384,7 @@ impl Glyph {
         ("heart-pulse", Self::HEART_PULSE),
         ("inbox", Self::INBOX),
         ("info", Self::INFO),
+        ("keyboard", Self::KEYBOARD),
         ("layers", Self::LAYERS),
         ("layout-dashboard", Self::LAYOUT_DASHBOARD),
         ("link", Self::LINK),
@@ -382,6 +395,8 @@ impl Glyph {
         ("monitor", Self::MONITOR),
         ("moon", Self::MOON),
         ("network", Self::NETWORK),
+        ("panel-left-close", Self::PANEL_LEFT_CLOSE),
+        ("panel-left-open", Self::PANEL_LEFT_OPEN),
         ("panel-right", Self::PANEL_RIGHT),
         ("pencil", Self::PENCIL),
         ("play", Self::PLAY),

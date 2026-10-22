@@ -244,18 +244,32 @@ async fn every_page_keeps_its_content_with_the_webassembly_withheld() -> Result<
             for variant in SIGN_INS {
                 let path = format!("/sign-in/{}/{variant}", brand.key());
                 browser.goto(&gallery.url(&path)).await?;
-                browser.element(By::Css(".fui-sign-in")).await?;
-                if variant == "provider" {
-                    browser
-                        .element(By::Css(".fui-sign-in a, .fui-sign-in form"))
-                        .await?;
-                } else {
+                browser.element(By::Css(".fui-sign-in h1")).await?;
+                browser
+                    .element(By::Css(
+                        ".fui-sign-in a.fui-button-primary, .fui-sign-in button.fui-button-primary",
+                    ))
+                    .await?;
+                if variant != "provider" {
+                    let notice = text_of(browser, By::Id("sign-in-notice")).await?;
+                    assert!(!notice.is_empty(), "{path} names its state");
+                }
+                if variant == "basic" || variant == "locked" {
                     let form = browser
                         .element(By::Css(".fui-sign-in form[method='post']"))
                         .await?;
                     form.find(By::Css("input[autocomplete='username']")).await?;
                     form.find(By::Css("input[autocomplete='current-password']"))
                         .await?;
+                } else {
+                    assert!(
+                        browser
+                            .driver()
+                            .find_all(By::Css("input[type='password']"))
+                            .await?
+                            .is_empty(),
+                        "{path} holds no password field"
+                    );
                 }
                 only_the_bundle_refused(browser, &path).await?;
             }
@@ -360,14 +374,22 @@ async fn forms_post_and_submit_with_the_webassembly_withheld() -> Result<(), Box
         browser
             .at(&gallery.url("/ferrofed/tables?q=synthetic-007"))
             .await?;
-        // The theme toggle and the density switch post, and the page comes
-        // back in the choice.
+        // The user menu opens as a popover, its theme posts, and the page
+        // comes back in the choice; so does the density switch.
         browser.goto(&gallery.url("/ferrofed")).await?;
         browser
-            .element(By::Id("theme-to-dark"))
+            .element(By::Css("button[popovertarget='user-menu']"))
             .await?
             .click()
             .await?;
+        let dark = browser
+            .element(By::Css("#user-menu button[name='theme'][value='dark']"))
+            .await?;
+        until("the user menu opens", async || {
+            Ok(dark.is_displayed().await?)
+        })
+        .await?;
+        dark.click().await?;
         browser
             .element(By::Css(r#"html[data-theme="dark"]"#))
             .await?;
@@ -380,6 +402,34 @@ async fn forms_post_and_submit_with_the_webassembly_withheld() -> Result<(), Box
             .await?;
         browser
             .element(By::Css(r#"html[data-density="compact"]"#))
+            .await?;
+        // The sidebar's Collapse posts, and the page comes back as the rail.
+        browser
+            .element(By::XPath("//button[@name = 'sidebar' and @value = 'rail']"))
+            .await?
+            .click()
+            .await?;
+        browser
+            .element(By::Css("#sidebar.fui-sidebar-rail"))
+            .await?;
+        // Sign out posts and leads to the signed-out card.
+        browser
+            .element(By::Css("button[popovertarget='user-menu']"))
+            .await?
+            .click()
+            .await?;
+        let out = browser
+            .element(By::XPath(
+                "//*[@id = 'user-menu']//button[contains(., 'Sign out')]",
+            ))
+            .await?;
+        until("the user menu opens again", async || {
+            Ok(out.is_displayed().await?)
+        })
+        .await?;
+        out.click().await?;
+        browser
+            .at(&gallery.url("/sign-in/ferrofed/signed-out"))
             .await?;
         leave(browser, "the forms").await
     })
@@ -394,15 +444,15 @@ async fn popovers_open_with_the_webassembly_withheld() -> Result<(), Box<dyn Err
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
         withhold_the_webassembly(browser).await?;
-        // The operator menu is a popover the browser opens.
+        // The user menu is a popover the browser opens.
         browser.goto(&gallery.url("/ferrofed")).await?;
         browser
-            .element(By::Css("button[popovertarget='operator-menu']"))
+            .element(By::Css("button[popovertarget='user-menu']"))
             .await?
             .click()
             .await?;
-        let menu = browser.element(By::Id("operator-menu")).await?;
-        until("the operator menu opens", async || {
+        let menu = browser.element(By::Id("user-menu")).await?;
+        until("the user menu opens", async || {
             Ok(menu.is_displayed().await?)
         })
         .await?;

@@ -682,10 +682,6 @@
     margin: calc(-1 * var(--space-loose)) calc(-1 * var(--space-loose)) 0;
   }
 
-  .mk-sign-in-stack {
-    justify-items: center;
-  }
-
   /* A hovered icon button. */
   .mk-hover-bg {
     background: var(--surface-sunken);
@@ -907,19 +903,6 @@
 
   .mk-ff-tools > .fui-field-grow {
     flex: 1 1 16rem;
-  }
-
-  .mk-sign-in-title {
-    margin: 0;
-    font-size: var(--text-heading);
-    line-height: var(--leading-heading);
-    font-weight: 600;
-    text-align: center;
-  }
-
-  .mk-sign-in-line {
-    margin: 0;
-    text-align: center;
   }
 
   .mk-ff-cfg-select {

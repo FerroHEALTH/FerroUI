@@ -537,8 +537,16 @@ texts! {
     Close = "close",
     /// The footer's link to the About page.
     FooterAbout = "footer-about",
-    /// The operator menu's sign-out button.
+    /// The user menu's sign-out item.
     SignOut = "sign-out",
+    /// The user menu's link to the preferences page.
+    YourPreferences = "your-preferences",
+    /// The user menu's link to the keyboard shortcuts.
+    KeyboardShortcuts = "keyboard-shortcuts",
+    /// The sidebar's button that folds it to the rail of glyphs.
+    SidebarCollapse = "sidebar-collapse",
+    /// The rail's button that unfolds it to the full sidebar.
+    SidebarExpand = "sidebar-expand",
     /// The search box's button.
     Find = "find",
     /// The accessible name of the breadcrumb trail.
@@ -553,10 +561,6 @@ texts! {
     ThemeSystem = "theme-system",
     /// The accessible name of the theme switch.
     ThemeSwitch = "theme-switch",
-    /// The toggle's button to the dark theme.
-    ThemeToDark = "theme-to-dark",
-    /// The toggle's button to the light theme.
-    ThemeToLight = "theme-to-light",
     /// The default density.
     DensityComfortable = "density-comfortable",
     /// The compact density.

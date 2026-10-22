@@ -174,14 +174,14 @@ Measured on the FerroPIX identifier domains table at 1440 px. Every console's ta
 | R9 | The worklist. Its extension: names in the ink, no underline, the row is the target. |
 | R10 | Field with an inner control |
 | R11 | Form grid. Its extension: fields share their label line (`align-items: start`), so help or an error under one field never lifts its neighbours; a field holding a URL, a path or another long token takes the whole row (`fui-span-row`). |
-| R12 | Honest navigation count |
+| R12 | Honest navigation count. The number is hidden from assistive technology and the whole phrase ("2 errors in the running load") is read in its place; nothing shows at zero; an unknown count is a muted dash with the reason in its tooltip. In the rail the count rides on the glyph. |
 | R13 | Masked identifier revealed |
 | R14 | Filter chips On a phone Clear filters keeps one line beside the chips. With a count the row says "Showing 7 of 21". |
 | R15 | Configuration editing A key hint (`fui-key-hint`) is a labelled copy button on the label's line, reachable by keyboard, shown on hover and focus, and always shown on a phone. |
 | R16 | Score scale |
 | R17 | Toasts and popover form A toast's action sits under its text. On a phone the page keeps clear of the toast region. |
 | R18 | Focus ring on every control |
-| R19 | Sign-in |
+| R19 | Sign-in. One card (`fui-sign-in`) and its caption in a centred column (`fui-sign-in-stack`): the lockup as plain text, an optional title (`fui-sign-in-title`), the notice of the state in its tone (`fui-sign-in-notice`, a status, or an alert for a refusal), the provider's action (busy while redirecting, disabled while unavailable), the basic form only where the console has one, muted lines (`fui-sign-in-line`) and the deployment's links. No placeholder repeats a label. |
 | R20 | Error page (`fui-status-page`) The status in words before its number, as one quiet line ("Not allowed · 403"); the title names the error in plain words; then what it means for you (who you are and the scope or role for a 403, the address and what it may mean for a 404, who can fix it for a 500), a quiet hint for the raw scope or key, and the way on as links. The time and the request id sit in a closed disclosure. It renders in the shell, and in the centred layout when no one is signed in. |
 | R21 | Settings rows hugging their options |
 | R22 | History filter |
@@ -207,8 +207,8 @@ Measured on the FerroPIX identifier domains table at 1440 px. Every console's ta
 | F8 Editor toolbar | The editor's own state, above it. |
 | F9 Topology | Its List twin's rows are scoped to `fui-topology-list`, so the base tree and M1 keep their own rows. The canvas hint's spinner takes the hint's light text. Hub layout with Bézier edges and horizontal tangents. The line style plus one marker at the child end carries the state; labels appear only on problem edges. Pulse along the path. Toolbar with the Status menu as the legend, and a zoom cluster whose icons name themselves in tooltips above. A canvas with no zoom cluster (the B9 flow, a small map) has no bottom padding and no grab cursor. A card click opens its page; the "i" button or Space opens the quick look. |
 | F10 Nested sidebar section | An organisation and its nodes, with health dots. |
-| F12 State | `fui-state`, the dot shape, colour and word: a filled circle, a diamond, a cross, a hollow ring (family rule 12); the sparkline. The top bar's status pill takes the same shapes, and below 64 rem it keeps its shape with the words as its accessible name and tooltip. |
-| F13 Menu | Anchored 4 px from its trigger, ink items with muted icons, 36 px rows (40 px on touch), destructive items last. Below 40 rem a labelled menu opens as a bottom sheet with Cancel. A bottom sheet carries its own scrim (a spread shadow under it), so it always stands above the dimmed page; the user menu is a sheet below 40 rem too, its theme choices menuitemradio. Separators use the strong hairline in dark. |
+| F12 State | `fui-state`, the dot shape, colour and word: a filled circle, a diamond, a cross, a hollow ring (family rule 12); the sparkline. The top bar's status pill takes the same shapes, and below 64 rem it keeps its shape with the words as its accessible name and tooltip: the words sit in `fui-roomy-text`, visually hidden below 64 rem as `fui-sr-only` hides text, and the tooltip holds the words and the detail. |
+| F13 Menu | Anchored 4 px from its trigger, ink items with muted icons, 36 px rows (40 px on touch), destructive items last. Below 40 rem a labelled menu opens as a bottom sheet with Cancel. A bottom sheet carries its own scrim (a spread shadow under it), so it always stands above the dimmed page; the user menu is a sheet below 40 rem too, its theme choices menuitemradio. The user menu is a popover its button opens with no script; its theme choices are submit buttons of one form posting to the console's theme route, Sign out is a form post, and a control the top bar shows from 40 rem up (a version choice) moves into it below that (`fui-menu-version`). Separators use the strong hairline in dark. |
 | F14 Action group | One primary action plus a More menu; a split variant for variants of one action. The one exception: the Query workbench's title row holds Run and Save to the CDR without More, since both act on the query being written; while it runs, Save folds into More. |
 
 ### Added in the shared library pass
@@ -222,7 +222,7 @@ Measured on the FerroPIX identifier domains table at 1440 px. Every console's ta
 | Tooltip above (`fui-tooltip-above`) | For controls at the foot of a canvas. |
 | Search result row | The dot or glyph, then the name over its line. Results are grouped by kind; a FerroFED creating_system_id resolves to its node's Routes tab. |
 | Self-description card (`fui-self-description`) | About's code card, with its own scroll, the scroll cue and token colours. |
-| Top-bar status pill | The product's state in two words, the same shape in every console: "Server up" (FerroPIX), "Gateway up" (FerroFED), "Bridge up" (FerroBRIDGE), then unreachable, unknown or refused 401. The version is in its tooltip and on About, never in the pill. |
+| Top-bar status pill | The product's state in two words, the same shape in every console: "Server up" (FerroPIX), "Gateway up" (FerroFED), "Bridge up" (FerroBRIDGE), then unreachable, unknown or refused 401. The version is in its tooltip, after the words, and on About, never in the pill (`fui-topbar-status`). |
 
 ### From FerroBRIDGE (B1 to B10), for every console
 

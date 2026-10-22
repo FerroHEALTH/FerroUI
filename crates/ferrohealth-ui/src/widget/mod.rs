@@ -20,6 +20,7 @@ pub mod document;
 pub mod editor;
 pub mod filter;
 pub mod help;
+pub mod menu;
 pub mod nav;
 pub mod pick_or_type;
 pub mod picker;

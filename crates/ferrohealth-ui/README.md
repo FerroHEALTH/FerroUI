@@ -70,20 +70,21 @@ which your server writes from its own cookie or setting (`theme::Theme`).
 
 ## Components
 
-- `view`: `button`, `status` (pill, badge, banner), `surface` (page header,
-  card, stat, definitions, disclosure), `form` (field, check), `tabs` (link
-  tabs), `empty`, `refusal` (an error with its issues), `code` (highlighted
-  panel and numbered lines), `theme_switch`, `menu`, `dialog`
-  (a popover confirmation), `shell` (skip link, top bar, footer, centred
-  page) and `sign_in` (a basic form, a provider button, or both).
-- `island`: the ready islands, `ToastRegion`, `NavDrawer` and
-  `KeyboardTabs`, each taking its words as props.
+- `view`: `button`, `status` (pill, badge, banner, the top bar's status
+  pill), `surface` (page header, card, stat, definitions, disclosure),
+  `form` (field, check), `tabs` (link tabs), `empty`, `refusal` (an error
+  with its issues), `code` (highlighted panel and numbered lines),
+  `theme_switch`, `dialog` (a popover confirmation), `shell` (skip link,
+  top bar, footer, centred page) and `sign_in` (the R19 card in every
+  state, with the provider's action and an optional basic form).
+- `island`: the ready islands, `ToastRegion`, `NavDrawer`, `UserMenuButton`
+  and `KeyboardTabs`, each taking its words as props.
 - `widget`: the interactive components as functions you call inside an
-  island: `nav` (the sidebar, plain links with the page marked, inside its
-  drawer island), `tabs` (the panels for `KeyboardTabs`), `toast` (`raise`
-  from any island), `editor` (the highlighted overlay editor with line
-  marks), `filter` (an in-place filter over rows that are already island
-  data) and the rest.
+  island: `nav` (the sidebar, plain links with the page marked, its counts
+  and its rail, inside its drawer island), `menu` (the user menu), `tabs`
+  (the panels for `KeyboardTabs`), `toast` (`raise` from any island),
+  `editor` (the highlighted overlay editor with line marks), `filter` (an
+  in-place filter over rows that are already island data) and the rest.
 - `table`: the paging and sorting model (`Paging`, `Window`, `Sort`,
   `StateSource`), the data table with its cells and list card (`view`), the
   link and `POST` pagers (`pager`) and the find field (`filter`), each a
@@ -93,15 +94,16 @@ which your server writes from its own cookie or setting (`theme::Theme`).
 
 ## The top bar
 
-The top bar keeps its start (the drawer button and the lockup) and its end
-on one row at every width. When the row is short of room, the lockup's
-accent word folds away first (below 30rem). A status pill in the end keeps
-its full words and never shortens to its dot: show it from the width where
-the row has room (`fui-roomy-only`, from 64rem) and put it in the operator
-menu's `extra` below that if a narrow screen needs it. The end's buttons (the theme toggle, the operator menu) never fold. A
-search box between them takes a row of its own below 48rem. Put anything
-else a console offers, such as a three-way theme choice or a scope list, in
-the operator menu's `extra`.
+`view::shell::topbar` draws the drawer button, the lockup, the search box
+and, at the end, the status pill (`view::status::status_pill`) and the
+user menu (`widget::menu::user_menu`), on one row at every width; the
+search box takes a row of its own below 48rem. The top bar carries no
+theme control: the theme is set in the user menu and in Your preferences.
+The status pill keeps its shape at every width and shows its words from
+64rem; below that the words stay its accessible name and its tooltip. The
+user menu opens as an anchored menu, and below 40rem as a bottom sheet
+with Cancel; a control the top bar shows from 40rem up, such as a version
+choice, moves into the menu below it (`Choices`).
 
 No component writes a `style` attribute or a `<style>` element, defines a
 server function, fetches, or touches browser storage.
@@ -109,7 +111,7 @@ server function, fetches, or touches browser storage.
 ## Locales
 
 Every word a component draws itself (a pager step, a dialog's Cancel, the
-theme toggle's name, an empty listing's range) comes from a Fluent catalog
+user menu's Sign out, an empty listing's range) comes from a Fluent catalog
 under `locales/`, one directory per language. English is the one catalog
 that ships, and every lookup falls back to it; a language joins as one
 catalog file, with no code change. Choose the locale once per render, at the

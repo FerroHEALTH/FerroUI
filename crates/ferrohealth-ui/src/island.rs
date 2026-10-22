@@ -97,8 +97,9 @@ pub fn KeyHint(
 }
 
 /// The navigation drawer `id`, named `label`, around the entries the
-/// server drew as its children, its close button saying `close`. A console
-/// draws it through [`crate::widget::nav::sidebar`].
+/// server drew as its children, its close button saying `close`, folded to
+/// its glyphs while `rail`. A console draws it through
+/// [`crate::widget::nav::sidebar`].
 #[island]
 pub fn NavDrawer(
     /// The navigation's id, which the drawer button opens.
@@ -107,8 +108,29 @@ pub fn NavDrawer(
     label: String,
     /// The close button's words, in the page's locale.
     close: String,
+    /// Whether the navigation is folded to its rail of glyphs.
+    rail: bool,
     /// The groups of entries, drawn on the server.
     children: Children,
 ) -> impl IntoView {
-    crate::widget::nav::drawer(id, label, close, children().into_any())
+    crate::widget::nav::drawer(id, label, close, rail, children().into_any())
+}
+
+/// The user menu `id`, named `label`, its button showing `name`, around the
+/// items the server drew as its children, its sheet's Cancel saying
+/// `cancel`. A console draws it through [`crate::widget::menu::user_menu`].
+#[island]
+pub fn UserMenuButton(
+    /// The menu's id, which its button opens.
+    id: String,
+    /// The menu's name and its sheet's title, in the page's locale.
+    label: String,
+    /// The name its button shows, or `None` for its icon alone.
+    name: Option<String>,
+    /// The sheet's Cancel, in the page's locale.
+    cancel: String,
+    /// The items, drawn on the server.
+    children: Children,
+) -> impl IntoView {
+    crate::widget::menu::menu_button(id, label, name, cancel, children().into_any())
 }

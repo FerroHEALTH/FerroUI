@@ -920,8 +920,12 @@ def brand_mark():
     )
 
 
-def lockup():
-    return f'<a href="dashboard.html" class="fui-lockup">{brand_mark()}<span class="fui-lockup-name">FerroTERM <span class="fui-lockup-accent">Console</span></span></a>'
+def lockup(link=True):
+    """`link`: signed in, the lockup leads to the dashboard; signed out it is plain."""
+    inner = f'{brand_mark()}<span class="fui-lockup-name">FerroTERM <span class="fui-lockup-accent">Console</span></span>'
+    if not link:
+        return f'<span class="fui-lockup">{inner}</span>'
+    return f'<a href="dashboard.html" class="fui-lockup">{inner}</a>'
 
 
 SEARCH_PLACEHOLDER = "Resource, code or phrase"
@@ -1033,6 +1037,13 @@ GATEWAY_STATUS = {
 }
 
 
+def status_pill(tone, word, detail):
+    """The top bar's status pill (F12): its shape and its words, which stay its
+    accessible name below 64 rem; the tooltip holds the words and the detail."""
+    tip = f"{word} · {detail}" if detail else word
+    return f'<span class="fui-pill fui-tone-{tone} fui-topbar-status" title="{e(tip)}"><span class="fui-roomy-text">{e(word)}</span></span>'
+
+
 def topbar(status="up", search_value="", search_state=None, results=None, menu_open=False, menu_theme="light", menu_focus=None,
            visitor=False, reader=False, version=DEFAULT_ROOT, version_open=False, dev=False):
     tone, word = GATEWAY_STATUS[status]
@@ -1050,8 +1061,8 @@ def topbar(status="up", search_value="", search_state=None, results=None, menu_o
     operator = '<span class="fui-anchor">' + trigger + operator_menu(menu_open, menu_focus, menu_theme, visitor, reader, version) + "</span>"
     # The theme lives in the user menu and Your preferences; the top bar
     # carries no toggle (family rule 5).
-    title = ' title="FerroTERM 0.1.8 at https://terminology.example.org · answered 13 s ago"' if status == "up" else ""
-    end = f'{version_select(version, version_open)}<span class="fui-pill fui-tone-{tone} fui-roomy-only"{title}>{word}</span>{signin}{operator}'
+    detail = "FerroTERM 0.1.8 at https://terminology.example.org · answered 13 s ago" if status == "up" else ""
+    end = f'{version_select(version, version_open)}{status_pill(tone, word, detail)}{signin}{operator}'
     drawer = f'<button type="button" class="fui-icon-button fui-drawer-only" popovertarget="sidebar" aria-controls="sidebar" aria-label="Menu">{icon("menu", "18")}</button>'
     return (
         f'<header class="fui-topbar"><div class="fui-topbar-row">{drawer}{lockup()}<div class="fui-topbar-middle">{search}</div>'

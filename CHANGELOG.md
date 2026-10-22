@@ -92,6 +92,40 @@ and this project adheres to
   crate's stylesheet and named in `design/COMPONENTS.md`.
 - The gallery's Page templates group: every template, the 403 and 404 in
   the shell and the 500 in the centred layout, in every brand.
+- The user menu (F13, #151): `widget::menu::user_menu(UserMenu)` draws the
+  operator's button and an ARIA menu with who is signed in, Your
+  preferences, the theme as three `menuitemradio` choices, Keyboard
+  shortcuts with its key (from 40 rem up), and Sign out last after a
+  separator. It is a popover the button opens with no script; the theme
+  and Sign out are plain form posts, and a group the top bar shows from
+  40 rem up (`Choices`, such as a FHIR version) moves into it below that.
+  The island `island::UserMenuButton` adds the menu button pattern: the
+  focus moves to the first item, Up and Down walk the items, Home and End
+  go to the ends, Tab and Escape close it and the focus returns to the
+  button. Below 40 rem it opens as a bottom sheet with Cancel.
+- The top bar's status pill (F12, #151): `view::status::status_pill` with
+  `Reach` (up, degraded, unknown, unreachable, refused, not probed), a
+  shape, a colour and a word, the version only in its tooltip. Below
+  64 rem it keeps its shape and its words stay its accessible name and its
+  tooltip.
+- The sidebar's rail (#151): `widget::nav::Sidebar` takes a `Rail`, and the
+  navigation folds to its glyphs from 48 rem up, each entry named by its
+  tooltip and its accessible name. Collapse and Expand at its foot post
+  `sidebar=rail` or `sidebar=full` to the console's route, which keeps the
+  choice and draws the next page folded or not. An entry carries an honest
+  count (R12, `Count`): a number read as its whole phrase, nothing at zero,
+  and a muted dash with the reason when none is known.
+- The sign-in page in every state (R19, #186): `view::sign_in::State` is
+  ready, redirecting, signed out, expired, full, unavailable, refused,
+  rejected, provider unreachable, upstream unreachable and locked, each
+  with its notice in its tone as a status or an alert, a muted detail and
+  an optional Try again. The provider's action is busy while redirecting
+  and disabled while sign-in is unavailable, and the basic form is drawn
+  only when the console passes one, with no placeholder.
+- `view::shell::lockup_plain`, the lockup as plain text for a page shown
+  before sign-in, and `Shell::dock`, the foot of the main area kept for the
+  docked bar (R4).
+- The Lucide glyphs `keyboard`, `panel-left-close` and `panel-left-open`.
 
 - The table's cell helpers and a stated order (#155): `title_cell`,
   `row_link`, `cell`, `count_cell`, `menu_cell`, `check_cell` and
@@ -247,6 +281,23 @@ and this project adheres to
   does nothing; the figures table reads as before. `view::chart::line_svg`
   draws the same markup as before.
 
+- The top bar is one struct (#151): `view::shell::topbar(TopBar { sidebar,
+  lockup, search, end })` draws the drawer button, the lockup, the search
+  box and the end, and carries no theme control (family rule 5). A console
+  puts the status pill and the user menu in `end`.
+- `widget::nav::sidebar(Sidebar { id, label, groups, current, rail })`
+  takes one struct, and `Entry` carries `count: Option<Count>`. A console
+  adds `count: None` to an entry with no count, and passes a `Rail` with its
+  own sidebar route to offer Collapse.
+- `view::sign_in::sign_in(SignIn)` takes the design's set (#186): `title`,
+  `state`, `provider` (with its busy words and glyph), `basic` (its divider,
+  submit words, username and error), `line`, `note`, `links` and `caption`.
+  `Notice` is the words of a state's notice; the tone comes from the
+  state. The card and its caption are drawn in one centred column.
+- The sign-in page's title, lines and column are crate classes
+  (`fui-sign-in-title`, `fui-sign-in-line`, `fui-sign-in-stack`) in place of
+  the design's capture scaffolding.
+
 ### Fixed
 
 - The picker's select (`widget::picker::picker_field`) follows its value
@@ -289,8 +340,7 @@ and this project adheres to
   with no client router an About link is a plain link; call `footer`,
   `shell` and `centred`.
 - `widget::theme::theme_toggle`, the toggle that swapped the theme in
-  place. `view::theme_switch::theme_toggle` is the toggle: a plain form
-  post the console answers with the page in the new theme.
+  place.
 - `widget::toast::Toasts`, `provide_toasts` and `use_toasts`: an island
   raises a toast with `raise`.
 - `widget::tabs::tabs` and `widget::tabs::Panel`: draw the panels with
@@ -299,6 +349,21 @@ and this project adheres to
   buttons paged only with the WebAssembly loaded and needed the listing's
   rows as island data. A console pages a session listing with
   `table::pager::post_pager` and keeps the position in its session.
+- `view::theme_switch::theme_toggle` and its ids `TO_DARK` and `TO_LIGHT`,
+  the theme toggle of the top bar, with its classes (`fui-theme-toggle`,
+  `fui-theme-to-dark`, `fui-theme-to-light`) and its catalog messages
+  (#151). The theme is set in the user menu and in Your preferences
+  (`view::theme_switch::theme_switch`). A console removes the toggle from
+  its top bar and passes its theme route to `user_menu`.
+- `view::menu::operator_menu` and `OperatorMenu`: use
+  `widget::menu::user_menu`. The class `fui-sign-out` goes with them.
+- `view::shell::topbar_with` and the two-part `topbar(start, end)`: use
+  `topbar(TopBar)`.
+- `view::sign_in::REFUSAL_ID` and the separate refusal: a refusal is a
+  `State`, and its notice carries the id `NOTICE_ID`.
+- The `font-size: 0` that hid a narrow status pill's words; they are
+  visually hidden (`fui-roomy-text`) and the type scale test holds every
+  size again.
 
 ## [0.2.2] - 2026-10-21
 

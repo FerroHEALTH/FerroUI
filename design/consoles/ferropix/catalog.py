@@ -2188,7 +2188,7 @@ def sign_in_card(notice_html="", username="", password_error=None, locked=False,
 
 
 def sign_in_page(**kw):
-    return centred("Sign in", f'<div class="fui-stack mk-sign-in-stack">{sign_in_card(**kw)}</div>')
+    return centred("Sign in", f'<div class="fui-stack fui-sign-in-stack">{sign_in_card(**kw)}</div>')
 
 
 def page_sign_in():

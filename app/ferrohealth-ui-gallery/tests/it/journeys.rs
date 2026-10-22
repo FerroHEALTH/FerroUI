@@ -36,8 +36,8 @@ pub(crate) const PAGES: [&str; 17] = [
     "/templates/not-found",
 ];
 
-/// The sign-in variants.
-pub(crate) const SIGN_INS: [&str; 3] = ["basic", "provider", "both"];
+/// The sign-in states the gallery draws.
+pub(crate) const SIGN_INS: [&str; 12] = ferrohealth_ui_gallery::pages::sign_in::STATES;
 
 /// Lays the page out `width` CSS pixels wide and `height` tall.
 pub(crate) async fn window(
@@ -320,9 +320,21 @@ async fn session_pager_posts(browser: &Browser, gallery: &Gallery) -> Result<(),
     Ok(())
 }
 
+/// The text of the element that has the focus.
+async fn focused_text(browser: &Browser) -> Result<String, Box<dyn Error>> {
+    Ok(browser
+        .driver()
+        .active_element()
+        .await?
+        .text()
+        .await?
+        .trim()
+        .to_owned())
+}
+
 #[tokio::test(flavor = "multi_thread")]
-async fn the_theme_toggle_posts_the_other_theme_and_the_choice_is_kept()
--> Result<(), Box<dyn Error>> {
+async fn the_user_menu_posts_the_theme_and_the_choice_is_kept() -> Result<(), Box<dyn Error>> {
+    // Family rule 5: the theme is set in the user menu; rule 9: kept in a cookie.
     if !journeys_enabled() {
         return Ok(());
     }
@@ -337,21 +349,27 @@ async fn the_theme_toggle_posts_the_other_theme_and_the_choice_is_kept()
             )
             .await?;
         browser.goto(&gallery.url("/ferrofed")).await?;
-        let to_dark = browser.element(By::Id("theme-to-dark")).await?;
-        assert!(
-            to_dark.is_displayed().await?,
-            "the moon shows in the light theme"
-        );
-        to_dark.click().await?;
+        browser
+            .element(By::Css("button[popovertarget='user-menu']"))
+            .await?
+            .click()
+            .await?;
+        let dark = browser
+            .element(By::XPath(
+                "//*[@id = 'user-menu']//button[@role = 'menuitemradio' and @value = 'dark']",
+            ))
+            .await?;
+        until("the menu opens", async || Ok(dark.is_displayed().await?)).await?;
+        dark.click().await?;
         browser
             .element(By::Css(r#"html[data-theme="dark"]"#))
             .await?;
         browser.at(&gallery.url("/ferrofed")).await?;
-        let to_light = browser.element(By::Id("theme-to-light")).await?;
-        until("the sun shows in the dark theme", async || {
-            Ok(to_light.is_displayed().await?)
-        })
-        .await?;
+        browser
+            .element(By::Css(
+                r#"#user-menu button[value="dark"][aria-checked="true"]"#,
+            ))
+            .await?;
         until("the choice reaches the cookie", async || {
             Ok(browser
                 .driver()
@@ -364,7 +382,199 @@ async fn the_theme_toggle_posts_the_other_theme_and_the_choice_is_kept()
         browser
             .element(By::Css(r#"html[data-theme="dark"]"#))
             .await?;
-        browser.console_clean("the theme toggle").await
+        assert!(
+            browser
+                .driver()
+                .find_all(By::Css(
+                    "#theme-to-dark, #theme-to-light, .fui-theme-toggle"
+                ))
+                .await?
+                .is_empty(),
+            "the top bar holds no theme toggle (family rule 5)"
+        );
+        browser.console_clean("the theme in the user menu").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_keyboard_walks_the_user_menu_and_the_focus_returns_to_its_button()
+-> Result<(), Box<dyn Error>> {
+    // WAI-ARIA Authoring Practices 1.2, the menu button pattern.
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/ferrobridge")).await?;
+        hydrated_tabs(browser).await?;
+        let button = browser
+            .element(By::Css("button[popovertarget='user-menu']"))
+            .await?;
+        button.focus().await?;
+        button.send_keys(Key::Enter).await?;
+        until("the button says the menu is open", async || {
+            Ok(button.attr("aria-expanded").await?.as_deref() == Some("true"))
+        })
+        .await?;
+        until("the focus is on the first item", async || {
+            Ok(focused_text(browser).await? == "Your preferences")
+        })
+        .await?;
+        let active = browser.driver().active_element().await?;
+        active.send_keys(Key::Down).await?;
+        until("Down moves to the theme", async || {
+            Ok(focused_text(browser).await? == "Light")
+        })
+        .await?;
+        browser
+            .driver()
+            .active_element()
+            .await?
+            .send_keys(Key::End)
+            .await?;
+        until("End goes to Sign out, the last item", async || {
+            Ok(focused_text(browser).await? == "Sign out")
+        })
+        .await?;
+        browser
+            .driver()
+            .active_element()
+            .await?
+            .send_keys(Key::Down)
+            .await?;
+        until("Down wraps to the first item", async || {
+            Ok(focused_text(browser).await? == "Your preferences")
+        })
+        .await?;
+        browser
+            .driver()
+            .active_element()
+            .await?
+            .send_keys(Key::Escape)
+            .await?;
+        let menu = browser.driver().find(By::Id("user-menu")).await?;
+        until("Escape closes the menu", async || {
+            Ok(!menu.is_displayed().await?)
+        })
+        .await?;
+        until("the focus returns to the button", async || {
+            let active = browser.driver().active_element().await?;
+            Ok(active.attr("popovertarget").await?.as_deref() == Some("user-menu"))
+        })
+        .await?;
+        until("the button says the menu is closed", async || {
+            Ok(button.attr("aria-expanded").await?.as_deref() == Some("false"))
+        })
+        .await?;
+        browser.console_clean("the user menu's keyboard").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn on_a_phone_the_user_menu_is_a_sheet_with_cancel() -> Result<(), Box<dyn Error>> {
+    // F13: below 40 rem the user menu opens as a bottom sheet with Cancel.
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        window(browser, 390, 844).await?;
+        browser.goto(&gallery.url("/ferropix")).await?;
+        browser
+            .element(By::Css("button[popovertarget='user-menu']"))
+            .await?
+            .click()
+            .await?;
+        let menu = browser.element(By::Id("user-menu")).await?;
+        until("the sheet opens", async || Ok(menu.is_displayed().await?)).await?;
+        let (bottom, left, right): (f64, f64, f64) = serde_json::from_value(
+            browser
+                .driver()
+                .execute(
+                    r"const box = document.getElementById('user-menu').getBoundingClientRect();
+                    return [window.innerHeight - box.bottom, box.left, window.innerWidth - box.right];",
+                    vec![],
+                )
+                .await?
+                .json()
+                .clone(),
+        )?;
+        assert!(bottom.abs() < 1.0, "the sheet sits on the screen's foot");
+        assert!(left.abs() < 1.0 && right.abs() < 1.0, "the sheet spans the screen");
+        let brands = browser
+            .element(By::XPath(
+                "//*[@id = 'user-menu']//a[@role = 'menuitemradio' and @aria-checked = 'true']",
+            ))
+            .await?;
+        assert!(brands.is_displayed().await?, "the brand choice moves into the sheet");
+        let shortcuts = browser
+            .driver()
+            .find(By::XPath("//*[@id = 'user-menu']//a[contains(., 'Keyboard shortcuts')]"))
+            .await?;
+        assert!(!shortcuts.is_displayed().await?, "no key hints on a phone");
+        browser
+            .element(By::Css("#user-menu .fui-menu-cancel"))
+            .await?
+            .click()
+            .await?;
+        until("Cancel closes the sheet", async || {
+            Ok(!menu.is_displayed().await?)
+        })
+        .await?;
+        browser.console_clean("the user menu's sheet").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_sidebar_folds_to_its_rail_and_back() -> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/ferroterm/tables")).await?;
+        browser
+            .element(By::XPath("//button[@name = 'sidebar' and @value = 'rail']"))
+            .await?
+            .click()
+            .await?;
+        browser
+            .element(By::Css("#sidebar.fui-sidebar-rail"))
+            .await?;
+        browser.at(&gallery.url("/ferroterm/tables")).await?;
+        let width: f64 = serde_json::from_value(
+            browser
+                .driver()
+                .execute(
+                    "return document.getElementById('sidebar').getBoundingClientRect().width;",
+                    vec![],
+                )
+                .await?
+                .json()
+                .clone(),
+        )?;
+        assert!(width < 70.0, "the rail is the glyphs alone, {width} px");
+        browser
+            .element(By::Css(
+                "#sidebar a[title='Tables and paging'][aria-current='page']",
+            ))
+            .await?;
+        browser.goto(&gallery.url("/ferroterm/code")).await?;
+        browser
+            .element(By::Css("#sidebar.fui-sidebar-rail"))
+            .await?;
+        browser
+            .element(By::XPath("//button[@name = 'sidebar' and @value = 'full']"))
+            .await?
+            .click()
+            .await?;
+        browser
+            .element(By::Css("#sidebar:not(.fui-sidebar-rail)"))
+            .await?;
+        browser.console_clean("the rail").await
     })
     .await
 }
@@ -651,8 +861,9 @@ async fn a_control_tabbed_to_above_the_fold_lands_below_the_sticky_top_bar()
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn the_top_bar_status_shows_its_full_words_or_nothing_at_every_width()
+async fn the_top_bar_status_keeps_its_shape_and_shows_its_words_from_64_rem()
 -> Result<(), Box<dyn Error>> {
+    // F12: below 64 rem the pill keeps its shape, its words its accessible name.
     if !journeys_enabled() {
         return Ok(());
     }
@@ -665,30 +876,34 @@ async fn the_top_bar_status_shows_its_full_words_or_nothing_at_every_width()
             let measured = browser
                 .driver()
                 .execute(
-                    r"const pill = document.querySelector('.fui-topbar-end .fui-pill');
+                    r"const pill = document.querySelector('.fui-topbar-end .fui-topbar-status');
+                    const words = pill.querySelector('.fui-roomy-text');
                     const end = document.querySelector('.fui-topbar-end').getBoundingClientRect();
                     const middle = document.querySelector('.fui-topbar-middle');
-                    const shown = pill !== null && pill.getClientRects().length > 0;
-                    if (!shown) { return [false, true, true, true]; }
                     const box = pill.getBoundingClientRect();
                     const search = middle.getBoundingClientRect();
                     const clear = middle.offsetTop !== pill.offsetTop
                       ? true
                       : box.left >= search.right;
-                    return [true, pill.scrollWidth <= pill.clientWidth + 1, end.right <= window.innerWidth + 0.5, clear];",
+                    const read = words.getBoundingClientRect();
+                    return [pill.getClientRects().length > 0, read.width > 1,
+                      pill.scrollWidth <= pill.clientWidth + 1, end.right <= window.innerWidth + 0.5,
+                      clear, words.textContent];",
                     vec![],
                 )
                 .await?;
-            let (shown, whole, inside, clear): (bool, bool, bool, bool) =
+            let (shown, worded, whole, inside, clear, name): (bool, bool, bool, bool, bool, String) =
                 serde_json::from_value(measured.json().clone())?;
+            assert!(shown, "the status pill keeps its shape at {width} px");
+            assert_eq!("Library up", name, "the words stay its name at {width} px");
             assert!(whole, "the status pill is cut short at {width} px");
             assert!(inside, "the top bar's end runs past the window at {width} px");
             assert!(clear, "the status pill overlaps the search box at {width} px");
-            if width >= 1024 {
-                assert!(shown, "the status pill is hidden at {width} px");
-            } else {
-                assert!(!shown, "the status pill shows at {width} px");
-            }
+            assert_eq!(
+                width >= 1024,
+                worded,
+                "the words show from 64 rem up alone, at {width} px"
+            );
         }
         browser.console_clean("the top bar status").await
     })
