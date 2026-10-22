@@ -128,19 +128,23 @@ pub fn tab_list(label: String, prefix: String, tabs: Vec<String>, panels: AnyVie
 }
 
 /// Returns the phone's select over `choices`, named `label`, on the one
-/// leading to `chosen`.
+/// leading to `chosen`, in a form whose submit button says `go`.
 ///
-/// Once the page has hydrated it leads to the route chosen; until then it
-/// is disabled and the row of links serves. A console draws it through
-/// [`crate::view::tabs::binder`], as the island [`crate::island::TabSelect`].
+/// Choosing an option changes nothing else (WCAG 2.2 SC 3.2.2); once the
+/// page has hydrated, pressing the button leads to the route chosen. Until
+/// then the select is disabled and the row of links serves. A console draws
+/// it through [`crate::view::tabs::binder`], as the island
+/// [`crate::island::TabSelect`].
 #[must_use]
 pub fn tab_select(
     label: String,
+    go_words: String,
     choices: Vec<crate::view::tabs::TabChoice>,
     chosen: &str,
 ) -> AnyView {
     let hydrated = RwSignal::new(false);
     Effect::new(move |_| hydrated.set(true));
+    let picker = NodeRef::<leptos::html::Select>::new();
     let options = choices
         .into_iter()
         .map(|choice| {
@@ -152,8 +156,14 @@ pub fn tab_select(
             }
         })
         .collect_view();
+    let on_submit = move |event: leptos::ev::SubmitEvent| {
+        event.prevent_default();
+        if let Some(select) = picker.get_untracked() {
+            go(&select.value());
+        }
+    };
     view! {
-        <div class="fui-tabs-select">
+        <form class="fui-tabs-select" method="get" on:submit=on_submit>
             <label class="fui-sr-only" for="fui-tabs-select">
                 {label}
             </label>
@@ -161,11 +171,14 @@ pub fn tab_select(
                 id="fui-tabs-select"
                 class=crate::view::form::SELECT
                 disabled=move || !hydrated.get()
-                on:change:target=move |event| go(&event.target().value())
+                node_ref=picker
             >
                 {options}
             </select>
-        </div>
+            <button type="submit" class=crate::view::button::Variant::Secondary.class()>
+                {go_words}
+            </button>
+        </form>
     }
     .into_any()
 }

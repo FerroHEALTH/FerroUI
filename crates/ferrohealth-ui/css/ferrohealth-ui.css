@@ -9879,9 +9879,10 @@
     line-height: var(--leading-small);
   }
 
-  /* Many tabs on a phone: a select names every section at once. It takes
-     the row's place only once it works (enabled, which the island does as
-     it hydrates); until then the row of links serves. */
+  /* Many tabs on a phone: a select names every section at once, and its Go
+     button leads there, so choosing alone changes nothing (WCAG 3.2.2). It
+     takes the row's place only once it works (enabled, which the island does
+     as it hydrates); until then the row of links serves. */
   .fui-tabs-select {
     display: none;
   }
@@ -9892,8 +9893,14 @@
     }
 
     .fui-tabbed-many .fui-tabs-select:has(> select:enabled) {
-      display: block;
+      display: flex;
+      gap: 0.5rem;
       margin-block-end: 0.5rem;
+    }
+
+    .fui-tabs-select > select {
+      flex: 1;
+      min-inline-size: 0;
     }
 
     .fui-tabbed-many:has(.fui-tabs-select > select:enabled) > .fui-tab-panel {

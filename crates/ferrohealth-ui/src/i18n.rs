@@ -610,6 +610,8 @@ texts! {
     TabDraft = "tab-draft",
     /// A `$tab` holding a draft, as the phone's tab select names it.
     TabDraftChoice = "tab-draft-choice",
+    /// The button of the phone's tab select that leads to the tab chosen.
+    TabGo = "tab-go",
     /// The help switch while the help lines are hidden.
     HelpShow = "help-show",
     /// The help switch while the help lines show.

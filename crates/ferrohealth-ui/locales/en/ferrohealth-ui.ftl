@@ -52,6 +52,7 @@ toast-region = Notices
 toast-dismiss = Dismiss
 tab-draft = draft
 tab-draft-choice = { $tab } (draft)
+tab-go = Go
 help-show = Explain these parameters
 help-hide = Hide help
 combobox-no-match = No match
