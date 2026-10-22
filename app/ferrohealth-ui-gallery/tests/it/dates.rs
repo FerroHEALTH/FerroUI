@@ -403,9 +403,15 @@ async fn on_a_phone_the_range_is_a_full_width_sheet_with_one_month_and_both_arro
         browser.goto(&gallery.url(FORMS)).await?;
         let picker = open_range(browser).await?;
         let rect = picker.rect().await?;
+        // The layout viewport, which leaves out a classic scrollbar.
+        let view: f64 = browser
+            .driver()
+            .execute("return document.documentElement.clientWidth;", vec![])
+            .await?
+            .convert()?;
         assert!(
-            rect.x.abs() < 1.0 && (rect.width - 390.0).abs() < 1.0,
-            "full width: {rect:?}"
+            rect.x.abs() < 1.0 && (rect.width - view).abs() < 1.0,
+            "full width of {view}: {rect:?}"
         );
         let months = picker.find_all(By::Css(".fui-datepicker-month")).await?;
         assert!(

@@ -186,7 +186,7 @@ async fn more_is_a_bottom_sheet_with_its_cancel_on_a_phone() -> Result<(), Box<d
             .driver()
             .execute(
                 "const box = document.getElementById('overlays-more').parentElement.getBoundingClientRect();
-                return Math.abs(box.bottom - window.innerHeight) < 1 && Math.abs(box.width - document.documentElement.clientWidth) < 1;",
+                return Math.abs(box.bottom - document.documentElement.clientHeight) < 1 && Math.abs(box.width - document.documentElement.clientWidth) < 1;",
                 vec![],
             )
             .await?

@@ -928,7 +928,7 @@ async fn the_top_bar_status_keeps_its_shape_and_shows_its_words_from_64_rem()
                       : box.left >= search.right;
                     const read = words.getBoundingClientRect();
                     return [pill.getClientRects().length > 0, read.width > 1,
-                      pill.scrollWidth <= pill.clientWidth + 1, end.right <= window.innerWidth + 0.5,
+                      pill.scrollWidth <= pill.clientWidth + 1, end.right <= document.documentElement.clientWidth + 0.5,
                       clear, words.textContent];",
                     vec![],
                 )
@@ -982,7 +982,7 @@ async fn the_top_bar_never_covers_the_search_at_any_width() -> Result<(), Box<dy
                 const operator = document.querySelector('.fui-topbar .fui-operator');
                 const label = operator.querySelector('.fui-operator-name');
                 return [parts.some((part) => overlaps(part, search)),
-                  end.right > window.innerWidth + 0.5,
+                  end.right > document.documentElement.clientWidth + 0.5,
                   document.documentElement.scrollWidth > document.documentElement.clientWidth + 0.5,
                   label.textContent, operator.getAttribute('title') || '',
                   search.width,
@@ -1171,7 +1171,7 @@ async fn a_long_button_label_wraps_at_320_pixels_and_a_short_one_keeps_its_line(
             browser,
             r"const long = document.getElementById('long-label').getBoundingClientRect();
             const short = document.getElementById('long-label').nextElementSibling.getBoundingClientRect();
-            return [long.right, window.innerWidth, long.height, short.height,
+            return [long.right, document.documentElement.clientWidth, long.height, short.height,
               document.documentElement.scrollWidth, document.documentElement.clientWidth];",
         )
         .await?;
