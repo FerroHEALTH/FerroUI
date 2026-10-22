@@ -496,7 +496,8 @@ async fn on_a_phone_the_user_menu_is_a_sheet_with_cancel() -> Result<(), Box<dyn
                 .driver()
                 .execute(
                     r"const box = document.getElementById('user-menu').getBoundingClientRect();
-                    return [window.innerHeight - box.bottom, box.left, window.innerWidth - box.right];",
+                    const view = document.documentElement;
+                    return [view.clientHeight - box.bottom, box.left, view.clientWidth - box.right];",
                     vec![],
                 )
                 .await?

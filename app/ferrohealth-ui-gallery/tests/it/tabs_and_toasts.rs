@@ -268,13 +268,22 @@ async fn the_popover_form_opens_under_its_trigger_or_as_a_sheet_and_escape_retur
         trigger.click().await?;
         until("the sheet opens", async || Ok(form.is_displayed().await?)).await?;
         let [left, _, right, bottom] = rect(browser, "save-query").await?;
+        // The layout viewport, which leaves out a classic scrollbar.
+        let wide = read(browser, "document.documentElement.clientWidth")
+            .await?
+            .as_f64()
+            .unwrap_or_default();
+        let high = read(browser, "document.documentElement.clientHeight")
+            .await?
+            .as_f64()
+            .unwrap_or_default();
         assert!(
-            (left - 12.0).abs() < 1.5 && (390.0 - right - 12.0).abs() < 1.5,
-            "the sheet takes the content width: {left} to {right}"
+            (left - 12.0).abs() < 1.5 && (wide - right - 12.0).abs() < 1.5,
+            "the sheet takes the content width: {left} to {right} of {wide}"
         );
         assert!(
-            (800.0 - bottom - 12.0).abs() < 1.5,
-            "the sheet rises from the foot: {bottom}"
+            (high - bottom - 12.0).abs() < 1.5,
+            "the sheet rises from the foot: {bottom} of {high}"
         );
         window(browser, 1440, 900).await?;
         browser.console_clean("the popover form").await
