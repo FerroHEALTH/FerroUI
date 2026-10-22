@@ -9,7 +9,9 @@
 
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::tone::Tone;
-use ferrohealth_ui::view::flow::{Flow, FlowCard, FlowEdge, FlowLane, FlowState, flow};
+use ferrohealth_ui::view::flow::{
+    FOLD_PAST, Flow, FlowCard, FlowEdge, FlowLane, FlowState, LaneFold, flow,
+};
 use ferrohealth_ui::view::funnel::{Bar, Funnel, FunnelPart, bar_list, funnel};
 use ferrohealth_ui::view::score::{Contribution, Score, Threshold, score_bar, score_breakdown};
 
@@ -102,14 +104,17 @@ fn bridge(cdr: FlowState, term: FlowState) -> Flow {
             FlowLane {
                 title: String::from("Callers"),
                 cards: vec![card("caller", FlowState::Up, &path)],
+                fold: None,
             },
             FlowLane {
                 title: String::from("Mapping set"),
                 cards: vec![card("hub", FlowState::Up, &[])],
+                fold: None,
             },
             FlowLane {
                 title: String::from("Upstreams"),
                 cards: vec![card("cdr", cdr, &path), card("term", term, &[])],
+                fold: None,
             },
         ],
         edges: vec![
@@ -220,6 +225,123 @@ fn the_phone_list_holds_a_heading_per_lane_and_a_row_per_card_with_its_state_in_
     assert!(
         shown.contains(r#"<p class="fui-pipeline-foot">1 face on.</p>"#),
         "{shown}"
+    );
+}
+
+/// A bridge whose callers lane holds twelve callers into the hub, two of
+/// them in problem states and one switched off, its fold `open` or not.
+fn crowded(fold: Option<bool>) -> Flow {
+    let callers: Vec<FlowCard> = (0..12)
+        .map(|index| {
+            let state = match index {
+                3 => FlowState::Degraded,
+                7 => FlowState::Unreachable,
+                9 => FlowState::Off,
+                _ => FlowState::Up,
+            };
+            card(&format!("caller-{index:02}"), state, &[])
+        })
+        .collect();
+    let edges = callers
+        .iter()
+        .map(|caller| FlowEdge {
+            from: caller.id.clone(),
+            to: String::from("hub"),
+            state: caller.state,
+            label: caller.state.is_problem().then(|| String::from("401")),
+        })
+        .collect();
+    Flow {
+        id: String::from("busy"),
+        label: String::from("A busy bridge"),
+        list_label: String::from("A busy bridge, lane by lane"),
+        lanes: vec![
+            FlowLane {
+                title: String::from("Callers"),
+                cards: callers,
+                fold: fold.map(|open| LaneFold {
+                    open,
+                    toggle: String::from("?open=callers"),
+                }),
+            },
+            FlowLane {
+                title: String::from("Mapping set"),
+                cards: vec![card("hub", FlowState::Up, &[])],
+                fold: None,
+            },
+        ],
+        edges,
+        foot: String::from("12 callers."),
+    }
+}
+
+#[test]
+fn a_lane_past_the_threshold_folds_its_quiet_cards_into_one_summary_that_unfolds_by_a_link() {
+    const { assert!(12 > FOLD_PAST) };
+    let shown = html(|| flow(&crowded(Some(false))));
+    for kept in ["/caller-03", "/caller-07"] {
+        assert!(
+            shown.contains(&format!("href=\"{kept}\"")),
+            "a problem card is never folded: {kept}: {shown}"
+        );
+    }
+    assert!(
+        !shown.contains(r#"href="/caller-00""#) && !shown.contains(r#"href="/caller-09""#),
+        "a quiet card folds: {shown}"
+    );
+    assert!(
+        shown.contains(r#"aria-label="10 more in Callers: Up 9 · Off 1. Shows every card.""#),
+        "{shown}"
+    );
+    assert!(shown.contains(">10 more</text>"), "{shown}");
+    assert!(
+        shown.contains(r#"href="?open=callers" aria-label="Show every card of Callers""#),
+        "the lane's title carries its unfold link: {shown}"
+    );
+    assert_eq!(
+        1,
+        shown.matches(r#"class="fui-edge fui-edge-ok""#).count(),
+        "the folded callers' edges are one edge into the hub: {shown}"
+    );
+    assert!(
+        shown.contains(r#"<span class="fui-pipeline-name">10 more</span>"#),
+        "the phone's list folds as the drawing does: {shown}"
+    );
+    assert!(!shown.contains("style="), "{shown}");
+}
+
+#[test]
+fn an_open_lane_shows_every_card_and_folds_again_by_a_link_and_a_lane_with_no_fold_never_folds() {
+    let open = html(|| flow(&crowded(Some(true))));
+    assert_eq!(
+        13,
+        open.matches(r#"class="fui-tnode-link""#).count(),
+        "every caller and the hub: {open}"
+    );
+    assert_eq!(
+        3,
+        open.matches("Fold the quiet cards of Callers").count(),
+        "the drawing's link, its tooltip and the list's row: {open}"
+    );
+    let never = html(|| flow(&crowded(None)));
+    assert_eq!(13, never.matches(r#"class="fui-tnode-link""#).count());
+    assert!(!never.contains("fui-tnode-toggle"), "{never}");
+    assert!(!never.contains("more in Callers"), "{never}");
+}
+
+#[test]
+fn labelled_problem_edges_that_meet_one_card_carry_their_labels_at_their_starts() {
+    let shown = html(|| flow(&crowded(Some(true))));
+    assert_eq!(
+        2,
+        shown
+            .matches(r#"<text x="12.6" y="12.5" text-anchor="middle">401</text>"#)
+            .count(),
+        "{shown}"
+    );
+    assert!(
+        shown.contains(r#"transform="translate(212.0 251.0)" class="fui-edge-label""#),
+        "the label sits just after the degraded caller's side: {shown}"
     );
 }
 

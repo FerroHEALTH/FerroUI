@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The federation page: the topology hovered, zoomed, with its quick look,
-//! folded, large with its minimap and as its List; the fan-out outcome at a
-//! phone's width; the replica line on the self-description; and the sidebar
-//! inside a node, beside the page and in the phone's drawer.
+//! folded, large with its minimap and as its List, at the size of a real
+//! federation folded and unfolded and as its List on a phone; the fan-out
+//! outcome at a phone's width; the replica line on the self-description;
+//! and the sidebar inside a node, beside the page and in the phone's
+//! drawer.
 
 use std::error::Error;
 
@@ -27,6 +29,9 @@ pub(super) const STATES: &[&str] = &[
     "topology-large",
     "topology-list",
     "topology-look",
+    "topology-real",
+    "topology-real-390",
+    "topology-real-open",
     "topology-zoomed",
 ];
 
@@ -83,6 +88,11 @@ pub(super) async fn federation(
             "topology-large",
         ),
         ("?view=list", "topology-list"),
+        (
+            "?large=50&minimap=on&view=map&collapse=all",
+            "topology-real",
+        ),
+        ("?large=50&minimap=on&view=map", "topology-real-open"),
     ] {
         let map = topology(browser, gallery, brand, query).await?;
         shot_of(browser, brand, theme, state, &map).await?;
@@ -116,5 +126,7 @@ pub(super) async fn federation(
         .await?;
     let partial = browser.element(card("One node failing")).await?;
     shot_of(browser, brand, theme, "fanout-partial-390", &partial).await?;
+    let real = topology(browser, gallery, brand, "?large=50&collapse=all").await?;
+    shot_of(browser, brand, theme, "topology-real-390", &real).await?;
     window(browser, WIDTH, HEIGHT).await
 }

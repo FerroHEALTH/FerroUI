@@ -24,6 +24,18 @@ texts! {
     FlowEdge = "flow-edge",
     /// A problem edge of a flow with its label as `$note`.
     FlowEdgeNoted = "flow-edge-noted",
+    /// The fold link of an open lane: `$title` the lane's title.
+    FlowFold = "flow-fold",
+    /// The accessible name of a lane's summary card: `$count` the cards it
+    /// holds, `$title` the lane's title, `$note` its counts.
+    FlowFoldCard = "flow-fold-card",
+    /// One state's count on a summary card: `$status` the state, `$count`
+    /// how many.
+    FlowFoldCount = "flow-fold-count",
+    /// Two counts of a summary card's line, `$first` and `$next`, joined.
+    FlowFoldJoin = "flow-fold-join",
+    /// The name of a lane's summary card: `$count` the cards it holds.
+    FlowFoldName = "flow-fold-name",
     /// The accessible name of a flow's hub: `$title` its name, `$note` its
     /// line.
     FlowHub = "flow-hub",
@@ -39,6 +51,8 @@ texts! {
     FlowUp = "flow-state-up",
     /// The description of a flow with no problem edge.
     FlowSteady = "flow-steady",
+    /// The fold link of a folded lane: `$title` the lane's title.
+    FlowUnfold = "flow-unfold",
     /// One contribution in a score's name: `$title` its words, `$value` its
     /// signed weight.
     ScoreContribution = "score-contribution",

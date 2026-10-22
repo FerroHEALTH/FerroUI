@@ -568,7 +568,10 @@ async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error
         "/terminology" => terminology_content(browser).await?,
         "/overlays" => overlays_content(browser).await?,
         "/federation" => topology_floor(browser).await?,
-        "/charts" => colour_key(browser).await?,
+        "/charts" => {
+            colour_key(browser).await?;
+            crate::widgets::busy_flow_unfolds(browser).await?;
+        }
         "/layouts" => {
             let items = browser
                 .driver()

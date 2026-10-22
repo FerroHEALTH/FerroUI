@@ -6,7 +6,9 @@
 //! A line chart of three synthetic series over a week, its legend showing
 //! and hiding each, the activity line of a dashboard, the ETL run report
 //! with refusals and with none, the flow at rest and with problem edges,
-//! and the score breakdown and its compact cell.
+//! a busy bridge of thirty callers and thirty upstreams as a flow whose
+//! lanes fold, and the score breakdown and its compact cell. The query's
+//! `open` names the busy flow's lanes unfolded (`callers`, `upstreams`).
 
 use crate::locale::{Msg, tr};
 use ferrohealth_ui::icon::Glyph;
@@ -15,12 +17,13 @@ use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::chart::{
     ACCENT, ActivityChart, BAD, LineChart, NEUTRAL, Series, activity_chart,
 };
-use ferrohealth_ui::view::flow::{Flow, FlowCard, FlowEdge, FlowLane, FlowState, flow};
+use ferrohealth_ui::view::flow::{Flow, FlowCard, FlowEdge, FlowLane, FlowState, LaneFold, flow};
 use ferrohealth_ui::view::funnel::{Bar, Funnel, FunnelPart, bar_list, funnel};
 use ferrohealth_ui::view::score::{Contribution, Score, Threshold, score_bar, score_breakdown};
 use ferrohealth_ui::view::surface::{card, definitions, page_header, stack, titled_panel};
 use ferrohealth_ui::widget::chart::{ChartWords, line_chart};
 use leptos::prelude::*;
+use leptos_router::hooks::use_query_map;
 use serde::{Deserialize, Serialize};
 
 /// The days of the synthetic week, as the X axis labels them.
@@ -248,6 +251,7 @@ fn bridge_lanes(
     let lane = |title: Msg, cards: Vec<FlowCard>| FlowLane {
         title: tr(title),
         cards,
+        fold: None,
     };
     vec![
         lane(
@@ -370,6 +374,200 @@ fn bridge_flow(problems: bool) -> AnyView {
     titled_panel(tr(title), (), drawn).into_any()
 }
 
+/// A card of the busy bridge, named by its kind and its number.
+fn busy_card(
+    (id, glyph, kind, number): (String, Glyph, Msg, u8),
+    (state, line): (FlowState, Msg),
+    path: Vec<String>,
+) -> FlowCard {
+    FlowCard {
+        href: format!("#{id}"),
+        id,
+        glyph,
+        name: format!("{} {number:02}", tr(kind)),
+        line: tr(line),
+        state,
+        path,
+        hub: false,
+    }
+}
+
+/// The thirty callers of the busy bridge, each with the faces it calls
+/// and the label of its edges: most call the FHIR facade, every sixth is
+/// an HL7 v2 sender, the third of every six calls the operator API, and
+/// every fifth client calls the operator API too.
+fn busy_callers() -> Vec<(FlowCard, Vec<&'static str>, Option<String>)> {
+    (1_u8..=30)
+        .map(|number| {
+            let faces = match (number % 6, number % 5) {
+                (0, _) => vec!["hl7"],
+                (3, _) => vec!["operator"],
+                (_, 0) => vec!["facade", "operator"],
+                _ => vec!["facade"],
+            };
+            let sender = number % 6 == 0;
+            let (state, line, label) = match number {
+                7 | 13 => (
+                    FlowState::Degraded,
+                    Msg::FlowBusyRefused,
+                    Some(String::from("401")),
+                ),
+                18 => (
+                    FlowState::Degraded,
+                    Msg::FlowBusyRejected,
+                    Some(tr(Msg::FlowBusyAe)),
+                ),
+                22 => (FlowState::Off, Msg::FlowBusyOff, None),
+                26 => (FlowState::NotChecked, Msg::FlowBusyNotChecked, None),
+                _ if sender => (FlowState::Up, Msg::FlowBusySending, None),
+                _ => (FlowState::Up, Msg::FlowBusyCalling, None),
+            };
+            let id = format!("caller-{number:02}");
+            let (glyph, kind) = if sender {
+                (Glyph::RADIO_TOWER, Msg::FlowBusySender)
+            } else {
+                (Glyph::USERS, Msg::FlowBusyCaller)
+            };
+            let path = faces
+                .first()
+                .map(|face| vec![id.clone(), (*face).to_owned(), String::from("hub")])
+                .unwrap_or_default();
+            let card = busy_card((id, glyph, kind, number), (state, line), path);
+            (card, faces, label)
+        })
+        .collect()
+}
+
+/// The thirty upstreams of the busy bridge, each with the label of its
+/// edge: CDRs, terminology servers and identity services in turn, two
+/// degraded, one unreachable, one switched off and one not yet checked.
+fn busy_upstreams() -> Vec<(FlowCard, Option<String>)> {
+    (1_u8..=30)
+        .map(|number| {
+            let (glyph, kind) = match number % 3 {
+                1 => (Glyph::DATABASE, Msg::FlowCdr),
+                2 => (Glyph::BOOK_A, Msg::FlowTerm),
+                _ => (Glyph::SHIELD_CHECK, Msg::FlowBusyIdentity),
+            };
+            let (state, line, label) = match number {
+                4 => (
+                    FlowState::Unreachable,
+                    Msg::FlowNoAnswer,
+                    Some(tr(Msg::FlowNoAnswerLabel)),
+                ),
+                11 => (
+                    FlowState::Degraded,
+                    Msg::FlowAnswers503,
+                    Some(String::from("503")),
+                ),
+                19 => (
+                    FlowState::Degraded,
+                    Msg::FlowBusySlow,
+                    Some(tr(Msg::FlowBusySlowLabel)),
+                ),
+                23 => (FlowState::Off, Msg::FlowBusyOff, None),
+                27 => (FlowState::NotChecked, Msg::FlowBusyNotChecked, None),
+                _ => (FlowState::Up, Msg::FlowBusyUp, None),
+            };
+            let id = format!("upstream-{number:02}");
+            let path = vec![String::from("hub"), id.clone()];
+            let card = busy_card((id, glyph, kind, number), (state, line), path);
+            (card, label)
+        })
+        .collect()
+}
+
+/// A busy synthetic bridge: thirty callers through three faces into the
+/// mapping set and out to thirty upstreams, some of each in a problem
+/// state, its callers and upstreams folded unless `open` names them.
+fn busy_flow(open: &[String]) -> AnyView {
+    let fold = |lane: &str| {
+        let unfolded = open.iter().any(|each| each == lane);
+        let mut next: Vec<&str> = open
+            .iter()
+            .map(String::as_str)
+            .filter(|each| *each != lane)
+            .collect();
+        if !unfolded {
+            next.push(lane);
+        }
+        next.sort_unstable();
+        let query = if next.is_empty() {
+            String::from("?")
+        } else {
+            format!("?open={}", next.join(","))
+        };
+        Some(LaneFold {
+            open: unfolded,
+            toggle: format!("{query}#busy-flow"),
+        })
+    };
+    let callers = busy_callers();
+    let upstreams = busy_upstreams();
+    let mut edges = Vec::new();
+    for (card, faces, label) in &callers {
+        for face in faces {
+            edges.push(flow_edge(&card.id, face, card.state, label.clone()));
+        }
+    }
+    for face in ["facade", "hl7", "operator"] {
+        edges.push(flow_edge(face, "hub", FlowState::Up, None));
+    }
+    for (card, label) in &upstreams {
+        edges.push(flow_edge("hub", &card.id, card.state, label.clone()));
+    }
+    let face = |id: &str, glyph: Glyph, name: Msg, line: Msg| {
+        flow_card(id, glyph, name, line, FlowState::Up, &[])
+    };
+    let lanes = vec![
+        FlowLane {
+            title: tr(Msg::FlowCallers),
+            cards: callers.into_iter().map(|(card, _, _)| card).collect(),
+            fold: fold("callers"),
+        },
+        FlowLane {
+            title: tr(Msg::FlowFaces),
+            cards: vec![
+                face("facade", Glyph::NETWORK, Msg::FlowFacade, Msg::FlowFacadeOn),
+                face("hl7", Glyph::ROUTE, Msg::FlowHl7, Msg::FlowHl7On),
+                face(
+                    "operator",
+                    Glyph::SETTINGS,
+                    Msg::FlowBusyOperator,
+                    Msg::FlowBusyOperatorOn,
+                ),
+            ],
+            fold: None,
+        },
+        FlowLane {
+            title: tr(Msg::FlowMappingSet),
+            cards: vec![flow_card(
+                "hub",
+                Glyph::LAYERS,
+                Msg::FlowBridge,
+                Msg::FlowContexts,
+                FlowState::Up,
+                &[],
+            )],
+            fold: None,
+        },
+        FlowLane {
+            title: tr(Msg::FlowUpstreams),
+            cards: upstreams.into_iter().map(|(card, _)| card).collect(),
+            fold: fold("upstreams"),
+        },
+    ];
+    let drawn = flow(&Flow {
+        id: String::from("flow-busy"),
+        label: tr(Msg::FlowBusyLabel),
+        list_label: tr(Msg::FlowBusyList),
+        lanes,
+        edges,
+        foot: tr(Msg::FlowBusyFoot),
+    });
+    view! { <div id="busy-flow">{titled_panel(tr(Msg::FlowBusyTitle), (), drawn)}</div> }.into_any()
+}
+
 /// One contribution of a synthetic score.
 fn contribution(label: Msg, reading: Msg, weight: f64) -> Contribution {
     Contribution {
@@ -459,7 +657,16 @@ pub fn ChartsPage() -> impl IntoView {
     .into_any();
     let sections = (lines(), activity());
     let reports = (run_report(true), run_report(false));
-    let flows = (bridge_flow(false), bridge_flow(true));
+    let open: Vec<String> = use_query_map().with_untracked(|query| {
+        query
+            .get_str("open")
+            .unwrap_or_default()
+            .split(',')
+            .filter(|lane| !lane.is_empty())
+            .map(str::to_owned)
+            .collect()
+    });
+    let flows = (bridge_flow(false), bridge_flow(true), busy_flow(&open));
     let scores = (breakdown(false), breakdown(true), score_cells());
     view! {
         {super::title(tr(Msg::Charts))}
@@ -472,6 +679,7 @@ pub fn ChartsPage() -> impl IntoView {
                 {reports.1}
                 {flows.0}
                 {flows.1}
+                {flows.2}
                 {scores.0}
                 {scores.1}
                 {scores.2}
