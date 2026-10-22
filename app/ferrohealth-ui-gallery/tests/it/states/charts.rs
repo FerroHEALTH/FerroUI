@@ -10,7 +10,7 @@ use std::error::Error;
 use ferrohealth_ui::style::Brand;
 use thirtyfour::prelude::*;
 
-use super::{HEIGHT, WIDTH, away, card, focus, hover, shot_of};
+use super::{HEIGHT, WIDTH, away, card, focus, shot_of};
 use crate::browser::Browser;
 use crate::journeys::window;
 use crate::stack::Gallery;
@@ -44,8 +44,27 @@ pub(super) async fn charts(
             vec![flow.to_json()?],
         )
         .await?;
-    hover(browser, &cdr).await?;
-    shot_of(browser, brand, theme, "flow-hover", &flow).await?;
+    browser.settled().await?;
+    // A pointer move to an element can scroll the page and leave the card
+    // from under the pointer, so the pointer goes to the card's centre in
+    // the viewport, which scrolls nothing.
+    let centre = browser
+        .driver()
+        .execute(
+            "const box = arguments[0].getBoundingClientRect(); return [Math.round(box.x + box.width / 2), Math.round(box.y + box.height / 2)];",
+            vec![cdr.to_json()?],
+        )
+        .await?;
+    let (x, y): (i64, i64) = serde_json::from_value(centre.json().clone())?;
+    browser
+        .driver()
+        .action_chain()
+        .move_to(x, y)
+        .perform()
+        .await?;
+    browser.settled().await?;
+    let png = flow.screenshot_as_png().await?;
+    super::write(brand, "flow-hover", theme, &png)?;
     away(browser).await?;
     focus(browser, &cdr).await?;
     shot_of(browser, brand, theme, "flow-focus", &flow).await?;

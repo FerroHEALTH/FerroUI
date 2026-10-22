@@ -1,0 +1,1 @@
+- A transform pair's input pane keeps the editor's ground to the pair's foot beside a taller answer, where a white band showed under the editor.

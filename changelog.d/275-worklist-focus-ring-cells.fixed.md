@@ -1,0 +1,1 @@
+- A work-list row's focus ring is whole on a wide screen, its checkbox and menu cells included; the current row's tint covered the outline there.
