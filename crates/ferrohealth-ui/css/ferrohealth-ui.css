@@ -4548,9 +4548,8 @@
   /* The stacked form alone (view::compare::compare_stacked) shows at
      every width; every mark ends its value's line, so the agree, differ
      and absent marks read as one column. */
-  .fui-compare-stacked-rows .fui-compare-cell {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+  .fui-compare-stacked-rows .fui-compare-cell > .fui-compare-mark {
+    margin-inline-start: auto;
   }
 
   .fui-compare-lead {

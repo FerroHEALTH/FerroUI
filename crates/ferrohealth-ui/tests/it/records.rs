@@ -465,6 +465,15 @@ fn the_server_draws_the_identifier_masked_with_its_domain_and_no_value() {
 #[test]
 fn the_copy_button_waits_in_an_inert_face_while_masked() {
     let drawn = masked_identifier(Reveal::Masked);
+    let disabled = tags(&drawn, "button")
+        .into_iter()
+        .filter(|button| button.contains_key("disabled"))
+        .count();
+    assert_eq!(
+        3, disabled,
+        "the busy twin, Hide and Copy are disabled while masked: {drawn}"
+    );
+    assert!(drawn.contains(">Copy</button>"), "{drawn}");
     let faces: Vec<_> = tags(&drawn, "span")
         .into_iter()
         .filter(|span| {

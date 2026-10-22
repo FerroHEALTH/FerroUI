@@ -493,7 +493,7 @@ fn reveal_press(
                 class=format!("{} fui-identifier-reveal", Variant::Secondary.small())
                 class:is-away=busy
                 aria-pressed="false"
-                inert=busy
+                disabled=busy
                 on:click=press
             >
                 {icon(Glyph::EYE, "14")}
@@ -579,12 +579,25 @@ fn revealed_face(state: RwSignal<Reveal>, total: StoredValue<u32>, words: ShownW
                     type="button"
                     class=format!("{} fui-identifier-reveal", Variant::Secondary.small())
                     aria-pressed="true"
+                    disabled=move || !shown()
                     on:click=move |_| state.set(Reveal::Masked)
                 >
                     {icon(Glyph::EYE_OFF, "14")}
                     {hide}
                 </button>
-                {copy_button(copy_id, copy, text, copied)}
+                {move || {
+                    if shown() {
+                        copy_button(copy_id.clone(), copy.clone(), text, copied.clone()).into_any()
+                    } else {
+                        view! {
+                            <button type="button" class=Variant::Secondary.small() disabled>
+                                {icon(Glyph::COPY, "14")}
+                                {copy.clone()}
+                            </button>
+                        }
+                        .into_any()
+                    }
+                }}
             </span>
         </span>
     }
