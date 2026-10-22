@@ -16,7 +16,7 @@
 //! only (family rule 3) and stills under reduced motion. No specification
 //! governs the drawing: our own design.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use leptos::prelude::*;
 
@@ -124,8 +124,27 @@ pub struct FlowCard {
 pub struct FlowLane {
     /// Its title, such as "Callers".
     pub title: String,
-    /// Its cards, top to bottom.
+    /// Its cards, top to bottom as the console passes them; the drawing
+    /// orders them to cross fewer edges.
     pub cards: Vec<FlowCard>,
+    /// How it folds past [`FOLD_PAST`] cards, or `None` for a lane that
+    /// never folds.
+    pub fold: Option<LaneFold>,
+}
+
+/// The most cards a lane shows before it folds its quiet ones: eight rows
+/// keep the drawing about one screen tall at 1440 px.
+pub const FOLD_PAST: usize = 8;
+
+/// How a lane past [`FOLD_PAST`] cards folds its quiet cards, those in no
+/// problem state and on no problem edge, into one summary card.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LaneFold {
+    /// Whether the reader unfolded it to show every card.
+    pub open: bool,
+    /// The page that unfolds the lane while it is folded and folds it while
+    /// it is open, such as `?open=callers`.
+    pub toggle: String,
 }
 
 /// One edge of a flow, from a card's right side to a card's left side.
@@ -189,36 +208,569 @@ pub(crate) fn units(count: usize) -> f64 {
     u32::try_from(count).map_or(f64::from(u32::MAX), f64::from)
 }
 
-/// The place of every card by its id, and the drawing's width and height.
-fn layout(flow: &Flow) -> (BTreeMap<&str, Place>, f64, f64) {
-    let rows = flow
+/// The summary of a lane's folded quiet cards.
+#[derive(Debug)]
+struct Folded<'a> {
+    /// Its id, which the folded cards' edges and paths name instead.
+    id: String,
+    /// The lane's title.
+    title: &'a str,
+    /// How many folded cards are in each state, in the order of the states.
+    counts: Vec<(FlowState, usize)>,
+    /// The page that unfolds the lane.
+    href: &'a str,
+}
+
+impl Folded<'_> {
+    /// How many cards it holds.
+    fn count(&self) -> usize {
+        self.counts.iter().map(|(_, count)| count).sum()
+    }
+
+    /// The state its dot shows: up while any card it holds is up.
+    fn state(&self) -> FlowState {
+        self.counts
+            .first()
+            .map_or(FlowState::Up, |(state, _)| *state)
+    }
+
+    /// Each state with its count.
+    fn parts(&self) -> Vec<String> {
+        self.counts
+            .iter()
+            .map(|(state, count)| {
+                tr_with(
+                    Text::FlowFoldCount,
+                    &[("status", state.word().into()), ("count", (*count).into())],
+                )
+            })
+            .collect()
+    }
+
+    /// Its line: each state with its count.
+    fn line(&self) -> String {
+        self.parts()
+            .into_iter()
+            .reduce(|first, next| joined(&first, &next))
+            .unwrap_or_default()
+    }
+
+    /// Its line broken into the lines its card draws, each at most
+    /// [`LINE_MOST`] characters, so no count is cut.
+    fn lines(&self) -> Vec<String> {
+        let mut lines: Vec<String> = Vec::new();
+        for part in self.parts() {
+            let longer = lines.last().map(|last| joined(last, &part));
+            match (lines.last_mut(), longer) {
+                (Some(last), Some(longer)) if longer.chars().count() <= LINE_MOST => *last = longer,
+                _ => lines.push(part),
+            }
+        }
+        lines
+    }
+
+    /// The height of its card: one more line's room for each line after
+    /// the first.
+    fn height(&self) -> f64 {
+        CARD + LINE * units(self.lines().len().saturating_sub(1))
+    }
+}
+
+/// The counts `first` and `next` of a summary card's line, joined.
+fn joined(first: &str, next: &str) -> String {
+    tr_with(
+        Text::FlowFoldJoin,
+        &[("first", first.into()), ("last", next.into())],
+    )
+}
+
+/// The most characters of a flow card's name and of its line.
+const NAME_MOST: usize = 23;
+const LINE_MOST: usize = 22;
+
+/// The room a card's line takes.
+const LINE: f64 = 14.0;
+
+/// One card as the drawing shows it: a card of the flow, or the summary of
+/// its lane's folded cards.
+#[derive(Debug)]
+enum Shown<'a> {
+    Card(&'a FlowCard),
+    Fold(Folded<'a>),
+}
+
+impl Shown<'_> {
+    /// The id its edges name it by.
+    fn id(&self) -> &str {
+        match self {
+            Self::Card(card) => &card.id,
+            Self::Fold(folded) => &folded.id,
+        }
+    }
+}
+
+/// One lane as the drawing shows it: its cards in their drawn order, the
+/// summary last, and its fold link with whether it is folded.
+#[derive(Debug)]
+struct Planned<'a> {
+    title: &'a str,
+    shown: Vec<Shown<'a>>,
+    toggle: Option<(bool, &'a str)>,
+}
+
+/// One edge as the drawing draws it, its ends the shown cards' ids.
+#[derive(Debug)]
+struct Drawn<'a> {
+    from: String,
+    to: String,
+    state: FlowState,
+    label: Option<&'a str>,
+}
+
+/// A flow as the drawing shows it: the lanes folded and ordered, the
+/// edges between the shown cards, and the summary that stands for each
+/// folded card.
+#[derive(Debug)]
+struct Plan<'a> {
+    lanes: Vec<Planned<'a>>,
+    edges: Vec<Drawn<'a>>,
+    alias: BTreeMap<&'a str, String>,
+}
+
+impl Plan<'_> {
+    /// The id of the shown card that stands for the card `id`.
+    fn shown_id<'b>(&'b self, id: &'b str) -> &'b str {
+        self.alias.get(id).map_or(id, String::as_str)
+    }
+}
+
+/// The state of an edge that stands for quiet edges in `states`: up while
+/// any is up, else not checked while any is, else off.
+fn quietest(states: impl Iterator<Item = FlowState>) -> FlowState {
+    states
+        .min_by_key(|state| match state {
+            FlowState::Up => 0,
+            FlowState::NotChecked => 1,
+            FlowState::Off => 2,
+            FlowState::Degraded => 3,
+            FlowState::Unreachable => 4,
+        })
+        .unwrap_or_default()
+}
+
+/// The lanes of `flow` folded as their folds say, each fold's summary
+/// standing for the cards it holds.
+fn folded(flow: &Flow) -> (Vec<Planned<'_>>, BTreeMap<&str, String>) {
+    let troubled: BTreeSet<&str> = flow
+        .edges
+        .iter()
+        .filter(|edge| edge.state.is_problem())
+        .flat_map(|edge| [edge.from.as_str(), edge.to.as_str()])
+        .collect();
+    let mut alias = BTreeMap::new();
+    let lanes = flow
         .lanes
         .iter()
-        .map(|lane| lane.cards.len())
+        .enumerate()
+        .map(|(column, lane)| {
+            let quiet = |card: &FlowCard| {
+                !card.hub && !card.state.is_problem() && !troubled.contains(card.id.as_str())
+            };
+            let foldable = lane.fold.as_ref().filter(|_| {
+                lane.cards.len() > FOLD_PAST
+                    && lane.cards.iter().filter(|card| quiet(card)).count() > 1
+            });
+            let toggle = foldable.map(|fold| (!fold.open, fold.toggle.as_str()));
+            let mut shown: Vec<Shown<'_>> = Vec::new();
+            match foldable.filter(|fold| !fold.open) {
+                Some(fold) => {
+                    let id = format!("{}-fold-{column}", flow.id);
+                    let mut counts = BTreeMap::new();
+                    for card in &lane.cards {
+                        if quiet(card) {
+                            alias.insert(card.id.as_str(), id.clone());
+                            *counts.entry(rank(card.state)).or_insert(0_usize) += 1;
+                        } else {
+                            shown.push(Shown::Card(card));
+                        }
+                    }
+                    shown.push(Shown::Fold(Folded {
+                        id,
+                        title: &lane.title,
+                        counts: counts
+                            .into_iter()
+                            .map(|(at, count)| (state_at(at), count))
+                            .collect(),
+                        href: &fold.toggle,
+                    }));
+                }
+                None => shown.extend(lane.cards.iter().map(Shown::Card)),
+            }
+            Planned {
+                title: &lane.title,
+                shown,
+                toggle,
+            }
+        })
+        .collect();
+    (lanes, alias)
+}
+
+/// The states in the order a summary counts them.
+const STATES: [FlowState; 5] = [
+    FlowState::Up,
+    FlowState::NotChecked,
+    FlowState::Off,
+    FlowState::Degraded,
+    FlowState::Unreachable,
+];
+
+/// The place of `state` in [`STATES`].
+fn rank(state: FlowState) -> usize {
+    STATES
+        .iter()
+        .position(|each| *each == state)
+        .unwrap_or_default()
+}
+
+/// The state at `at` in [`STATES`].
+fn state_at(at: usize) -> FlowState {
+    STATES.get(at).copied().unwrap_or_default()
+}
+
+/// The edges of `flow` between the shown cards: an edge into or out of a
+/// summary stands for every quiet edge it holds between the same two cards.
+fn drawn<'a>(flow: &'a Flow, alias: &BTreeMap<&'a str, String>) -> Vec<Drawn<'a>> {
+    let mut edges: Vec<Drawn<'a>> = Vec::new();
+    let mut merged: BTreeMap<(String, String), usize> = BTreeMap::new();
+    for edge in &flow.edges {
+        let from = alias.get(edge.from.as_str());
+        let to = alias.get(edge.to.as_str());
+        let ends = (
+            from.cloned().unwrap_or_else(|| edge.from.clone()),
+            to.cloned().unwrap_or_else(|| edge.to.clone()),
+        );
+        if from.is_none() && to.is_none() {
+            edges.push(Drawn {
+                from: ends.0,
+                to: ends.1,
+                state: edge.state,
+                label: edge.label.as_deref(),
+            });
+            continue;
+        }
+        if let Some(at) = merged.get(&ends).copied() {
+            if let Some(kept) = edges.get_mut(at) {
+                kept.state = quietest([kept.state, edge.state].into_iter());
+            }
+            continue;
+        }
+        merged.insert(ends.clone(), edges.len());
+        edges.push(Drawn {
+            from: ends.0,
+            to: ends.1,
+            state: edge.state,
+            label: None,
+        });
+    }
+    edges
+}
+
+/// How many pairs of edges cross between the lanes `lanes`, each lane its
+/// ids top to bottom: two edges between the same two lanes cross when
+/// their ends lie in opposite orders.
+fn crossings(lanes: &[Vec<&str>], edges: &[(&str, &str)]) -> usize {
+    let at: BTreeMap<&str, (usize, usize)> = lanes
+        .iter()
+        .enumerate()
+        .flat_map(|(lane, ids)| {
+            ids.iter()
+                .enumerate()
+                .map(move |(index, id)| (*id, (lane, index)))
+        })
+        .collect();
+    let spans: Vec<(usize, usize, usize, usize)> = edges
+        .iter()
+        .filter_map(|(from, to)| {
+            let (one, two) = (at.get(from)?, at.get(to)?);
+            match one.0.cmp(&two.0) {
+                std::cmp::Ordering::Less => Some((one.0, one.1, two.0, two.1)),
+                std::cmp::Ordering::Greater => Some((two.0, two.1, one.0, one.1)),
+                std::cmp::Ordering::Equal => None,
+            }
+        })
+        .collect();
+    let mut count = 0_usize;
+    for (index, first) in spans.iter().enumerate() {
+        for second in spans.iter().skip(index + 1) {
+            let same_lanes = first.0 == second.0 && first.2 == second.2;
+            let opposite = (first.1 < second.1 && first.3 > second.3)
+                || (first.1 > second.1 && first.3 < second.3);
+            if same_lanes && opposite {
+                count += 1;
+            }
+        }
+    }
+    count
+}
+
+/// How many times the lanes are swept each way at most.
+const SWEEPS: usize = 6;
+
+/// Reorders the lane `lane` of `lanes` by the barycentre of each card's
+/// neighbours in the lane `by`, its last card held while `pinned`; a card
+/// with no neighbour there keeps its place, and the console's order
+/// `first` breaks a tie.
+fn sweep(
+    lanes: &mut [Vec<&str>],
+    pinned: &[bool],
+    edges: &[(&str, &str)],
+    first: &BTreeMap<&str, usize>,
+    (lane, by): (usize, usize),
+) {
+    let spread = |ids: &[&str]| -> BTreeMap<String, f64> {
+        let count = units(ids.len().max(1));
+        ids.iter()
+            .enumerate()
+            .map(|(index, id)| ((*id).to_owned(), (units(index) + 0.5) / count))
+            .collect()
+    };
+    let Some(reference) = lanes.get(by).map(|ids| spread(ids)) else {
+        return;
+    };
+    let Some(ids) = lanes.get_mut(lane) else {
+        return;
+    };
+    let current = spread(ids);
+    let held = usize::from(pinned.get(lane).copied().unwrap_or(false)).min(ids.len());
+    let movable = ids.len() - held;
+    let mut keyed: Vec<(f64, usize, &str)> = ids
+        .iter()
+        .take(movable)
+        .map(|id| {
+            let (sum, count) = edges
+                .iter()
+                .filter_map(|(from, to)| {
+                    if from == id {
+                        reference.get(*to)
+                    } else if to == id {
+                        reference.get(*from)
+                    } else {
+                        None
+                    }
+                })
+                .fold((0.0, 0_usize), |(sum, count), at| (sum + at, count + 1));
+            let key = if count == 0 {
+                current.get(*id).copied().unwrap_or_default()
+            } else {
+                sum / units(count)
+            };
+            (key, first.get(id).copied().unwrap_or_default(), *id)
+        })
+        .collect();
+    keyed.sort_by(|one, two| one.0.total_cmp(&two.0).then(one.1.cmp(&two.1)));
+    for (slot, (_, _, id)) in ids.iter_mut().zip(keyed) {
+        *slot = id;
+    }
+}
+
+/// The order of `lanes` that crosses the fewest of `edges`: barycentre
+/// sweeps left to right and back from the console's order, which is kept
+/// unless a sweep crosses strictly fewer, each lane's last card held while
+/// `pinned`.
+fn ordered<'a>(
+    lanes: &[Vec<&'a str>],
+    pinned: &[bool],
+    edges: &[(&'a str, &'a str)],
+) -> Vec<Vec<&'a str>> {
+    let first: BTreeMap<&str, usize> = lanes
+        .iter()
+        .flat_map(|ids| ids.iter().enumerate().map(|(index, id)| (*id, index)))
+        .collect();
+    let mut best = lanes.to_vec();
+    let mut fewest = crossings(&best, edges);
+    let mut tried = best.clone();
+    let count = lanes.len();
+    for _ in 0..SWEEPS {
+        if fewest == 0 || count < 2 {
+            break;
+        }
+        let before = fewest;
+        let rightward = (1..count).map(|lane| (lane, lane - 1));
+        let leftward = (0..count - 1).rev().map(|lane| (lane, lane + 1));
+        for pass in [rightward.collect::<Vec<_>>(), leftward.collect()] {
+            for pair in pass {
+                sweep(&mut tried, pinned, edges, &first, pair);
+            }
+            let now = crossings(&tried, edges);
+            if now < fewest {
+                fewest = now;
+                best.clone_from(&tried);
+            }
+        }
+        if fewest == before {
+            break;
+        }
+    }
+    transposed(&mut best, pinned, edges);
+    best
+}
+
+/// How many pairs of edges of `upper` and `lower` cross, `upper` drawn
+/// above `lower` in one lane, with every other card at its place in `at`.
+fn pair_crossings(
+    (upper, lower): (&str, &str),
+    lane: usize,
+    edges: &[(&str, &str)],
+    at: &BTreeMap<&str, (usize, usize)>,
+) -> usize {
+    let others = |id: &str| -> Vec<(usize, usize)> {
+        edges
+            .iter()
+            .filter_map(|(from, to)| {
+                let other = if *from == id {
+                    to
+                } else if *to == id {
+                    from
+                } else {
+                    return None;
+                };
+                at.get(other).copied().filter(|(each, _)| *each != lane)
+            })
+            .collect()
+    };
+    let (above, below) = (others(upper), others(lower));
+    above
+        .iter()
+        .map(|(lane_a, a)| {
+            below
+                .iter()
+                .filter(|(lane_b, b)| lane_a == lane_b && a > b)
+                .count()
+        })
+        .sum()
+}
+
+/// Swaps neighbouring cards of each lane of `lanes` while a swap crosses
+/// fewer of `edges`, each lane's last card held while `pinned`.
+fn transposed(lanes: &mut [Vec<&str>], pinned: &[bool], edges: &[(&str, &str)]) {
+    for _ in 0..SWEEPS {
+        let mut swapped = false;
+        for lane in 0..lanes.len() {
+            let held = usize::from(pinned.get(lane).copied().unwrap_or(false));
+            let movable = lanes
+                .get(lane)
+                .map_or(0, |ids| ids.len().saturating_sub(held));
+            for index in 1..movable {
+                let at: BTreeMap<&str, (usize, usize)> = lanes
+                    .iter()
+                    .enumerate()
+                    .flat_map(|(each, ids)| {
+                        ids.iter()
+                            .enumerate()
+                            .map(move |(place, id)| (*id, (each, place)))
+                    })
+                    .collect();
+                let Some(ids) = lanes.get_mut(lane) else {
+                    continue;
+                };
+                let (Some(upper), Some(lower)) =
+                    (ids.get(index - 1).copied(), ids.get(index).copied())
+                else {
+                    continue;
+                };
+                let now = pair_crossings((upper, lower), lane, edges, &at);
+                let then = pair_crossings((lower, upper), lane, edges, &at);
+                if then < now {
+                    ids.swap(index - 1, index);
+                    swapped = true;
+                }
+            }
+        }
+        if !swapped {
+            break;
+        }
+    }
+}
+
+/// `flow` as the drawing shows it: each lane folded as its fold says,
+/// then ordered to cross the fewest edges.
+fn plan(flow: &Flow) -> Plan<'_> {
+    let (mut lanes, alias) = folded(flow);
+    let edges = drawn(flow, &alias);
+    let order = {
+        let ids: Vec<Vec<&str>> = lanes
+            .iter()
+            .map(|lane| lane.shown.iter().map(Shown::id).collect())
+            .collect();
+        let pinned: Vec<bool> = lanes
+            .iter()
+            .map(|lane| matches!(lane.shown.last(), Some(Shown::Fold(_))))
+            .collect();
+        let pairs: Vec<(&str, &str)> = edges
+            .iter()
+            .map(|edge| (edge.from.as_str(), edge.to.as_str()))
+            .collect();
+        ordered(&ids, &pinned, &pairs)
+            .into_iter()
+            .map(|lane| lane.into_iter().map(str::to_owned).collect::<Vec<_>>())
+            .collect::<Vec<_>>()
+    };
+    for (lane, ids) in lanes.iter_mut().zip(order) {
+        let mut shown = std::mem::take(&mut lane.shown);
+        for id in ids {
+            if let Some(at) = shown.iter().position(|each| each.id() == id) {
+                lane.shown.push(shown.remove(at));
+            }
+        }
+        lane.shown.append(&mut shown);
+    }
+    Plan {
+        lanes,
+        edges,
+        alias,
+    }
+}
+
+/// The place of every shown card by its id, and the drawing's width and
+/// height.
+fn layout<'p>(plan: &'p Plan<'_>) -> (BTreeMap<&'p str, Place>, f64, f64) {
+    let rows = plan
+        .lanes
+        .iter()
+        .map(|lane| lane.shown.len())
         .max()
         .unwrap_or(1)
         .max(1);
     let mut places = BTreeMap::new();
-    for (column, lane) in flow.lanes.iter().enumerate() {
+    for (column, lane) in plan.lanes.iter().enumerate() {
         let x = units(column) * (LANE + GAP);
-        let slots = units(rows) / units(lane.cards.len().max(1));
-        for (index, card) in lane.cards.iter().enumerate() {
-            let height = if card.hub { HUB } else { CARD };
+        let slots = units(rows) / units(lane.shown.len().max(1));
+        for (index, shown) in lane.shown.iter().enumerate() {
             let middle = TOP + ((units(index) + 0.5) * slots - 0.5) * ROW + CARD / 2.0;
+            let (y, height) = match shown {
+                Shown::Card(card) if card.hub => (middle - HUB / 2.0, HUB),
+                Shown::Card(_) => (middle - CARD / 2.0, CARD),
+                Shown::Fold(folded) => (middle - CARD / 2.0, folded.height()),
+            };
             places.insert(
-                card.id.as_str(),
+                shown.id(),
                 Place {
                     x,
-                    y: middle - height / 2.0,
+                    y,
                     width: LANE,
                     height,
                 },
             );
         }
     }
-    let lanes = units(flow.lanes.len().max(1));
+    let lanes = units(plan.lanes.len().max(1));
     let width = lanes * LANE + (lanes - 1.0) * GAP;
-    (places, width, TOP + units(rows) * ROW)
+    let height = places
+        .values()
+        .map(|place| place.y + place.height + ROW - CARD)
+        .fold(TOP + units(rows) * ROW, f64::max);
+    (places, width, height)
 }
 
 /// The two ends of an edge from `from` to `to`: it leaves the side of
@@ -258,19 +810,28 @@ pub(crate) fn fit(text: &str, most: usize) -> String {
     cut
 }
 
+/// Where a problem edge draws its label.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum LabelAt {
+    /// Beside the end mark, at the child end.
+    Mark,
+    /// After the start, where several labelled edges meet one card.
+    Start,
+}
+
 /// The drawing of an edge from `from` to `to` in `state`: its line, and on
 /// a problem edge the end mark at the child end while `marked`, and the
-/// label beside the mark.
+/// label where `label_at` says.
 pub(crate) fn edge_line(
     from: Place,
     to: Place,
     state: FlowState,
-    label: Option<&str>,
+    (label, label_at): (Option<&str>, LabelAt),
     on_path: bool,
     marked: bool,
 ) -> AnyView {
     let line = ends(from, to);
-    let ((x1, _), (x2, y2)) = line;
+    let ((x1, y1), (x2, y2)) = line;
     let toward = if x2 >= x1 { 1.0 } else { -1.0 };
     let at = format!("translate({:.1} {y2:.1})", x2 - toward * 11.0);
     let mark = match (marked, state) {
@@ -296,12 +857,13 @@ pub(crate) fn edge_line(
     };
     let label = label.filter(|_| state.is_problem()).map(|label| {
         let width = 8.0 + units(label.chars().count()) * 5.7;
-        let left = if toward > 0.0 {
-            x2 - 22.0 - width
-        } else {
-            x2 + 22.0
+        let (left, y) = match (label_at, toward > 0.0) {
+            (LabelAt::Mark, true) => (x2 - 22.0 - width, y2),
+            (LabelAt::Mark, false) => (x2 + 22.0, y2),
+            (LabelAt::Start, true) => (x1 + 12.0, y1),
+            (LabelAt::Start, false) => (x1 - 12.0 - width, y1),
         };
-        let place = format!("translate({left:.1} {:.1})", y2 - 9.0);
+        let place = format!("translate({left:.1} {:.1})", y - 9.0);
         let wide = format!("{width:.1}");
         let middle = format!("{:.1}", width / 2.0);
         let label = label.to_owned();
@@ -325,18 +887,44 @@ pub(crate) fn edge_line(
 }
 
 /// The drawing of `edge` between `places`: its line, and on a problem edge
-/// its end mark and its label.
-fn edge_view(edge: &FlowEdge, places: &BTreeMap<&str, Place>, on_path: bool) -> Option<AnyView> {
+/// its end mark and its label where `crowded` says several labels meet.
+/// The drawing draws every problem edge last, so no line covers a label.
+fn edge_view(
+    edge: &Drawn<'_>,
+    places: &BTreeMap<&str, Place>,
+    crowded: &BTreeSet<&str>,
+    on_path: bool,
+) -> Option<AnyView> {
     let from = places.get(edge.from.as_str())?;
     let to = places.get(edge.to.as_str())?;
+    let label_at = if crowded.contains(edge.to.as_str()) {
+        LabelAt::Start
+    } else {
+        LabelAt::Mark
+    };
     Some(edge_line(
         *from,
         *to,
         edge.state,
-        edge.label.as_deref(),
+        (edge.label, label_at),
         on_path,
         true,
     ))
+}
+
+/// The cards that more than one labelled problem edge enters.
+fn crowded<'p>(plan: &'p Plan<'_>) -> BTreeSet<&'p str> {
+    let mut entered: BTreeMap<&str, usize> = BTreeMap::new();
+    for edge in &plan.edges {
+        if edge.state.is_problem() && edge.label.is_some() {
+            *entered.entry(edge.to.as_str()).or_default() += 1;
+        }
+    }
+    entered
+        .into_iter()
+        .filter(|(_, count)| *count > 1)
+        .map(|(id, _)| id)
+        .collect()
 }
 
 /// The shape of a card's dot in `state`, centred on `(x, y)`.
@@ -429,6 +1017,9 @@ pub(crate) struct CardDrawing {
     /// The most characters of its name and of its line it shows before an
     /// ellipsis.
     pub(crate) most: (usize, usize),
+    /// The lines it draws under its line, each in the line's room; the
+    /// card's height leaves room for them.
+    pub(crate) more: Vec<String>,
     /// Its controls beside the link, such as its quick look and its
     /// collapse button, drawn in the card's own units.
     pub(crate) controls: Option<AnyView>,
@@ -450,13 +1041,27 @@ pub(crate) fn card_drawing(card: CardDrawing) -> AnyView {
         mono,
         selected,
         most: (name_most, line_most),
+        more,
         controls,
     } = card;
     let height = place.height;
+    let base = height - LINE * units(more.len());
     let muted = state == FlowState::Off;
     let class = format!("fui-tnode {kind} {}", state.tone().class());
-    let shown_dot = (!hub).then(|| dot(state, 47.0, height / 2.0 + 10.0));
+    let shown_dot = (!hub).then(|| dot(state, 47.0, base / 2.0 + 10.0));
     let line_x = if hub { 42.0 } else { 56.0 };
+    let more = more
+        .into_iter()
+        .enumerate()
+        .map(|(index, text)| {
+            let y = base / 2.0 + 14.0 + LINE * (units(index) + 1.0);
+            view! {
+                <text class="fui-tnode-line" x=line_x y=y>
+                    {fit(&text, line_most)}
+                </text>
+            }
+        })
+        .collect_view();
     let tip = label.clone();
     let name_class = if mono {
         "fui-tnode-name fui-tnode-mono"
@@ -474,16 +1079,17 @@ pub(crate) fn card_drawing(card: CardDrawing) -> AnyView {
                 <title>{tip}</title>
                 <rect class="fui-tnode-box" width=place.width height=height rx="8"></rect>
                 <rect class="fui-tnode-bar" width="4" height=height - 16.0 x="0" y="8" rx="2"></rect>
-                <g class="fui-tnode-glyph" transform=format!("translate(14 {:.1})", height / 2.0 - 9.0)>
+                <g class="fui-tnode-glyph" transform=format!("translate(14 {:.1})", base / 2.0 - 9.0)>
                     {icon(glyph, "18")}
                 </g>
-                <text class=name_class x="42" y=height / 2.0 - 4.0>
+                <text class=name_class x="42" y=base / 2.0 - 4.0>
                     {fit(&name, name_most)}
                 </text>
                 {shown_dot}
-                <text class="fui-tnode-line" x=line_x y=height / 2.0 + 14.0>
+                <text class="fui-tnode-line" x=line_x y=base / 2.0 + 14.0>
                     {fit(&line, line_most)}
                 </text>
+                {more}
             </a>
             {controls}
         </g>
@@ -504,29 +1110,41 @@ pub(crate) fn path_drawing(lines: Vec<AnyView>, route: String) -> AnyView {
     .into_any()
 }
 
+/// What every card of one drawing reads: the plan, the places and the
+/// crowded cards.
+#[derive(Debug, Clone, Copy)]
+struct Scene<'s, 'a> {
+    plan: &'s Plan<'a>,
+    places: &'s BTreeMap<&'s str, Place>,
+    crowded: &'s BTreeSet<&'s str>,
+}
+
 /// The drawing of `card` at `place`, a link to its page, after its path
-/// with the pulse, which shows while the card is hovered or focused.
-fn card_view(
-    card: &FlowCard,
-    place: Place,
-    flow: &Flow,
-    places: &BTreeMap<&str, Place>,
-) -> AnyView {
-    let steps: Vec<&FlowEdge> = card
+/// with the pulse, which shows while the card is hovered or focused; a
+/// folded card on the path is its summary.
+fn card_view(card: &FlowCard, place: Place, scene: Scene<'_, '_>) -> AnyView {
+    let Scene {
+        plan,
+        places,
+        crowded,
+    } = scene;
+    let steps: Vec<&Drawn<'_>> = card
         .path
         .windows(2)
         .filter_map(|pair| match pair {
-            [from, to] => flow
-                .edges
-                .iter()
-                .find(|edge| edge.from == *from && edge.to == *to),
+            [from, to] => {
+                let (from, to) = (plan.shown_id(from), plan.shown_id(to));
+                plan.edges
+                    .iter()
+                    .find(|edge| edge.from == from && edge.to == to)
+            }
             _ => None,
         })
         .collect();
     let path = (!steps.is_empty()).then(|| {
         let lines = steps
             .iter()
-            .filter_map(|edge| edge_view(edge, places, true))
+            .filter_map(|edge| edge_view(edge, places, crowded, true))
             .collect();
         let route = steps
             .iter()
@@ -555,13 +1173,82 @@ fn card_view(
         hub: card.hub,
         mono: false,
         selected: false,
-        most: (23, 22),
+        most: (NAME_MOST, LINE_MOST),
+        more: Vec::new(),
         controls: None,
     });
     view! {
         <g class="fui-pipeline-card">
             {path}
             {drawing}
+        </g>
+    }
+    .into_any()
+}
+
+/// The summary card of a folded lane at `place`, a link that unfolds it.
+fn fold_view(folded: &Folded<'_>, place: Place) -> AnyView {
+    let mut lines = folded.lines().into_iter();
+    let first = lines.next().unwrap_or_default();
+    let more = lines.collect();
+    let drawing = card_drawing(CardDrawing {
+        kind: "fui-tnode-group",
+        place,
+        glyph: Glyph::ELLIPSIS,
+        name: tr_with(Text::FlowFoldName, &[("count", folded.count().into())]),
+        line: first,
+        state: folded.state(),
+        href: folded.href.to_owned(),
+        label: fold_name(folded),
+        hub: false,
+        mono: false,
+        selected: false,
+        most: (NAME_MOST, LINE_MOST),
+        more,
+        controls: None,
+    });
+    view! { <g class="fui-pipeline-card">{drawing}</g> }.into_any()
+}
+
+/// The accessible name of a summary card, also its tooltip.
+fn fold_name(folded: &Folded<'_>) -> String {
+    tr_with(
+        Text::FlowFoldCard,
+        &[
+            ("count", folded.count().into()),
+            ("title", folded.title.into()),
+            ("note", folded.line().into()),
+        ],
+    )
+}
+
+/// The words of a lane's fold link: unfold while `folded`, else fold.
+fn toggle_words(folded: bool, title: &str) -> String {
+    let text = if folded {
+        Text::FlowUnfold
+    } else {
+        Text::FlowFold
+    };
+    tr_with(text, &[("title", title.into())])
+}
+
+/// The fold link beside the title of the lane at `x`.
+fn lane_toggle(x: f64, title: &str, (folded, href): (bool, &str)) -> AnyView {
+    let name = toggle_words(folded, title);
+    let tip = name.clone();
+    let glyph = if folded {
+        Glyph::CHEVRON_DOWN
+    } else {
+        Glyph::CHEVRON_UP
+    };
+    let at = format!("translate({:.1} -1)", x + LANE - 16.0);
+    view! {
+        <g class="fui-tnode-toggle" transform=at>
+            <a href=href.to_owned() aria-label=name>
+                <title>{tip}</title>
+                <rect width="16" height="16" fill="transparent"></rect>
+                {icon(glyph, "16")}
+            </a>
         </g>
     }
     .into_any()
@@ -603,54 +1290,93 @@ fn problems(flow: &Flow) -> String {
     }
 }
 
-/// The phone's form of `flow`: a heading per lane and a row per card, each
-/// a link to its page with its state as a dot and a word.
-fn list(flow: &Flow) -> AnyView {
-    let lanes = flow
+/// One row of the phone's list: a link with its state as a dot and a
+/// word, its name and its line.
+fn list_row(href: String, state: FlowState, name: String, line: String) -> AnyView {
+    let class = format!("fui-dot {}", state.tone().class());
+    let muted = state == FlowState::Off;
+    let word = state.word();
+    view! {
+        <li>
+            <a class="fui-row-link" href=href>
+                <span class=class class:is-muted=muted role="img" aria-label=word.clone() title=word></span>
+                <span class="fui-pipeline-name">{name}</span>
+                <span class="fui-pipeline-line">{line}</span>
+            </a>
+        </li>
+    }
+    .into_any()
+}
+
+/// The phone's form of `plan`: a heading per lane and a row per card, each
+/// a link to its page with its state as a dot and a word, folded as the
+/// drawing is, and an open lane's fold link last.
+fn list(plan: &Plan<'_>, label: &str) -> AnyView {
+    let lanes = plan
         .lanes
         .iter()
         .map(|lane| {
             let rows = lane
-                .cards
+                .shown
                 .iter()
-                .map(|card| {
-                    let class = format!("fui-dot {}", card.state.tone().class());
-                    let muted = card.state == FlowState::Off;
-                    let word = card.state.word();
-                    view! {
-                        <li>
-                            <a class="fui-row-link" href=card.href.clone()>
-                                <span class=class class:is-muted=muted role="img" aria-label=word.clone() title=word></span>
-                                <span class="fui-pipeline-name">{card.name.clone()}</span>
-                                <span class="fui-pipeline-line">{card.line.clone()}</span>
-                            </a>
-                        </li>
-                    }
+                .map(|shown| match shown {
+                    Shown::Card(card) => list_row(
+                        card.href.clone(),
+                        card.state,
+                        card.name.clone(),
+                        card.line.clone(),
+                    ),
+                    Shown::Fold(folded) => list_row(
+                        folded.href.to_owned(),
+                        folded.state(),
+                        tr_with(Text::FlowFoldName, &[("count", folded.count().into())]),
+                        folded.line(),
+                    ),
                 })
                 .collect_view();
+            let fold = lane.toggle.filter(|(folded, _)| !folded).map(|(_, href)| {
+                view! {
+                    <li>
+                        <a class="fui-row-link" href=href.to_owned()>
+                            {icon(Glyph::CHEVRON_UP, "16")}
+                            <span class="fui-pipeline-name">{toggle_words(false, lane.title)}</span>
+                        </a>
+                    </li>
+                }
+            });
             view! {
                 <li>
-                    <p class="fui-pipeline-lane">{lane.title.clone()}</p>
-                    <ul>{rows}</ul>
+                    <p class="fui-pipeline-lane">{lane.title.to_owned()}</p>
+                    <ul>{rows} {fold}</ul>
                 </li>
             }
         })
         .collect_view();
-    view! { <ul class="fui-pipeline-list" aria-label=flow.list_label.clone()>{lanes}</ul> }
-        .into_any()
+    view! { <ul class="fui-pipeline-list" aria-label=label.to_owned()>{lanes}</ul> }.into_any()
 }
 
 /// Returns `flow`: the drawing, which a phone replaces with its list, and
 /// the quiet foot line.
 ///
 /// Put it in a panel ([`crate::view::surface::titled_panel`]), whose head
-/// holds the title and the actions. Cards in a lane spread over the height
-/// of the fullest lane; a hub card is taller and carries no dot.
+/// holds the title and the actions. Each lane is ordered to cross the
+/// fewest edges, with the console's order breaking a tie; cards in a lane
+/// spread over the height of the fullest lane; a hub card is taller and
+/// carries no dot. A lane past [`FOLD_PAST`] cards with a fold folds its
+/// quiet cards into one summary card, a link that unfolds it, and keeps
+/// every card in a problem state or on a problem edge.
 #[must_use]
 pub fn flow(flow: &Flow) -> AnyView {
-    let (places, width, height) = layout(flow);
+    let plan = plan(flow);
+    let (places, width, height) = layout(&plan);
+    let crowded = crowded(&plan);
+    let scene = Scene {
+        plan: &plan,
+        places: &places,
+        crowded: &crowded,
+    };
     let view_box = format!("-8 -4 {:.0} {height:.0}", width + 16.0);
-    let lanes = flow
+    let lanes = plan
         .lanes
         .iter()
         .enumerate()
@@ -658,23 +1384,41 @@ pub fn flow(flow: &Flow) -> AnyView {
             let x = units(column) * (LANE + GAP);
             view! {
                 <text class="fui-topology-lane" x=x y="12">
-                    {lane.title.clone()}
+                    {lane.title.to_owned()}
                 </text>
             }
         })
         .collect_view();
-    let edges = flow
-        .edges
-        .iter()
-        .filter_map(|edge| edge_view(edge, &places, false))
-        .collect_view();
-    let cards = flow
+    let toggles = plan
         .lanes
         .iter()
-        .flat_map(|lane| lane.cards.iter())
-        .filter_map(|card| {
-            let place = places.get(card.id.as_str())?;
-            Some(card_view(card, *place, flow, &places))
+        .enumerate()
+        .filter_map(|(column, lane)| {
+            let toggle = lane.toggle?;
+            Some(lane_toggle(
+                units(column) * (LANE + GAP),
+                lane.title,
+                toggle,
+            ))
+        })
+        .collect_view();
+    let edges = plan
+        .edges
+        .iter()
+        .filter(|edge| !edge.state.is_problem())
+        .chain(plan.edges.iter().filter(|edge| edge.state.is_problem()))
+        .filter_map(|edge| edge_view(edge, &places, &crowded, false))
+        .collect_view();
+    let cards = plan
+        .lanes
+        .iter()
+        .flat_map(|lane| lane.shown.iter())
+        .filter_map(|shown| {
+            let place = *places.get(shown.id())?;
+            Some(match shown {
+                Shown::Card(card) => card_view(card, place, scene),
+                Shown::Fold(folded) => fold_view(folded, place),
+            })
         })
         .collect_view();
     let title = format!("{}-title", flow.id);
@@ -701,13 +1445,209 @@ pub fn flow(flow: &Flow) -> AnyView {
                         role="group"
                         aria-label=flow.list_label.clone()
                     >
+                        {toggles}
                         {cards}
                     </svg>
                 </div>
             </div>
-            {list(flow)}
+            {list(&plan, &flow.list_label)}
             <p class="fui-pipeline-foot">{flow.foot.clone()}</p>
         </div>
     }
     .into_any()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        FOLD_PAST, Flow, FlowCard, FlowEdge, FlowLane, FlowState, LaneFold, Shown, crossings, plan,
+    };
+    use crate::icon::Glyph;
+
+    fn card(id: String, state: FlowState) -> FlowCard {
+        FlowCard {
+            name: id.clone(),
+            line: String::new(),
+            href: format!("/{id}"),
+            id,
+            glyph: Glyph::SERVER,
+            state,
+            path: Vec::new(),
+            hub: false,
+        }
+    }
+
+    fn edge(from: &str, to: &str, state: FlowState) -> FlowEdge {
+        FlowEdge {
+            from: from.to_owned(),
+            to: to.to_owned(),
+            state,
+            label: Some(String::from("503")),
+        }
+    }
+
+    /// A fixed busy bridge: 30 callers, each calling one or two of six
+    /// faces, and 30 upstreams, each reached from one face, wired by a
+    /// fixed sequence so the console's order crosses freely.
+    fn busy(fold: Option<LaneFold>) -> Flow {
+        let mut seed = 7_u32;
+        let mut next = |bound: usize| {
+            seed = seed.wrapping_mul(1_103_515_245).wrapping_add(12_345) % 2_147_483_648;
+            usize::try_from(seed >> 8).unwrap_or_default() % bound
+        };
+        let lane = |title: &str, prefix: &str, count: usize, fold: Option<LaneFold>| FlowLane {
+            title: title.to_owned(),
+            cards: (0..count)
+                .map(|index| {
+                    let state = match index {
+                        4 => FlowState::Degraded,
+                        11 => FlowState::Unreachable,
+                        17 => FlowState::Off,
+                        _ => FlowState::Up,
+                    };
+                    card(format!("{prefix}{index:02}"), state)
+                })
+                .collect(),
+            fold,
+        };
+        let mut edges = Vec::new();
+        for caller in 0..30 {
+            for _ in 0..=next(2) {
+                let face = next(6);
+                edges.push(edge(
+                    &format!("c{caller:02}"),
+                    &format!("f{face:02}"),
+                    FlowState::Up,
+                ));
+            }
+        }
+        for upstream in 0..30 {
+            let face = next(6);
+            let state = if upstream == 23 {
+                FlowState::Degraded
+            } else {
+                FlowState::Up
+            };
+            edges.push(edge(
+                &format!("f{face:02}"),
+                &format!("u{upstream:02}"),
+                state,
+            ));
+        }
+        Flow {
+            id: String::from("busy"),
+            label: String::new(),
+            list_label: String::new(),
+            lanes: vec![
+                lane("Callers", "c", 30, fold.clone()),
+                lane("Faces", "f", 6, None),
+                lane("Upstreams", "u", 30, fold),
+            ],
+            edges,
+            foot: String::new(),
+        }
+    }
+
+    /// How many edges of `flow` cross with its lanes in `order`.
+    fn crossed(flow: &Flow, order: &[Vec<&str>]) -> usize {
+        let pairs: Vec<(&str, &str)> = flow
+            .edges
+            .iter()
+            .map(|edge| (edge.from.as_str(), edge.to.as_str()))
+            .collect();
+        crossings(order, &pairs)
+    }
+
+    #[test]
+    fn the_lane_order_crosses_far_fewer_edges_than_the_consoles_and_is_deterministic() {
+        let flow = busy(None);
+        let console: Vec<Vec<&str>> = flow
+            .lanes
+            .iter()
+            .map(|lane| lane.cards.iter().map(|card| card.id.as_str()).collect())
+            .collect();
+        let planned = plan(&flow);
+        let drawn: Vec<Vec<&str>> = planned
+            .lanes
+            .iter()
+            .map(|lane| lane.shown.iter().map(Shown::id).collect())
+            .collect();
+        let (before, after) = (crossed(&flow, &console), crossed(&flow, &drawn));
+        assert_eq!((657, 201), (before, after), "{drawn:?}");
+        let again = plan(&flow);
+        let redrawn: Vec<Vec<&str>> = again
+            .lanes
+            .iter()
+            .map(|lane| lane.shown.iter().map(Shown::id).collect())
+            .collect();
+        assert_eq!(drawn, redrawn, "the same flow draws the same order");
+    }
+
+    #[test]
+    fn a_flow_that_crosses_nothing_keeps_the_consoles_order() {
+        let mut flow = busy(None);
+        flow.edges = (0..6)
+            .map(|index| {
+                edge(
+                    &format!("c{index:02}"),
+                    &format!("f{index:02}"),
+                    FlowState::Up,
+                )
+            })
+            .collect();
+        let planned = plan(&flow);
+        for (lane, shown) in flow.lanes.iter().zip(&planned.lanes) {
+            let ids: Vec<&str> = shown.lanes_ids();
+            let console: Vec<&str> = lane.cards.iter().map(|card| card.id.as_str()).collect();
+            assert_eq!(console, ids);
+        }
+    }
+
+    #[test]
+    fn a_folded_lane_keeps_every_problem_card_and_holds_the_rest_in_one_summary_last() {
+        let flow = busy(Some(LaneFold {
+            open: false,
+            toggle: String::from("?open=all"),
+        }));
+        let planned = plan(&flow);
+        let callers = planned.lanes.first().expect("the callers lane");
+        let ids = callers.lanes_ids();
+        assert!(ids.contains(&"c04") && ids.contains(&"c11"), "{ids:?}");
+        assert!(!ids.contains(&"c17"), "an off card is quiet: {ids:?}");
+        assert_eq!(Some(&"busy-fold-0"), ids.last(), "{ids:?}");
+        assert_eq!(Some((true, "?open=all")), callers.toggle);
+        let upstreams = planned.lanes.get(2).expect("the upstreams lane");
+        assert!(
+            upstreams.lanes_ids().contains(&"u23"),
+            "a card on a problem edge stays"
+        );
+        let faces = planned.lanes.get(1).expect("the faces lane");
+        assert_eq!(
+            None, faces.toggle,
+            "a lane of {FOLD_PAST} or fewer never folds"
+        );
+        let into_summary = planned
+            .edges
+            .iter()
+            .filter(|edge| edge.from == "busy-fold-0")
+            .count();
+        assert!(
+            into_summary <= 6,
+            "one edge per face at most: {into_summary}"
+        );
+        let unfolded = busy(Some(LaneFold {
+            open: true,
+            toggle: String::from("?"),
+        }));
+        let open = plan(&unfolded);
+        let callers = open.lanes.first().expect("the callers lane");
+        assert_eq!(30, callers.shown.len());
+        assert_eq!(Some((false, "?")), callers.toggle);
+    }
+
+    impl super::Planned<'_> {
+        fn lanes_ids(&self) -> Vec<&str> {
+            self.shown.iter().map(Shown::id).collect()
+        }
+    }
 }

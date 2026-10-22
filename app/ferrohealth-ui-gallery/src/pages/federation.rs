@@ -8,7 +8,8 @@
 //! federation with its List twin. Its query names the topology's state:
 //! `view` (`map` or `list`), `look` (the card whose quick look is open),
 //! `collapse` (`all` or the groups folded), `show` (the states shown),
-//! `large` (a federation of twelve organisations) and `minimap`. Inside it
+//! `large` (`1` for a federation of twelve organisations, `50` for one of
+//! fifty organisations and two hundred nodes) and `minimap`. Inside it
 //! an organisation's and a node's page open the nested sidebar section,
 //! and the gateway's self-description is a reference page with the replica
 //! line. Every name is synthetic.
@@ -138,7 +139,7 @@ struct Asked {
     collapse: BTreeSet<String>,
     all_folded: bool,
     show: Option<BTreeSet<String>>,
-    large: bool,
+    large: Option<u8>,
     minimap: bool,
 }
 
@@ -165,8 +166,8 @@ impl Asked {
         if let Some(show) = &next.show {
             parts.extend(show.iter().map(|state| format!("show={state}")));
         }
-        if next.large {
-            parts.push(String::from("large=1"));
+        if let Some(large) = next.large {
+            parts.push(format!("large={large}"));
         }
         if next.minimap {
             parts.push(String::from("minimap=on"));
@@ -213,7 +214,11 @@ fn asked() -> Asked {
             show: query
                 .get_all("show")
                 .map(|states| states.into_iter().collect()),
-            large: query.get_str("large") == Some("1"),
+            large: match query.get_str("large") {
+                Some("1") => Some(1),
+                Some("50") => Some(50),
+                _ => None,
+            },
             minimap: query.get_str("minimap") == Some("on"),
         }
     })
@@ -345,15 +350,24 @@ fn organisations() -> Vec<Organisation> {
     ]
 }
 
-/// The twelve organisations of the large synthetic federation, each named
-/// by its number, one of them degraded and one not yet probed.
-fn many_organisations() -> Vec<(String, String, FlowState, Vec<Part>)> {
-    (1_u8..=12)
+/// The organisations of a large synthetic federation, each named by its
+/// number: twelve with two to four nodes, one degraded and one not yet
+/// probed, or fifty with two to six nodes, two hundred in all, a few in
+/// each problem state.
+fn many_organisations(fifty: bool) -> Vec<(String, String, FlowState, Vec<Part>)> {
+    let last = if fifty { 50 } else { 12 };
+    (1_u8..=last)
         .map(|number| {
-            let count = 2 + usize::from(number % 3);
-            let state = match number {
-                5 => FlowState::Degraded,
-                8 => FlowState::NotChecked,
+            let count = if fifty {
+                2 + usize::from(number % 5)
+            } else {
+                2 + usize::from(number % 3)
+            };
+            let state = match (fifty, number) {
+                (false, 5) | (true, 5 | 23 | 41) => FlowState::Degraded,
+                (true, 17 | 34) => FlowState::Unreachable,
+                (false, 8) | (true, 8 | 29) => FlowState::NotChecked,
+                (true, 46) => FlowState::Off,
                 _ => FlowState::Up,
             };
             let nodes = (0..count)
@@ -364,9 +378,15 @@ fn many_organisations() -> Vec<(String, String, FlowState, Vec<Part>)> {
                         (FlowState::Degraded, 1) => {
                             (FlowState::Degraded, Msg::FedDegraded503, Some(Msg::Fed503))
                         }
+                        (FlowState::Unreachable, 0) => (
+                            FlowState::Unreachable,
+                            Msg::FedUnreachableNoAnswer,
+                            Some(Msg::FedNoAnswer),
+                        ),
                         (FlowState::NotChecked, _) => {
                             (FlowState::NotChecked, Msg::FedNotProbed, None)
                         }
+                        (FlowState::Off, _) => (FlowState::Off, Msg::FedExcluded, None),
                         _ => (FlowState::Up, Msg::FedReachable, None),
                     };
                     fed_node(&id, node_state, line, label)
@@ -538,14 +558,16 @@ fn hub_and_caller(brand: Brand, asked: &Asked) -> (TopologyCard, TopologyCard) {
 
 /// The topology of the synthetic federation in the state `asked`.
 fn federation_map(brand: Brand, asked: &Asked) -> AnyView {
-    let sources: Vec<(String, String, String, FlowState, Vec<Part>)> = if asked.large {
-        many_organisations()
+    let sources: Vec<(String, String, String, FlowState, Vec<Part>)> = if let Some(large) =
+        asked.large
+    {
+        many_organisations(large == 50)
             .into_iter()
             .map(|(id, name, state, nodes)| {
-                let line = tr(if state == FlowState::Up {
-                    Msg::FedNodesReachable
-                } else {
-                    Msg::FedOneNotWell
+                let line = tr(match state {
+                    FlowState::Up => Msg::FedNodesReachable,
+                    FlowState::Off => Msg::FedExcluded,
+                    _ => Msg::FedOneNotWell,
                 });
                 (id, name, line, state, nodes)
             })
@@ -574,12 +596,12 @@ fn federation_map(brand: Brand, asked: &Asked) -> AnyView {
         label: tr(Msg::FedMapLabel),
         list_label: tr(Msg::FedListLabel),
         hub,
-        callers: (!asked.large).then(|| TopologyCallers {
+        callers: asked.large.is_none().then(|| TopologyCallers {
             title: tr(Msg::FedCallers),
             line: tr(Msg::FedCallersLine),
             cards: vec![caller],
         }),
-        start: (!asked.large).then(|| services(brand, asked)),
+        start: asked.large.is_none().then(|| services(brand, asked)),
         end: Some(TopologySide {
             title: tr(Msg::FedOrganisations),
             line: tr(Msg::FedOrganisationsLine),

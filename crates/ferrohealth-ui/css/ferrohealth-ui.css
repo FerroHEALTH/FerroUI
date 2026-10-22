@@ -8308,8 +8308,10 @@
 
   /* ---- F9 drawn by the library: the canvas scrolls inside its frame, so
      the zoom cluster and the minimap stay put while it pans; a zoomed
-     drawing takes the width its attributes give it, never a style. ---- */
+     drawing takes the width its attributes give it, never a style, and a
+     federation taller than the frame scrolls in it at any zoom. ---- */
   .fui-topology-scroll {
+    max-height: 70vh;
     overflow: auto;
     overscroll-behavior: contain;
   }
@@ -8317,10 +8319,6 @@
   .fui-topology-scroll:focus-visible {
     outline: 2px solid var(--focus);
     outline-offset: 2px;
-  }
-
-  .fui-topology-scroll:has(> .is-zoomed) {
-    max-height: 70vh;
   }
 
   .fui-topology-scroll > .fui-pipeline-stage {
@@ -11690,17 +11688,22 @@
      the pulse, paint only, and the other edges fade. */
   .fui-pipeline-stage {
     display: grid;
+    isolation: isolate;
   }
 
   .fui-pipeline-stage > svg {
     grid-area: 1 / 1;
   }
 
+  /* The cards stay above the edges, which a hovered card fades into a
+     layer of their own, so a click lands on the card it pressed. */
   .fui-pipeline-cards {
+    position: relative;
+    z-index: 1;
     pointer-events: none;
   }
 
-  .fui-pipeline-cards .fui-tnode {
+  .fui-pipeline-cards :is(.fui-tnode, .fui-tnode-toggle) {
     pointer-events: auto;
   }
 

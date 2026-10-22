@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The charts page's figures: a flow's card hovered and focused, which
-//! shows its path, and the run report, the flow's list and the score
-//! breakdown on a phone.
+//! shows its path, the busy bridge folded and unfolded, and the run report,
+//! the flows' lists and the score breakdown on a phone.
 
 use std::error::Error;
 
@@ -17,6 +17,9 @@ use crate::stack::Gallery;
 
 /// The area's states, by the name their images take.
 pub(super) const STATES: &[&str] = &[
+    "flow-busy",
+    "flow-busy-390",
+    "flow-busy-open",
     "flow-hover",
     "flow-focus",
     "flow-list-390",
@@ -68,8 +71,18 @@ pub(super) async fn charts(
     away(browser).await?;
     focus(browser, &cdr).await?;
     shot_of(browser, brand, theme, "flow-focus", &flow).await?;
+    for (query, state) in [
+        ("", "flow-busy"),
+        ("?open=callers,upstreams", "flow-busy-open"),
+    ] {
+        browser.goto(&format!("{page}{query}")).await?;
+        let busy = browser.element(By::Id("busy-flow")).await?;
+        shot_of(browser, brand, theme, state, &busy).await?;
+    }
     window(browser, 390, HEIGHT).await?;
     browser.goto(&page).await?;
+    let busy = browser.element(By::Id("busy-flow")).await?;
+    shot_of(browser, brand, theme, "flow-busy-390", &busy).await?;
     for (title, state) in [
         ("Flow with problem edges", "flow-list-390"),
         ("Run report", "run-report-390"),

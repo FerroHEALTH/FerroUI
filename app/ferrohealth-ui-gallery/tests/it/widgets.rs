@@ -258,6 +258,58 @@ async fn the_pickers_select_follows_a_value_set_after_a_manual_choice() -> Resul
     .await
 }
 
+/// The busy bridge on the charts page, which `browser` shows at a
+/// desktop's width: its folded callers lane holds a summary card, a link
+/// that unfolds the lane, after which the lane shows every caller and its
+/// fold link. It needs no WebAssembly.
+pub(crate) async fn busy_flow_unfolds(browser: &Browser) -> Result<(), Box<dyn Error>> {
+    let quiet = "#busy-flow .fui-pipeline-cards a.fui-tnode-link[href='#caller-01']";
+    assert!(
+        browser.driver().find_all(By::Css(quiet)).await?.is_empty(),
+        "a quiet caller is folded"
+    );
+    browser
+        .element(By::Css(
+            "#busy-flow .fui-pipeline-cards a.fui-tnode-link[href='#caller-07']",
+        ))
+        .await?;
+    let summary = browser
+        .element(By::Css(
+            "#busy-flow .fui-pipeline-cards a.fui-tnode-link[href^='?open=callers']",
+        ))
+        .await?;
+    browser
+        .driver()
+        .execute(
+            "arguments[0].scrollIntoView({block: 'center'});",
+            vec![summary.to_json()?],
+        )
+        .await?;
+    browser.click_and_load(&summary).await?;
+    browser.element(By::Css(quiet)).await?;
+    browser
+        .element(By::Css(
+            "#busy-flow a[aria-label='Fold the quiet cards of Callers']",
+        ))
+        .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_folded_flow_lane_unfolds_by_its_summary_card() -> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        crate::journeys::window(browser, 1440, 900).await?;
+        browser.goto(&gallery.url("/ferrobridge/charts")).await?;
+        busy_flow_unfolds(browser).await?;
+        browser.console_clean("the busy bridge unfolding").await
+    })
+    .await
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn the_chart_legend_hides_and_shows_a_series_in_place() -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {

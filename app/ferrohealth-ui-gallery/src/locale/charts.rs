@@ -22,6 +22,44 @@ messages! {
     FlowBridgeAsFlow = "flow-bridge-as-flow",
     /// `The bridge as a flow, lane by lane`
     FlowBridgeLaneByLane = "flow-bridge-lane-by-lane",
+    /// `AE`
+    FlowBusyAe = "flow-busy-ae",
+    /// `Client app`
+    FlowBusyCaller = "flow-busy-caller",
+    /// `Up · SMART on FHIR`
+    FlowBusyCalling = "flow-busy-calling",
+    /// `3 faces on · 3 of 30 callers refused · 25 of 30 upstreams up, 2 degraded, 1 unreachable.`
+    FlowBusyFoot = "flow-busy-foot",
+    /// `Identity service`
+    FlowBusyIdentity = "flow-busy-identity",
+    /// `A busy bridge as a flow`
+    FlowBusyLabel = "flow-busy-label",
+    /// `A busy bridge as a flow, lane by lane`
+    FlowBusyList = "flow-busy-list",
+    /// `Not checked yet`
+    FlowBusyNotChecked = "flow-busy-not-checked",
+    /// `Off · switched off`
+    FlowBusyOff = "flow-busy-off",
+    /// `Operator API`
+    FlowBusyOperator = "flow-busy-operator",
+    /// `On · /operator`
+    FlowBusyOperatorOn = "flow-busy-operator-on",
+    /// `Refused · 401`
+    FlowBusyRefused = "flow-busy-refused",
+    /// `Rejected · AE`
+    FlowBusyRejected = "flow-busy-rejected",
+    /// `HL7 sender`
+    FlowBusySender = "flow-busy-sender",
+    /// `Up · MLLP`
+    FlowBusySending = "flow-busy-sending",
+    /// `Degraded · slow`
+    FlowBusySlow = "flow-busy-slow",
+    /// `slow`
+    FlowBusySlowLabel = "flow-busy-slow-label",
+    /// `A busy bridge`
+    FlowBusyTitle = "flow-busy-title",
+    /// `Up`
+    FlowBusyUp = "flow-busy-up",
     /// `Callers`
     FlowCallers = "flow-callers",
     /// `openEHR CDR`

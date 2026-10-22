@@ -33,7 +33,8 @@ use crate::i18n::{Arg, Text, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::view::button::Variant;
 use crate::view::flow::{
-    CardDrawing, FlowState, Place, card_drawing, curve, edge_line, ends, path_drawing, units,
+    CardDrawing, FlowState, LabelAt, Place, card_drawing, curve, edge_line, ends, path_drawing,
+    units,
 };
 use crate::widget::topology::TopologyWords;
 
@@ -256,8 +257,9 @@ const START_GROUP: f64 = 236.0;
 const OUTER_GAP: f64 = 92.0;
 const HUB_GAP: f64 = 84.0;
 
-/// The minimap's width.
+/// The minimap's widest and tallest measure.
 const MINIMAP: f64 = 168.0;
+const MINIMAP_TALL: f64 = 300.0;
 
 /// One edge laid out.
 #[derive(Debug, Clone, Copy)]
@@ -513,7 +515,7 @@ fn edge(edge: Edge<'_>, on_path: bool) -> AnyView {
             edge.from,
             edge.to,
             edge.state,
-            edge.label,
+            (edge.label, LabelAt::Mark),
             on_path,
             edge.marked,
         )
@@ -632,6 +634,7 @@ fn card_view(laid: &Laid<'_>, selected: Option<&str>) -> AnyView {
         mono: card.mono,
         selected: selected == Some(card.id.as_str()),
         most: most(laid.place.width, card.mono, count, hub),
+        more: Vec::new(),
         controls: controls(card, laid.group, laid.place.width),
     });
     view! {
@@ -684,10 +687,11 @@ fn problems(topology: &Topology) -> String {
 }
 
 /// The minimap of `layout`: a rectangle per card in its tone, and the
-/// frame of what the map shows, the whole drawing at first.
+/// frame of what the map shows, the whole drawing at first. A tall
+/// federation narrows it to keep it inside its tallest measure.
 fn minimap(layout: &Layout<'_>) -> AnyView {
-    let scale = MINIMAP / layout.width.max(1.0);
-    let height = layout.height * scale;
+    let scale = (MINIMAP / layout.width.max(1.0)).min(MINIMAP_TALL / layout.height.max(1.0));
+    let (width, height) = (layout.width * scale, layout.height * scale);
     let rects = layout
         .cards
         .iter()
@@ -705,17 +709,22 @@ fn minimap(layout: &Layout<'_>) -> AnyView {
             }
         })
         .collect_view();
-    let view_box = format!("-4 -4 {:.0} {:.0}", MINIMAP + 8.0, height + 8.0);
+    let view_box = format!("-4 -4 {:.0} {:.0}", width + 8.0, height + 8.0);
     view! {
         <div class="fui-topology-minimap" role="img" aria-label=tr(Text::TopologyMinimapFrame)>
-            <svg viewBox=view_box width="176" height=format!("{:.0}", height + 8.0) aria-hidden="true">
+            <svg
+                viewBox=view_box
+                width=format!("{:.0}", width + 8.0)
+                height=format!("{:.0}", height + 8.0)
+                aria-hidden="true"
+            >
                 {rects}
                 <rect
                     class="fui-minimap-view"
                     data-scale=format!("{scale:.6}")
                     x="0"
                     y="0"
-                    width=format!("{MINIMAP:.1}")
+                    width=format!("{width:.1}")
                     height=format!("{height:.1}")
                     rx="2"
                 ></rect>
