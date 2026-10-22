@@ -15,7 +15,9 @@ ferrohealth-ui = "=0.3.0"
 ```
 
 Pin the version exactly: a console moves its pin after looking at its own
-screens.
+screens. The [console guide](https://github.com/FerroHEALTH/FerroUI/blob/main/docs/consoles.md)
+says what the library owns, what a console owns, and which document governs
+each part.
 
 ## Islands
 

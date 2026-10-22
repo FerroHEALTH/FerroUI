@@ -55,6 +55,8 @@ it, in islands mode (#196): a page is server HTML, and only an island ships
 code to the browser. Where the book lags behind 0.8, the Leptos 0.8 source
 the workspace pins decides.
 
+- **A console starts at `docs/consoles.md`:** what the library owns, what
+  the console owns, and which document here governs each part.
 - **The rules are `.claude/rules/leptos-ui.md`.** §14 states each Leptos rule
   with its book chapter and 0.8 source, and §15 is the islands rules: when a
   part is an island, its props, its children, context, locale and toasts,
