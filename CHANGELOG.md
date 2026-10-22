@@ -223,6 +223,45 @@ and this project adheres to
   `island::Combobox`, `island::PickerField` and `island::ChartLegend`, each
   with serde props and its words as props.
 - The Lucide `ellipsis` glyph, `Glyph::ELLIPSIS`, for the row menu's ⋯.
+- The top bar's search is one joined control (#144): the search glyph and a
+  quiet `/` key cap inside the field, the submit joined on its end edge,
+  and one hover edge and focus ring on the group. It is the island
+  `island::Search` over `widget::search::search_control`, still a plain
+  `GET` form with `role="search"`: `/` from anywhere outside a field
+  focuses it (announced through `aria-keyshortcuts`), Escape clears and
+  leaves it, a submit turns the glyph into the spinner, and the cap hides
+  while the field is filled or focused, while disabled and below 40 rem.
+  `SearchBox` takes `submit`, `shortcut` (`Some('/')` by default), `busy`,
+  `disabled` (the reason, shown in the field) and `post`, which posts a
+  query that can carry clinical content instead of putting it in the URL. The answer under it is
+  `view::search::SearchAnswer`, drawn by the server: hits (`Hit`, with a
+  `Mark`, a line on its own row and a tag) grouped by kind (`HitGroup`), the
+  first one selected for Enter, the way to every result (`Way`), and the
+  line when nothing was found. The search result row is the crate's
+  `fui-search-results` class, one overlay surface.
+- The docked decision bar (R4, #145): `view::dock::decision_bar` over
+  `DecisionBar` docks the page's one decision to the foot of the main area,
+  with up to two fields (`DockField`: a reason and a path), an editor's
+  state line in the field's place when it has none, and its decisions
+  (`Decision` with a `DecisionState`: ready, busy, held, or blocked with
+  the reason the bar says in words). Every decision is a submit button of
+  the bar's own `POST` form or of the page's form it names (`DockForm`), so
+  it works with no WebAssembly; a refused reason takes the focus with its
+  error. Its lines say a decision is done (`DockLine::Done`) or that
+  someone decided first (`DockLine::Stale`). On a phone the fields take
+  their own rows and the decisions stack under them, the primary first,
+  and the page keeps a focused control clear of the bar.
+- Key caps and the keyboard shortcut legend (R1, #141): `view::kbd::kbd`
+  draws a key or a chord as printed on the keyboard, `shortcut_keys` the
+  alternatives of one shortcut, and `shortcut_hint` the one line at a
+  listing's foot, over `Shortcut` and `ShortcutGroup`; `aria_keys` writes
+  them for `aria-keyshortcuts`. `widget::shortcuts::shortcut_legend` is
+  the legend dialog a console's signal opens over the page, which returns
+  the focus when it closes, with its words in `LegendWords`; its dismiss
+  button says Close (`LegendWords::close`), as it only informs. The library
+  binds no key: `typing`, `chorded` and `phone_layout` are the tests a
+  console's listener asks first, and below 40 rem no key cap, hint or
+  legend shows.
 
 ### Changed
 
@@ -391,6 +430,15 @@ and this project adheres to
   (`fui-sign-in-title`, `fui-sign-in-line`, `fui-sign-in-stack`) in place of
   the design's capture scaffolding.
 
+- The design's search answer is the crate's `fui-search-results` class in
+  place of the capture scaffolding's `mk-results`, and on a phone the
+  docked bar's decisions stack at full width, the primary first, where they
+  shared one row (#144, #145).
+- `view::search::search_box(search, answer)` takes the answer under the
+  search, and `SearchBox`'s fields are `String`s, since the box is an
+  island and its props cross to the browser: a console fills the new
+  fields or takes `..SearchBox::default()`.
+
 ### Fixed
 
 - The picker's select (`widget::picker::picker_field`) follows its value
@@ -472,6 +520,9 @@ and this project adheres to
 - The `font-size: 0` that hid a narrow status pill's words; they are
   visually hidden (`fui-roomy-text`) and the type scale test holds every
   size again.
+- `view::layout::action_bar` and its `fui-action-bar` class, the actions at
+  the foot of a card: the page's decision goes in the docked decision bar,
+  `view::dock::decision_bar` (#145).
 
 ## [0.2.2] - 2026-10-21
 

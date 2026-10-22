@@ -179,14 +179,14 @@ def mark_q(text, q):
 
 def search_results_list(kind):
     if kind == "system":
-        body = ('<p class="mk-results-head">1 match for “legacy-zvs”</p><p class="mk-results-group">Routes</p><ul role="listbox" aria-label="Routes">'
-                f'<li role="option" aria-selected="true"><a href="node-routes.html">{icon("route", "14")}<span class="mk-results-name">{mark_q("legacy-zvs.example.org", "legacy-zvs")}</span>'
+        body = ('<p class="fui-search-results-head">1 match for “legacy-zvs”</p><p class="fui-search-results-group">Routes</p><ul role="listbox" aria-label="Routes">'
+                f'<li role="option" aria-selected="true"><a href="node-routes.html">{icon("route", "14")}<span class="fui-search-results-name">{mark_q("legacy-zvs.example.org", "legacy-zvs")}</span>'
                 '<span class="fui-small fui-muted">A creating system: follow-ups of its records go to node-a, through node-a-pub (a route registered in the registry)</span></a></li></ul>')
-        return f'<div id="find-results" class="mk-results" role="region" aria-label="Search answer">{body}</div>'
+        return f'<div id="find-results" class="fui-search-results" role="region" aria-label="Search answer">{body}</div>'
     if kind == "none":
-        body = (f'<div class="mk-results-empty">{icon("search-x", "16")}<div><strong>Nothing found for “node-x”.</strong>'
+        body = (f'<div class="fui-search-results-empty">{icon("search-x", "16")}<div><strong>Nothing found for “node-x”.</strong>'
                 f'<span>The search never takes a patient identifier. <a href="query.html">Open the query console</a></span></div></div>')
-        return f'<div id="find-results" class="mk-results" role="region" aria-label="Search answer">{body}</div>'
+        return f'<div id="find-results" class="fui-search-results" role="region" aria-label="Search answer">{body}</div>'
     q = "b"
     zvs, nb, nl = data.org("zvs"), data.node("node-b"), data.node("node-a-lab")
     groups = [
@@ -197,12 +197,12 @@ def search_results_list(kind):
                             ("problem_list", "3 versions", None, routes.sq_href("problem_list"), False)]),
     ]
     n = sum(len(i) for _, i in groups)
-    body = f'<p class="mk-results-head">{n} matches for “{q}”</p>'
+    body = f'<p class="fui-search-results-head">{n} matches for “{q}”</p>'
     for g, items in groups:
-        body += f'<p class="mk-results-group">{g}</p><ul role="listbox" aria-label="{g}">' + "".join(
-            f'<li role="option"{" aria-selected=\"true\"" if sel else ""}><a href="{href}">{health_dot(t) if t else icon("database", "14")}<span class="mk-results-name">{mark_q(nm, q)}</span>'
+        body += f'<p class="fui-search-results-group">{g}</p><ul role="listbox" aria-label="{g}">' + "".join(
+            f'<li role="option"{" aria-selected=\"true\"" if sel else ""}><a href="{href}">{health_dot(t) if t else icon("database", "14")}<span class="fui-search-results-name">{mark_q(nm, q)}</span>'
             f'<span class="fui-small fui-muted">{e(line)}</span></a></li>' for nm, line, t, href, sel in items) + "</ul>"
-    return f'<div id="find-results" class="mk-results" role="region" aria-label="Search answer">{body}</div>'
+    return f'<div id="find-results" class="fui-search-results" role="region" aria-label="Search answer">{body}</div>'
 
 
 def topbar_state_page(state_=None, value="", results=None):

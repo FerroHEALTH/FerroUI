@@ -184,17 +184,6 @@ pub fn keyed_field_row(id: String, row: FieldRow, body: impl IntoView + 'static)
     .into_any()
 }
 
-/// Returns the actions `body` of a form in a bar at the foot of its card.
-///
-/// On a window tall enough the bar stays in view at the bottom while the
-/// form scrolls, the page's scroll padding keeping a focused control clear
-/// of it (WCAG 2.2 SC 2.4.11).
-#[must_use]
-pub fn action_bar(body: impl IntoView + 'static) -> AnyView {
-    let body = body.into_any();
-    view! { <div class="fui-action-bar">{body}</div> }.into_any()
-}
-
 /// Returns `items` as tiles in a row that wraps, with list semantics kept.
 ///
 /// Each tile is a small bordered box holding a few facts of one thing, such

@@ -17,7 +17,6 @@ use ferrohealth_ui::view::form::{
     chip_choices, columns, described_by, error_id, field, field_flow, help_id, keyed_check_field,
     keyed_field,
 };
-use ferrohealth_ui::view::layout::action_bar;
 use ferrohealth_ui::view::layout::{FieldRow, field_row};
 use ferrohealth_ui::view::notice::{Announce, notice};
 use ferrohealth_ui::view::segmented::choice_reveal;
@@ -32,8 +31,8 @@ use ferrohealth_ui::widget::pick_or_type::{PickOrType, Picker, pick_or_type};
 use ferrohealth_ui::widget::upload::{Upload, UploadWords, upload_field};
 use leptos::prelude::*;
 
-/// A query form: the nodes as checkbox chips, an option as a switch, and the
-/// actions in the bar at the card's foot.
+/// A query form: the nodes as checkbox chips, an option as a switch, and its
+/// actions at its foot.
 fn federated() -> AnyView {
     let nodes = ["node-a", "node-b", "node-c", "node-d"]
         .into_iter()
@@ -62,14 +61,14 @@ fn federated() -> AnyView {
                     tr(Msg::WhenNodeDoesNotAnswer),
                     partial,
                 )}
-                {action_bar(view! {
+                <div class="fui-cluster">
                     <button type="button" class=Variant::Primary.class()>
                         {label(Some(Glyph::PLAY), tr(Msg::RunQuery))}
                     </button>
                     <button type="button" class=Variant::Secondary.class()>
                         {label(Some(Glyph::X), tr(Msg::Clear))}
                     </button>
-                })}
+                </div>
             </form>
         },
     )
@@ -669,37 +668,6 @@ fn nested_reveal() -> AnyView {
     .into_any()
 }
 
-/// A long form whose actions stay in the bar at the window's foot: a
-/// control the keyboard reaches is scrolled clear of the bar.
-fn long_form() -> AnyView {
-    let fields = (1..=14_u32)
-        .map(|index| {
-            let id = format!("long-field-{index}");
-            let input_id = id.clone();
-            keyed_field(
-                id,
-                tr_with(Msg::SyntheticSetting, &[("index", index.into())]),
-                None,
-                view! { <input id=input_id type="text" class=INPUT value=format!("value-{index}") /> },
-            )
-        })
-        .collect_view();
-    card(
-        tr(Msg::LongForm),
-        view! {
-            <form method="post" action="#" class=FORM id="long-form">
-                {fields}
-                {action_bar(view! {
-                    <button type="button" class=Variant::Primary.class()>
-                        {label(Some(Glyph::CHECK), tr(Msg::SaveSettings))}
-                    </button>
-                })}
-            </form>
-        },
-    )
-    .into_any()
-}
-
 /// A button whose words are longer than a phone's column, which break
 /// between words rather than push the page sideways, beside a short one.
 fn long_label() -> AnyView {
@@ -1078,7 +1046,8 @@ pub fn FormsPage() -> impl IntoView {
     .into_any();
     let headers = editor_headers();
     let reloading = reloading_editor();
-    let long = long_form();
+    let long = super::dock::long_form();
+    let dock = super::dock::dock();
     view! {
         {super::title(tr(Msg::FormsEditor))}
         {header}
@@ -1096,5 +1065,6 @@ pub fn FormsPage() -> impl IntoView {
             {sections.3}
             {long}
         })}
+        {dock}
     }
 }

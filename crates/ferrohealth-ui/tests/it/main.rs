@@ -18,9 +18,12 @@
 
 mod console;
 mod contrast;
+mod dock;
+mod kbd;
 mod locale;
 mod markup;
 mod render;
+mod search;
 mod shell;
 mod stylesheet;
 mod table;

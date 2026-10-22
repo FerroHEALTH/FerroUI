@@ -11,11 +11,12 @@
 //! help switch on, the picker open on its input, the tree walked by the
 //! keyboard, the search box focused, the tables in the compact density, the
 //! compact stat tiles and the stacked timestamps of a phone at 320 and
-//! 390 px, the disabled fields inside a well at 1440 and 390 px, and the
+//! 390 px, the disabled fields inside a well at 1440 and 390 px, the
 //! title row's action group with More open by the pointer and the keyboard,
 //! the split button's variants, a row menu and the select button's listbox,
 //! with the action group, More's bottom sheet and the listbox's at 390 px,
-//! and the document pane switched to its raw view.
+//! the document pane switched to its raw view, and the states of the keys
+//! ([`crate::key_states`]).
 //!
 //! Each state is written as `states/<brand>/<state>.png` and its `-dark`
 //! twin under the screenshots folder, every brand in the light and the
@@ -38,7 +39,7 @@ use crate::journeys::window;
 use crate::stack::Gallery;
 
 /// Every state, by the name its images take.
-pub(crate) const STATES: [&str; 63] = [
+pub(crate) const STATES: [&str; 84] = [
     "hover-nav",
     "focus-nav",
     "hover-stat",
@@ -102,6 +103,27 @@ pub(crate) const STATES: [&str; 63] = [
     "action-group-390",
     "menu-sheet-390",
     "listbox-sheet-390",
+    "hover-search",
+    "search-filled",
+    "search-busy",
+    "search-disabled",
+    "search-answer",
+    "search-none",
+    "search-390",
+    "search-answer-390",
+    "dock-idle",
+    "dock-missing",
+    "dock-disabled",
+    "dock-submitting",
+    "dock-done",
+    "dock-stale",
+    "dock-bare",
+    "dock-path",
+    "dock-idle-390",
+    "dock-disabled-390",
+    "dock-path-390",
+    "legend-open",
+    "shortcut-hint",
 ];
 
 /// The viewport the states are taken in.
@@ -163,14 +185,14 @@ fn write(brand: Brand, state: &str, theme: &str, png: &[u8]) -> Result<(), Box<d
 }
 
 /// The card whose title is `title`.
-fn card(title: &str) -> By {
+pub(crate) fn card(title: &str) -> By {
     By::XPath(format!(
         "//section[contains(@class, 'fui-card')][h2[normalize-space(.) = '{title}'] or div/h2[normalize-space(.) = '{title}']]"
     ))
 }
 
 /// Moves the pointer onto `element`.
-async fn hover(browser: &Browser, element: &WebElement) -> Result<(), Box<dyn Error>> {
+pub(crate) async fn hover(browser: &Browser, element: &WebElement) -> Result<(), Box<dyn Error>> {
     browser
         .driver()
         .action_chain()
@@ -181,13 +203,13 @@ async fn hover(browser: &Browser, element: &WebElement) -> Result<(), Box<dyn Er
 }
 
 /// Moves the pointer away, to the page's top-left corner.
-async fn away(browser: &Browser) -> Result<(), Box<dyn Error>> {
+pub(crate) async fn away(browser: &Browser) -> Result<(), Box<dyn Error>> {
     let body = browser.element(By::Tag("footer")).await?;
     hover(browser, &body).await
 }
 
 /// Gives `element` the keyboard focus.
-async fn focus(browser: &Browser, element: &WebElement) -> Result<(), Box<dyn Error>> {
+pub(crate) async fn focus(browser: &Browser, element: &WebElement) -> Result<(), Box<dyn Error>> {
     browser
         .driver()
         .execute("arguments[0].focus();", vec![element.to_json()?])
@@ -210,7 +232,7 @@ async fn press(browser: &Browser, element: &WebElement) -> Result<(), Box<dyn Er
 }
 
 /// Presses Escape, which closes the overlay that is open.
-async fn escape(browser: &Browser) -> Result<(), Box<dyn Error>> {
+pub(crate) async fn escape(browser: &Browser) -> Result<(), Box<dyn Error>> {
     browser
         .driver()
         .action_chain()
@@ -221,7 +243,7 @@ async fn escape(browser: &Browser) -> Result<(), Box<dyn Error>> {
 }
 
 /// Writes the screenshot of `element` as `state`.
-async fn shot_of(
+pub(crate) async fn shot_of(
     browser: &Browser,
     brand: Brand,
     theme: &str,
@@ -241,7 +263,7 @@ async fn shot_of(
 }
 
 /// Writes the screenshot of the viewport as `state`.
-async fn shot_of_view(
+pub(crate) async fn shot_of_view(
     browser: &Browser,
     brand: Brand,
     theme: &str,
@@ -1006,6 +1028,7 @@ async fn every_state_is_captured_in_every_brand_light_and_dark() -> Result<(), B
                 phone(browser, &gallery, brand, theme).await?;
                 document(browser, &gallery, brand, theme).await?;
                 menu_states(browser, &gallery, brand, theme).await?;
+                crate::key_states::keys(browser, &gallery, brand, theme).await?;
             }
         }
         let missing = unwritten();

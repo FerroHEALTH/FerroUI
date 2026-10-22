@@ -196,3 +196,17 @@ pub fn FileFilter(
 ) -> impl IntoView {
     crate::pages::forms::filter_body(&words)
 }
+
+/// The overlays page's keyboard shortcut legend and the button and key
+/// that open it.
+#[island]
+pub fn ShortcutLegend(
+    /// The page's shortcuts, their words in the page's locale.
+    groups: Vec<ferrohealth_ui::view::kbd::ShortcutGroup>,
+    /// The legend's own words, in the page's locale.
+    words: ferrohealth_ui::widget::shortcuts::LegendWords,
+    /// The words of the button that opens it.
+    opener: String,
+) -> impl IntoView {
+    crate::pages::overlays::shortcut_legend_with(groups, words, opener)
+}

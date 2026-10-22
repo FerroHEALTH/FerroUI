@@ -121,21 +121,21 @@ def page_dashboard_dev():
 def results_list(kind):
     if kind == "none":
         body = (
-            f'<div class="mk-results-empty">{icon("search-x", "16")}<div><strong>No code system, value set or concept map on FHIR R4 has this canonical.</strong>'
+            f'<div class="fui-search-results-empty">{icon("search-x", "16")}<div><strong>No code system, value set or concept map on FHIR R4 has this canonical.</strong>'
             '<span>Another FHIR version may hold it: switch the FHIR version beside the search, and search again.</span></div></div>'
         )
-        return f'<div id="find-results" class="mk-results" role="region" aria-label="Search answer">{body}</div>'
+        return f'<div id="find-results" class="fui-search-results" role="region" aria-label="Search answer">{body}</div>'
     groups = [
         ("Value sets", [("Synthetic respiratory findings", "Value set · stored on this server · version 2", "value-set.html", True, "layers")]),
         ("With what you typed", [("Search the designations for “respir”", "In the concept browser, in a code system you choose", "browse-results.html", False, "search"),
                                  ("Every place it can go", "The find page", "find.html", False, "arrow-right")]),
     ]
-    body = '<p class="mk-results-head">1 match for “respir”</p>'
+    body = '<p class="fui-search-results-head">1 match for “respir”</p>'
     for g, items in groups:
-        body += f'<p class="mk-results-group">{g}</p><ul role="listbox" aria-label="{g}">' + "".join(
-            f'<li role="option"{" aria-selected=\"true\"" if sel else ""}><a href="{href}">{icon(gl, "14")}<span class="mk-results-name">{e(n)}</span>'
+        body += f'<p class="fui-search-results-group">{g}</p><ul role="listbox" aria-label="{g}">' + "".join(
+            f'<li role="option"{" aria-selected=\"true\"" if sel else ""}><a href="{href}">{icon(gl, "14")}<span class="fui-search-results-name">{e(n)}</span>'
             f'<span class="fui-small fui-muted">{e(line)}</span></a></li>' for n, line, href, sel, gl in items) + "</ul>"
-    return f'<div id="find-results" class="mk-results" role="region" aria-label="Search answer">{body}</div>'
+    return f'<div id="find-results" class="fui-search-results" role="region" aria-label="Search answer">{body}</div>'
 
 
 def topbar_state_page(state_=None, value="", results=None):

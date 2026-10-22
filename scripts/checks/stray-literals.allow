@@ -10,6 +10,9 @@ skip crates/ferrohealth-ui/src/i18n.rs      # the catalog mechanism: message ids
 
 allow ^(ArrowUp|ArrowDown|ArrowLeft|ArrowRight|Home|End|Enter|Escape|Tab)$   # UI Events KeyboardEvent.key values
 allow ^\(width                         # a CSS media query the browser code matches
+allow ^(Esc|Space|Ctrl|Control|Shift|Alt|Meta)$  # a key as printed on its cap and as aria-keyshortcuts names it
+allow ^Ctrl s$                          # a shortcut's keys, drawn as key caps
+allow ^(checkbox|radio|button|submit|reset|range|color|file|image)$   # the input types that take no typed text
 allow ^Ferro(BRIDGE|FED|EHR|TERM|PIX)$ # product names, the same in every language
 allow ^Cadasto B\.V\.$                  # the maker's legal name
 allow ^(start|middle|end)$              # SVG text-anchor keywords

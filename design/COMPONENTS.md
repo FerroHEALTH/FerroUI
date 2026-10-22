@@ -166,7 +166,7 @@ Measured on the FerroPIX identifier domains table at 1440 px. Every console's ta
 | R1 | Responsive key hints |
 | R2 | Tag |
 | R3 | Binder tabs joined to their panel A tab row that scrolls starts with its current tab in view (`scroll-initial-target`). A tab marked `data-tab="keyboard"` (the family hook for Keyboard in Your preferences) is hidden below 40 rem: phones have no keyboard items. Each tab is a link to its own route, so the row works with no WebAssembly; the phone's tab select takes the row's place only once it works. |
-| R4 | Docked decision bar |
+| R4 | Docked decision bar It takes up to two fields, a reason and a path, side by side before the decisions (`fui-dock-field`); an editor's dock with no field puts its state line in the field's place. Below 40 rem each field takes its own rows and the decisions stack under them at full width, the primary first. A disabled decision says why as visible text in the bar's line ("Give a reason to save"), never only in a tooltip. The page keeps a focused control clear of the bar (`scroll-padding-bottom`). Every decision is a form submit. |
 | R5 | Previous and next in the page header |
 | R6 | Breadcrumb as a back link on a phone |
 | R7 | Page actions folding into one menu. F14 replaces it. |
@@ -220,7 +220,7 @@ Measured on the FerroPIX identifier domains table at 1440 px. Every console's ta
 | Tab select (`fui-tabs-select`, `fui-tabbed-many`) | Replaces a long tab row on a phone. |
 | Settings panel (`fui-settings-panel`, `-head`, `-intro`) | T3's panel. |
 | Tooltip above (`fui-tooltip-above`) | For controls at the foot of a canvas. |
-| Search result row | The dot or glyph, then the name over its line. Results are grouped by kind; a FerroFED creating_system_id resolves to its node's Routes tab. |
+| Search result row (`fui-search-results`) | The dot or glyph, then the name over its line, the line on its own row so a tag at the end (an identifier) never clips it. Results are grouped by kind (`fui-search-results-group`), the first hit selected for Enter, and the panel ends with the way to the full results (`fui-search-results-more`); no hit says so with the way on (`fui-search-results-empty`). It is one overlay surface. A FerroFED creating_system_id resolves to its node's Routes tab. |
 | Self-description card (`fui-self-description`) | About's code card, with its own scroll, the scroll cue and token colours. |
 | Top-bar status pill | The product's state in two words, the same shape in every console: "Server up" (FerroPIX), "Gateway up" (FerroFED), "Bridge up" (FerroBRIDGE), then unreachable, unknown or refused 401. The version is in its tooltip, after the words, and on About, never in the pill (`fui-topbar-status`). |
 

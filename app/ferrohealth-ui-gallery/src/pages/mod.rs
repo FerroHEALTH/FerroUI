@@ -9,6 +9,7 @@
 
 pub mod charts;
 pub mod code;
+pub mod dock;
 pub mod forms;
 pub mod layouts;
 pub mod overlays;
