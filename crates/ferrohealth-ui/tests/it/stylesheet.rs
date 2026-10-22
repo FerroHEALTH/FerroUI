@@ -259,6 +259,7 @@ fn a_phone_row_keeps_its_checkbox_on_its_first_line() {
     );
 }
 
+#[test]
 fn a_document_view_a_link_targets_shows_until_the_island_takes_over() {
     assert!(
         STYLESHEET.contains(
