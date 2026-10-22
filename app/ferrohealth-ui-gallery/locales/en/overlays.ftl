@@ -1,0 +1,77 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+
+# The English words of the overlays page: one message per `Msg` of
+# `src/locale/overlays.rs`, in the order of their ids.
+
+a-primary-alone = A primary alone
+a-split-primary = A split primary and its variants
+access = Access
+action-groups = Action groups
+confirmation-dialogs = Confirmation dialogs
+content-no-navigation-from-end = Content that is no navigation, from the end of the page.
+delete-file = Delete the file
+delete-row = Delete { $row }?
+delete-the-file = Delete the file?
+dialogs-modals-side-panel-toasts = Dialogs, modals, the side panel and toasts.
+download-the-file = Download the file
+file-goes-good-running-set = The file goes for good, and the running set reloads without it.
+files-disk-compile-replace-running = The files on disk compile and replace the running set when they compile.
+information = Information
+keyboard-shortcuts = Keyboard shortcuts
+menus-and-selects = Menus and select buttons
+method = Method
+modal-dialogs = Modal dialogs
+more-actions-file = More actions for the file
+more-alone = More alone
+new-name = New name
+open-the-tables = Open the tables
+opened-their-trigger-no-script = Opened by their trigger with no script; Escape and Cancel close them and the focus returns.
+openid-connect = OpenID Connect
+operator-scope-decides-what-console = The operator scope decides what the console may do.
+overlays-feedback = Overlays and feedback
+path-below-fhirconnect-omocl = A path below fhirconnect/ or omocl/.
+policy = Policy
+popover-form = Popover form
+popover-form-opens-under-trigger = It opens under its trigger and, on a phone, rises from the foot of the screen.
+provisioned-read-only = The file is provisioned and read-only.
+refusal = Refusal
+reload = Reload
+reload-set = Reload the set
+reload-the-set = Reload the set?
+rename = Rename
+rename-file = Rename the file
+rename-the-file = Rename a file
+row-deleted = { $row } was deleted.
+save-and-reload = Save and reload the set
+save-as-draft = Save as a draft
+save-the-query = Save the query
+save-the-query-to-the-server = Save the query to the server
+save-was-refused-412 = The save was refused: 412.
+saved-set-reloaded = Saved, and the set reloaded.
+scopes = Scopes
+set-compiled-2-warnings = The set compiled with 2 warnings.
+set-reloaded = The set reloaded.
+set-reloads-background = The set reloads in the background.
+shortcut-close = Close a dialog, a menu or a panel
+shortcut-find = Find a mapping file
+shortcut-open-first = Open the search's first answer
+shortcut-show = Show the keyboard shortcuts
+shortcuts-card-intro = Press ? outside a field, or the button, to open the legend over this page; the line under it is the hint a listing shows at its foot.
+shortcuts-everywhere = Everywhere
+shortcuts-search = The search
+side-panel = Side panel
+signed = Signed in as
+someone-saved-the-file-first = Someone saved the file first; reload it to see their change.
+success = Success
+synthetic-file-goes-good-running = The synthetic file goes for good; the running set reloads without it.
+synthetic-file-was-deleted = The synthetic file was deleted.
+synthetic-operator = Synthetic operator
+the-file = the file
+three-files-compiled-facade-serves = 3 files compiled; the facade serves them now.
+toasts = Toasts
+two-mappings-name-missing-path = Two mappings name a path the template does not hold.
+version-latest-of = { $version } (latest of { $count })
+view-access = View access
+warning = Warning
+ways-to-save = Ways to save

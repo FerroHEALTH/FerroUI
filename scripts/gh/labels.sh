@@ -70,5 +70,6 @@ label dependencies 0366d6 "Dependency updates (used by Dependabot)."
 label security ee0701 "Security fix or hardening."
 label blocked-upstream 6f42c1 "Waiting on an upstream specification or tool release."
 label no-changelog bfdadc "PR escape hatch: the change has no effect a console sees."
+label screenshots c5def5 "The pull request commits the gallery screenshots; CI runs the screenshot guard."
 
 echo "done."

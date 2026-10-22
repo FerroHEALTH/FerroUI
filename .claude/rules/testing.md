@@ -32,9 +32,13 @@ applies to every crate.
   no-JavaScript mandate), behind `FERROUI_JOURNEYS=1`, failing on any
   `SEVERE` browser log entry and waiting on elements, never on a timer.
 - **Screenshots:** behind `FERROUI_SCREENSHOTS=1`, every page of every brand
-  light and dark at 1440 px and full height, into `docs/screenshots/`; the
-  ordinary suite's guard fails on a shot without both images. Every refreshed
-  screenshot is looked at before the change merges.
+  light and dark at 1440 px and full height, into `docs/screenshots/`. You
+  look at every image your change moves before it merges; CI uploads the
+  capture as the `gallery-screenshots` artifact for the reviewer. Only the
+  refresh pull request (`chore/screenshots`) commits images, and the guard
+  that fails on a page or state without both images runs there and on a
+  release pull request, behind `FERROUI_SCREENSHOT_GUARD=1`
+  (`parallel-prs.md`).
 
 ## Coverage is a mandate, not just pass rate
 

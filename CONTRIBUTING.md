@@ -31,8 +31,10 @@ FERROUI_JOURNEYS=1 cargo nextest run -p ferrohealth-ui-gallery --locked
 FERROUI_SCREENSHOTS=1 cargo nextest run -p ferrohealth-ui-gallery --locked screenshots
 ```
 
-A change you can see refreshes `docs/screenshots/`, and you look at every
-image it changed before asking for review.
+A change you can see is captured and looked at, every image it changed,
+before you ask for review. Leave `docs/screenshots/` as `main` has it: CI
+uploads the capture as an artifact for the reviewer, and the refresh pull
+request commits the images (`.claude/rules/parallel-prs.md`).
 
 A change to a workflow or a shell script also needs the linters CI runs:
 
@@ -63,8 +65,11 @@ specification governs this: our own design".
 
 - Declare `Closes #N`, one keyword per issue.
 - Never weaken, skip, or delete a test to make a build pass.
-- Add a `CHANGELOG.md` entry under `[Unreleased]` for any change a console
-  sees, and name what a console must change when an API breaks.
+- Add a changelog fragment under `changelog.d/` for any change a console
+  sees (`changelog.d/README.md`), and name what a console must change when an
+  API breaks. Never edit `CHANGELOG.md` itself; the release assembles it.
+- Keep every `mod` list alphabetical, and put a gallery state or word in its
+  area's own file (`.claude/rules/parallel-prs.md`).
 - Write prose to `.claude/rules/writing-style.md`.
 
 ## Using AI tools

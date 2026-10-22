@@ -50,7 +50,8 @@ only says where to look.
    | `get_element_by_id`, `query_selector` | Would a `NodeRef` or a directive do (§14.10, #214)? |
 
 4. **Check the tests that should move with it.**
-   - A new interactive state belongs in `tests/it/states.rs`.
+   - A new interactive state belongs in its area's file under
+     `tests/it/states/`.
    - A new behaviour needs a journey, and an assertion in the
      no-WebAssembly journey.
    - A new class needs its stylesheet rule, and a new role its contrast

@@ -1,25 +1,45 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The states of the keys, captured with the others of [`crate::states`]:
-//! the top bar's search under the pointer, filled, busy, disabled, with its
-//! answer and with none, at 1440 and 390 px; the docked decision bar in each
-//! state, and on a phone; the shortcut legend open over the page and the
-//! hint at a listing's foot.
+//! The states of the keys: the top bar's search under the pointer, filled,
+//! busy, disabled, with its answer and with none, at 1440 and 390 px; the
+//! docked decision bar in each state, and on a phone; the shortcut legend
+//! open over the page and the hint at a listing's foot.
 
 use std::error::Error;
 
 use ferrohealth_ui::style::Brand;
 use thirtyfour::prelude::*;
 
+use super::{HEIGHT, WIDTH, away, card, escape, hover, shot_of, shot_of_view};
 use crate::browser::{Browser, until};
 use crate::journeys::window;
 use crate::stack::Gallery;
-use crate::states::{away, card, escape, hover, shot_of, shot_of_view};
 
-/// The viewport the states are taken in.
-const WIDTH: u32 = 1440;
-const HEIGHT: u32 = 900;
+/// The area's states, by the name their images take.
+pub(super) const STATES: &[&str] = &[
+    "hover-search",
+    "search-filled",
+    "search-busy",
+    "search-disabled",
+    "search-answer",
+    "search-none",
+    "search-390",
+    "search-answer-390",
+    "dock-idle",
+    "dock-missing",
+    "dock-disabled",
+    "dock-submitting",
+    "dock-done",
+    "dock-stale",
+    "dock-bare",
+    "dock-path",
+    "dock-idle-390",
+    "dock-disabled-390",
+    "dock-path-390",
+    "legend-open",
+    "shortcut-hint",
+];
 
 /// The top bar of `brand`'s forms page with the search in the state
 /// `search` names, written as `state`.
@@ -165,7 +185,7 @@ async fn legend(
 }
 
 /// Writes every state of the keys of `brand` in `theme`.
-pub(crate) async fn keys(
+pub(super) async fn keys(
     browser: &Browser,
     gallery: &Gallery,
     brand: Brand,

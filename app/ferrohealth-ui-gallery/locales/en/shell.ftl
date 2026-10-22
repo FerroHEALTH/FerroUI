@@ -1,0 +1,105 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+
+# The English words of the gallery's shell and those more than one page draws:
+# one message per `Msg` of `src/locale/shell.rs`, in the order of their ids.
+
+actions-for = Actions for { $name }
+another-canonical = Another canonical
+back-gallery = Back to the gallery
+base-url = Base URL
+basic-sign = Basic sign-in
+brand = Brand
+bridge = BRIDGE
+bridge-serves-no-mapping-file = The bridge serves no mapping file yet.
+charts = Charts
+choose-one-server-holds = Choose one this server holds
+code = Code
+components = Components
+concept = Concept
+console = Console
+delete = Delete
+display = Display
+documents = Documents
+ehr = EHR
+every-component-library-every-product = Every component of the library in every product theme. Choose a brand.
+every-row-text-these-pages = every row and text on these pages is invented for the gallery; none is patient data.
+fed = FED
+ferrohealth-ui = FerroHEALTH UI
+file-template-path = A file, a template or a path
+files = Files
+finding-start-twice = The anchor start is read again as the fallback.
+forms-editor = Forms and editor
+gallery = Gallery
+gallery-operator-line = Gallery operator · a synthetic identity
+history = History
+json = JSON
+language = Language
+latest = Latest
+layouts = Layouts
+library-up = Library up
+library-version = ferrohealth-ui { $version }, rendered on the server
+loading = Loading
+mapping-file-yaml = A mapping file, YAML
+member = Member
+more-actions = More actions
+more-actions-set = More actions for the mapping set
+name = Name
+nav-about = About
+nav-detail = T2 Detail
+nav-fault = Error 500
+nav-forbidden = Error 403
+nav-issues = { $count } issues to look at
+nav-list = T1 List
+nav-list-empty = T1 Empty
+nav-list-many = T1 Many items
+nav-list-tabs = T1 With tabs
+nav-not-found = Error 404
+nav-not-probed = Not known: the gallery does not probe the charts
+nav-settings = T3 From a file
+nav-settings-managed = T3 Managed
+no-mapping-file = No mapping file
+not-found = Not found
+not-found-body = 404: the gallery has no page at this address.
+open = Open
+open-the-document = Open the document
+overlays = Overlays
+overview = Overview
+pages = Pages
+pix = PIX
+product = FerroHEALTH UI Gallery
+provider-sign = Provider sign-in
+remove = Remove
+save = Save
+search = Search
+search-all-results = All results in Tables
+search-browse = Browse every file
+search-file-line =
+    { $kind } · { $lines } { $lines ->
+        [one] line
+       *[other] lines
+    }
+search-found-head = Names that start with “{ $query }”
+search-index-rebuilding = Search waits while the index is rebuilding
+search-kind-files = Mapping files
+search-kind-templates = Templates
+search-mapping-files = Search the mapping files
+search-no-file = No file found for “{ $query }”
+search-no-file-line = Check the spelling, or browse every file in Tables.
+search-template-line = Operational template
+sign-in = Sign in
+sign-in-group = Sign-in
+sign-in-states = Sign-in states
+staged-changes = Staged changes
+staged-configuration-against-running-one = The staged configuration against the running one
+status = Status
+tables-paging = Tables and paging
+templates = Page templates
+term = TERM
+the-code = The code
+timeout = Timeout
+try-again = Try again
+value = Value
+version = Version
+xml = XML
+yaml = YAML

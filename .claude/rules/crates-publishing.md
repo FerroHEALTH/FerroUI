@@ -20,13 +20,15 @@ true`), so the tag, the crate and the changelog section always agree.
 ## The bump rule
 
 - **A release bumps the workspace version, the changelog section and the
-  lock together** (`cargo update -w`), in the release pull request.
+  lock together** (`cargo update -w`), in the release pull request, whose
+  changelog section `scripts/release/changelog.sh --assemble` writes from the
+  fragments under `changelog.d/` (`docs/release.md`).
 - Consumers pin the crate exactly (`ferrohealth-ui = "=0.1.0"`): Cargo reads a
   `0.x` caret requirement as compatible across patches
   (<https://doc.rust-lang.org/cargo/reference/semver.html>), and a console
   moves its pin deliberately, after looking at its own screens.
 - A pull request that breaks a public API says so in its body and its
-  CHANGELOG entry, naming what a console changes; while the line is `0.x`,
+  changelog fragment, naming what a console changes; while the line is `0.x`,
   such a release moves the minor version.
 
 ## The publish lane is resumable and verified

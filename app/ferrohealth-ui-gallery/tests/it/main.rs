@@ -26,7 +26,6 @@ mod browser;
 mod dates;
 mod http;
 mod journeys;
-mod key_states;
 mod keys;
 mod menus;
 mod no_wasm;

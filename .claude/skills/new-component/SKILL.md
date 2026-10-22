@@ -1,6 +1,6 @@
 ---
 name: new-component
-description: Walks a FerroUI component from its COMPONENTS.md id to a merged change, in the design's order. Covers the design pages, the choice between a server view and an island, the API, the CSS layer, the render, stylesheet and contrast tests, the gallery entry in every brand light and dark, the no-WebAssembly journey, the design check, the screenshots and the changelog. Use when an issue asks for a new or rebuilt component.
+description: Walks a FerroUI component from its COMPONENTS.md id to a merged change, in the design's order. Covers the design pages, the choice between a server view and an island, the API, the CSS layer, the render, stylesheet and contrast tests, the gallery entry in every brand light and dark, the no-WebAssembly journey, the design check, the screenshots and the changelog fragment. Use when an issue asks for a new or rebuilt component.
 allowed-tools: Read, Grep, Glob, Bash, Edit, Write
 argument-hint: "<issue number>"
 ---
@@ -72,10 +72,17 @@ component rules are `.claude/rules/leptos-ui.md`; §14 is the Leptos way and
    - `tests/it/contrast.rs` for a new role pairing.
 8. **Add the gallery entry.**
    - Put the component on its page under
-     `app/ferrohealth-ui-gallery/src/pages/`, with its words in
-     `app/ferrohealth-ui-gallery/locales/en/ferrohealth-ui-gallery.ftl`. The
-     brand routes show it in every brand, light and dark.
-   - Add its interactive states to `tests/it/states.rs` (§11).
+     `app/ferrohealth-ui-gallery/src/pages/`, with its words declared in
+     that page's `src/locale/<area>.rs` and written in
+     `locales/en/<area>.ftl`, each in the order of the ids (`shell` for a
+     word more than one page draws). The brand routes show it in every
+     brand, light and dark.
+   - Add its interactive states to its area's file under
+     `tests/it/states/`: the names to `STATES`, the steps to the area's
+     capture function (§11). A new area is a new file, a `mod` line and an
+     `AREAS` entry in `states.rs`, and a call in the capture driver.
+   - Put every new `mod` line (library, gallery, `tests/it/main.rs`) in
+     alphabetical position; `scripts/checks/mod-order.sh` checks it.
    - Add a journey for each behaviour to `tests/it/journeys.rs` or
      `tests/it/widgets.rs`.
    - Add an assertion to the no-WebAssembly journey (#196): the content and
@@ -87,20 +94,28 @@ component rules are `.claude/rules/leptos-ui.md`; §14 is the Leptos way and
      no baseline entry added. The browser steps wait on the machine-wide
      Chrome lock, so several worktrees can run it at once. CI runs the
      full gate.
-   - The guards: `bash scripts/checks/leptos-rules.sh`, `bash scripts/checks/stray-literals.sh crates/ferrohealth-ui/src app/ferrohealth-ui-gallery/src` and `bash scripts/checks/comment-style.sh --all`.
+   - The guards: `bash scripts/checks/mod-order.sh`,
+     `bash scripts/release/changelog.sh --check`,
+     `bash scripts/checks/leptos-rules.sh`, `bash scripts/checks/stray-literals.sh crates/ferrohealth-ui/src app/ferrohealth-ui-gallery/src` and `bash scripts/checks/comment-style.sh --all`.
 10. **Look at it.** Never run the full screenshot capture. Capture only the
     pages you touched, over the release site bundle from
     `scripts/release/gallery-site.sh --release`:
     `scripts/chrome-lock.sh env FERROUI_SCREENSHOTS=1 FERROUI_SCREENSHOT_PAGES=<page,...> cargo nextest run --locked -p ferrohealth-ui-gallery -E 'test(every_page_is_captured)'`.
     Look at every image that changed, in every brand, light and dark, at
     1440 and 390 px; the `gallery-screenshots` artifact of CI holds the
-    whole capture. Refresh the `docs/qa/` pair (§11).
+    whole capture. Then restore `docs/screenshots/` (`git checkout
+    origin/main -- docs/screenshots`, and delete any image you added): a
+    feature pull request commits no screenshot, the coordinator's refresh
+    pull request does (`.claude/rules/parallel-prs.md`). Name each new state
+    in the pull request body. Refresh the `docs/qa/` pair (§11).
 11. **Check the bundle.** Run `bash scripts/checks/gallery-bundle.sh` after
     the release build. A rise past the budget is its own pull request with
     the measured size (§12).
 12. **Review and record.**
     - Run `/leptos-check` over the diff and fix what it finds.
-    - Add the `[Unreleased]` entry to `CHANGELOG.md`, naming any API break
-      and what a console changes.
+    - Add the changelog fragment
+      `changelog.d/<issue>-<kebab-slug>.<section>.md` (one per section),
+      naming any API break and what a console changes. Never edit
+      `CHANGELOG.md` (`changelog.d/README.md`).
     - Open the pull request from the template with `Closes #<n>`, and arm
       auto-merge (`gh pr merge <n> --auto`).
