@@ -566,6 +566,12 @@ texts! {
     SidebarExpand = "sidebar-expand",
     /// The search box's button.
     Find = "find",
+    /// The accessible name of the search box's answer under it.
+    SearchAnswer = "search-answer",
+    /// The word between the alternative keys of one shortcut.
+    KeysOr = "keys-or",
+    /// The sentence under the legend's heading.
+    ShortcutsIntro = "shortcuts-intro",
     /// The accessible name of the breadcrumb trail.
     Breadcrumb = "breadcrumb",
     /// A definition whose value is absent.

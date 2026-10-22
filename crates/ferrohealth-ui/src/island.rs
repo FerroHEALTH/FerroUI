@@ -275,3 +275,22 @@ pub fn ChartLegend(
 ) -> impl IntoView {
     crate::widget::chart::legend(plot, label, entries, gap)
 }
+}
+
+
+/// The top bar's search box `search`, its answer under it, the server's
+/// children, open when `open`, Enter following the hit `selected`. A
+/// console draws it through [`crate::view::search::search_box`].
+#[island]
+pub fn Search(
+    /// What the search box holds, its words in the page's locale.
+    search: crate::view::search::SearchBox,
+    /// The id of the hit Enter follows, the answer's first.
+    selected: Option<String>,
+    /// Whether the answer is open.
+    open: bool,
+    /// The answer, drawn on the server.
+    children: Children,
+) -> impl IntoView {
+    crate::widget::search::search_control(search, selected, open, children().into_any())
+}

@@ -192,6 +192,26 @@ messages! {
     FileTemplatePath = "file-template-path",
     /// `Search the mapping files`
     SearchMappingFiles = "search-mapping-files",
+    /// `All results in Tables`
+    SearchAllResults = "search-all-results",
+    /// `Browse every file`
+    SearchBrowse = "search-browse",
+    /// `{ $kind } · { $lines } lines`
+    SearchFileLine = "search-file-line",
+    /// `Names that start with “{ $query }”`
+    SearchFoundHead = "search-found-head",
+    /// `Search waits while the index is rebuilding`
+    SearchIndexRebuilding = "search-index-rebuilding",
+    /// `Mapping files`
+    SearchKindFiles = "search-kind-files",
+    /// `Templates`
+    SearchKindTemplates = "search-kind-templates",
+    /// `No file found for “{ $query }”`
+    SearchNoFile = "search-no-file",
+    /// `Check the spelling, or browse every file in Tables.`
+    SearchNoFileLine = "search-no-file-line",
+    /// `Operational template`
+    SearchTemplateLine = "search-template-line",
     /// `Brand`
     Brand = "brand",
     /// `TERM`
@@ -360,6 +380,36 @@ messages! {
     SaveSettings = "save-settings",
     /// `A long form`
     LongForm = "long-form",
+    /// `Discard`
+    DockDiscard = "dock-discard",
+    /// `2 changes in this draft`
+    DockDraftChanges = "dock-draft-changes",
+    /// `Give a reason to save.`
+    DockGiveReason = "dock-give-reason",
+    /// `Your changes`
+    DockLabel = "dock-label",
+    /// `Open the current settings`
+    DockOpenCurrent = "dock-open-current",
+    /// `Path`
+    DockPath = "dock-path",
+    /// `Below fhirconnect/ or omocl/, ending in .yml.`
+    DockPathHelp = "dock-path-help",
+    /// `Reason`
+    DockReason = "dock-reason",
+    /// `One line, at most 200 characters`
+    DockReasonHelp = "dock-reason-help",
+    /// `Write why you change the settings: the reason goes into the audit trail with your name.`
+    DockReasonMissing = "dock-reason-missing",
+    /// `Why you change the settings`
+    DockReasonPlaceholder = "dock-reason-placeholder",
+    /// `Synthetic thresholds for the night shift`
+    DockReasonSample = "dock-reason-sample",
+    /// `Saved: the settings apply at once.`
+    DockSaved = "dock-saved",
+    /// `Saving`
+    DockSaving = "dock-saving",
+    /// `Someone saved first: Demo Steward changed these settings at 09:41 today, so your changes were not sent.`
+    DockStale = "dock-stale",
     /// `Client credentials`
     ClientCredentials = "client-credentials",
     /// `A token`
@@ -696,6 +746,22 @@ messages! {
     DialogsModalsSidePanelToasts = "dialogs-modals-side-panel-toasts",
     /// `Toasts`
     Toasts = "toasts",
+    /// `Keyboard shortcuts`
+    KeyboardShortcuts = "keyboard-shortcuts",
+    /// `Close a dialog, a menu or a panel`
+    ShortcutClose = "shortcut-close",
+    /// `Find a mapping file`
+    ShortcutFind = "shortcut-find",
+    /// `Open the search's first answer`
+    ShortcutOpenFirst = "shortcut-open-first",
+    /// `Show the keyboard shortcuts`
+    ShortcutShow = "shortcut-show",
+    /// `Press ? outside a field, or the button, to open the legend over this page; the line under it is the hint a listing shows at its foot.`
+    ShortcutsCardIntro = "shortcuts-card-intro",
+    /// `Everywhere`
+    ShortcutsEverywhere = "shortcuts-everywhere",
+    /// `The search`
+    ShortcutsSearch = "shortcuts-search",
     /// `Refusal`
     Refusal = "refusal",
     /// `The save was refused: 412.`
@@ -1625,8 +1691,8 @@ mod tests {
         let english = fluent_templates::langid!("en");
         // Every placeable a message names, so each formats whole.
         let args: HashMap<Cow<'static, str>, FluentValue<'static>> = [
-            "bytes", "count", "format", "index", "kept", "line", "lines", "member", "mode", "name",
-            "place", "row", "total", "value", "version",
+            "bytes", "count", "format", "index", "kept", "kind", "line", "lines", "member", "mode",
+            "name", "place", "query", "row", "total", "value", "version",
         ]
         .into_iter()
         .map(|name| (Cow::Borrowed(name), FluentValue::from(3)))

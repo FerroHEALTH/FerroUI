@@ -113,30 +113,30 @@ def page_dashboard_namespace_failed():
 def results_list(kind):
     if kind == "none":
         body = (
-            f'<div class="mk-results-empty">{icon("search-x", "16")}<div><strong>Nothing in the CDR has this id</strong>'
+            f'<div class="fui-search-results-empty">{icon("search-x", "16")}<div><strong>Nothing in the CDR has this id</strong>'
             '<span>The search reads EHR ids and subject ids, composition uids, template and stored query ids or names, and party ids.</span></div></div>'
-            f'<a href="find.html" class="mk-results-more">Other ways to read this id{icon("arrow-right", "14")}</a>'
+            f'<a href="find.html" class="fui-search-results-more">Other ways to read this id{icon("arrow-right", "14")}</a>'
         )
-        return f'<div id="find-results" class="mk-results" role="region" aria-label="Search answer">{body}</div>'
+        return f'<div id="find-results" class="fui-search-results" role="region" aria-label="Search answer">{body}</div>'
     groups = [
         ("Templates", [("Vital signs encounter.v1", "ADL 1.4 · 1,284 compositions", "template.html", True, "file-code")]),
         ("Stored queries", [("recent_vitals", "Unqualified · version 1.0.0", "stored-query.html", False, "scroll-text")]),
         ("Compositions", [("Vital signs", "today 07:50 · EHR 0199c2a4…1a01", "composition.html", False, "file-text")]),
     ]
-    body = '<p class="mk-results-head">3 matches for “vital”</p>'
+    body = '<p class="fui-search-results-head">3 matches for “vital”</p>'
     for g, items in groups:
-        body += f'<p class="mk-results-group">{g}</p><ul role="listbox" aria-label="{g}">' + "".join(
-            f'<li role="option"{" aria-selected=\"true\"" if sel else ""}><a href="{href}">{icon(gl, "14")}<span class="mk-results-name">{e(n)}</span>'
+        body += f'<p class="fui-search-results-group">{g}</p><ul role="listbox" aria-label="{g}">' + "".join(
+            f'<li role="option"{" aria-selected=\"true\"" if sel else ""}><a href="{href}">{icon(gl, "14")}<span class="fui-search-results-name">{e(n)}</span>'
             f'<span class="fui-small fui-muted">{e(line)}</span></a></li>' for n, line, href, sel, gl in items) + "</ul>"
-    return f'<div id="find-results" class="mk-results" role="region" aria-label="Search answer">{body}</div>'
+    return f'<div id="find-results" class="fui-search-results" role="region" aria-label="Search answer">{body}</div>'
 
 
 def subject_results():
-    body = ('<p class="mk-results-head">1 EHR for that subject id</p><p class="mk-results-group">EHRs</p><ul role="listbox" aria-label="EHRs">'
-            f'<li role="option" aria-selected="true"><a href="ehr.html">{icon("database", "14")}<span class="mk-results-name">EHR 0199c2a4…1a01</span>'
+    body = ('<p class="fui-search-results-head">1 EHR for that subject id</p><p class="fui-search-results-group">EHRs</p><ul role="listbox" aria-label="EHRs">'
+            f'<li role="option" aria-selected="true"><a href="ehr.html">{icon("database", "14")}<span class="fui-search-results-name">EHR 0199c2a4…1a01</span>'
             f'<span class="fui-small fui-muted">Subject {masked("537", static=True)} · 8 compositions</span></a></li></ul>'
-            f'<a href="ehrs-found.html" class="mk-results-more">Show it in EHRs{icon("arrow-right", "14")}</a>')
-    return f'<div id="find-results" class="mk-results" role="region" aria-label="Search answer">{body}</div>'
+            f'<a href="ehrs-found.html" class="fui-search-results-more">Show it in EHRs{icon("arrow-right", "14")}</a>')
+    return f'<div id="find-results" class="fui-search-results" role="region" aria-label="Search answer">{body}</div>'
 
 
 def page_topbar_subject():

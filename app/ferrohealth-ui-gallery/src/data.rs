@@ -307,3 +307,19 @@ pub const OPERATOR_SCOPE: &str = "__example.operator";
 
 /// The id of the location the detail template shows.
 pub const LOCATION_ID: &str = "loc-n";
+
+/// What the top bar's search was given in each of its states the gallery
+/// shows: while it runs, for an answer, and for none.
+pub const SEARCHED_BUSY: &str = "synthetic-007";
+
+/// The query the top bar's answer answers.
+pub const SEARCHED: &str = "synthetic-00";
+
+/// The query the top bar's search finds nothing for.
+pub const SEARCHED_NONE: &str = "zz-unknown";
+
+/// The operational template the top bar's answer finds, and its version.
+pub const TEMPLATE: (&str, &str) = ("synthetic-vital-signs", "v1.0.2");
+
+/// The path of a new mapping file the forms page's docked bar names.
+pub const NEW_PATH: &str = "fhirconnect/synthetic-night.context.yml";

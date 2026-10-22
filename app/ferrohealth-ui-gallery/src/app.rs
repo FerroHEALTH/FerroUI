@@ -18,7 +18,6 @@ use ferrohealth_ui::style::Brand;
 use ferrohealth_ui::table::model::Paging;
 use ferrohealth_ui::theme::{Density, Theme};
 use ferrohealth_ui::tone::Tone;
-use ferrohealth_ui::view::search::{SearchBox, search_box};
 use ferrohealth_ui::view::segmented::segmented_links;
 use ferrohealth_ui::view::shell::{Footer, Shell, TopBar, centred, lockup, mark, shell, topbar};
 use ferrohealth_ui::view::status::{Reach, StatusPill, banner, status_pill};
@@ -28,7 +27,7 @@ use ferrohealth_ui::widget::toast::RegionWords;
 use leptos::prelude::*;
 use leptos_meta::{Stylesheet, Title, provide_meta_context};
 use leptos_router::components::{Outlet, ParentRoute, Route, Router, Routes};
-use leptos_router::hooks::{use_location, use_params_map};
+use leptos_router::hooks::{use_location, use_params_map, use_query_map};
 use leptos_router::path;
 
 use crate::locale::gallery_locale;
@@ -644,18 +643,21 @@ pub const fn brand_glyph(brand: Brand) -> Glyph {
 fn BrandShell() -> impl IntoView {
     let params = use_params_map();
     let location = use_location();
+    let query = use_query_map();
     let at = Memo::new(move |_| {
         let brand = params.with(|params| params.get_str("brand").and_then(Brand::parse));
-        (brand, location.pathname.get())
+        let search = query.with(|query| query.get("search"));
+        (brand, location.pathname.get(), search)
     });
     move || match at.get() {
-        (Some(brand), back) => brand_shell(brand, back),
-        (None, _) => view! { <NotFound /> }.into_any(),
+        (Some(brand), back, search) => brand_shell(brand, back, search.as_deref()),
+        (None, _, _) => view! { <NotFound /> }.into_any(),
     }
 }
 
-/// The shell of `brand`'s pages, whose theme switch returns to `back`.
-fn brand_shell(brand: Brand, back: String) -> AnyView {
+/// The shell of `brand`'s pages, whose theme switch returns to `back`, its
+/// search in the state `search` names.
+fn brand_shell(brand: Brand, back: String, search: Option<&str>) -> AnyView {
     let lockup = lockup(
         "/",
         mark(brand_glyph(brand)),
@@ -694,7 +696,7 @@ fn brand_shell(brand: Brand, back: String) -> AnyView {
             back,
         },
         choices: Some(choices),
-        shortcuts: Some(format!("/{}/forms", brand.key())),
+        shortcuts: Some(format!("/{}/overlays", brand.key())),
         sign_out: Some(format!("{SIGN_OUT_ROUTE}/{}", brand.key())),
     });
     let pill = status_pill(StatusPill {
@@ -711,15 +713,7 @@ fn brand_shell(brand: Brand, back: String) -> AnyView {
         {menu}
     }
     .into_any();
-    let search = search_box(SearchBox {
-        id: "gallery-search",
-        name: "q",
-        label: tr(Msg::SearchMappingFiles).into(),
-        placeholder: tr(Msg::FileTemplatePath).into(),
-        action: format!("/{}/tables", brand.key()),
-        value: String::new(),
-    })
-    .into_any();
+    let search = crate::search::gallery_search(brand, search);
     let page = shell(Shell {
         topbar: topbar(TopBar {
             sidebar: SIDEBAR_ID,

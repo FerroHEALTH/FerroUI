@@ -210,7 +210,15 @@ async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error
             assert!(!shown.is_empty(), "the document pane shows its document");
             document_views(browser).await?;
         }
-        "/overlays" => more_opens(browser).await?,
+        "/overlays" => {
+            more_opens(browser).await?;
+            let opener = browser.element(By::Id("open-shortcuts")).await?;
+            assert!(
+                !opener.is_displayed().await?,
+                "the legend's opener, which needs its script, waits hidden"
+            );
+            browser.element(By::Css(".fui-shortcut-hint kbd")).await?;
+        }
         "/charts" => colour_key(browser).await?,
         "/layouts" => {
             let items = browser
@@ -405,6 +413,41 @@ async fn links_lead_on_with_the_webassembly_withheld() -> Result<(), Box<dyn Err
     .await
 }
 
+/// Follows a hit of the search's answer and saves through the docked bar,
+/// both drawn by the server.
+async fn answer_and_dock(browser: &Browser, gallery: &Gallery) -> Result<(), Box<dyn Error>> {
+    // The search's answer is drawn by the server and its hits are links.
+    browser
+        .goto(&gallery.url("/ferrofed/forms?search=hits"))
+        .await?;
+    browser
+        .element(By::Id("gallery-search-hit-1"))
+        .await?
+        .click()
+        .await?;
+    browser
+        .at(&gallery.url("/ferrofed/tables?q=synthetic-001.model.yml"))
+        .await?;
+    // The docked bar's decisions submit the form they name.
+    browser
+        .goto(&gallery.url("/ferrofed/forms?dock=missing"))
+        .await?;
+    browser
+        .element(By::Id("dock-reason"))
+        .await?
+        .send_keys("Synthetic night thresholds")
+        .await?;
+    browser
+        .element(By::Css("button[value='save']"))
+        .await?
+        .click()
+        .await?;
+    browser
+        .text("p", "Saved: the settings apply at once.")
+        .await?;
+    Ok(())
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn forms_post_and_submit_with_the_webassembly_withheld() -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
@@ -429,6 +472,7 @@ async fn forms_post_and_submit_with_the_webassembly_withheld() -> Result<(), Box
         browser
             .at(&gallery.url("/ferrofed/tables?q=synthetic-007"))
             .await?;
+        answer_and_dock(browser, &gallery).await?;
         // The user menu opens as a popover, its theme posts, and the page
         // comes back in the choice; so does the density switch.
         browser.goto(&gallery.url("/ferrofed")).await?;

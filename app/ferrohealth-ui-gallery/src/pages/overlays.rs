@@ -15,6 +15,7 @@ use ferrohealth_ui::view::action::{ActionGroup, action_group};
 use ferrohealth_ui::view::button::{Variant, label};
 use ferrohealth_ui::view::dialog::{Confirmation, confirm_dialog, danger_dialog};
 use ferrohealth_ui::view::form::{INPUT, field};
+use ferrohealth_ui::view::kbd::{Shortcut, ShortcutGroup, kbd, shortcut_hint};
 use ferrohealth_ui::view::layout::divided_list;
 use ferrohealth_ui::view::popover::{PopoverForm, popover_form};
 use ferrohealth_ui::view::surface::{
@@ -25,6 +26,7 @@ use ferrohealth_ui::widget::action_menu::{
     Act, Action, Choice, Item, Listbox, Menu, Pick, listbox, row_menu,
 };
 use ferrohealth_ui::widget::dialog::{Modal, ModalWords, Width, modal_dialog};
+use ferrohealth_ui::widget::shortcuts::{LegendWords, shortcut_legend};
 use ferrohealth_ui::widget::side_panel::{
     SidePanel, SidePanelWords, side_panel, side_panel_trigger,
 };
@@ -578,6 +580,111 @@ fn popover() -> AnyView {
     .into_any()
 }
 
+/// The page's shortcuts, as the legend lists them: the ones the gallery
+/// binds, and a group of one.
+fn shortcut_groups() -> Vec<ShortcutGroup> {
+    let shortcut = |keys: &str, does: Msg| Shortcut {
+        keys: String::from(keys),
+        does: tr(does),
+    };
+    vec![
+        ShortcutGroup {
+            title: tr(Msg::ShortcutsEverywhere),
+            shortcuts: vec![
+                shortcut("/", Msg::ShortcutFind),
+                shortcut("?", Msg::ShortcutShow),
+                shortcut("Esc", Msg::ShortcutClose),
+            ],
+        },
+        ShortcutGroup {
+            title: tr(Msg::ShortcutsSearch),
+            shortcuts: vec![shortcut("Enter", Msg::ShortcutOpenFirst)],
+        },
+    ]
+}
+
+/// The keyboard shortcut legend, opened by the island
+/// [`crate::islands::ShortcutLegend`], and the hint a listing shows at its
+/// foot.
+fn shortcuts() -> AnyView {
+    let hint = [
+        Shortcut {
+            keys: String::from("/"),
+            does: tr(Msg::ShortcutFind),
+        },
+        Shortcut {
+            keys: String::from("?"),
+            does: tr(Msg::ShortcutShow),
+        },
+    ];
+    card(
+        tr(Msg::KeyboardShortcuts),
+        view! {
+            <p class="fui-muted">{tr(Msg::ShortcutsCardIntro)}</p>
+            <crate::islands::ShortcutLegend
+                groups=shortcut_groups()
+                words=LegendWords::of_page()
+                opener=tr(Msg::KeyboardShortcuts)
+            />
+            {shortcut_hint(&hint)}
+        },
+    )
+    .into_any()
+}
+
+/// The legend of `groups` in the words `words`, and the button `opener`
+/// that opens it: the gallery's own listener opens it on `?` outside a
+/// field, never in the phone layout, as a console's does. The button shows
+/// once the page has hydrated and from 40 rem up.
+pub(crate) fn shortcut_legend_with(
+    groups: Vec<ShortcutGroup>,
+    words: LegendWords,
+    opener: String,
+) -> AnyView {
+    let open = RwSignal::new(false);
+    let hydrated = RwSignal::new(false);
+    Effect::new(move |_| hydrated.set(true));
+    Effect::new(move |_| listen_for_legend(open));
+    view! {
+        <button
+            type="button"
+            id="open-shortcuts"
+            class="fui-button fui-button-secondary fui-wide-only"
+            aria-keyshortcuts="?"
+            hidden=move || !hydrated.get()
+            on:click=move |_| open.set(true)
+        >
+            {opener}
+            {kbd("?")}
+        </button>
+        {shortcut_legend(groups, words, open.into(), Callback::new(move |()| open.set(false)))}
+    }
+    .into_any()
+}
+
+/// Opens the legend `open` on `?` pressed outside a field, unless the page
+/// is in its phone layout or another listener took the key.
+fn listen_for_legend(open: RwSignal<bool>) {
+    #[cfg(target_arch = "wasm32")]
+    {
+        let keys = window_event_listener(leptos::ev::keydown, move |event| {
+            if event.default_prevented()
+                || event.key() != "?"
+                || ferrohealth_ui::widget::shortcuts::chorded(&event)
+                || ferrohealth_ui::widget::shortcuts::typing(&event)
+                || ferrohealth_ui::widget::shortcuts::phone_layout()
+            {
+                return;
+            }
+            event.prevent_default();
+            open.set(true);
+        });
+        on_cleanup(move || keys.remove());
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    let _: RwSignal<bool> = open;
+}
+
 /// Closes the popover `id`.
 fn hide(id: &str) {
     #[cfg(target_arch = "wasm32")]
@@ -609,7 +716,14 @@ pub fn OverlaysPage() -> impl IntoView {
         overlays_actions(),
     )
     .into_any();
-    let sections = (confirmations(), modals(), panel(), toasts(), popover());
+    let sections = (
+        confirmations(),
+        modals(),
+        panel(),
+        toasts(),
+        popover(),
+        shortcuts(),
+    );
     let shapes = (action_groups(), menus());
     view! {
         {super::title(tr(Msg::OverlaysFeedback))}
@@ -628,6 +742,7 @@ pub fn OverlaysPage() -> impl IntoView {
                 {sections.3}
                 {sections.4}
             })}
+            {sections.5}
         })}
     }
 }

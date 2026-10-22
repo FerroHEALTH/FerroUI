@@ -24,6 +24,9 @@ keyboard-shortcuts = Keyboard shortcuts
 sidebar-collapse = Collapse
 sidebar-expand = Expand
 find = Find
+search-answer = Search answer
+keys-or = or
+shortcuts-intro = A shortcut acts only when no field has the focus. Every shortcut has a control on the screen that does the same.
 breadcrumb = Breadcrumb
 none-value = none
 

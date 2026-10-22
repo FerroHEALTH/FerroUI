@@ -73,7 +73,7 @@ PROBE = r"""
   }
   // Text that sits on other text: leaf elements with their own words whose
   // boxes intersect, outside dialogs, menus and popovers drawn over a page.
-  const overlay = (el) => el.closest('.mk-open, .fui-menu, .fui-popover, .fui-side-panel, .fui-toasts, .mk-results, .fui-tooltip, .mk-scrim, .fui-sidebar.mk-drawer-open, .fui-dock, .fui-datepicker, .fui-listbox');
+  const overlay = (el) => el.closest('.mk-open, .fui-menu, .fui-popover, .fui-side-panel, .fui-toasts, .fui-search-results, .fui-tooltip, .mk-scrim, .fui-sidebar.mk-drawer-open, .fui-dock, .fui-datepicker, .fui-listbox');
   const leaves = [];
   for (const el of document.querySelectorAll('body *')) {
     if (overlay(el)) continue;

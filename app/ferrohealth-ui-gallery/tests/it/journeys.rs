@@ -1328,7 +1328,7 @@ async fn cards_in_a_start_grid_keep_their_own_heights() -> Result<(), Box<dyn Er
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn tabbing_through_a_long_form_never_leaves_the_focus_under_the_action_bar()
+async fn tabbing_through_a_long_form_never_leaves_the_focus_under_the_dock()
 -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
         return Ok(());
@@ -1336,7 +1336,7 @@ async fn tabbing_through_a_long_form_never_leaves_the_focus_under_the_action_bar
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
         window(browser, 1440, 700).await?;
-        browser.goto(&gallery.url("/ferroehr/forms")).await?;
+        browser.goto(&gallery.url("/ferroehr/forms?dock=idle")).await?;
         let first = browser.element(By::Id("long-field-1")).await?;
         browser
             .driver()
@@ -1355,17 +1355,17 @@ async fn tabbing_through_a_long_form_never_leaves_the_focus_under_the_action_bar
             let (id, bottom, bar): (String, f64, f64) = measure(
                 browser,
                 r"const focused = document.activeElement;
-                const bar = document.querySelector('#long-form .fui-action-bar').getBoundingClientRect();
+                const bar = document.querySelector('.fui-dock').getBoundingClientRect();
                 return [focused.id, focused.getBoundingClientRect().bottom, bar.top];",
             )
             .await?;
             assert_eq!(format!("long-field-{step}"), id, "the focus left the form");
             assert!(
                 bottom <= bar + 0.5,
-                "{id} ends at {bottom}, under the action bar from {bar}"
+                "{id} ends at {bottom}, under the dock from {bar}"
             );
         }
-        browser.console_clean("the action bar").await
+        browser.console_clean("the dock").await
     })
     .await
 }
