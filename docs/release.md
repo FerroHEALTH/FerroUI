@@ -23,11 +23,14 @@ is the signed tag `vX.Y.Z` on the merge commit of the release pull request on
      -E 'test(every_page_is_captured) | test(every_state_is_captured)'
    FERROUI_SCREENSHOT_GUARD=1 cargo nextest run --locked -p ferrohealth-ui-gallery \
      -E 'test(every_shot_has_its_light_and_dark_image)'
+   python3 scripts/release/hero.py
    ```
 
    Commit the whole `docs/screenshots/` tree, the images a removed page or
-   state left behind deleted. CI runs the screenshot guard on that branch.
-   Look at every image that changed, in every brand, light and dark.
+   state left behind deleted, and the README's hero, `docs/hero.png` and
+   `docs/hero-dark.png`, which `hero.py` composes from the new images. CI
+   runs the screenshot guard on that branch. Look at every image that
+   changed, in every brand, light and dark.
 
 ## The release pull request
 
