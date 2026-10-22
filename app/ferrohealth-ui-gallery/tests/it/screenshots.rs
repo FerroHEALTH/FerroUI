@@ -10,8 +10,14 @@
 //! and writes each as `<page>.png` and `<page>-dark.png`, the narrow ones
 //! `<page>-narrow.png` and `<page>-narrow-dark.png`, under [`IMAGES`]. Without the
 //! gate the capture returns at once. [`PAGES_FILTER`] limits it to the pages
-//! a change touches. The guard runs in the ordinary suite:
-//! every shot has both images, and every image is a shot's.
+//! a change touches.
+//!
+//! The guard, every shot and state has both images and every image is a
+//! shot's or a state's, runs behind `FERROUI_SCREENSHOT_GUARD=1`: in CI on the
+//! refresh pull request (branch `chore/screenshots`), on a release pull
+//! request and on a manual run. A feature pull request commits no image
+//! (`scripts/checks/screenshot-paths.sh`), so between refreshes the committed
+//! set may lack a state a merged change added.
 
 use std::collections::BTreeSet;
 use std::error::Error;
@@ -34,6 +40,9 @@ const SCREENSHOTS_GATE: &str = "FERROUI_SCREENSHOTS";
 /// of an image's name (`tables` takes the tables page of every brand). The
 /// whole capture runs when it is unset.
 const PAGES_FILTER: &str = "FERROUI_SCREENSHOT_PAGES";
+
+/// The environment variable that opts in to the screenshot guard.
+const GUARD_GATE: &str = "FERROUI_SCREENSHOT_GUARD";
 
 /// The environment variable that opts in to the pseudo-locale capture,
 /// which checks the layout of longer words once and is never committed.
@@ -308,6 +317,9 @@ fn the_page_filter_takes_the_named_pages_of_every_brand_alone() {
 
 #[test]
 fn every_shot_has_its_light_and_dark_image_and_no_other_image_is_kept() {
+    if !std::env::var(GUARD_GATE).is_ok_and(|value| value == "1") {
+        return;
+    }
     let mut expected = BTreeSet::new();
     for shot in shots() {
         for (theme, (_, suffix)) in ["light", "dark"]
@@ -324,7 +336,7 @@ fn every_shot_has_its_light_and_dark_image_and_no_other_image_is_kept() {
         }
     }
     for brand in Brand::ALL {
-        for state in crate::states::STATES {
+        for state in crate::states::all() {
             for theme in ["light", "dark"] {
                 let image = file(&format!("states/{}/{state}", brand.key()), theme);
                 assert!(

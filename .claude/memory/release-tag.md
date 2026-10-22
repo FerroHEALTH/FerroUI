@@ -8,8 +8,9 @@ metadata:
 <!-- SPDX-FileCopyrightText: Cadasto B.V. -->
 <!-- SPDX-License-Identifier: BUSL-1.1 -->
 
-The release pull request bumps the workspace version, the changelog section
-and the lock. After it merges, the tag `vX.Y.Z` is created signed
+The release pull request (`release/vX.Y.Z`, after the screenshot refresh
+on `chore/screenshots`) bumps the workspace version and the lock and
+assembles the changelog section from the fragments (`docs/release.md`). After it merges, the tag `vX.Y.Z` is created signed
 (`git tag -s`) on that merge commit and pushed; `release.yml` builds the
 draft, attests the `.crate`, publishes the release, and its `crates` leg
 pauses on the `crates-io` environment until the owner approves. `plan`

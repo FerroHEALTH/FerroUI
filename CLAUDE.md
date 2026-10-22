@@ -76,7 +76,10 @@ the workspace pins decides.
   islands hydrated, its halves chosen by target (never by Cargo feature),
   with its browser journeys (the no-WebAssembly journey among them) and
   screenshots under `tests/it/` (`FERROUI_JOURNEYS=1`,
-  `FERROUI_SCREENSHOTS=1`) and the images under `docs/screenshots/`.
+  `FERROUI_SCREENSHOTS=1`), its states one file per area under
+  `tests/it/states/`, its words one file per area under `src/locale/` and
+  `locales/en/`, and the images under `docs/screenshots/`, which only the
+  refresh pull request commits.
 - `design/`: the approved console design and the source of truth for
   0.3.0 (`design/README.md`): `COMPONENTS.md` (the family rules, the
   templates and every component spec), the `mk-` capture scaffolding, the five
@@ -87,9 +90,13 @@ the workspace pins decides.
   from the design folders). Renders go to the ignored `design/out/`.
 - `scripts/`: `fast.sh` (the local gate), `chrome-lock.sh` (the
   machine-wide lock the browser steps hold), `vendor/lucide.sh`, `release/`
-  (journey tools, the gallery site build, the crate publish), `checks/` (the
-  committed guards, the Leptos rules check `leptos-rules.sh` and the change
-  classifier `affected.sh` among them), `gh/` (the tracker helpers).
+  (journey tools, the gallery site build, the crate publish, `changelog.sh`
+  that checks and assembles the fragments), `checks/` (the committed guards,
+  the Leptos rules check `leptos-rules.sh`, the change classifier
+  `affected.sh`, and the changelog, screenshot-path and module-order guards
+  among them), `gh/` (the tracker helpers).
+- `changelog.d/`: the changelog fragments, one file per entry, assembled
+  into `CHANGELOG.md` by the release pull request (`docs/release.md`).
 - `.github/`: CI with a single required `conclusion` job, CodeQL, Scorecard,
   Dependabot, the release lane with crates.io Trusted Publishing.
 - `.claude/`: the working discipline (rules, agents, skills, hooks, memory).
@@ -125,8 +132,13 @@ the workspace pins decides.
   Never run the full screenshot capture locally; capture the pages you
   touched with `FERROUI_SCREENSHOT_PAGES`.
 - **Never weaken, skip, or delete a test** (`.claude/rules/testing.md`).
-- **Keep the changelog** (`CHANGELOG.md`, Keep a Changelog 1.1.0).
-- **Look at every gallery screenshot** a change refreshes before it merges.
+- **Keep the changelog** (`CHANGELOG.md`, Keep a Changelog 1.1.0) through a
+  fragment under `changelog.d/`; never edit its `[Unreleased]` section.
+- **Parallel pull requests share no lines** (`.claude/rules/parallel-prs.md`):
+  changelog fragments, gallery states and words in their area's own files,
+  no screenshots in a feature pull request (the `chore/screenshots` refresh
+  commits them, before every release), and every `mod` list alphabetical.
+- **Look at every gallery screenshot** a change moves before it merges.
 
 ## Licence
 
@@ -141,6 +153,7 @@ ISC License, recorded beside them.
 - Rules: `writing-style`, `rust-style`, `reliability`, `comments`, `testing`,
   `ci-cd`, `crates-publishing`, `issue-workflow`, `issue-relationships`,
   `project-board`, `vendored-inputs`, `leptos-ui` (the component rule
-  set), and `console-design` (the design library and the family rules).
+  set), `console-design` (the design library and the family rules), and
+  `parallel-prs` (no shared lines between open pull requests).
 - Agents: `implementer`, `spec-researcher`. Skills: `next-task`,
   `phase-done`, `phase-status`, `new-component`, `leptos-check`.

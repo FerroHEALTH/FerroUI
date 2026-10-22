@@ -176,6 +176,55 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: bash scripts/checks/todo-issues.sh
 
+  # The guards that keep parallel pull requests off each other's lines (no
+  # specification governs them: our own design): every changelog fragment is
+  # well formed and every module list is alphabetical. On a pull request, the
+  # change adds a fragment and leaves [Unreleased] alone (`no-changelog`
+  # waives the fragment), and commits no screenshot unless it is the refresh
+  # pull request. Labels are read when the job runs, so re-running it after
+  # adding one is enough.
+  guards:
+    name: guards
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: The guards prove themselves over stub repositories
+        run: |
+          set -euo pipefail
+          bash scripts/release/changelog.sh --self-test
+          bash scripts/checks/changelog-guard.sh --self-test
+          bash scripts/checks/screenshot-paths.sh --self-test
+          bash scripts/checks/mod-order.sh --self-test
+      - run: bash scripts/release/changelog.sh --check
+      - run: bash scripts/checks/mod-order.sh
+      - name: The pull request adds a fragment and commits no screenshot
+        if: github.event_name == 'pull_request' && github.event.pull_request.user.type != 'Bot'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          labels="$(gh pr view "$PR" --json labels --jq '.labels[].name')"
+          flag=()
+          if grep -qx 'no-changelog' <<<"$labels"; then flag=(--no-changelog); fi
+          bash scripts/checks/changelog-guard.sh "${flag[@]}" "$BASE" "$HEAD"
+          if [ "$HEAD_REF" = "chore/screenshots" ] || grep -qx 'screenshots' <<<"$labels"; then
+            echo "the refresh pull request: the screenshot guard runs in the test job"
+          else
+            bash scripts/checks/screenshot-paths.sh "$BASE" "$HEAD"
+          fi
+
   # A person's pull request records acceptance of the contribution licensing
   # terms (CONTRIBUTING.md § Licensing of contributions) through the
   # template's checkbox. Bots are skipped: a bot cannot accept terms.
@@ -324,6 +373,18 @@ jobs:
           tool: cargo-nextest
       - run: cargo nextest run --workspace --locked
       - run: cargo test --doc --workspace --locked
+      # Every page and state has both images, and no other image is kept:
+      # on the refresh pull request, a release pull request and a manual run,
+      # since a feature pull request commits no screenshot.
+      - name: The screenshot set is whole
+        if: >-
+          github.event_name == 'workflow_dispatch'
+          || github.head_ref == 'chore/screenshots'
+          || startsWith(github.head_ref, 'release/')
+          || contains(github.event.pull_request.labels.*.name, 'screenshots')
+        env:
+          FERROUI_SCREENSHOT_GUARD: "1"
+        run: cargo nextest run --locked -p ferrohealth-ui-gallery -E 'test(every_shot_has_its_light_and_dark_image)'
 
   doc:
     name: rustdoc
@@ -569,6 +630,7 @@ jobs:
       - leptos-rules
       - todo-issues
       - contribution-licence
+      - guards
       - detect
       - fmt
       - clippy

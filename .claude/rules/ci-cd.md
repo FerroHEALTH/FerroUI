@@ -36,6 +36,12 @@ Actions Security Cheat Sheet, SLSA v1.0, OpenSSF Scorecard, and Sigstore.
   SPDX lines (`scripts/checks/spdx.sh`). The contrast test runs inside
   nextest. The `conclusion` job is the single required status check on
   `main`: it passes when every job it needs passed or was skipped.
+  The `guards` job runs on every event: the changelog fragments well
+  formed (`scripts/release/changelog.sh --check`) and every module list
+  alphabetical (`scripts/checks/mod-order.sh`), and on a pull request the
+  changelog guard and the screenshot-path guard (`parallel-prs.md`), with
+  the labels read when it runs. The `test` job runs the screenshot guard on
+  the refresh pull request, a `release/` branch and a manual run.
 - **What a change reaches** is `scripts/checks/affected.sh`'s answer over
   the paths it touches, read by the `detect` job: a pull request's merge
   commit against its base, a merge group against the queue's base, and
@@ -84,7 +90,8 @@ repository neither needs nor configures one.
   OpenSSF API and to code scanning.
 - `.github/workflows/release.yml`: dormant until a `v*` tag is pushed. It
   validates the tag against the workspace version, takes the notes from the
-  matching `CHANGELOG.md` section, creates the release as a draft, calls
+  matching `CHANGELOG.md` section (assembled from the fragments by the
+  release pull request, `docs/release.md`), creates the release as a draft, calls
   `release-crate.yml` (a reusable workflow, so the signing identity stays out
   of reach of caller steps) to package the `.crate`, attest it and attach it,
   publishes the release, and then

@@ -1,0 +1,73 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+
+# The English words of the layouts page: one message per `Msg` of
+# `src/locale/layouts.rs`, in the order of their ids.
+
+add-step = Add a step
+another-synthetic-child = Another synthetic child
+canonical-value-set-list = The canonical of the value set to list.
+choose-value-set-server-holds = Choose a value set this server holds
+composed-two-synthetic-code-systems = Composed of two synthetic code systems.
+concepts = Concepts
+default = Default
+definition = Definition
+display-language = Display language
+dutch = Dutch
+english = English
+excludes-inactive-concepts = Excludes the inactive concepts.
+fieldset-under-title = A fieldset under a card's title
+find-concept = Find a concept
+finding-invented-gallery = A finding invented for the gallery.
+hierarchy = Hierarchy
+how-many-concepts-one-page = How many concepts one page lists, 1 to 1000.
+inactive-concept-listed-marked = An inactive concept is listed and marked.
+include-inactive-concepts = Include inactive concepts
+language-displays = The language of the displays.
+latency = Latency
+latency-per-operation = Latency per operation
+list = List
+list-value-set = List a value set
+lists-laid-out = Lists laid out by a layout class
+loose = Loose
+main-aside = Main and aside
+master-detail = Master and detail
+matches = Matches
+n-12-ms = 12 ms
+n-30-s = 30 s
+n-31-ms = 31 ms
+n-96-ms = 96 ms
+no-time-spent-0-percent = No time spent, 0 percent
+nodes = Nodes
+nodes-answered = The nodes that answered
+note-kept-beside-run = A note kept beside the run.
+page-size = Page size
+panel-sections = Panel sections
+panel-sections-intro = Each part of a panel is a section under its heading, a hairline between.
+parent = Parent
+rows-fields = Rows of fields
+second-line = A second line.
+section = Section
+spacing-steps = Spacing steps
+stacks = Stacks
+synthetic-body-site = Synthetic body site
+synthetic-child-read-opening = Synthetic child, read on opening
+synthetic-finding = Synthetic finding
+synthetic-finding-arm = Synthetic finding of the arm
+synthetic-finding-leg = Synthetic finding of the leg
+synthetic-hierarchy = Synthetic hierarchy
+synthetic-procedure = Synthetic procedure
+synthetic-signs = Synthetic signs
+synthetic-sites = Synthetic sites
+synthetic-units = Synthetic units
+system = System
+third-line = A third line.
+three-panes-tree = Three panes and the tree
+three-panes-tree-list-beside = Three panes and the tree, a list beside its item, a form beside its answer, rows of fields and stacks.
+tight = Tight
+timed-out = timed out
+up = Up
+use-first-value-set = Use the first value set
+value-set = Value set
+value-sets = Value sets
+why-you-run = Why you run it

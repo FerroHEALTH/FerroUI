@@ -120,7 +120,9 @@ Labels carry what the platform has no field for. Bootstrap them with
   project grows; keep the set small and meaningful.
 - **Workflow:** `security`, `dependencies` (Dependabot), `blocked-upstream`
   (waits on an upstream specification or tool release), and the pull-request
-  escape hatches `no-changelog` and `no-crate-bump`.
+  escape hatches `no-changelog` and `no-crate-bump`, and `screenshots`, which
+  marks a pull request that commits the gallery screenshots
+  (`parallel-prs.md`).
 - **Outbound:** `upstream-report` for a report of a defect, contradiction, or
   silence in a published specification. The issue IS the report: it opens with
   a plain summary, then what the specification says (with citations), what this

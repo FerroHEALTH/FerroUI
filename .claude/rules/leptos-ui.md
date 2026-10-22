@@ -234,8 +234,9 @@ carries meaning alone: it sits beside its word.
   `leptos/csr`); `cargo nextest run --workspace`.
 - The gallery's journeys (`FERROUI_JOURNEYS=1`) and screenshots
   (`FERROUI_SCREENSHOTS=1`); a new component joins a gallery page, a journey
-  where it is interactive, and the refreshed screenshots, which are looked at
-  before the change merges.
+  where it is interactive, and the screenshots, which are looked at before
+  the change merges and committed by the refresh pull request
+  (`parallel-prs.md`).
 
 ## 11. Quality control (owner rule, 2026-10-18)
 
@@ -248,17 +249,17 @@ The library is held to the best console's quality, not to "it renders".
   scale, radius and shadow set, hover and focus treatment, and role tokens,
   so a piece taken from one console never looks like another app's.
 - **Every interactive state is captured.** The gallery's state capture
-  (`tests/it/states.rs`) moves the pointer onto a navigation entry, a table
-  row, each button variant, a linked card and a tab; gives the focus to a
-  control, a navigation entry and the keyboard tabs; opens every overlay
-  (dialogs, the modal a signal opens, the side panel, both menus, the
-  drawer); raises the toasts; and drives the upload field through empty, a
-  file over it, a file read and a file refused; turns the help switch off and on,
-  opens the picker on its input, walks the tree by the keyboard, focuses the
-  search box, reveals a choice's fields and draws the tables in the compact
-  density, in every brand, light and dark, with reduced motion so each
-  state is drawn at rest. A new interactive component adds its states
-  there.
+  (`tests/it/states.rs`, one file per area under `tests/it/states/`) moves
+  the pointer onto a navigation entry, a table row, each button variant, a
+  linked card and a tab; gives the focus to a control, a navigation entry
+  and the keyboard tabs; opens every overlay (dialogs, the modal a signal
+  opens, the side panel, both menus, the drawer); raises the toasts; and
+  drives the upload field through empty, a file over it, a file read and a
+  file refused; turns the help switch off and on, opens the picker on its
+  input, walks the tree by the keyboard, focuses the search box, reveals a
+  choice's fields and draws the tables in the compact density, in every
+  brand, light and dark, with reduced motion so each state is drawn at rest.
+  A new interactive component adds its states to its area's file there.
 - **Side by side with the reference.** `docs/qa/` pairs the reference
   consoles' screenshots with the gallery's, screen by screen; a component that
   changes refreshes its pair.
