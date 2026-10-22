@@ -566,7 +566,7 @@ pub(crate) fn identifiers_body(
     let caption = words.get(Msg::RecordsIdentifiersOf);
     let label = caption.clone();
     view! {
-        <div class="fui-table-scroll fui-table-stack" role="region" aria-label=label tabindex="0" id="identifiers">
+        <div class="fui-table-scroll fui-table-stack" role="region" aria-label=label id="identifiers">
             <table class="fui-table">
                 <caption>{caption}</caption>
                 <thead>
