@@ -269,8 +269,8 @@ PRIVACY = "https://terminology.example.org/privacy"
 
 def sign_in_card(notice_html="", state=None, title="Sign in to edit"):
     retry = f'<a href="sign-in-redirecting.html" rel="external" class="fui-button fui-button-primary">{icon("refresh-cw", "16")}Try again</a>'
-    read_line = '<p class="fui-small mk-sign-in-line"><a href="dashboard-visitor.html">Read without signing in</a>: every screen is open to read.</p>'
-    foot = '<p class="fui-small fui-muted mk-sign-in-line">You sign in at your organisation\'s identity provider; the console never sees your password and the browser never holds a token.</p>'
+    read_line = '<p class="fui-small fui-sign-in-line"><a href="dashboard-visitor.html">Read without signing in</a>: every screen is open to read.</p>'
+    foot = '<p class="fui-small fui-muted fui-sign-in-line">You sign in at your organisation\'s identity provider; the console never sees your password and the browser never holds a token.</p>'
     if state == "redirecting":
         main = '<button type="button" class="fui-button fui-button-primary" aria-busy="true" disabled><span class="fui-spinner-ring" aria-hidden="true"></span>Taking you to idp.example.org…</button>' + read_line
     elif state == "unavailable":
@@ -282,8 +282,8 @@ def sign_in_card(notice_html="", state=None, title="Sign in to edit"):
     else:
         main = f'<a href="sign-in-redirecting.html" rel="external" class="fui-button fui-button-primary">{icon("log-in", "16")}Sign in at idp.example.org</a>' + read_line
     return (
-        f'<div class="fui-card fui-sign-in"><div class="fui-sign-in-lockup">{lockup()}</div>'
-        f'<h1 class="mk-sign-in-title">{title}</h1>'
+        f'<div class="fui-card fui-sign-in"><div class="fui-sign-in-lockup">{lockup(link=False)}</div>'
+        f'<h1 class="fui-sign-in-title">{title}</h1>'
         + notice_html + main + foot
         + f'<div class="fui-sign-in-links"><a href="{DOCS}" rel="external noopener">Documentation</a><a href="{PRIVACY}" rel="external noopener">Privacy notice</a></div></div>'
         '<p class="fui-sign-in-caption">The console of the FerroTERM terminology server. It holds no patient data.</p>'
@@ -291,7 +291,7 @@ def sign_in_card(notice_html="", state=None, title="Sign in to edit"):
 
 
 def sign_in_page(**kw):
-    return centred("Sign in", f'<div class="fui-stack mk-sign-in-stack">{sign_in_card(**kw)}</div>')
+    return centred("Sign in", f'<div class="fui-stack fui-sign-in-stack">{sign_in_card(**kw)}</div>')
 
 
 def n(tone, role, text):

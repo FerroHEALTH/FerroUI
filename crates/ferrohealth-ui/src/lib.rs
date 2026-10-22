@@ -10,8 +10,8 @@
 //! HTML. [`widget`] holds the interactive components, each where
 //! interaction needs browser code, as functions a page calls inside an
 //! island. [`island`] holds the widgets that need nothing from the console's
-//! code as ready islands: the toast region, the navigation drawer and the
-//! keyboard tabs. [`table`] is the one paging and
+//! code as ready islands: the toast region, the navigation drawer, the user
+//! menu and the keyboard tabs. [`table`] is the one paging and
 //! sorting model every listing shares, [`highlight`] the tokenizers of YAML,
 //! JSON, XML and AQL, [`icon`] the vendored Lucide outlines, [`tone`] and
 //! [`theme`] the status tones and the theme choice, [`i18n`] the locale and

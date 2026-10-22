@@ -24,19 +24,16 @@ use ferrohealth_ui::view::form::{
 };
 use ferrohealth_ui::view::refusal::{Issue, Refusal, Severity, refusal};
 use ferrohealth_ui::view::shell::{Footer, footer, lockup, mark};
-use ferrohealth_ui::view::sign_in::{Basic, Notice, Provider, SignIn, sign_in};
-use ferrohealth_ui::view::status::{badge, banner, pill, status};
 use ferrohealth_ui::view::surface::{
     Header, SectionHead, Stat, add_row, definitions, page_header, page_heading, panel_section,
     panel_sections, section_intro, source_split, stat_card,
 };
 use ferrohealth_ui::view::tabs::{Tab, link_tabs};
-use ferrohealth_ui::view::theme_switch::{theme_switch, theme_toggle};
+use ferrohealth_ui::view::theme_switch::theme_switch;
 use ferrohealth_ui::widget::chart::line_chart;
 use ferrohealth_ui::widget::document::DocumentView;
 use ferrohealth_ui::widget::editor::{Editor, code_editor};
 use ferrohealth_ui::widget::help::explained_check_field;
-use ferrohealth_ui::widget::nav::{Entry, Group, sidebar};
 use ferrohealth_ui::widget::pick_or_type::{PickOrType, Picker, pick_or_type};
 use ferrohealth_ui::widget::picker::{self, picker_field};
 use ferrohealth_ui::widget::tabs::tab_panels;
@@ -48,122 +45,18 @@ use crate::markup::{has, tags};
 
 /// The HTML `view` renders to, under a reactive owner as a server render
 /// runs.
-fn html(view: impl FnOnce() -> AnyView) -> String {
+pub(crate) fn html(view: impl FnOnce() -> AnyView) -> String {
     let owner = Owner::new();
     owner.with(|| view().to_html())
 }
 
 /// `view` rendered to HTML in a page tree with the server's shared
 /// context, as a page draws an island that takes children.
-fn page_html(view: impl FnOnce() -> AnyView) -> String {
+pub(crate) fn page_html(view: impl FnOnce() -> AnyView) -> String {
     let owner = Owner::new_root(Some(std::sync::Arc::new(
         hydration_context::SsrSharedContext::new(),
     )));
     owner.with(|| view().to_html())
-}
-
-/// A sign-in card with the methods `basic` and `provider`.
-fn card(basic: bool, provider: bool, refusal: Option<&str>) -> String {
-    html(|| {
-        sign_in(SignIn {
-            lockup: lockup("/", mark(Glyph::SERVER), "FerroBRIDGE", "Console").into_any(),
-            notices: vec![
-                Notice::new(Tone::Warn, "Your session ended. Sign in again to continue.")
-                    .id("session-expired"),
-                Notice::new(Tone::Accent, "A sandbox.\nUse synthetic / synthetic."),
-            ],
-            refusal: refusal.map(str::to_owned),
-            basic: basic.then(|| Basic {
-                action: "/login",
-                next: String::from("/files?x=\"<y>\""),
-            }),
-            provider: provider.then(|| Provider {
-                href: String::from("/auth/oidc/login"),
-                label: String::from("Sign in with OIDC"),
-            }),
-            links: vec![(
-                String::from("API reference"),
-                String::from("https://example.org/docs"),
-            )],
-        })
-        .into_any()
-    })
-}
-
-#[test]
-fn the_basic_sign_in_is_a_plain_post_form_a_password_manager_reads() {
-    let form = card(true, false, Some("Wrong username or password."));
-    assert!(form.contains(r#"method="post""#), "{form}");
-    assert!(form.contains(r#"action="/login""#), "{form}");
-    assert!(form.contains(r#"name="username""#), "{form}");
-    assert!(form.contains(r#"autocomplete="username""#), "{form}");
-    assert!(
-        form.contains(r#"autocomplete="current-password""#),
-        "{form}"
-    );
-    assert!(form.contains(r#"type="password""#), "{form}");
-    assert!(form.contains(r#"name="next""#), "{form}");
-    assert!(
-        form.contains("&lt;y&gt;"),
-        "the destination is escaped: {form}"
-    );
-    assert!(form.contains("Wrong username or password."), "{form}");
-    assert!(form.contains(r#"id="sign-in-refused""#), "{form}");
-    assert!(form.contains(r#"id="session-expired""#), "{form}");
-    assert!(form.contains("A sandbox."), "both notices show: {form}");
-    assert!(form.contains("API reference"), "{form}");
-    assert!(form.contains("Your session ended."), "{form}");
-    assert!(
-        !form.contains("rel=\"external\" class=\"fui-button"),
-        "no provider: {form}"
-    );
-    assert!(
-        !form.contains("fui-divider"),
-        "one method, no divider: {form}"
-    );
-}
-
-#[test]
-fn the_oauth_sign_in_is_one_external_link_and_both_methods_split_by_or() {
-    let button = card(false, true, None);
-    assert!(button.contains(r#"href="/auth/oidc/login""#), "{button}");
-    assert!(button.contains(r#"rel="external""#), "{button}");
-    assert!(
-        button.contains("fui-button-primary"),
-        "the one method stands out: {button}"
-    );
-    assert!(!button.contains("<form"), "{button}");
-    let both = card(true, true, None);
-    assert!(both.contains("fui-divider"), "{both}");
-    assert!(
-        both.contains("fui-button-secondary"),
-        "the provider steps back: {both}"
-    );
-    let none = card(false, false, None);
-    assert!(none.contains("No sign-in method is available"), "{none}");
-}
-
-#[test]
-fn a_status_is_a_word_as_well_as_a_tint() {
-    let marks = html(|| {
-        view! {
-            {pill(Tone::Ok, "Bridge UP")}
-            {badge(Tone::Bad, "down")}
-            {status(Tone::Info, Glyph::INFO, "Serving", Some(String::from("R4")))}
-            {banner(Tone::Warn, Glyph::TRIANGLE_ALERT, "Sandbox", "Holds no real patient data.")}
-        }
-        .into_any()
-    });
-    for word in [
-        "Bridge UP",
-        "down",
-        "Serving",
-        "R4",
-        "Sandbox",
-        "fui-tone-warn",
-    ] {
-        assert!(marks.contains(word), "{word}: {marks}");
-    }
 }
 
 #[test]
@@ -181,29 +74,6 @@ fn the_theme_switch_posts_and_marks_the_theme_in_force_by_more_than_colour() {
     assert!(
         switch.contains(Glyph::CHECK.markup()),
         "a check on the pressed one: {switch}"
-    );
-}
-
-#[test]
-fn the_theme_toggle_is_one_form_that_posts_the_other_theme() {
-    let toggle = html(|| theme_toggle(String::from("/theme"), String::from("/files")).into_any());
-    assert!(toggle.contains(r#"method="post""#), "{toggle}");
-    assert!(toggle.contains(r#"action="/theme""#), "{toggle}");
-    assert!(
-        has(&toggle, "input", &[("name", "back"), ("value", "/files")]),
-        "{toggle}"
-    );
-    assert!(
-        toggle.contains(r#"value="dark""#) && toggle.contains(r#"value="light""#),
-        "{toggle}"
-    );
-    assert!(
-        toggle.contains("Switch to the dark theme"),
-        "named, not a bare glyph: {toggle}"
-    );
-    assert!(
-        toggle.contains(Glyph::MOON.markup()) && toggle.contains(Glyph::SUN.markup()),
-        "{toggle}"
     );
 }
 
@@ -1199,47 +1069,6 @@ fn an_editor_carries_its_text_escaped_so_a_form_posts_it_with_no_webassembly() {
     assert!(
         page.contains(">a: &lt;/textarea&gt;&lt;b&gt;&amp;</textarea>"),
         "the text area holds its text, escaped: {page}"
-    );
-}
-
-#[test]
-fn the_navigation_is_plain_links_with_the_page_marked_inside_its_drawer_island() {
-    let page = page_html(|| {
-        sidebar(
-            "sidebar",
-            "Pages",
-            vec![Group {
-                id: "nav-pages",
-                title: "Pages".into(),
-                entries: vec![
-                    Entry {
-                        href: "/files",
-                        label: "Files".into(),
-                        glyph: Glyph::DATABASE,
-                        exact: false,
-                    },
-                    Entry {
-                        href: "/about",
-                        label: "About".into(),
-                        glyph: Glyph::INFO,
-                        exact: true,
-                    },
-                ],
-            }],
-            "/files/synthetic-007",
-        )
-    });
-    assert!(
-        page.contains("<leptos-island"),
-        "the drawer is an island: {page}"
-    );
-    assert!(
-        page.contains(r#"<a href="/files" aria-current="page" class="fui-nav-entry">"#),
-        "the section of the page is marked: {page}"
-    );
-    assert!(
-        page.contains(r#"<a href="/about" class="fui-nav-entry">"#),
-        "another page is a plain link, unmarked: {page}"
     );
 }
 

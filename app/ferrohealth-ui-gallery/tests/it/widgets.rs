@@ -464,7 +464,9 @@ async fn the_open_pager_steps_with_no_total() -> Result<(), Box<dyn Error>> {
                 .driver()
                 .find(By::Css(format!("{posted} [role='status']")))
                 .await?;
-            Ok(status.text().await? == "EHRs 1 to 25")
+            // NOTE: WebDriver, "stale element reference": a status the posted page
+            // replaced is gone, so the new page has not shown yet and the wait goes on.
+            Ok(status.text().await.is_ok_and(|text| text == "EHRs 1 to 25"))
         })
         .await?;
         let linked = browser

@@ -78,7 +78,7 @@ async fn every_page_of_every_brand_renders_with_its_theme_and_the_headers()
                 "{path} carries a style attribute"
             );
         }
-        for variant in ["basic", "provider", "both"] {
+        for variant in crate::journeys::SIGN_INS {
             let path = format!("/sign-in/{}/{variant}", brand.key());
             let (parts, body) = get(&path).await?;
             assert_eq!(StatusCode::OK, parts.status, "{path}");
@@ -123,6 +123,43 @@ async fn a_theme_choice_is_kept_in_a_cookie_and_returns_to_the_gallery_alone()
     assert!(
         body.contains(r#"data-theme="dark""#),
         "the page arrives in its theme"
+    );
+    Ok(())
+}
+
+/// A form post of `body` to `path`.
+fn form(path: &str, body: &'static str) -> Result<Request<Body>, Box<dyn Error>> {
+    Ok(Request::post(path)
+        .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+        .body(Body::from(body))?)
+}
+
+#[tokio::test]
+async fn the_sidebar_choice_is_kept_in_its_cookie_and_sign_out_leads_to_the_signed_out_card()
+-> Result<(), Box<dyn Error>> {
+    let (parts, _) = send(form("/sidebar", "sidebar=rail&back=%2Fferrofed%2Ftables")?).await?;
+    assert_eq!(StatusCode::SEE_OTHER, parts.status);
+    assert_eq!("/ferrofed/tables", parts.headers[header::LOCATION]);
+    let cookie = parts.headers[header::SET_COOKIE].to_str()?;
+    assert!(cookie.starts_with("gallery-sidebar=rail;"), "{cookie}");
+    let (parts, _) = send(form("/sidebar", "sidebar=wide&back=%2F")?).await?;
+    assert_eq!(StatusCode::BAD_REQUEST, parts.status);
+    let (parts, _) = send(form("/sign-out/ferroehr", "")?).await?;
+    assert_eq!(StatusCode::SEE_OTHER, parts.status);
+    assert_eq!(
+        "/sign-in/ferroehr/signed-out",
+        parts.headers[header::LOCATION]
+    );
+    let (parts, body) = send(
+        Request::get("/ferrofed/tables")
+            .header(header::COOKIE, "gallery-sidebar=rail")
+            .body(Body::empty())?,
+    )
+    .await?;
+    assert_eq!(StatusCode::OK, parts.status);
+    assert!(
+        body.contains("fui-sidebar fui-sidebar-rail"),
+        "the server draws the rail the cookie asks for"
     );
     Ok(())
 }

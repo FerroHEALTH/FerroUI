@@ -208,11 +208,12 @@ entry, and a new role joins the contrast test in the change that adds it.
   each the accent of its theme. Nothing else.
 - The theme is `data-theme` (`light`, `dark`, `system`) on `<html>`, written
   by the console's server from its cookie, so the first paint is right; with
-  no cookie it follows the system. Every top bar carries the one theme
-  toggle (`view::theme_switch::theme_toggle`), a moon in light and a sun in
-  dark, a plain form post the console answers with the page in the new
-  theme, kept in the same cookie; never browser storage. The three-way
-  choice belongs in a settings form.
+  no cookie it follows the system. The top bar carries no theme control
+  (family rule 5): the user menu (`widget::menu::user_menu`) holds the
+  three choices as `menuitemradio` submit buttons of one plain form, and
+  Your preferences holds the theme switch; the console answers the post
+  with the page in the new theme, kept in the same cookie, never browser
+  storage.
 - Six steps of type (`--text-display` to `--text-micro`), each written
   with its leading (`--leading-display` to `--leading-micro`), and four of
   space (`--space-tight` to `--space-section`), the compact density under

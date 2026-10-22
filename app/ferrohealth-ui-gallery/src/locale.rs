@@ -191,10 +191,6 @@ messages! {
     FileTemplatePath = "file-template-path",
     /// `Search the mapping files`
     SearchMappingFiles = "search-mapping-files",
-    /// `Signed in to the gallery`
-    SignedGallery = "signed-gallery",
-    /// `Library v0.1.7`
-    LibraryV017 = "library-v0-1-7",
     /// `Brand`
     Brand = "brand",
     /// `TERM`
@@ -211,8 +207,6 @@ messages! {
     SignInGroup = "sign-in-group",
     /// `Components`
     Components = "components",
-    /// `Both methods`
-    BothMethods = "both-methods",
     /// `Provider sign-in`
     ProviderSign = "provider-sign",
     /// `Basic sign-in`
@@ -1005,20 +999,10 @@ messages! {
     Structured = "structured",
     /// `FLAT`
     FlatUpper = "flat-upper",
-    /// `API reference`
-    ApiReference = "api-reference",
     /// `Documentation`
     Documentation = "documentation",
     /// `Console`
     Console = "console",
-    /// `Wrong username or password.`
-    WrongUsernamePassword = "wrong-username-password",
-    /// `Could not read the server's sign-in methods, so both are offered.`
-    CouldNotReadServerS = "could-not-read-server-s",
-    /// `Your session ended. Sign in again to continue.`
-    YourSessionEndedSignAgain = "your-session-ended-sign-again",
-    /// `Sign in with OIDC`
-    SignOidc = "sign-oidc",
     /// `One table and pager model: in the URL, or in the page for a screen that can show...`
     OneTablePagerModelUrl = "one-table-pager-model-url",
     /// `The staged configuration against the running one`
@@ -1141,8 +1125,6 @@ messages! {
     ShownAs = "shown-as",
     /// A refusal notice with its issues, a line each.
     SaveRefusedIssues = "save-refused-issues",
-    /// The sign-in card's notice of the synthetic deployment.
-    SyntheticDeployment = "synthetic-deployment",
     /// The reload count: read `$count` times again.
     ReadTimesAgain = "read-times-again",
     /// The heading of the panel that previews the files.
@@ -1221,6 +1203,8 @@ messages! {
     AllUnits = "all-units",
     /// `Audit`
     Audit = "audit",
+    /// `or, on this development deployment`
+    BasicDivider = "basic-divider",
     /// `Best effort`
     BestEffort = "best-effort",
     /// `A caller may ask for a partial answer.`
@@ -1249,10 +1233,16 @@ messages! {
     ForbiddenBody = "forbidden-body",
     /// `This view needs the operator scope`
     ForbiddenTitle = "forbidden-title",
+    /// `Gallery operator · a synthetic identity`
+    GalleryOperatorLine = "gallery-operator-line",
     /// `General`
     General = "general",
     /// `How settings work`
     HowSettingsWork = "how-settings-work",
+    /// `Library up`
+    LibraryUp = "library-up",
+    /// `ferrohealth-ui { $version }, rendered on the server`
+    LibraryVersion = "library-version",
     /// `Limits`
     Limits = "limits",
     /// `Business Source License 1.1`
@@ -1277,6 +1267,10 @@ messages! {
     ModeDesc = "mode-desc",
     /// `Mode`
     ModeSetting = "mode-setting",
+    /// `{ $count } issues to look at`
+    NavIssues = "nav-issues",
+    /// `Not known: the gallery does not probe the charts`
+    NavNotProbed = "nav-not-probed",
     /// `nearest`
     Nearest = "nearest",
     /// `New location`
@@ -1289,8 +1283,14 @@ messages! {
     NotFoundTitle = "not-found-title",
     /// `offered`
     Offered = "offered",
+    /// `Privacy notice`
+    PrivacyNotice = "privacy-notice",
     /// `Previous and next`
     QueueSteps = "queue-steps",
+    /// `Read without signing in`
+    ReadWithout = "read-without",
+    /// `Every screen is open to read.`
+    ReadWithoutLine = "read-without-line",
     /// `Retries`
     Retries = "retries",
     /// `How often a failed call is tried again.`
@@ -1317,14 +1317,56 @@ messages! {
     Show = "show",
     /// `Sign in again`
     SignInAgain = "sign-in-again",
+    /// `The gallery of the FerroHEALTH consoles. It holds no clinical data.`
+    SignInCaption = "sign-in-caption",
+    /// `You sign in at your organisation's identity provider; the gallery never sees your password.`
+    SignInNote = "sign-in-note",
+    /// `Sign-in states`
+    SignInStates = "sign-in-states",
+    /// `Taking you to FerroHEALTH ID…`
+    SignInTaking = "sign-in-taking",
+    /// `Sign in to the gallery`
+    SignInTitle = "sign-in-title",
+    /// `Sign in with FerroHEALTH ID`
+    SignInWith = "sign-in-with",
     /// `Standing`
     Standing = "standing",
     /// `Degraded`
     StateDegraded = "state-degraded",
     /// `Excluded`
     StateExcluded = "state-excluded",
+    /// `Your session ended after 30 minutes without a request. Sign in again to go on.`
+    StateExpired = "state-expired",
+    /// `The gallery holds as many sessions as it allows, so it cannot start yours. Try again in a few minutes; sessions end after 30 minutes without a request.`
+    StateFull = "state-full",
+    /// `Sign-in is paused for this username after 5 failed tries. Try again later, or sign in with FerroHEALTH ID.`
+    StateLocked = "state-locked",
+    /// `The gallery could not reach FerroHEALTH ID. Try again in a moment; it may be down.`
+    StateProviderUnreachable = "state-provider-unreachable",
     /// `Reachable`
     StateReachable = "state-reachable",
+    /// `You come back here once you are signed in.`
+    StateRedirecting = "state-redirecting",
+    /// `Not signed in: the sign-in could not be completed at FerroHEALTH ID. Try again; if it keeps failing, the provider may be down.`
+    StateRefused = "state-refused",
+    /// `The gallery could not exchange the code for tokens (502).`
+    StateRefusedDetail = "state-refused-detail",
+    /// `Not signed in: FerroHEALTH ID did not sign you in, so nothing was kept. If it keeps happening, ask your provider's administrator.`
+    StateRejected = "state-rejected",
+    /// `For the administrator: the ID token did not pass the gallery's checks (401).`
+    StateRejectedDetail = "state-rejected-detail",
+    /// `You are signed out of the gallery and of FerroHEALTH ID.`
+    StateSignedOut = "state-signed-out",
+    /// `Sign-in is not set up yet. Whoever runs the gallery adds an identity provider to its configuration file.`
+    StateUnavailable = "state-unavailable",
+    /// `No [oidc] section in the configuration file (503).`
+    StateUnavailableDetail = "state-unavailable-detail",
+    /// `The server behind the gallery did not answer. You can still try to sign in.`
+    StateUpstream = "state-upstream",
+    /// `Not signed in: the username or the password is wrong.`
+    StateWrong = "state-wrong",
+    /// `4 tries are left before a 15-minute pause.`
+    StateWrongTries = "state-wrong-tries",
     /// `Example content: the template's parts, not a product's.`
     TemplateExample = "template-example",
     /// `The FerroBRIDGE book`
@@ -1401,7 +1443,7 @@ mod tests {
         // Every placeable a message names, so each formats whole.
         let args: HashMap<Cow<'static, str>, FluentValue<'static>> = [
             "bytes", "count", "format", "index", "kept", "line", "lines", "member", "mode", "name",
-            "place", "row", "total", "value",
+            "place", "row", "total", "value", "version",
         ]
         .into_iter()
         .map(|name| (Cow::Borrowed(name), FluentValue::from(3)))

@@ -1042,6 +1042,13 @@ CDR_STATUS = {
 VIEWER_VERSION = "4.3.10"
 
 
+def status_pill(tone, word, detail):
+    """The top bar's status pill (F12): its shape and its words, which stay its
+    accessible name below 64 rem; the tooltip holds the words and the detail."""
+    tip = f"{word} · {detail}" if detail else word
+    return f'<span class="fui-pill fui-tone-{tone} fui-topbar-status" title="{e(tip)}"><span class="fui-roomy-text">{e(word)}</span></span>'
+
+
 def topbar(status="up", search_value="", search_state=None, results=None, menu_open=False, menu_theme="light", menu_focus=None, reader=False, profile="production"):
     tone, word = CDR_STATUS[status]
     search = search_control(search_value, search_state, results=results)
@@ -1049,9 +1056,9 @@ def topbar(status="up", search_value="", search_state=None, results=None, menu_o
     trigger = (f'<button type="button" class="fui-button fui-button-ghost fui-operator" aria-haspopup="menu" aria-expanded="{"true" if menu_open else "false"}" aria-controls="operator-menu">'
                f'{icon("circle-user", "16")}<span class="fui-operator-name">{who}</span>{icon("chevron-down", "14")}</button>')
     operator = '<span class="fui-anchor">' + trigger + operator_menu(menu_open, menu_focus, menu_theme, reader) + "</span>"
-    title = {"up": f' title="FerroEHR {VIEWER_VERSION} at https://cdr.example.org · {profile} deployment · answered 13 s ago"',
-             "down": ' title="Last answered 09:38"', "unknown": ' title="No answer since 09:41; the next request will tell"'}.get(status, "")
-    end = f'<span class="fui-pill fui-tone-{tone} fui-roomy-only"{title}>{word}</span>{operator}'
+    detail = {"up": f"FerroEHR {VIEWER_VERSION} at https://cdr.example.org · {profile} deployment · answered 13 s ago",
+              "down": "Last answered 09:38", "unknown": "No answer since 09:41; the next request will tell"}.get(status, "")
+    end = f'{status_pill(tone, word, detail)}{operator}'
     drawer = f'<button type="button" class="fui-icon-button fui-drawer-only" popovertarget="sidebar" aria-controls="sidebar" aria-label="Menu">{icon("menu", "18")}</button>'
     return (
         f'<header class="fui-topbar"><div class="fui-topbar-row">{drawer}{lockup()}<div class="fui-topbar-middle">{search}</div>'

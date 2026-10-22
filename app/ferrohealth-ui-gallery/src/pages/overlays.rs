@@ -5,8 +5,8 @@
 //!
 //! They are the confirmation dialogs, the modal
 //! dialog a signal opens, the side panel, and a toast in every tone. The
-//! operator menu and the theme menu are in the top bar, the drawer is the
-//! navigation on a narrow screen.
+//! user menu, which sets the theme, is in the top bar, and the drawer is
+//! the navigation on a narrow screen.
 
 use crate::locale::{Msg, tr, tr_with};
 use ferrohealth_ui::icon::{Glyph, icon};

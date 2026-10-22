@@ -5,8 +5,8 @@
 //! the pointer on a navigation entry, a table row, each button variant, a
 //! linked card, a card-header action and a tab; the keyboard focus on a
 //! control, a navigation entry, a card-header action and the keyboard tabs; every overlay open (the dialogs, the modal
-//! a signal opens, the side panel, the operator menu, the
-//! drawer); the toasts; the upload field empty, with a file over it, with a
+//! a signal opens, the side panel, the user menu and its phone
+//! sheet, the drawer); the sidebar folded to its rail; the toasts; the upload field empty, with a file over it, with a
 //! file read and with a file refused; the editor with its diagnostics; the
 //! help switch on, the picker open on its input, the tree walked by the
 //! keyboard, the search box focused, the tables in the compact density, the
@@ -35,7 +35,7 @@ use crate::journeys::window;
 use crate::stack::Gallery;
 
 /// Every state, by the name its images take.
-pub(crate) const STATES: [&str; 49] = [
+pub(crate) const STATES: [&str; 51] = [
     "hover-nav",
     "focus-nav",
     "hover-stat",
@@ -62,8 +62,10 @@ pub(crate) const STATES: [&str; 49] = [
     "modal-open",
     "modal-wide",
     "side-panel",
-    "operator-menu",
-    "focus-theme-toggle",
+    "user-menu",
+    "user-menu-sheet",
+    "focus-user-menu",
+    "rail-hover",
     "toasts",
     "drawer-open",
     "focus-search",
@@ -280,15 +282,12 @@ async fn overview(
     away(browser).await?;
     focus(browser, &entry).await?;
     shot_of(browser, brand, theme, "focus-nav", &sidebar).await?;
-    let toggle = browser.element(By::Id("theme-to-dark")).await?;
-    let shown = if toggle.is_displayed().await? {
-        toggle
-    } else {
-        browser.element(By::Id("theme-to-light")).await?
-    };
-    focus(browser, &shown).await?;
+    let opener = browser
+        .element(By::Css("button[popovertarget='user-menu']"))
+        .await?;
+    focus(browser, &opener).await?;
     let bar = browser.element(By::Css(".fui-topbar")).await?;
-    shot_of(browser, brand, theme, "focus-theme-toggle", &bar).await?;
+    shot_of(browser, brand, theme, "focus-user-menu", &bar).await?;
     let stats = browser.element(By::Css(".fui-grid-stats")).await?;
     let first = browser.element(By::Css("a.fui-stat")).await?;
     hover(browser, &first).await?;
@@ -519,9 +518,9 @@ async fn overlays(
             "access",
         ),
         (
-            "operator-menu",
-            "//button[@aria-controls = 'operator-menu']",
-            "operator-menu",
+            "user-menu",
+            "//button[@popovertarget = 'user-menu']",
+            "user-menu",
         ),
     ];
     for (state, opener, id) in opened {
@@ -562,6 +561,15 @@ async fn overlays(
         "drawer-open",
         By::XPath("//button[@aria-label = 'Menu']"),
         By::Id("sidebar"),
+    )
+    .await?;
+    overlay(
+        browser,
+        brand,
+        theme,
+        "user-menu-sheet",
+        By::XPath("//button[@popovertarget = 'user-menu']"),
+        By::Id("user-menu"),
     )
     .await?;
     window(browser, WIDTH, HEIGHT).await
@@ -788,6 +796,33 @@ async fn field_states(
     shot_of(browser, brand, theme, "pick-or-type-combobox-typed", &picks).await
 }
 
+/// The sidebar folded to its rail, an entry under the pointer, its cookie
+/// set for the one shot.
+async fn rail(
+    browser: &Browser,
+    gallery: &Gallery,
+    brand: Brand,
+    theme: &str,
+) -> Result<(), Box<dyn Error>> {
+    let mut cookie = Cookie::new("gallery-sidebar", "rail");
+    cookie.set_path("/");
+    browser.driver().add_cookie(cookie).await?;
+    browser
+        .goto(&gallery.url(&format!("/{}/tables", brand.key())))
+        .await?;
+    browser
+        .element(By::Css("#sidebar.fui-sidebar-rail"))
+        .await?;
+    let entry = browser
+        .element(By::Css("#sidebar a[title='Forms and editor']"))
+        .await?;
+    hover(browser, &entry).await?;
+    shot_of_view(browser, brand, theme, "rail-hover").await?;
+    away(browser).await?;
+    browser.driver().delete_cookie("gallery-sidebar").await?;
+    Ok(())
+}
+
 /// The tables page in the compact density, its cookie set for the one shot.
 async fn compact(
     browser: &Browser,
@@ -838,6 +873,7 @@ async fn every_state_is_captured_in_every_brand_light_and_dark() -> Result<(), B
                 combobox_states(browser, &gallery, brand, theme).await?;
                 field_states(browser, &gallery, brand, theme).await?;
                 compact(browser, &gallery, brand, theme).await?;
+                rail(browser, &gallery, brand, theme).await?;
                 phone(browser, &gallery, brand, theme).await?;
                 document(browser, &gallery, brand, theme).await?;
             }

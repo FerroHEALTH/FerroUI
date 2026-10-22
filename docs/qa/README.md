@@ -18,7 +18,7 @@ states under `../screenshots/states/`.
 | Reference | Gallery | What to compare |
 |---|---|---|
 | `reference/ferroehr/dashboard.png`, `dashboard-dark.png` | `screenshots/ferroehr/overview.png`, `overview-dark.png` | stat tiles, cards, type scale, sidebar, top bar |
-| `reference/ferroehr/user-menu.png` | `screenshots/states/ferroehr/operator-menu.png` | the operator menu |
+| `reference/ferroehr/user-menu.png` | `screenshots/states/ferroehr/user-menu.png` | the user menu |
 | `reference/ferroehr/scopes-drawer.png` | `screenshots/states/ferroehr/side-panel.png` | the side panel |
 | `reference/ferroehr/templates.png`, `templates-admin-delete.png` | `screenshots/ferroehr/tables.png`, `states/ferroehr/dialog-danger.png` | the data table, row actions, the danger dialog |
 | `reference/ferroehr/template-detail.png` | `screenshots/ferroehr/code.png` | breadcrumbs, mono title, tabs, the document pane |

@@ -5,8 +5,9 @@
 //!
 //! They are the shell, the page templates, the surfaces, the status marks,
 //! the buttons and fields, the tabs as links, the empty and loading states,
-//! the refusal, the error page, the code viewer, the document pane, the two sign-in screens, the theme switch, the operator menu,
-//! the confirmation dialog and the timestamp. Each is a plain function
+//! the refusal, the error page, the code viewer, the document pane, the
+//! sign-in card, the theme switch, the confirmation dialog and the
+//! timestamp. Each is a plain function
 //! returning its typed view, never a `#[component]`: a component
 //! writes a props type and a builder the browser bundle carries for each,
 //! and these take no reactive input. Each renders
@@ -26,7 +27,6 @@ pub mod empty;
 pub mod error_page;
 pub mod form;
 pub mod layout;
-pub mod menu;
 pub mod notice;
 pub mod refusal;
 pub mod search;

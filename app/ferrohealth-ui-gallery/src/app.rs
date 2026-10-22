@@ -11,21 +11,19 @@
 //! `data-density`, so a page arrives in its theme before any script runs,
 //! and its locale as `lang`, the locale every component draws its words in.
 
-use ferrohealth_ui::i18n::{Locale, provide_locale};
+use ferrohealth_ui::i18n::{Arg, Locale, provide_locale};
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::island::ToastRegion;
 use ferrohealth_ui::style::Brand;
 use ferrohealth_ui::table::model::Paging;
 use ferrohealth_ui::theme::{Density, Theme};
 use ferrohealth_ui::tone::Tone;
-use ferrohealth_ui::view::menu::{OperatorMenu, operator_menu};
 use ferrohealth_ui::view::search::{SearchBox, search_box};
 use ferrohealth_ui::view::segmented::segmented_links;
-use ferrohealth_ui::view::shell::{
-    Footer, Shell, centred, drawer_button, lockup, mark, shell, topbar_with,
-};
-use ferrohealth_ui::view::status::{banner, pill};
-use ferrohealth_ui::widget::nav::{Entry, Group, sidebar};
+use ferrohealth_ui::view::shell::{Footer, Shell, TopBar, centred, lockup, mark, shell, topbar};
+use ferrohealth_ui::view::status::{Reach, StatusPill, banner, status_pill};
+use ferrohealth_ui::widget::menu::{Choice, Choices, ThemeChoice, UserMenu, user_menu};
+use ferrohealth_ui::widget::nav::{Count, Entry, Group, Rail, Sidebar, sidebar};
 use ferrohealth_ui::widget::toast::RegionWords;
 use leptos::prelude::*;
 use leptos_meta::{Stylesheet, Title, provide_meta_context};
@@ -34,7 +32,7 @@ use leptos_router::hooks::{use_location, use_params_map};
 use leptos_router::path;
 
 use crate::locale::gallery_locale;
-use crate::locale::{Msg, tr};
+use crate::locale::{Msg, tr, tr_with};
 
 /// The gallery's name, as its footer and titles name it, in the page's
 /// locale.
@@ -78,6 +76,15 @@ pub const PAGED_LISTINGS: [&str; 2] = ["files", "ehrs"];
 /// The prefix of the cookie a session listing's position is kept in, for
 /// the browser's session alone and never in a URL.
 pub const PAGING_COOKIE: &str = "gallery-paging-";
+
+/// The path of the route the sidebar's Collapse and Expand post to.
+pub const SIDEBAR_ROUTE: &str = "/sidebar";
+
+/// The name of the cookie the sidebar's state is kept in.
+pub const SIDEBAR_COOKIE: &str = "gallery-sidebar";
+
+/// The path under which a brand's Sign out posts.
+pub const SIGN_OUT_ROUTE: &str = "/sign-out";
 
 /// The id of the navigation, which the drawer button opens.
 const SIDEBAR_ID: &str = "sidebar";
@@ -209,6 +216,24 @@ fn theme_requested() -> Theme {
     }
 }
 
+/// Whether the `Cookie` header value `cookies` asks for the sidebar's rail.
+#[must_use]
+pub fn rail_of(cookies: &str) -> bool {
+    cookie(cookies, SIDEBAR_COOKIE) == Some("rail")
+}
+
+/// Whether the request asks for the sidebar's rail, decided as the theme is.
+fn rail_requested() -> bool {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        rail_of(&request_cookies())
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        false
+    }
+}
+
 /// The density the request names, decided as the theme is.
 fn density_requested() -> Density {
     #[cfg(not(target_arch = "wasm32"))]
@@ -322,42 +347,49 @@ macro_rules! entries {
                 label: tr(Msg::Overview).into(),
                 glyph: Glyph::LAYOUT_DASHBOARD,
                 exact: true,
+                count: None,
             },
             Entry {
                 href: concat!("/", $key, "/forms"),
                 label: tr(Msg::FormsEditor).into(),
                 glyph: Glyph::PENCIL,
                 exact: true,
+                count: None,
             },
             Entry {
                 href: concat!("/", $key, "/tables"),
                 label: tr(Msg::TablesPaging).into(),
                 glyph: Glyph::DATABASE,
                 exact: true,
+                count: None,
             },
             Entry {
                 href: concat!("/", $key, "/code"),
                 label: tr(Msg::Documents).into(),
                 glyph: Glyph::SQUARE_TERMINAL,
                 exact: true,
+                count: None,
             },
             Entry {
                 href: concat!("/", $key, "/overlays"),
                 label: tr(Msg::Overlays).into(),
                 glyph: Glyph::LAYERS,
                 exact: true,
+                count: None,
             },
             Entry {
                 href: concat!("/", $key, "/charts"),
                 label: tr(Msg::Charts).into(),
                 glyph: Glyph::CHART_LINE,
                 exact: true,
+                count: None,
             },
             Entry {
                 href: concat!("/", $key, "/layouts"),
                 label: tr(Msg::Layouts).into(),
                 glyph: Glyph::PANEL_RIGHT,
                 exact: true,
+                count: None,
             },
         ]
     };
@@ -372,66 +404,77 @@ macro_rules! templates {
                 label: tr(Msg::NavList).into(),
                 glyph: Glyph::LIST_CHECKS,
                 exact: true,
+                count: None,
             },
             Entry {
                 href: concat!("/", $key, "/templates/list-many"),
                 label: tr(Msg::NavListMany).into(),
                 glyph: Glyph::LIST_CHECKS,
                 exact: true,
+                count: None,
             },
             Entry {
                 href: concat!("/", $key, "/templates/list-empty"),
                 label: tr(Msg::NavListEmpty).into(),
                 glyph: Glyph::INBOX,
                 exact: true,
+                count: None,
             },
             Entry {
                 href: concat!("/", $key, "/templates/list-tabs"),
                 label: tr(Msg::NavListTabs).into(),
                 glyph: Glyph::LIST_CHECKS,
                 exact: true,
+                count: None,
             },
             Entry {
                 href: concat!("/", $key, "/templates/detail"),
                 label: tr(Msg::NavDetail).into(),
                 glyph: Glyph::FILE_TEXT,
                 exact: true,
+                count: None,
             },
             Entry {
                 href: concat!("/", $key, "/templates/settings"),
                 label: tr(Msg::NavSettings).into(),
                 glyph: Glyph::SETTINGS,
                 exact: true,
+                count: None,
             },
             Entry {
                 href: concat!("/", $key, "/templates/settings-managed"),
                 label: tr(Msg::NavSettingsManaged).into(),
                 glyph: Glyph::SLIDERS_HORIZONTAL,
                 exact: true,
+                count: None,
             },
             Entry {
                 href: concat!("/", $key, "/templates/about"),
                 label: tr(Msg::NavAbout).into(),
                 glyph: Glyph::INFO,
                 exact: true,
+                count: None,
             },
             Entry {
                 href: concat!("/", $key, "/templates/forbidden"),
                 label: tr(Msg::NavForbidden).into(),
                 glyph: Glyph::SHIELD_OFF,
                 exact: true,
+                count: None,
             },
             Entry {
                 href: concat!("/", $key, "/templates/not-found"),
                 label: tr(Msg::NavNotFound).into(),
                 glyph: Glyph::COMPASS,
                 exact: true,
+                count: None,
             },
             Entry {
                 href: concat!("/fault/", $key),
                 label: tr(Msg::NavFault).into(),
                 glyph: Glyph::SERVER_CRASH,
                 exact: true,
+                count: None,
             },
         ]
     };
@@ -446,18 +489,21 @@ macro_rules! sign_ins {
                 label: tr(Msg::BasicSign).into(),
                 glyph: Glyph::LOG_IN,
                 exact: true,
+                count: None,
             },
             Entry {
                 href: concat!("/sign-in/", $key, "/provider"),
                 label: tr(Msg::ProviderSign).into(),
                 glyph: Glyph::SHIELD_CHECK,
                 exact: true,
+                count: None,
             },
             Entry {
-                href: concat!("/sign-in/", $key, "/both"),
-                label: tr(Msg::BothMethods).into(),
-                glyph: Glyph::USERS,
+                href: concat!("/sign-in/", $key, "/expired"),
+                label: tr(Msg::SignInStates).into(),
+                glyph: Glyph::CLOCK,
                 exact: true,
+                count: None,
             },
         ]
     };
@@ -467,7 +513,7 @@ macro_rules! sign_ins {
 /// its sign-in cards. The brand itself is chosen in the top bar, so the
 /// navigation marks one page.
 fn navigation(brand: Brand) -> [Group; 3] {
-    let (pages, layouts, signs): (Vec<Entry>, Vec<Entry>, Vec<Entry>) = match brand {
+    let (mut pages, layouts, signs): (Vec<Entry>, Vec<Entry>, Vec<Entry>) = match brand {
         Brand::Bridge => (
             entries!("ferrobridge"),
             templates!("ferrobridge"),
@@ -494,6 +540,18 @@ fn navigation(brand: Brand) -> [Group; 3] {
             sign_ins!("ferropix"),
         ),
     };
+    // The honest count (R12): a number on the overlays, and none known for the charts.
+    if let Some(overlays) = pages.get_mut(4) {
+        overlays.count = Some(Count::Known {
+            count: 2,
+            words: tr_with(Msg::NavIssues, &[("count", Arg::Number(2.0))]),
+        });
+    }
+    if let Some(charts) = pages.get_mut(5) {
+        charts.count = Some(Count::Unknown {
+            why: tr(Msg::NavNotProbed),
+        });
+    }
     [
         Group {
             id: "nav-components",
@@ -513,14 +571,13 @@ fn navigation(brand: Brand) -> [Group; 3] {
     ]
 }
 
-/// The brand switcher: the same page in each brand, the one in force marked
-/// current.
-fn brand_switch(brand: Brand, back: &str) -> impl IntoView + use<> {
+/// The same page as `back` in each brand, as a link and its words.
+fn brand_links(back: &str) -> Vec<(Brand, String, String)> {
     let page = back
         .strip_prefix('/')
         .and_then(|rest| rest.split_once('/').map(|(_, page)| format!("/{page}")))
         .unwrap_or_default();
-    let choices = Brand::ALL
+    Brand::ALL
         .into_iter()
         .map(|each| {
             let words = match each {
@@ -530,14 +587,39 @@ fn brand_switch(brand: Brand, back: &str) -> impl IntoView + use<> {
                 Brand::Term => tr(Msg::Term),
                 Brand::Pix => tr(Msg::Pix),
             };
-            (format!("/{}{page}", each.key()), words)
+            (each, format!("/{}{page}", each.key()), words)
         })
-        .collect();
-    let current = Brand::ALL
-        .into_iter()
-        .position(|each| each == brand)
+        .collect()
+}
+
+/// The brand switcher of the top bar from 40 rem up: the same page in each
+/// brand, the one in force marked current.
+fn brand_switch(brand: Brand, back: &str) -> impl IntoView + use<> {
+    let links = brand_links(back);
+    let current = links
+        .iter()
+        .position(|(each, _, _)| *each == brand)
         .unwrap_or(0);
+    let choices = links
+        .into_iter()
+        .map(|(_, href, words)| (href, words))
+        .collect();
     segmented_links(tr(Msg::Brand), choices, current)
+}
+
+/// The brand switcher as the user menu holds it below 40 rem.
+fn brand_choices(brand: Brand, back: &str) -> Choices {
+    Choices {
+        label: tr(Msg::Brand),
+        choices: brand_links(back)
+            .into_iter()
+            .map(|(each, href, words)| Choice {
+                words,
+                href,
+                chosen: each == brand,
+            })
+            .collect(),
+    }
 }
 
 /// The glyph a brand's mark draws in the gallery.
@@ -574,29 +656,61 @@ fn BrandShell() -> impl IntoView {
 
 /// The shell of `brand`'s pages, whose theme switch returns to `back`.
 fn brand_shell(brand: Brand, back: String) -> AnyView {
-    let start = view! {
-        {drawer_button(SIDEBAR_ID)}
-        {lockup("/", mark(brand_glyph(brand)), brand.product(), tr(Msg::Gallery))}
-    };
+    let lockup = lockup(
+        "/",
+        mark(brand_glyph(brand)),
+        brand.product(),
+        tr(Msg::Gallery),
+    )
+    .into_any();
     let switch = brand_switch(brand, &back).into_any();
-    let nav = sidebar(SIDEBAR_ID, tr(Msg::Pages), navigation(brand).into(), &back);
+    let collapsed = rail_requested();
+    let nav = sidebar(Sidebar {
+        id: SIDEBAR_ID,
+        label: tr(Msg::Pages),
+        groups: navigation(brand).into(),
+        current: back.clone(),
+        rail: Some(Rail {
+            collapsed,
+            action: String::from(SIDEBAR_ROUTE),
+            back: back.clone(),
+        }),
+    });
+    let theme = use_context::<InForce>().map_or(Theme::System, |in_force| in_force.0);
+    // A name as long as a FHIR user reference gets, so the top bar shows how
+    // it gives way; the synthetic operator the gallery is signed in as.
+    let operator = String::from("Practitioner/synthetic-terminologist-on-call");
+    let choices = brand_choices(brand, &back);
+    let menu = user_menu(UserMenu {
+        id: "user-menu",
+        label: operator.clone(),
+        name: Some(operator.clone()),
+        who: operator,
+        line: tr(Msg::GalleryOperatorLine),
+        preferences: format!("/{}", brand.key()),
+        theme: ThemeChoice {
+            current: theme,
+            action: String::from(THEME_ROUTE),
+            back,
+        },
+        choices: Some(choices),
+        shortcuts: Some(format!("/{}/forms", brand.key())),
+        sign_out: Some(format!("{SIGN_OUT_ROUTE}/{}", brand.key())),
+    });
+    let pill = status_pill(StatusPill {
+        reach: Reach::Up,
+        words: tr(Msg::LibraryUp),
+        detail: Some(tr_with(
+            Msg::LibraryVersion,
+            &[("version", Arg::from(VERSION))],
+        )),
+    });
     let end = view! {
         <span class="fui-wide-only">{switch}</span>
-        <span class="fui-roomy-only">{pill(Tone::Ok, &tr(Msg::LibraryV017))}</span>
-        {operator_menu(
-            OperatorMenu {
-                id: "operator-menu",
-                // A name as long as a FHIR user reference gets, so the top
-                // bar shows how it gives way.
-                // The synthetic operator the gallery is signed in as.
-                name: String::from("Practitioner/synthetic-terminologist-on-call"),
-                subtitle: tr(Msg::SignedGallery).into(),
-                sign_out: None,
-            },
-            (),
-        )}
-        {ferrohealth_ui::view::theme_switch::theme_toggle(String::from(THEME_ROUTE), back)}
-    };
+        {pill}
+        {menu}
+    }
+    .into_any();
     let search = search_box(SearchBox {
         id: "gallery-search",
         name: "q",
@@ -604,9 +718,15 @@ fn brand_shell(brand: Brand, back: String) -> AnyView {
         placeholder: tr(Msg::FileTemplatePath).into(),
         action: format!("/{}/tables", brand.key()),
         value: String::new(),
-    });
+    })
+    .into_any();
     let page = shell(Shell {
-        topbar: topbar_with(start, search, end).into_any(),
+        topbar: topbar(TopBar {
+            sidebar: SIDEBAR_ID,
+            lockup,
+            search: Some(search),
+            end,
+        }),
         banner: Some(
             banner(
                 Tone::Warn,
@@ -618,6 +738,7 @@ fn brand_shell(brand: Brand, back: String) -> AnyView {
         ),
         sidebar: nav,
         content: view! { <Outlet /> }.into_any(),
+        dock: None,
         footer: footer(),
     });
     view! {

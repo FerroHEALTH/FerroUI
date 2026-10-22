@@ -91,17 +91,17 @@ def sign_in_card(notice_html="", state=None):
     else:
         provider = f'<a href="sign-in-redirecting.html" class="fui-button fui-button-primary">{icon("log-in", "16")}Sign in with FerroHEALTH ID</a>'
     return (
-        f'<div class="fui-card fui-sign-in"><div class="fui-sign-in-lockup">{lockup()}</div>'
-        '<h1 class="mk-sign-in-title">Sign in to the console</h1>'
+        f'<div class="fui-card fui-sign-in"><div class="fui-sign-in-lockup">{lockup(link=False)}</div>'
+        '<h1 class="fui-sign-in-title">Sign in to the console</h1>'
         + notice_html + provider
-        + '<p class="fui-small fui-muted mk-sign-in-line">You sign in at your organisation\'s identity provider; the console never sees your password.</p>'
+        + '<p class="fui-small fui-muted fui-sign-in-line">You sign in at your organisation\'s identity provider; the console never sees your password.</p>'
         '<div class="fui-sign-in-links"><a href="https://ferrofed.eu/docs/" rel="external noopener">Documentation</a><a href="https://ferrofed.eu/privacy/" rel="external noopener">Privacy notice</a></div></div>'
         '<p class="fui-sign-in-caption">The console for the operators of the federation gateway. It holds no clinical data.</p>'
     )
 
 
 def sign_in_page(**kw):
-    return centred("Sign in", f'<div class="fui-stack mk-sign-in-stack">{sign_in_card(**kw)}</div>')
+    return centred("Sign in", f'<div class="fui-stack fui-sign-in-stack">{sign_in_card(**kw)}</div>')
 
 
 def n(tone, role, text):
