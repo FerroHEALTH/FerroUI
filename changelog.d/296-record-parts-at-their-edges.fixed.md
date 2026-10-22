@@ -16,7 +16,9 @@
   narrows a grant, and its raw scope breaks after a slash, a dot or a query
   mark. The condition builder keeps a chosen value its select does not
   list chosen, said to be not in the list, where it used to post the first
-  option. The row preview wraps a long value inside its cell where the
+  option, and a condition row stacks its fields in a group too narrow for
+  them side by side, where the builder widened the page at 768 px with a
+  classic scrollbar (#307). The row preview wraps a long value inside its cell where the
   card's edge cut it off. The clinical reading indents nested clusters at
   most four levels deep and wraps a long label or value; a reader hears a
   heading's title and its node id as two phrases and a quantity's UCUM

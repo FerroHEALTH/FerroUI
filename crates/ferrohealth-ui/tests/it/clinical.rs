@@ -605,6 +605,22 @@ fn a_chosen_value_its_select_does_not_list_stays_chosen() {
     );
 }
 
+#[test]
+fn a_condition_row_stacks_in_a_group_too_narrow_for_its_fields() {
+    // NOTE: WCAG 2.2 SC 1.4.10: between the phone layout and a width where a nested row
+    // fits, the row stacks inside its group instead of widening the page (#307).
+    assert!(
+        STYLESHEET.contains("  .fui-cond-list {\n    container-type: inline-size;"),
+        "the list measures the room its group leaves"
+    );
+    assert!(
+        STYLESHEET.contains(
+            "  @container (width < 30rem) {\n    .fui-cond {\n      grid-template-columns: minmax(0, 1fr) auto;"
+        ),
+        "a narrow group stacks its rows"
+    );
+}
+
 // ---- E7 ----
 
 /// A pane showing `shown`, its switch `switch`.

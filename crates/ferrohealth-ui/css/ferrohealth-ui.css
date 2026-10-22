@@ -13577,7 +13577,10 @@
     line-height: var(--leading-body);
   }
 
+  /* The list is a size container, so a row measures the room its group
+     leaves it, nested groups' indents included. */
   .fui-cond-list {
+    container-type: inline-size;
     display: grid;
     gap: 0.625rem;
     margin: 0;
@@ -13615,9 +13618,26 @@
     text-overflow: ellipsis;
   }
 
-  /* A condition row is an F7 row: on a phone its Remove stays on the
-     first line, beside the path. */
+  /* A condition row is an F7 row: on a phone, and in a group too narrow
+     for its three fields side by side, its Remove stays on the first
+     line, beside the path, so the row never widens the page (WCAG 2.2 SC
+     1.4.10). */
   @media (width < 40rem) {
+    .fui-cond {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .fui-cond > :not(.fui-icon-button):not(:first-child) {
+      grid-column: 1 / -1;
+    }
+
+    .fui-cond > .fui-icon-button {
+      grid-column: 2;
+      grid-row: 1;
+    }
+  }
+
+  @container (width < 30rem) {
     .fui-cond {
       grid-template-columns: minmax(0, 1fr) auto;
     }

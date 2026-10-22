@@ -10,7 +10,8 @@
 //! nested group's edge is the strong hairline. A condition is an F7 row:
 //! the path as a select with its archetype path as a quiet mono line under
 //! it, the operator, a typed value (a unit suffix, or a coded select), and
-//! Remove, which stays on the row's first line on a phone. Add a condition
+//! Remove, which stays on the row's first line on a phone and in a group
+//! too narrow for the fields side by side. Add a condition
 //! and Add a group close each group.
 //!
 //! Every control is a field of the console's own form, which wraps the
