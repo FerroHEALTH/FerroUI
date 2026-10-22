@@ -47,7 +47,6 @@ use ferrohealth_ui::widget::picker::{self, picker_field};
 use ferrohealth_ui::widget::side_panel::{Opener, SidePanelWords};
 use ferrohealth_ui::widget::tabs::tab_panels;
 use ferrohealth_ui::widget::toast::{Flash, RegionWords, ToastLink};
-use ferrohealth_ui::widget::tree::{Tree, TreeNode, tree_view};
 use leptos::prelude::*;
 
 use crate::markup::{has, tags};
@@ -629,27 +628,6 @@ fn the_server_marks_the_pickers_initial_choice_and_fills_its_input() {
         first.contains_key("selected") && first.get("value").is_some_and(String::is_empty),
         "{empty}"
     );
-}
-
-#[test]
-fn a_tree_item_states_its_level_by_name() {
-    let tree = html(|| {
-        let mut parent = TreeNode::new("a", "Parent");
-        parent.expandable = true;
-        parent.children = vec![TreeNode::new("b", "Child")];
-        tree_view(Tree {
-            id: "browse",
-            label: "Concepts".into(),
-            nodes: Signal::stored(vec![parent]),
-            expanded: RwSignal::new(std::collections::BTreeSet::from([String::from("a")])),
-            selected: Signal::stored(None),
-            on_expand: None,
-            actions: None,
-        })
-    });
-    assert!(tree.contains(r#"aria-level="1""#), "{tree}");
-    assert!(tree.contains(r#"aria-level="2""#), "{tree}");
-    assert!(!tree.contains("attr:aria-level"), "{tree}");
 }
 
 #[test]

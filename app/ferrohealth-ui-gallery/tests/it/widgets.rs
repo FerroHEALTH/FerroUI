@@ -772,7 +772,7 @@ async fn the_tree_keeps_its_open_items_in_the_address_across_a_reload() -> Resul
         .await?;
         let branch = browser
             .element(By::XPath(
-                "//ul[@id = 'gallery-tree']/li[2]//button[contains(@class, 'fui-tree-toggle')]",
+                "//ul[@id = 'gallery-tree']/li[2]//*[contains(@class, 'fui-tree-toggle')]",
             ))
             .await?;
         press_until("the toggle opens the branch", &branch, async || {

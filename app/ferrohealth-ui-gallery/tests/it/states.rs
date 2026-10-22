@@ -47,6 +47,7 @@ mod preferences;
 mod rail;
 mod records;
 mod tables;
+mod trees;
 mod upload;
 
 /// Every area's states.
@@ -67,6 +68,7 @@ const AREAS: &[&[&str]] = &[
     rail::STATES,
     records::STATES,
     tables::STATES,
+    trees::STATES,
     upload::STATES,
 ];
 
@@ -265,6 +267,7 @@ async fn every_state_is_captured_in_every_brand_light_and_dark() -> Result<(), B
                 records::records(browser, &gallery, brand, theme).await?;
                 tables::compact(browser, &gallery, brand, theme).await?;
                 tables::tables_and_editor(browser, &gallery, brand, theme).await?;
+                trees::trees(browser, &gallery, brand, theme).await?;
                 upload::upload(browser, &gallery, brand, theme).await?;
             }
         }

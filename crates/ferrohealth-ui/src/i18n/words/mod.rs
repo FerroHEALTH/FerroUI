@@ -46,6 +46,7 @@ mod sign_in;
 mod tables;
 mod templates;
 mod theme;
+mod trees;
 
 /// Every area by the name of its catalog file, with its messages.
 #[cfg(test)]
@@ -67,6 +68,7 @@ pub(super) const AREAS: &[(&str, &[crate::i18n::Text])] = &[
     ("tables", tables::ALL),
     ("templates", templates::ALL),
     ("theme", theme::ALL),
+    ("trees", trees::ALL),
 ];
 
 #[cfg(test)]

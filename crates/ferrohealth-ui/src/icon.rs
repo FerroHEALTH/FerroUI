@@ -342,6 +342,9 @@ impl Glyph {
     pub const TRIANGLE_ALERT: Self = Self(
         r#"<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /><path d="M12 9v4" /><path d="M12 17h.01" />"#,
     );
+    /// Lucide `undo`.
+    pub const UNDO: Self =
+        Self(r#"<path d="M3 7v6h6" /><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />"#);
     /// Lucide `upload`.
     pub const UPLOAD: Self = Self(
         r#"<path d="M12 3v12" /><path d="m17 8-5-5-5 5" /><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />"#,
@@ -358,7 +361,7 @@ impl Glyph {
     pub const X: Self = Self(r#"<path d="M18 6 6 18" /><path d="m6 6 12 12" />"#);
 
     /// Every glyph, with the Lucide name of its vendored file.
-    pub const ALL: [(&str, Self); 93] = [
+    pub const ALL: [(&str, Self); 94] = [
         ("activity", Self::ACTIVITY),
         ("arrow-down", Self::ARROW_DOWN),
         ("arrow-left", Self::ARROW_LEFT),
@@ -448,6 +451,7 @@ impl Glyph {
         ("tags", Self::TAGS),
         ("trash", Self::TRASH),
         ("triangle-alert", Self::TRIANGLE_ALERT),
+        ("undo", Self::UNDO),
         ("upload", Self::UPLOAD),
         ("user-plus", Self::USER_PLUS),
         ("users", Self::USERS),

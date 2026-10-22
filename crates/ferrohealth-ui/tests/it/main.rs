@@ -34,3 +34,4 @@ mod shell;
 mod stylesheet;
 mod table;
 mod templates;
+mod trees;

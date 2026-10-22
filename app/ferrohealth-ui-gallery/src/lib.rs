@@ -24,6 +24,7 @@ pub mod search;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod server;
+pub mod trees_data;
 
 /// Hydrates the islands of the page the server rendered. Each island takes
 /// the words it draws as props, so the browser builds no locale.

@@ -1,8 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The tree view: nested items that fold, one tab stop, and the arrow keys
-//! (WAI-ARIA Authoring Practices 1.2, the tree view pattern).
+//! The tree view: nested items that fold, one tab stop, and the arrow keys.
+//!
+//! It follows the tree view pattern of the WAI-ARIA Authoring Practices 1.2,
+//! drawn as M1's concept tree, E4's folder tree or E5's path tree
+//! (`design/COMPONENTS.md`).
 //!
 //! The tree is a `role="tree"` list of `treeitem`s, each child list a
 //! `group`, every item carrying `aria-level`, the selected one
@@ -10,49 +13,187 @@
 //! keyboard reaches the tree once (a roving `tabindex`): Down and Up move
 //! between the items in sight, Home and End to the ends, Right opens an item
 //! or moves to its first child, Left closes it or moves to its parent, and
-//! Enter or Space follows an item's link or folds it. A row may be a link the
-//! console gives, so selecting works before the page hydrates and the
-//! selection is shareable; children may arrive later, so a row can open
-//! before any child is read. The indentation comes from the nesting, never a
-//! style attribute. Keys are the console's data-derived ids, never
-//! positions.
+//! Enter or Space follows an item's link or folds it. The focus ring is on
+//! the row. A name is a name in a list (family rule 4) that never wraps, so
+//! a deep level scrolls sideways under the scroll cue.
+//!
+//! A tree holds plain data ([`TreeNode`]), so the ready island
+//! [`crate::island::TreeView`] takes it as props. A level is read by the
+//! console's server, one at a time: an item whose children are not read yet
+//! is [`Children::Unread`], and opening it follows its toggle's link, which
+//! the console answers with the level read; meanwhile the level shows its
+//! loading row. A level larger than a page ends in the more row ([`More`]).
+//! The open items are state the server can read: the toggle is a link to the
+//! page with the item opened or closed, so a tree folds with no
+//! WebAssembly, and a tree in a form can post its open items as hidden
+//! fields. A console that keeps the open items in its address watches
+//! [`Tree::expanded`] with `Effect::watch` (the Leptos book,
+//! `reactivity/14_create_effect`). Keys are the console's data-derived ids,
+//! never positions.
 
 use std::collections::BTreeSet;
 
-use std::borrow::Cow;
-
 use leptos::prelude::*;
+use serde::{Deserialize, Serialize};
 
+use crate::i18n::{Phrase, Text, tr, tr_with};
 use crate::icon::{Glyph, icon};
 
+/// The children of an item.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum Children {
+    /// A leaf: the item cannot open.
+    #[default]
+    None,
+    /// The item can open, and its children are not read yet: opening it
+    /// shows the loading row and follows its toggle's link.
+    Unread,
+    /// The children read so far, and the more row when the level ends
+    /// before its last child.
+    Read {
+        /// The children, in the order the level reads them.
+        nodes: Vec<TreeNode>,
+        /// The more row, when the server pages the level.
+        more: Option<More>,
+    },
+}
+
+/// The more row that ends a level larger than a page: "25 of 40 children
+/// shown. Show the other 15".
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct More {
+    /// The sentence that counts the children shown.
+    pub words: String,
+    /// The link's words.
+    pub link: String,
+    /// The page with the next children read.
+    pub href: String,
+}
+
+impl More {
+    /// The more row of a level that shows `shown` of its `total` children,
+    /// reading `next` more at `href`, in the locale of the page being drawn.
+    #[must_use]
+    pub fn of_page(shown: u32, total: u32, next: u32, href: impl Into<String>) -> Self {
+        let rest = total.saturating_sub(shown);
+        let link = if next >= rest {
+            tr_with(Text::TreeMoreRest, &[("count", rest.into())])
+        } else {
+            tr_with(Text::TreeMoreNext, &[("count", next.into())])
+        };
+        Self {
+            words: tr_with(
+                Text::TreeMore,
+                &[("shown", shown.into()), ("total", total.into())],
+            ),
+            link,
+            href: href.into(),
+        }
+    }
+}
+
+/// What an item of a folder tree is (E4).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Mark {
+    /// A folder, with the folder glyph.
+    Folder,
+    /// A reference, with the file glyph in the accent.
+    Reference,
+}
+
+/// An action at the end of an item's row in an edit (E4): a submit button
+/// of the console's form, named [`Edit::name`] with the item's key as its
+/// value, so the edit posts with no WebAssembly.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Edit {
+    /// Add a folder in the folder.
+    AddFolder,
+    /// Add a reference in the folder.
+    AddReference,
+    /// Rename the folder.
+    Rename,
+    /// Remove the item.
+    Remove,
+    /// Keep an item an edit removed.
+    Undo,
+}
+
+impl Edit {
+    /// The name of the action's button, the field the console's form reads.
+    #[must_use]
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::AddFolder => "add_folder",
+            Self::AddReference => "add_reference",
+            Self::Rename => "rename",
+            Self::Remove => "remove",
+            Self::Undo => "undo",
+        }
+    }
+
+    /// The action's glyph.
+    const fn glyph(self) -> Glyph {
+        match self {
+            Self::AddFolder => Glyph::FOLDER_PLUS,
+            Self::AddReference => Glyph::FILE_TEXT,
+            Self::Rename => Glyph::PENCIL,
+            Self::Remove => Glyph::TRASH,
+            Self::Undo => Glyph::UNDO,
+        }
+    }
+}
+
 /// One item of a tree.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TreeNode {
     /// The item's stable key, derived from its data.
     pub key: String,
-    /// Its words.
+    /// Its name.
     pub label: String,
-    /// A code shown muted after the words, such as a concept's code.
+    /// A code shown muted in mono after the name, such as a concept's code
+    /// or a reference's short uid; it never breaks.
     pub code: Option<String>,
+    /// A quiet mono tag after the name, such as a path's RM type (E5).
+    pub tag: Option<String>,
+    /// The count after a folder's name, in words ("2 items").
+    pub count: Option<String>,
+    /// The glyph before the name, in a folder tree.
+    pub mark: Option<Mark>,
+    /// Whether the concept is inactive: muted, with M2's inactive mark.
+    pub inactive: bool,
+    /// Whether an edit removed the item: struck through, and said so.
+    pub removed: bool,
+    /// The name being typed, while the item is renamed in an edit.
+    pub rename: Option<String>,
+    /// The actions at the end of its row while the tree is in an edit.
+    pub edits: Vec<Edit>,
     /// The page the item opens, when it is a link.
     pub href: Option<String>,
-    /// Whether it can open, even before its children are read.
-    pub expandable: bool,
-    /// The children read so far.
-    pub children: Vec<TreeNode>,
+    /// The page with this item opened, or closed when it is open, so the
+    /// tree folds with no WebAssembly and the console reads an unread level.
+    pub toggle_href: Option<String>,
+    /// Its children.
+    pub children: Children,
 }
 
 impl TreeNode {
-    /// A leaf `key` with the words `label`.
+    /// A leaf `key` named `label`.
     #[must_use]
     pub fn new(key: impl Into<String>, label: impl Into<String>) -> Self {
         Self {
             key: key.into(),
             label: label.into(),
             code: None,
+            tag: None,
+            count: None,
+            mark: None,
+            inactive: false,
+            removed: false,
+            rename: None,
+            edits: Vec::new(),
             href: None,
-            expandable: false,
-            children: Vec::new(),
+            toggle_href: None,
+            children: Children::None,
         }
     }
 
@@ -65,6 +206,66 @@ impl TreeNode {
         }
     }
 
+    /// This item, with the tag `tag`.
+    #[must_use]
+    pub fn tag(self, tag: impl Into<String>) -> Self {
+        Self {
+            tag: Some(tag.into()),
+            ..self
+        }
+    }
+
+    /// This item, with the count `count`.
+    #[must_use]
+    pub fn count(self, count: impl Into<String>) -> Self {
+        Self {
+            count: Some(count.into()),
+            ..self
+        }
+    }
+
+    /// This item, marked `mark`.
+    #[must_use]
+    pub fn mark(self, mark: Mark) -> Self {
+        Self {
+            mark: Some(mark),
+            ..self
+        }
+    }
+
+    /// This item, inactive.
+    #[must_use]
+    pub fn inactive(self) -> Self {
+        Self {
+            inactive: true,
+            ..self
+        }
+    }
+
+    /// This item, removed by an edit.
+    #[must_use]
+    pub fn removed(self) -> Self {
+        Self {
+            removed: true,
+            ..self
+        }
+    }
+
+    /// This item, being renamed to `name`.
+    #[must_use]
+    pub fn renaming(self, name: impl Into<String>) -> Self {
+        Self {
+            rename: Some(name.into()),
+            ..self
+        }
+    }
+
+    /// This item, with the actions `edits` in an edit.
+    #[must_use]
+    pub fn edits(self, edits: Vec<Edit>) -> Self {
+        Self { edits, ..self }
+    }
+
     /// This item, a link to `href`.
     #[must_use]
     pub fn href(self, href: impl Into<String>) -> Self {
@@ -74,87 +275,205 @@ impl TreeNode {
         }
     }
 
-    /// This item, with the children `children`; it can open.
+    /// This item, whose toggle leads to `href`.
+    #[must_use]
+    pub fn toggle_href(self, href: impl Into<String>) -> Self {
+        Self {
+            toggle_href: Some(href.into()),
+            ..self
+        }
+    }
+
+    /// This item, with the children `children` read; it can open.
     #[must_use]
     pub fn children(self, children: Vec<Self>) -> Self {
         Self {
-            expandable: true,
-            children,
+            children: Children::Read {
+                nodes: children,
+                more: None,
+            },
+            ..self
+        }
+    }
+
+    /// This item, with the children `children` read and the more row
+    /// `more` after them.
+    #[must_use]
+    pub fn paged(self, children: Vec<Self>, more: More) -> Self {
+        Self {
+            children: Children::Read {
+                nodes: children,
+                more: Some(more),
+            },
             ..self
         }
     }
 
     /// This item, able to open before its children are read.
     #[must_use]
-    pub fn expandable(self) -> Self {
+    pub fn unread(self) -> Self {
         Self {
-            expandable: true,
+            children: Children::Unread,
             ..self
         }
+    }
+
+    /// Whether the item can open.
+    #[must_use]
+    pub const fn opens(&self) -> bool {
+        !matches!(self.children, Children::None)
+    }
+
+    /// The children read so far.
+    fn read(&self) -> &[Self] {
+        match &self.children {
+            Children::Read { nodes, .. } => nodes,
+            Children::None | Children::Unread => &[],
+        }
+    }
+}
+
+/// Which design a tree draws.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum TreeKind {
+    /// M1's concept tree.
+    #[default]
+    Concept,
+    /// E4's folder tree of a directory.
+    Folder,
+    /// E5's path tree of a template.
+    Path,
+}
+
+/// The words a tree draws itself, resolved on the server in the page's
+/// locale, so an island that draws it carries no catalog.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TreeWords {
+    /// The name of a toggle that opens an item, around its `label`.
+    pub expand: Phrase,
+    /// The name of a toggle that closes an item, around its `label`.
+    pub collapse: Phrase,
+    /// An inactive concept's mark.
+    pub inactive: String,
+    /// The loading row of a level being read.
+    pub reading: String,
+    /// What a removed item says to assistive technology.
+    pub removed: String,
+    /// The name of the rename field, around the item's `label`.
+    pub rename_field: Phrase,
+    /// The name of [`Edit::AddFolder`], around the item's `label`.
+    pub add_folder: Phrase,
+    /// The name of [`Edit::AddReference`], around the item's `label`.
+    pub add_reference: Phrase,
+    /// The name of [`Edit::Rename`], around the item's `label`.
+    pub rename: Phrase,
+    /// The name of [`Edit::Remove`] on a folder, around its `label`.
+    pub remove: Phrase,
+    /// The name of [`Edit::Remove`] on a reference, around its `label`.
+    pub remove_reference: Phrase,
+    /// The name of [`Edit::Undo`], around the item's `label`.
+    pub undo: Phrase,
+}
+
+impl TreeWords {
+    /// The tree's words in the locale of the page being drawn.
+    #[must_use]
+    pub fn of_page() -> Self {
+        let around = |text: Text| Phrase::new(tr_with(text, &[("label", Phrase::open("label"))]));
+        Self {
+            expand: around(Text::TreeExpand),
+            collapse: around(Text::TreeCollapse),
+            inactive: tr(Text::TreeInactive),
+            reading: tr(Text::TreeReading),
+            removed: tr(Text::TreeRemoved),
+            rename_field: around(Text::TreeRenameField),
+            add_folder: around(Text::TreeEditAddFolder),
+            add_reference: around(Text::TreeEditAddReference),
+            rename: around(Text::TreeEditRename),
+            remove: around(Text::TreeEditRemove),
+            remove_reference: around(Text::TreeEditRemoveReference),
+            undo: around(Text::TreeEditUndo),
+        }
+    }
+
+    /// The name of the action `edit` on the item `node`.
+    fn edit(&self, edit: Edit, node: &TreeNode) -> String {
+        let phrase = match edit {
+            Edit::AddFolder => &self.add_folder,
+            Edit::AddReference => &self.add_reference,
+            Edit::Rename => &self.rename,
+            Edit::Remove if node.mark == Some(Mark::Reference) => &self.remove_reference,
+            Edit::Remove => &self.remove,
+            Edit::Undo => &self.undo,
+        };
+        phrase.fill(&[("label", &node.label)])
     }
 }
 
 /// What a tree shows and the state it shares with its console.
 #[derive(Debug, Clone)]
 pub struct Tree {
-    /// The tree's id; each item's id is built from it.
-    pub id: &'static str,
+    /// The tree's id, on its `role="tree"` list; each item's id is built
+    /// from it.
+    pub id: String,
     /// The tree's accessible name.
-    pub label: Cow<'static, str>,
+    pub label: String,
+    /// Which design it draws.
+    pub kind: TreeKind,
+    /// Whether it is in an edit: each row ends in its [`TreeNode::edits`].
+    pub editing: bool,
     /// The items at the top.
     pub nodes: Signal<Vec<TreeNode>>,
     /// The keys of the open items; the server draws the tree as given.
     pub expanded: RwSignal<BTreeSet<String>>,
-    /// The key of the selected item.
+    /// The key of the selected item; the items above it are its path.
     pub selected: Signal<Option<String>>,
-    /// Called with an item's key when it opens, so the console can read its
-    /// children.
-    pub on_expand: Option<Callback<String>>,
-    /// The actions at the end of an item's row, such as rename and delete.
-    pub actions: Option<Callback<TreeNode, AnyView>>,
+    /// The name of the hidden fields that carry the open items in the
+    /// form around the tree, one field per key.
+    pub open_field: Option<String>,
+    /// Its words, in the page's locale ([`TreeWords::of_page`]).
+    pub words: TreeWords,
 }
 
-/// The part of a [`Tree`] its items and handlers share: all of it but the
-/// accessible name, so it is `Copy`.
+/// A tree as plain data, the props of [`crate::island::TreeView`]: what
+/// [`Tree`] holds, its state as it arrives from the server.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TreeData {
+    /// The tree's id.
+    pub id: String,
+    /// The tree's accessible name.
+    pub label: String,
+    /// Which design it draws.
+    pub kind: TreeKind,
+    /// Whether it is in an edit.
+    pub editing: bool,
+    /// The items at the top.
+    pub nodes: Vec<TreeNode>,
+    /// The keys of the open items.
+    pub open: BTreeSet<String>,
+    /// The key of the selected item.
+    pub selected: Option<String>,
+    /// The name of the hidden fields that carry the open items.
+    pub open_field: Option<String>,
+}
+
+/// The part of a [`Tree`] its items and handlers share, so it is `Copy`.
 #[derive(Debug, Clone, Copy)]
 struct State {
-    id: &'static str,
+    id: StoredValue<String>,
     nodes: Signal<Vec<TreeNode>>,
     expanded: RwSignal<BTreeSet<String>>,
     selected: Signal<Option<String>>,
-    on_expand: Option<Callback<String>>,
-    actions: Option<Callback<TreeNode, AnyView>>,
+    /// The keys of the items above the selected one.
+    path: Memo<BTreeSet<String>>,
+    editing: bool,
+    /// Whether the page has hydrated, so a toggle with no link works.
+    hydrated: RwSignal<bool>,
+    words: StoredValue<TreeWords>,
     /// The element of each item drawn, by key; a row drawn again before
     /// its old one is cleaned up comes later, so a key's last entry is the
     /// one in the page.
     drawn: StoredValue<Vec<(String, NodeRef<leptos::html::Li>)>>,
-}
-
-impl State {
-    /// The state of `tree`, and its accessible name.
-    fn of(tree: Tree) -> (Self, Cow<'static, str>) {
-        let Tree {
-            id,
-            label,
-            nodes,
-            expanded,
-            selected,
-            on_expand,
-            actions,
-        } = tree;
-        (
-            Self {
-                id,
-                nodes,
-                expanded,
-                selected,
-                on_expand,
-                actions,
-                drawn: StoredValue::new(Vec::new()),
-            },
-            label,
-        )
-    }
 }
 
 /// One item in sight, in the order the keyboard walks them.
@@ -182,16 +501,16 @@ fn in_sight(nodes: &[TreeNode], expanded: &BTreeSet<String>) -> Vec<Shown> {
         out: &mut Vec<Shown>,
     ) {
         for node in nodes {
-            let open = node.expandable && expanded.contains(&node.key);
+            let open = node.opens() && expanded.contains(&node.key);
             out.push(Shown {
                 key: node.key.clone(),
                 parent: parent.map(str::to_owned),
-                expandable: node.expandable,
+                expandable: node.opens(),
                 open,
-                link: node.href.is_some(),
+                link: node.href.is_some() && !node.removed,
             });
             if open {
-                walk(&node.children, Some(&node.key), expanded, out);
+                walk(node.read(), Some(&node.key), expanded, out);
             }
         }
     }
@@ -200,23 +519,39 @@ fn in_sight(nodes: &[TreeNode], expanded: &BTreeSet<String>) -> Vec<Shown> {
     out
 }
 
+/// The item `key` among `nodes` and the children read under them.
+fn find<'a>(nodes: &'a [TreeNode], key: &str) -> Option<&'a TreeNode> {
+    nodes.iter().find_map(|node| {
+        if node.key == key {
+            Some(node)
+        } else {
+            find(node.read(), key)
+        }
+    })
+}
+
 /// The children of the item `key` in `nodes`, or the top items for `None`.
 fn children_of(nodes: &[TreeNode], key: Option<&str>) -> Vec<TreeNode> {
-    fn find<'a>(nodes: &'a [TreeNode], key: &str) -> Option<&'a TreeNode> {
-        nodes.iter().find_map(|node| {
-            if node.key == key {
-                Some(node)
-            } else {
-                find(&node.children, key)
-            }
-        })
-    }
     match key {
         None => nodes.to_vec(),
         Some(key) => find(nodes, key)
-            .map(|node| node.children.clone())
+            .map(|node| node.read().to_vec())
             .unwrap_or_default(),
     }
+}
+
+/// The keys of the items above the item `key` in `nodes`, from the top.
+fn path_to(nodes: &[TreeNode], key: &str) -> Option<Vec<String>> {
+    nodes.iter().find_map(|node| {
+        if node.key == key {
+            Some(Vec::new())
+        } else {
+            path_to(node.read(), key).map(|mut below| {
+                below.insert(0, node.key.clone());
+                below
+            })
+        }
+    })
 }
 
 /// What a key press does to the tree.
@@ -274,14 +609,37 @@ fn item_id(tree: &str, key: &str) -> String {
     id
 }
 
-/// Opens the item `key` of `tree` and tells the console.
+/// Opens the item `key` of `tree`; an unread level is read by the console
+/// behind the item's toggle link, which the page then follows.
 fn open(tree: State, key: &str) {
     tree.expanded.update(|open| {
         open.insert(key.to_owned());
     });
-    if let Some(on_expand) = tree.on_expand {
-        on_expand.run(key.to_owned());
+    let unread = tree.nodes.with_untracked(|nodes| {
+        find(nodes, key)
+            .filter(|node| node.children == Children::Unread)
+            .and_then(|node| node.toggle_href.clone())
+    });
+    if let Some(href) = unread {
+        navigate(&href);
     }
+}
+
+/// Closes the item `key` of `tree`.
+fn close(tree: State, key: &str) {
+    tree.expanded.update(|open| {
+        open.remove(key);
+    });
+}
+
+/// Leaves the page for `href`.
+fn navigate(href: &str) {
+    #[cfg(target_arch = "wasm32")]
+    if window().location().assign(href).is_err() {
+        leptos::logging::warn!("the browser refused to read a tree's level");
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    let _: &str = href;
 }
 
 /// The element of the item `key` of `tree`, if it is drawn.
@@ -313,10 +671,10 @@ fn follow(tree: State, key: &str) {
     #[cfg(target_arch = "wasm32")]
     {
         use leptos::wasm_bindgen::JsCast as _;
-        // NOTE: the item's own row comes before its children, so its first link is its own.
+        // NOTE: the item's own row comes before its children, so its first label is its own.
         let link = item
             .and_then(|item| item.get_untracked())
-            .and_then(|item| item.query_selector("a").ok().flatten())
+            .and_then(|item| item.query_selector("a.fui-tree-label").ok().flatten())
             .and_then(|link| link.dyn_into::<web_sys::HtmlElement>().ok());
         if let Some(link) = link {
             link.click();
@@ -324,6 +682,25 @@ fn follow(tree: State, key: &str) {
     }
     #[cfg(not(target_arch = "wasm32"))]
     let _: Option<NodeRef<leptos::html::Li>> = item;
+}
+
+/// Whether the key press `event` reached the tree from an item itself, not
+/// from a field or a button in its row.
+fn from_an_item(event: &leptos::ev::KeyboardEvent) -> bool {
+    #[cfg(target_arch = "wasm32")]
+    {
+        use leptos::wasm_bindgen::JsCast as _;
+        event
+            .target()
+            .and_then(|target| target.dyn_into::<web_sys::Element>().ok())
+            .and_then(|element| element.get_attribute("role"))
+            .is_some_and(|role| role == "treeitem")
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let _: &leptos::ev::KeyboardEvent = event;
+        true
+    }
 }
 
 /// Returns the items under `parent` (the top for `None`) at `level`.
@@ -345,37 +722,215 @@ fn items(
     .into_any()
 }
 
-/// Returns the item `node` at `level` and, while it is open, its children.
-/// Returns the button that folds and unfolds the item `key`, out of the tab
-/// order (the arrow keys fold an item), or a spacer for an item that cannot
-/// open.
+/// Returns the toggle that folds and unfolds the item `node`, out of the
+/// tab order (the arrow keys fold an item): a link to its
+/// [`TreeNode::toggle_href`], or a button that works once the page has
+/// hydrated; or a spacer for an item that cannot open.
 fn toggle(
     tree: State,
-    key: String,
-    open: Option<impl Fn() -> bool + Clone + Send + Sync + 'static>,
+    node: &TreeNode,
+    open: impl Fn() -> bool + Clone + Send + Sync + 'static,
 ) -> AnyView {
-    let Some(open) = open else {
-        return view! { <span class="fui-tree-spacer"></span> }.into_any();
-    };
-    let shown = open.clone();
-    view! {
-        <button
-            type="button"
-            class="fui-tree-toggle"
-            tabindex="-1"
-            aria-hidden="true"
-            on:click=move |_| {
-                if open() {
-                    tree.expanded.update(|expanded| {
-                        expanded.remove(&key);
-                    });
+    if !node.opens() {
+        return view! { <span class="fui-tree-spacer" aria-hidden="true"></span> }.into_any();
+    }
+    let key = node.key.clone();
+    let label = node.label.clone();
+    let name = {
+        let open = open.clone();
+        move || {
+            tree.words.with_value(|words| {
+                let phrase = if open() {
+                    &words.collapse
                 } else {
-                    self::open(tree, &key);
-                }
+                    &words.expand
+                };
+                phrase.fill(&[("label", &label)])
+            })
+        }
+    };
+    let glyph = {
+        let open = open.clone();
+        move || {
+            icon(
+                if open() {
+                    Glyph::CHEVRON_DOWN
+                } else {
+                    Glyph::CHEVRON_RIGHT
+                },
+                "14",
+            )
+        }
+    };
+    let flip = move |event: leptos::ev::MouseEvent| {
+        event.prevent_default();
+        if open() {
+            close(tree, &key);
+        } else {
+            self::open(tree, &key);
+        }
+    };
+    match node.toggle_href.clone() {
+        Some(href) => view! {
+            <a href=href class="fui-tree-toggle" tabindex="-1" aria-label=name on:click=flip>
+                {glyph}
+            </a>
+        }
+        .into_any(),
+        None => view! {
+            <button
+                type="button"
+                class="fui-tree-toggle"
+                tabindex="-1"
+                aria-label=name
+                disabled=move || !tree.hydrated.get()
+                on:click=flip
+            >
+                {glyph}
+            </button>
+        }
+        .into_any(),
+    }
+}
+
+/// Returns the name of the item `node`: the rename field while it is
+/// renamed, a link when it opens a page, and words otherwise.
+fn name(tree: State, node: &TreeNode) -> AnyView {
+    if let Some(typed) = node.rename.clone() {
+        let id = tree.id.with_value(|id| format!("{id}-rename"));
+        let label = tree
+            .words
+            .with_value(|words| words.rename_field.fill(&[("label", &node.label)]));
+        return view! {
+            <input
+                id=id
+                name="new_name"
+                type="text"
+                class="fui-input"
+                value=typed
+                aria-label=label
+                autocomplete="off"
+            />
+        }
+        .into_any();
+    }
+    if node.removed {
+        let removed = tree.words.with_value(|words| words.removed.clone());
+        return view! {
+            <span class="fui-tree-label">{node.label.clone()}</span>
+            <span class="fui-sr-only">" " {removed}</span>
+        }
+        .into_any();
+    }
+    match node.href.clone() {
+        Some(href) => view! {
+            <a href=href class="fui-tree-label" tabindex="-1">
+                {node.label.clone()}
+            </a>
+        }
+        .into_any(),
+        None => view! { <span class="fui-tree-label">{node.label.clone()}</span> }.into_any(),
+    }
+}
+
+/// Returns the actions of the item `node` while `tree` is in an edit.
+fn edits(tree: State, node: &TreeNode) -> Option<AnyView> {
+    if !tree.editing || node.edits.is_empty() {
+        return None;
+    }
+    let buttons = node
+        .edits
+        .iter()
+        .map(|edit| {
+            let words = tree.words.with_value(|words| words.edit(*edit, node));
+            view! {
+                <button
+                    type="submit"
+                    class="fui-icon-button"
+                    name=edit.name()
+                    value=node.key.clone()
+                    aria-label=words.clone()
+                    title=words
+                >
+                    {icon(edit.glyph(), "16")}
+                </button>
             }
-        >
-            {move || icon(if shown() { Glyph::CHEVRON_DOWN } else { Glyph::CHEVRON_RIGHT }, "14")}
-        </button>
+        })
+        .collect_view();
+    Some(view! { <span class="fui-tree-actions">{buttons}</span> }.into_any())
+}
+
+/// The loading row and the more row that end the open level of the item
+/// `key`, as the nodes of `tree` have it now.
+fn level_end(tree: State, key: &str) -> AnyView {
+    let (unread, more) = tree.nodes.with(|nodes| {
+        find(nodes, key).map_or((false, None), |node| match &node.children {
+            Children::Unread => (true, None),
+            Children::Read { more, .. } => (false, more.clone()),
+            Children::None => (false, None),
+        })
+    });
+    let reading = unread.then(|| {
+        let words = tree.words.with_value(|words| words.reading.clone());
+        view! {
+            <li class="fui-tree-loading" role="none">
+                <span class="fui-spinner-ring" aria-hidden="true"></span>
+                {words}
+            </li>
+        }
+    });
+    let more = more.map(|more| {
+        view! {
+            <li class="fui-tree-more" role="none">
+                <span>{more.words} " " <a href=more.href>{more.link}</a></span>
+            </li>
+        }
+    });
+    view! { {reading} {more} }.into_any()
+}
+
+/// The classes `each` names, in order, one space apart.
+fn classes(each: &[Option<&str>]) -> String {
+    each.iter().flatten().copied().collect::<Vec<_>>().join(" ")
+}
+
+/// Returns the row of the item `node`: its toggle, glyph, name, code, tag,
+/// inactive mark, count and actions.
+fn row(
+    tree: State,
+    node: &TreeNode,
+    open: impl Fn() -> bool + Clone + Send + Sync + 'static,
+) -> AnyView {
+    let toggle = toggle(tree, node, open);
+    let glyph = node.mark.map(|mark| {
+        let glyph = match mark {
+            Mark::Folder => Glyph::FOLDER,
+            Mark::Reference => Glyph::FILE_TEXT,
+        };
+        view! { <span class="fui-tree-glyph">{icon(glyph, "14")}</span> }
+    });
+    let name = name(tree, node);
+    let code = node
+        .code
+        .clone()
+        .map(|code| view! { <span class="fui-tree-code">{code}</span> });
+    let tag = node
+        .tag
+        .clone()
+        .map(|tag| view! { <span class="fui-rm-type">{tag}</span> });
+    let inactive = node.inactive.then(|| {
+        let words = tree.words.with_value(|words| words.inactive.clone());
+        view! { <span class="fui-inactive-mark">{words}</span> }
+    });
+    let count = node
+        .count
+        .clone()
+        .map(|count| view! { <span class="fui-tree-count">{count}</span> });
+    let actions = edits(tree, node);
+    view! {
+        <div class="fui-tree-row">
+            {toggle} {glyph} {name} {code} {tag} {inactive} {count} {actions}
+        </div>
     }
     .into_any()
 }
@@ -383,8 +938,8 @@ fn toggle(
 /// Returns the item `node` at `level` and, while it is open, its children.
 fn item(tree: State, node: &TreeNode, level: u16, focused: RwSignal<Option<String>>) -> AnyView {
     let key = node.key.clone();
-    let id = item_id(tree.id, &key);
-    let expandable = node.expandable;
+    let id = tree.id.with_value(|id| item_id(id, &key));
+    let expandable = node.opens();
     let element = NodeRef::<leptos::html::Li>::new();
     tree.drawn.update_value(|drawn| {
         drawn.push((key.clone(), element));
@@ -413,6 +968,10 @@ fn item(tree: State, node: &TreeNode, level: u16, focused: RwSignal<Option<Strin
                 .with(|selected| selected.as_deref() == Some(key.as_str()))
         }
     };
+    let on_path = {
+        let key = key.clone();
+        move || tree.path.with(|path| path.contains(&key))
+    };
     let stop = {
         let key = key.clone();
         move || {
@@ -427,42 +986,37 @@ fn item(tree: State, node: &TreeNode, level: u16, focused: RwSignal<Option<Strin
             }
         }
     };
-    let toggle = toggle(tree, key.clone(), expandable.then_some(open));
-    let words = match node.href.clone() {
-        Some(href) => view! {
-            <a href=href class="fui-tree-label" tabindex="-1">
-                {node.label.clone()}
-            </a>
-        }
-        .into_any(),
-        None => view! { <span class="fui-tree-label">{node.label.clone()}</span> }.into_any(),
-    };
-    let code = node
-        .code
-        .clone()
-        .map(|code| view! { <code class="fui-tree-code">{code}</code> });
-    let actions = tree
-        .actions
-        .map(|actions| view! { <span class="fui-tree-actions">{actions.run(node.clone())}</span> });
+    let row = row(tree, node, open);
     let children = {
         let key = key.clone();
         move || {
             open().then(|| {
+                let end = {
+                    let key = key.clone();
+                    move || level_end(tree, &key)
+                };
                 view! {
                     <ul role="group" class="fui-tree-group">
                         {items(tree, Some(key.clone()), level.saturating_add(1), focused)}
+                        {end}
                     </ul>
                 }
             })
         }
     };
-    let expanded = { move || expandable.then(|| open().to_string()) };
-    let focus_key = key.clone();
+    let expanded = move || expandable.then(|| open().to_string());
+    let focus_key = key;
     view! {
         <li
             id=id
             role="treeitem"
-            class="fui-tree-item"
+            class=classes(&[
+                Some("fui-tree-item"),
+                node.inactive.then_some("is-inactive"),
+                (node.mark == Some(Mark::Reference)).then_some("is-ref"),
+                node.removed.then_some("is-removed"),
+            ])
+            class:is-on-path=on_path
             node_ref=element
             aria-expanded=expanded
             aria-selected=move || selected().to_string()
@@ -472,7 +1026,7 @@ fn item(tree: State, node: &TreeNode, level: u16, focused: RwSignal<Option<Strin
                 focused.set(Some(focus_key.clone()));
             }
         >
-            <div class="fui-tree-row">{toggle} {words} {code} {actions}</div>
+            {row}
             {children}
         </li>
     }
@@ -481,76 +1035,142 @@ fn item(tree: State, node: &TreeNode, level: u16, focused: RwSignal<Option<Strin
     .into_any()
 }
 
-/// Returns the tree [`tree_view`] draws, telling `on_collapse` what closes.
-///
-/// `on_collapse` receives an item's key whenever it closes, by the toggle,
-/// the keyboard or the console, so a console that keeps the open set in its
-/// address can remove it.
-#[must_use]
-pub fn tree_view_collapsing(tree: Tree, on_collapse: Callback<String>) -> AnyView {
-    let expanded = tree.expanded;
-    Effect::new(move |previous: Option<BTreeSet<String>>| {
-        let now = expanded.get();
-        if let Some(previous) = previous {
-            for key in previous.difference(&now) {
-                on_collapse.run(key.clone());
-            }
-        }
-        now
-    });
-    tree_view(tree)
-}
-
 /// Returns the tree `tree`.
 #[must_use]
 pub fn tree_view(tree: Tree) -> AnyView {
-    let (tree, label) = State::of(tree);
+    let Tree {
+        id,
+        label,
+        kind,
+        editing,
+        nodes,
+        expanded,
+        selected,
+        open_field,
+        words,
+    } = tree;
+    let path = Memo::new(move |_| {
+        selected.with(|selected| {
+            selected
+                .as_deref()
+                .and_then(|key| nodes.with(|nodes| path_to(nodes, key)))
+                .unwrap_or_default()
+                .into_iter()
+                .collect()
+        })
+    });
+    let hydrated = RwSignal::new(false);
+    Effect::new(move |_| hydrated.set(true));
+    let state = State {
+        id: StoredValue::new(id.clone()),
+        nodes,
+        expanded,
+        selected,
+        path,
+        editing,
+        hydrated,
+        words: StoredValue::new(words),
+        drawn: StoredValue::new(Vec::new()),
+    };
     let focused = RwSignal::new(None::<String>);
     let on_key = move |event: leptos::ev::KeyboardEvent| {
+        if !from_an_item(&event) {
+            return;
+        }
+        // NOTE: no specification governs this: our own design; an item focused before
+        // the page hydrated is the tab stop, the selected item or the first.
         let Some(at) = focused
             .get_untracked()
-            .or_else(|| tree.selected.get_untracked())
+            .or_else(|| state.selected.get_untracked())
+            .or_else(|| {
+                state
+                    .nodes
+                    .with_untracked(|nodes| nodes.first().map(|node| node.key.clone()))
+            })
         else {
             return;
         };
-        let shown = tree
+        let shown = state
             .nodes
-            .with_untracked(|nodes| tree.expanded.with_untracked(|open| in_sight(nodes, open)));
+            .with_untracked(|nodes| state.expanded.with_untracked(|open| in_sight(nodes, open)));
         let Some(step) = moved(&event.key(), &at, &shown) else {
             return;
         };
         event.prevent_default();
         match step {
             Move::Focus(key) => {
-                focus_item(tree, &key);
+                focus_item(state, &key);
                 focused.set(Some(key));
             }
-            Move::Open(key) => open(tree, &key),
-            Move::Close(key) => tree.expanded.update(|open| {
-                open.remove(&key);
-            }),
-            Move::Follow(key) => follow(tree, &key),
+            Move::Open(key) => open(state, &key),
+            Move::Close(key) => close(state, &key),
+            Move::Follow(key) => follow(state, &key),
         }
     };
+    let fields = open_field.map(|name| {
+        let each = move || expanded.get().into_iter().collect::<Vec<_>>();
+        view! {
+            <For each=each key=String::clone let:key>
+                <input type="hidden" name=name.clone() value=key />
+            </For>
+        }
+    });
     view! {
-        <ul id=tree.id role="tree" aria-label=label class="fui-tree" on:keydown=on_key>
-            {items(tree, None, 1, focused)}
-        </ul>
+        <div class=classes(
+            &[
+                Some("fui-concept-tree"),
+                (kind == TreeKind::Folder).then_some("fui-folder-tree"),
+                (kind == TreeKind::Path).then_some("fui-path-tree"),
+                editing.then_some("is-editing"),
+            ],
+        )>
+            {fields}
+            <ul id=id role="tree" aria-label=label class="fui-tree" on:keydown=on_key>
+                {items(state, None, 1, focused)}
+            </ul>
+        </div>
     }
     .into_any()
+}
+
+/// Returns the tree `data` with its words `words`, its open items and its
+/// selection its own state: the body of [`crate::island::TreeView`].
+#[must_use]
+pub fn tree_island(data: TreeData, words: TreeWords) -> AnyView {
+    let TreeData {
+        id,
+        label,
+        kind,
+        editing,
+        nodes,
+        open,
+        selected,
+        open_field,
+    } = data;
+    tree_view(Tree {
+        id,
+        label,
+        kind,
+        editing,
+        nodes: Signal::stored(nodes),
+        expanded: RwSignal::new(open),
+        selected: Signal::stored(selected),
+        open_field,
+        words,
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeSet;
 
-    use super::{Move, TreeNode, children_of, in_sight, item_id, moved};
+    use super::{Children, Move, TreeNode, children_of, in_sight, item_id, moved, path_to};
 
     fn nodes() -> Vec<TreeNode> {
         vec![
             TreeNode::new("a", "Body site").children(vec![
                 TreeNode::new("a1", "Arm").href("/c/a1"),
-                TreeNode::new("a2", "Leg").expandable(),
+                TreeNode::new("a2", "Leg").unread(),
             ]),
             TreeNode::new("b", "Finding"),
         ]
@@ -561,14 +1181,25 @@ mod tests {
         let closed = in_sight(&nodes(), &BTreeSet::new());
         let keys: Vec<&str> = closed.iter().map(|item| item.key.as_str()).collect();
         assert_eq!(vec!["a", "b"], keys);
-        let open = BTreeSet::from([String::from("a")]);
+        let open = BTreeSet::from([String::from("a"), String::from("a2")]);
         let keys: Vec<String> = in_sight(&nodes(), &open)
             .into_iter()
             .map(|item| item.key)
             .collect();
-        assert_eq!(vec!["a", "a1", "a2", "b"], keys);
+        assert_eq!(
+            vec!["a", "a1", "a2", "b"],
+            keys,
+            "an unread level shows no item"
+        );
         assert_eq!(2, children_of(&nodes(), Some("a")).len());
         assert!(children_of(&nodes(), Some("a2")).is_empty(), "not read yet");
+    }
+
+    #[test]
+    fn the_path_is_every_item_above_the_selected_one() {
+        assert_eq!(Some(vec![String::from("a")]), path_to(&nodes(), "a2"));
+        assert_eq!(Some(Vec::new()), path_to(&nodes(), "b"));
+        assert_eq!(None, path_to(&nodes(), "z"));
     }
 
     #[test]
@@ -612,6 +1243,24 @@ mod tests {
             moved(" ", "a2", &shown)
         );
         assert_eq!(None, moved("x", "a", &shown));
+    }
+
+    #[test]
+    fn a_removed_item_is_no_link_to_follow() {
+        let nodes = vec![TreeNode::new("r", "Report").href("/r").removed()];
+        let shown = in_sight(&nodes, &BTreeSet::new());
+        assert_eq!(None, moved("Enter", "r", &shown));
+    }
+
+    #[test]
+    fn a_tree_round_trips_through_json_as_an_island_prop() {
+        let json = serde_json::to_string(&nodes()).expect("a tree serializes");
+        let back: Vec<TreeNode> = serde_json::from_str(&json).expect("a tree reads back");
+        assert_eq!(nodes(), back);
+        assert!(matches!(
+            back.first().map(|node| &node.children),
+            Some(Children::Read { .. })
+        ));
     }
 
     #[test]
