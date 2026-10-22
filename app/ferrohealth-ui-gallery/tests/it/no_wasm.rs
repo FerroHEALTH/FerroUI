@@ -51,6 +51,15 @@ async fn only_the_bundle_refused(browser: &Browser, step: &str) -> Result<(), Bo
     .into())
 }
 
+/// Leaves the page for a blank one, so the island loader, which imports
+/// the bundle when the browser is next idle, logs its refusal before the
+/// journey ends or never; then fails on any error but a refused bundle file,
+/// naming `step`.
+async fn leave(browser: &Browser, step: &str) -> Result<(), Box<dyn Error>> {
+    browser.goto("about:blank").await?;
+    only_the_bundle_refused(browser, step).await
+}
+
 /// The trimmed text of the element `by` names, waiting for it.
 async fn text_of(browser: &Browser, by: By) -> Result<String, Box<dyn Error>> {
     Ok(browser.element(by).await?.text().await?.trim().to_owned())
@@ -168,6 +177,7 @@ async fn every_page_keeps_its_content_with_the_webassembly_withheld() -> Result<
         // logs beside the withheld bundle.
         browser.goto(&gallery.url("/nowhere")).await?;
         browser.element(By::Css("a[href='/']")).await?;
+        browser.goto("about:blank").await?;
         let others: Vec<String> = browser
             .console_errors()
             .await?
@@ -234,7 +244,7 @@ async fn links_lead_on_with_the_webassembly_withheld() -> Result<(), Box<dyn Err
             .at(&gallery.url("/ferroehr/layouts?concept=SYN-110"))
             .await?;
         browser.text("h2", "SYN-110").await?;
-        only_the_bundle_refused(browser, "the links").await
+        leave(browser, "the links").await
     })
     .await
 }
@@ -284,7 +294,7 @@ async fn forms_post_and_submit_with_the_webassembly_withheld() -> Result<(), Box
         browser
             .element(By::Css(r#"html[data-density="compact"]"#))
             .await?;
-        only_the_bundle_refused(browser, "the forms").await
+        leave(browser, "the forms").await
     })
     .await
 }
@@ -334,7 +344,7 @@ async fn popovers_open_with_the_webassembly_withheld() -> Result<(), Box<dyn Err
         until("the drawer opens", async || Ok(nav.is_displayed().await?)).await?;
         browser.follow("Documents").await?;
         browser.at(&gallery.url("/ferroehr/code")).await?;
-        only_the_bundle_refused(browser, "the popovers").await
+        leave(browser, "the popovers").await
     })
     .await
 }
