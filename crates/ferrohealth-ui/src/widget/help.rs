@@ -11,11 +11,33 @@
 //! through the context [`provide_help`] sets.
 
 use leptos::prelude::*;
+use serde::{Deserialize, Serialize};
 
 use crate::i18n::{Text, tr};
 use crate::icon::{Glyph, icon};
 use crate::view::button::Variant;
 use crate::view::form::help_id;
+
+/// The help switch's words, resolved on the server in the page's locale, so
+/// an island that draws it carries no catalog.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct HelpWords {
+    /// The switch's words while the help is hidden.
+    pub show: String,
+    /// The switch's words while the help shows.
+    pub hide: String,
+}
+
+impl HelpWords {
+    /// The switch's words in the locale of the page being drawn.
+    #[must_use]
+    pub fn of_page() -> Self {
+        Self {
+            show: tr(Text::HelpShow),
+            hide: tr(Text::HelpHide),
+        }
+    }
+}
 
 /// Whether the help lines of a form show, shared through the context.
 #[derive(Debug, Clone, Copy)]
@@ -36,13 +58,15 @@ fn help_shown() -> HelpShown {
     use_context::<HelpShown>().unwrap_or_else(|| HelpShown(RwSignal::new(false)))
 }
 
-/// Returns the form's help switch: a button with `aria-pressed` that shows
-/// and hides every help line of the form.
+/// Returns the form's help switch in `words`: a button with `aria-pressed`
+/// that shows and hides every help line of the form.
 #[must_use]
-pub fn help_switch() -> AnyView {
+pub fn help_switch(words: HelpWords) -> AnyView {
     let HelpShown(shown) = help_shown();
-    let hide = tr(Text::HelpHide);
-    let explain = tr(Text::HelpShow);
+    let HelpWords {
+        show: explain,
+        hide,
+    } = words;
     view! {
         <button
             type="button"

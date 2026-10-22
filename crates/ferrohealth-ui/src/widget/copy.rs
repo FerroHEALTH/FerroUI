@@ -21,6 +21,33 @@ use crate::view::button::Variant;
 /// How long "Copied" stays, in milliseconds.
 pub const COPIED_MS: u64 = 2000;
 
+/// The words the copy button draws itself, resolved on the server in the
+/// page's locale, so an island that draws it carries no catalog.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CopyWords {
+    /// The button's words once the text is on the clipboard.
+    pub copied: String,
+    /// What the live region says once the text is on the clipboard.
+    pub said_copied: String,
+    /// What the live region says when the browser refused.
+    pub said_refused: String,
+    /// The line beside the button when the browser refused.
+    pub refused: String,
+}
+
+impl CopyWords {
+    /// The copy button's words in the locale of the page being drawn.
+    #[must_use]
+    pub fn of_page() -> Self {
+        Self {
+            copied: tr(Text::CopyCopied),
+            said_copied: tr(Text::CopySaidCopied),
+            said_refused: tr(Text::CopySaidRefused),
+            refused: tr(Text::CopyRefused),
+        }
+    }
+}
+
 /// What the copy button says.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum State {
@@ -33,12 +60,13 @@ enum State {
 }
 
 /// Returns the copy button `id` labelled `label`, copying `text` when
-/// pressed.
+/// pressed and saying what came of it in `words`.
 #[must_use]
 pub fn copy_button(
     id: impl Into<String>,
     label: impl Into<Oco<'static, str>>,
     text: Signal<String>,
+    words: CopyWords,
 ) -> impl IntoView {
     let id = id.into();
     let label = label.into();
@@ -49,12 +77,12 @@ pub fn copy_button(
         let value = text.get_untracked();
         write(&value, state);
     };
-    // The words are read once, while the page's locale is in reach, and
-    // drawn as the state moves.
-    let said_copied = tr(Text::CopySaidCopied);
-    let said_refused = tr(Text::CopySaidRefused);
-    let copied = tr(Text::CopyCopied);
-    let refused = tr(Text::CopyRefused);
+    let CopyWords {
+        copied,
+        said_copied,
+        said_refused,
+        refused,
+    } = words;
     let said = move || match state.get() {
         State::Ready => String::new(),
         State::Copied => said_copied.clone(),

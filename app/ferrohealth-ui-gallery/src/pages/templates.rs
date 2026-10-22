@@ -19,7 +19,7 @@ use ferrohealth_ui::view::error_page::{Detail, ErrorPage, Status, Way, error_pag
 use ferrohealth_ui::view::shell::centred;
 use ferrohealth_ui::view::status::{badge, pill};
 use ferrohealth_ui::view::surface::{Crumb, Header, card, facts_row, grid_start};
-use ferrohealth_ui::view::tabs::{KeyedTab, keyed_tabs};
+use ferrohealth_ui::view::tabs::{Tab, TabRow};
 use ferrohealth_ui::view::template::about::{
     AboutPage, Link, Manufacturer, SelfDescription, about_page,
 };
@@ -147,23 +147,14 @@ fn table(rows: &[Location]) -> AnyView {
 /// The card of the short list, with its tabs when `tabs`.
 fn short_card(tabs: bool) -> ListCard {
     let rows = locations();
-    let tabs = tabs.then(|| {
-        keyed_tabs(
-            tr(Msg::Locations),
-            vec![
-                KeyedTab {
-                    key: "all",
-                    href: at("list-tabs"),
-                    label: tr(Msg::Locations).into(),
-                },
-                KeyedTab {
-                    key: "units",
-                    href: at("list-tabs"),
-                    label: tr(Msg::AllUnits).into(),
-                },
-            ],
-            "all",
-        )
+    let tabs = tabs.then(|| TabRow {
+        label: tr(Msg::Locations),
+        tabs: vec![
+            Tab::new("all", at("list-tabs"), tr(Msg::Locations))
+                .count(5, tr_with(Msg::LocationsCount, &[("count", 5.into())])),
+            Tab::new("units", at("list-tabs"), tr(Msg::AllUnits)),
+        ],
+        current: String::from("all"),
     });
     ListCard {
         title: tr(Msg::Locations),
@@ -300,23 +291,19 @@ fn list_empty_page() -> AnyView {
 
 /// T2: the trail, the title with its state, one primary, binder tabs.
 fn detail() -> AnyView {
-    let tabs = keyed_tabs(
-        tr(Msg::LocatieNoord),
-        [
+    let tabs = TabRow {
+        label: tr(Msg::LocatieNoord),
+        tabs: [
             ("overview", Msg::Overview),
             ("units", Msg::Units),
             ("audit", Msg::Audit),
             ("settings", Msg::SettingsTab),
         ]
         .into_iter()
-        .map(|(key, msg)| KeyedTab {
-            key,
-            href: at("detail"),
-            label: tr(msg).into(),
-        })
+        .map(|(key, msg)| Tab::new(key, at("detail"), tr(msg)))
         .collect(),
-        "overview",
-    );
+        current: String::from("overview"),
+    };
     let facts = facts_row(vec![
         (
             tr(Msg::ColumnId),
@@ -402,25 +389,29 @@ fn settings() -> Vec<Setting> {
     ]
 }
 
-/// The binder tabs of the settings pages.
-fn settings_tabs(variant: &str) -> AnyView {
-    keyed_tabs(
-        tr(Msg::SettingsSections),
-        [
+/// The binder tabs of the settings page `variant`, General holding a
+/// draft when `draft`.
+fn settings_tabs(variant: &str, draft: bool) -> TabRow {
+    TabRow {
+        label: tr(Msg::SettingsSections),
+        tabs: [
             ("general", Msg::General),
             ("limits", Msg::Limits),
             ("access", Msg::AccessLog),
             ("history", Msg::History),
         ]
         .into_iter()
-        .map(|(key, msg)| KeyedTab {
-            key,
-            href: at(variant),
-            label: tr(msg).into(),
+        .map(|(key, msg)| {
+            let tab = Tab::new(key, at(variant), tr(msg));
+            if draft && key == "general" {
+                tab.draft()
+            } else {
+                tab
+            }
         })
         .collect(),
-        "general",
-    )
+        current: String::from("general"),
+    }
 }
 
 /// The header of the settings pages.
@@ -441,14 +432,13 @@ fn settings_file() -> AnyView {
             file: String::from(CONFIG_FILE),
             how: at("settings"),
         },
-        tabs: Some(settings_tabs("settings")),
+        tabs: Some(settings_tabs("settings", false)),
         settings: settings(),
     })
 }
 
 /// T3 managed: the mode badge, the revision line, the intro and Edit.
 fn settings_managed() -> AnyView {
-    // TODO(#152): the General tab carries the draft badge while it holds a draft.
     settings_page(SettingsPage {
         header: settings_header(),
         actions: Some(link_button(
@@ -470,7 +460,7 @@ fn settings_managed() -> AnyView {
                 .into_any(),
             ),
         })),
-        tabs: Some(settings_tabs("settings-managed")),
+        tabs: Some(settings_tabs("settings-managed", true)),
         settings: settings(),
     })
 }

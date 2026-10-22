@@ -13,9 +13,34 @@
 //! press that does nothing; the figures table reads the same either way.
 
 use leptos::prelude::*;
+use serde::{Deserialize, Serialize};
 
 use crate::i18n::{Text, tr};
-use crate::view::chart::{LineChart, PALETTE, figures, has_gaps, line_svg_grouped};
+use crate::view::chart::{FiguresWords, LineChart, PALETTE, figures, has_gaps, line_svg_grouped};
+
+/// The words a line chart draws itself, resolved on the server in the
+/// page's locale, so an island that draws it carries no catalog.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ChartWords {
+    /// The legend's note on a gap in a line.
+    pub no_value: String,
+    /// The legend's name.
+    pub series: String,
+    /// The figures table's words.
+    pub figures: FiguresWords,
+}
+
+impl ChartWords {
+    /// The chart's words in the locale of the page being drawn.
+    #[must_use]
+    pub fn of_page() -> Self {
+        Self {
+            no_value: tr(Text::ChartNoValue),
+            series: tr(Text::ChartSeries),
+            figures: FiguresWords::of_page(),
+        }
+    }
+}
 
 /// How many of `count` series `shown` keeps, a missing flag counting as
 /// shown.
@@ -33,11 +58,16 @@ fn is_shown(shown: RwSignal<Vec<bool>>, index: usize) -> bool {
     shown.with(|flags| flags.get(index).copied().unwrap_or(true))
 }
 
-/// Returns the line chart `chart`, its legend toggling `shown`, one flag
-/// per series; the last series shown cannot be hidden.
+/// Returns the line chart `chart` in `words`, its legend toggling `shown`,
+/// one flag per series; the last series shown cannot be hidden.
 #[must_use]
-pub fn line_chart(chart: LineChart, shown: RwSignal<Vec<bool>>) -> AnyView {
-    let table = figures(&chart).into_any();
+pub fn line_chart(chart: LineChart, shown: RwSignal<Vec<bool>>, words: ChartWords) -> AnyView {
+    let ChartWords {
+        no_value,
+        series: legend,
+        figures: figure_words,
+    } = words;
+    let table = figures(&chart, figure_words).into_any();
     let count = chart.series.len();
     let hydrated = RwSignal::new(false);
     Effect::new(move || hydrated.set(true));
@@ -84,7 +114,7 @@ pub fn line_chart(chart: LineChart, shown: RwSignal<Vec<bool>>) -> AnyView {
         view! {
             <span class="fui-legend-note">
                 <span class="fui-swatch-gap" aria-hidden="true"></span>
-                {tr(Text::ChartNoValue)}
+                {no_value}
             </span>
         }
     });
@@ -94,7 +124,7 @@ pub fn line_chart(chart: LineChart, shown: RwSignal<Vec<bool>>) -> AnyView {
     view! {
         <figure class="fui-chart">
             <div class="fui-chart-plot" node_ref=plot inner_html=drawn></div>
-            <figcaption class="fui-legend" aria-label=tr(Text::ChartSeries)>
+            <figcaption class="fui-legend" aria-label=legend>
                 {chips}
                 {note}
             </figcaption>

@@ -23,14 +23,11 @@ pub mod pages;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod server;
 
-/// Hydrates the islands of the page the server rendered, in the locale the
-/// server wrote as its `<html lang>`.
+/// Hydrates the islands of the page the server rendered. Each island takes
+/// the words it draws as props, so the browser builds no locale.
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen::prelude::wasm_bindgen]
 pub fn hydrate() {
     console_error_panic_hook::set_once();
-    ferrohealth_ui::i18n::provide_page_locale(locale::gallery_locale(
-        &ferrohealth_ui::i18n::document_lang().unwrap_or_default(),
-    ));
     leptos::mount::hydrate_islands();
 }

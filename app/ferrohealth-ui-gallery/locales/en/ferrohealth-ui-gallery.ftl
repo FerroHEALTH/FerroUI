@@ -277,6 +277,14 @@ information = Information
 set-reloads-background = The set reloads in the background.
 success = Success
 saved-set-reloaded = Saved, and the set reloaded.
+open-the-tables = Open the tables
+popover-form = Popover form
+popover-form-opens-under-trigger = It opens under its trigger and, on a phone, rises from the foot of the screen.
+save-the-query = Save the query
+save-the-query-to-the-server = Save the query to the server
+someone-saved-the-file-first = Someone saved the file first; reload it to see their change.
+three-files-compiled-facade-serves = 3 files compiled; the facade serves them now.
+two-mappings-name-missing-path = Two mappings name a path the template does not hold.
 access = Access
 view-access = View access
 content-no-navigation-from-end = Content that is no navigation, from the end of the page.
@@ -350,6 +358,18 @@ minimal = Minimal
 detail = Detail
 format = Format
 keyboard-tabs-left-right-home = Keyboard tabs: Left, Right, Home and End move between them.
+appearance = Appearance
+binder-many-tabs-select = Past five tabs, a phone shows the sections as a select once the page has loaded its script.
+binder-panel-joined = The tab you are on opens into this panel, so the two read as one sheet.
+binder-preferences-draft = Notifications holds a draft; Keyboard leaves the row on a phone, which has no keyboard.
+findings-count =
+    { $count ->
+        [one] { $count } finding
+       *[other] { $count } findings
+    }
+keyboard = Keyboard
+notifications = Notifications
+your-preferences = Your preferences
 tabs = Tabs
 what-console-asked = What the console asked.
 request = Request

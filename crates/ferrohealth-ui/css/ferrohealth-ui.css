@@ -5194,7 +5194,8 @@
   }
 
   /* The sheet: the panel's edge runs under the inactive tabs. */
-  .fui-tabbed > .fui-tab-panel {
+  .fui-tabbed > .fui-tab-panel,
+  .fui-tabbed > leptos-children > .fui-tab-panel {
     min-width: 0;
     border: 1px solid var(--edge-strong);
     border-radius: var(--radius-card);
@@ -5203,7 +5204,8 @@
   }
 
   /* A card inside the sheet is the sheet: no second frame. */
-  .fui-tabbed > .fui-tab-panel > :is(.fui-card, .fui-panel) {
+  .fui-tabbed > .fui-tab-panel > :is(.fui-card, .fui-panel),
+  .fui-tabbed > leptos-children > .fui-tab-panel > :is(.fui-card, .fui-panel) {
     border: 0;
     box-shadow: none;
     padding: 0;
@@ -5211,15 +5213,18 @@
 
   /* A titled table fills the sheet edge to edge: the sheet gives up its
      padding and the head keeps it. */
-  .fui-tabbed > .fui-tab-panel:has(> .fui-panel) {
+  .fui-tabbed > .fui-tab-panel:has(> .fui-panel),
+  .fui-tabbed > leptos-children > .fui-tab-panel:has(> .fui-panel) {
     padding: 0;
   }
 
-  .fui-tabbed > .fui-tab-panel > .fui-panel > .fui-panel-head {
+  .fui-tabbed > .fui-tab-panel > .fui-panel > .fui-panel-head,
+  .fui-tabbed > leptos-children > .fui-tab-panel > .fui-panel > .fui-panel-head {
     padding: 0.75rem var(--space-loose);
   }
 
-  .fui-tabbed > .fui-tab-panel > .fui-panel > .fui-table-scroll {
+  .fui-tabbed > .fui-tab-panel > .fui-panel > .fui-table-scroll,
+  .fui-tabbed > leptos-children > .fui-tab-panel > .fui-panel > .fui-table-scroll {
     border-radius: 0 0 var(--radius-card) var(--radius-card);
   }
 
@@ -5238,11 +5243,13 @@
       padding-inline: 0.75rem;
     }
 
-    .fui-tabbed > .fui-tab-panel {
+    .fui-tabbed > .fui-tab-panel,
+    .fui-tabbed > leptos-children > .fui-tab-panel {
       padding: 0.75rem;
     }
 
-    .fui-tabbed > .fui-tab-panel > .fui-panel > .fui-table-stack {
+    .fui-tabbed > .fui-tab-panel > .fui-panel > .fui-table-stack,
+    .fui-tabbed > leptos-children > .fui-tab-panel > .fui-panel > .fui-table-stack {
       padding: 0 0.75rem 0.75rem;
     }
   }
@@ -9810,22 +9817,24 @@
     line-height: var(--leading-small);
   }
 
-  /* Many tabs on a phone: a select names every section at once. */
+  /* Many tabs on a phone: a select names every section at once. It takes
+     the row's place only once it works (enabled, which the island does as
+     it hydrates); until then the row of links serves. */
   .fui-tabs-select {
     display: none;
   }
 
   @media (width < 40rem) {
-    .fui-tabbed-many > .fui-tabs {
+    .fui-tabbed-many:has(.fui-tabs-select > select:enabled) > .fui-tabs {
       display: none;
     }
 
-    .fui-tabbed-many > .fui-tabs-select {
+    .fui-tabbed-many .fui-tabs-select:has(> select:enabled) {
       display: block;
       margin-block-end: 0.5rem;
     }
 
-    .fui-tabbed-many > .fui-tab-panel {
+    .fui-tabbed-many:has(.fui-tabs-select > select:enabled) > .fui-tab-panel {
       border-radius: var(--radius-card);
     }
   }
@@ -12359,6 +12368,35 @@
     }
   }
 
+  /* As a native popover it sits in the top layer, where no ancestor holds
+     it, so it is placed against its trigger by CSS anchor positioning, the
+     anchor's name scoped to its own anchor; a browser without it centres
+     the popover. */
+  .fui-anchor > .fui-popover[popover] {
+    position: fixed;
+    margin: 0;
+  }
+
+  @supports (position-area: block-end) {
+    .fui-anchor {
+      anchor-scope: --fui-anchor;
+    }
+
+    .fui-anchor > [popovertarget] {
+      anchor-name: --fui-anchor;
+    }
+
+    @media (width >= 40rem) {
+      .fui-anchor > .fui-popover[popover] {
+        inset: auto;
+        margin-block-start: 0.25rem;
+        position-anchor: --fui-anchor;
+        position-area: block-end span-inline-start;
+        position-try-fallbacks: flip-block;
+      }
+    }
+  }
+
   /* ---- A row's actions on a phone (FerroEHR pass): in every stacked
      table, the row-menu cell sits on the card's first line,
      at its end, as F7 keeps Remove on a repeatable row's first line. ---- */
@@ -12901,7 +12939,7 @@
 
   /* On a phone the toast region keeps clear of the page's last row. */
   @media (width < 40rem) {
-    .fui-page:has(> .fui-toasts) .fui-main {
+    :root:has(.fui-toasts > .fui-toast) .fui-main {
       padding-block-end: 7rem;
     }
   }
@@ -13182,7 +13220,7 @@
   }
 
   /* The toast region keeps clear of the page's last row at every width. */
-  .fui-page:has(> .fui-toasts) .fui-main {
+  :root:has(.fui-toasts > .fui-toast) .fui-main {
     padding-block-end: 7rem;
   }
 
@@ -13248,7 +13286,7 @@
   /* ---- Library items from the FerroFED and FerroPIX fixers (final pass) ---- */
 
   /* R17: the toast region keeps clear of the footer too. */
-  .fui-page:has(> .fui-toasts) > .fui-footer {
+  :root:has(.fui-toasts > .fui-toast) .fui-page > .fui-footer {
     padding-block-end: 7rem;
   }
 

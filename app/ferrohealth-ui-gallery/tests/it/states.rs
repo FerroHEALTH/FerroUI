@@ -35,7 +35,7 @@ use crate::journeys::window;
 use crate::stack::Gallery;
 
 /// Every state, by the name its images take.
-pub(crate) const STATES: [&str; 51] = [
+pub(crate) const STATES: [&str; 54] = [
     "hover-nav",
     "focus-nav",
     "hover-stat",
@@ -49,6 +49,7 @@ pub(crate) const STATES: [&str; 51] = [
     "focus-button",
     "hover-tab",
     "focus-keyboard-tabs",
+    "tabs-select-390",
     "hover-row",
     "focus-row",
     "focus-sort",
@@ -67,6 +68,8 @@ pub(crate) const STATES: [&str; 51] = [
     "focus-user-menu",
     "rail-hover",
     "toasts",
+    "popover-form",
+    "popover-form-390",
     "drawer-open",
     "focus-search",
     "help-on",
@@ -320,14 +323,24 @@ async fn overview(
     focus(browser, &primary).await?;
     shot_of(browser, brand, theme, "focus-button", &buttons).await?;
     let tabs = browser.element(card("Tabs")).await?;
-    let tab = browser.element(By::LinkText("Diagnostics")).await?;
+    let tab = browser.element(By::PartialLinkText("Diagnostics")).await?;
     hover(browser, &tab).await?;
     shot_of(browser, brand, theme, "hover-tab", &tabs).await?;
     away(browser).await?;
     let first_tab = browser.element(By::Id("answer-tab-0")).await?;
     focus(browser, &first_tab).await?;
     first_tab.send_keys(Key::Right).await?;
-    shot_of(browser, brand, theme, "focus-keyboard-tabs", &tabs).await
+    shot_of(browser, brand, theme, "focus-keyboard-tabs", &tabs).await?;
+    away(browser).await?;
+    window(browser, 390, HEIGHT).await?;
+    let select = browser.element(By::Id("fui-tabs-select")).await?;
+    until("the tab select takes the row's place", async || {
+        Ok(select.is_displayed().await?)
+    })
+    .await?;
+    let tabs = browser.element(card("Tabs")).await?;
+    shot_of(browser, brand, theme, "tabs-select-390", &tabs).await?;
+    window(browser, WIDTH, HEIGHT).await
 }
 
 /// The row under the pointer, and the editor with its diagnostics.
@@ -469,6 +482,38 @@ async fn overlay(
     .await
 }
 
+/// The four toasts raised at once, then dismissed.
+async fn raised_toasts(browser: &Browser, brand: Brand, theme: &str) -> Result<(), Box<dyn Error>> {
+    for tone in ["ok", "info", "warn", "bad"] {
+        let raise = browser
+            .element(By::Css(format!("button[data-toast='{tone}']")))
+            .await?;
+        press(browser, &raise).await?;
+    }
+    let region = browser.element(By::Css(".fui-toasts")).await?;
+    until("four toasts show", async || {
+        Ok(region.find_all(By::Css(".fui-toast")).await?.len() >= 4)
+    })
+    .await?;
+    shot_of(browser, brand, theme, "toasts", &region).await?;
+    for close in browser
+        .driver()
+        .find_all(By::Css(".fui-toast > .fui-icon-button"))
+        .await?
+    {
+        close.click().await?;
+    }
+    until("the toasts are gone", async || {
+        Ok(browser
+            .driver()
+            .find_all(By::Css(".fui-toast"))
+            .await?
+            .is_empty())
+    })
+    .await?;
+    Ok(())
+}
+
 /// Every overlay open, and the toasts.
 async fn overlays(
     browser: &Browser,
@@ -482,7 +527,7 @@ async fn overlays(
     crate::journeys::hydrated_toasts(browser).await?;
     for close in browser
         .driver()
-        .find_all(By::Css(".fui-toast button"))
+        .find_all(By::Css(".fui-toast > .fui-icon-button"))
         .await?
     {
         close.click().await?;
@@ -522,38 +567,26 @@ async fn overlays(
             "//button[@popovertarget = 'user-menu']",
             "user-menu",
         ),
+        (
+            "popover-form",
+            "//button[@popovertarget = 'save-query']",
+            "save-query",
+        ),
     ];
     for (state, opener, id) in opened {
         overlay(browser, brand, theme, state, By::XPath(opener), By::Id(id)).await?;
     }
-    for tone in ["ok", "info", "warn", "bad"] {
-        let raise = browser
-            .element(By::Css(format!("button[data-toast='{tone}']")))
-            .await?;
-        press(browser, &raise).await?;
-    }
-    let region = browser.element(By::Css(".fui-toasts")).await?;
-    until("four toasts show", async || {
-        Ok(region.find_all(By::Css(".fui-toast")).await?.len() >= 4)
-    })
-    .await?;
-    shot_of(browser, brand, theme, "toasts", &region).await?;
-    for close in browser
-        .driver()
-        .find_all(By::Css(".fui-toast button"))
-        .await?
-    {
-        close.click().await?;
-    }
-    until("the toasts are gone", async || {
-        Ok(browser
-            .driver()
-            .find_all(By::Css(".fui-toast"))
-            .await?
-            .is_empty())
-    })
-    .await?;
+    raised_toasts(browser, brand, theme).await?;
     window(browser, 390, HEIGHT).await?;
+    overlay(
+        browser,
+        brand,
+        theme,
+        "popover-form-390",
+        By::XPath("//button[@popovertarget = 'save-query']"),
+        By::Id("save-query"),
+    )
+    .await?;
     overlay(
         browser,
         brand,

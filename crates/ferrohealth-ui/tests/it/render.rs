@@ -6,6 +6,7 @@
 //! what each must never carry, and the escaping of what it is given.
 
 use ferrohealth_ui::highlight::Language;
+use ferrohealth_ui::i18n::Phrase;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::island::{KeyboardTabs, ToastRegion};
 use ferrohealth_ui::theme::Theme;
@@ -22,22 +23,23 @@ use ferrohealth_ui::view::form::{
     ERROR, Field, INPUT, SELECT, action_field, described_by, error_id, field, help_id, keyed_check,
     keyed_check_field, keyed_field,
 };
+use ferrohealth_ui::view::popover::{PopoverForm, popover_form};
 use ferrohealth_ui::view::refusal::{Issue, Refusal, Severity, refusal};
 use ferrohealth_ui::view::shell::{Footer, footer, lockup, mark};
 use ferrohealth_ui::view::surface::{
     Header, SectionHead, Stat, add_row, definitions, page_header, page_heading, panel_section,
     panel_sections, section_intro, source_split, stat_card,
 };
-use ferrohealth_ui::view::tabs::{Tab, link_tabs};
+use ferrohealth_ui::view::tabs::{Tab, binder};
 use ferrohealth_ui::view::theme_switch::theme_switch;
-use ferrohealth_ui::widget::chart::line_chart;
+use ferrohealth_ui::widget::chart::{ChartWords, line_chart};
 use ferrohealth_ui::widget::document::DocumentView;
 use ferrohealth_ui::widget::editor::{Editor, code_editor};
 use ferrohealth_ui::widget::help::explained_check_field;
 use ferrohealth_ui::widget::pick_or_type::{PickOrType, Picker, pick_or_type};
 use ferrohealth_ui::widget::picker::{self, picker_field};
 use ferrohealth_ui::widget::tabs::tab_panels;
-use ferrohealth_ui::widget::toast::{Flash, RegionWords};
+use ferrohealth_ui::widget::toast::{Flash, RegionWords, ToastLink};
 use ferrohealth_ui::widget::tree::{Tree, TreeNode, tree_view};
 use leptos::prelude::*;
 
@@ -474,10 +476,22 @@ fn the_last_series_shown_cannot_be_hidden_and_each_chip_names_its_series() {
         x_ticks: vec![(0.0, String::from("Mon")), (1.0, String::from("Tue"))],
         y_range: None,
     };
-    let both = html(move || line_chart(chart(), RwSignal::new(vec![true, true])));
+    let both = html(move || {
+        line_chart(
+            chart(),
+            RwSignal::new(vec![true, true]),
+            ChartWords::of_page(),
+        )
+    });
     assert!(both.contains(r#"data-series="systolic""#), "{both}");
     assert!(!both.contains("disabled"), "{both}");
-    let one = html(move || line_chart(chart(), RwSignal::new(vec![false, true])));
+    let one = html(move || {
+        line_chart(
+            chart(),
+            RwSignal::new(vec![false, true]),
+            ChartWords::of_page(),
+        )
+    });
     assert_eq!(1, one.matches("disabled").count(), "{one}");
     assert!(
         has(
@@ -514,7 +528,13 @@ fn every_series_is_drawn_once_and_a_hidden_one_is_hidden_in_place() {
         x_ticks: vec![(0.0, String::from("Mon")), (1.0, String::from("Tue"))],
         y_range: None,
     };
-    let one = html(move || line_chart(chart(), RwSignal::new(vec![false, true])));
+    let one = html(move || {
+        line_chart(
+            chart(),
+            RwSignal::new(vec![false, true]),
+            ChartWords::of_page(),
+        )
+    });
     assert!(one.contains("fui-chart-line fui-series-0"), "{one}");
     assert!(one.contains("fui-chart-line fui-series-1"), "{one}");
     let groups = tags(&one, "g");
@@ -647,7 +667,7 @@ fn the_surfaces_render_and_none_writes_a_style_attribute() {
             {lockup("/", mark(Glyph::LAYERS), "FerroUI", "Gallery")}
             {stat_card(Stat { glyph: Glyph::USERS, value: String::from("12"), label: "Members".into(), href: Some(String::from("/members")) })}
             {definitions(vec![("Version", "0.1.0".into_any())])}
-            {link_tabs("Views", &[Tab { href: "/a", label: "A".into() }, Tab { href: "/b", label: "B".into() }], "/b")}
+            {binder("Views", vec![Tab::new("a", "/a", "A"), Tab::new("b", "/b", "B")], "b", ().into_any())}
             {empty_state(Glyph::INBOX, "Nothing here", "No file yet.", ())}
             {skeleton(3, "Loading the files.")}
             {link_button(String::from("/new"), Variant::Primary, Some(Glyph::PLUS), "New")}
@@ -1100,6 +1120,12 @@ fn the_keyboard_tabs_show_the_first_panel_and_hide_the_others_before_any_webasse
         "the first panel shows: {page}"
     );
     assert!(
+        page.contains(
+            r#"<div class="fui-tabbed"><div role="tablist" aria-label="Answer" class="fui-tabs">"#
+        ),
+        "the tabs are joined to their panels as binder tabs: {page}"
+    );
+    assert!(
         page.contains(r#"id="answer-panel-1" aria-labelledby="answer-tab-1" hidden tabindex="0""#),
         "the second panel is hidden: {page}"
     );
@@ -1111,7 +1137,18 @@ fn the_toast_region_draws_the_flash_toasts_the_server_hands_it() {
         view! {
             <ToastRegion
                 words=RegionWords { region: String::from("Notices"), dismiss: String::from("Dismiss") }
-                flash=vec![Flash { tone: Tone::Ok, text: String::from("Saved.") }]
+                flash=vec![
+                    Flash {
+                        tone: Tone::Ok,
+                        title: String::from("Saved <now>."),
+                        line: Some(String::from("3 files compiled.")),
+                        action: Some(ToastLink {
+                            label: String::from("Open History"),
+                            href: String::from("/history"),
+                        }),
+                    },
+                    Flash { tone: Tone::Bad, title: String::from("Refused."), line: None, action: None },
+                ]
             />
         }
         .into_any()
@@ -1121,11 +1158,208 @@ fn the_toast_region_draws_the_flash_toasts_the_server_hands_it() {
         "{page}"
     );
     assert!(
-        page.contains(r#"<p class="fui-toast-text">Saved.</p>"#),
-        "the flash toast shows: {page}"
+        page.contains("<strong>Saved &lt;now&gt;.</strong><span>3 files compiled.</span>"),
+        "the title over its line, escaped: {page}"
     );
     assert!(
-        page.contains("Dismiss"),
-        "its close button is named: {page}"
+        has(
+            &page,
+            "a",
+            &[
+                ("href", "/history"),
+                ("class", "fui-button fui-button-secondary fui-button-small")
+            ]
+        ),
+        "the action is a small link button under the text: {page}"
+    );
+    // WAI-ARIA 1.2, the alert role: the bad tone interrupts, the others wait.
+    let toasts: Vec<_> = tags(&page, "div")
+        .into_iter()
+        .filter(|div| {
+            div.get("class")
+                .is_some_and(|class| class.starts_with("fui-toast "))
+        })
+        .collect();
+    assert_eq!(2, toasts.len(), "{page}");
+    assert_eq!(None, toasts[0].get("role"), "an ok toast is polite: {page}");
+    assert_eq!(
+        Some(&String::from("alert")),
+        toasts[1].get("role"),
+        "{page}"
+    );
+    assert!(
+        has(
+            &page,
+            "button",
+            &[("aria-label", "Dismiss"), ("hidden", "")]
+        ),
+        "Dismiss is named, and absent until the page hydrates: {page}"
+    );
+}
+
+#[test]
+fn binder_tabs_join_their_panel_and_mark_the_current_page_with_its_count_and_draft() {
+    let page = page_html(|| {
+        binder(
+            "Sections",
+            vec![
+                Tab::new("nodes", "/nodes", "Nodes").count(12, "12 nodes"),
+                Tab::new("consent", "/consent", "Consent <draft>").draft(),
+                Tab::new("keyboard", "/keyboard", "Keyboard"),
+            ],
+            "nodes",
+            view! { <p>"The panel"</p> }.into_any(),
+        )
+    });
+    assert!(page.starts_with(r#"<div class="fui-tabbed">"#), "{page}");
+    assert!(
+        has(
+            &page,
+            "nav",
+            &[("aria-label", "Sections"), ("class", "fui-tabs")]
+        ),
+        "{page}"
+    );
+    assert!(
+        has(
+            &page,
+            "a",
+            &[
+                ("href", "/nodes"),
+                ("aria-current", "page"),
+                ("data-tab", "nodes")
+            ]
+        ),
+        "{page}"
+    );
+    assert!(
+        page.contains(
+            r#"<span aria-hidden="true">12</span><span class="fui-sr-only">12 nodes</span>"#
+        ),
+        "the count carries its noun: {page}"
+    );
+    assert!(
+        page.contains(r#"<span class="fui-tab-draft">draft</span>"#),
+        "{page}"
+    );
+    assert!(
+        page.contains("Consent &lt;draft&gt;"),
+        "the label is escaped: {page}"
+    );
+    assert!(has(&page, "a", &[("data-tab", "keyboard")]), "{page}");
+    assert!(
+        page.contains(r#"<div class="fui-tab-panel"><p>The panel</p></div>"#),
+        "{page}"
+    );
+    assert!(
+        !page.contains("fui-tabs-select"),
+        "five tabs or fewer keep the row: {page}"
+    );
+}
+
+#[test]
+fn past_five_binder_tabs_a_phone_select_waits_disabled_for_the_webassembly() {
+    let page = page_html(|| {
+        let tabs = (1..=7)
+            .map(|index| {
+                let tab = Tab::new(
+                    format!("t{index}"),
+                    format!("/t{index}"),
+                    format!("Tab {index}"),
+                );
+                if index == 2 { tab.draft() } else { tab }
+            })
+            .chain([Tab::new("keyboard", "/keyboard", "Keyboard")])
+            .collect();
+        binder("Sections", tabs, "t3", ().into_any())
+    });
+    assert!(
+        page.contains(r#"class="fui-tabbed fui-tabbed-many""#),
+        "{page}"
+    );
+    assert!(
+        has(
+            &page,
+            "select",
+            &[("id", "fui-tabs-select"), ("disabled", "")]
+        ),
+        "no-WebAssembly floor: the row of links serves until the select works: {page}"
+    );
+    assert!(
+        has(&page, "option", &[("value", "/t3"), ("selected", "")]),
+        "{page}"
+    );
+    assert!(
+        page.contains("Tab 2 (draft)"),
+        "a draft is named in the select: {page}"
+    );
+    assert!(
+        !has(&page, "option", &[("value", "/keyboard")]),
+        "a phone leaves Keyboard out: {page}"
+    );
+    assert_eq!(
+        8,
+        tags(&page, "a").len(),
+        "every tab is still a link: {page}"
+    );
+}
+
+#[test]
+fn the_popover_form_is_a_native_popover_inside_its_anchor() {
+    let page = html(|| {
+        popover_form(PopoverForm {
+            id: "save",
+            variant: Variant::Secondary,
+            glyph: Glyph::SAVE,
+            label: "Save <it>".into(),
+            title: "Save to the CDR".into(),
+            body: view! { <form method="post"><button type="submit">"Save"</button></form> }
+                .into_any(),
+        })
+    });
+    assert!(page.starts_with(r#"<span class="fui-anchor">"#), "{page}");
+    assert!(
+        has(
+            &page,
+            "button",
+            &[("popovertarget", "save"), ("aria-controls", "save")]
+        ),
+        "{page}"
+    );
+    assert!(
+        has(
+            &page,
+            "div",
+            &[
+                ("id", "save"),
+                ("popover", "auto"),
+                ("role", "dialog"),
+                ("aria-labelledby", "save-title")
+            ]
+        ),
+        "{page}"
+    );
+    assert!(
+        page.contains(r#"<p id="save-title" class="fui-popover-title">Save to the CDR</p>"#),
+        "{page}"
+    );
+    assert!(page.contains("Save &lt;it&gt;"), "{page}");
+}
+
+#[test]
+fn a_phrase_fills_its_open_placeables_and_leaves_the_rest() {
+    let phrase = Phrase::new(format!(
+        "{} of {} rows",
+        Phrase::open_mark("first"),
+        Phrase::open_mark("total")
+    ));
+    assert_eq!(
+        "1 of 312 rows",
+        phrase.fill(&[("first", "1"), ("total", "312")])
+    );
+    assert_eq!(
+        Phrase::new("No rows").fill(&[("first", "1")]),
+        "No rows",
+        "a phrase with nothing open is its words"
     );
 }

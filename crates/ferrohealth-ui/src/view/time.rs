@@ -14,7 +14,7 @@
 
 use leptos::prelude::*;
 
-use crate::i18n::{Text, tr_with};
+use crate::i18n::{Phrase, Text, tr_with};
 
 /// A date, `YYYY-MM-DD`, its parts checked against the calendar.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -268,18 +268,15 @@ impl Parsed {
         Some(Self::Instant(date, clock))
     }
 
-    /// The form a person reads: `2026-10-18 23:18:37 UTC` for an instant.
-    fn reading(&self) -> String {
+    /// The form a person reads in `words`: `2026-10-18 23:18:37 UTC` for
+    /// an instant.
+    fn reading(&self, words: &TimeWords) -> String {
         match self {
             Self::Date(date) => day(*date),
             Self::Local(date, clock) => format!("{} {}", day(*date), time(clock, false)),
-            Self::Instant(date, clock) => tr_with(
-                Text::TimestampUtc,
-                &[
-                    ("date", day(*date).into()),
-                    ("time", time(clock, false).into()),
-                ],
-            ),
+            Self::Instant(date, clock) => words
+                .utc
+                .fill(&[("date", &day(*date)), ("time", &time(clock, false))]),
         }
     }
 
@@ -309,12 +306,42 @@ fn time(clock: &Clock, fraction: bool) -> String {
     }
 }
 
+/// The words of a timestamp, resolved on the server in the page's locale,
+/// so an island that draws one carries no catalog.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct TimeWords {
+    /// An instant in UTC, around the open `date` and `time`.
+    pub utc: Phrase,
+}
+
+impl TimeWords {
+    /// The timestamp's words in the locale of the page being drawn.
+    #[must_use]
+    pub fn of_page() -> Self {
+        Self {
+            utc: Phrase::new(tr_with(
+                Text::TimestampUtc,
+                &[
+                    ("date", Phrase::open("date")),
+                    ("time", Phrase::open("time")),
+                ],
+            )),
+        }
+    }
+}
+
 /// The reading form of `raw`: `2026-10-18 23:18:37 UTC` for the instant
 /// `2026-10-18T23:18:37.039437+00:00`, a date-time with no offset as it
 /// stands, and anything that is no date-time verbatim.
 #[must_use]
 pub fn reading(raw: &str) -> String {
-    Parsed::parse(raw).map_or_else(|| raw.to_owned(), |parsed| parsed.reading())
+    reading_in(raw, &TimeWords::of_page())
+}
+
+/// [`reading`] in `words`.
+#[must_use]
+pub fn reading_in(raw: &str, words: &TimeWords) -> String {
+    Parsed::parse(raw).map_or_else(|| raw.to_owned(), |parsed| parsed.reading(words))
 }
 
 /// Returns `raw` drawn for reading on one line, never broken.
@@ -324,12 +351,18 @@ pub fn reading(raw: &str) -> String {
 /// `title` is `raw` exactly as it came; anything else is `raw` verbatim.
 #[must_use]
 pub fn timestamp(raw: &str) -> impl IntoView + use<> {
+    timestamp_in(raw, &TimeWords::of_page())
+}
+
+/// [`timestamp`] in `words`, for an island.
+#[must_use]
+pub fn timestamp_in(raw: &str, words: &TimeWords) -> impl IntoView + use<> {
     // NOTE: HTML Living Standard §4.5.14 and §2.3.5 allow at most three digits of a second's
     // fraction in `datetime`, so the attribute carries the UTC form and the title the raw value.
     match Parsed::parse(raw) {
         Some(parsed) => view! {
             <time class="fui-time" datetime=parsed.machine() title=raw.to_owned()>
-                {parsed.reading()}
+                {parsed.reading(words)}
             </time>
         }
         .into_any(),

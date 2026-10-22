@@ -20,7 +20,7 @@ use leptos::prelude::*;
 use crate::i18n::{Text, tr};
 use crate::icon::{Glyph, icon};
 use crate::view::surface::{Header, page_heading};
-use crate::view::template::tabbed;
+use crate::view::tabs::{TabRow, joined};
 use crate::widget::copy::KeyHintWords;
 
 /// One setting: its label, what it governs, its value and its keys.
@@ -79,7 +79,7 @@ pub struct SettingsPage {
     /// Where the settings come from.
     pub source: Source,
     /// The binder tabs, when the page has three or more sections.
-    pub tabs: Option<AnyView>,
+    pub tabs: Option<TabRow>,
     /// The tab's settings.
     pub settings: Vec<Setting>,
 }
@@ -116,7 +116,7 @@ pub fn settings_page(page: SettingsPage) -> AnyView {
         .collect::<Vec<_>>();
     let panel = settings_panel(intro, panel_actions, rows);
     let section = match tabs {
-        Some(tabs) => tabbed(tabs, panel, "fui-tabbed fui-settings-tabbed"),
+        Some(tabs) => joined(tabs, panel, Some("fui-settings-tabbed")),
         None => view! { <div class="fui-card fui-panel">{panel}</div> }.into_any(),
     };
     view! {

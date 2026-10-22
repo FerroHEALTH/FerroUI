@@ -15,10 +15,13 @@
 //!
 //! A console chooses the locale once per render: it builds a [`Locale`] from
 //! its configuration or the request and hands it to [`provide_locale`] at
-//! the root of its page tree, on the server and in the hydrating browser
-//! alike, and writes [`Locale::tag`] as `<html lang>` (WCAG 2.2 SC 3.1.1).
-//! A component reads it with [`locale`], and a page that provides none
-//! renders in English. A console catalogs its own page strings the same
+//! the root of its page tree on the server, and writes [`Locale::tag`] as
+//! `<html lang>` (WCAG 2.2 SC 3.1.1). A component reads it with [`locale`],
+//! and a page that provides none renders in English. An island never looks a
+//! word up: the server resolves each word it draws, through a widget's
+//! `*Words::of_page()` or a [`Phrase`] for a sentence around a value the
+//! browser learns, and hands them over as props, so the browser carries no
+//! catalog. A console catalogs its own page strings the same
 //! way: its own `static_loader!` over its own `locales/`, looked up through
 //! [`Locale::lookup`] so its words follow the same choice.
 //!
@@ -443,60 +446,74 @@ fn quality(value: &str) -> Option<u16> {
 }
 
 /// Makes `locale` the locale of the page tree under the calling component:
-/// call it once, at the root, with the same locale on the server and in the
-/// hydrating browser, so both halves draw the same words.
+/// call it once, at the root of the page tree the server draws.
 pub fn provide_locale(locale: Locale) {
     provide_context(locale);
 }
 
-thread_local! {
-    /// The locale an island draws in, which the browser entry sets once.
-    static PAGE: std::cell::RefCell<Option<Locale>> = const { std::cell::RefCell::new(None) };
-}
-
-/// Makes `locale` the locale every island on the page draws in, in the
-/// browser.
-///
-/// An island hydrates on its own, out of reach of the context the server's
-/// page tree provided, so the console's browser entry calls this once
-/// before `leptos::mount::hydrate_islands`, with the locale it builds from
-/// [`document_lang`], the tag the server wrote as `<html lang>`. On the
-/// server it does nothing: there every island is drawn inside the page tree
-/// and reads the locale [`provide_locale`] gave it.
-pub fn provide_page_locale(locale: Locale) {
-    #[cfg(target_arch = "wasm32")]
-    PAGE.with(|page| *page.borrow_mut() = Some(locale));
-    #[cfg(not(target_arch = "wasm32"))]
-    drop(locale);
-}
-
-/// The tag of the page's `<html lang>`, in the browser; `None` on the
-/// server and for a page that names none.
-#[must_use]
-pub fn document_lang() -> Option<String> {
-    #[cfg(target_arch = "wasm32")]
-    {
-        document()
-            .document_element()
-            .and_then(|root| root.get_attribute("lang"))
-            .filter(|tag| !tag.is_empty())
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        None
-    }
-}
-
-/// The locale of the page being drawn: the one the page tree provides, the
-/// one the browser entry gave the islands, and English when there is
-/// neither.
+/// The locale of the page being drawn: the one the page tree provides, and
+/// English when there is none.
 #[must_use]
 pub fn locale() -> Locale {
     // NOTE: no specification governs this: our own design; a page that names no
     // locale, or a string rendered outside a page tree, draws the reference one.
-    use_context::<Locale>()
-        .or_else(|| PAGE.with(|page| page.borrow().clone()))
-        .unwrap_or_default()
+    use_context::<Locale>().unwrap_or_default()
+}
+
+/// The marks around the name of a placeable a [`Phrase`] leaves open:
+/// Unicode private-use characters, which no catalog writes.
+const OPEN: char = '\u{E000}';
+/// The mark after the name of an open placeable.
+const SHUT: char = '\u{E001}';
+
+/// Words resolved on the server with placeables left open, which an island
+/// fills with values it learns only as it runs, such as a file's name.
+///
+/// An island takes its words as props, resolved on the server, so it carries
+/// no catalog (`leptos-ui.md` §15.4). Where a sentence names a value the
+/// browser learns, the server looks the message up with [`Phrase::open`] in
+/// place of that value, and the island fills it with [`Phrase::fill`]. A
+/// catalog never selects a form by an open placeable: a plural is chosen on
+/// the server, by a count it knows.
+///
+/// # Examples
+///
+/// ```
+/// use ferrohealth_ui::i18n::Phrase;
+///
+/// let read = Phrase::new(format!("{} read.", Phrase::open_mark("file")));
+/// assert_eq!("notes.txt read.", read.fill(&[("file", "notes.txt")]));
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+pub struct Phrase(String);
+
+impl Phrase {
+    /// The phrase `resolved`, a message looked up with [`Phrase::open`] for
+    /// each placeable left to the browser.
+    #[must_use]
+    pub fn new(resolved: impl Into<String>) -> Self {
+        Self(resolved.into())
+    }
+
+    /// The argument that leaves the placeable `name` open in a lookup.
+    #[must_use]
+    pub fn open(name: &str) -> Arg {
+        Arg::Text(Self::open_mark(name))
+    }
+
+    /// The mark that stands for the open placeable `name` in a phrase.
+    #[must_use]
+    pub fn open_mark(name: &str) -> String {
+        format!("{OPEN}{name}{SHUT}")
+    }
+
+    /// The words with each open placeable named in `values` filled in.
+    #[must_use]
+    pub fn fill(&self, values: &[(&str, &str)]) -> String {
+        values.iter().fold(self.0.clone(), |words, (name, value)| {
+            words.replace(&Self::open_mark(name), value)
+        })
+    }
 }
 
 /// Declares the library's messages: each variant names one message of the
@@ -583,6 +600,10 @@ texts! {
     ToastRegion = "toast-region",
     /// A toast's dismiss button.
     ToastDismiss = "toast-dismiss",
+    /// The badge of a tab whose section holds a draft.
+    TabDraft = "tab-draft",
+    /// A `$tab` holding a draft, as the phone's tab select names it.
+    TabDraftChoice = "tab-draft-choice",
     /// The help switch while the help lines are hidden.
     HelpShow = "help-show",
     /// The help switch while the help lines show.
@@ -724,10 +745,6 @@ texts! {
     /// A `$file` of `$size` over the `$limit`.
     UploadRefusedSize = "upload-refused-size",
     /// A `$file` the browser could not read.
-    #[cfg_attr(
-        all(not(target_arch = "wasm32"), not(test)),
-        expect(dead_code, reason = "the browser half alone reads a file")
-    )]
     UploadUnreadable = "upload-unreadable",
     /// A size in bytes.
     SizeBytes = "size-bytes",
@@ -808,11 +825,6 @@ impl Locale {
     pub(crate) fn text(&self, text: Text) -> String {
         self.library(text.id(), &[])
     }
-
-    /// The library's message `text` in this locale, with `args` filled in.
-    pub(crate) fn text_with(&self, text: Text, args: &[(&'static str, Arg)]) -> String {
-        self.library(text.id(), args)
-    }
 }
 
 #[cfg(test)]
@@ -825,7 +837,7 @@ mod tests {
     const PLACEABLES: &[&str] = &[
         "chart", "code", "count", "date", "document", "file", "filter", "first", "held", "key",
         "kinds", "last", "limit", "note", "noun", "nouns", "page", "pages", "range", "shown",
-        "size", "stated", "status", "summary", "time", "total", "what", "words",
+        "size", "stated", "status", "summary", "tab", "time", "total", "what", "words",
     ];
 
     /// The ids of the messages the catalog file at `path` defines.

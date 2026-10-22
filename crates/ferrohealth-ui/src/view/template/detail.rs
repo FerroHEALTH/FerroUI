@@ -18,7 +18,7 @@ use crate::i18n::{Text, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::view::button::Variant;
 use crate::view::surface::{Header, page_heading};
-use crate::view::template::tabbed;
+use crate::view::tabs::{TabRow, joined};
 
 /// What a detail page shows.
 #[derive(Debug)]
@@ -28,7 +28,7 @@ pub struct DetailPage {
     /// The title row's actions: one primary plus More, or a [`stepper`].
     pub actions: Option<AnyView>,
     /// The binder tabs, when the object has more than one section.
-    pub tabs: Option<AnyView>,
+    pub tabs: Option<TabRow>,
     /// The section in view: the tab's panel, or the whole page under the
     /// header when there are no tabs.
     pub body: AnyView,
@@ -47,7 +47,7 @@ pub fn detail_page(page: DetailPage) -> AnyView {
     // TODO(#153): the title row takes the action group of one primary plus More.
     let heading = page_heading(header, actions).into_any();
     let section = match tabs {
-        Some(tabs) => tabbed(tabs, body, "fui-tabbed"),
+        Some(tabs) => joined(tabs, body, None),
         None => body,
     };
     view! {

@@ -27,6 +27,7 @@
 
 use leptos::prelude::*;
 
+use crate::view::tabs::TabChoice;
 use crate::widget::toast::{Flash, RegionWords};
 
 /// The toast region, which draws `flash` as the page arrives and every
@@ -94,6 +95,26 @@ pub fn KeyHint(
     words: crate::widget::copy::KeyHintWords,
 ) -> impl IntoView {
     crate::widget::copy::key_hint(key, words)
+}
+
+/// The phone's select over binder tabs, named `label`, on the choice that
+/// leads to `chosen`. A console draws it through
+/// [`crate::view::tabs::binder`], which places it past
+/// [`crate::view::tabs::MANY`] tabs.
+#[island]
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "an island takes its props by value, as they arrive from the page"
+)]
+pub fn TabSelect(
+    /// The tabs' name, in the page's locale.
+    label: String,
+    /// Each tab's route and words, in the page's locale.
+    choices: Vec<TabChoice>,
+    /// The route of the current tab.
+    chosen: String,
+) -> impl IntoView {
+    crate::widget::tabs::tab_select(label, choices, &chosen)
 }
 
 /// The navigation drawer `id`, named `label`, around the entries the

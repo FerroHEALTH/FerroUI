@@ -53,7 +53,7 @@ diffing, the form submitter, file inputs and the base path.
 - `view`: plain functions, drawn on the server alone.
 - `island`: the ready islands, each a thin `#[island]` over its widget
   function: `ToastRegion`, `NavDrawer`, `UserMenuButton`, `KeyboardTabs`,
-  `KeyHint`, `DocumentViews`. The module's `#![expect]` lines cover what
+  `KeyHint`, `DocumentViews`, `TabSelect`. The module's `#![expect]` lines cover what
   the island macro writes (a forgotten view state, an undocumented props
   struct, a dropped `#[must_use]`).
 - `widget`: the interactive components as functions a page calls inside
@@ -68,13 +68,15 @@ forms, and the no-WebAssembly floor. The crate keeps no widget on
 `display: contents`, with each container's spacing between its children
 reaching through them (`tests/it/stylesheet.rs`).
 
-A widget that still looks its words up as it draws reads the page's
-locale in the browser from `i18n::provide_page_locale`, until it takes its
-words as props.
+Every widget takes the words it draws as props: a `*Words` struct whose
+`of_page()` resolves them on the server, with an `i18n::Phrase` for a
+sentence around a value the browser learns (a file's name, a page number).
+No island looks a word up, so the browser bundle carries no Fluent loader
+and no catalog.
 
 ## The bundle budget
 
-The gallery's brotli-compressed WebAssembly is held to 552960 bytes (540
+The gallery's brotli-compressed WebAssembly is held to 491520 bytes (480
 KiB) by `scripts/checks/gallery-bundle.sh`, which reads the number from
 `leptos-ui.md` §12. Each console keeps its own budget in its own
 repository: FerroBRIDGE's is 458752 bytes.

@@ -14,6 +14,7 @@
 //! (WAI-ARIA Authoring Practices, the dialog (modal) pattern).
 
 use leptos::prelude::*;
+use serde::{Deserialize, Serialize};
 
 use crate::i18n::{Text, tr};
 use crate::icon::{Glyph, icon};
@@ -26,6 +27,24 @@ pub enum Width {
     Narrow,
     /// A form's width, 48 rem, for a text area or a table.
     Wide,
+}
+
+/// The words a modal dialog draws itself, resolved on the server in the
+/// page's locale, so an island that draws it carries no catalog.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ModalWords {
+    /// The Cancel button's words.
+    pub cancel: String,
+}
+
+impl ModalWords {
+    /// The dialog's words in the locale of the page being drawn.
+    #[must_use]
+    pub fn of_page() -> Self {
+        Self {
+            cancel: tr(Text::Cancel),
+        }
+    }
 }
 
 /// What a modal dialog shows.
@@ -44,6 +63,8 @@ pub struct Modal {
     pub body: AnyView,
     /// The actions, the confirming control last: the console's own.
     pub actions: AnyView,
+    /// The words the dialog draws itself ([`ModalWords::of_page`]).
+    pub words: ModalWords,
 }
 
 /// Returns the modal dialog `modal`, shown while `open` reads true, with
@@ -57,6 +78,7 @@ pub fn modal_dialog(modal: Modal, open: Signal<bool>, on_dismiss: Callback<()>) 
         width,
         body,
         actions,
+        words,
     } = modal;
     let node = NodeRef::<leptos::html::Dialog>::new();
     Effect::new(move |_| sync(node, open.get()));
@@ -97,7 +119,7 @@ pub fn modal_dialog(modal: Modal, open: Signal<bool>, on_dismiss: Callback<()>) 
                     on:click=move |_| on_dismiss.run(())
                 >
                     {icon(Glyph::X, "16")}
-                    {tr(Text::Cancel)}
+                    {words.cancel}
                 </button>
                 {actions}
             </div>

@@ -28,14 +28,17 @@ in your shell, and hydrate from your browser entry, which names this crate
 so its islands are linked into your WebAssembly:
 
 ```text
+extern crate ferrohealth_ui;
+
 #[wasm_bindgen]
 pub fn hydrate() {
-    ferrohealth_ui::i18n::provide_page_locale(your_locale(
-        &ferrohealth_ui::i18n::document_lang().unwrap_or_default(),
-    ));
     leptos::mount::hydrate_islands();
 }
 ```
+
+Every island takes the words it draws as props your server resolves (each
+widget's `*Words::of_page()`), so the browser builds no locale and carries
+no catalog.
 
 Every page works with no WebAssembly: the HTML is complete, and every
 important action is a link or a form.
@@ -72,17 +75,20 @@ which your server writes from its own cookie or setting (`theme::Theme`).
 
 - `view`: `button`, `status` (pill, badge, banner, the top bar's status
   pill), `surface` (page header, card, stat, definitions, disclosure),
-  `form` (field, check), `tabs` (link tabs), `empty`, `refusal` (an error
+  `form` (field, check), `tabs` (binder tabs
+  joined to their panel), `popover` (the anchored popover form), `empty`, `refusal` (an error
   with its issues), `code` (highlighted panel and numbered lines),
   `theme_switch`, `dialog` (a popover confirmation), `shell` (skip link,
   top bar, footer, centred page) and `sign_in` (the R19 card in every
   state, with the provider's action and an optional basic form).
-- `island`: the ready islands, `ToastRegion`, `NavDrawer`, `UserMenuButton`
-  and `KeyboardTabs`, each taking its words as props.
+- `island`: the ready islands, `ToastRegion`, `NavDrawer`, `UserMenuButton`,
+  `KeyboardTabs` and `TabSelect`, each taking its words as props. Every
+  widget takes the words it draws as a `*Words` struct its `of_page()`
+  resolves on the server, so no island carries a catalog.
 - `widget`: the interactive components as functions you call inside an
   island: `nav` (the sidebar, plain links with the page marked, its counts
   and its rail, inside its drawer island), `menu` (the user menu), `tabs`
-  (the panels for `KeyboardTabs`), `toast` (`raise` from any island),
+  (the panels for `KeyboardTabs`), `toast` (`raise` a title, a line and an action from any island),
   `editor` (the highlighted overlay editor with line marks), `filter` (an
   in-place filter over rows that are already island data) and the rest.
 - `table`: the paging and sorting model (`Paging`, `Window`, `Sort`,

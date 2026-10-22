@@ -30,6 +30,7 @@ mod painted;
 mod screenshots;
 mod stack;
 mod states;
+mod tabs_and_toasts;
 mod widgets;
 
 /// The environment variable that opts in to the browser journeys.

@@ -10,8 +10,9 @@ use ferrohealth_ui::view::chart::{
     ACCENT, ActivityChart, BAD, LineChart, NEUTRAL, Series, activity_chart,
 };
 use ferrohealth_ui::view::surface::{card, page_header, stack};
-use ferrohealth_ui::widget::chart::line_chart;
+use ferrohealth_ui::widget::chart::{ChartWords, line_chart};
 use leptos::prelude::*;
+use serde::{Deserialize, Serialize};
 
 /// The days of the synthetic week, as the X axis labels them.
 fn days() -> [String; 7] {
@@ -32,14 +33,50 @@ fn days() -> [String; 7] {
 fn lines() -> AnyView {
     card(
         tr(Msg::LineChart),
-        view! { <crate::islands::RequestsChart /> },
+        view! { <crate::islands::RequestsChart words=RequestsWords::of_page() /> },
     )
     .into_any()
 }
 
-/// The line chart of three synthetic series, its legend showing and hiding
-/// each.
-pub(crate) fn requests_chart() -> AnyView {
+/// The words the line chart's island draws, resolved on the server.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RequestsWords {
+    label: String,
+    summary: String,
+    reads: String,
+    writes: String,
+    refusals: String,
+    days: [String; 7],
+    chart: ChartWords,
+}
+
+impl RequestsWords {
+    /// The words in the page's locale.
+    pub(crate) fn of_page() -> Self {
+        Self {
+            label: tr(Msg::RequestsPerDay),
+            summary: tr(Msg::ThreeSyntheticSeriesOverWeek),
+            reads: tr(Msg::Reads),
+            writes: tr(Msg::Writes),
+            refusals: tr(Msg::Refusals),
+            days: days(),
+            chart: ChartWords::of_page(),
+        }
+    }
+}
+
+/// The line chart of three synthetic series in `words`, its legend showing
+/// and hiding each.
+pub(crate) fn requests_chart(words: RequestsWords) -> AnyView {
+    let RequestsWords {
+        label,
+        summary,
+        reads,
+        writes,
+        refusals,
+        days,
+        chart: chart_words,
+    } = words;
     let series = |name: &str, palette: u8, values: [f64; 7]| Series {
         name: name.to_owned(),
         points: (0_u8..7)
@@ -50,33 +87,21 @@ pub(crate) fn requests_chart() -> AnyView {
     };
     let chart = LineChart {
         id: "requests",
-        label: tr(Msg::RequestsPerDay),
-        summary: tr(Msg::ThreeSyntheticSeriesOverWeek),
+        label,
+        summary,
         series: vec![
-            series(
-                &tr(Msg::Reads),
-                ACCENT,
-                [22.0, 30.0, 27.0, 35.0, 48.0, 31.0, 26.0],
-            ),
-            series(
-                &tr(Msg::Writes),
-                NEUTRAL,
-                [10.0, 12.0, 14.0, 11.0, 13.0, 9.0, 12.0],
-            ),
-            series(
-                &tr(Msg::Refusals),
-                BAD,
-                [3.0, 5.0, f64::NAN, 4.0, 6.0, 2.0, 1.0],
-            ),
+            series(&reads, ACCENT, [22.0, 30.0, 27.0, 35.0, 48.0, 31.0, 26.0]),
+            series(&writes, NEUTRAL, [10.0, 12.0, 14.0, 11.0, 13.0, 9.0, 12.0]),
+            series(&refusals, BAD, [3.0, 5.0, f64::NAN, 4.0, 6.0, 2.0, 1.0]),
         ],
         x_ticks: (0_u8..7)
-            .zip(days())
+            .zip(days)
             .map(|(day, label)| (f64::from(day), label))
             .collect(),
         y_range: None,
     };
     let shown = RwSignal::new(vec![true, true, true]);
-    line_chart(chart, shown)
+    line_chart(chart, shown, chart_words)
 }
 
 /// The activity line of thirty synthetic days.

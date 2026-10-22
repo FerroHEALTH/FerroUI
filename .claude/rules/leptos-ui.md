@@ -91,11 +91,10 @@ parts:
   `view!` over nested views blows rustc's layout recursion. The library's
   `shell` and `centred` take and return `AnyView` for that reason.
 
-A widget that still looks its words up as it draws reads the page's locale
-in the browser from `i18n::provide_page_locale`, which a console's browser
-entry calls with the tag of `<html lang>` (`i18n::document_lang`) before
-`hydrate_islands`, so both halves draw the same words until the widget
-takes its words as props (§15.4).
+Every widget takes the words it draws as props (§15.4): a `*Words` struct
+whose `of_page()` resolves them on the server, and an `i18n::Phrase` for a
+sentence around a value the browser learns, so a console's browser entry
+builds no locale and its bundle carries no catalog.
 
 ## 2. Render-mode agnostic
 
@@ -290,14 +289,14 @@ WebAssembly is over the number below, which the script reads from this table.
 
 | Measure | Budget |
 |---|---|
-| WebAssembly, brotli-compressed | 552960 bytes |
+| WebAssembly, brotli-compressed | 491520 bytes |
 
-The budget is 540 KiB, 29% over the 427449 bytes the gallery measured in
-islands mode (#196, 2026-10-22, cargo-leptos 0.3.11, wasm-bindgen 0.2.129,
-wasm-opt version_133, Rust 1.99.1). The headroom is for the 0.3.0
-components still to come (the date picker, the editor's keys, the
-topology), which add islands; moving each widget's words to props takes
-the Fluent catalog back out of the browser. The spike of #196 measured
+The budget is 480 KiB, 34% over the 365376 bytes the gallery measured once
+every island took its words as props and the Fluent loader and catalogs
+left the browser (#219, 2026-10-22, cargo-leptos 0.3.11, wasm-bindgen
+0.2.129, wasm-opt version_133, Rust 1.99.1; 402593 before on the same
+tree). The headroom is for the 0.3.0 components still to come (the date
+picker, the editor's keys, the topology), which add islands. The spike of #196 measured
 the same gallery both ways (bytes):
 
 | Build | WebAssembly raw | gzip -9 | brotli -q 11 | JS glue raw / brotli |
@@ -305,6 +304,7 @@ the same gallery both ways (bytes):
 | Whole page hydrated (0.2.2) | 2455510 | 943813 | 685903 | 25423 / 6276 |
 | Islands, spike (whole sections) | 1527677 | 613353 | 460744 | 25391 / 6325 |
 | Islands, as landed | 1389712 | 564473 | 427449 | 22469 / 5817 |
+| Islands, words as props (#219) | 1229704 | 486326 | 365376 | 23304 / 5993 |
 
 Time to interactive on the forms page, Chrome for Testing with the CPU
 slowed 4x (the mid-tier phone rate) and the bundle served locally, the

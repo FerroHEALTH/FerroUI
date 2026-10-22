@@ -257,6 +257,31 @@ fn a_phone_row_keeps_its_checkbox_on_its_first_line() {
 }
 
 #[test]
+fn a_binder_panel_inside_an_island_is_the_sheet_its_tabs_open_into() {
+    assert!(
+        STYLESHEET.contains(
+            "  .fui-tabbed > .fui-tab-panel,\n  .fui-tabbed > leptos-children > .fui-tab-panel {\n    min-width: 0;\n    border: 1px solid var(--edge-strong);"
+        ),
+        "the keyboard tabs' panels would lose the binder sheet"
+    );
+}
+
+#[test]
+fn the_phone_tab_select_replaces_the_row_only_once_it_works() {
+    // NOTE: leptos-ui.md §15.8: with no WebAssembly the row of links is the floor.
+    assert!(
+        STYLESHEET.contains(
+            "    .fui-tabbed-many:has(.fui-tabs-select > select:enabled) > .fui-tabs {\n      display: none;"
+        ),
+        "the row would hide behind a select that cannot work yet"
+    );
+    assert!(
+        !STYLESHEET.contains("    .fui-tabbed-many > .fui-tabs {\n      display: none;"),
+        "the row hides with no condition"
+    );
+}
+
+#[test]
 fn a_document_view_a_link_targets_shows_until_the_island_takes_over() {
     assert!(
         STYLESHEET.contains(
@@ -317,4 +342,41 @@ fn a_viewer_a_table_and_a_list_of_findings_in_a_section_reach_both_edges() {
             "{part} runs edge to edge in a section"
         );
     }
+}
+
+#[test]
+fn the_keyboard_tab_leaves_the_row_below_40rem() {
+    let phone = STYLESHEET
+        .find("    .fui-tabs > .fui-tab[data-tab=\"keyboard\"] {\n      display: none !important;")
+        .expect("the keyboard tab's rule");
+    let media = STYLESHEET
+        .get(..phone)
+        .and_then(|before| before.rfind("@media"))
+        .and_then(|at| STYLESHEET.get(at..phone))
+        .expect("the rule's media query");
+    assert!(media.starts_with("@media (width < 40rem)"), "{media}");
+}
+
+#[test]
+fn the_popover_form_is_anchored_to_its_trigger_on_a_wide_screen() {
+    assert!(
+        STYLESHEET.contains(
+            "    @media (width >= 40rem) {\n      .fui-anchor > .fui-popover[popover] {\n        inset: auto;\n        margin-block-start: 0.25rem;\n        position-anchor: --fui-anchor;\n        position-area: block-end span-inline-start;"
+        ),
+        "a native popover in the top layer would lose its trigger"
+    );
+}
+
+#[test]
+fn a_shown_toast_keeps_the_page_foot_clear() {
+    assert!(
+        STYLESHEET.contains(
+            "  :root:has(.fui-toasts > .fui-toast) .fui-main {\n    padding-block-end: 7rem;"
+        ),
+        "a toast would cover the page's last row"
+    );
+    assert!(
+        STYLESHEET.contains("  :root:has(.fui-toasts > .fui-toast) .fui-page > .fui-footer {\n    padding-block-end: 7rem;"),
+        "a toast would cover the footer"
+    );
 }
