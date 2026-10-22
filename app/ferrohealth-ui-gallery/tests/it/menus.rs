@@ -77,7 +77,7 @@ async fn press(browser: &Browser, key: Key) -> Result<(), Box<dyn Error>> {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn more_walks_by_the_keyboard_skips_a_disabled_item_and_returns_the_focus()
+async fn more_walks_by_the_keyboard_reaches_a_disabled_item_and_returns_the_focus()
 -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
         return Ok(());
@@ -103,10 +103,30 @@ async fn more_walks_by_the_keyboard_skips_a_disabled_item_and_returns_the_focus(
         })
         .await?;
         press(browser, Key::Down).await?;
+        // WAI-ARIA Authoring Practices, "Focusability of disabled controls": a disabled menu
+        // item stays focusable, so its reason is read.
+        let disabled = browser.driver().active_element().await?;
+        assert!(
+            focused_words(browser)
+                .await?
+                .starts_with("Download the file"),
+            "the disabled download is reached"
+        );
+        assert_eq!(
+            Some(String::from("true")),
+            disabled.attr("aria-disabled").await?,
+            "and announced disabled"
+        );
+        press(browser, Key::Enter).await?;
+        assert!(
+            is_open(browser, "overlays-more").await?,
+            "a disabled item takes no press"
+        );
+        press(browser, Key::Down).await?;
         assert_eq!(
             "Delete the file\u{2026}",
             focused_words(browser).await?,
-            "the disabled download is skipped, the destructive item is last"
+            "the destructive item is last"
         );
         press(browser, Key::Down).await?;
         assert_eq!("Open the document", focused_words(browser).await?, "wraps");

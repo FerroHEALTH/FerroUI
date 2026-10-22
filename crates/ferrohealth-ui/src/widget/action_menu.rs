@@ -6,14 +6,14 @@
 //!
 //! Both are a `<details>` whose `<summary>` is the trigger, so the browser
 //! opens and closes them with no script, and every item is a link, a submit
-//! button of a plain form, or a button that opens a confirmation popover:
+//! button of a plain form, or a button that opens a confirmation dialog:
 //! each works before the page hydrates. The `<details>` of every menu on a
 //! page share one `name`, so opening one closes the others (HTML Living
 //! Standard, the `details` element). The island [`crate::island::MenuButton`]
 //! adds what HTML leaves out, after the WAI-ARIA Authoring Practices menu
 //! button and listbox patterns: the focus moves to the first item as the
-//! menu opens, the arrows, Home, End and a letter walk the items and skip a
-//! disabled one, Escape closes it and returns the focus to its trigger, a
+//! menu opens, the arrows, Home, End and a letter walk the items, a disabled
+//! one among them, which takes no press, Escape closes it and returns the focus to its trigger, a
 //! focus or a press outside closes it, choosing an item closes it, the menu
 //! flips above or to the other edge where it has no room, and the phone's
 //! bottom sheet shows its Cancel.
@@ -54,7 +54,7 @@ pub enum Act {
     },
     /// Submits the form with this id, such as an editor's own form.
     Submit(String),
-    /// Opens the popover with this id, a confirmation dialog
+    /// Opens the confirmation dialog with this id as a modal
     /// ([`crate::view::dialog`]); its words end in an ellipsis.
     Dialog(String),
 }
@@ -330,7 +330,8 @@ fn item(item: Item, danger: bool) -> AnyView {
                 type="button"
                 role="menuitem"
                 class=class
-                popovertarget=target.clone()
+                command="show-modal"
+                commandfor=target.clone()
                 aria-controls=target
                 aria-haspopup="dialog"
             >
@@ -659,12 +660,14 @@ mod browser {
         use leptos::prelude::*;
         use leptos::wasm_bindgen::JsCast as _;
 
-        /// The items of `list` the keyboard walks: every option, and every
-        /// menu item that is not disabled.
+        /// The items of `list` the keyboard walks: every option and every
+        /// menu item, a disabled one too.
+        // NOTE: WAI-ARIA Authoring Practices, "Focusability of disabled controls":
+        // a disabled menu item stays focusable, so its reason is reached.
         pub(super) fn walked(list: &web_sys::HtmlElement) -> Vec<web_sys::HtmlElement> {
-            let Ok(found) = list.query_selector_all(
-                "[role='menuitem']:not([aria-disabled='true']), [role='menuitemradio'], [role='option']",
-            ) else {
+            let Ok(found) = list
+                .query_selector_all("[role='menuitem'], [role='menuitemradio'], [role='option']")
+            else {
                 return Vec::new();
             };
             (0..found.length())

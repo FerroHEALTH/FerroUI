@@ -4,14 +4,17 @@
 //! The popover form: a small form inside an anchor, such as Save to the
 //! CDR, that opens under its trigger.
 //!
-//! It is an HTML popover, so the trigger opens it with no script, the
-//! browser closes it on Escape and on a press outside and returns the focus
-//! to the trigger (HTML Living Standard, the `popover` attribute). It opens
-//! 4 px under its trigger, aligned to the trigger's end edge, placed against
-//! it by CSS anchor positioning; below 40 rem it rises from the foot of the
-//! screen as a bottom sheet over a scrim. The form inside is the console's,
-//! so it posts with no script too. No specification governs the layout: our
-//! own design.
+//! It is an HTML `dialog` its trigger opens as a modal through the
+//! `show-modal` command, so it opens with no script, the page behind is
+//! inert while it shows, the focus moves to its first control, the browser
+//! closes it on Escape and on a press outside and returns the focus to the
+//! trigger (HTML Living Standard, the `dialog` element and the `command`
+//! attribute; WAI-ARIA Authoring Practices, the dialog (modal) pattern). It
+//! opens 4 px under its trigger, aligned to the trigger's end edge, placed
+//! against it by CSS anchor positioning, and centred where the browser has
+//! none; below 40 rem it rises from the foot of the screen as a bottom sheet
+//! over a scrim. The form inside is the console's, so it posts with no
+//! script too. No specification governs the layout: our own design.
 
 use std::borrow::Cow;
 
@@ -53,16 +56,23 @@ pub fn popover_form(form: PopoverForm) -> AnyView {
     let labelled_by = title_id.clone();
     view! {
         <span class="fui-anchor">
-            <button type="button" class=variant.class() popovertarget=id aria-controls=id>
+            <button
+                type="button"
+                class=variant.class()
+                command="show-modal"
+                commandfor=id
+                aria-controls=id
+                aria-haspopup="dialog"
+            >
                 {icon(glyph, "16")}
                 {label}
             </button>
-            <div id=id popover="auto" class="fui-popover" role="dialog" aria-labelledby=labelled_by>
+            <dialog id=id closedby="any" class="fui-popover" aria-labelledby=labelled_by>
                 <p id=title_id class="fui-popover-title">
                     {title}
                 </p>
                 {body}
-            </div>
+            </dialog>
         </span>
     }
     .into_any()

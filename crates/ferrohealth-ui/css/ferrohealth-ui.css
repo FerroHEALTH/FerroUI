@@ -3401,8 +3401,13 @@
     margin-block-start: 0.75rem;
   }
 
+  /* A dialog never runs past the viewport: past its height it scrolls, and
+     a long word in it (a canonical URL) breaks (WCAG 2.2 SC 1.4.10). */
   .fui-dialog {
     width: min(28rem, calc(100vw - 2rem));
+    max-height: calc(100dvh - 2rem);
+    overflow: auto;
+    overflow-wrap: anywhere;
     margin: auto;
     border: 1px solid var(--edge);
     border-radius: var(--radius-card);
@@ -3907,7 +3912,7 @@
     color: var(--ink);
   }
 
-  .fui-side-panel:popover-open {
+  .fui-side-panel[open] {
     position: fixed;
     inset: 0;
     display: flex;
@@ -3920,7 +3925,7 @@
       border-inline-start: 1px solid var(--edge);
     }
 
-    .fui-side-panel:popover-open {
+    .fui-side-panel[open] {
       inset-inline-start: auto;
     }
   }
@@ -5790,6 +5795,7 @@
     display: grid;
     gap: 0.125rem;
     padding: 0.375rem 0.5rem 0.25rem;
+    overflow-wrap: anywhere;
   }
 
   .fui-menu-header > span {
@@ -7151,7 +7157,7 @@
      and aligned to the trigger's start (`is-end` flips it to the end edge
      where the start has no room). It is as wide as its widest option and
      at least as wide as its trigger, never clipped: past 20 rem an
-     option's note takes its own muted line. */
+     option's words wrap, and past the viewport's height it scrolls. */
   .fui-listbox {
     position: absolute;
     inset: calc(100% + 0.25rem) auto auto 0;
@@ -7159,6 +7165,8 @@
     width: max-content;
     min-width: 100%;
     max-width: min(20rem, calc(100vw - 2rem));
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
     margin: 0;
     border: 1px solid var(--edge-strong);
     border-radius: var(--radius-card);
@@ -7208,7 +7216,7 @@
   }
 
   .fui-listbox-text > span:first-child {
-    white-space: nowrap;
+    overflow-wrap: anywhere;
   }
 
   .fui-listbox-option:hover {
@@ -9350,6 +9358,8 @@
     width: max-content;
     min-width: 12rem;
     max-width: min(20rem, calc(100vw - 2rem));
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
     border: 1px solid var(--edge-strong);
     border-radius: var(--radius-card);
     background: var(--surface-raised);
@@ -9378,7 +9388,7 @@
     font-weight: 400;
     line-height: var(--leading-small);
     text-decoration: none;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
     cursor: pointer;
   }
 
@@ -9393,7 +9403,8 @@
     min-width: 0;
   }
 
-  /* An item's words: one line, the menu fitted to the longest. */
+  /* An item's words: the menu fitted to the longest, up to its widest,
+     past which they wrap. */
   .fui-menu-item-label {
     min-width: 0;
   }
@@ -9475,6 +9486,7 @@
     .fui-menu.fui-menu-anchored.fui-user-menu:popover-open {
       position: fixed;
       inset: calc(var(--bar) / 2 + 1.25rem) var(--space-loose) auto auto;
+      max-height: calc(100dvh - var(--bar) / 2 - 1.25rem - var(--space-loose));
     }
   }
 
@@ -9541,6 +9553,7 @@
       width: 100%;
       max-width: none;
       border-radius: var(--radius-card) var(--radius-card) 0 0;
+      max-height: calc(100dvh - 1rem);
       border-width: 1px 0 0;
       padding: 0.5rem 0.75rem 1rem;
       box-shadow: 0 -8px 24px -8px rgb(15 23 42 / 0.25);
@@ -9562,7 +9575,11 @@
       line-height: var(--leading-small);
     }
 
+    /* A sheet taller than the screen scrolls under its Cancel, which stays
+       in sight at its foot. */
     .fui-menu-sheet .fui-menu-cancel {
+      position: sticky;
+      inset-block-end: 0;
       display: block;
       width: 100%;
       min-height: 3rem;
@@ -13115,29 +13132,40 @@
 
   /* ---- R17 anchored (FerroEHR pass): a popover form inside an anchor
      opens 4 px under its trigger, aligned to the trigger's end edge, as
-     the F13 menu does; on a phone it spans the content width. ---- */
-  .fui-anchor > .fui-popover {
-    inset: calc(100% + 0.25rem) 0 auto auto;
+     the F13 menu does; on a phone it spans the content width. It is a
+     modal dialog in the top layer, where no ancestor holds it, so it is
+     placed against its trigger by CSS anchor positioning, the anchor's
+     name scoped to its own anchor; a browser without it centres the
+     form in the viewport. Its backdrop stays clear from 40 rem, where it
+     reads as a popover; the page behind is inert all the same. ---- */
+  .fui-anchor > dialog.fui-popover {
+    position: fixed;
+    inset: 0;
+    max-width: none;
+    max-height: calc(100dvh - 2rem);
+    overflow: auto;
+    margin: auto;
+    color: var(--ink);
     text-align: start;
   }
 
-  @media (width < 40rem) {
-    .fui-anchor > .fui-popover {
-      position: fixed;
-      inset: auto 0.75rem 0.75rem 0.75rem;
-      z-index: 80;
-      width: auto;
-      box-shadow: var(--shadow-overlay), 0 0 0 100vmax var(--scrim);
-    }
+  .fui-anchor > dialog.fui-popover::backdrop {
+    background: transparent;
   }
 
-  /* As a native popover it sits in the top layer, where no ancestor holds
-     it, so it is placed against its trigger by CSS anchor positioning, the
-     anchor's name scoped to its own anchor; a browser without it centres
-     the popover. */
-  .fui-anchor > .fui-popover[popover] {
-    position: fixed;
-    margin: 0;
+  @media (width < 40rem) {
+    .fui-anchor > dialog.fui-popover {
+      inset: auto 0.75rem 0.75rem 0.75rem;
+      width: auto;
+      max-width: none;
+      max-height: calc(100dvh - 1.5rem);
+      margin: 0;
+      box-shadow: var(--shadow-overlay);
+    }
+
+    .fui-anchor > dialog.fui-popover::backdrop {
+      background: var(--scrim);
+    }
   }
 
   @supports (position-area: block-end) {
@@ -13145,13 +13173,14 @@
       anchor-scope: --fui-anchor;
     }
 
-    .fui-anchor > [popovertarget] {
+    .fui-anchor > [commandfor] {
       anchor-name: --fui-anchor;
     }
 
     @media (width >= 40rem) {
-      .fui-anchor > .fui-popover[popover] {
+      .fui-anchor > dialog.fui-popover {
         inset: auto;
+        margin: 0;
         margin-block-start: 0.25rem;
         position-anchor: --fui-anchor;
         position-area: block-end span-inline-start;

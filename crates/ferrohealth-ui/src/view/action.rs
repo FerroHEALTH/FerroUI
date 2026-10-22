@@ -9,7 +9,7 @@
 //! its destructive ones last after a separator in the danger tone, so no
 //! danger button ever sits beside the primary (family rule 7). Every action
 //! is a link, a plain form post, a submit of a form on the page or a button
-//! that opens a confirmation popover, so the group works with no
+//! that opens a confirmation dialog, so the group works with no
 //! WebAssembly; the menus are [`crate::widget::menu`]'s. No specification
 //! governs the layout: our own design.
 
@@ -134,7 +134,8 @@ fn button_of(action: Action, class: &'static str) -> AnyView {
             <button
                 type="button"
                 class=class
-                popovertarget=target.clone()
+                command="show-modal"
+                commandfor=target.clone()
                 aria-controls=target
                 aria-haspopup="dialog"
             >

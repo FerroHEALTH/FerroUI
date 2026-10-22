@@ -101,10 +101,9 @@ pub(crate) fn confirm_and_toast(dialog: String, danger: bool, words: &Words) -> 
             type="button"
             id=id
             class=class
-            on:click=move |_| {
-                raise(Toast::new(Tone::Ok, said.clone()));
-                hide(&dialog);
-            }
+            command="close"
+            commandfor=dialog
+            on:click=move |_| raise(Toast::new(Tone::Ok, said.clone()))
         >
             {icon(glyph, "16")}
             {words}
@@ -697,24 +696,6 @@ fn listen_for_legend(open: RwSignal<bool>) {
     }
     #[cfg(not(target_arch = "wasm32"))]
     let _: RwSignal<bool> = open;
-}
-
-/// Closes the popover `id`.
-fn hide(id: &str) {
-    #[cfg(target_arch = "wasm32")]
-    {
-        use leptos::wasm_bindgen::JsCast as _;
-        let element = document()
-            .get_element_by_id(id)
-            .and_then(|element| element.dyn_into::<web_sys::HtmlElement>().ok());
-        if let Some(element) = element
-            && element.hide_popover().is_err()
-        {
-            leptos::logging::warn!("the browser refused to close the dialog");
-        }
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    let _: &str = id;
 }
 
 /// The access page: the side panel's content as a page of its own, where

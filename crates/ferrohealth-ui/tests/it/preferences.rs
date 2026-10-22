@@ -329,19 +329,19 @@ fn a_console_s_own_rows_follow_the_library_s_in_their_tab() {
 fn reset_to_defaults_asks_first_and_says_what_it_leaves_alone() {
     let shown = drawn(page(Section::Keyboard, Preferences::default(), None));
     assert!(
-        has(&shown, "button", &[("popovertarget", RESET_DIALOG)]),
+        has(
+            &shown,
+            "button",
+            &[("command", "show-modal"), ("commandfor", RESET_DIALOG)]
+        ),
         "{shown}"
     );
     assert!(shown.contains("Reset to defaults…"), "{shown}");
     assert!(
         has(
             &shown,
-            "div",
-            &[
-                ("id", RESET_DIALOG),
-                ("popover", "auto"),
-                ("role", "dialog")
-            ]
+            "dialog",
+            &[("id", RESET_DIALOG), ("closedby", "any")]
         ),
         "{shown}"
     );

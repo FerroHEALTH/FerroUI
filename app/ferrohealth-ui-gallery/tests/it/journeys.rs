@@ -787,7 +787,7 @@ async fn the_side_panel_takes_the_focus_to_its_close_button_and_gives_it_back()
         browser.goto(&gallery.url("/ferrofed/overlays")).await?;
         let opener = browser
             .element(By::Css(
-                "button[popovertarget='access'][aria-controls='access']",
+                "button[commandfor='access'][aria-controls='access']",
             ))
             .await?;
         // The button shows once the island has hydrated, and its link hides.
@@ -842,7 +842,7 @@ async fn the_side_panel_is_a_sheet_the_size_of_the_viewport_on_a_phone()
         browser.goto(&gallery.url("/ferropix/overlays")).await?;
         let opener = browser
             .element(By::Css(
-                "button[popovertarget='access'][aria-controls='access']",
+                "button[commandfor='access'][aria-controls='access']",
             ))
             .await?;
         until("the panel's button shows", async || {
@@ -883,6 +883,110 @@ async fn the_side_panel_is_a_sheet_the_size_of_the_viewport_on_a_phone()
         );
         browser.console_clean("the phone's side panel").await
     })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn every_overlay_with_a_scrim_holds_the_focus_and_gives_it_back() -> Result<(), Box<dyn Error>>
+{
+    // WAI-ARIA Authoring Practices, the dialog (modal) pattern; WCAG 2.2 SC 2.4.3 and SC 2.4.11:
+    // Tab never reaches the page under the scrim, and closing returns the focus to the opener.
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        for (width, height) in [(1440, 900), (390, 844)] {
+            window(browser, width, height).await?;
+            browser.goto(&gallery.url("/ferrofed/overlays")).await?;
+            let panel = browser
+                .element(By::Css(
+                    "button[commandfor='access'][aria-controls='access']",
+                ))
+                .await?;
+            until("the panel's button shows", async || {
+                Ok(panel.is_displayed().await?)
+            })
+            .await?;
+            for id in ["reload-set", "save-query", "access"] {
+                held(browser, id).await?;
+            }
+        }
+        browser.console_clean("the overlays' focus").await
+    })
+    .await
+}
+
+/// Opens the overlay `id` from its opener, walks Tab through it more times
+/// than it has controls, and closes it with Escape, checking the focus
+/// never lands under it and returns to the opener.
+async fn held(browser: &Browser, id: &str) -> Result<(), Box<dyn Error>> {
+    let opener = browser
+        .element(By::Css(format!(
+            "button[command='show-modal'][commandfor='{id}']:not([role])"
+        )))
+        .await?;
+    browser
+        .driver()
+        .execute(
+            "arguments[0].scrollIntoView({block: 'center'});",
+            vec![opener.to_json()?],
+        )
+        .await?;
+    opener.click().await?;
+    let overlay = browser.element(By::Id(id)).await?;
+    until(&format!("{id} opens"), async || {
+        Ok(overlay.is_displayed().await?)
+    })
+    .await?;
+    let modal: bool = browser
+        .driver()
+        .execute(
+            "return document.getElementById(arguments[0]).matches(':modal');",
+            vec![json!(id)],
+        )
+        .await?
+        .convert()?;
+    assert!(modal, "{id} is modal, so the page under it is inert");
+    for step in 0..12 {
+        browser
+            .driver()
+            .action_chain()
+            .send_keys(Key::Tab)
+            .perform()
+            .await?;
+        let behind: bool = browser
+            .driver()
+            .execute(
+                "const active = document.activeElement;
+                return active !== null && active !== document.body
+                    && !document.getElementById(arguments[0]).contains(active);",
+                vec![json!(id)],
+            )
+            .await?
+            .convert()?;
+        assert!(!behind, "Tab {step} left {id} for the page under it");
+    }
+    browser
+        .driver()
+        .action_chain()
+        .send_keys(Key::Escape)
+        .perform()
+        .await?;
+    until(&format!("Escape closes {id}"), async || {
+        Ok(!overlay.is_displayed().await?)
+    })
+    .await?;
+    until(
+        &format!("the focus returns to the opener of {id}"),
+        async || {
+            let active = browser.driver().active_element().await?;
+            Ok(
+                active.attr("command").await?.as_deref() == Some("show-modal")
+                    && active.attr("commandfor").await?.as_deref() == Some(id),
+            )
+        },
+    )
     .await
 }
 

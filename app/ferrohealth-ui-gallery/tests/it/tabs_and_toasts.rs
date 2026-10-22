@@ -229,7 +229,7 @@ async fn the_popover_form_opens_under_its_trigger_or_as_a_sheet_and_escape_retur
         window(browser, 1440, 1600).await?;
         browser.goto(&gallery.url("/ferroehr/overlays")).await?;
         let trigger = browser
-            .element(By::Css("button[popovertarget='save-query']"))
+            .element(By::Css("button[commandfor='save-query']"))
             .await?;
         browser
             .driver()

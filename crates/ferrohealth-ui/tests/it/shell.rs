@@ -377,12 +377,15 @@ fn the_user_menu_is_a_menu_button_over_a_popover() {
             &[
                 ("popovertarget", "user-menu"),
                 ("aria-haspopup", "menu"),
-                ("aria-expanded", "false"),
-                ("aria-controls", "user-menu"),
+                ("aria-controls", "user-menu-menu"),
                 ("title", "Demo &lt;Operator&gt;")
             ]
         ),
         "{menu}"
+    );
+    assert!(
+        !menu.contains("aria-expanded"),
+        "the button says it is open only once its island runs, never a fixed false: {menu}"
     );
     assert!(
         menu.contains(r#"<span class="fui-operator-name">Demo &lt;Operator&gt;</span>"#),
@@ -395,6 +398,20 @@ fn the_user_menu_is_a_menu_button_over_a_popover() {
             &[
                 ("id", "user-menu"),
                 ("popover", "auto"),
+                (
+                    "class",
+                    "fui-menu fui-menu-compact fui-menu-anchored fui-menu-sheet fui-user-menu"
+                )
+            ]
+        ),
+        "{menu}"
+    );
+    assert!(
+        has(
+            &menu,
+            "div",
+            &[
+                ("id", "user-menu-menu"),
                 ("role", "menu"),
                 ("aria-label", "Demo &lt;Operator&gt;")
             ]
@@ -435,6 +452,25 @@ fn the_user_menu_is_a_menu_button_over_a_popover() {
         "no key hints on phones (family rule 6): {menu}"
     );
     assert!(menu.contains(r#"<kbd class="fui-kbd">?</kbd>"#), "{menu}");
+}
+
+#[test]
+fn who_is_signed_in_heads_the_popup_outside_the_aria_menu() {
+    // WAI-ARIA 1.2, the menu role: its owned elements are menu items and their groups, so plain
+    // text inside it is skipped by menu navigation.
+    let menu = menu_html(Some("Demo Operator"), true);
+    let head = menu.find("fui-menu-header").expect("the head");
+    let list = menu.find(r#"role="menu""#).expect("the menu");
+    assert!(head < list, "the head comes before the menu: {menu}");
+    let inside = menu.get(list..).unwrap_or_default();
+    assert!(
+        !inside.contains("fui-menu-header") && !inside.contains("<strong>"),
+        "the identity is outside the menu role: {menu}"
+    );
+    assert!(
+        inside.contains(r#"href="/preferences""#),
+        "the items are inside it: {menu}"
+    );
 }
 
 #[test]

@@ -654,8 +654,8 @@ fn the_surfaces_render_and_none_writes_a_style_attribute() {
         r#"aria-current="page""#,
         "fui-empty",
         r#"aria-busy="true""#,
-        r#"popovertarget="delete""#,
-        r#"popover="auto""#,
+        r#"command="show-modal" commandfor="delete""#,
+        r#"<dialog id="delete" closedby="any""#,
         "Cadasto B.V.",
     ] {
         assert!(page.contains(expected), "{expected}: {page}");
@@ -1314,7 +1314,9 @@ fn past_five_binder_tabs_a_phone_select_waits_disabled_for_the_webassembly() {
 }
 
 #[test]
-fn the_popover_form_is_a_native_popover_inside_its_anchor() {
+fn the_popover_form_is_a_native_modal_dialog_inside_its_anchor() {
+    // WAI-ARIA Authoring Practices, the dialog (modal) pattern: the page behind is inert and the
+    // focus stays inside; HTML Living Standard, the `command` attribute opens it with no script.
     let page = html(|| {
         popover_form(PopoverForm {
             id: "save",
@@ -1331,22 +1333,30 @@ fn the_popover_form_is_a_native_popover_inside_its_anchor() {
         has(
             &page,
             "button",
-            &[("popovertarget", "save"), ("aria-controls", "save")]
+            &[
+                ("command", "show-modal"),
+                ("commandfor", "save"),
+                ("aria-controls", "save"),
+                ("aria-haspopup", "dialog")
+            ]
         ),
         "{page}"
     );
     assert!(
         has(
             &page,
-            "div",
+            "dialog",
             &[
                 ("id", "save"),
-                ("popover", "auto"),
-                ("role", "dialog"),
+                ("closedby", "any"),
                 ("aria-labelledby", "save-title")
             ]
         ),
         "{page}"
+    );
+    assert!(
+        !page.contains("popover="),
+        "no popover, which lets the focus out: {page}"
     );
     assert!(
         page.contains(r#"<p id="save-title" class="fui-popover-title">Save to the CDR</p>"#),
@@ -1532,7 +1542,8 @@ fn the_action_group_draws_one_primary_then_more_with_the_destructive_item_last()
             "button",
             &[
                 ("role", "menuitem"),
-                ("popovertarget", "delete-file"),
+                ("command", "show-modal"),
+                ("commandfor", "delete-file"),
                 ("class", "fui-menu-item fui-menu-danger")
             ]
         ),
@@ -1898,7 +1909,8 @@ fn the_side_panel_island_opens_from_a_link_to_its_route_until_it_hydrates() {
             "button",
             &[
                 ("type", "button"),
-                ("popovertarget", "access"),
+                ("command", "show-modal"),
+                ("commandfor", "access"),
                 ("aria-controls", "access"),
                 ("hidden", "")
             ]
@@ -1908,16 +1920,15 @@ fn the_side_panel_island_opens_from_a_link_to_its_route_until_it_hydrates() {
     assert!(
         has(
             &panel,
-            "aside",
+            "dialog",
             &[
                 ("id", "access"),
-                ("popover", "auto"),
-                ("role", "dialog"),
+                ("closedby", "any"),
                 ("aria-labelledby", "access-title"),
                 ("class", "fui-side-panel")
             ]
         ),
-        "{panel}"
+        "a modal dialog, so the page behind is inert while it shows (WAI-ARIA Authoring Practices, the dialog (modal) pattern): {panel}"
     );
     assert!(
         panel.contains(r#"<h2 id="access-title" class="fui-card-title">Access &lt;now&gt;</h2>"#),
@@ -1929,8 +1940,8 @@ fn the_side_panel_island_opens_from_a_link_to_its_route_until_it_hydrates() {
             "button",
             &[
                 ("class", "fui-icon-button fui-side-panel-close"),
-                ("popovertarget", "access"),
-                ("popovertargetaction", "hide"),
+                ("command", "close"),
+                ("commandfor", "access"),
                 ("aria-label", "Close")
             ]
         ),

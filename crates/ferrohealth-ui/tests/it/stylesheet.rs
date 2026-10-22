@@ -381,9 +381,92 @@ fn the_keyboard_tab_leaves_the_row_below_40rem() {
 fn the_popover_form_is_anchored_to_its_trigger_on_a_wide_screen() {
     assert!(
         STYLESHEET.contains(
-            "    @media (width >= 40rem) {\n      .fui-anchor > .fui-popover[popover] {\n        inset: auto;\n        margin-block-start: 0.25rem;\n        position-anchor: --fui-anchor;\n        position-area: block-end span-inline-start;"
+            "    @media (width >= 40rem) {\n      .fui-anchor > dialog.fui-popover {\n        inset: auto;\n        margin: 0;\n        margin-block-start: 0.25rem;\n        position-anchor: --fui-anchor;\n        position-area: block-end span-inline-start;"
         ),
-        "a native popover in the top layer would lose its trigger"
+        "a modal dialog in the top layer would lose its trigger"
+    );
+    assert!(
+        STYLESHEET.contains("    .fui-anchor > [commandfor] {\n      anchor-name: --fui-anchor;"),
+        "the trigger names the anchor"
+    );
+}
+
+/// The block of the rule whose selector line is `selector`, up to its
+/// closing brace.
+fn rule(selector: &str) -> &'static str {
+    let at = STYLESHEET
+        .find(&format!("{selector} {{\n"))
+        .unwrap_or_else(|| panic!("no rule {selector}"));
+    let rest = STYLESHEET.get(at..).unwrap_or_default();
+    rest.get(..rest.find('}').unwrap_or(rest.len()))
+        .unwrap_or_default()
+}
+
+#[test]
+fn the_popover_form_without_anchor_positioning_is_centred_in_the_viewport() {
+    // WCAG 2.2 SC 2.4.11: the fallback must not leave the form below the viewport's foot.
+    let fallback = rule("  .fui-anchor > dialog.fui-popover");
+    assert!(
+        fallback.contains("position: fixed;")
+            && fallback.contains("inset: 0;")
+            && fallback.contains("margin: auto;"),
+        "{fallback}"
+    );
+}
+
+#[test]
+fn every_menu_and_listbox_scrolls_inside_the_viewport() {
+    // WCAG 2.2 SC 1.4.10: at 400% zoom or with many items, no item is past the screen's edge.
+    for selector in ["  .fui-menu.fui-menu-anchored", "  .fui-listbox"] {
+        let block = STYLESHEET
+            .match_indices(&format!("{selector} {{\n"))
+            .map(|(at, _)| {
+                let rest = STYLESHEET.get(at..).unwrap_or_default();
+                rest.get(..rest.find('}').unwrap_or(rest.len()))
+                    .unwrap_or_default()
+            })
+            .find(|block| block.contains("max-height"))
+            .unwrap_or_else(|| panic!("{selector} has no height limit"));
+        assert!(
+            block.contains("max-height: calc(100dvh - 2rem);")
+                && block.contains("overflow-y: auto;"),
+            "{block}"
+        );
+    }
+    let sheet = rule("    .fui-menu.fui-menu-anchored.fui-menu-sheet");
+    assert!(
+        sheet.contains("max-height: calc(100dvh - 1rem);"),
+        "the phone's sheet: {sheet}"
+    );
+    let user = rule("    .fui-menu.fui-menu-anchored.fui-user-menu:popover-open");
+    assert!(user.contains("max-height:"), "the user menu: {user}");
+}
+
+#[test]
+fn a_long_word_in_a_menu_item_an_option_or_the_user_menu_head_wraps() {
+    // WCAG 2.2 SC 1.4.10: a long e-mail or canonical URL wraps in its box, never clipped.
+    for selector in [
+        "  .fui-menu :is(a, button).fui-menu-item,\n  .fui-column .fui-menu a.fui-menu-item",
+        "  .fui-listbox-text > span:first-child",
+        "  .fui-menu-header",
+    ] {
+        let block = rule(selector);
+        assert!(
+            block.contains("overflow-wrap: anywhere;") && !block.contains("nowrap"),
+            "{block}"
+        );
+    }
+}
+
+#[test]
+fn the_confirmation_dialog_scrolls_inside_the_viewport() {
+    // WCAG 2.2 SC 1.4.10: a long message never hides the dialog's buttons past the screen.
+    let dialog = rule("  .fui-dialog");
+    assert!(
+        dialog.contains("max-height: calc(100dvh - 2rem);")
+            && dialog.contains("overflow: auto;")
+            && dialog.contains("overflow-wrap: anywhere;"),
+        "{dialog}"
     );
 }
 
