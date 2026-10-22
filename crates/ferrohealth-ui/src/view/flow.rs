@@ -280,7 +280,7 @@ impl Folded<'_> {
 fn joined(first: &str, next: &str) -> String {
     tr_with(
         Text::FlowFoldJoin,
-        &[("first", first.into()), ("next", next.into())],
+        &[("first", first.into()), ("last", next.into())],
     )
 }
 

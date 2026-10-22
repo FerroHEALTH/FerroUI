@@ -32,7 +32,7 @@ texts! {
     /// One state's count on a summary card: `$status` the state, `$count`
     /// how many.
     FlowFoldCount = "flow-fold-count",
-    /// Two counts of a summary card's line, `$first` and `$next`, joined.
+    /// Two counts of a summary card's line, `$first` and `$last`, joined.
     FlowFoldJoin = "flow-fold-join",
     /// The name of a lane's summary card: `$count` the cards it holds.
     FlowFoldName = "flow-fold-name",
