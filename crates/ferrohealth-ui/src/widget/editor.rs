@@ -38,7 +38,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::highlight::{Language, Lines, html};
 use crate::i18n::{Phrase, Text, tr, tr_with};
-use crate::view::diagnostics::{FileFindings, Position, rows};
+use crate::view::diagnostics::{DiagnosticsWords, FileFindings, Position, rows};
 
 /// How a marked line reads: the severity of the diagnostic that names it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -576,7 +576,8 @@ pub fn editor_panel(panel: Panel, on_input: impl Fn(String) + 'static) -> AnyVie
 }
 
 /// Returns the diagnostics list (B3) of the file the code editor `editor`
-/// edits, named `label`, in step with the cursor at `caret`.
+/// edits, named `label`, its rows in `words`, in step with the cursor at
+/// `caret`.
 ///
 /// The row of the marked line the cursor is on is current; following a
 /// row's line link moves the caret to the finding's line and column and
@@ -585,6 +586,7 @@ pub fn editor_panel(panel: Panel, on_input: impl Fn(String) + 'static) -> AnyVie
 pub fn editor_diagnostics(
     label: &str,
     file: &FileFindings,
+    words: &DiagnosticsWords,
     editor: Editor,
     caret: RwSignal<Position>,
 ) -> AnyView {
@@ -596,7 +598,7 @@ pub fn editor_diagnostics(
         caret.set(at);
         place_caret(id, text, at);
     });
-    let rows = rows(file, current, Some(on_line));
+    let rows = rows(file, words, current, Some(on_line));
     view! {
         <ul class="fui-diags" aria-label=label.to_owned()>
             {rows}

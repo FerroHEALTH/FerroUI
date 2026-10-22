@@ -289,20 +289,37 @@ The library is held to the best console's quality, not to "it renders".
 A library component reaches every console's bundle, so a new browser-side
 dependency or a heavy generic is justified against the bytes it adds. The
 gallery, which carries every component, is held to a budget in CI:
-`scripts/checks/gallery-bundle.sh` fails when its brotli-compressed
-WebAssembly is over the number below, which the script reads from this table.
+`scripts/checks/gallery-bundle.sh` fails when its brotli-compressed entry
+WebAssembly is over the number below, which the script reads from this
+table. The entry is what every page loads before any island hydrates; a
+lazy island's code (`#[island(lazy)]`, §15.8) is cut out of it by
+`cargo leptos --split` and loads from its own chunks on a page that draws
+it. The script prints what each lazy island adds and all the chunks
+together beside the entry, so a chunk that grows is seen.
 
 | Measure | Budget |
 |---|---|
-| WebAssembly, brotli-compressed | 491520 bytes |
+| Entry WebAssembly, brotli-compressed | 491520 bytes |
 
 The budget is 480 KiB, 34% over the 365376 bytes the gallery measured once
 every island took its words as props and the Fluent loader and catalogs
 left the browser (#219, 2026-10-22, cargo-leptos 0.3.11, wasm-bindgen
 0.2.129, wasm-opt version_133, Rust 1.99.1; 402593 before on the same
-tree). The headroom is for the 0.3.0 components still to come (the date
-picker, the editor's keys, the topology), which add islands. The spike of #196 measured
-the same gallery both ways (bytes):
+tree). The v0.3.1 islands took the gallery to 588808 bytes in one piece
+(#262). The masked identifier and the editor's diagnostics list looked
+their words up in the browser, which linked the Fluent loader and the whole
+catalog again (49840 bytes). A build without each family showed what it
+cost: the date pickers 72105, the four mapping editors 51074, the masked
+identifiers 33665 and the concept tree 22285. With the words back as props
+and those eight islands lazy, the entry is 363730 bytes and the chunks
+294040, with the pair input of #259 in the entry. The forms page, which
+draws seven of them, loads 257104 bytes of chunks beside the entry, the
+layouts page the concept tree's 41313, and every other page none. The combobox, the pick-or-type field and the upload
+field stay in the entry: lazy, they cut 43 KB from every page and added
+46 KB to the forms page, in chunks that compress worse alone. The budget
+stayed where it was.
+The gallery's measures in bytes, the first three rows the spike of #196
+(the same gallery both ways):
 
 | Build | WebAssembly raw | gzip -9 | brotli -q 11 | JS glue raw / brotli |
 |---|---:|---:|---:|---:|
@@ -310,6 +327,10 @@ the same gallery both ways (bytes):
 | Islands, spike (whole sections) | 1527677 | 613353 | 460744 | 25391 / 6325 |
 | Islands, as landed | 1389712 | 564473 | 427449 | 22469 / 5817 |
 | Islands, words as props (#219) | 1229704 | 486326 | 365376 | 23304 / 5993 |
+| v0.3.0 (c429eea) | 1668471 | 648775 | 474239 | 26531 / 6729 |
+| v0.3.1 islands, one piece (b742acc) | 2071614 | 809209 | 588808 | 28335 / 7123 |
+| Words as props again (#262) | 1934809 | 744438 | 538968 | 28337 / 7090 |
+| Entry with eight lazy islands (#262) | 1259810 | 486607 | 363730 | 29138 / 7285 |
 
 Time to interactive on the forms page, Chrome for Testing with the CPU
 slowed 4x (the mid-tier phone rate) and the bundle served locally, the
@@ -767,6 +788,12 @@ interaction contract and the budget; this section is the component's side.
   or disabled before hydration, and says why. [test: the gallery's
   no-WebAssembly journey (#196); review]
 - **Lazy islands are measured before they land**: `#[island(lazy)]` with
-  `cargo leptos --split` loads an island's code from its own chunk, a
-  candidate for the code editor and the topology (leptos_macro `src/lib.rs`;
-  B2, B9, F9). [review]
+  `cargo leptos --split` loads an island's code from its own chunks once a
+  page that draws it hydrates (leptos_macro `src/component.rs`, the
+  `_loader` it writes). An island is lazy when building the gallery without
+  it cuts more from the entry than its chunks add to the pages that draw
+  it, as §12 records: the date pickers, the mapping editors, the masked
+  identifiers and the concept tree are, and the topology (B9, F9) is the
+  next candidate. Without `--split` a lazy island hydrates from the entry,
+  so a console that does not split loses nothing. [review; the chunk table
+  of `scripts/checks/gallery-bundle.sh`]

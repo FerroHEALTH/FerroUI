@@ -42,6 +42,12 @@ Every island takes the words it draws as props your server resolves (each
 widget's `*Words::of_page()`), so the browser builds no locale and carries
 no catalog.
 
+`DatePicker` and `DateRangePicker` are lazy islands (`#[island(lazy)]`):
+build your site with `cargo leptos build --split` and their code loads from
+chunks of its own on a page that draws them, out of the WebAssembly every
+page loads. Without `--split` they hydrate from your one WebAssembly as
+every other island does.
+
 Every page works with no WebAssembly: the HTML is complete, and every
 important action is a link or a form.
 

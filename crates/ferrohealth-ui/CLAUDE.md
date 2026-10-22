@@ -55,7 +55,10 @@ diffing, the form submitter, file inputs and the base path.
   function: `ToastRegion`, `NavDrawer`, `UserMenuButton`, `KeyboardTabs`,
   `KeyHint`, `DocumentViews`, `TabSelect`, `Search`, `MenuButton`, `Combobox`,
   `PickerField`, `ChartLegend`, `DatePicker`, `DateRangePicker`, `CopyButton`,
-  `SidePanel`, `PreferenceForm`, `WorkList`. The module's `#![expect]` lines cover what
+  `SidePanel`, `PreferenceForm`, `WorkList`. `DatePicker` and
+  `DateRangePicker` are `#[island(lazy)]`, measured on #262 (72105 bytes of
+  brotli-compressed WebAssembly out of every page that draws no date
+  picker; `leptos-ui.md` §12, §15.8). The module's `#![expect]` lines cover what
   the island macro writes (a forgotten view state, an undocumented props
   struct, a dropped `#[must_use]`).
 - `widget`: the interactive components as functions a page calls inside

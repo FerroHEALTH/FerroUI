@@ -6,7 +6,8 @@
 #
 # scripts/release/gallery-site.sh remaps the cargo home, the toolchain and the
 # checkout to fixed prefixes for the WebAssembly build, so a bundle names
-# none of them. This reads the WebAssembly and its JavaScript glue for a
+# none of them. This reads every WebAssembly and JavaScript file of the
+# bundle (the entry, its glue, the lazy chunks and their loader) for a
 # home directory (/home/, /Users/, /root/, C:\Users\), a CI runner path
 # (/runner/, /github/workspace), the cargo registry (.cargo/registry) and a
 # rustup toolchain (.rustup/toolchains), and prints each one it finds.
@@ -32,12 +33,17 @@ esac
 
 pattern='(/home/|/Users/|/root/|[A-Za-z]:\\Users\\|/runner/|/github/workspace|\.cargo/registry|\.rustup/toolchains)[^"[:cntrl:]]*'
 
-found=0
 for file in "$name.wasm" "$name.js"; do
   if [ ! -s "$pkg/$file" ]; then
     echo "gallery-paths: $pkg/$file is missing; run scripts/release/gallery-site.sh --release first." >&2
     exit 1
   fi
+done
+
+# The entry, its glue, and the lazy islands' chunks and their loader.
+found=0
+for path in "$pkg"/*.wasm "$pkg"/*.js; do
+  file="$(basename "$path")"
   hits="$(LC_ALL=C grep -a -o -E "$pattern" "$pkg/$file" | sort -u || true)"
   if [ -n "$hits" ]; then
     count="$(printf '%s\n' "$hits" | wc -l | tr -d '[:space:]')"

@@ -9,7 +9,7 @@
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::view::code::Gravity;
 use ferrohealth_ui::view::diagnostics::{
-    FileFindings, Finding, Position, diagnostics, diagnostics_by_file,
+    DiagnosticsWords, FileFindings, Finding, Position, diagnostics, diagnostics_by_file,
 };
 use ferrohealth_ui::widget::editor::{
     Editor, EditorWords, LineMark, MarkKind, Opened, Panel, editor_diagnostics, editor_panel,
@@ -346,7 +346,13 @@ fn on_a_marked_line_the_line_and_its_row_are_current_and_the_status_says_so() {
     let beside = html(|| {
         editor_split(
             panel(text, Opened::New, caret),
-            editor_diagnostics("Diagnostics", &one, editor(text), RwSignal::new(caret)),
+            editor_diagnostics(
+                "Diagnostics",
+                &one,
+                &DiagnosticsWords::of_page(),
+                editor(text),
+                RwSignal::new(caret),
+            ),
         )
     });
     assert!(
