@@ -11811,10 +11811,15 @@
     overflow: hidden;
   }
 
+  /* The table name is a code: it never hyphenates or breaks inside the word,
+     and the row count wraps under it on a narrow card instead. */
   .fui-rowgraph-name {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
-    gap: var(--space-default);
+    gap: 0 var(--space-default);
+    hyphens: manual;
+    overflow-wrap: normal;
     margin: 0;
     padding: 0.5rem 0.75rem;
     border-bottom: 1px solid var(--edge);
