@@ -367,7 +367,7 @@ VLINE = 'Set in <code>ferroehr-viewer.toml</code> · read at start · <a href="c
 
 
 def key_hint(k, show=False):
-    return f'<button type="button" class="mk-key-hint{" is-shown" if show else ""}" aria-label="Copy the key {e(k)}" title="Copy the key"><code>{e(k)}</code>{icon("copy", "12")}</button>'
+    return f'<button type="button" class="fui-key-hint{" is-shown" if show else ""}" aria-label="Copy the key {e(k)}" title="Copy the key"><code>{e(k)}</code>{icon("copy", "12")}</button>'
 
 
 def srow(label, desc, value, key, hint=False):

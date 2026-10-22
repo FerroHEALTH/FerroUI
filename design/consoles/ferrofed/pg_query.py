@@ -261,7 +261,7 @@ def page_query_raw():
     from pg_shell import json_html
     text = json.dumps(RAW, indent=2)
     body = body_part(f'<div class="fui-panel-section-head"><p class="fui-small fui-muted">The federated result set, as a client receives it.</p><div class="fui-actions">{copy_button("Copy", "the result set")}</div></div>'
-                     f'<div class="fui-code-panel mk-options-code" role="region" aria-label="The federated result set as JSON" tabindex="0"><pre>{json_html(text)}</pre></div>')
+                     f'<div class="fui-code-panel fui-self-description" role="region" aria-label="The federated result set as JSON" tabindex="0"><pre>{json_html(text)}</pre></div>')
     return query_page(query_form(), results(body, "6 rows", view="raw", window=WINDOW_6))
 
 

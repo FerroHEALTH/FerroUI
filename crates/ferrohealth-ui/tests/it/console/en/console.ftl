@@ -21,5 +21,5 @@ ehrs =
 file-editor =
     { $mode ->
         [new] New mapping file
-       *[edit] Edit { $name }
+       *[edit] Edit
     }

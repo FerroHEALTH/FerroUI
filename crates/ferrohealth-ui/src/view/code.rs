@@ -24,6 +24,27 @@ pub fn code_panel(label: &str, language: Language, text: &str) -> impl IntoView 
     }
 }
 
+/// Returns `text` in `language` as [`code_panel`] draws it, capped at
+/// 24 rem with its own scroll, for a product's raw self-description on its
+/// About page.
+///
+/// A line never wraps: a long one scrolls sideways, on a phone too.
+#[must_use]
+pub fn self_description(label: &str, language: Language, text: &str) -> impl IntoView + use<> {
+    let text = text.strip_suffix('\n').unwrap_or(text);
+    let lines = html(language, text, Lines::default(), |_| None);
+    view! {
+        <div
+            class="fui-code-panel fui-self-description"
+            role="region"
+            aria-label=label.to_owned()
+            tabindex="0"
+        >
+            <pre inner_html=lines></pre>
+        </div>
+    }
+}
+
 /// Returns `text` in `language` as [`code_panel`] draws it, its lines
 /// numbered.
 ///

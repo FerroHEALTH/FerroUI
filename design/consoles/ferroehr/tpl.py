@@ -65,7 +65,7 @@ def card(table_html, foot="", tabs_html=None, label="List", title=None, count=No
     if tabs_html:
         return tabbed(tabs_html, f'<div class="fui-worklist fui-list-panel" aria-label="{e(label)}">{inner}</div>')
     t = title or label
-    c = f' <span class="mk-count">· {count}</span>' if count else ""
+    c = f' <span class="fui-list-count">· {count}</span>' if count else ""
     head = f'<div class="fui-panel-head fui-list-head"><h2 class="fui-card-title"><span>{t}{c}</span></h2><div class="fui-actions">{actions}</div></div>'
     return f'<section class="fui-card fui-panel fui-worklist fui-list-card" aria-label="{e(label)}">{head}{inner}</section>'
 

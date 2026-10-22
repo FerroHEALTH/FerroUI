@@ -168,3 +168,96 @@ mod tests {
         );
     }
 }
+
+/// One synthetic location of the page templates' list.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Location {
+    /// Its name.
+    pub name: String,
+    /// Its id, drawn as code.
+    pub id: String,
+    /// How many units it holds.
+    pub units: u32,
+    /// Its state: `ok`, `warn` or `muted`.
+    pub state: &'static str,
+}
+
+/// The five locations of the short list, as the reference template draws
+/// them.
+#[must_use]
+pub fn locations() -> Vec<Location> {
+    [
+        ("Locatie Noord", "loc-n", 3, "ok"),
+        ("Locatie Oost", "loc-o", 1, "warn"),
+        ("Locatie Zuid", "loc-z", 2, "ok"),
+        ("Locatie West", "loc-w", 1, "ok"),
+        ("Locatie Midden", "loc-m", 1, "muted"),
+    ]
+    .into_iter()
+    .map(|(name, id, units, state)| Location {
+        name: name.to_owned(),
+        id: id.to_owned(),
+        units,
+        state,
+    })
+    .collect()
+}
+
+/// The thirty locations of the long list, its first page of 25 shown.
+#[must_use]
+pub fn many_locations() -> Vec<Location> {
+    (1..=30)
+        .map(|index: u32| Location {
+            name: format!("Locatie {index:02}"),
+            id: format!("loc-{index:02}"),
+            units: 1 + index % 3,
+            state: match index {
+                4 => "warn",
+                9 => "muted",
+                _ => "ok",
+            },
+        })
+        .collect()
+}
+
+/// The self-description the About template shows.
+pub const SELF_DESCRIPTION: &str = r#"{
+  "name": "example",
+  "version": "0.1.0",
+  "limits": { "timeout_ms": 2500, "retries": 2 },
+  "best_effort": true
+}
+"#;
+
+/// The synthetic request id of the fault page's detail.
+pub const REQUEST_ID: &str = "0199c2a4-77e1-7c3a-9b1e-5d0f4c2e8a17";
+
+/// The synthetic time of the fault page's detail.
+pub const FAULT_TIME: &str = "2026-10-21 09:42:11 UTC";
+
+/// The server row of the About template's Versions card.
+pub const EXAMPLE_SERVER: &str = "Example 0.1.0";
+
+/// The library row's name on the About template.
+pub const LIBRARY: &str = "FerroUI";
+
+/// The library and its version, as the About template's library row says.
+#[must_use]
+pub fn library_release(version: &str) -> String {
+    format!("ferrohealth-ui {version}")
+}
+
+/// The maker's support address, as the About template shows it.
+pub const SUPPORT: &str = "info@cadasto.com";
+
+/// The link to the maker's support address.
+pub const SUPPORT_HREF: &str = "mailto:info@cadasto.com";
+
+/// The file a file-only configuration is read from.
+pub const CONFIG_FILE: &str = "example.toml";
+
+/// The operator scope the 403 page names.
+pub const OPERATOR_SCOPE: &str = "__example.operator";
+
+/// The id of the location the detail template shows.
+pub const LOCATION_ID: &str = "loc-n";

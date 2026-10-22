@@ -113,6 +113,7 @@ pub fn CodePage() -> impl IntoView {
                 Crumb::new(tr(Msg::CodeDocuments), format!("{root}/code")),
             ],
             mono: true,
+            badge: None,
         },
         (),
     )

@@ -60,6 +60,18 @@ pub fn KeyboardTabs(
     crate::widget::tabs::tab_list(label, prefix, tabs, children().into_any())
 }
 
+/// The key hint of a setting, copying its `key` when pressed (R15). The
+/// settings template draws it on each setting's label line.
+#[island]
+pub fn KeyHint(
+    /// The configuration key it names and copies.
+    key: String,
+    /// Its words, in the page's locale ([`crate::widget::copy::KeyHintWords::of_page`]).
+    words: crate::widget::copy::KeyHintWords,
+) -> impl IntoView {
+    crate::widget::copy::key_hint(key, words)
+}
+
 /// The navigation drawer `id`, named `label`, around the entries the
 /// server drew as its children, its close button saying `close`. A console
 /// draws it through [`crate::widget::nav::sidebar`].

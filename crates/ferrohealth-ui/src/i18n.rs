@@ -721,6 +721,60 @@ texts! {
     SizeKib = "size-kib",
     /// A size in mebibytes.
     SizeMib = "size-mib",
+    /// The words before the active filters of a list.
+    FilterShowing = "filter-showing",
+    /// The words before the active filters, with the rows they keep.
+    FilterShowingOf = "filter-showing-of",
+    /// The accessible name of the link that removes one filter.
+    FilterRemove = "filter-remove",
+    /// The link that removes every filter.
+    FilterClear = "filter-clear",
+    /// The accessible name of a setting's key hint.
+    KeyCopy = "key-copy",
+    /// The tooltip of a setting's key hint.
+    KeyCopyTitle = "key-copy-title",
+    /// A setting that takes effect at the next start.
+    NextStart = "next-start",
+    /// The file-mode line's words before the file.
+    ConfigSetIn = "config-set-in",
+    /// The file-mode line's words on when the file is read.
+    ConfigReadAtStart = "config-read-at-start",
+    /// The file-mode line's link to how configuration works.
+    ConfigHow = "config-how",
+    /// The step to the previous item of a queue, named with the item.
+    StepperPrevious = "stepper-previous",
+    /// The step to the next item of a queue, named with the item.
+    StepperNext = "stepper-next",
+    /// The About page's card of versions.
+    AboutVersions = "about-versions",
+    /// The About page's card of the maker.
+    AboutManufacturer = "about-manufacturer",
+    /// The About page's row of the console's own version.
+    AboutConsole = "about-console",
+    /// The About page's row of the maker.
+    AboutMadeBy = "about-made-by",
+    /// The About page's row of the licence.
+    AboutLicence = "about-licence",
+    /// The About page's row of where to ask for help.
+    AboutSupport = "about-support",
+    /// The About page's row of the documentation.
+    AboutDocumentation = "about-documentation",
+    /// The button that downloads a document.
+    Download = "download",
+    /// The words of a 403.
+    ErrorForbidden = "error-forbidden",
+    /// The words of a 404.
+    ErrorNotFound = "error-not-found",
+    /// The words of a 500.
+    ErrorFault = "error-fault",
+    /// An error's status: its words, then its number.
+    ErrorStatus = "error-status",
+    /// The summary of an error's technical detail.
+    ErrorDetail = "error-detail",
+    /// The time an error happened.
+    ErrorTime = "error-time",
+    /// The id of the request that failed.
+    ErrorRequest = "error-request",
 }
 
 /// The library's message `text` in the page's locale.
@@ -755,9 +809,9 @@ mod tests {
 
     /// The names of the placeables the library's messages take.
     const PLACEABLES: &[&str] = &[
-        "chart", "count", "date", "document", "file", "first", "held", "kinds", "last", "limit",
-        "note", "noun", "nouns", "page", "pages", "range", "size", "stated", "status", "summary",
-        "time", "total",
+        "chart", "count", "date", "document", "file", "filter", "first", "held", "key", "kinds",
+        "last", "limit", "note", "noun", "nouns", "page", "pages", "range", "shown", "size",
+        "stated", "status", "summary", "time", "total", "what", "words",
     ];
 
     /// The ids of the messages the catalog file at `path` defines.

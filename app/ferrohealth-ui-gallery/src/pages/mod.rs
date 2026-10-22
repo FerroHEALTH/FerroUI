@@ -15,6 +15,7 @@ pub mod overlays;
 pub mod overview;
 pub mod sign_in;
 pub mod tables;
+pub mod templates;
 
 use crate::locale::{Msg, tr};
 use leptos::prelude::*;

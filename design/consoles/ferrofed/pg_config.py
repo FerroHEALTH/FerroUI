@@ -95,7 +95,7 @@ LINES = {
 
 def compact_strip(n="7"):
     at, by = LINES[n]
-    return (f'<div class="fui-revision mk-revision-compact">{icon("file-text", "16")}<p><strong>Revision {n}</strong> · applied {at} by {by} · '
+    return (f'<div class="fui-revision fui-revision-compact">{icon("file-text", "16")}<p><strong>Revision {n}</strong> · applied {at} by {by} · '
             f'<span class="fui-pill fui-tone-ok" title="gateway-0 and gateway-1 run revision {n}">In step</span></p></div>')
 
 
@@ -106,7 +106,7 @@ def replicas_inline(g1=("ok", "In step")):
 # ---- the settings tabs ----
 
 def key_hint(k, show=False):
-    return f'<button type="button" class="mk-key-hint{" is-shown" if show else ""}" aria-label="Copy the key {e(k)}" title="Copy the key"><code>{e(k)}</code>{icon("copy", "12")}</button>'
+    return f'<button type="button" class="fui-key-hint{" is-shown" if show else ""}" aria-label="Copy the key {e(k)}" title="Copy the key"><code>{e(k)}</code>{icon("copy", "12")}</button>'
 
 
 def srow(label, desc, value, key=None, restart=False, control=None, edit=False, error=None, changed=None, hint_=False, pending=None):
@@ -233,7 +233,7 @@ def page_configuration_loading():
     from parts import skeleton_lines
     rows = "".join(f'<div class="fui-setting-row" aria-hidden="true"><div class="fui-setting-text">{skeleton_lines([30, 60])}</div><div class="fui-setting-control">{skeleton_lines([50])}</div></div>' for _ in range(6))
     body = tpl.settings_panel(rows, '<span class="fui-spinner"><span class="fui-spinner-ring" aria-hidden="true"></span>Reading the revisions from gateway-0</span>')
-    strip = f'<div class="fui-revision mk-revision-compact" aria-hidden="true">{icon("file-text", "16")}<p>{skeleton_lines([40])}</p></div>'
+    strip = f'<div class="fui-revision fui-revision-compact" aria-hidden="true">{icon("file-text", "16")}<p>{skeleton_lines([40])}</p></div>'
     html = config_page("federation", body=body, status_html=strip)
     return html.replace(config_heading("managed"), config_heading("managed", loading=True), 1)
 

@@ -116,7 +116,7 @@ Fixed vertical rhythm: 24 px under the title and intro (the page header's margin
 | Part | When |
 |---|---|
 | Title, mode badge, action group | Always; the badge only where a deployment has modes. |
-| Revision line | Only where the settings are revisioned. One line, "Revision 7 · applied 2026-10-14 by Demo Steward · in step", with the reason in the pill's tooltip and in History. An event (applied, a restart waiting, a conflict, a replica refusing) replaces it with a full revision strip in its tone until it is resolved. A draft is never a strip: the tab's draft badge and the panel intro say it. |
+| Revision line (`fui-revision-compact`) | Only where the settings are revisioned. One line, "Revision 7 · applied 2026-10-14 by Demo Steward · in step", with the reason in the pill's tooltip and in History. An event (applied, a restart waiting, a conflict, a replica refusing) replaces it with a full revision strip in its tone until it is resolved. A draft is never a strip: the tab's draft badge and the panel intro say it. |
 | Binder tabs, one section each | When the page has three or more sections. Each tab is a route (`/configuration/consent`) that survives a reload. ← and → move along the tablist. |
 | Tab select at 390 px (`fui-tabbed-many`) | When there are more tabs than a phone row shows (Configuration's seven). Up to five tabs keep the scrolling row with edge fades. |
 | Panel head: one-line intro and that tab's actions | One sentence on what the tab governs, then how a change takes effect ("Changes apply at once unless a row says Next start."). Edit is per tab. In edit the intro becomes "A draft of this tab, based on revision 7: 2 changes." A review shows the diff inside the same tab, still marked draft. |
@@ -175,12 +175,12 @@ Measured on the FerroPIX identifier domains table at 1440 px. Every console's ta
 | R12 | Honest navigation count |
 | R13 | Masked identifier revealed |
 | R14 | Filter chips On a phone Clear filters keeps one line beside the chips. With a count the row says "Showing 7 of 21". |
-| R15 | Configuration editing A key hint is a labelled copy button, reachable by keyboard, and always shown on a phone. |
+| R15 | Configuration editing A key hint (`fui-key-hint`) is a labelled copy button on the label's line, reachable by keyboard, shown on hover and focus, and always shown on a phone. |
 | R16 | Score scale |
 | R17 | Toasts and popover form A toast's action sits under its text. On a phone the page keeps clear of the toast region. |
 | R18 | Focus ring on every control |
 | R19 | Sign-in |
-| R20 | Error page |
+| R20 | Error page (`fui-status-page`) The status in words before its number, as one quiet line ("Not allowed · 403"); the title names the error in plain words; then what it means for you (who you are and the scope or role for a 403, the address and what it may mean for a 404, who can fix it for a 500), a quiet hint for the raw scope or key, and the way on as links. The time and the request id sit in a closed disclosure. It renders in the shell, and in the centred layout when no one is signed in. |
 | R21 | Settings rows hugging their options |
 | R22 | History filter |
 | R23 | Date field |
@@ -213,13 +213,13 @@ Measured on the FerroPIX identifier domains table at 1440 px. Every console's ta
 
 | | Spec |
 |---|---|
-| Card header row (`fui-list-head`) | T1's title, count and actions above a table. |
+| Card header row (`fui-list-head`) | T1's title, count (`fui-list-count`, muted after a middle dot) and actions above a table. |
 | Tab draft badge (`fui-tab-draft`) | Accent tint, micro text, on a tab that holds a draft. |
 | Tab select (`fui-tabs-select`, `fui-tabbed-many`) | Replaces a long tab row on a phone. |
 | Settings panel (`fui-settings-panel`, `-head`, `-intro`) | T3's panel. |
 | Tooltip above (`fui-tooltip-above`) | For controls at the foot of a canvas. |
 | Search result row | The dot or glyph, then the name over its line. Results are grouped by kind; a FerroFED creating_system_id resolves to its node's Routes tab. |
-| Self-description card | About's code card, with its own scroll and token colours. |
+| Self-description card (`fui-self-description`) | About's code card, with its own scroll and token colours. |
 | Top-bar status pill | The product's state in two words, the same shape in every console: "Server up" (FerroPIX), "Gateway up" (FerroFED), "Bridge up" (FerroBRIDGE), then unreachable, unknown or refused 401. The version is in its tooltip and on About, never in the pill. |
 
 ### From FerroBRIDGE (B1 to B10), for every console

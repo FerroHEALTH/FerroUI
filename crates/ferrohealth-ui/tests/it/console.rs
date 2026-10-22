@@ -16,6 +16,8 @@ use ferrohealth_ui::view::surface::{
 use ferrohealth_ui::widget::nav::{Entry, Group};
 use leptos::prelude::*;
 
+use crate::markup::has;
+
 fluent_templates::static_loader! {
     static CONSOLE = {
         locales: "./tests/it/console",
@@ -74,26 +76,42 @@ fn a_listing_names_its_rows_by_the_consoles_noun_chosen_by_count() {
 #[test]
 fn an_editor_says_new_when_it_creates_and_edit_when_it_edits() {
     let editor = message("file-editor");
-    let header = || Header {
-        crumbs: vec![Crumb::new("Mapping files", "/files")],
-        mono: true,
-        ..Header::default()
-    };
-    let creating = html(|| editor_heading(editor, &Mode::Creating, header(), ()));
+    let list = || Crumb::new("Mapping files", "/files");
+    let creating = html(|| {
+        let header = Header {
+            crumbs: vec![list()],
+            mono: true,
+            ..Header::default()
+        };
+        editor_heading(editor, &Mode::Creating, header, ())
+    });
     assert!(creating.contains("<h1>New mapping file</h1>"), "{creating}");
     assert!(
-        creating.contains(r#"<li aria-current="page">New mapping file</li>"#),
-        "the trail's last crumb: {creating}"
+        has(&creating, "nav", &[("class", "fui-crumbs is-parent")]),
+        "the trail ends with the list the new file joins: {creating}"
+    );
+    assert!(
+        !creating.contains("aria-current"),
+        "the trail never ends with the editor: {creating}"
     );
     let editing = Mode::Editing(String::from("vitals.model.yml"));
-    let changing = html(|| editor_heading(editor, &editing, header(), ()));
+    let changing = html(|| {
+        let header = Header {
+            crumbs: vec![list(), Crumb::new("vitals.model.yml", "/files/vitals")],
+            mono: true,
+            ..Header::default()
+        };
+        editor_heading(editor, &editing, header, ())
+    });
     assert!(
-        changing.contains("<h1>Edit vitals.model.yml</h1>"),
+        changing.contains("<h1>Edit</h1>"),
         "a sentence in the body face: {changing}"
     );
     assert!(
-        changing.contains(r#"<li aria-current="page">Edit vitals.model.yml</li>"#),
-        "{changing}"
+        changing.contains(r#"<li><a href="/files/vitals">"#)
+            && !changing.contains("/ Edit")
+            && !changing.contains("aria-current"),
+        "the trail ends with the file it edits, never with Edit: {changing}"
     );
     let title = Owner::new().with(|| editor_title(editor, &Mode::Creating));
     assert_eq!(

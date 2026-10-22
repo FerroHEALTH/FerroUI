@@ -27,6 +27,7 @@ states under `../screenshots/states/`.
 | `reference/ferroehr/login.png` | `screenshots/ferroehr/sign-in-basic.png` | the sign-in card |
 | `reference/ferrofed/dashboard.png` | `screenshots/ferrofed/overview.png` | marked stat cards, the page meta line |
 | `reference/ferrofed/members.png` | `screenshots/ferrofed/tables.png` | the table and its pager |
+| the design's `templates/` set (`design/tools/render.sh templates`) and each console's `forbidden`, `not-found` and `unreadable` | `screenshots/<brand>/templates/*.png`, `screenshots/<brand>/fault.png` | the page templates T1 to T3, About, and the error page |
 | `reference/ferrofed/configuration-member-form.png` | `screenshots/ferrofed/forms.png`, `states/ferrofed/reveal-replace.png` | fieldsets, the segmented radio and what it reveals, the change table |
 | `reference/ferrofed/query-complete.png` | `screenshots/ferrofed/forms.png`, `layouts.png` | checkbox chips, the switch, the action bar, node tiles |
 | `reference/ferroterm/overview.png` | `screenshots/ferroterm/overview.png`, `states/ferroterm/focus-search.png` | the search box in the top bar, the type scale |

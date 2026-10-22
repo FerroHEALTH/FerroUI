@@ -271,9 +271,10 @@ The library is held to the best console's quality, not to "it renders".
   words then an arrow a tight space apart), never a console's own link or
   outlined button.
 - **An editor's header says what it does.** A form that creates titles
-  itself "New <thing>" and one that changes "Edit <name>", through
-  `editor_heading`, in the heading, the trail's last crumb and the
-  document's title alike.
+  itself "New <thing>" and one that changes "Edit", through
+  `editor_heading`, whose trail ends with the list a new thing joins or
+  with the thing edited, never with the editor (`design/COMPONENTS.md`
+  T2).
 
 ## 12. Bundle
 
