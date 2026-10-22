@@ -24,7 +24,6 @@ import sys
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import chrome as browser  # noqa: E402
-import design_set  # noqa: E402
 
 PROBE = r"""(() => {
 const out = [];
@@ -98,21 +97,15 @@ for (const [label, n] of seen) if (n > 1) out.push(['primary', label, n + ' visi
 return out; })()"""
 
 
-def worker(site, chrome, session, slugs):
-    found = []
-    for slug in slugs:
-        for width in (1440, 390):
-            browser.load(chrome, session, site.page_url(slug), width, theme="light", still=True)
-            for hit in browser.evaluate(chrome, session, PROBE) or []:
-                found.append((slug, width) + tuple(hit))
-    return found
+LOADS = tuple({"width": width, "theme": "light", "still": True} for width in (1440, 390))
+
+
+def measure(chrome, session, slug, load):
+    return [(slug, load["width"]) + tuple(hit) for hit in browser.evaluate(chrome, session, PROBE) or []]
 
 
 def main():
-    site, only = design_set.site_from_argv(__doc__)
-    slugs = [s for s in site.slugs() if not only or s in only]
-    findings = browser.run(site, "forms", slugs, worker)
-    return site.verdict("forms", findings, set(slugs))
+    return browser.main_one("forms", __doc__)
 
 
 if __name__ == "__main__":

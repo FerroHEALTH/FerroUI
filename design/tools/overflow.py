@@ -14,7 +14,6 @@ import time
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import chrome as browser  # noqa: E402
-import design_set  # noqa: E402
 
 PROBE = r"""
 (() => {
@@ -140,22 +139,16 @@ PROBE = r"""
 """
 
 
-def worker(site, chrome, session, slugs):
-    found = []
-    for slug in slugs:
-        for width in (1440, 390):
-            browser.load(chrome, session, site.page_url(slug), width, still=True)
-            time.sleep(0.05)
-            for kind, el, _px, text in browser.evaluate(chrome, session, PROBE) or []:
-                found.append((slug, width, kind, el, text))
-    return found
+LOADS = ({"width": 1440, "still": True}, {"width": 390, "still": True})
+
+
+def measure(chrome, session, slug, load):
+    time.sleep(0.05)
+    return [(slug, load["width"], kind, el, text) for kind, el, _px, text in browser.evaluate(chrome, session, PROBE) or []]
 
 
 def main():
-    site, only = design_set.site_from_argv(__doc__)
-    slugs = [s for s in site.slugs() if not only or s in only]
-    findings = browser.run(site, "overflow", slugs, worker)
-    return site.verdict("overflow", findings, set(slugs))
+    return browser.main_one("overflow", __doc__)
 
 
 if __name__ == "__main__":

@@ -99,15 +99,28 @@ class Chrome:
         os.waitpid(self.pid, 0)
 
 
-def open_page(site, profile):
-    """Starts Chrome with its own profile under the set's state directory and
-    returns it with one attached page session, Page and Runtime enabled."""
-    chrome = Chrome(os.path.join(site.state_dir, profile), site.state_dir)
+def attach(chrome):
+    """Opens a fresh page target, attaches a session to it with Page and
+    Runtime enabled, and returns the target and the session. A fresh target
+    carries no emulation and no pointer from an earlier page."""
     target = chrome.send("Target.createTarget", {"url": "about:blank"})["targetId"]
     session = chrome.send("Target.attachToTarget", {"targetId": target, "flatten": True})["sessionId"]
     chrome.send("Page.enable", {}, session)
     chrome.send("Runtime.enable", {}, session)
-    return chrome, session
+    return target, session
+
+
+def detach(chrome, target, session):
+    """Closes a page target and drops the events its session left behind."""
+    chrome.send("Target.closeTarget", {"targetId": target})
+    chrome.events = [ev for ev in chrome.events if ev.get("sessionId") != session]
+
+
+def open_page(site, profile):
+    """Starts Chrome with its own profile under the set's state directory and
+    returns it with one attached page session, Page and Runtime enabled."""
+    chrome = Chrome(os.path.join(site.state_dir, profile), site.state_dir)
+    return chrome, attach(chrome)[1]
 
 
 def load(chrome, session, url, width, height=900, theme=None, reduced_motion=False, still=False):
@@ -184,3 +197,83 @@ def run(site, profile, slugs, worker, jobs=None):
     with concurrent.futures.ProcessPoolExecutor(len(parts)) as pool:
         results = pool.map(_part, [(site.name, f"{profile}-{i}", p, worker) for i, p in enumerate(parts)])
         return [x for r in results for x in r]
+
+
+def plan(checks):
+    """The loads one page takes for a list of check modules, each with the
+    checks that measure it. A check names its loads in LOADS (the keyword
+    arguments of load) and measures with measure(chrome, session, slug,
+    load). The loads of checks that move the pointer (POINTER) come apart,
+    so no other check measures a page with a control hovered. The rest run
+    unthemed first and reduced motion last: an emulated feature lasts for
+    the page target, and every themed load names its own scheme."""
+    still, moving = [], []
+    for check in checks:
+        dest = moving if getattr(check, "POINTER", False) else still
+        for load in check.LOADS:
+            for known, readers in dest:
+                if known == load:
+                    readers.append(check)
+                    break
+            else:
+                dest.append((load, [check]))
+    still.sort(key=lambda entry: (entry[0].get("theme") is not None, bool(entry[0].get("reduced_motion"))))
+    return still, moving
+
+
+def _sweep(args):
+    site_name, profile, slugs, names = args
+    import importlib
+
+    site = design_set.Site(site_name)
+    checks = [importlib.import_module(name) for name in names]
+    still, moving = plan(checks)
+    found = {check.__name__: [] for check in checks}
+    chrome = Chrome(os.path.join(site.state_dir, profile), site.state_dir)
+    try:
+        # One pointer page serves every slug, as a single hover pass did; the
+        # other loads take a fresh page per slug.
+        pointer = attach(chrome)[1] if moving else None
+        for slug in slugs:
+            if still:
+                target, session = attach(chrome)
+                for load_args, readers in still:
+                    load(chrome, session, site.page_url(slug), **load_args)
+                    for check in readers:
+                        found[check.__name__] += check.measure(chrome, session, slug, load_args)
+                detach(chrome, target, session)
+            for load_args, readers in moving:
+                load(chrome, pointer, site.page_url(slug), **load_args)
+                for check in readers:
+                    found[check.__name__] += check.measure(chrome, pointer, slug, load_args)
+        return found
+    finally:
+        chrome.close()
+
+
+def check(site, slugs, names, jobs=None):
+    """Renders each page once per distinct load and runs every named check
+    module over that render, the slugs split across jobs browsers
+    (FERROUI_DESIGN_JOBS, else the CPU count up to 4). Returns each check's
+    findings by module name."""
+    import concurrent.futures
+
+    jobs = jobs or int(os.environ.get("FERROUI_DESIGN_JOBS") or min(4, os.cpu_count() or 1))
+    profile = "check-" + "-".join(names)
+    parts = [slugs[i::jobs] for i in range(jobs) if slugs[i::jobs]]
+    if len(parts) <= 1:
+        return _sweep((site.name, profile + "-0", slugs, names))
+    found = {name: [] for name in names}
+    with concurrent.futures.ProcessPoolExecutor(len(parts)) as pool:
+        for part in pool.map(_sweep, [(site.name, f"{profile}-{i}", p, names) for i, p in enumerate(parts)]):
+            for name, findings in part.items():
+                found[name] += findings
+    return found
+
+
+def main_one(name, usage):
+    """The main of one check module run alone: its findings over the set's
+    pages (or the slugs named) against the baseline."""
+    site, only = design_set.site_from_argv(usage)
+    slugs = design_set.in_part([s for s in site.slugs() if not only or s in only])
+    return site.verdict(name, check(site, slugs, [name])[name], set(slugs))

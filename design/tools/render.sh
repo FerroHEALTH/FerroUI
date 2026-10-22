@@ -8,9 +8,13 @@
 # Usage: design/tools/render.sh <set|all> [slug ...]
 #   A set is `templates` or a console: ferrobridge, ferroehr, ferrofed,
 #   ferropix, ferroterm. FERROUI_CHROME names the browser binary and
-#   FERROUI_DESIGN_JOBS the number of browsers run side by side.
+#   FERROUI_DESIGN_JOBS the number of browsers run side by side. The renders
+#   hold the machine-wide Chrome lock (scripts/chrome-lock.sh).
 set -euo pipefail
 tools="$(cd "$(dirname "$0")" && pwd)"
+if [[ "${FERROUI_CHROME_LOCK_HELD:-}" != 1 && $# -ge 1 ]]; then
+  exec bash "$tools/../../scripts/chrome-lock.sh" bash "$0" "$@"
+fi
 
 if [[ $# -lt 1 ]]; then
   sed -n '/^# Usage:/,/^set /p' "$0" | sed '$d; s/^# \{0,1\}//' >&2

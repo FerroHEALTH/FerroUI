@@ -14,7 +14,6 @@ import sys
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import chrome as browser  # noqa: E402
-import design_set  # noqa: E402
 
 SNAP = r"""
 (() => {
@@ -47,33 +46,33 @@ DIFF = r"""
 """
 
 
-def worker(site, chrome, session, slugs):
+LOADS = ({"width": 1440, "still": True}, {"width": 390, "still": True})
+# Hovering leaves the pointer on the page, so no other check reads this load.
+POINTER = True
+
+
+def measure(chrome, session, slug, load):
     found = []
-    for slug in slugs:
-        for width in (1440, 390):
-            browser.load(chrome, session, site.page_url(slug), width, still=True)
-            h = browser.evaluate(chrome, session, "document.documentElement.scrollHeight")
-            chrome.send("Emulation.setDeviceMetricsOverride", {"width": width, "height": int(h), "deviceScaleFactor": 1, "mobile": width < 600}, session)
-            browser.settle(chrome, session)
-            pts = browser.evaluate(chrome, session, SNAP)
-            for i, (x, y) in enumerate(pts):
-                chrome.send("Input.dispatchMouseEvent", {"type": "mouseMoved", "x": x, "y": y}, session)
-                r = browser.evaluate(chrome, session, f"{DIFF}({i}, 'hover')")
-                if r:
-                    found.append((slug, width, r[0], r[1], str(r[3])))
-                chrome.send("Runtime.evaluate", {"expression": f"window.__ctl[{i}].focus({{preventScroll: true}})"}, session)
-                r = browser.evaluate(chrome, session, f"{DIFF}({i}, 'focus')")
-                if r:
-                    found.append((slug, width, r[0], r[1], str(r[3])))
-            chrome.send("Input.dispatchMouseEvent", {"type": "mouseMoved", "x": 0, "y": 0}, session)
+    width = load["width"]
+    h = browser.evaluate(chrome, session, "document.documentElement.scrollHeight")
+    chrome.send("Emulation.setDeviceMetricsOverride", {"width": width, "height": int(h), "deviceScaleFactor": 1, "mobile": width < 600}, session)
+    browser.settle(chrome, session)
+    pts = browser.evaluate(chrome, session, SNAP)
+    for i, (x, y) in enumerate(pts):
+        chrome.send("Input.dispatchMouseEvent", {"type": "mouseMoved", "x": x, "y": y}, session)
+        r = browser.evaluate(chrome, session, f"{DIFF}({i}, 'hover')")
+        if r:
+            found.append((slug, width, r[0], r[1], str(r[3])))
+        chrome.send("Runtime.evaluate", {"expression": f"window.__ctl[{i}].focus({{preventScroll: true}})"}, session)
+        r = browser.evaluate(chrome, session, f"{DIFF}({i}, 'focus')")
+        if r:
+            found.append((slug, width, r[0], r[1], str(r[3])))
+    chrome.send("Input.dispatchMouseEvent", {"type": "mouseMoved", "x": 0, "y": 0}, session)
     return found
 
 
 def main():
-    site, only = design_set.site_from_argv(__doc__)
-    slugs = [s for s in site.slugs() if not only or s in only]
-    findings = browser.run(site, "hover", slugs, worker)
-    return site.verdict("hover", findings, set(slugs))
+    return browser.main_one("hover", __doc__)
 
 
 if __name__ == "__main__":

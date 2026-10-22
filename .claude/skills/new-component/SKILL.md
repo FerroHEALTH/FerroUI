@@ -26,8 +26,9 @@ component rules are `.claude/rules/leptos-ui.md`; §14 is the Leptos way and
    `design/templates/`. Read the classes it uses in
    `design/css/ferroui-console.css`. If the component must differ from the
    design, change `design/COMPONENTS.md` and the console stylesheet first,
-   then run `design/tools/render.sh all` and `design/tools/check.sh all`,
-   before any Rust.
+   then run `design/tools/render.sh <set>` for each console that draws the
+   component and `scripts/fast.sh`, which checks every design set your
+   change reaches, before any Rust.
 3. **Choose a server view or an island** (§15.1). Ask, in order:
    - Can HTML, CSS and a native element do it (`<dialog>`, `popover`,
      `<details>`, a link, a `GET` or `POST` form, a checkbox with `:has()`)?
@@ -80,17 +81,20 @@ component rules are `.claude/rules/leptos-ui.md`; §14 is the Leptos way and
    - Add an assertion to the no-WebAssembly journey (#196): the content and
      the key action work with the WebAssembly withheld.
 9. **Run the gates.**
-   - `cargo fmt --all --check`.
-   - `cargo clippy --workspace --all-targets -- -D warnings`.
-   - The two wasm32 clippy runs: `cargo clippy -p ferrohealth-ui --lib --target wasm32-unknown-unknown --features leptos/hydrate -- -D warnings`, and the same with `leptos/csr`.
-   - `cargo nextest run --workspace --locked`.
+   - `scripts/fast.sh`: rustfmt, clippy (wasm32 when browser code changed),
+     nextest and the doctests, the journeys of the area you touched, and
+     `design/tools/check.sh` for each design set your change reaches, with
+     no baseline entry added. The browser steps wait on the machine-wide
+     Chrome lock, so several worktrees can run it at once. CI runs the
+     full gate.
    - The guards: `bash scripts/checks/leptos-rules.sh`, `bash scripts/checks/stray-literals.sh crates/ferrohealth-ui/src app/ferrohealth-ui-gallery/src` and `bash scripts/checks/comment-style.sh --all`.
-   - `design/tools/check.sh all`, with no baseline entry added.
-10. **Look at it.** Run the journeys (`FERROUI_JOURNEYS=1`), then the
-    screenshots and states (`FERROUI_SCREENSHOTS=1`, over the release site
-    bundle from `scripts/release/gallery-site.sh --release`). Look at every
-    image that changed, in every brand, light and dark, at 1440 and 390 px.
-    Refresh the `docs/qa/` pair (§11).
+10. **Look at it.** Never run the full screenshot capture. Capture only the
+    pages you touched, over the release site bundle from
+    `scripts/release/gallery-site.sh --release`:
+    `scripts/chrome-lock.sh env FERROUI_SCREENSHOTS=1 FERROUI_SCREENSHOT_PAGES=<page,...> cargo nextest run --locked -p ferrohealth-ui-gallery -E 'test(every_page_is_captured)'`.
+    Look at every image that changed, in every brand, light and dark, at
+    1440 and 390 px; the `gallery-screenshots` artifact of CI holds the
+    whole capture. Refresh the `docs/qa/` pair (§11).
 11. **Check the bundle.** Run `bash scripts/checks/gallery-bundle.sh` after
     the release build. A rise past the budget is its own pull request with
     the measured size (§12).

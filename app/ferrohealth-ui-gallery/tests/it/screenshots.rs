@@ -9,7 +9,8 @@
 //! theme, at 1440 and at 390 CSS pixels wide and the full height of the page,
 //! and writes each as `<page>.png` and `<page>-dark.png`, the narrow ones
 //! `<page>-narrow.png` and `<page>-narrow-dark.png`, under [`IMAGES`]. Without the
-//! gate the capture returns at once. The guard runs in the ordinary suite:
+//! gate the capture returns at once. [`PAGES_FILTER`] limits it to the pages
+//! a change touches. The guard runs in the ordinary suite:
 //! every shot has both images, and every image is a shot's.
 
 use std::collections::BTreeSet;
@@ -27,6 +28,12 @@ use crate::stack::Gallery;
 
 /// The environment variable that opts in to the capture.
 const SCREENSHOTS_GATE: &str = "FERROUI_SCREENSHOTS";
+
+/// The environment variable that limits the capture to some pages: a
+/// comma-separated list of page names, each matched against the last part
+/// of an image's name (`tables` takes the tables page of every brand). The
+/// whole capture runs when it is unset.
+const PAGES_FILTER: &str = "FERROUI_SCREENSHOT_PAGES";
 
 /// The environment variable that opts in to the pseudo-locale capture,
 /// which checks the layout of longer words once and is never committed.
@@ -107,6 +114,16 @@ fn shots() -> Vec<Shot> {
         }
     }
     shots
+}
+
+/// Whether the capture takes `image` under the page list `filter`, the value
+/// of [`PAGES_FILTER`] (`None` takes every image).
+fn wanted(image: &str, filter: Option<&str>) -> bool {
+    let Some(filter) = filter else {
+        return true;
+    };
+    let page = image.rsplit('/').next().unwrap_or(image);
+    filter.split(',').map(str::trim).any(|name| name == page)
 }
 
 /// The workspace root.
@@ -206,6 +223,7 @@ async fn every_page_is_captured_in_every_brand_light_and_dark() -> Result<(), Bo
     if !std::env::var(SCREENSHOTS_GATE).is_ok_and(|value| value == "1") {
         return Ok(());
     }
+    let filter = std::env::var(PAGES_FILTER).ok();
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
         window(browser, WIDTH, HEIGHT).await?;
@@ -223,7 +241,10 @@ async fn every_page_is_captured_in_every_brand_light_and_dark() -> Result<(), Bo
                     json!({ "features": [{ "name": "prefers-color-scheme", "value": theme }] }),
                 )
                 .await?;
-            for shot in shots() {
+            for shot in shots()
+                .into_iter()
+                .filter(|shot| wanted(&shot.image, filter.as_deref()))
+            {
                 for width in WIDTHS {
                     capture(browser, &gallery, &shot, theme, width, IMAGES).await?;
                 }
@@ -273,6 +294,16 @@ async fn one_brand_is_captured_in_the_pseudo_locale_light_and_dark() -> Result<(
         Ok(())
     })
     .await
+}
+
+#[test]
+fn the_page_filter_takes_the_named_pages_of_every_brand_alone() {
+    assert!(wanted("ferrobridge/tables", None));
+    assert!(wanted("ferrobridge/tables", Some("tables")));
+    assert!(wanted("ferroehr/tables", Some("forms, tables")));
+    assert!(wanted("index", Some("index")));
+    assert!(!wanted("ferrobridge/forms", Some("tables")));
+    assert!(!wanted("ferrobridge/sign-in-basic", Some("sign-in")));
 }
 
 #[test]

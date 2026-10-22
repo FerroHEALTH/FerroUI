@@ -76,3 +76,7 @@ site-pkg-dir = "pkg"
 site-addr = "127.0.0.1:3000"
 reload-port = 3001
 lib-profile-release = "wasm-release"
+lib-profile-dev = "wasm-dev"
+# A dev build keeps its component types, as the server half does, so the
+# bundle hydrates the pages the server rendered.
+disable-erase-components = true

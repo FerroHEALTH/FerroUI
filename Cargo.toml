@@ -183,3 +183,16 @@ opt-level = "z"
 lto = true
 codegen-units = 1
 debug = false
+
+# The gallery's WebAssembly for local journeys (scripts/fast.sh): the
+# release settings without the size optimization, LTO or wasm-opt pass, so
+# it builds quickly and hydrates like the release bundle. CI, the release
+# and the bundle budget build wasm-release alone (no specification governs
+# this: our own design).
+[profile.wasm-dev]
+inherits = "release"
+opt-level = 1
+lto = false
+codegen-units = 256
+incremental = true
+debug = false

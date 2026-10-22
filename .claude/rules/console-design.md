@@ -60,8 +60,9 @@ one is a defect. In short:
 ## The checks
 
 `design/tools/check.sh` runs the build's markup checks and the overflow,
-hover, contrast, selects, popups and forms checks; CI runs it per design set
-on macOS (`ci-cd.md`). A set's `baseline.tsv` holds the findings it was approved
+hover, contrast, selects, popups and forms checks over one render of each
+page (`design/tools/sweep.py`); `scripts/fast.sh` and CI run it on macOS for
+each design set a change reaches (`ci-cd.md`). A set's `baseline.tsv` holds the findings it was approved
 with and only shrinks. Never add an entry to make a check pass: fix the
 page, or record an approved design change with the baseline rewrite in the
 same pull request.

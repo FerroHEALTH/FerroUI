@@ -85,10 +85,11 @@ the workspace pins decides.
   render, the overflow, hover, contrast, selects, popups and forms
   checks, and the sync
   from the design folders). Renders go to the ignored `design/out/`.
-- `scripts/`: `vendor/lucide.sh`, `release/` (journey tools, the gallery
-  site build, the crate publish), `checks/` (the committed guards, the
-  Leptos rules check `leptos-rules.sh` among them), `gh/` (the tracker
-  helpers).
+- `scripts/`: `fast.sh` (the local gate), `chrome-lock.sh` (the
+  machine-wide lock the browser steps hold), `vendor/lucide.sh`, `release/`
+  (journey tools, the gallery site build, the crate publish), `checks/` (the
+  committed guards, the Leptos rules check `leptos-rules.sh` and the change
+  classifier `affected.sh` among them), `gh/` (the tracker helpers).
 - `.github/`: CI with a single required `conclusion` job, CodeQL, Scorecard,
   Dependabot, the release lane with crates.io Trusted Publishing.
 - `.claude/`: the working discipline (rules, agents, skills, hooks, memory).
@@ -118,6 +119,11 @@ the workspace pins decides.
 - **NEVER add AI or Claude attribution** to a commit, PR, issue, comment, or
   code comment. A `PreToolUse` hook blocks a commit or PR command carrying
   one.
+- **`scripts/fast.sh` is the local gate; CI is the full gate**
+  (`.claude/rules/ci-cd.md`). Run `fast.sh` before you push: it runs what
+  your change reaches, and the browser steps queue on the Chrome lock.
+  Never run the full screenshot capture locally; capture the pages you
+  touched with `FERROUI_SCREENSHOT_PAGES`.
 - **Never weaken, skip, or delete a test** (`.claude/rules/testing.md`).
 - **Keep the changelog** (`CHANGELOG.md`, Keep a Changelog 1.1.0).
 - **Look at every gallery screenshot** a change refreshes before it merges.
