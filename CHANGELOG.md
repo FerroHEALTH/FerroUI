@@ -324,6 +324,15 @@ and this project adheres to
 - The editor's text area carries its text in the page the server draws,
   escaped, so a form posts it before or without the WebAssembly; before,
   it arrived empty and only the highlight layer showed the text.
+- The top bar's end fits its row with a classic scrollbar, which takes
+  15 px from the layout viewport on Linux and Windows (#234). At a 640 px
+  window the user menu's button ran 4 to 12 px past the 625 px viewport,
+  so the page scrolled sideways (WCAG 2.2 SC 1.4.10). Below 48 rem, where
+  the top bar wraps, the operator's name is now visually hidden, as it was
+  below 40 rem, and stays the button's accessible name and title; the end
+  keeps its parts' width and the lockup's name gives way with an ellipsis.
+  The user menu sheet's journey measures the sheet against the layout
+  viewport (`clientWidth`, `clientHeight`) instead of the window.
 
 ### Removed
 

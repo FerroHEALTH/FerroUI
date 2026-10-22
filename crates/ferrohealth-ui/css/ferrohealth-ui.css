@@ -367,9 +367,10 @@
     border: 0;
   }
 
-  /* The operator's name, visually hidden on a phone, where the icon and the
-     chevron name the menu and the name still names the button. */
-  @media (width < 40rem) {
+  /* The operator's name, visually hidden below 48 rem, where the top bar
+     wraps and the icon and the chevron name the menu; the name still names
+     the button. */
+  @media (width < 48rem) {
     .fui-operator-name {
       position: absolute;
       width: 1px;
@@ -8916,20 +8917,28 @@
     }
   }
 
-  /* From 40 rem up the operator's button gives way in the end through its
+  /* From 48 rem up the operator's button gives way in the end through its
      anchor: its name ends in an ellipsis, and the button's title carries all
-     of it. Below 40 rem the name is hidden, so the end keeps its parts'
-     width and the lockup's name gives way. */
-  @media (width >= 40rem) {
+     of it. Below 48 rem the name is hidden, so the end keeps its parts'
+     width and the lockup's name gives way, even when a classic scrollbar
+     takes 15 px of a 40 rem window (FerroUI #234). */
+  @media (width >= 48rem) {
     .fui-topbar-end .fui-anchor:has(> .fui-operator > .fui-operator-name) {
       min-width: 0;
       flex-shrink: 1;
     }
   }
 
-  @media (width < 40rem) {
+  @media (width < 48rem) {
     .fui-topbar-end {
       min-width: max-content;
+    }
+
+    /* The lockup starts from nothing, so the row never breaks before the
+       end, and grows to its whole name where the end leaves room. */
+    .fui-topbar-row > .fui-lockup {
+      max-width: max-content;
+      flex: 1 1 0;
     }
   }
 
