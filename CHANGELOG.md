@@ -11,6 +11,171 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-22
+
+### Added
+
+- The record compare (`view::compare`): several records side by side, one
+  column per record and one row per field, each value marked agree, differ
+  or absent against the leading record as a glyph and a word, never colour
+  alone. `compare` draws the table at every width with fixed columns, so a
+  revealed value moves nothing, scrolling sideways inside its card with the
+  field and the leading record held at the start; `compare_stacked` reads one
+  record at a time under a radio choice that works with no WebAssembly, every
+  mark at the end of its line; `compare_pair` switches between them at 64 rem.
+  The differing rows come first when asked, and a caption whose fields all
+  agree says so. A cell's value is a `ViewFn`, so it can be an island such as
+  a masked identifier, or a record's identifiers in any number and order (#137).
+- `view::score::{score_breakdown, score_bar}`, the score breakdown (R16):
+  one signed bar per compared field (`Contribution`), its plain words first
+  and the comparator as a quiet hint, the total weight, the score with its
+  grade, and the thresholds (`Threshold`) on one scale, each label centred
+  on its mark and the start kept on a phone. The scale is an image named by
+  the score, the grade, the thresholds and every contribution;
+  `Score::tone` gives the grade's tone, and `score_bar` is the compact form
+  for a table cell (#138).
+- The timeline (`view::timeline`): events along a rail, newest first, as a
+  labelled ordered list. Each event's dot takes its tone and is hidden from
+  assistive technology, its kind is a word with a capital and its raw event
+  code a quiet hint, its time is absolute in a `<time>`, its actor, its
+  masked identifiers and its reason follow, and its body opens in a native
+  `<details>`. The list has no cap in height (#139).
+- The masked identifier (`widget::identifier`), for any national or local
+  identifier system: the domain is data (`Domain`, a label and the system's
+  URI), and `Masked::new` masks on the server with no assumption of length,
+  characters, format or check digit, keeping at most `KEEP` trailing
+  characters and never more than half, behind a fixed run of dots that never
+  tells the length. `identifier` draws it masked with Reveal, which runs the
+  console's audited round trip; the console answers in the widget's `Reveal`
+  signal, and the widget counts the seconds down, drops the value at zero or
+  on Hide, and offers Copy only while it shows. The masked, revealed and busy
+  faces share one reserved slot, so nothing around it moves; a refusal is a
+  line in words on its row; the countdown speaks through a polite live region
+  at 10 and 0 seconds. A revealed value is a `Revealed`, which never
+  serializes and whose `Debug` withholds it. Before hydration Reveal is a link
+  to the console's own reveal page. `identifier_static` and `identifier_list`
+  are the listing forms (#140).
+- The Lucide icons `equal-not`, `eye-off` and `minus` (`Glyph::EQUAL_NOT`,
+  `Glyph::EYE_OFF`, `Glyph::MINUS`) (#140).
+- The work-list (`widget::worklist`, the ready island `island::WorkList`): a
+  data table a steward walks with the keyboard. The server draws its rows
+  with `worklist::row`, the first focused, and the foot with
+  `worklist_foot`, which stays in view below the rows inside the card. Once
+  hydrated the table is a grid with one tab stop on the focused row, which
+  carries `aria-current`: `j` and Down, `k` and Up, Home and End move it and
+  scroll it clear of the sticky header and the foot, and Enter opens it (the
+  ready island follows the row's link; `worklist` takes the console's
+  `on_open`). One focus outline goes round the whole row, its row menu
+  included. With no WebAssembly the table stays a table whose rows open by
+  their links (#142).
+- `docs/consoles.md`, the guide every console repository points its agents
+  to: what the library owns and what a console owns, which FerroUI document
+  governs each part, the version rule, the rollout, and where to ask for a
+  missing component (#161).
+- The code editor (B2), `widget::editor::editor_panel` over a `Panel`: F8's
+  toolbar with what the text is, its line count and the console's tools; the
+  editor with its gutter marks; and the status line with the cursor's line and
+  column, the console's facts and the unsaved dot (`Opened` says what the
+  draft is measured against), its words as props (`EditorWords`). While the
+  cursor is on a marked line, the line is current and a polite live region
+  says so. `editor_split` puts it beside its diagnostics, stacked under 64rem,
+  and `editor_diagnostics` draws them in step with the cursor: a row's line
+  link moves the caret to its line and column and focuses the editor.
+  `caret_at`, `offset_of`, `mark_kind` and `current_line` are the pure parts (#162).
+- The diagnostics list (B3), `view::diagnostics`: one row per `Finding` with
+  its gravity in shape, colour and word, its code, its line and column as a
+  link to the line, its message and its mapping, errors first;
+  `diagnostics` for one file and `diagnostics_by_file` grouped by file under
+  each file's name and counts, the files with an error first. The row of the
+  current line takes `is-current` and `aria-current` (#163) (#162).
+- Serde for `view::code::Gravity`, so an island can take findings as props (#162).
+- `view::load_report`, the load report (B4): a loaded set's outcome or an
+  operation's verdict in one line, its glyph, title, counts and at most one
+  action, in the ok, warn and bad outcomes (`Outcome`), the bad one on the
+  bad ground. It is a status message when it appears after an action
+  (`Arrival::AfterAction`) and plain content when the page loads with it (#164).
+- `view::transform`, the transform pair (B5): the options row
+  (`transform_options`, plain or `Density::Dense`) with Run at its end
+  (`run_button`, ready, running or off with its reason), the input and
+  answer panes with their sticky heads and the answer's state
+  (`transform_pair`, `TransformPane`, `AnswerState`), the answer before the
+  first run, running, answered and refused (`Answer`), the request an
+  answer came from with Copy and the raw answer (`request`), and a group of
+  check boxes as one field (`field_checks`) (#165).
+- `Field::holds_id`, an options row's id field (`is-id`), wide enough for a
+  whole uuid or versioned object uid (#165).
+- `view::row_preview`, the OMOP row preview (B6): the rows one input becomes,
+  table by table, each table's name with its row count, a hairline between
+  rows, and an unresolved concept as `0` with the warn mark and its words
+  (`RowValue::ConceptZero`). On a phone each column stacks over its value (#166).
+- `view::funnel::{funnel, bar_list}`, the ETL run report (B7): one stacked
+  bar of where the inputs went (`Funnel`, `FunnelPart`), an SVG image named
+  by the caller's sentence, with a legend of big tabular figures, and the
+  rows per table as a bar list (`Bar`) with the numbers right-aligned and
+  the track under the name on a phone. A part with a count of zero keeps its
+  legend entry (#167).
+- `view::hl7v2`, the HL7 v2 message viewer (B8): the message raw
+  (`hl7v2_raw`), never wrapped and scrolling under the scroll cue, and
+  parsed (`hl7v2_segments`), one block per segment with its fields by
+  position, name and value, the names dropped on a phone (#168).
+- `highlight::Language::Hl7v2`, the HL7 v2 highlighter: each segment id and
+  the five separators the message's header declares, total over any input (#168).
+- `view::flow::flow`, the flow (B9): F9's cards and edges laid out as a
+  pipeline of lanes (`Flow`, `FlowLane`, `FlowCard`, `FlowEdge`), each
+  state (`FlowState`) a line style, a colour and on a problem edge one end
+  mark and a label, with one quiet foot line. The edges are an SVG image
+  whose description names each problem edge; the cards over them are links,
+  and hovering or focusing one shows its path with the pulse from the
+  stylesheet alone, still under reduced motion. On a phone the list form
+  (`fui-pipeline-list`) takes its place (#169).
+
+### Changed
+
+- A data table's checkbox column (`Role::Check`) draws a select-all checkbox
+  in its header, hidden until a work-list island shows it; the work-list then
+  selects every row or none from it, shows the mixed state while some rows are
+  selected, and marks each selected row `aria-selected` (#142).
+- The highlighted editor's text area carries `aria-invalid="true"` while an
+  error marks one of its lines, and its frame takes the bad tone; a code
+  editor inside a panel section runs edge to edge when it is drawn as an
+  island too (#162).
+- `highlight::Language` gains `Hl7v2` (`Language::ALL` holds six) and
+  `highlight::Kind` gains `Segment` and `Separator`, so a console's
+  exhaustive match over either needs the new arms (#168).
+- `DatePicker` and `DateRangePicker` are lazy islands (`#[island(lazy)]`): a
+  console that builds with `cargo leptos build --split` loads their code
+  from chunks of its own on a page that draws them, which keeps 72 KB of
+  brotli-compressed WebAssembly off every other page. Without `--split`
+  nothing changes. The gallery builds with `--split`, makes its mapping
+  editors, masked identifiers and concept tree lazy too, and holds its
+  entry WebAssembly to the budget, with each lazy island's chunks reported
+  beside it (#262).
+- Breaking: `widget::editor::editor_diagnostics` takes the list's words as
+  a `view::diagnostics::DiagnosticsWords` (`DiagnosticsWords::of_page()`
+  on the server), and `widget::identifier::IdentifierWords` gains `masked`,
+  the words a mask is heard as (#262).
+
+### Fixed
+
+- An unreachable card in the topology and the flow draws its cross: the dot
+  (`fui-tdot-cross`) was filled where its two strokes needed a stroke (#169).
+- The editor's text area keeps a draft that opens with a line break whole in
+  the server HTML, and the module docs say the server writes the text, so a
+  page whose WebAssembly has not loaded posts the draft unchanged; the
+  gallery's no-WebAssembly journey posts the code editor's form and reads the
+  draft back from the server (#205).
+- The masked identifier and the code editor's diagnostics list no longer
+  look their words up in the browser, which had linked the Fluent loader and
+  the whole catalog into every console's WebAssembly again (50 KB
+  brotli-compressed in the gallery) (#262).
+- A diagnostics list's file head wraps its counts under the file name when
+  both do not fit, so the list no longer pushes a 320-pixel page sideways (#267).
+- A diagnostics file head with a link holds the link's cover to itself, so it no longer lies over controls outside the list (#271).
+- The HL7 v2 viewer keeps a field position on one line on a phone, where `MSH-10` broke at its hyphen (#272).
+- Following a diagnostic's line link keeps the code editor's gutter in view; the editor scrolled sideways by the gutter's width before (#273).
+- A work-list row's focus ring is whole on a wide screen, its checkbox and menu cells included; the current row's tint covered the outline there (#275).
+- A transform pair's input pane keeps the editor's ground to the pair's foot beside a taller answer, where a white band showed under the editor (#276).
+
 ## [0.3.0] - 2026-10-22
 
 ### Added
@@ -1316,7 +1481,8 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/FerroHEALTH/FerroUI/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/FerroHEALTH/FerroUI/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/FerroHEALTH/FerroUI/compare/v0.2.0...v0.2.1
