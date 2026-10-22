@@ -332,6 +332,66 @@ async fn preferences_post_and_reset(
     Ok(())
 }
 
+/// Checks what the page template at `page` must show with no WebAssembly.
+async fn templates_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error>> {
+    match page {
+        "/templates/list" | "/templates/list-tabs" => {
+            let rows = browser
+                .driver()
+                .find_all(By::Css(".fui-worklist tbody tr"))
+                .await?;
+            assert_eq!(5, rows.len(), "the list shows its five locations");
+        }
+        "/templates/list-many" => {
+            browser.element(By::Css(".fui-filter-chip a[href]")).await?;
+            browser.element(By::Css(".fui-list-foot a[href]")).await?;
+        }
+        "/templates/list-empty" => {
+            browser
+                .element(By::Css(".fui-transform-empty a[href]"))
+                .await?;
+        }
+        "/templates/detail" => {
+            browser.element(By::Css(".fui-crumbs a[href]")).await?;
+            browser.element(By::Css(".fui-stepper a[href]")).await?;
+        }
+        "/templates/settings" => {
+            key_hint_floor(browser).await?;
+            browser.text("p", "Set in").await?;
+        }
+        "/templates/settings-managed" => {
+            browser.element(By::Css(".fui-revision-compact")).await?;
+        }
+        "/templates/about" => {
+            browser.element(By::Css("a[download]")).await?;
+            copy_waits(browser, "about-copy").await?;
+            let shown = text_of(browser, By::Css(".fui-self-description")).await?;
+            assert!(!shown.is_empty(), "the self-description shows");
+        }
+        "/templates/forbidden" | "/templates/not-found" => {
+            browser
+                .element(By::Css(".fui-status-page a.fui-button-primary[href]"))
+                .await?;
+        }
+        other => return Err(format!("no content check for the page {other:?}").into()),
+    }
+    Ok(())
+}
+
+/// Checks what the overlays page must show with no WebAssembly: the More
+/// menu and the side panel open, and the legend's opener waits hidden.
+async fn overlays_content(browser: &Browser) -> Result<(), Box<dyn Error>> {
+    more_opens(browser).await?;
+    side_panel_floor(browser).await?;
+    let opener = browser.element(By::Id("open-shortcuts")).await?;
+    assert!(
+        !opener.is_displayed().await?,
+        "the legend's opener, which needs its script, waits hidden"
+    );
+    browser.element(By::Css(".fui-shortcut-hint kbd")).await?;
+    Ok(())
+}
+
 /// Checks what a brand's page at `page` must show with no WebAssembly,
 /// beyond its heading and its navigation.
 async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error>> {
@@ -373,16 +433,7 @@ async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error
             document_views(browser).await?;
             copy_waits(browser, "file-copy").await?;
         }
-        "/overlays" => {
-            more_opens(browser).await?;
-            side_panel_floor(browser).await?;
-            let opener = browser.element(By::Id("open-shortcuts")).await?;
-            assert!(
-                !opener.is_displayed().await?,
-                "the legend's opener, which needs its script, waits hidden"
-            );
-            browser.element(By::Css(".fui-shortcut-hint kbd")).await?;
-        }
+        "/overlays" => overlays_content(browser).await?,
         "/charts" => colour_key(browser).await?,
         "/layouts" => {
             let items = browser
@@ -395,43 +446,8 @@ async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error
         "/preferences" | "/preferences/language" | "/preferences/keyboard" => {
             preferences_content(browser, page).await?;
         }
-        "/templates/list" | "/templates/list-tabs" => {
-            let rows = browser
-                .driver()
-                .find_all(By::Css(".fui-worklist tbody tr"))
-                .await?;
-            assert_eq!(5, rows.len(), "the list shows its five locations");
-        }
-        "/templates/list-many" => {
-            browser.element(By::Css(".fui-filter-chip a[href]")).await?;
-            browser.element(By::Css(".fui-list-foot a[href]")).await?;
-        }
-        "/templates/list-empty" => {
-            browser
-                .element(By::Css(".fui-transform-empty a[href]"))
-                .await?;
-        }
-        "/templates/detail" => {
-            browser.element(By::Css(".fui-crumbs a[href]")).await?;
-            browser.element(By::Css(".fui-stepper a[href]")).await?;
-        }
-        "/templates/settings" => {
-            key_hint_floor(browser).await?;
-            browser.text("p", "Set in").await?;
-        }
-        "/templates/settings-managed" => {
-            browser.element(By::Css(".fui-revision-compact")).await?;
-        }
-        "/templates/about" => {
-            browser.element(By::Css("a[download]")).await?;
-            copy_waits(browser, "about-copy").await?;
-            let shown = text_of(browser, By::Css(".fui-self-description")).await?;
-            assert!(!shown.is_empty(), "the self-description shows");
-        }
-        "/templates/forbidden" | "/templates/not-found" => {
-            browser
-                .element(By::Css(".fui-status-page a.fui-button-primary[href]"))
-                .await?;
+        templates if templates.starts_with("/templates/") => {
+            templates_content(browser, templates).await?;
         }
         other => return Err(format!("no content check for the page {other:?}").into()),
     }
