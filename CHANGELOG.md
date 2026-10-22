@@ -103,9 +103,31 @@ and this project adheres to
 - `tone::Tone` is `Serialize` and `Deserialize`, so it crosses to an island.
 - The gallery's bundle budget is 552960 bytes of brotli-compressed
   WebAssembly, down from 716800 (`.claude/rules/leptos-ui.md` §12).
+- The interactive line chart (`widget::chart::line_chart`) draws its SVG
+  once, every series in groups of its own, and a legend chip sets the
+  `hidden` attribute of its series' groups alone, so a press no longer
+  redraws the SVG as a string the browser parses again (#209). The legend
+  chips stay hidden until the page hydrates, so none offers a press that
+  does nothing; the figures table reads as before. `view::chart::line_svg`
+  draws the same markup as before.
 
 ### Fixed
 
+- The picker's select (`widget::picker::picker_field`) follows its value
+  through `prop:value` on the select, so it always shows the value's
+  choice, also after the reader has chosen by hand (#206). The server marks
+  the initial choice with a static `selected` and writes the value into the
+  input, so a page posts it before it hydrates, and the choices are a keyed
+  list. The "another" choice no longer starts with U+0000, which the HTML
+  parser turns into U+FFFD, so choosing it keeps the value in the input
+  where it wrote U+FFFD and "another" before. The gallery's runner form has
+  a button that sets the value from the console's side.
+- `scripts/checks/crate-version-guard.sh` reads each file into a variable
+  before it searches it, so a reader that stops at its first match no
+  longer kills `git show` with SIGPIPE, which `pipefail` reported as a
+  missing changelog section or a failed lock read once the file outgrew the
+  pipe buffer (#203). Its `--self-test`, run in CI, checks a changelog and a
+  lock over 64 KB twenty times and a changelog without the section.
 - The gallery's state capture lists the card-header action's hover and
   focus (`hover-card-action`, `focus-card-action`), so their images are
   committed for every brand, light and dark, and the screenshot guard no

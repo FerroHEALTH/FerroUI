@@ -2,11 +2,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The journeys of the 0.1.1 widgets and forms: the help switch, the picker,
-//! the tree's keyboard path, the search box, the density switch and the
-//! pager of a listing with no stated total.
+//! the tree's keyboard path, the search box, the density switch, the pager
+//! of a listing with no stated total and the line chart's legend.
 
 use std::error::Error;
 
+use thirtyfour::components::SelectElement;
 use thirtyfour::prelude::*;
 
 use crate::browser::{Browser, until, with_browser};
@@ -130,6 +131,149 @@ async fn the_picker_writes_a_choice_and_keeps_a_typed_value() -> Result<(), Box<
         );
         assert_eq!(None, choice.attr("name").await?, "the select submits nothing");
         browser.console_clean("the picker").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_pickers_select_follows_a_value_set_after_a_manual_choice() -> Result<(), Box<dyn Error>>
+{
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/ferroterm/layouts")).await?;
+        let choice = browser.element(By::Id("run-value-set-choice")).await?;
+        let input = browser.element(By::Id("run-value-set")).await?;
+        until("the picker hydrates and hides its input", async || {
+            Ok(!input.is_displayed().await?)
+        })
+        .await?;
+        // A manual choice of the value set the console sets later, then of
+        // another: an option the reader chose ignores its `selected`
+        // attribute from then on (HTML Living Standard, the option's
+        // dirtiness), so only the select's `value` property can follow.
+        for chosen in [
+            "http://example.org/vs/sites",
+            "http://example.org/vs/signs",
+            "http://example.org/vs/sites",
+        ] {
+            SelectElement::new(&choice)
+                .await?
+                .select_by_value(chosen)
+                .await?;
+            until("the manual choice is written into the input", async || {
+                Ok(input.prop("value").await?.as_deref() == Some(chosen))
+            })
+            .await?;
+        }
+        browser
+            .element(By::Id("run-value-set-reset"))
+            .await?
+            .click()
+            .await?;
+        until("the select follows the value the console set", async || {
+            Ok(choice.prop("value").await?.as_deref() == Some("http://example.org/vs/signs"))
+        })
+        .await?;
+        assert_eq!(
+            Some(String::from("http://example.org/vs/signs")),
+            input.prop("value").await?
+        );
+        assert_eq!(
+            Some(String::from("http://example.org/vs/signs")),
+            SelectElement::new(&choice)
+                .await?
+                .first_selected_option()
+                .await?
+                .attr("value")
+                .await?,
+            "the option shown is the value's"
+        );
+        assert!(
+            !input.is_displayed().await?,
+            "a listed value keeps the input hidden"
+        );
+        SelectElement::new(&choice)
+            .await?
+            .select_by_exact_text("Another canonical")
+            .await?;
+        until("another opens the input", async || {
+            Ok(input.is_displayed().await?)
+        })
+        .await?;
+        assert_eq!(
+            Some(String::from("http://example.org/vs/signs")),
+            input.prop("value").await?,
+            "another keeps the value for editing"
+        );
+        assert_eq!(
+            "Another canonical",
+            SelectElement::new(&choice)
+                .await?
+                .first_selected_option()
+                .await?
+                .text()
+                .await?,
+            "the select shows the choice that opened the input"
+        );
+        browser
+            .console_clean("the picker following its value")
+            .await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_chart_legend_hides_and_shows_a_series_in_place() -> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/ferroterm/charts")).await?;
+        let chip = browser
+            .element(By::Css(".fui-legend-chip[data-series='Writes']"))
+            .await?;
+        until("the legend shows once the page hydrates", async || {
+            chip.is_displayed().await.map_err(Into::into)
+        })
+        .await?;
+        let lines = browser
+            .driver()
+            .find_all(By::Css("[data-series-lines] .fui-chart-line"))
+            .await?;
+        assert_eq!(3, lines.len(), "every series is drawn");
+        let writes = browser
+            .element(By::Css("[data-series-lines] .fui-chart-line.fui-series-5"))
+            .await?;
+        assert!(writes.is_displayed().await?);
+        chip.click().await?;
+        until("the series hides", async || {
+            Ok(!writes.is_displayed().await?)
+        })
+        .await?;
+        assert_eq!(
+            Some(String::from("false")),
+            chip.attr("aria-pressed").await?
+        );
+        assert_eq!(
+            3,
+            browser
+                .driver()
+                .find_all(By::Css("[data-series-lines] .fui-chart-line"))
+                .await?
+                .len(),
+            "a hidden series stays drawn"
+        );
+        chip.click().await?;
+        until("the same line shows again", async || {
+            writes.is_displayed().await.map_err(Into::into)
+        })
+        .await?;
+        assert_eq!(Some(String::from("true")), chip.attr("aria-pressed").await?);
+        browser.console_clean("the chart legend").await
     })
     .await
 }

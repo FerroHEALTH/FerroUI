@@ -8,9 +8,62 @@
 # must move all three together (no specification governs this: our own
 # design).
 #
+# Each file is read whole into a variable before anything searches it: a
+# reader that stops at its first match (`grep -q`, an awk `exit`) at the end
+# of a `git show` pipe would kill the writer with SIGPIPE, which pipefail
+# reports as a failure once the file outgrows the pipe buffer (#203).
+#
 # Usage: scripts/checks/crate-version-guard.sh <base-ref> [head-ref]
+#        scripts/checks/crate-version-guard.sh --self-test
 set -euo pipefail
 cd "$(dirname "$0")/../.."
+
+# Builds a repository whose changelog and lock are each over 64 KB, with the
+# matched line near the top, and checks the guard passes on it every time and
+# fails when the changelog lacks the section.
+self_test() {
+  local work script status out i
+  work="$(mktemp -d)"
+  trap 'rm -rf "$work"' RETURN
+  script="$PWD/scripts/checks/crate-version-guard.sh"
+  mkdir -p "$work/scripts/checks"
+  cp "$script" "$work/scripts/checks/"
+  git -C "$work" init -q
+  printf '[workspace.package]\nversion = "1.2.3"\n' > "$work/Cargo.toml"
+  {
+    printf '[[package]]\nname = "ferrohealth-ui"\nversion = "1.2.3"\n'
+    for i in $(seq 3000); do printf '\n[[package]]\nname = "padding-%s"\n' "$i"; done
+  } > "$work/Cargo.lock"
+  {
+    printf '# Changelog\n\n## [1.2.3]\n\n'
+    for i in $(seq 3000); do printf -- '- An entry that pads the changelog, %s.\n' "$i"; done
+  } > "$work/CHANGELOG.md"
+  git -C "$work" add -A
+  git -C "$work" -c user.name=self-test -c user.email=self-test@example.invalid \
+    -c commit.gpgsign=false commit -q -m base
+  for i in $(seq 20); do
+    if ! out="$(bash "$work/scripts/checks/crate-version-guard.sh" HEAD HEAD 2>&1)"; then
+      echo "self-test: run $i failed on a changelog that holds the section: $out" >&2
+      return 1
+    fi
+  done
+  sed -i.bak 's/^## \[1\.2\.3\]$/## [1.2.2]/' "$work/CHANGELOG.md"
+  rm "$work/CHANGELOG.md.bak"
+  git -C "$work" -c user.name=self-test -c user.email=self-test@example.invalid \
+    -c commit.gpgsign=false commit -q -am 'no section'
+  status=0
+  out="$(bash "$work/scripts/checks/crate-version-guard.sh" HEAD~1 HEAD 2>&1)" || status=$?
+  if [[ "$status" -ne 1 || "$out" != *"CHANGELOG.md has no section for 1.2.3"* ]]; then
+    echo "self-test: a changelog without the section passed (exit $status): $out" >&2
+    return 1
+  fi
+  echo "crate-version-guard: self-test passed"
+}
+
+if [[ "${1:-}" == "--self-test" ]]; then
+  self_test
+  exit $?
+fi
 
 base="${1:?usage: crate-version-guard.sh <base-ref> [head-ref]}"
 head="${2:-HEAD}"
@@ -27,10 +80,15 @@ locked_version() {
        p && /^version = /{gsub(/version = "|"/, ""); print; exit}'
 }
 
-want="$(git show "$head:Cargo.toml" | workspace_version)"
+manifest="$(git show "$head:Cargo.toml")"
 # The base has no manifest before the workspace's first change.
-was="$(git show "$base:Cargo.toml" 2> /dev/null | workspace_version || true)"
-locked="$(git show "$head:Cargo.lock" | locked_version)"
+base_manifest="$(git show "$base:Cargo.toml" 2> /dev/null || true)"
+lock="$(git show "$head:Cargo.lock")"
+changelog="$(git show "$head:CHANGELOG.md")"
+
+want="$(workspace_version <<< "$manifest")"
+was="$(workspace_version <<< "$base_manifest")"
+locked="$(locked_version <<< "$lock")"
 
 failed=0
 if [[ -z "$want" ]]; then
@@ -51,7 +109,7 @@ if [[ "$locked" != "$want" ]]; then
   failed=1
 fi
 
-if ! git show "$head:CHANGELOG.md" | grep -qF "## [$want]"; then
+if [[ "$changelog" != *"## [$want]"* ]]; then
   echo "crate-version-guard: CHANGELOG.md has no section for $want" >&2
   failed=1
 fi

@@ -183,6 +183,7 @@ pick-type = Pick or type
 code-system-server-holds-canonical = A code system this server holds, or the canonical of another.
 choose-one-server-holds = Choose one this server holds
 another-canonical = Another canonical
+use-first-value-set = Use the first value set
 choose-from-list = Choose from the list
 version-server-holds-another-one = A version this server holds, or another one you type.
 another-version = Another version

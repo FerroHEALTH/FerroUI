@@ -38,6 +38,7 @@ use ferrohealth_ui::widget::editor::{Editor, code_editor};
 use ferrohealth_ui::widget::help::explained_check_field;
 use ferrohealth_ui::widget::nav::{Entry, Group, sidebar};
 use ferrohealth_ui::widget::pick_or_type::{PickOrType, Picker, pick_or_type};
+use ferrohealth_ui::widget::picker::{self, picker_field};
 use ferrohealth_ui::widget::tabs::tab_panels;
 use ferrohealth_ui::widget::toast::{Flash, RegionWords};
 use ferrohealth_ui::widget::tree::{Tree, TreeNode, tree_view};
@@ -436,6 +437,132 @@ fn the_last_series_shown_cannot_be_hidden_and_each_chip_names_its_series() {
             ]
         ),
         "{one}"
+    );
+}
+
+#[test]
+fn every_series_is_drawn_once_and_a_hidden_one_is_hidden_in_place() {
+    let chart = || LineChart {
+        id: "trend",
+        label: String::from("Readings <mmHg>"),
+        summary: String::from("Two series."),
+        series: vec![
+            Series {
+                name: String::from("systolic"),
+                points: vec![(0.0, 120.0), (1.0, 130.0)],
+                palette: 0,
+            },
+            Series {
+                name: String::from("diastolic"),
+                points: vec![(0.0, 80.0), (1.0, 85.0)],
+                palette: 1,
+            },
+        ],
+        x_ticks: vec![(0.0, String::from("Mon")), (1.0, String::from("Tue"))],
+        y_range: None,
+    };
+    let one = html(move || line_chart(chart(), RwSignal::new(vec![false, true])));
+    assert!(one.contains("fui-chart-line fui-series-0"), "{one}");
+    assert!(one.contains("fui-chart-line fui-series-1"), "{one}");
+    let groups = tags(&one, "g");
+    let hidden = groups
+        .iter()
+        .filter(|group| group.contains_key("hidden"))
+        .count();
+    assert_eq!(2, hidden, "the hidden series' lines and points: {one}");
+    assert!(one.contains("Readings &lt;mmHg&gt;"), "{one}");
+    assert!(
+        has(
+            &one,
+            "svg",
+            &[("aria-labelledby", "trend-title trend-desc")]
+        ),
+        "{one}"
+    );
+    assert!(
+        tags(&one, "button")
+            .iter()
+            .all(|chip| chip.contains_key("hidden")),
+        "no chip offers a press before the page hydrates: {one}"
+    );
+    assert!(
+        one.contains("<table"),
+        "the figures table reads alone: {one}"
+    );
+}
+
+/// The picker over two synthetic value sets, holding `value`.
+fn picker_holding(value: &str) -> String {
+    let value = value.to_owned();
+    html(move || {
+        picker_field(picker::Picker {
+            id: "run-value-set",
+            name: "url",
+            label: "Value set".into(),
+            choose_label: "Choose a value set".into(),
+            help: None,
+            choices: Signal::stored(vec![
+                (
+                    String::from("http://example.org/vs/a"),
+                    String::from("Synthetic A"),
+                ),
+                (
+                    String::from("http://example.org/vs/b"),
+                    String::from("Synthetic B"),
+                ),
+            ]),
+            value: RwSignal::new(value),
+            empty_word: "Choose one".into(),
+            other_word: "Another".into(),
+        })
+    })
+}
+
+#[test]
+fn the_server_marks_the_pickers_initial_choice_and_fills_its_input() {
+    let listed = picker_holding("http://example.org/vs/b");
+    let options = tags(&listed, "option");
+    let chosen: Vec<_> = options
+        .iter()
+        .filter(|option| option.contains_key("selected"))
+        .collect();
+    assert_eq!(1, chosen.len(), "{listed}");
+    assert_eq!(
+        Some(&String::from("http://example.org/vs/b")),
+        chosen.first().and_then(|option| option.get("value")),
+        "{listed}"
+    );
+    assert!(
+        has(
+            &listed,
+            "input",
+            &[("name", "url"), ("value", "http://example.org/vs/b")]
+        ),
+        "the form posts the value before the page hydrates: {listed}"
+    );
+    let typed = picker_holding("http://example.org/vs/mine");
+    assert!(
+        !typed.contains('\u{0}'),
+        "the parser would turn a NUL into U+FFFD: {typed}"
+    );
+    let last = tags(&typed, "option").pop().expect("the other choice");
+    assert!(last.contains_key("selected"), "{typed}");
+    assert_eq!(
+        1,
+        tags(&typed, "option")
+            .iter()
+            .filter(|option| option.contains_key("selected"))
+            .count(),
+        "{typed}"
+    );
+    let empty = picker_holding("");
+    let first = tags(&empty, "option")
+        .into_iter()
+        .next()
+        .expect("the empty choice");
+    assert!(
+        first.contains_key("selected") && first.get("value").is_some_and(String::is_empty),
+        "{empty}"
     );
 }
 
