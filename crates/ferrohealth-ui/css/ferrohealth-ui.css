@@ -1395,16 +1395,26 @@
     color: var(--ink);
   }
 
+  /* Every rule that fills a segment with the accent also sets
+     `--segment-ring` to the accent ink, and every rule that empties one sets
+     it back to transparent. */
   .fui-segment[aria-pressed="true"],
   .fui-segment[aria-current="true"],
   .fui-segment:has(> input:checked) {
+    --segment-ring: var(--accent-ink);
     background: var(--accent);
     color: var(--accent-ink);
   }
 
+  /* The focus ring of a segment, pressed or not: the focus colour on the
+     segment's edge against the surface, and inside it, on a pressed
+     segment, a band of the accent ink against the fill, since the focus
+     colour is the accent in every brand (WCAG 2.2 SC 1.4.11, SC 2.4.7). */
+  .fui-segment:focus-visible,
   .fui-segment:has(> input:focus-visible) {
     outline: 2px solid var(--focus);
     outline-offset: -2px;
+    box-shadow: inset 0 0 0 4px var(--segment-ring, transparent);
   }
 
   /* ---- Status ---- */
@@ -4284,6 +4294,7 @@
   }
 
   .fui-document:has(.fui-document-views:not(.is-live) .fui-document-view:target) .fui-document-switch > .fui-segment[aria-current="true"] {
+    --segment-ring: transparent;
     background: transparent;
     color: var(--muted);
   }
@@ -4291,6 +4302,7 @@
   .fui-document:has(.fui-document-views:not(.is-live) [data-view="highlighted"]:target) .fui-document-switch > .fui-segment[data-view="highlighted"],
   .fui-document:has(.fui-document-views:not(.is-live) [data-view="raw"]:target) .fui-document-switch > .fui-segment[data-view="raw"],
   .fui-document:has(.fui-document-views:not(.is-live) [data-view="rendered"]:target) .fui-document-switch > .fui-segment[data-view="rendered"] {
+    --segment-ring: var(--accent-ink);
     background: var(--accent);
     color: var(--accent-ink);
   }
@@ -7665,11 +7677,6 @@
     font-weight: 600;
   }
 
-  .fui-segment:focus-visible {
-    outline: 2px solid var(--focus);
-    outline-offset: -4px;
-  }
-
   /* ---- R19. The sign-in page: the card and its caption in one centred
      column, the title and the lines centred in the card. ---- */
   .fui-sign-in-stack {
@@ -9128,12 +9135,14 @@
     }
 
     .fui-view-auto .fui-view-map[aria-pressed="true"] {
+      --segment-ring: transparent;
       background: transparent;
       color: var(--muted);
       box-shadow: none;
     }
 
     .fui-view-auto .fui-view-list {
+      --segment-ring: var(--accent-ink);
       background: var(--accent);
       color: var(--accent-ink);
     }
@@ -13122,6 +13131,7 @@
 
   /* A theme choice in the user menu is a menuitemradio. */
   .fui-segment[aria-checked="true"] {
+    --segment-ring: var(--accent-ink);
     background: var(--accent);
     color: var(--accent-ink);
   }

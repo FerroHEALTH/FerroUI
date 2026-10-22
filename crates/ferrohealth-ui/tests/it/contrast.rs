@@ -375,6 +375,53 @@ fn every_text_and_ground_pair_meets_wcag_aa_in_every_brand() {
     assert!(failures.is_empty(), "{}", failures.join("\n"));
 }
 
+/// The bands of a focused segment's ring and what each one meets, pressed or
+/// not: the focus colour on the segment's edge meets the group's ground, a
+/// hovered neighbour and the band inside it; on a pressed segment that inner
+/// band is the accent ink, which meets the accent fill. The ring itself is
+/// drawn by the `.fui-segment:focus-visible` rule of the stylesheet.
+const SEGMENT_RING: &[(&str, &[&str])] = &[
+    ("focus", &["surface-raised", "surface-sunken"]),
+    ("accent-ink", &["accent", "focus"]),
+];
+
+#[test]
+fn a_focused_segments_ring_meets_3_to_1_pressed_or_not_in_every_brand() {
+    let css = strip_comments(STYLESHEET);
+    let ring = block(
+        &css,
+        ".fui-segment:focus-visible,\n  .fui-segment:has(> input:focus-visible)",
+    );
+    assert!(
+        ring.contains("outline: 2px solid var(--focus)")
+            && ring.contains("box-shadow: inset 0 0 0 4px var(--segment-ring, transparent)"),
+        "a focused segment draws the focus colour and the pressed band: {ring}"
+    );
+    let pressed = block(
+        &css,
+        ".fui-segment[aria-pressed=\"true\"],\n  .fui-segment[aria-current=\"true\"],\n  .fui-segment:has(> input:checked)",
+    );
+    assert!(
+        pressed.contains("--segment-ring: var(--accent-ink)")
+            && pressed.contains("background: var(--accent)"),
+        "a pressed segment's band is the accent ink on the accent: {pressed}"
+    );
+    let mut failures = Vec::new();
+    for (name, theme) in every_theme() {
+        for (band, grounds) in SEGMENT_RING {
+            for ground in *grounds {
+                let measured = worst(&theme, band, ground);
+                if measured < EDGE {
+                    failures.push(format!(
+                        "{name}: the segment ring's --{band} on --{ground} is {measured:.2}:1, under {EDGE}:1"
+                    ));
+                }
+            }
+        }
+    }
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
 #[test]
 fn the_ratio_is_the_wcag_contrast_ratio() {
     let black = parse_colour("#000000").expect("black");
