@@ -246,24 +246,26 @@ async fn every_state_is_captured_in_every_brand_light_and_dark() -> Result<(), B
                 )
                 .await?;
             for brand in Brand::ALL {
+                // The areas in alphabetical order, so two new areas land on
+                // different lines (`scripts/checks/mod-order.sh`).
+                charts::charts(browser, &gallery, brand, theme).await?;
+                combobox::combobox_states(browser, &gallery, brand, theme).await?;
+                dates::date_states(browser, &gallery, brand, theme).await?;
+                document::document(browser, &gallery, brand, theme).await?;
+                editor::editor(browser, &gallery, brand, theme).await?;
+                fields::field_states(browser, &gallery, brand, theme).await?;
+                keys::keys(browser, &gallery, brand, theme).await?;
+                layouts::layouts(browser, &gallery, brand, theme).await?;
+                menus::menu_states(browser, &gallery, brand, theme).await?;
+                overlays::overlays(browser, &gallery, brand, theme).await?;
                 overview::overview(browser, &gallery, brand, theme).await?;
+                phone::phone(browser, &gallery, brand, theme).await?;
+                preferences::preferences(browser, &gallery, brand, theme).await?;
+                rail::rail(browser, &gallery, brand, theme).await?;
+                records::records(browser, &gallery, brand, theme).await?;
+                tables::compact(browser, &gallery, brand, theme).await?;
                 tables::tables_and_editor(browser, &gallery, brand, theme).await?;
                 upload::upload(browser, &gallery, brand, theme).await?;
-                overlays::overlays(browser, &gallery, brand, theme).await?;
-                layouts::layouts(browser, &gallery, brand, theme).await?;
-                combobox::combobox_states(browser, &gallery, brand, theme).await?;
-                fields::field_states(browser, &gallery, brand, theme).await?;
-                editor::editor(browser, &gallery, brand, theme).await?;
-                dates::date_states(browser, &gallery, brand, theme).await?;
-                tables::compact(browser, &gallery, brand, theme).await?;
-                rail::rail(browser, &gallery, brand, theme).await?;
-                phone::phone(browser, &gallery, brand, theme).await?;
-                document::document(browser, &gallery, brand, theme).await?;
-                menus::menu_states(browser, &gallery, brand, theme).await?;
-                keys::keys(browser, &gallery, brand, theme).await?;
-                preferences::preferences(browser, &gallery, brand, theme).await?;
-                records::records(browser, &gallery, brand, theme).await?;
-                charts::charts(browser, &gallery, brand, theme).await?;
             }
         }
         let missing = unwritten();
