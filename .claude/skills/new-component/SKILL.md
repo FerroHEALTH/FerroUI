@@ -47,7 +47,9 @@ component rules are `.claude/rules/leptos-ui.md`; §14 is the Leptos way and
      not already show (§15.2).
    - Words are `String` props the console resolved from its catalog. The
      library's own words come from `i18n`, looked up on the server side of
-     the island (§13, §15.4).
+     the island (§13, §15.4). A new library word is a `Text` declared in
+     `src/i18n/words/<area>.rs` with its English in `locales/en/<area>.ftl`,
+     each in the order of the ids.
    - A form view renders fields named after the console's server-function
      arguments, or takes the console's `ActionForm` as children. The library
      defines no server function (§15.7).

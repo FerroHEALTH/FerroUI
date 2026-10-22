@@ -32,6 +32,14 @@ different components off each other's lines. Each one has a check.
   (`shell` for the shell and a word more than one page draws), each file in
   the order of the ids. Check: `the_catalog_holds_every_message_and_no_other`
   over every catalog file; a constant declared twice does not compile.
+- **Library words live in their area's files too.** A word a component
+  draws itself is a `Text` declared in
+  `crates/ferrohealth-ui/src/i18n/words/<area>.rs` and its English in
+  `crates/ferrohealth-ui/locales/en/<area>.ftl`, the area being the
+  component family that draws it, each file in the order of the ids. A new
+  area is a new pair of files, a `mod` line and an `AREAS` entry in
+  `words/mod.rs`. Check: `every_catalog_holds_every_message_and_no_other`
+  and `every_area_declares_its_messages_in_the_order_of_their_ids`.
 - **Feature pull requests commit no screenshot.** CI captures the pages and
   uploads them as the `gallery-screenshots` artifact, which the reviewer
   opens; locally you capture and look as before (`testing.md`), then leave

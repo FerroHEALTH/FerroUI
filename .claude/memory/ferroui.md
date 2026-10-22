@@ -35,9 +35,9 @@ submodule or a path dependency (owner, 2026-10-18).
   choice kept in the server cookie written as `data-theme`.
 - **No user-visible component string outside the catalogs** (owner,
   2026-10-19). English is the one language that ships and the family is
-  ready for more: a new language is a catalog file and no code change. Every
+  ready for more: a new language is a catalog directory and no code change. Every
   word a FerroUI component draws is a message of its Fluent catalog
-  (`locales/en/ferrohealth-ui.ftl`), the locale is chosen once per render
+  (`locales/en/<area>.ftl`), the locale is chosen once per render
   through `i18n::provide_locale` and written as `<html lang>`, and a
   console catalogs its own page strings the same way, held by the
   stray-literal check (`leptos-ui.md` §13). No Dutch or German catalog is
