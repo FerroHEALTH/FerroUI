@@ -8,8 +8,13 @@
 //! reader reads it as it arrives: the region is a polite live region, and a
 //! toast of the bad tone is an alert (WAI-ARIA 1.2, the `status` and
 //! `alert` roles). A toast without an action goes on its own after
-//! [`DWELL_MS`]; one with an action stays until it is dismissed, so the
-//! action can be reached at any pace (WCAG 2.2 SC 2.2.1). A toast holds no
+//! [`DWELL_MS`], the count held while the pointer or the focus is on the
+//! region; one with an action stays until it is dismissed, so the action
+//! can be reached at any pace (WCAG 2.2 SC 2.2.1). The region shows at most
+//! [`SHOWN_MAX`] toasts, the oldest that is no refusal and has no action
+//! giving way first,
+//! stays above the page's decision bar (R4) and scrolls past the viewport's
+//! height, so it never covers the decisions (SC 2.4.11). A toast holds no
 //! clinical data: it says what happened, never what was in it, and it never
 //! repeats what a banner or a load report on the page already says.
 //!
@@ -18,10 +23,10 @@
 //! [`raise`]: every island of a page runs in one WebAssembly instance, so
 //! they share one queue there, which exists in the browser alone. With no
 //! WebAssembly the server draws the region with the [`Flash`] toasts the
-//! console hands it, the outcome of a form post it redirected back from.
-//! Below 40 rem the region sits at the foot of the screen, and the page
-//! keeps its height clear while a toast shows, so a toast covers no control
-//! of the page.
+//! console hands it, the outcome of a form post it redirected back from,
+//! each with a Dismiss that is a native disclosure, so it closes with no
+//! script. The page keeps the region's height clear at its foot while a
+//! toast shows, so a toast covers no control of the page.
 
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -31,8 +36,14 @@ use crate::icon::{Glyph, icon};
 use crate::tone::Tone;
 use crate::view::button::Variant;
 
-/// How long a toast without an action stays, in milliseconds.
+/// How long a toast without an action stays, in milliseconds, counted
+/// while neither the pointer nor the focus is on the region.
 pub const DWELL_MS: u64 = 6000;
+
+/// The most toasts the region shows at once. Past it the oldest toast
+/// that is no refusal and has no action leaves; a refusal or a toast with
+/// an action stays, and the region scrolls.
+pub const SHOWN_MAX: usize = 3;
 
 /// A toast's action that leads somewhere: a link drawn as a small button.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -156,12 +167,81 @@ struct Shown {
     toast: Toast,
 }
 
+/// Takes the oldest toasts that are no refusal and have no action out of
+/// `list` until it holds [`SHOWN_MAX`] or none of those is left to take.
+fn trim(list: &mut Vec<Shown>) {
+    while list.len() > SHOWN_MAX {
+        let Some(oldest) = list
+            .iter()
+            .position(|shown| shown.toast.action.is_none() && shown.toast.tone != Tone::Bad)
+        else {
+            return;
+        };
+        list.remove(oldest);
+    }
+}
+
 #[cfg(target_arch = "wasm32")]
 thread_local! {
     /// The toasts shown, oldest first, shared by every island of the page.
     static QUEUE: ArcRwSignal<Vec<Shown>> = ArcRwSignal::new(Vec::new());
     /// The id the next toast takes.
     static NEXT: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+    /// Whether the pointer is on the region.
+    static HOVERED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    /// Whether the focus is in the region.
+    static FOCUSED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    /// The count the running dwells belong to; a hold or a release starts
+    /// another, so the dwells of the one before do nothing.
+    static EPOCH: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+}
+
+/// What holds the toasts on the screen.
+#[derive(Debug, Clone, Copy)]
+enum Hold {
+    /// The pointer is on the region.
+    Pointer,
+    /// The focus is in the region.
+    Focus,
+}
+
+/// Records whether `hold` is on the region: while either is, no toast
+/// leaves, and when both have gone every toast without an action starts
+/// its full dwell again (WCAG 2.2 SC 2.2.1).
+fn held(hold: Hold, on: bool) {
+    #[cfg(target_arch = "wasm32")]
+    {
+        let cell = match hold {
+            Hold::Pointer => &HOVERED,
+            Hold::Focus => &FOCUSED,
+        };
+        if cell.with(|cell| cell.replace(on)) == on {
+            return;
+        }
+        EPOCH.with(|epoch| epoch.set(epoch.get().wrapping_add(1)));
+        if paused() {
+            return;
+        }
+        let waiting: Vec<u32> = QUEUE.with(|queue| {
+            queue.with_untracked(|list| {
+                list.iter()
+                    .filter(|shown| shown.toast.action.is_none())
+                    .map(|shown| shown.id)
+                    .collect()
+            })
+        });
+        for id in waiting {
+            dismiss_later(id);
+        }
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    let _: (Hold, bool) = (hold, on);
+}
+
+/// Whether the pointer or the focus holds the toasts.
+#[cfg(target_arch = "wasm32")]
+fn paused() -> bool {
+    HOVERED.with(std::cell::Cell::get) || FOCUSED.with(std::cell::Cell::get)
 }
 
 /// Shows `toast` in the page's toast region, from an island's event
@@ -176,7 +256,12 @@ pub fn raise(toast: Toast) {
             id
         });
         let stays = toast.action.is_some();
-        QUEUE.with(|queue| queue.update(|list| list.push(Shown { id, toast })));
+        QUEUE.with(|queue| {
+            queue.update(|list| {
+                list.push(Shown { id, toast });
+                trim(list);
+            });
+        });
         if !stays {
             dismiss_later(id);
         }
@@ -185,11 +270,16 @@ pub fn raise(toast: Toast) {
     drop(toast);
 }
 
-/// Removes the toast `id` after [`DWELL_MS`].
+/// Removes the toast `id` after [`DWELL_MS`], unless the toasts are held
+/// then or were held and released since.
 #[cfg(target_arch = "wasm32")]
 fn dismiss_later(id: u32) {
+    let epoch = EPOCH.with(std::cell::Cell::get);
     set_timeout(
         move || {
+            if paused() || EPOCH.with(std::cell::Cell::get) != epoch {
+                return;
+            }
             QUEUE.with(|queue| queue.update(|list| list.retain(|shown| shown.id != id)));
         },
         std::time::Duration::from_millis(DWELL_MS),
@@ -242,13 +332,14 @@ pub const fn role(tone: Tone) -> Option<&'static str> {
 /// [`crate::island::ToastRegion`].
 #[must_use]
 pub fn toast_region(words: RegionWords, flash: Vec<Flash>) -> impl IntoView {
-    let seeded = (0_u32..)
+    let mut seeded = (0_u32..)
         .zip(flash)
         .map(|(id, flash)| Shown {
             id,
             toast: flash.into(),
         })
         .collect();
+    trim(&mut seeded);
     let list = shown(seeded);
     let hydrated = RwSignal::new(false);
     Effect::new(move |_| hydrated.set(true));
@@ -258,7 +349,16 @@ pub fn toast_region(words: RegionWords, flash: Vec<Flash>) -> impl IntoView {
     };
     let RegionWords { region, dismiss } = words;
     view! {
-        <div class="fui-toasts" role="status" aria-live="polite" aria-label=region>
+        <div
+            class="fui-toasts"
+            role="status"
+            aria-live="polite"
+            aria-label=region
+            on:pointerenter=move |_| held(Hold::Pointer, true)
+            on:pointerleave=move |_| held(Hold::Pointer, false)
+            on:focusin=move |_| held(Hold::Focus, true)
+            on:focusout=move |_| held(Hold::Focus, false)
+        >
             <For each=move || list.get() key=|shown| shown.id let:shown>
                 {toast_view(shown, dismiss.clone(), close.clone(), hydrated)}
             </For>
@@ -301,8 +401,9 @@ fn toast_view(
             .into_any()
         }
     });
-    // NOTE: leptos-ui.md §15.8: a Dismiss that only script can work is absent
-    // until the page hydrates; a flash toast then stays as page content.
+    // NOTE: leptos-ui.md §15.8: until the page hydrates, Dismiss is a native
+    // disclosure that hides its toast when closed; after, a button.
+    let shut = dismiss.clone();
     view! {
         <div class=class role=role(toast.tone)>
             {icon(glyph(toast.tone), "16")}
@@ -311,6 +412,11 @@ fn toast_view(
                 {line}
             </div>
             {action}
+            <details open class="fui-toast-close" hidden=move || hydrated.get()>
+                <summary class="fui-icon-button" aria-label=shut.clone() title=shut>
+                    {icon(Glyph::X, "16")}
+                </summary>
+            </details>
             <button
                 type="button"
                 class="fui-icon-button"

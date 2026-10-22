@@ -73,7 +73,7 @@ for (const el of document.querySelectorAll('input:not([type]), input[type=text],
 }
 // drawer
 const vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
-for (const d of document.querySelectorAll('.fui-sidebar.mk-drawer-open, .fui-sidebar:popover-open, .fui-drawer.mk-drawer-open')) {
+for (const d of document.querySelectorAll('.fui-sidebar.mk-drawer-open, .fui-sidebar[open], .fui-drawer.mk-drawer-open')) {
   if (!vis(d) || vw >= 640) continue;
   const r = d.getBoundingClientRect(), cs = getComputedStyle(d);
   const why = [];

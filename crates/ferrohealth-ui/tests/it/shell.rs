@@ -117,9 +117,14 @@ fn the_top_bar_holds_its_parts_and_no_theme_control() {
         has(
             &bar,
             "button",
-            &[("popovertarget", "sidebar"), ("aria-label", "Menu")]
+            &[
+                ("command", "show-modal"),
+                ("commandfor", "sidebar"),
+                ("aria-haspopup", "dialog"),
+                ("aria-label", "Menu")
+            ]
         ),
-        "the drawer button opens the navigation: {bar}"
+        "the drawer button opens the navigation as a modal dialog: {bar}"
     );
     assert!(bar.contains(r#"<div class="fui-topbar-middle">"#), "{bar}");
     assert!(bar.contains(r#"<div class="fui-topbar-end">"#), "{bar}");
@@ -222,7 +227,29 @@ fn the_navigation_is_plain_links_with_the_page_marked_inside_its_drawer_island()
         !page.contains("fui-sidebar-foot"),
         "a navigation that never folds has no foot: {page}"
     );
-    assert!(has(&page, "nav", &[("class", "fui-sidebar")]), "{page}");
+    // WAI-ARIA Authoring Practices, the dialog (modal) pattern: the drawer is a
+    // native modal dialog, so the page behind is inert with no WebAssembly.
+    assert!(
+        has(
+            &page,
+            "dialog",
+            &[("closedby", "any"), ("class", "fui-sidebar")]
+        ),
+        "{page}"
+    );
+    assert!(
+        has(
+            &page,
+            "button",
+            &[("command", "close"), ("commandfor", "sidebar")]
+        ),
+        "the drawer's Close closes its dialog: {page}"
+    );
+    assert!(
+        has(&page, "nav", &[("class", "fui-sidebar-nav")]),
+        "the entries are a navigation landmark: {page}"
+    );
+    assert!(!page.contains("popover"), "{page}");
 }
 
 #[test]
@@ -230,7 +257,7 @@ fn a_count_is_a_number_on_screen_and_a_phrase_to_assistive_technology() {
     // R12, the honest count; WCAG 2.2 SC 1.3.1.
     let page = navigation(None);
     assert!(
-        page.contains(r#"<span aria-hidden="true">2</span><span class="fui-sr-only">2 errors in the running load</span>"#),
+        page.contains(r#"<span aria-hidden="true" class="fui-nav-count-whole">2</span><!><span class="fui-sr-only">2 errors in the running load</span>"#),
         "{page}"
     );
     assert!(
@@ -251,6 +278,42 @@ fn a_count_is_a_number_on_screen_and_a_phrase_to_assistive_technology() {
 }
 
 #[test]
+fn a_count_past_99_shows_whole_and_short_for_the_rail() {
+    // Shell edge audit, row 12: 123456 on the rail's badge covered its glyph.
+    let page = page_html(|| {
+        sidebar(Sidebar {
+            id: "sidebar",
+            label: String::from("Pages"),
+            groups: vec![Group {
+                id: "nav-pages",
+                title: "Pages".into(),
+                entries: vec![Entry {
+                    href: "/files",
+                    label: "Files".into(),
+                    glyph: Glyph::DATABASE,
+                    exact: false,
+                    count: Some(Count::Known {
+                        count: 123_456,
+                        words: String::from("123456 errors in the running load"),
+                    }),
+                }],
+            }],
+            current: String::from("/files"),
+            rail: None,
+            nest: None,
+        })
+    });
+    assert!(
+        page.contains(r#"<span aria-hidden="true" class="fui-nav-count-whole">123456</span><span aria-hidden="true" class="fui-nav-count-short">99+</span><span class="fui-sr-only">123456 errors in the running load</span>"#),
+        "{page}"
+    );
+    assert!(
+        has(&page, "span", &[("class", "fui-nav-count is-long")]),
+        "{page}"
+    );
+}
+
+#[test]
 fn the_rail_names_every_entry_by_tooltip_and_posts_its_expand() {
     let page = navigation(Some(Rail {
         collapsed: true,
@@ -258,12 +321,19 @@ fn the_rail_names_every_entry_by_tooltip_and_posts_its_expand() {
         back: String::from("/files?page=2"),
     }));
     assert!(
-        has(&page, "nav", &[("class", "fui-sidebar fui-sidebar-rail")]),
+        has(
+            &page,
+            "dialog",
+            &[("class", "fui-sidebar fui-sidebar-rail")]
+        ),
         "{page}"
     );
     for word in ["Files", "Routes", "About"] {
+        // WCAG 2.2 SC 1.4.13: a drawn tooltip shows on keyboard focus too.
         assert!(
-            has(&page, "a", &[("title", word)]),
+            page.contains(&format!(
+                r#"<span aria-hidden="true" class="fui-tooltip">{word}</span>"#
+            )),
             "{word} is named by its tooltip: {page}"
         );
         assert!(

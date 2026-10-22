@@ -5,11 +5,17 @@
 //! marked, a column beside the page from the first breakpoint that folds to
 //! a rail of glyphs, and a drawer below it.
 //!
-//! The drawer is an HTML popover the top bar's button opens, so the browser
-//! opens it, closes it on Escape and returns the focus to the button with
-//! no script. The island [`crate::island::NavDrawer`] adds what HTML leaves
-//! out: the focus moves into the drawer as it opens, and the drawer closes
-//! when one of its links is followed (WCAG 2.2 SC 2.4.3). The entries are
+//! The drawer is a modal HTML `dialog` the top bar's button opens through
+//! the `show-modal` command, so with no script the page behind is inert
+//! while it shows, the focus moves into it, Escape and a press outside close
+//! it, and the focus returns to the button (HTML Living Standard, the
+//! `dialog` element and the `command` attribute; WAI-ARIA Authoring
+//! Practices, the dialog (modal) pattern; WCAG 2.2 SC 2.4.3 and SC 2.4.11).
+//! The island [`crate::island::NavDrawer`] adds what HTML leaves out: the
+//! focus moves to the first link as it opens, the drawer closes when one of
+//! its links is followed, and Escape hides a rail entry's tooltip
+//! (SC 1.4.13). From the first breakpoint up the closed dialog is the
+//! column beside the page. The entries are
 //! plain links the server draws, the current page marked
 //! `aria-current="page"`, so following one loads the page, with or without
 //! WebAssembly. The rail is the console's choice, kept as the others are
@@ -125,24 +131,47 @@ pub fn marks(href: &str, exact: bool, current: &str) -> bool {
                 .is_some_and(|rest| rest.starts_with('/') || href.ends_with('/')))
 }
 
+/// The largest count the rail's badge draws whole; a larger one draws as
+/// this number and a plus, so the badge stays on its glyph.
+pub const RAIL_COUNT_MAX: u32 = 99;
+
 /// Returns the count `count` an entry carries, the number hidden from
 /// assistive technology and the whole phrase read in its place; nothing at
-/// zero.
+/// zero. A count over [`RAIL_COUNT_MAX`] also carries the short form the
+/// rail's badge shows in its place.
 fn count(count: Count) -> Option<AnyView> {
-    let (class, shown, words) = match count {
+    let (shown, words) = match count {
         Count::Known { count: 0, .. } => return None,
-        Count::Known { count, words } => ("fui-nav-count", count.to_string(), words),
-        Count::Unknown { why } => (
-            "fui-nav-count fui-nav-count-unknown",
-            String::from("\u{2013}"),
-            why,
-        ),
+        Count::Known { count, words } => (count, words),
+        Count::Unknown { why } => {
+            let tooltip = why.clone();
+            return Some(
+                view! {
+                    <span class="fui-nav-count fui-nav-count-unknown" title=tooltip>
+                        <span aria-hidden="true">"\u{2013}"</span>
+                        <span class="fui-sr-only">{why}</span>
+                    </span>
+                }
+                .into_any(),
+            );
+        }
     };
     let tooltip = words.clone();
+    let short = (shown > RAIL_COUNT_MAX).then(|| {
+        view! {
+            <span class="fui-nav-count-short" aria-hidden="true">
+                {format!("{RAIL_COUNT_MAX}+")}
+            </span>
+        }
+    });
+    let long = short.is_some();
     Some(
         view! {
-            <span class=class title=tooltip>
-                <span aria-hidden="true">{shown}</span>
+            <span class="fui-nav-count" class:is-long=long title=tooltip>
+                <span class="fui-nav-count-whole" aria-hidden="true">
+                    {shown.to_string()}
+                </span>
+                {short}
                 <span class="fui-sr-only">{words}</span>
             </span>
         }
@@ -151,9 +180,10 @@ fn count(count: Count) -> Option<AnyView> {
 }
 
 /// Returns the entry `entry`, marked while `current` is its page, or a
-/// page under it unless it is exact; in the rail its words become its
-/// tooltip. The nested section `nest` opens under it when it names the
-/// entry, which then marks the location the page is inside.
+/// page under it unless it is exact; in the rail its words show as its
+/// tooltip on hover and on focus. The nested section `nest` opens under it
+/// when it names the entry, which then marks the location the page is
+/// inside.
 fn entry(
     entry: Entry,
     current: &str,
@@ -166,15 +196,23 @@ fn entry(
     } else {
         marks(entry.href, entry.exact, current).then_some("page")
     };
-    let title = rail.then(|| entry.label.to_string());
+    // NOTE: WCAG 2.2 SC 1.4.13; a title shows on hover alone, so the rail draws its own tooltip.
+    let tooltip = rail.then(|| {
+        view! {
+            <span class="fui-tooltip" aria-hidden="true">
+                {entry.label.to_string()}
+            </span>
+        }
+    });
     let count = entry.count.and_then(count);
     let nest = nest.map(|nest| nested::section(nest, current));
     view! {
         <li>
-            <a href=entry.href class="fui-nav-entry" aria-current=here title=title>
+            <a href=entry.href class="fui-nav-entry" aria-current=here>
                 {icon(entry.glyph, "16")}
                 <span class="fui-nav-word">{entry.label}</span>
                 {count}
+                {tooltip}
             </a>
             {nest}
         </li>
@@ -271,7 +309,8 @@ pub fn sidebar(sidebar: Sidebar) -> AnyView {
 /// drawer's behaviour. A console draws it through [`sidebar`].
 #[must_use]
 pub fn drawer(id: String, label: String, close: String, rail: bool, entries: AnyView) -> AnyView {
-    let nav = NodeRef::<leptos::html::Nav>::new();
+    let dialog = NodeRef::<leptos::html::Dialog>::new();
+    let quiet = RwSignal::new(false);
     let button = format!("{} fui-drawer-only", Variant::Ghost.class());
     let class = if rail {
         "fui-sidebar fui-sidebar-rail"
@@ -279,22 +318,33 @@ pub fn drawer(id: String, label: String, close: String, rail: bool, entries: Any
         "fui-sidebar"
     };
     let target = id.clone();
+    let name = label.clone();
     view! {
-        <nav
+        <dialog
             id=id
-            popover="auto"
-            aria-label=label
+            closedby="any"
+            aria-label=name
             class=class
-            node_ref=nav
+            data-tips=move || quiet.get().then_some("off")
+            node_ref=dialog
             use:focus_on_open="a"
-            on:click=move |event| drawer::followed(nav, &event)
+            on:click=move |event| drawer::followed(dialog, &event)
+            on:keydown=move |event| {
+                if event.key() == "Escape" {
+                    quiet.set(true);
+                }
+            }
+            on:pointerover=move |_| quiet.set(false)
+            on:focusin=move |_| quiet.set(false)
         >
-            <button type="button" class=button popovertarget=target popovertargetaction="hide">
+            <button type="button" class=button command="close" commandfor=target>
                 {icon(Glyph::X, "16")}
                 {close}
             </button>
-            {entries}
-        </nav>
+            <nav aria-label=label class="fui-sidebar-nav">
+                {entries}
+            </nav>
+        </dialog>
     }
     .into_any()
 }
@@ -335,21 +385,29 @@ pub struct Nest {
     /// The number of children as a whole phrase, such as "2 nodes": the
     /// accessible name of the count badge beside the parent.
     pub count_words: String,
-    /// The children, in order.
+    /// The children, in order; past [`NEST_SHOWN`] the section draws that
+    /// many, the page's own among them, and a link to the parent's page.
     pub children: Vec<NestItem>,
+    /// The words of that link, a whole phrase such as "All 300 nodes".
+    pub all: String,
 }
 
+/// The most children a nested section draws, so a parent with hundreds
+/// leaves the groups under it in reach.
+pub const NEST_SHOWN: usize = 8;
+
 /// What the browser code adds to the drawer. From the first breakpoint up
-/// the navigation is no popover the browser opens, so it does not apply.
+/// the navigation is a closed dialog drawn as a column, so it does not
+/// apply.
 mod drawer {
     use leptos::prelude::*;
 
     /// Closes the open drawer when `event` follows one of its links.
-    pub(super) fn followed(nav: NodeRef<leptos::html::Nav>, event: &leptos::ev::MouseEvent) {
+    pub(super) fn followed(dialog: NodeRef<leptos::html::Dialog>, event: &leptos::ev::MouseEvent) {
         #[cfg(target_arch = "wasm32")]
         {
             use leptos::wasm_bindgen::JsCast as _;
-            let Some(nav) = nav.get_untracked() else {
+            let Some(dialog) = dialog.get_untracked() else {
                 return;
             };
             let on_link = event
@@ -357,15 +415,12 @@ mod drawer {
                 .and_then(|target| target.dyn_into::<web_sys::Element>().ok())
                 .and_then(|target| target.closest("a").ok().flatten())
                 .is_some();
-            if on_link
-                && nav.matches(":popover-open").unwrap_or(false)
-                && nav.hide_popover().is_err()
-            {
-                leptos::logging::warn!("the browser refused to close the navigation");
+            if on_link && dialog.open() {
+                dialog.close();
             }
         }
         #[cfg(not(target_arch = "wasm32"))]
-        let _: (NodeRef<leptos::html::Nav>, &leptos::ev::MouseEvent) = (nav, event);
+        let _: (NodeRef<leptos::html::Dialog>, &leptos::ev::MouseEvent) = (dialog, event);
     }
 }
 
@@ -373,7 +428,7 @@ mod drawer {
 mod nested {
     use leptos::prelude::*;
 
-    use super::{Nest, NestItem, marks};
+    use super::{NEST_SHOWN, Nest, NestItem, marks};
     use crate::view::flow::FlowState;
 
     /// The `aria-current` of the parent while its own page is in view, and
@@ -406,14 +461,20 @@ mod nested {
     }
 
     /// Returns one child, marked as the page in view while `current` is
-    /// its page.
+    /// its page; its full label is its tooltip, since a long one is cut.
     fn child(item: NestItem, current: &str) -> impl IntoView + use<> {
         let here = marks(&item.href, true, current).then_some("page");
         let dot = dot(&item);
         let word = word(&item);
+        let title = item.label;
         view! {
             <li>
-                <a href=item.href class="fui-nav-entry fui-nav-child" aria-current=here>
+                <a
+                    href=item.href
+                    class="fui-nav-entry fui-nav-child"
+                    aria-current=here
+                    title=title
+                >
                     {dot}
                     {word}
                 </a>
@@ -421,9 +482,27 @@ mod nested {
         }
     }
 
+    /// The children `children` the section draws: the first
+    /// [`NEST_SHOWN`], the last of them giving way to the page in view
+    /// at `current` when it comes later.
+    pub(super) fn shown(mut children: Vec<NestItem>, current: &str) -> Vec<NestItem> {
+        if children.len() <= NEST_SHOWN {
+            return children;
+        }
+        let here = children
+            .iter()
+            .position(|item| marks(&item.href, true, current))
+            .filter(|at| *at >= NEST_SHOWN);
+        let kept = here.map(|at| children.swap_remove(at));
+        children.truncate(NEST_SHOWN - usize::from(kept.is_some()));
+        children.extend(kept);
+        children
+    }
+
     /// Returns the nested section `nest`: the parent with its worst dot and
     /// its count, marked as the page while `current` is its own page and
-    /// as the location while a child's is, then its children.
+    /// as the location while a child's is, then its children, at most
+    /// [`NEST_SHOWN`] of them and a link to the parent's page for all.
     pub(super) fn section(nest: Nest, current: &str) -> AnyView {
         let Nest {
             under: _,
@@ -431,22 +510,34 @@ mod nested {
             parent,
             count_words,
             children,
+            all,
         } = nest;
         let here = if marks(&parent.href, true, current) {
             PAGE
         } else {
             LOCATION
         };
-        let count = children.len().to_string();
+        let total = children.len();
+        let count = total.to_string();
         let dot = dot(&parent);
         let word = word(&parent);
         let title = parent.label.clone();
-        let children = (!children.is_empty()).then(|| {
-            let rows = children
+        let more = (total > NEST_SHOWN).then(|| {
+            let href = parent.href.clone();
+            view! {
+                <li>
+                    <a href=href class="fui-nav-entry fui-nav-child fui-nav-all">
+                        <span class="fui-nav-word">{all}</span>
+                    </a>
+                </li>
+            }
+        });
+        let children = (total > 0).then(|| {
+            let rows = shown(children, current)
                 .into_iter()
                 .map(|item| child(item, current))
                 .collect_view();
-            view! { <ul class="fui-nav-children">{rows}</ul> }
+            view! { <ul class="fui-nav-children">{rows}{more}</ul> }
         });
         view! {
             <ul class="fui-nav-tree" aria-label=label>
@@ -474,7 +565,45 @@ mod nested {
 
 #[cfg(test)]
 mod tests {
-    use super::marks;
+    use super::{NEST_SHOWN, NestItem, marks, nested};
+    use crate::view::flow::FlowState;
+
+    fn nodes(count: usize) -> Vec<NestItem> {
+        (0..count)
+            .map(|at| NestItem {
+                label: format!("node-{at}"),
+                href: format!("/org/node-{at}"),
+                state: FlowState::Up,
+                state_words: String::from("Reachable"),
+                mono: true,
+            })
+            .collect()
+    }
+
+    fn hrefs(items: &[NestItem]) -> Vec<&str> {
+        items.iter().map(|item| item.href.as_str()).collect()
+    }
+
+    #[test]
+    fn a_nested_section_draws_a_few_children_and_always_the_page_in_view() {
+        assert_eq!(
+            3,
+            nested::shown(nodes(3), "/org").len(),
+            "a few are all drawn"
+        );
+        let first = nested::shown(nodes(300), "/org/node-2");
+        assert_eq!(NEST_SHOWN, first.len());
+        assert_eq!(Some(&"/org/node-0"), hrefs(&first).first());
+        let late = nested::shown(nodes(300), "/org/node-250");
+        assert_eq!(NEST_SHOWN, late.len());
+        assert_eq!(
+            Some(&"/org/node-250"),
+            hrefs(&late).last(),
+            "the page in view is drawn last: {:?}",
+            hrefs(&late)
+        );
+        assert_eq!(Some(&"/org/node-0"), hrefs(&late).first());
+    }
 
     #[test]
     fn an_entry_marks_its_own_page_and_the_pages_under_it() {

@@ -687,8 +687,8 @@ async fn the_sidebar_folds_to_its_rail_and_back() -> Result<(), Box<dyn Error>> 
         )?;
         assert!(width < 70.0, "the rail is the glyphs alone, {width} px");
         browser
-            .element(By::Css(
-                "#sidebar a[title='Tables and paging'][aria-current='page']",
+            .element(By::XPath(
+                "//*[@id = 'sidebar']//a[@aria-current = 'page'][span[@class = 'fui-tooltip' and . = 'Tables and paging']]",
             ))
             .await?;
         browser.goto(&gallery.url("/ferroterm/code")).await?;
@@ -704,6 +704,83 @@ async fn the_sidebar_folds_to_its_rail_and_back() -> Result<(), Box<dyn Error>> 
             .element(By::Css("#sidebar:not(.fui-sidebar-rail)"))
             .await?;
         browser.console_clean("the rail").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_rail_entry_shows_its_words_on_keyboard_focus_until_escape() -> Result<(), Box<dyn Error>>
+{
+    // WCAG 2.2 SC 1.4.13; shell edge audit, row 13: the collapsed rail showed no words on focus.
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/ferroehr/tables")).await?;
+        browser
+            .element(By::XPath("//button[@name = 'sidebar' and @value = 'rail']"))
+            .await?
+            .click()
+            .await?;
+        browser
+            .element(By::Css("#sidebar.fui-sidebar-rail"))
+            .await?;
+        let entry = browser
+            .element(By::Css("#sidebar a.fui-nav-entry[aria-current='page']"))
+            .await?;
+        browser
+            .driver()
+            .execute("arguments[0].focus();", vec![entry.to_json()?])
+            .await?;
+        let tooltip = entry.find(By::ClassName("fui-tooltip")).await?;
+        until("the focused entry shows its words", async || {
+            Ok(tooltip.is_displayed().await?)
+        })
+        .await?;
+        let beside: bool = browser
+            .driver()
+            .execute(
+                "const tip = arguments[0].getBoundingClientRect();
+                const rail = document.getElementById('sidebar').getBoundingClientRect();
+                const entry = arguments[1].getBoundingClientRect();
+                return tip.left >= rail.right - 1 && tip.top < entry.bottom && tip.bottom > entry.top;",
+                vec![tooltip.to_json()?, entry.to_json()?],
+            )
+            .await?
+            .convert()?;
+        assert!(beside, "the tooltip sits beside its entry, past the rail");
+        browser
+            .driver()
+            .action_chain()
+            .send_keys(Key::Escape)
+            .perform()
+            .await?;
+        until("Escape hides the tooltip", async || {
+            Ok(!tooltip.is_displayed().await?)
+        })
+        .await?;
+        browser
+            .driver()
+            .action_chain()
+            .send_keys(Key::Tab)
+            .perform()
+            .await?;
+        let next = browser.driver().active_element().await?;
+        let shown = next.find(By::ClassName("fui-tooltip")).await?;
+        until("the next entry shows its words", async || {
+            Ok(shown.is_displayed().await?)
+        })
+        .await?;
+        browser
+            .element(By::XPath("//button[@name = 'sidebar' and @value = 'full']"))
+            .await?
+            .click()
+            .await?;
+        browser
+            .element(By::Css("#sidebar:not(.fui-sidebar-rail)"))
+            .await?;
+        browser.console_clean("the rail's tooltips").await
     })
     .await
 }
@@ -910,6 +987,10 @@ async fn every_overlay_with_a_scrim_holds_the_focus_and_gives_it_back() -> Resul
             .await?;
             for id in ["reload-set", "save-query", "access"] {
                 held(browser, id).await?;
+            }
+            // Shell edge audit, row 4: below 48 rem the navigation is a drawer.
+            if width < 768 {
+                held(browser, "sidebar").await?;
             }
         }
         browser.console_clean("the overlays' focus").await

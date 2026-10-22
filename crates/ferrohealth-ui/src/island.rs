@@ -217,13 +217,13 @@ pub fn TabSelect(
     crate::widget::tabs::tab_select(label, go, choices, &chosen)
 }
 
-/// The navigation drawer `id`, named `label`, around the entries the
-/// server drew as its children, its close button saying `close`, folded to
-/// its glyphs while `rail`. A console draws it through
+/// The navigation drawer `id`, a modal dialog named `label`, around the
+/// entries the server drew as its children, its close button saying
+/// `close`, folded to its glyphs while `rail`. A console draws it through
 /// [`crate::widget::nav::sidebar`].
 #[island]
 pub fn NavDrawer(
-    /// The navigation's id, which the drawer button opens.
+    /// The drawer's id, which the drawer button opens.
     id: String,
     /// The navigation's name, in the page's locale.
     label: String,

@@ -744,6 +744,7 @@ pub fn nest(brand: Brand, path: &str, under: &'static str) -> Option<Nest> {
                 mono: true,
             })
             .collect(),
+        all: tr(Msg::FedAllNodes),
     })
 }
 
