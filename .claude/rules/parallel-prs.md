@@ -23,9 +23,13 @@ different components off each other's lines. Each one has a check.
   `STATES` list and the capture function of its area under
   `app/ferrohealth-ui-gallery/tests/it/states/` (overview, tables, menus and
   so on). A new area is a new file there, a `mod` line and an `AREAS` entry
-  in `states.rs`, and a call in the capture driver. Check:
-  `every_state_is_listed_once` and `a_state_states_does_not_list_is_refused`
-  over every area's list.
+  in `states.rs`, and a call in the capture driver. The `mod` lines, the
+  `AREAS` entries and the driver's calls each go in alphabetical position,
+  so two new areas land on different lines; the areas capture
+  independently, each loading its own page, so the order changes no image.
+  Check: `every_state_is_listed_once` and
+  `a_state_states_does_not_list_is_refused` over every area's list, and
+  `scripts/checks/mod-order.sh` over the three lists.
 - **Gallery words live in their area's files.** A message is declared in
   `app/ferrohealth-ui-gallery/src/locale/<area>.rs` and its English in
   `locales/en/<area>.ftl`, the area being the gallery page that draws it

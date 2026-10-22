@@ -8,6 +8,9 @@
 # lines. rustfmt sorts only a run of declarations with nothing between them;
 # this guard holds the whole file. Inline modules (`mod tests { … }`) are
 # not declarations and are not read. Names compare byte by byte (LC_ALL=C).
+# The gallery's screenshot driver, `tests/it/states.rs`, is held the same way
+# in two more lists: its `AREAS` entries (`area::STATES,`) and the capture
+# calls (`area::function(browser, …)`), each in ascending order.
 #
 #   mod-order.sh [file.rs ...]    the named files, or every tracked .rs file
 #   mod-order.sh --self-test
@@ -30,6 +33,36 @@ check() {
       }
       last = name
       seen = 1
+    }
+  ' "$1"
+}
+
+# The gallery's screenshot driver, whose area lists check_driver also reads.
+driver="app/ferrohealth-ui-gallery/tests/it/states.rs"
+
+# check_driver FILE: prints `FILE:LINE: …` for each `AREAS` entry and each
+# capture call that sorts before the one above it.
+check_driver() {
+  awk -v file="$1" '
+    match($0, /^ +[a-z_][a-z0-9_]*::STATES,$/) {
+      name = $0
+      sub(/^ +/, "", name)
+      sub(/,$/, "", name)
+      if (areas_seen && name <= areas_last) {
+        printf "%s:%d: %s comes after %s; keep the AREAS entries in alphabetical order\n", file, NR, name, areas_last
+      }
+      areas_last = name
+      areas_seen = 1
+    }
+    match($0, /^ +[a-z_][a-z0-9_]*::[a-z_][a-z0-9_]*\(browser,/) {
+      name = $0
+      sub(/^ +/, "", name)
+      sub(/\(.*$/, "", name)
+      if (calls_seen && name <= calls_last) {
+        printf "%s:%d: %s comes after %s; keep the capture calls in alphabetical order\n", file, NR, name, calls_last
+      }
+      calls_last = name
+      calls_seen = 1
     }
   ' "$1"
 }
@@ -62,6 +95,27 @@ self_test() {
     echo "mod-order: self-test failed: a pub(crate) declaration out of order passed." >&2
     exit 1
   }
+  printf '%s\n' 'const AREAS: &[&[&str]] = &[' '    charts::STATES,' '    tables::STATES,' '];' \
+    '    charts::charts(browser, &gallery, brand, theme).await?;' \
+    '    tables::compact(browser, &gallery, brand, theme).await?;' \
+    '    tables::tables_and_editor(browser, &gallery, brand, theme).await?;' > "$work/driver.rs"
+  [[ -z "$(check_driver "$work/driver.rs")" ]] || {
+    echo "mod-order: self-test failed: an ordered driver was refused:" >&2
+    check_driver "$work/driver.rs" >&2
+    exit 1
+  }
+  printf '%s\n' '    preferences::preferences(browser, &gallery, brand, theme).await?;' \
+    '    records::records(browser, &gallery, brand, theme).await?;' \
+    '    charts::charts(browser, &gallery, brand, theme).await?;' > "$work/calls.rs"
+  [[ "$(check_driver "$work/calls.rs")" == *"calls.rs:3: charts::charts comes after records::records"* ]] || {
+    echo "mod-order: self-test failed: a capture call appended out of order passed." >&2
+    exit 1
+  }
+  printf '%s\n' '    records::STATES,' '    charts::STATES,' > "$work/areas.rs"
+  [[ "$(check_driver "$work/areas.rs")" == *"areas.rs:2: charts::STATES comes after records::STATES"* ]] || {
+    echo "mod-order: self-test failed: an AREAS entry out of order passed." >&2
+    exit 1
+  }
   echo "mod-order: self-test passed."
 }
 
@@ -82,6 +136,9 @@ fi
 out=""
 for file in "${files[@]}"; do
   out+="$(check "$file")"$'\n'
+  if [[ "$file" == "$driver" ]]; then
+    out+="$(check_driver "$file")"$'\n'
+  fi
 done
 out="$(sed '/^$/d' <<<"$out")"
 if [[ -n "$out" ]]; then
