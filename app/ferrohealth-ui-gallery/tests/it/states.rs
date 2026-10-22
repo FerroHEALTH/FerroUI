@@ -3,8 +3,8 @@
 
 //! The interaction states, captured behind the `FERROUI_SCREENSHOTS` gate:
 //! the pointer on a navigation entry, a table row, each button variant, a
-//! linked card and a tab; the keyboard focus on a control, a navigation
-//! entry and the keyboard tabs; every overlay open (the dialogs, the modal
+//! linked card, a card-header action and a tab; the keyboard focus on a
+//! control, a navigation entry, a card-header action and the keyboard tabs; every overlay open (the dialogs, the modal
 //! a signal opens, the side panel, the operator menu, the
 //! drawer); the toasts; the upload field empty, with a file over it, with a
 //! file read and with a file refused; the editor with its diagnostics; the
@@ -16,10 +16,14 @@
 //! Each state is written as `states/<brand>/<state>.png` and its `-dark`
 //! twin under the screenshots folder, every brand in the light and the
 //! dark theme, so the hover and focus treatment is looked at as often as
-//! the pages are.
+//! the pages are. The capture writes only a state [`STATES`] lists and
+//! fails unless it wrote every one of them, so the list and the capture
+//! cannot drift apart.
 
+use std::collections::BTreeSet;
 use std::error::Error;
 use std::path::PathBuf;
+use std::sync::{Mutex, PoisonError};
 
 use ferrohealth_ui::style::Brand;
 use serde_json::json;
@@ -30,10 +34,12 @@ use crate::journeys::window;
 use crate::stack::Gallery;
 
 /// Every state, by the name its images take.
-pub(crate) const STATES: [&str; 44] = [
+pub(crate) const STATES: [&str; 46] = [
     "hover-nav",
     "focus-nav",
     "hover-stat",
+    "hover-card-action",
+    "focus-card-action",
     "hover-primary",
     "hover-secondary",
     "hover-danger",
@@ -91,8 +97,42 @@ fn file(brand: Brand, state: &str, theme: &str) -> PathBuf {
         .join(format!("{state}{suffix}.png"))
 }
 
+/// Every image the capture wrote, by brand, theme and state.
+static WRITTEN: Mutex<BTreeSet<(&'static str, String, String)>> = Mutex::new(BTreeSet::new());
+
+/// Refuses a state [`STATES`] does not list, whose image the screenshot
+/// guard would reject.
+fn listed(state: &str) -> Result<(), Box<dyn Error>> {
+    if STATES.contains(&state) {
+        Ok(())
+    } else {
+        Err(format!("the capture writes {state}, which STATES does not list").into())
+    }
+}
+
+/// Every listed state the capture did not write in some brand and theme.
+fn unwritten() -> Vec<String> {
+    let written = WRITTEN.lock().unwrap_or_else(PoisonError::into_inner);
+    let mut missing = Vec::new();
+    for brand in Brand::ALL {
+        for theme in ["light", "dark"] {
+            for state in STATES {
+                if !written.contains(&(brand.key(), theme.to_owned(), state.to_owned())) {
+                    missing.push(format!("{}/{state} ({theme})", brand.key()));
+                }
+            }
+        }
+    }
+    missing
+}
+
 /// Writes `png` as the image of `state`.
 fn write(brand: Brand, state: &str, theme: &str, png: &[u8]) -> Result<(), Box<dyn Error>> {
+    listed(state)?;
+    WRITTEN
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .insert((brand.key(), theme.to_owned(), state.to_owned()));
     let path = file(brand, state, theme);
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
@@ -760,7 +800,28 @@ async fn every_state_is_captured_in_every_brand_light_and_dark() -> Result<(), B
                 phone(browser, &gallery, brand, theme).await?;
             }
         }
-        Ok(())
+        let missing = unwritten();
+        if missing.is_empty() {
+            Ok(())
+        } else {
+            Err(format!("STATES lists states the capture never wrote: {missing:?}").into())
+        }
     })
     .await
+}
+
+#[test]
+fn a_state_states_does_not_list_is_refused() {
+    assert!(listed("hover-card-action").is_ok());
+    assert!(listed("focus-card-action").is_ok());
+    assert!(
+        listed("hover-unlisted").is_err(),
+        "the capture would write an image the screenshot guard rejects"
+    );
+}
+
+#[test]
+fn every_state_is_listed_once() {
+    let unique: BTreeSet<&str> = STATES.into_iter().collect();
+    assert_eq!(unique.len(), STATES.len(), "STATES names a state twice");
 }

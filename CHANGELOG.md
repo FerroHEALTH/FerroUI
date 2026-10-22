@@ -35,6 +35,15 @@ and this project adheres to
   the skills `/new-component` and `/leptos-check` walk a component and a
   review against the rules.
 
+### Fixed
+
+- The gallery's state capture lists the card-header action's hover and
+  focus (`hover-card-action`, `focus-card-action`), so their images are
+  committed for every brand, light and dark, and the screenshot guard no
+  longer rejects them after a capture run (#201). The capture now refuses to
+  write a state its list does not name and fails when it did not write
+  every listed state.
+
 ## [0.2.2] - 2026-10-21
 
 The row depth of a hierarchy table, and two fixes FerroTERM's move onto
