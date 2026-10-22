@@ -378,6 +378,21 @@ async fn templates_content(browser: &Browser, page: &str) -> Result<(), Box<dyn 
     Ok(())
 }
 
+/// Checks that the clinical reading draws a coded value as an inline M2
+/// coding with its code and terminology.
+async fn clinical_codings(browser: &Browser) -> Result<(), Box<dyn Error>> {
+    let coded = text_of(
+        browser,
+        By::Css(".fui-reading .fui-coding.fui-coding-inline"),
+    )
+    .await?;
+    assert!(
+        coded.contains("238") && coded.contains("openehr"),
+        "a coded value is an M2 coding with its code and system: {coded}"
+    );
+    Ok(())
+}
+
 /// Checks what the terminology page must show with no WebAssembly: the
 /// version select opens its menu of links, and every Remove and Add of the
 /// repeatable rows is a submit button of the form around it.
@@ -504,6 +519,7 @@ async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error
                 subject.contains("demo.hospital.mrn"),
                 "the subject line names the namespace: {subject}"
             );
+            clinical_codings(browser).await?;
             browser
                 .element(By::Css(
                     "form.fui-at-time[method='get'] button[type='submit']",
