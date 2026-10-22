@@ -12242,6 +12242,12 @@
     vertical-align: bottom;
   }
 
+  /* The matrix scrolls sideways in its own box at every width, so its
+     header keeps to the top of that box, never under the top bar. */
+  .fui-root-matrix thead th {
+    top: 0;
+  }
+
   .fui-root-head {
     display: flex;
     flex-direction: column;
