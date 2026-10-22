@@ -34,8 +34,9 @@ use leptos_axum::LeptosRoutes as _;
 use tower_http::set_header::SetResponseHeaderLayer;
 
 use crate::app::{
-    COOKIE_PREFIX, OWN_PREFERENCES, PAGED_LISTINGS, PAGING_COOKIE, PAGING_ROUTE, PREFERENCE_ROUTE,
-    RESET_ROUTE, SIDEBAR_COOKIE, SIDEBAR_ROUTE, SIGN_OUT_ROUTE, STYLESHEET as STYLESHEET_PATH,
+    COOKIE_PREFIX, DRAFT_ROUTE, OWN_PREFERENCES, PAGED_LISTINGS, PAGING_COOKIE, PAGING_ROUTE,
+    PREFERENCE_ROUTE, RESET_ROUTE, SIDEBAR_COOKIE, SIDEBAR_ROUTE, SIGN_OUT_ROUTE,
+    STYLESHEET as STYLESHEET_PATH,
 };
 
 /// The name cargo-leptos gives the site bundle's files under `pkg/`.
@@ -65,6 +66,7 @@ pub fn router(options: LeptosOptions) -> axum::Router {
         .route(PREFERENCE_ROUTE, post(choose_preference))
         .route(RESET_ROUTE, post(reset_preferences))
         .route(PAGING_ROUTE, post(choose_paging))
+        .route(DRAFT_ROUTE, post(receive_draft))
         .route(SIDEBAR_ROUTE, post(choose_sidebar))
         .route(&format!("{SIGN_OUT_ROUTE}/{{brand}}"), post(sign_out))
         .leptos_routes_with_context(&options, routes, provide_request_nonce, {
@@ -316,6 +318,33 @@ async fn choose_paging(Form(choice): Form<PagingChoice>) -> Response {
         choice.listing, paging.page, paging.size
     );
     with_cookie(cookie, &choice.back)
+}
+
+/// What the code editor's form posts: the draft, under its text area's name.
+#[derive(serde::Deserialize)]
+struct DraftPost {
+    /// The draft as the form posted it.
+    #[serde(rename = "gallery-mapping")]
+    draft: String,
+}
+
+/// Answers the code editor's posted draft with a page that shows the draft
+/// as it arrived, so a journey reads what the server received.
+async fn receive_draft(Form(post): Form<DraftPost>) -> Response {
+    // NOTE: HTML Living Standard §4.10.21.8: a form posts a text area's line breaks as
+    // CR LF, which the server reads back as the LF the editor holds.
+    let draft = post.draft.replace("\r\n", "\n");
+    let mut page = String::from(
+        "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>Draft received</title></head><body><pre id=\"received\">",
+    );
+    // NOTE: HTML Living Standard §13.2.6.4.7: the parser drops one line break right after
+    // `<pre>`, so a draft that opens with one is written with two.
+    if draft.starts_with('\n') {
+        page.push('\n');
+    }
+    ferrohealth_ui::highlight::escape(&draft, &mut page);
+    page.push_str("</pre></body></html>");
+    axum::response::Html(page).into_response()
 }
 
 /// Wraps `router` in the browser security headers every response carries.

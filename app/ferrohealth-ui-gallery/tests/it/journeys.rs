@@ -249,6 +249,113 @@ async fn the_editor_keeps_every_byte_typed_and_a_diagnostic_leads_to_its_line()
     .await
 }
 
+/// The text of the code editor's live region, which says the diagnostic of
+/// the line the cursor is on.
+async fn said(browser: &Browser) -> Result<String, Box<dyn Error>> {
+    Ok(browser
+        .element(By::Css(
+            ".fui-editor-split .fui-editor-status [role='status']",
+        ))
+        .await?
+        .text()
+        .await?)
+}
+
+/// Follows the code editor's diagnostic of line `line`, beside it.
+async fn follow_diagnostic(browser: &Browser, line: u32) -> Result<(), Box<dyn Error>> {
+    browser
+        .element(By::Css(format!(
+            ".fui-editor-split a.fui-diag-where[href='#gallery-mapping-L{line}']"
+        )))
+        .await?
+        .click()
+        .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_code_editor_keeps_its_cursor_its_marks_and_its_diagnostics_in_step()
+-> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/ferrobridge/forms")).await?;
+        let draft = browser.element(By::Id("gallery-mapping")).await?;
+        until("the code editor may be edited", async || {
+            Ok(draft.attr("readonly").await?.is_none())
+        })
+        .await?;
+        browser.text("span", "Changed since opened").await?;
+        assert!(said(browser).await?.is_empty(), "the status says nothing at rest");
+        // Following a diagnostic moves the caret to its line and column, and
+        // the line and its row turn current together.
+        follow_diagnostic(browser, 16).await?;
+        browser
+            .element(By::Css("#gallery-mapping-L16.fui-mark-error.is-current"))
+            .await?;
+        let row = browser
+            .element(By::Css(".fui-editor-split li.fui-diag.is-current[aria-current='true']"))
+            .await?;
+        assert!(row.text().await?.contains("FC-201"), "the error's row is current");
+        browser.text("span", "Ln 16, Col 12").await?;
+        until("the status says the line's error", async || {
+            Ok(said(browser).await? == "Line 16 has an error.")
+        })
+        .await?;
+        // The editor is the one tab stop and takes the focus.
+        until("the editor takes the focus", async || {
+            let focused = browser
+                .driver()
+                .execute("return document.activeElement.id;", Vec::new())
+                .await?;
+            Ok(focused.json().as_str() == Some("gallery-mapping"))
+        })
+        .await?;
+        // Typing at the caret: the text area and the layer follow, and the
+        // caret moves on.
+        draft.send_keys("0").await?;
+        until("the text area holds what was typed", async || {
+            Ok(draft
+                .prop("value")
+                .await?
+                .is_some_and(|value| value.contains("retries: 0three")))
+        })
+        .await?;
+        let layer = browser
+            .element(By::XPath(
+                "//textarea[@id = 'gallery-mapping']/preceding-sibling::pre[contains(@class, 'fui-editor-layer')]",
+            ))
+            .await?;
+        assert!(
+            layer.text().await?.contains("retries: 0three"),
+            "the layer draws what was typed"
+        );
+        browser.text("span", "Ln 16, Col 13").await?;
+        // The warning's row takes its turn.
+        follow_diagnostic(browser, 6).await?;
+        until("the status says the line's warning", async || {
+            Ok(said(browser).await? == "Line 6 has a warning.")
+        })
+        .await?;
+        browser
+            .element(By::Css("#gallery-mapping-L6.fui-mark-warning.is-current"))
+            .await?;
+        assert_eq!(
+            1,
+            browser
+                .driver()
+                .find_all(By::Css(".fui-editor-split li.fui-diag.is-current"))
+                .await?
+                .len(),
+            "one row is current"
+        );
+        browser.console_clean("the code editor").await
+    })
+    .await
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn the_url_pager_is_links_the_sort_a_get_form_and_the_session_pager_posts()
 -> Result<(), Box<dyn Error>> {

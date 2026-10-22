@@ -18,6 +18,7 @@
 //! specification governs the viewer: our own design.
 
 use leptos::prelude::*;
+use serde::{Deserialize, Serialize};
 
 use crate::highlight::{self, Language};
 use crate::i18n::{Text, tr, tr_with};
@@ -27,7 +28,7 @@ use crate::view::surface::{SectionHead, panel_section};
 use crate::widget::copy::CopyWords;
 
 /// How grave a finding on a line is.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Gravity {
     /// The line is wrong: the bad tone.
     Error,
@@ -219,7 +220,7 @@ fn meta(
 
 /// Returns `title` as a path that may break after each slash and never
 /// inside a name.
-fn path(title: &str) -> AnyView {
+pub(crate) fn path(title: &str) -> AnyView {
     let mut parts = title.split_inclusive('/').peekable();
     let mut out = Vec::new();
     while let Some(part) = parts.next() {

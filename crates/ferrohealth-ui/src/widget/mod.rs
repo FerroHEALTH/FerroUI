@@ -15,8 +15,9 @@
 //! The widgets that own their state are ready islands. The others are
 //! island parts: each takes a signal, a callback or a closure that ties it
 //! to the console's own state, which no island prop can carry, so a console
-//! calls it inside an island of its own. They are the code editor
-//! ([`editor::code_editor`]), the list filter ([`filter::table_filter`]),
+//! calls it inside an island of its own. They are the highlighted editor
+//! ([`editor::code_editor`]) and the code editor with its diagnostics
+//! ([`editor::editor_panel`], [`editor::editor_diagnostics`]), the list filter ([`filter::table_filter`]),
 //! the pager whose steps the console draws ([`crate::table::pager::pager`],
 //! as a session pager does), the modal dialog ([`dialog::modal_dialog`]),
 //! the tree ([`tree::tree_view`]), the upload field

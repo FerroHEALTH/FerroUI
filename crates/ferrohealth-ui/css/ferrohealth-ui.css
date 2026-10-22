@@ -8348,7 +8348,8 @@
     min-height: 0;
   }
 
-  .fui-editor[aria-invalid="true"] {
+  .fui-editor[aria-invalid="true"],
+  .fui-editor:has(> .fui-editor-stack > .fui-editor-input[aria-invalid="true"]) {
     border-color: var(--bad);
   }
 
@@ -13055,8 +13056,10 @@
     border-radius: 0;
   }
 
-  /* B2 in a B10 section has no card frame and runs edge to edge. */
-  .fui-panel-section > .fui-mapping-editor {
+  /* B2 in a B10 section has no card frame and runs edge to edge, drawn
+     there itself or as an island. */
+  .fui-panel-section > .fui-mapping-editor,
+  .fui-panel-section > leptos-island > .fui-mapping-editor {
     margin-inline: calc(var(--space-loose) * -1);
     border: 0;
     border-top: 1px solid var(--edge);
@@ -13064,7 +13067,8 @@
     box-shadow: none;
   }
 
-  .fui-panel-section > .fui-mapping-editor:last-child {
+  .fui-panel-section > .fui-mapping-editor:last-child,
+  .fui-panel-section > leptos-island:last-child > .fui-mapping-editor {
     margin-block-end: calc(var(--space-loose) * -1);
   }
 

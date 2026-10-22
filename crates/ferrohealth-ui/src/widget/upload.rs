@@ -299,6 +299,9 @@ pub fn upload_field(
             marks: Signal::stored(Vec::new()),
             editable: Signal::stored(true),
             placeholder: Some(upload.placeholder.clone()),
+            label: None,
+            caret: None,
+            current: Signal::stored(None),
         },
         move |text| source.set(text),
     );

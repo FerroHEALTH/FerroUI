@@ -4,6 +4,11 @@
 //! The forms page: the fields, the checkbox row, the highlighted editor with
 //! diagnostics that link to its lines, and the filter over a list.
 
+use crate::app::DRAFT_ROUTE;
+use crate::data::{
+    CONTEXT_MAPPING, DRAFT_FINDINGS, DRAFT_MAPPING, DRAFT_OPENED, DRAFT_PATH, DRAFT_TEXT,
+    FINDING_CODES, MAPPING_PATH, WHOLE_FINDING,
+};
 use crate::locale::{Msg, Words, message, tr, tr_with};
 use ferrohealth_ui::calendar::{Bounds, Day, Preset, Quick, Weekday};
 use ferrohealth_ui::highlight::Language;
@@ -13,6 +18,8 @@ use ferrohealth_ui::island::{Combobox, DatePicker, DateRangePicker};
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::button::{Variant, label};
+use ferrohealth_ui::view::code::Gravity;
+use ferrohealth_ui::view::diagnostics::{FileFindings, Finding, Position, diagnostics_by_file};
 use ferrohealth_ui::view::form::{
     ERROR, FIELD_FLOW, FORM, Field, INPUT, Inner, SELECT, SWITCH, TEXTAREA, action_field, check,
     check_field, chip_choices, columns, described_by, described_with_unit, error_id, field,
@@ -23,13 +30,17 @@ use ferrohealth_ui::view::notice::{Announce, notice};
 use ferrohealth_ui::view::segmented::choice_reveal;
 use ferrohealth_ui::view::status::badge;
 use ferrohealth_ui::view::surface::{
-    Crumb, Header, Mode, card, editor_heading, grid, grid_start, page_header, stack, well,
+    Crumb, Header, Mode, SectionHead, card, editor_heading, grid, grid_start, page_header,
+    panel_section, panel_sections_card, stack, well,
 };
 use ferrohealth_ui::widget::combobox::{ComboOption, ComboboxWords, KeyedCombobox, keyed_combobox};
 use ferrohealth_ui::widget::date::{
     DateField, DateRange, DateWords, QuickChoice, RangeEnd, RangePreset,
 };
-use ferrohealth_ui::widget::editor::{Editor, LineMark, MarkKind, code_editor, line_id};
+use ferrohealth_ui::widget::editor::{
+    Editor, EditorWords, LineMark, MarkKind, Opened, Panel, code_editor, editor_diagnostics,
+    editor_panel, editor_split, line_id,
+};
 use ferrohealth_ui::widget::filter::{keeps, table_filter};
 use ferrohealth_ui::widget::pick_or_type::{PickOrType, Picker, pick_or_type};
 use ferrohealth_ui::widget::upload::{Upload, UploadWords, upload_field};
@@ -827,6 +838,248 @@ pub(crate) fn editor_body(words: Words) -> AnyView {
     .into_any()
 }
 
+/// The id of the code editor's text area.
+pub const MAPPING_DRAFT: &str = "gallery-mapping";
+
+/// The id of the new mapping's text area.
+pub const NEW_MAPPING: &str = "gallery-new-mapping";
+
+/// The code editor (B2) beside its diagnostics (B3), in a form that posts
+/// its draft.
+fn mapping_editor() -> AnyView {
+    let words = Words::of(&[
+        Msg::Check,
+        Msg::Diagnostics,
+        Msg::NoteKeptNeverRead,
+        Msg::RetriesMustBeNumber,
+        Msg::Utf8Lf,
+        Msg::YamlFhirconnectContext,
+    ])
+    .open(Msg::DraftOf, &["name"]);
+    let editor = EditorWords::of_page();
+    view! { <crate::islands::MappingEditor words editor /> }.into_any()
+}
+
+/// The interactive part of [`mapping_editor`], hydrated as the island
+/// [`crate::islands::MappingEditor`]: the draft opened with a warning and
+/// an error, and the list beside it in step with the cursor.
+pub(crate) fn mapping_editor_body(words: &Words, editor: EditorWords) -> AnyView {
+    let text = RwSignal::new(String::from(DRAFT_TEXT));
+    let ready = RwSignal::new(false);
+    Effect::new(move |_| ready.set(true));
+    let caret = RwSignal::new(Position::default());
+    let [(note, note_line, note_column), (retries, line, column)] = DRAFT_FINDINGS;
+    let marks = Signal::stored(vec![
+        LineMark {
+            line: note_line,
+            kind: MarkKind::Warning,
+        },
+        LineMark {
+            line,
+            kind: MarkKind::Error,
+        },
+    ]);
+    let field = Editor {
+        id: MAPPING_DRAFT,
+        language: Language::Yaml,
+        text: text.into(),
+        marks,
+        editable: ready.into(),
+    };
+    let found = |gravity, code: &str, (line, column), message| Finding {
+        gravity,
+        code: String::from(code),
+        at: Some(Position { line, column }),
+        message,
+        mapping: Some(String::from(DRAFT_MAPPING)),
+    };
+    let findings = FileFindings {
+        file: String::from(DRAFT_PATH),
+        href: None,
+        lines: format!("#{MAPPING_DRAFT}-L"),
+        current: None,
+        findings: vec![
+            found(
+                Gravity::Warning,
+                note,
+                (note_line, note_column),
+                words.get(Msg::NoteKeptNeverRead),
+            ),
+            found(
+                Gravity::Error,
+                retries,
+                (line, column),
+                words.get(Msg::RetriesMustBeNumber),
+            ),
+        ],
+    };
+    let check = view! {
+        <button type="submit" class=Variant::Secondary.small()>
+            {label(Some(Glyph::LIST_CHECKS), words.get(Msg::Check))}
+        </button>
+    };
+    let panel = editor_panel(
+        Panel {
+            editor: field,
+            label: words.fill(Msg::DraftOf, &[("name", DRAFT_PATH)]),
+            lead: words.get(Msg::YamlFhirconnectContext),
+            facts: vec![words.get(Msg::Utf8Lf)],
+            opened: Opened::Text(String::from(DRAFT_OPENED)),
+            caret,
+            tools: Some(check.into_any()),
+            end: None,
+            words: editor,
+        },
+        move |typed| text.set(typed),
+    );
+    let title = words.get(Msg::Diagnostics);
+    let list = editor_diagnostics(&title, &findings, field, caret);
+    let side = panel_sections_card(
+        title.clone(),
+        panel_section(
+            Some(SectionHead {
+                title,
+                count: Some(2),
+                actions: None,
+            }),
+            list,
+        ),
+    );
+    editor_split(
+        view! { <form method="post" action=DRAFT_ROUTE>{panel}</form> }.into_any(),
+        side,
+    )
+}
+
+/// The code editor of a new file, empty, in a panel section (B10).
+fn new_mapping() -> AnyView {
+    let words = Words::of(&[
+        Msg::NewMappingFile,
+        Msg::Utf8Lf,
+        Msg::YamlFhirconnectContext,
+    ]);
+    let editor = EditorWords::of_page();
+    panel_sections_card(
+        tr(Msg::NewMapping),
+        panel_section(
+            Some(SectionHead {
+                title: tr(Msg::NewMapping),
+                count: None,
+                actions: None,
+            }),
+            view! { <crate::islands::NewMappingEditor words editor /> },
+        ),
+    )
+}
+
+/// The interactive part of [`new_mapping`], hydrated as the island
+/// [`crate::islands::NewMappingEditor`].
+pub(crate) fn new_mapping_body(words: &Words, editor: EditorWords) -> AnyView {
+    let text = RwSignal::new(String::new());
+    let ready = RwSignal::new(false);
+    Effect::new(move |_| ready.set(true));
+    editor_panel(
+        Panel {
+            editor: Editor {
+                id: NEW_MAPPING,
+                language: Language::Yaml,
+                text: text.into(),
+                marks: Signal::stored(Vec::new()),
+                editable: ready.into(),
+            },
+            label: words.get(Msg::NewMappingFile),
+            lead: words.get(Msg::YamlFhirconnectContext),
+            facts: vec![words.get(Msg::Utf8Lf)],
+            opened: Opened::New,
+            caret: RwSignal::new(Position::default()),
+            tools: None,
+            end: None,
+            words: editor,
+        },
+        move |typed| text.set(typed),
+    )
+}
+
+/// The diagnostics list of two files, errors first, the current row on the
+/// draft's error: the code page's mapping file, and the draft the code
+/// editor holds.
+fn diagnostics_of_files() -> AnyView {
+    let [(note, note_line, note_column), (retries, line, column)] = DRAFT_FINDINGS;
+    let [code_retries, code_start] = FINDING_CODES;
+    let found = |gravity, code: &str, at: Option<(u32, u32)>, message, mapping: &str| Finding {
+        gravity,
+        code: String::from(code),
+        at: at.map(|(line, column)| Position { line, column }),
+        message,
+        mapping: Some(String::from(mapping)),
+    };
+    let files = [
+        FileFindings {
+            file: String::from(MAPPING_PATH),
+            href: Some(String::from("code")),
+            lines: String::from("code#file-L"),
+            current: None,
+            findings: vec![
+                found(
+                    Gravity::Warning,
+                    code_start,
+                    Some((20, 3)),
+                    tr(Msg::FindingStartTwice),
+                    CONTEXT_MAPPING,
+                ),
+                found(
+                    Gravity::Error,
+                    code_retries,
+                    Some((18, 12)),
+                    tr(Msg::FindingRetries),
+                    CONTEXT_MAPPING,
+                ),
+            ],
+        },
+        FileFindings {
+            file: String::from(DRAFT_PATH),
+            href: None,
+            lines: format!("#{MAPPING_DRAFT}-L"),
+            current: Some(line),
+            findings: vec![
+                found(
+                    Gravity::Warning,
+                    note,
+                    Some((note_line, note_column)),
+                    tr(Msg::NoteKeptNeverRead),
+                    DRAFT_MAPPING,
+                ),
+                found(
+                    Gravity::Error,
+                    retries,
+                    Some((line, column)),
+                    tr(Msg::RetriesMustBeNumber),
+                    DRAFT_MAPPING,
+                ),
+                found(
+                    Gravity::Error,
+                    WHOLE_FINDING,
+                    None,
+                    tr(Msg::ProfileUnknown),
+                    DRAFT_MAPPING,
+                ),
+            ],
+        },
+    ];
+    let title = tr(Msg::DiagnosticsByFile);
+    panel_sections_card(
+        title.clone(),
+        panel_section(
+            Some(SectionHead {
+                title: tr(Msg::Diagnostics),
+                count: Some(5),
+                actions: None,
+            }),
+            diagnostics_by_file(&title, &files),
+        ),
+    )
+}
+
 /// Waits most of a second in the browser, so a reload keeps its old view on
 /// screen long enough to type into; on the server it waits not at all.
 #[cfg_attr(
@@ -1212,6 +1465,9 @@ pub fn FormsPage() -> impl IntoView {
     })
     .into_any();
     let reloading = reloading_editor();
+    let mapping = mapping_editor();
+    let fresh = new_mapping();
+    let by_file = diagnostics_of_files();
     let long = super::dock::long_form();
     let dock = super::dock::dock();
     view! {
@@ -1228,6 +1484,9 @@ pub fn FormsPage() -> impl IntoView {
             {sections.7}
             {sections.1}
             {sections.2}
+            {mapping}
+            {fresh}
+            {by_file}
             {reloading}
             {sections.3}
             {super::records::identifiers_section()}
