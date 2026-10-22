@@ -23,6 +23,7 @@ use leptos::prelude::*;
 use crate::i18n::{Text, tr};
 use crate::icon::{Glyph, icon};
 use crate::view::button::Variant;
+use crate::widget::focus::focus_on_open;
 
 /// The count an entry carries (R12): a number while one is known, nothing
 /// at zero, and a muted dash with the reason when none is known.
@@ -262,7 +263,7 @@ pub fn drawer(id: String, label: String, close: String, rail: bool, entries: Any
             aria-label=label
             class=class
             node_ref=nav
-            on:toggle=move |_| drawer::opened(nav)
+            use:focus_on_open="a"
             on:click=move |event| drawer::followed(nav, &event)
         >
             <button type="button" class=button popovertarget=target popovertargetaction="hide">
@@ -276,35 +277,9 @@ pub fn drawer(id: String, label: String, close: String, rail: bool, entries: Any
 }
 
 /// What the browser code adds to the drawer. From the first breakpoint up
-/// the navigation is no popover the browser opens, so neither applies.
+/// the navigation is no popover the browser opens, so it does not apply.
 mod drawer {
     use leptos::prelude::*;
-
-    /// Moves the focus to the drawer's first link, once it is open.
-    pub(super) fn opened(nav: NodeRef<leptos::html::Nav>) {
-        #[cfg(target_arch = "wasm32")]
-        {
-            use leptos::wasm_bindgen::JsCast as _;
-            let Some(nav) = nav.get_untracked() else {
-                return;
-            };
-            if !nav.matches(":popover-open").unwrap_or(false) {
-                return;
-            }
-            let first = nav
-                .query_selector("a")
-                .ok()
-                .flatten()
-                .and_then(|link| link.dyn_into::<web_sys::HtmlElement>().ok());
-            if let Some(first) = first
-                && first.focus().is_err()
-            {
-                leptos::logging::warn!("the browser refused the focus on the navigation");
-            }
-        }
-        #[cfg(not(target_arch = "wasm32"))]
-        let _: NodeRef<leptos::html::Nav> = nav;
-    }
 
     /// Closes the open drawer when `event` follows one of its links.
     pub(super) fn followed(nav: NodeRef<leptos::html::Nav>, event: &leptos::ev::MouseEvent) {

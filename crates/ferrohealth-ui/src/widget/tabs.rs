@@ -81,13 +81,14 @@ pub fn tab_list(label: String, prefix: String, tabs: Vec<String>, panels: AnyVie
     let selected = RwSignal::new(0_usize);
     let count = tabs.len();
     let prefix = StoredValue::new(prefix);
+    let list = NodeRef::<leptos::html::Div>::new();
     let on_key = move |event: leptos::ev::KeyboardEvent| {
         let Some(next) = moved(&event.key(), selected.get_untracked(), count) else {
             return;
         };
         event.prevent_default();
         selected.set(next);
-        prefix.with_value(|prefix| focus(&tab_id(prefix, next)));
+        focus(list, next);
     };
     Effect::new(move |_| {
         let chosen = selected.get();
@@ -118,7 +119,7 @@ pub fn tab_list(label: String, prefix: String, tabs: Vec<String>, panels: AnyVie
         .collect_view();
     view! {
         <div class="fui-tabbed">
-            <div role="tablist" aria-label=label class="fui-tabs" on:keydown=on_key>
+            <div role="tablist" aria-label=label class="fui-tabs" node_ref=list on:keydown=on_key>
                 {buttons}
             </div>
             {panels}
@@ -216,22 +217,25 @@ fn show(prefix: &str, chosen: usize, count: usize) {
     let _: (&str, usize, usize) = (prefix, chosen, count);
 }
 
-/// Moves the focus to the element `id`.
-fn focus(id: &str) {
+/// Moves the focus to tab `index` of the tab list `list`.
+fn focus(list: NodeRef<leptos::html::Div>, index: usize) {
     #[cfg(target_arch = "wasm32")]
     {
         use leptos::wasm_bindgen::JsCast as _;
-        let element = document()
-            .get_element_by_id(id)
-            .and_then(|element| element.dyn_into::<web_sys::HtmlElement>().ok());
-        if let Some(element) = element
-            && element.focus().is_err()
+        let mut tab = list
+            .get_untracked()
+            .and_then(|list| list.first_element_child());
+        for _ in 0..index {
+            tab = tab.and_then(|before| before.next_element_sibling());
+        }
+        if let Some(tab) = tab.and_then(|tab| tab.dyn_into::<web_sys::HtmlElement>().ok())
+            && tab.focus().is_err()
         {
             leptos::logging::warn!("the browser refused the focus on a tab");
         }
     }
     #[cfg(not(target_arch = "wasm32"))]
-    let _: &str = id;
+    let _: (NodeRef<leptos::html::Div>, usize) = (list, index);
 }
 
 #[cfg(test)]

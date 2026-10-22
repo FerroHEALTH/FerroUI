@@ -253,7 +253,7 @@ The library is held to the best console's quality, not to "it renders".
   control, a navigation entry and the keyboard tabs; opens every overlay
   (dialogs, the modal a signal opens, the side panel, both menus, the
   drawer); raises the toasts; and drives the upload field through empty, a
-  file over it, a file read and a file refused; turns the help switch on,
+  file over it, a file read and a file refused; turns the help switch off and on,
   opens the picker on its input, walks the tree by the keyboard, focuses the
   search box, reveals a choice's fields and draws the tables in the compact
   density, in every brand, light and dark, with reduced motion so each

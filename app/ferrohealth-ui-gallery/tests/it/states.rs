@@ -8,7 +8,7 @@
 //! a signal opens, the side panel, the user menu and its phone
 //! sheet, the drawer); the sidebar folded to its rail; the toasts; the upload field empty, with a file over it, with a
 //! file read and with a file refused; the editor with its diagnostics; the
-//! help switch on, the picker open on its input, the tree walked by the
+//! help switch off and on, the picker open on its input, the tree walked by the
 //! keyboard, the search box focused, the tables in the compact density, the
 //! compact stat tiles and the stacked timestamps of a phone at 320 and
 //! 390 px, the disabled fields inside a well at 1440 and 390 px, the
@@ -39,7 +39,7 @@ use crate::journeys::window;
 use crate::stack::Gallery;
 
 /// Every state, by the name its images take.
-pub(crate) const STATES: [&str; 84] = [
+pub(crate) const STATES: [&str; 85] = [
     "hover-nav",
     "focus-nav",
     "hover-stat",
@@ -76,6 +76,7 @@ pub(crate) const STATES: [&str; 84] = [
     "popover-form-390",
     "drawer-open",
     "focus-search",
+    "help-off",
     "help-on",
     "picker-other",
     "tree-keyboard",
@@ -650,7 +651,7 @@ async fn overlays(
     window(browser, WIDTH, HEIGHT).await
 }
 
-/// The layouts page: the search box focused, the help switch on, the
+/// The layouts page: the search box focused, the help switch off and on, the
 /// picker open on its input, and the tree walked by the keyboard.
 async fn layouts(
     browser: &Browser,
@@ -665,19 +666,16 @@ async fn layouts(
     focus(browser, &search).await?;
     let bar = browser.element(By::Css(".fui-topbar")).await?;
     shot_of(browser, brand, theme, "focus-search", &bar).await?;
-    let switch = browser
-        .element(By::XPath(
-            "//button[normalize-space(.) = 'Explain these parameters']",
-        ))
-        .await?;
+    let form = browser.element(card("Main and aside")).await?;
+    shot_of(browser, brand, theme, "help-off", &form).await?;
+    let switch = browser.element(By::Id("run-help")).await?;
     until("the help switch answers", async || {
-        if switch.attr("aria-pressed").await?.as_deref() != Some("true") {
+        if !switch.is_selected().await? {
             press(browser, &switch).await?;
         }
-        Ok(switch.attr("aria-pressed").await?.as_deref() == Some("true"))
+        Ok(switch.is_selected().await?)
     })
     .await?;
-    let form = browser.element(card("Main and aside")).await?;
     shot_of(browser, brand, theme, "help-on", &form).await?;
     let choice = browser.element(By::Id("run-value-set-choice")).await?;
     browser

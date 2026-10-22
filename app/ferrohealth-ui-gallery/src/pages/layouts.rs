@@ -18,6 +18,7 @@ use ferrohealth_ui::view::change::{Change, change_table};
 use ferrohealth_ui::view::chart::proportion;
 use ferrohealth_ui::view::code::{Code, CodeHead, Gravity, LineDiagnostic, code_section};
 use ferrohealth_ui::view::form::{FORM, INPUT, MEDIUM, NARROW, PROSE, SELECT, field, help_id};
+use ferrohealth_ui::view::help::{HelpWords, explained_check_field, explained_field, help_switch};
 use ferrohealth_ui::view::layout::{
     FieldRow, Gap, Pane, bullet_list, divided_list, field_row, main_aside, master_detail, stack_at,
     three_panes, tile_list,
@@ -26,9 +27,6 @@ use ferrohealth_ui::view::status::pill;
 use ferrohealth_ui::view::surface::{
     SectionHead, add_row, card, definitions, or_none, page_header, panel_section,
     panel_sections_card, section_intro, split,
-};
-use ferrohealth_ui::widget::help::{
-    HelpWords, explained_check_field, explained_field, help_switch, provide_help,
 };
 use ferrohealth_ui::widget::picker::{Picker, picker_field};
 use ferrohealth_ui::widget::tree::{Tree, TreeNode, tree_view_collapsing};
@@ -311,8 +309,9 @@ fn listing() -> AnyView {
 /// The runner's form: the help switch, the picker, a number, a select, a
 /// prose text area and a checkbox with help.
 ///
-/// The help switch and the fields it explains share one state, so the form
-/// is the island [`crate::islands::RunnerForm`].
+/// The picker and the button that resets it share one state, so the form
+/// is the island [`crate::islands::RunnerForm`]; the help switch needs no
+/// script.
 fn runner_form() -> AnyView {
     let brand = brand_key();
     view! { <crate::islands::RunnerForm brand words=runner_words() help=HelpWords::of_page() /> }
@@ -322,7 +321,6 @@ fn runner_form() -> AnyView {
 /// The runner's form on the layouts page of the brand `brand`, in `words`
 /// and the help switch's `help`.
 pub(crate) fn runner_form_in(brand: &str, words: &Words, help: HelpWords) -> AnyView {
-    let ferrohealth_ui::widget::help::HelpShown(_shown) = provide_help();
     let options = vec![
         (
             String::from("http://example.org/vs/signs"),
@@ -387,7 +385,7 @@ pub(crate) fn runner_form_in(brand: &str, words: &Words, help: HelpWords) -> Any
     };
     view! {
         <form method="get" action=here(brand, "") class=FORM>
-            {split(view! { <h2 class="fui-card-title">{words.get(Msg::ListValueSet)}</h2> }, help_switch(help))}
+            {split(view! { <h2 class="fui-card-title">{words.get(Msg::ListValueSet)}</h2> }, help_switch("run-help", help))}
             {picker}
             <div>{reset}</div>
             {explained_field("run-count", words.get(Msg::PageSize), words.get(Msg::HowManyConceptsOnePage), count)}

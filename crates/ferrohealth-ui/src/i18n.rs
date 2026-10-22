@@ -612,10 +612,8 @@ texts! {
     TabDraftChoice = "tab-draft-choice",
     /// The button of the phone's tab select that leads to the tab chosen.
     TabGo = "tab-go",
-    /// The help switch while the help lines are hidden.
+    /// The help switch's label.
     HelpShow = "help-show",
-    /// The help switch while the help lines show.
-    HelpHide = "help-hide",
     /// The combobox list when the filter keeps no option.
     ComboboxNoMatch = "combobox-no-match",
     /// The title row's button that opens the More menu.

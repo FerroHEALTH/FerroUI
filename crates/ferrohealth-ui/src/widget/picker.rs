@@ -22,6 +22,7 @@ use leptos::prelude::*;
 use leptos::web_sys::HtmlSelectElement;
 
 use crate::view::form::{INPUT, SELECT, help_id};
+use crate::view::help::help_line;
 
 /// Which option of the select stands for the input's value.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -62,7 +63,8 @@ pub struct Picker {
     /// The select's label, read by a screen reader, such as "Choose a value
     /// set this server holds".
     pub choose_label: Cow<'static, str>,
-    /// The help line under both, which both name.
+    /// The help line under both, which both name, under the form's help
+    /// switch ([`crate::view::help::help_switch`]) when the form has one.
     pub help: Option<Cow<'static, str>>,
     /// The choices, value and words, which may arrive after the value.
     pub choices: Signal<Vec<(String, String)>>,
@@ -102,6 +104,7 @@ pub fn picker_field(picker: Picker) -> AnyView {
         other_word,
     } = picker;
     let typing = RwSignal::new(false);
+    let input = NodeRef::<leptos::html::Input>::new();
     let hydrated = RwSignal::new(false);
     Effect::new(move || hydrated.set(true));
     let selected = move || {
@@ -118,8 +121,7 @@ pub fn picker_field(picker: Picker) -> AnyView {
     };
     let described = help.as_ref().map(|_| help_id(&id));
     let select_id = format!("{id}-choice");
-    let focus_id = id.clone();
-    let help = help.map(|help| picker_help(&id, help));
+    let help = help.map(|help| help_line(&id, help));
     // NOTE: HTML Living Standard, "The option element": the
     // `selected` attribute sets an option's selectedness only until the
     // select is used, so it marks the choice an option is created with.
@@ -138,7 +140,7 @@ pub fn picker_field(picker: Picker) -> AnyView {
         let last = i32::try_from(select.length()).map_or(0, |count| count.saturating_sub(1));
         if select.selected_index() == last {
             typing.set(true);
-            focus_input(&focus_id);
+            focus_input(input);
         } else {
             typing.set(false);
             value.set(select.value());
@@ -171,6 +173,7 @@ pub fn picker_field(picker: Picker) -> AnyView {
                 <input
                     id=id
                     name=name
+                    node_ref=input
                     class=INPUT
                     aria-describedby=described
                     autocomplete="off"
@@ -186,35 +189,18 @@ pub fn picker_field(picker: Picker) -> AnyView {
     .into_any()
 }
 
-/// Returns the picker's help line: under the form's help switch when the
-/// form has one, always shown when it has none.
-fn picker_help(id: &str, help: Cow<'static, str>) -> AnyView {
-    if use_context::<crate::widget::help::HelpShown>().is_some() {
-        crate::widget::help::help_line(id, help)
-    } else {
-        view! { <p id=help_id(id) class="fui-help">{help}</p> }.into_any()
-    }
-}
-
-/// Moves the keyboard focus to the input `id`, once it shows.
-fn focus_input(id: &str) {
+/// Moves the keyboard focus to the input `input`, once it shows.
+fn focus_input(input: NodeRef<leptos::html::Input>) {
     #[cfg(target_arch = "wasm32")]
-    {
-        use leptos::wasm_bindgen::JsCast as _;
-        let id = id.to_owned();
-        request_animation_frame(move || {
-            let input = document()
-                .get_element_by_id(&id)
-                .and_then(|input| input.dyn_into::<web_sys::HtmlElement>().ok());
-            if let Some(input) = input
-                && input.focus().is_err()
-            {
-                leptos::logging::warn!("the browser refused the focus on a picker's input");
-            }
-        });
-    }
+    request_animation_frame(move || {
+        if let Some(input) = input.get_untracked()
+            && input.focus().is_err()
+        {
+            leptos::logging::warn!("the browser refused the focus on a picker's input");
+        }
+    });
     #[cfg(not(target_arch = "wasm32"))]
-    let _: &str = id;
+    let _: NodeRef<leptos::html::Input> = input;
 }
 
 #[cfg(test)]

@@ -19,20 +19,33 @@ pub mod tables;
 pub mod templates;
 
 use crate::locale::{Msg, tr};
+use ferrohealth_ui::style::Brand;
 use leptos::prelude::*;
 use leptos_meta::Title;
 
-/// The title of a page named `name` in the brand the route names.
-#[must_use]
-pub fn titled(name: &str) -> String {
-    let brand =
-        crate::app::route_brand().map_or(tr(Msg::Gallery), |brand| brand.product().to_owned());
-    format!("{name} · {brand} · {}", crate::app::product())
+/// The root's one title format: a page's words, then the product; a page
+/// that sets no words of its own is titled by the product alone.
+pub fn title_format(product: String) -> impl Fn(String) -> String + Send + Sync + 'static {
+    move |page| {
+        if page.is_empty() {
+            product.clone()
+        } else {
+            format!("{page} · {product}")
+        }
+    }
 }
 
-/// The document title of the page `name`.
+/// The document title of the page `name` in the brand `brand`, the
+/// gallery's for none, which the root's [`title_format`] completes.
+#[must_use]
+pub fn title_in(name: impl Into<String>, brand: Option<Brand>) -> impl IntoView {
+    let name = name.into();
+    let brand = brand.map_or(tr(Msg::Gallery), |brand| brand.product().to_owned());
+    view! { <Title text=format!("{name} · {brand}") /> }
+}
+
+/// The document title of the page `name` in the brand the route names.
 #[must_use]
 pub fn title(name: impl Into<String>) -> impl IntoView {
-    let name = name.into();
-    view! { <Title text=titled(&name) /> }
+    title_in(name, crate::app::route_brand())
 }

@@ -24,6 +24,7 @@ use ferrohealth_ui::view::form::{
     ERROR, Field, INPUT, SELECT, action_field, described_by, error_id, field, help_id, keyed_check,
     keyed_check_field, keyed_field,
 };
+use ferrohealth_ui::view::help::{HelpWords, explained_check_field, help_switch};
 use ferrohealth_ui::view::popover::{PopoverForm, popover_form};
 use ferrohealth_ui::view::refusal::{Issue, Refusal, Severity, refusal};
 use ferrohealth_ui::view::shell::{Footer, footer, lockup, mark};
@@ -40,7 +41,6 @@ use ferrohealth_ui::widget::chart::{ChartWords, line_chart};
 use ferrohealth_ui::widget::combobox::{ComboOption, ComboboxWords};
 use ferrohealth_ui::widget::document::DocumentView;
 use ferrohealth_ui::widget::editor::{Editor, code_editor};
-use ferrohealth_ui::widget::help::explained_check_field;
 use ferrohealth_ui::widget::pick_or_type::{PickOrType, Picker, pick_or_type};
 use ferrohealth_ui::widget::picker::{self, picker_field};
 use ferrohealth_ui::widget::tabs::tab_panels;
@@ -1004,7 +1004,7 @@ fn a_pick_or_type_field_shows_one_control_with_its_own_label() {
 }
 
 #[test]
-fn an_explained_checkbox_keeps_its_help_named_and_hidden_from_sight_until_the_switch() {
+fn an_explained_checkbox_keeps_its_help_named_under_the_forms_switch() {
     let drawn = html(|| {
         explained_check_field(
             "run-inactive",
@@ -1014,19 +1014,46 @@ fn an_explained_checkbox_keeps_its_help_named_and_hidden_from_sight_until_the_sw
         )
     });
     assert!(has(&drawn, "label", &[("for", "run-inactive")]), "{drawn}");
-    // WCAG 2.2 technique C7: hidden from sight, still in the tree.
+    // WCAG 2.2 technique C7: the stylesheet hides it from sight, never from the tree.
     assert!(
         has(
             &drawn,
             "span",
             &[
                 ("id", "run-inactive-help"),
-                ("class", "fui-help fui-sr-only")
+                ("class", "fui-help fui-explain")
             ]
         ),
         "{drawn}"
     );
     assert!(has(&drawn, "div", &[("class", "fui-check")]), "{drawn}");
+}
+
+#[test]
+fn the_help_switch_is_a_native_checkbox_that_submits_nothing() {
+    let drawn = html(|| help_switch("run-help", HelpWords::of_page()));
+    assert!(
+        has(
+            &drawn,
+            "input",
+            &[
+                ("type", "checkbox"),
+                ("role", "switch"),
+                ("id", "run-help"),
+                ("class", "fui-switch")
+            ]
+        ),
+        "{drawn}"
+    );
+    assert!(
+        !drawn.contains("name="),
+        "the switch is no form field: {drawn}"
+    );
+    assert!(
+        has(&drawn, "label", &[("class", "fui-help-switch")]),
+        "the words name the switch: {drawn}"
+    );
+    assert!(drawn.contains("Explain these parameters"), "{drawn}");
 }
 
 #[test]
@@ -1798,8 +1825,11 @@ fn the_combobox_and_picker_islands_draw_their_native_floor_on_the_server() {
         ),
         "the input posts the value with no WebAssembly: {picker}"
     );
+    // The line follows the switch of a form that has one, and shows in any other.
     assert!(
-        picker.contains(r#"<p id="run-value-set-help" class="fui-help">The set to expand.</p>"#),
+        picker.contains(
+            r#"<p id="run-value-set-help" class="fui-help fui-explain">The set to expand.</p>"#
+        ),
         "{picker}"
     );
 }

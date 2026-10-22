@@ -4,7 +4,3 @@
 # and the issue that removes it. A line reads:
 #   <rule> <path from the repository root> <ERE matched against the line>   # reason
 # A line goes when its issue lands; the list only shrinks.
-
-L7 app/ferrohealth-ui-gallery/src/pages/forms.rs Signal::derive\(\|\|   # constants in a derived signal; #216
-L7 app/ferrohealth-ui-gallery/src/pages/layouts.rs Signal::derive\(\|\|   # a constant in a derived signal; #216
-L7 app/ferrohealth-ui-gallery/src/pages/overlays.rs Signal::derive\(\|\|   # a constant in a derived signal; #216
