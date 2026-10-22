@@ -10,7 +10,9 @@
 # not declarations and are not read. Names compare byte by byte (LC_ALL=C).
 # The gallery's screenshot driver, `tests/it/states.rs`, is held the same way
 # in two more lists: its `AREAS` entries (`area::STATES,`) and the capture
-# calls (`area::function(browser, …)`), each in ascending order.
+# calls (`area::function(browser, …)`), each in ascending order. The journeys'
+# `PAGES` list, `tests/it/journeys.rs`, holds one page per line in ascending
+# order, so two pull requests that each add a page land on different lines.
 #
 #   mod-order.sh [file.rs ...]    the named files, or every tracked .rs file
 #   mod-order.sh --self-test
@@ -67,6 +69,35 @@ check_driver() {
   ' "$1"
 }
 
+# The gallery's journeys, whose page list check_pages reads.
+pages="app/ferrohealth-ui-gallery/tests/it/journeys.rs"
+
+# check_pages FILE: prints `FILE:LINE: …` for each entry of the `PAGES` list
+# that sorts before the one above it, and when the file holds no such list.
+check_pages() {
+  awk -v file="$1" '
+    /^pub\(crate\) const PAGES: &\[&str\] = &\[$/ { inside = 1; found = 1; next }
+    inside && /^\];$/ { inside = 0; next }
+    inside {
+      if ($0 !~ /^    "[^"]*",$/) {
+        printf "%s:%d: keep one page per line in the PAGES list\n", file, NR
+        next
+      }
+      name = $0
+      sub(/^    "/, "", name)
+      sub(/",$/, "", name)
+      if (seen && name <= last) {
+        printf "%s:%d: page \"%s\" comes after \"%s\"; keep the PAGES list in alphabetical order\n", file, NR, name, last
+      }
+      last = name
+      seen = 1
+    }
+    END {
+      if (!found) printf "%s: no `pub(crate) const PAGES: &[&str] = &[` list\n", file
+    }
+  ' "$1"
+}
+
 self_test() {
   local work
   work="$(mktemp -d)"
@@ -116,6 +147,27 @@ self_test() {
     echo "mod-order: self-test failed: an AREAS entry out of order passed." >&2
     exit 1
   }
+  printf '%s\n' 'pub(crate) const PAGES: &[&str] = &[' '    "",' '    "/charts",' '    "/trees",' '];' > "$work/pages.rs"
+  [[ -z "$(check_pages "$work/pages.rs")" ]] || {
+    echo "mod-order: self-test failed: an ordered PAGES list was refused:" >&2
+    check_pages "$work/pages.rs" >&2
+    exit 1
+  }
+  printf '%s\n' 'pub(crate) const PAGES: &[&str] = &[' '    "",' '    "/trees",' '    "/charts",' '];' > "$work/appended.rs"
+  [[ "$(check_pages "$work/appended.rs")" == *'appended.rs:4: page "/charts" comes after "/trees"'* ]] || {
+    echo "mod-order: self-test failed: a page appended out of order passed." >&2
+    exit 1
+  }
+  printf '%s\n' 'pub(crate) const PAGES: &[&str] = &[' '    "", "/charts",' '];' > "$work/joined.rs"
+  [[ "$(check_pages "$work/joined.rs")" == *"joined.rs:2: keep one page per line"* ]] || {
+    echo "mod-order: self-test failed: two pages on one line passed." >&2
+    exit 1
+  }
+  printf '%s\n' 'pub(crate) const PAGES: [&str; 2] = ["", "/charts"];' > "$work/sized.rs"
+  [[ "$(check_pages "$work/sized.rs")" == *"sized.rs: no"* ]] || {
+    echo "mod-order: self-test failed: a sized PAGES array passed." >&2
+    exit 1
+  }
   echo "mod-order: self-test passed."
 }
 
@@ -138,6 +190,9 @@ for file in "${files[@]}"; do
   out+="$(check "$file")"$'\n'
   if [[ "$file" == "$driver" ]]; then
     out+="$(check_driver "$file")"$'\n'
+  fi
+  if [[ "$file" == "$pages" ]]; then
+    out+="$(check_pages "$file")"$'\n'
   fi
 done
 out="$(sed '/^$/d' <<<"$out")"

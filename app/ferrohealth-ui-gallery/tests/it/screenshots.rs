@@ -102,7 +102,7 @@ fn shots() -> Vec<Shot> {
         },
     ];
     for brand in Brand::ALL {
-        for page in PAGES {
+        for &page in PAGES {
             shots.push(Shot {
                 image: format!("{}/{}", brand.key(), page_name(page)),
                 path: format!("/{}{page}", brand.key()),
