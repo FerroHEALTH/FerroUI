@@ -277,7 +277,10 @@ async fn one_brand_is_captured_in_the_pseudo_locale_light_and_dark() -> Result<(
             browser.driver().delete_all_cookies().await?;
             for (name, value) in [
                 ("gallery-theme", theme),
-                ("gallery-locale", ferrohealth_ui_gallery::locale::PSEUDO_TAG),
+                (
+                    "gallery-language",
+                    ferrohealth_ui_gallery::locale::PSEUDO_TAG,
+                ),
             ] {
                 let mut cookie = Cookie::new(name, value);
                 cookie.set_path("/");

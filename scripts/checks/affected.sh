@@ -70,7 +70,7 @@ words_of() {
     side_panel) echo "panel" ;;
     sign_in) echo "sign" ;;
     surface) echo "card stat" ;;
-    theme_switch) echo "theme" ;;
+    preference | preferences) echo "preferences density" ;;
     time) echo "timestamp" ;;
     toast) echo "toast" ;;
     overview | templates) echo "every_page" ;;

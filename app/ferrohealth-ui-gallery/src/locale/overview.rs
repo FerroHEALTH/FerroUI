@@ -56,8 +56,6 @@ messages! {
     DefinitionGrid = "definition-grid",
     /// `Degraded`
     Degraded = "degraded",
-    /// `Density`
-    Density = "density",
     /// `Detail`
     Detail = "detail",
     /// `Diagnostics`
@@ -148,8 +146,6 @@ messages! {
     ProductColumn = "product-column",
     /// `Profile`
     Profile = "profile",
-    /// `The pseudo-locale draws every library string accented and longer, to check the layout.`
-    PseudoLocaleDrawsEveryLibrary = "pseudo-locale-draws-every-library",
     /// `A quiet empty section`
     QuietEmptySection = "quiet-empty-section",
     /// `R4`
@@ -228,8 +224,6 @@ messages! {
     Target = "target",
     /// `the terminology server answered with no readable outcome.`
     TerminologyServerAnsweredNoReadable = "terminology-server-answered-no-readable",
-    /// `Theme`
-    Theme = "theme",
     /// `Three changes wait to be applied to the running set.`
     ThreeChangesWaitAppliedRunning = "three-changes-wait-applied-running",
     /// `$tofhir http://fhirconnect.org/fhir/OperationDefinition/ToFhirSynthetic`

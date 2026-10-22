@@ -8,9 +8,12 @@
 use ferrohealth_ui::i18n::{Locale, locale, provide_locale};
 use ferrohealth_ui::table::model::{Paging, Window};
 use ferrohealth_ui::table::pager::link_pager;
+use ferrohealth_ui::theme::Language;
 use ferrohealth_ui::view::dialog::{Confirmation, confirm_dialog};
-use ferrohealth_ui::view::theme_switch::locale_switch;
+use ferrohealth_ui::view::preferences::{Post, language_select};
 use leptos::prelude::*;
+
+use crate::markup::has;
 
 fluent_templates::static_loader! {
     static THROWAWAY = {
@@ -105,25 +108,70 @@ fn the_page_reads_the_locale_it_provided() {
 }
 
 #[test]
-fn the_language_switch_names_each_choice_in_its_own_language() {
-    let switch = render(Some(throwaway()), || {
-        locale_switch(
+fn the_language_select_names_each_choice_in_its_own_language() {
+    let post = Post {
+        action: String::from("/preference"),
+        back: String::from("/preferences/language"),
+    };
+    let select = Owner::new_root(Some(std::sync::Arc::new(
+        hydration_context::SsrSharedContext::new(),
+    )))
+    .with(|| {
+        provide_locale(throwaway());
+        language_select(
+            "language-list",
+            &Language::Chosen(String::from("qaa")),
             &[Locale::english(), throwaway()],
-            String::from("/locale"),
-            String::from("/"),
+            &Locale::english(),
+            &post,
         )
+        .to_html()
     });
-    assert!(switch.contains(r#"aria-label="Language""#), "{switch}");
     assert!(
-        switch.contains(r#"value="en" lang="en" aria-pressed="false""#),
-        "{switch}"
+        has(
+            &select,
+            "button",
+            &[("lang", "en"), ("aria-selected", "false")]
+        ),
+        "{select}"
     );
-    assert!(switch.contains(">English<"), "{switch}");
+    assert!(select.contains(">English<"), "{select}");
     assert!(
-        switch.contains(r#"value="qaa" lang="qaa" aria-pressed="true""#),
-        "the page's locale is pressed: {switch}"
+        has(
+            &select,
+            "button",
+            &[("lang", "qaa"), ("aria-selected", "true")]
+        ),
+        "the page's language is chosen: {select}"
     );
-    assert!(switch.contains(">Qaa<"), "{switch}");
+    assert!(
+        select.contains(">Qaa<"),
+        "each language in its own name: {select}"
+    );
+    assert!(
+        has(
+            &select,
+            "input",
+            &[("name", "language"), ("value", "browser")]
+        ),
+        "Follow the browser posts the browser's key: {select}"
+    );
+    assert!(
+        has(&select, "input", &[("name", "language"), ("value", "qaa")]),
+        "{select}"
+    );
+    assert!(
+        has(
+            &select,
+            "input",
+            &[("name", "back"), ("value", "/preferences/language")]
+        ),
+        "{select}"
+    );
+    assert!(
+        select.contains("English, from your browser"),
+        "the browser's language under its choice: {select}"
+    );
 }
 
 #[test]

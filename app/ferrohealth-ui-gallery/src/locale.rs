@@ -188,6 +188,7 @@ mod forms;
 mod layouts;
 mod overlays;
 mod overview;
+mod preferences;
 mod shell;
 mod sign_in;
 mod tables;
@@ -202,6 +203,7 @@ const AREAS: &[&[Msg]] = &[
     layouts::ALL,
     overlays::ALL,
     overview::ALL,
+    preferences::ALL,
     shell::ALL,
     sign_in::ALL,
     tables::ALL,

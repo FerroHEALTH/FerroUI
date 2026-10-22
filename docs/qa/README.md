@@ -28,6 +28,7 @@ states under `../screenshots/states/`.
 | `reference/ferrofed/dashboard.png` | `screenshots/ferrofed/overview.png` | marked stat cards, the page meta line |
 | `reference/ferrofed/members.png` | `screenshots/ferrofed/tables.png` | the table and its pager |
 | the design's `templates/` set (`design/tools/render.sh templates`) and each console's `forbidden`, `not-found` and `unreadable` | `screenshots/<brand>/templates/*.png`, `screenshots/<brand>/fault.png` | the page templates T1 to T3, About, and the error page |
+| each console's `preferences`, `preferences-saved`, `preferences-keyboard`, `preferences-reset` and `preferences-dark` (`design/tools/render.sh <console>`) | `screenshots/<brand>/preferences.png`, `preferences/language.png`, `preferences/keyboard.png`, `states/<brand>/preferences-saved.png`, `preferences-reset.png`, `preferences-phone.png` | Your preferences: the three tabs, the preview cards, Saved in its slot, the reset confirmation, the phone |
 | `reference/ferrofed/configuration-member-form.png` | `screenshots/ferrofed/forms.png`, `states/ferrofed/reveal-replace.png` | fieldsets, the segmented radio and what it reveals, the change table |
 | `reference/ferrofed/query-complete.png` | `screenshots/ferrofed/forms.png`, `layouts.png` | checkbox chips, the switch, the action bar, node tiles |
 | `reference/ferroterm/overview.png` | `screenshots/ferroterm/overview.png`, `states/ferroterm/focus-search.png` | the search box in the top bar, the type scale |

@@ -110,6 +110,8 @@ messages! {
     NavNotFound = "nav-not-found",
     /// `Not known: the gallery does not probe the charts`
     NavNotProbed = "nav-not-probed",
+    /// `T3 Your preferences`
+    NavPreferences = "nav-preferences",
     /// `T3 From a file`
     NavSettings = "nav-settings",
     /// `T3 Managed`

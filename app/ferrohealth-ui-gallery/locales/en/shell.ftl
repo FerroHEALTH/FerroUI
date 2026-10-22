@@ -56,6 +56,7 @@ nav-list-many = T1 Many items
 nav-list-tabs = T1 With tabs
 nav-not-found = Error 404
 nav-not-probed = Not known: the gallery does not probe the charts
+nav-preferences = T3 Your preferences
 nav-settings = T3 From a file
 nav-settings-managed = T3 Managed
 no-mapping-file = No mapping file

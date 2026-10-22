@@ -37,6 +37,7 @@ pub mod menu;
 pub mod nav;
 pub mod pick_or_type;
 pub mod picker;
+pub mod preference;
 pub mod search;
 pub mod segmented;
 pub mod shortcuts;

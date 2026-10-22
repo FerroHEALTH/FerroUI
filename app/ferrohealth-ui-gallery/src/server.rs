@@ -20,7 +20,9 @@ use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
 use ferrohealth_ui::style::{Brand, STYLESHEET};
 use ferrohealth_ui::table::model::Paging;
-use ferrohealth_ui::theme::{Density, Theme};
+use ferrohealth_ui::theme::{
+    Density, Hints, Language, Motion, Preference, Preferences, Theme, WeekStart,
+};
 use http::header::{
     CACHE_CONTROL, CONTENT_SECURITY_POLICY, CONTENT_TYPE, REFERRER_POLICY, SET_COOKIE,
     X_CONTENT_TYPE_OPTIONS, X_FRAME_OPTIONS,
@@ -32,9 +34,8 @@ use leptos_axum::LeptosRoutes as _;
 use tower_http::set_header::SetResponseHeaderLayer;
 
 use crate::app::{
-    DENSITY_COOKIE, DENSITY_ROUTE, LOCALE_COOKIE, LOCALE_ROUTE, PAGED_LISTINGS, PAGING_COOKIE,
-    PAGING_ROUTE, SIDEBAR_COOKIE, SIDEBAR_ROUTE, SIGN_OUT_ROUTE, STYLESHEET as STYLESHEET_PATH,
-    THEME_COOKIE, THEME_ROUTE,
+    COOKIE_PREFIX, OWN_PREFERENCES, PAGED_LISTINGS, PAGING_COOKIE, PAGING_ROUTE, PREFERENCE_ROUTE,
+    RESET_ROUTE, SIDEBAR_COOKIE, SIDEBAR_ROUTE, SIGN_OUT_ROUTE, STYLESHEET as STYLESHEET_PATH,
 };
 
 /// The name cargo-leptos gives the site bundle's files under `pkg/`.
@@ -61,9 +62,8 @@ pub fn router(options: LeptosOptions) -> axum::Router {
         .route("/favicon.svg", get(favicon))
         .route("/favicon.ico", get(favicon))
         .route("/themes/{file}", get(theme_file))
-        .route(THEME_ROUTE, post(choose_theme))
-        .route(DENSITY_ROUTE, post(choose_density))
-        .route(LOCALE_ROUTE, post(choose_locale))
+        .route(PREFERENCE_ROUTE, post(choose_preference))
+        .route(RESET_ROUTE, post(reset_preferences))
         .route(PAGING_ROUTE, post(choose_paging))
         .route(SIDEBAR_ROUTE, post(choose_sidebar))
         .route(&format!("{SIGN_OUT_ROUTE}/{{brand}}"), post(sign_out))
@@ -119,15 +119,6 @@ fn css(text: &'static str) -> Response {
         .into_response()
 }
 
-/// What a theme choice posts.
-#[derive(Debug, serde::Deserialize)]
-struct Choice {
-    /// The key of the theme chosen.
-    theme: String,
-    /// The page to return to.
-    back: String,
-}
-
 /// The page `back` names when it is one of the gallery's own, plain path
 /// segments of visible ASCII, and `/` for anything else, so a post never
 /// redirects off the gallery.
@@ -142,39 +133,118 @@ pub fn return_path(back: &str) -> &str {
     if plain { back } else { "/" }
 }
 
-/// Keeps the theme a plain form post chose in its cookie and sends the
-/// browser back to the page it came from.
-async fn choose_theme(Form(choice): Form<Choice>) -> Response {
-    let Some(theme) = Theme::parse(&choice.theme) else {
+/// The value of the preference `name` as its cookie keeps it, when `value`
+/// is one the gallery offers for it, and `None` for anything else.
+#[must_use]
+pub fn preference_value(name: &str, value: &str) -> Option<String> {
+    let kept = |choice: Option<&str>| choice.map(str::to_owned);
+    if name == Theme::COOKIE {
+        kept(Theme::from_cookie(value).map(Theme::key))
+    } else if name == Density::COOKIE {
+        kept(Density::from_cookie(value).map(Density::key))
+    } else if name == Motion::COOKIE {
+        kept(Motion::from_cookie(value).map(Motion::key))
+    } else if name == WeekStart::COOKIE {
+        kept(WeekStart::from_cookie(value).map(WeekStart::key))
+    } else if name == Hints::COOKIE {
+        kept(Hints::from_cookie(value).map(Hints::key))
+    } else if name == Language::COOKIE {
+        let offered = |tag: &str| {
+            crate::locale::choices()
+                .iter()
+                .any(|locale| locale.tag() == tag)
+        };
+        Language::from_cookie(value)
+            .filter(|language| language.tag().is_none_or(offered))
+            .map(|language| language.cookie_value().to_owned())
+    } else if name == "reveal" {
+        kept(
+            ["10", "15", "30"]
+                .into_iter()
+                .find(|seconds| *seconds == value),
+        )
+    } else if name == "hide" {
+        kept(["on", "off"].into_iter().find(|state| *state == value))
+    } else {
+        None
+    }
+}
+
+/// Where a preference post returns: the page `back` names, and on Your
+/// preferences the same page saying which preference it kept.
+#[must_use]
+pub fn preference_return(back: &str, name: &str) -> String {
+    let page = return_path(back);
+    if page.contains("/preferences") {
+        format!("{page}?saved={name}")
+    } else {
+        page.to_owned()
+    }
+}
+
+/// Keeps the one preference a plain form post chose in its cookie, and
+/// sends the browser back to the page it came from.
+///
+/// The post carries `back` and one preference under its cookie's name; a
+/// switch posts `off` before its `on`, and the last value wins.
+async fn choose_preference(Form(fields): Form<Vec<(String, String)>>) -> Response {
+    let back = fields
+        .iter()
+        .rev()
+        .find(|(name, _)| name == "back")
+        .map_or("/", |(_, back)| back.as_str());
+    let chosen = fields
+        .iter()
+        .filter(|(name, _)| name != "back")
+        .collect::<Vec<_>>();
+    let Some((name, value)) = chosen.last() else {
+        return (StatusCode::BAD_REQUEST, "the post names no preference").into_response();
+    };
+    if chosen.iter().any(|(other, _)| other != name) {
+        return (StatusCode::BAD_REQUEST, "a post keeps one preference").into_response();
+    }
+    let Some(value) = preference_value(name, value) else {
         return (
             StatusCode::BAD_REQUEST,
-            "the theme is not light, dark or system",
+            "the preference or its value is not one the gallery offers",
         )
             .into_response();
     };
-    kept(THEME_COOKIE, theme.key(), &choice.back)
+    let cookie =
+        format!("{COOKIE_PREFIX}{name}={value}; Path=/; SameSite=Lax; HttpOnly; Max-Age=31536000");
+    redirect_with(&preference_return(back, name), &[cookie])
 }
 
-/// What a density choice posts.
+/// What Reset to defaults posts.
 #[derive(Debug, serde::Deserialize)]
-struct DensityChoice {
-    /// The key of the density chosen.
-    density: String,
+struct Reset {
     /// The page to return to.
     back: String,
 }
 
-/// Keeps the density a plain form post chose in its cookie and sends the
-/// browser back to the page it came from.
-async fn choose_density(Form(choice): Form<DensityChoice>) -> Response {
-    let Some(density) = Density::parse(&choice.density) else {
-        return (
-            StatusCode::BAD_REQUEST,
-            "the density is not comfortable or compact",
-        )
-            .into_response();
-    };
-    kept(DENSITY_COOKIE, density.key(), &choice.back)
+/// Clears every preference cookie, the gallery's own among them, and sends
+/// the browser back to the page it came from.
+async fn reset_preferences(Form(reset): Form<Reset>) -> Response {
+    let cleared = Preferences::COOKIES
+        .into_iter()
+        .chain(OWN_PREFERENCES)
+        .map(|name| format!("{COOKIE_PREFIX}{name}=; Path=/; SameSite=Lax; HttpOnly; Max-Age=0"))
+        .collect::<Vec<_>>();
+    redirect_with(return_path(&reset.back), &cleared)
+}
+
+/// The redirect to `location` that sets each of `cookies`.
+fn redirect_with(location: &str, cookies: &[String]) -> Response {
+    let mut response = Redirect::to(location).into_response();
+    for cookie in cookies {
+        match HeaderValue::from_str(cookie) {
+            Ok(value) => {
+                response.headers_mut().append(SET_COOKIE, value);
+            }
+            Err(_invalid) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        }
+    }
+    response
 }
 
 /// What the sidebar's Collapse or Expand posts.
@@ -204,47 +274,15 @@ async fn sign_out(Path(brand): Path<String>) -> Response {
     Redirect::to(&format!("/sign-in/{}/signed-out", brand.key())).into_response()
 }
 
-/// What a language choice posts.
-#[derive(Debug, serde::Deserialize)]
-struct LocaleChoice {
-    /// The tag of the locale chosen.
-    locale: String,
-    /// The page to return to.
-    back: String,
-}
-
-/// Keeps the locale a plain form post chose in its cookie and sends the
-/// browser back to the page it came from.
-async fn choose_locale(Form(choice): Form<LocaleChoice>) -> Response {
-    let known = crate::locale::choices()
-        .iter()
-        .any(|locale| locale.tag() == choice.locale);
-    if !known {
-        return (
-            StatusCode::BAD_REQUEST,
-            "the locale is not one the gallery offers",
-        )
-            .into_response();
-    }
-    kept(LOCALE_COOKIE, &choice.locale, &choice.back)
-}
-
 /// The redirect to `back` that keeps `value` in the cookie `name`.
 fn kept(name: &str, value: &str, back: &str) -> Response {
     let cookie = format!("{name}={value}; Path=/; SameSite=Lax; HttpOnly; Max-Age=31536000");
-    with_cookie(&cookie, back)
+    with_cookie(cookie, back)
 }
 
 /// The redirect to `back` that sets `cookie`.
-fn with_cookie(cookie: &str, back: &str) -> Response {
-    let mut response = Redirect::to(return_path(back)).into_response();
-    match HeaderValue::from_str(cookie) {
-        Ok(value) => {
-            response.headers_mut().insert(SET_COOKIE, value);
-            response
-        }
-        Err(_invalid) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-    }
+fn with_cookie(cookie: String, back: &str) -> Response {
+    redirect_with(return_path(back), &[cookie])
 }
 
 /// What a session listing's pager posts: a step carries the page beside the
@@ -277,7 +315,7 @@ async fn choose_paging(Form(choice): Form<PagingChoice>) -> Response {
         "{PAGING_COOKIE}{}={}.{}; Path=/; SameSite=Lax; HttpOnly",
         choice.listing, paging.page, paging.size
     );
-    with_cookie(&cookie, &choice.back)
+    with_cookie(cookie, &choice.back)
 }
 
 /// Wraps `router` in the browser security headers every response carries.
@@ -412,7 +450,7 @@ pub async fn main() -> ExitCode {
 mod tests {
     use leptos::nonce::Nonce;
 
-    use super::{policy, return_path};
+    use super::{policy, preference_return, preference_value, return_path};
 
     #[test]
     fn the_policy_allows_scripts_by_nonce_and_styles_from_the_gallery() {
@@ -422,6 +460,61 @@ mod tests {
         assert!(policy.contains("style-src 'self';"), "{policy}");
         assert!(!policy.contains("unsafe-inline"), "{policy}");
         assert!(!policy.contains("'unsafe-eval'"), "{policy}");
+    }
+
+    #[test]
+    fn a_preference_post_keeps_only_a_value_the_gallery_offers() {
+        assert_eq!(
+            Some(String::from("dark")),
+            preference_value("theme", "dark")
+        );
+        assert_eq!(None, preference_value("theme", "sepia"));
+        assert_eq!(
+            Some(String::from("reduce")),
+            preference_value("motion", "reduce")
+        );
+        assert_eq!(
+            Some(String::from("sunday")),
+            preference_value("week-start", "sunday")
+        );
+        assert_eq!(
+            Some(String::from("never")),
+            preference_value("hints", "never")
+        );
+        assert_eq!(
+            Some(String::from("browser")),
+            preference_value("language", "browser")
+        );
+        assert_eq!(
+            Some(String::from("qps")),
+            preference_value("language", "qps")
+        );
+        assert_eq!(
+            None,
+            preference_value("language", "nl"),
+            "a language the gallery lacks"
+        );
+        assert_eq!(Some(String::from("30")), preference_value("reveal", "30"));
+        assert_eq!(
+            None,
+            preference_value("reveal", "300"),
+            "the server bounds a reveal"
+        );
+        assert_eq!(Some(String::from("off")), preference_value("hide", "off"));
+        assert_eq!(None, preference_value("sidebar", "rail"), "no preference");
+    }
+
+    #[test]
+    fn a_preference_post_returns_saying_what_it_kept_only_on_your_preferences() {
+        assert_eq!(
+            "/ferropix/preferences?saved=reveal",
+            preference_return("/ferropix/preferences", "reveal")
+        );
+        assert_eq!("/ferrofed", preference_return("/ferrofed", "theme"));
+        assert_eq!(
+            "/",
+            preference_return("//evil.example/preferences", "theme")
+        );
     }
 
     #[test]

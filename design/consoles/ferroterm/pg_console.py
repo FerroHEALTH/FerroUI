@@ -222,7 +222,7 @@ def pref_rows(theme="system", saved=None):
 
 def preferences_page(tab="appearance", theme="system", saved=None, overlay=None, lock_dark=False):
     inner = tpl.settings_panel(pref_rows(theme, saved)[tab])
-    reset = f'<div class="fui-settings-foot"><p class="fui-small fui-muted">Each preference is its own cookie in this browser, read when each page is drawn.</p>{button("ghost", "Reset to defaults…", "rotate-ccw", small=True)}</div>'
+    reset = f'<div class="fui-settings-foot"><p class="fui-small fui-muted">Kept in this browser as cookies, read when each page is drawn. Nothing here names a patient.</p>{button("ghost", "Reset to defaults…", "rotate-ccw", small=True)}</div>'
     content = (page_heading("Your preferences", subtitle="Only for you, in this browser.")
                + f'<div class="fui-stack">{tpl.settings_tabs("Preference sections", PREF_TABS, tab, inner)}{reset}</div>')
     html = shell("Your preferences", "", content, overlay=overlay)

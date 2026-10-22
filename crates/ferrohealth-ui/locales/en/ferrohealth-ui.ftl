@@ -40,6 +40,47 @@ density-comfortable = Comfortable
 density-compact = Compact
 density-switch = Density
 
+## Your preferences
+
+motion-system = Follow the system (default)
+motion-reduce = Always reduce
+hints-wide = Wide screens with a keyboard (default)
+hints-always = All wide screens
+hints-never = Never
+week-start-language = { $weekday }, from the language (default)
+preferences-sections = Preference sections
+preferences-appearance = Appearance
+preferences-language-region = Language and region
+preferences-reading = Reading
+preferences-keyboard = Keyboard
+preferences-intro = Only for you, in this browser.
+preferences-theme-desc = Light, dark, or the one your system uses. Applies at once.
+preferences-theme-light-note = { $accent } on white
+preferences-theme-dark-note = { $accent } on ink
+preferences-theme-system-note = Follows your device
+preferences-density-desc = Compact fits more rows in every list; comfortable, the default, gives rows and forms room.
+preferences-density-comfortable-note = More room
+preferences-density-compact-note = More rows
+preferences-motion = Reduce motion
+preferences-motion-desc = Fewer animations in menus and panels.
+preferences-language-desc = The console's words. Each language is listed in its own name.
+preferences-language-browser = Follow the browser
+preferences-language-browser-note = { $language }, from your browser
+preferences-week = First day of the week
+preferences-week-desc = Follows the language unless you change it.
+preferences-hints = Shortcut hints
+preferences-hints-desc = The key caps after a label. Phones never show them.
+preferences-shortcuts = All shortcuts
+preferences-shortcuts-desc = Every shortcut of the screen you are on, in one list.
+preferences-shortcuts-open = Open the shortcut legend
+preferences-save = Save
+preferences-saved = Saved
+preferences-foot = Kept in this browser as cookies, read when each page is drawn. Nothing here names a patient.
+preferences-reset = Reset to defaults…
+preferences-reset-title = Reset your preferences?
+preferences-reset-body = Every preference on this page goes back to its default, and its cookie in this browser is cleared. The console's configuration and its records are not touched.
+preferences-reset-confirm = Reset to defaults
+
 ## Buttons and dialogs
 
 variant-primary = Primary

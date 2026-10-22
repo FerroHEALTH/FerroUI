@@ -23,6 +23,7 @@ mod fields;
 mod kbd;
 mod locale;
 mod markup;
+mod preferences;
 mod render;
 mod search;
 mod shell;

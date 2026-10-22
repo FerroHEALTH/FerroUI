@@ -364,3 +364,25 @@ pub fn DateRangePicker(
 ) -> impl IntoView {
     crate::widget::date::date_range(range)
 }
+
+/// The form of one preference in Your preferences, posting its control
+/// (the server children) and `back` to `action`: a Save button saying
+/// `save` until the page hydrates, then a post on every change, the focus
+/// back on the control of the row just `saved`. A console draws it through
+/// [`crate::view::preferences::select_preference`] and the page
+/// [`crate::view::preferences::preferences_page`].
+#[island]
+pub fn PreferenceForm(
+    /// The console's route that keeps the preference in its cookie.
+    action: String,
+    /// The page to return to.
+    back: String,
+    /// The Save button's words, in the page's locale.
+    save: String,
+    /// Whether this preference was just saved.
+    saved: bool,
+    /// The control, drawn on the server.
+    children: Children,
+) -> impl IntoView {
+    crate::widget::preference::preference_form(action, back, save, saved, children().into_any())
+}

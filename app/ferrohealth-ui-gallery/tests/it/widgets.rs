@@ -425,7 +425,8 @@ async fn the_tree_walks_by_the_keyboard_and_reads_children_on_opening() -> Resul
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn the_search_box_submits_and_the_density_switch_posts() -> Result<(), Box<dyn Error>> {
+async fn the_search_box_submits_and_the_preferences_density_posts_on_change()
+-> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
         return Ok(());
     }
@@ -439,32 +440,168 @@ async fn the_search_box_submits_and_the_density_switch_posts() -> Result<(), Box
         browser
             .at(&gallery.url("/ferroterm/tables?q=synthetic-007"))
             .await?;
-        browser.goto(&gallery.url("/ferroterm")).await?;
-        crate::journeys::hydrated_tabs(browser).await?;
-        let compact = browser
-            .element(By::XPath(
-                "//button[@name = 'density' and @value = 'compact']",
-            ))
-            .await?;
+        browser.goto(&gallery.url("/ferroterm/preferences")).await?;
+        preferences_hydrated(browser).await?;
+        let compact = density_card(browser, "compact").await?;
         browser.click_and_load(&compact).await?;
+        browser
+            .at(&gallery.url("/ferroterm/preferences?saved=density"))
+            .await?;
         browser
             .element(By::Css(r#"html[data-density="compact"]"#))
             .await?;
         browser
-            .element(By::XPath(
-                "//button[@value = 'compact' and @aria-pressed = 'true']",
-            ))
+            .element(By::Css(".fui-setting-saved[role='status']"))
             .await?;
-        let comfortable = browser
-            .element(By::XPath(
-                "//button[@name = 'density' and @value = 'comfortable']",
-            ))
-            .await?;
+        preferences_hydrated(browser).await?;
+        until("the row just saved has its choice focused", async || {
+            let focused = browser.driver().active_element().await?;
+            Ok(focused.attr("name").await?.as_deref() == Some("density")
+                && focused.attr("value").await?.as_deref() == Some("compact"))
+        })
+        .await?;
+        let comfortable = density_card(browser, "comfortable").await?;
         browser.click_and_load(&comfortable).await?;
         browser
             .element(By::Css(r#"html[data-density="comfortable"]"#))
             .await?;
         browser.console_clean("the search and the density").await
+    })
+    .await
+}
+
+/// Waits until Your preferences has hydrated: every Save button has left,
+/// since a change now posts by itself.
+async fn preferences_hydrated(browser: &Browser) -> Result<(), Box<dyn Error>> {
+    until("the preferences post on change", async || {
+        let saves = browser
+            .driver()
+            .find_all(By::Css("form.fui-preference-form > button[type='submit']"))
+            .await?;
+        for save in &saves {
+            if save.is_displayed().await? {
+                return Ok(false);
+            }
+        }
+        Ok(!saves.is_empty())
+    })
+    .await
+}
+
+/// The density preview card that chooses `density`.
+async fn density_card(browser: &Browser, density: &str) -> Result<WebElement, Box<dyn Error>> {
+    let card = browser
+        .element(By::XPath(format!(
+            "//label[contains(@class, 'fui-choice-card')][input[@name = 'density' and @value = '{density}']]"
+        )))
+        .await?;
+    browser
+        .driver()
+        .execute(
+            "arguments[0].scrollIntoView({block: 'center'});",
+            vec![card.to_json()?],
+        )
+        .await?;
+    Ok(card)
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn your_preferences_keeps_its_keyboard_tab_off_a_phone_and_its_cards_full_width()
+-> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        crate::journeys::window(browser, 390, 844).await?;
+        browser.goto(&gallery.url("/ferrobridge/preferences")).await?;
+        let keyboard = browser
+            .element(By::Css("nav.fui-tabs a[data-tab='keyboard']"))
+            .await?;
+        assert!(
+            !keyboard.is_displayed().await?,
+            "a phone has no keyboard tab (R3)"
+        );
+        let widths: Vec<f64> = serde_json::from_value(
+            browser
+                .driver()
+                .execute(
+                    "const row = document.querySelector('.fui-choice-cards').getBoundingClientRect().width; \
+                     return [row, ...[...document.querySelectorAll('.fui-choice-cards')[0].querySelectorAll('.fui-choice-card')].map(c => c.getBoundingClientRect().width)];",
+                    vec![],
+                )
+                .await?
+                .json()
+                .clone(),
+        )?;
+        let (row, cards) = widths.split_first().ok_or("no preview cards")?;
+        assert_eq!(3, cards.len(), "{widths:?}");
+        for card in cards {
+            assert!(
+                (row - card).abs() < 1.0,
+                "each theme card takes the phone's row: {widths:?}"
+            );
+        }
+        let overflow: bool = serde_json::from_value(
+            browser
+                .driver()
+                .execute(
+                    "return document.documentElement.scrollWidth > document.documentElement.clientWidth;",
+                    vec![],
+                )
+                .await?
+                .json()
+                .clone(),
+        )?;
+        assert!(!overflow, "the page reflows with no sideways scroll");
+        crate::journeys::window(browser, 1440, 900).await?;
+        browser
+            .goto(&gallery.url("/ferrobridge/preferences/keyboard"))
+            .await?;
+        assert!(
+            browser
+                .element(By::Css("nav.fui-tabs a[data-tab='keyboard']"))
+                .await?
+                .is_displayed()
+                .await?,
+            "a wide screen keeps it"
+        );
+        browser.console_clean("Your preferences").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn your_preferences_saved_mark_never_moves_its_control() -> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        crate::journeys::window(browser, 1440, 900).await?;
+        let place = async |path: &str| -> Result<Vec<f64>, Box<dyn Error>> {
+            browser.goto(&gallery.url(path)).await?;
+            preferences_hydrated(browser).await?;
+            Ok(serde_json::from_value(
+                browser
+                    .driver()
+                    .execute(
+                        "const r = document.getElementById('week-start').getBoundingClientRect(); \
+                         return [r.left + window.scrollX, r.top + window.scrollY, r.width, r.height];",
+                        vec![],
+                    )
+                    .await?
+                    .json()
+                    .clone(),
+            )?)
+        };
+        let quiet = place("/ferrofed/preferences/language").await?;
+        let saved = place("/ferrofed/preferences/language?saved=week-start").await?;
+        browser
+            .element(By::Css(".fui-setting-saved[role='status']"))
+            .await?;
+        assert_eq!(quiet, saved, "Saved has its own slot (R28)");
+        browser.console_clean("the saved mark").await
     })
     .await
 }

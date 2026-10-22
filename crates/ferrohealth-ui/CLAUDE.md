@@ -55,7 +55,7 @@ diffing, the form submitter, file inputs and the base path.
   function: `ToastRegion`, `NavDrawer`, `UserMenuButton`, `KeyboardTabs`,
   `KeyHint`, `DocumentViews`, `TabSelect`, `Search`, `MenuButton`, `Combobox`,
   `PickerField`, `ChartLegend`, `DatePicker`, `DateRangePicker`, `CopyButton`,
-  `SidePanel`. The module's `#![expect]` lines cover what
+  `SidePanel`, `PreferenceForm`. The module's `#![expect]` lines cover what
   the island macro writes (a forgotten view state, an undocumented props
   struct, a dropped `#[must_use]`).
 - `widget`: the interactive components as functions a page calls inside
