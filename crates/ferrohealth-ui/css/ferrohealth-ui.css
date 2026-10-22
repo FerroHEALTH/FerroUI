@@ -8003,11 +8003,14 @@
     stroke-width: 3;
   }
 
+  /* The ring sweeps between the seconds; reduced motion stops the sweep,
+     and the ring steps. */
   .fui-countdown-left {
     fill: none;
     stroke: var(--tone, var(--warn));
     stroke-width: 3;
     stroke-linecap: round;
+    transition: stroke-dashoffset 1s linear;
   }
 
   .fui-countdown-words {
@@ -8034,6 +8037,7 @@
      password field is never filled by the page. ---- */
   .fui-secret {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 0.5rem;
     border: 1px solid var(--edge);
     border-radius: var(--radius-card);
@@ -8083,6 +8087,26 @@
     width: fit-content;
     max-width: 100%;
     flex-wrap: wrap;
+  }
+
+  /* On a phone the choices stack whatever their number, so a secret that
+     is not set (three choices) never wraps one under two. */
+  @media (width < 40rem) {
+    .fui-secret .fui-segmented {
+      display: grid;
+      width: 100%;
+      grid-auto-flow: row;
+    }
+  }
+
+  /* The chosen choice's control follows the choices at the field's own
+     gap; Keep reveals no control, and so no gap. */
+  .fui-secret > .fui-reveal {
+    gap: 0;
+  }
+
+  .fui-secret > .fui-reveal > .fui-reveal-parts > .fui-revealed:not(:empty) {
+    margin-block-start: 0.5rem;
   }
 
   .fui-secret-control {

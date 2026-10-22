@@ -23,6 +23,7 @@
 )]
 
 mod browser;
+mod configuration;
 mod dates;
 mod http;
 mod journeys;

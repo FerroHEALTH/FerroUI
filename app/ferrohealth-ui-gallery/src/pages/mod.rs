@@ -11,6 +11,7 @@
 pub mod charts;
 pub mod clinical;
 pub mod code;
+pub mod configuration;
 pub mod dock;
 pub mod forms;
 pub mod layouts;

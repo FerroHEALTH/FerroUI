@@ -479,6 +479,8 @@ async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error
             document_views(browser).await?;
             copy_waits(browser, "file-copy").await?;
         }
+        "/configuration" => crate::configuration::config_floor(browser).await?,
+        "/configuration/provisioned" => crate::configuration::provisioned_floor(browser).await?,
         "/operations" => {
             // NOTE: leptos-ui.md §5: a text area carries its text in the server HTML, so
             // Run posts the input with no WebAssembly.

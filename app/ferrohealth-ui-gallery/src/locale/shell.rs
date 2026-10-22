@@ -34,6 +34,8 @@ messages! {
     Components = "components",
     /// `Concept`
     Concept = "concept",
+    /// `Configuration`
+    Configuration = "configuration",
     /// `Console`
     Console = "console",
     /// `Delete`

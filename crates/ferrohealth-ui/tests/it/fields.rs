@@ -71,8 +71,7 @@ fn a_tag_is_its_words_on_one_line_with_a_quiet_code_and_a_hidden_glyph() {
     );
     let locked = html(|| {
         Tag::new("Directory")
-            .locked()
-            .title("From the care services directory")
+            .locked("From the care services directory")
             .view()
     });
     assert!(

@@ -87,7 +87,19 @@ impl ActionGroup {
 /// its confirmation.
 #[must_use]
 pub fn action_button(action: Action, variant: Variant) -> AnyView {
-    let class = variant.class();
+    button_of(action, variant.class())
+}
+
+/// Returns the action `action` as [`action_button`] draws it, as a small
+/// button of `variant`, for a card's header row.
+#[must_use]
+pub fn small_action_button(action: Action, variant: Variant) -> AnyView {
+    button_of(action, variant.small())
+}
+
+/// The button [`action_button`] and [`small_action_button`] draw, with the
+/// classes `class`.
+fn button_of(action: Action, class: &'static str) -> AnyView {
     let words = action.words();
     let inside = label(action.glyph, words);
     match action.act {

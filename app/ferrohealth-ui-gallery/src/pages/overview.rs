@@ -208,7 +208,7 @@ fn marks_card() -> AnyView {
         {Tag::new(tr(Msg::FhirConnect)).code("fhirconnect").view()}
         {Tag::new(tr(Msg::ReadOperation)).code("r").view()}
         {Tag::new("1.1.0").mono().view()}
-        {Tag::new(tr(Msg::Directory)).locked().title(tr(Msg::FromDirectory)).view()}
+        {Tag::new(tr(Msg::Directory)).locked(tr(Msg::FromDirectory)).view()}
     };
     let statuses = view! {
         {status(Tone::Ok, Glyph::CIRCLE_CHECK, &tr(Msg::Serving), Some(tr(Msg::R4)))}

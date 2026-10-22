@@ -8,7 +8,8 @@
 //! They are the toast region, the keyboard tabs, the navigation drawer, the
 //! menu and listbox behind every More, row menu and select button, the
 //! combobox, the picker field, the chart legend, the copy button, the
-//! side panel, the tree, the work-list and the repeatable rows.
+//! commit-confirm countdown, the side panel, the tree, the work-list and
+//! the repeatable rows.
 //!
 //! An island is the only part of a page the browser hydrates (the Leptos
 //! book, "Guide: Islands"). Its props cross to the browser as JSON in the
@@ -102,6 +103,20 @@ pub fn KeyHint(
     words: crate::widget::copy::KeyHintWords,
 ) -> impl IntoView {
     crate::widget::copy::key_hint(key, words)
+}
+
+/// The commit-confirm countdown `countdown` (F2): the ring and the time
+/// left, counting down by the second once the page hydrates, with a polite
+/// live region at its set points. The server draws the time left, so with
+/// no WebAssembly the page shows it as it was drawn. A console draws it
+/// through [`crate::view::lifecycle::trial_actions`].
+#[island]
+pub fn CommitCountdown(
+    /// The countdown, its time left and its words
+    /// ([`crate::widget::countdown::Countdown::new`]).
+    countdown: crate::widget::countdown::Countdown,
+) -> impl IntoView {
+    crate::widget::countdown::countdown(countdown)
 }
 
 /// The copy button `id` saying `label`, putting `text` on the clipboard

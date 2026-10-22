@@ -17,6 +17,7 @@
 )]
 
 mod clinical;
+mod config;
 mod console;
 mod contrast;
 mod dock;
