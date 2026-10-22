@@ -11,6 +11,18 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- The FerroPIX brand, Plum and Iron: `style::Brand::Pix` and its theme file
+  `themes/ferropix.css`, plum `#6b21a8` in light and `#c084fc` in dark with
+  dark ink on the accent, and the two preview accents
+  (`--preview-accent-light`, `--preview-accent-dark`) the theme previews in
+  Your preferences draw (#143). `tests/it/contrast.rs` holds every pairing
+  of the brand to WCAG 2.2 AA in both themes, and the gallery shows every
+  page in the brand, light and dark. This breaks the public API: a console
+  that matches on `Brand` exhaustively adds the `Pix` arm, and
+  `Brand::ALL` is a `[Brand; 5]`.
+
 ## [0.2.2] - 2026-10-21
 
 The row depth of a hierarchy table, and two fixes FerroTERM's move onto

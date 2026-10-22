@@ -348,6 +348,7 @@ fn navigation(brand: Brand) -> [Group; 2] {
         Brand::Fed => (entries!("ferrofed"), sign_ins!("ferrofed")),
         Brand::Ehr => (entries!("ferroehr"), sign_ins!("ferroehr")),
         Brand::Term => (entries!("ferroterm"), sign_ins!("ferroterm")),
+        Brand::Pix => (entries!("ferropix"), sign_ins!("ferropix")),
     };
     [
         Group {
@@ -378,6 +379,7 @@ fn brand_switch(brand: Brand, back: &str) -> impl IntoView + use<> {
                 Brand::Fed => tr(Msg::Fed),
                 Brand::Ehr => tr(Msg::Ehr),
                 Brand::Term => tr(Msg::Term),
+                Brand::Pix => tr(Msg::Pix),
             };
             (format!("/{}{page}", each.key()), words)
         })
@@ -397,6 +399,7 @@ pub const fn brand_glyph(brand: Brand) -> Glyph {
         Brand::Fed => Glyph::USERS,
         Brand::Ehr => Glyph::HEART_PULSE,
         Brand::Term => Glyph::LIST_CHECKS,
+        Brand::Pix => Glyph::LINK,
     }
 }
 
