@@ -41,6 +41,25 @@ never publish under it.
   touches browser storage. Theme persistence, URL policy and the router base
   are the console's.
 
+## How we use Leptos
+
+The library and the consoles use Leptos 0.8 the way the Leptos book teaches
+it, in islands mode (#196): a page is server HTML, and only an island ships
+code to the browser. Where the book lags behind 0.8, the Leptos 0.8 source
+the workspace pins decides.
+
+- **The rules are `.claude/rules/leptos-ui.md`.** §14 states each Leptos rule
+  with its book chapter and 0.8 source, and §15 is the islands rules: when a
+  part is an island, its props, its children, context, locale and toasts,
+  what reaches the page, forms, and the no-WebAssembly floor.
+- **`scripts/checks/leptos-rules.sh` enforces the mechanical part in CI**
+  (rules L1 to L10, the `leptos-rules` job). Its allow file lists each
+  exception with the issue that removes it.
+- **`/new-component`** walks a component from its COMPONENTS.md id to the
+  gallery, the tests, the screenshots and the changelog.
+- **`/leptos-check`** reviews a diff against §14 and §15 before a pull
+  request opens.
+
 ## Repo map
 
 - `crates/ferrohealth-ui`: the library. `src/` (`view`, `widget`, `table`,
@@ -59,8 +78,9 @@ never publish under it.
   checks, and the sync
   from the design folders). Renders go to the ignored `design/out/`.
 - `scripts/`: `vendor/lucide.sh`, `release/` (journey tools, the gallery
-  site build, the crate publish), `checks/` (the committed guards), `gh/`
-  (the tracker helpers).
+  site build, the crate publish), `checks/` (the committed guards, the
+  Leptos rules check `leptos-rules.sh` among them), `gh/` (the tracker
+  helpers).
 - `.github/`: CI with a single required `conclusion` job, CodeQL, Scorecard,
   Dependabot, the release lane with crates.io Trusted Publishing.
 - `.claude/`: the working discipline (rules, agents, skills, hooks, memory).
@@ -105,4 +125,4 @@ ISC License, recorded beside them.
   `project-board`, `vendored-inputs`, `leptos-ui` (the component rule
   set), and `console-design` (the design library and the family rules).
 - Agents: `implementer`, `spec-researcher`. Skills: `next-task`,
-  `phase-done`, `phase-status`.
+  `phase-done`, `phase-status`, `new-component`, `leptos-check`.

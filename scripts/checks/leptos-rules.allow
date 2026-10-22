@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+# The findings scripts/checks/leptos-rules.sh allows, each with its reason
+# and the issue that removes it. A line reads:
+#   <rule> <path from the repository root> <ERE matched against the line>   # reason
+# A line goes when its issue lands; the list only shrinks.
+
+L1 crates/ferrohealth-ui/src/widget/nav.rs leptos_router::components::A   # the router link of the navigation; #196 draws it as a plain link
+L7 app/ferrohealth-ui-gallery/src/pages/forms.rs Signal::derive\(\|\|   # constants in a derived signal; #216
+L7 app/ferrohealth-ui-gallery/src/pages/layouts.rs Signal::derive\(\|\|   # a constant in a derived signal; #216
+L7 app/ferrohealth-ui-gallery/src/pages/overlays.rs Signal::derive\(\|\|   # a constant in a derived signal; #216

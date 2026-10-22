@@ -22,6 +22,18 @@ and this project adheres to
   page in the brand, light and dark. This breaks the public API: a console
   that matches on `Brand` exhaustively adds the `Pix` arm, and
   `Brand::ALL` is a `[Brand; 5]`.
+- The Leptos rules every console follows, from a full read of the Leptos
+  book checked against the Leptos 0.8 source (#204). `.claude/rules/leptos-ui.md`
+  §14 states each rule with its citation and what enforces it, and §15 is
+  the islands rules: when a part is an island, its serializable props, its
+  server children, context between islands, words as props, the toast
+  region, what reaches the page, forms through `ActionForm` in a server
+  component, and the no-WebAssembly floor. Two rules change for a console:
+  a `<textarea>` now carries its escaped text in the server HTML, and a
+  root `SharedValue` locale no longer reaches an island.
+  `scripts/checks/leptos-rules.sh` enforces the mechanical part in CI, and
+  the skills `/new-component` and `/leptos-check` walk a component and a
+  review against the rules.
 
 ## [0.2.2] - 2026-10-21
 
