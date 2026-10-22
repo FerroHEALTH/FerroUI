@@ -27,7 +27,11 @@ stale="${FERROUI_CHROME_LOCK_STALE:-3600}"
 age_of() {
   local now mtime
   now="$(date +%s)"
-  mtime="$(stat -f %m "$1" 2> /dev/null || stat -c %Y "$1" 2> /dev/null || echo "$now")"
+  # NOTE: GNU stat -f is the file-system form and accepts %m, so the GNU form goes first.
+  mtime="$(stat -c %Y "$1" 2> /dev/null || stat -f %m "$1" 2> /dev/null || true)"
+  case "$mtime" in
+    '' | *[!0-9]*) mtime="$now" ;;
+  esac
   echo $((now - mtime))
 }
 
