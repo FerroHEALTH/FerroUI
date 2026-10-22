@@ -186,7 +186,8 @@ pub(crate) fn joined(row: TabRow, panel: AnyView, class: Option<&'static str>) -
             .find(|tab| tab.key == current)
             .map(|tab| tab.href.clone())
             .unwrap_or_default();
-        view! { <crate::island::TabSelect label=label.clone() choices=choices(&tabs) chosen /> }
+        let go = tr(Text::TabGo);
+        view! { <crate::island::TabSelect label=label.clone() go choices=choices(&tabs) chosen /> }
     });
     let draft = tr(Text::TabDraft);
     let links = tabs

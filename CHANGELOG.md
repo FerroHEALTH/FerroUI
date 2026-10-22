@@ -18,8 +18,10 @@ and this project adheres to
   current one `aria-current="page"` and raised into the panel, with an
   optional count whose words name what it counts (`Tab::count`) and the
   draft badge (`Tab::draft`, `fui-tab-draft`). Past five tabs a phone shows
-  the sections as a select, the island `island::TabSelect`, which takes the
-  row's place only once it works; until then the row of links serves. A
+  the sections as a select in a GET form with a Go button, the island
+  `island::TabSelect`; choosing an option changes nothing until Go is
+  pressed (WCAG 2.2 SC 3.2.2, #239). The select takes the row's place only once
+  it works; until then the row of links serves. A
   tab keyed `keyboard` leaves the row below 40 rem. The keyboard tabs of
   `widget::tabs::tab_list` are binder tabs too, their panels the binder
   panel.

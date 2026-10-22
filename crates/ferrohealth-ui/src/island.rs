@@ -98,7 +98,7 @@ pub fn KeyHint(
 }
 
 /// The phone's select over binder tabs, named `label`, on the choice that
-/// leads to `chosen`. A console draws it through
+/// leads to `chosen`, with the submit button saying `go`. A console draws it through
 /// [`crate::view::tabs::binder`], which places it past
 /// [`crate::view::tabs::MANY`] tabs.
 #[island]
@@ -109,12 +109,14 @@ pub fn KeyHint(
 pub fn TabSelect(
     /// The tabs' name, in the page's locale.
     label: String,
+    /// The submit button's words, in the page's locale.
+    go: String,
     /// Each tab's route and words, in the page's locale.
     choices: Vec<TabChoice>,
     /// The route of the current tab.
     chosen: String,
 ) -> impl IntoView {
-    crate::widget::tabs::tab_select(label, choices, &chosen)
+    crate::widget::tabs::tab_select(label, go, choices, &chosen)
 }
 
 /// The navigation drawer `id`, named `label`, around the entries the

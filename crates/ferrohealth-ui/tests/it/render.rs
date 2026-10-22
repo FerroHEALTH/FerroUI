@@ -1286,6 +1286,18 @@ fn past_five_binder_tabs_a_phone_select_waits_disabled_for_the_webassembly() {
         "no-WebAssembly floor: the row of links serves until the select works: {page}"
     );
     assert!(
+        has(
+            &page,
+            "form",
+            &[("class", "fui-tabs-select"), ("method", "get")]
+        ),
+        "the select sits in a GET form: {page}"
+    );
+    assert!(
+        has(&page, "button", &[("type", "submit")]) && page.contains(">Go</button>"),
+        "a visible Go button leads to the tab chosen, never the select's change: {page}"
+    );
+    assert!(
         has(&page, "option", &[("value", "/t3"), ("selected", "")]),
         "{page}"
     );

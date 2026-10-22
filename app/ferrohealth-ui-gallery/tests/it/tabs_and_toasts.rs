@@ -56,7 +56,7 @@ async fn dismiss_all(browser: &Browser) -> Result<(), Box<dyn Error>> {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn a_phone_shows_many_tabs_as_a_select_that_leads_to_the_tab_chosen()
+async fn a_phone_shows_many_tabs_as_a_select_whose_go_button_leads_to_the_tab_chosen()
 -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
         return Ok(());
@@ -89,11 +89,24 @@ async fn a_phone_shows_many_tabs_as_a_select_that_leads_to_the_tab_chosen()
             !keyboard.is_displayed().await?,
             "a phone has no keyboard, so no Keyboard tab"
         );
+        // A mark on the window, which a navigation would clear.
+        read(browser, "(window.fuiStayed = true)").await?;
         SelectElement::new(&select)
             .await?
             .select_by_value("?tab=commit")
             .await?;
-        until("the select leads to the tab chosen", async || {
+        browser.settled().await?;
+        assert_eq!(
+            read(browser, "window.fuiStayed === true && !location.search").await?,
+            Value::Bool(true),
+            "choosing an option alone changes no page (WCAG 2.2 SC 3.2.2)"
+        );
+        browser
+            .element(By::Css("form.fui-tabs-select button[type='submit']"))
+            .await?
+            .click()
+            .await?;
+        until("the Go button leads to the tab chosen", async || {
             Ok(browser
                 .driver()
                 .current_url()
