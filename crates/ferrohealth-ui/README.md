@@ -40,10 +40,13 @@ crate, for a build that imports them into its Tailwind entry;
 utilities (`bg-surface-raised`, `text-muted`, `border-edge`). The stylesheet
 declares `@layer theme, base, components, utilities;`, so your utilities win.
 
-A theme file sets five properties (`--accent`, `--accent-hover`,
-`--accent-ink`, `--accent-tint`, `--focus`) in three blocks: `:root`,
-`:root[data-theme="dark"]`, and
+A theme file sets seven properties. Five (`--accent`, `--accent-hover`,
+`--accent-ink`, `--accent-tint`, `--focus`) are written in three blocks:
+`:root`, `:root[data-theme="dark"]`, and
 `@media (prefers-color-scheme: dark) { :root:not([data-theme="light"], [data-theme="dark"]) }`.
+Two (`--preview-accent-light`, `--preview-accent-dark`) are written once, in
+a closing `:root` block: the accents the theme previews in Your preferences
+draw, whatever theme the page itself is in.
 The theme choice is `data-theme` (`light`, `dark` or `system`) on `<html>`,
 which your server writes from its own cookie or setting (`theme::Theme`).
 

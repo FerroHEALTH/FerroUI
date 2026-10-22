@@ -154,10 +154,13 @@ entry, and a new role joins the contrast test in the change that adds it.
   tab, a segment, a menu item, a table row at 60%), a filled control its
   hover shade, a card that is a link its accent edge; every control shows the
   2 px focus ring in `--focus`, 2 px out.
-- A brand's theme file sets `--accent`, `--accent-hover`, `--accent-ink`,
-  `--accent-tint` and `--focus` in three blocks: `:root`,
+- A brand's theme file sets seven properties: `--accent`, `--accent-hover`,
+  `--accent-ink`, `--accent-tint` and `--focus` in three blocks (`:root`,
   `:root[data-theme="dark"]`, and the system's dark under
-  `prefers-color-scheme`. Nothing else.
+  `prefers-color-scheme`), then `--preview-accent-light` and
+  `--preview-accent-dark` once in a closing `:root` block, the accents the
+  theme previews in Your preferences draw whatever theme the page is in,
+  each the accent of its theme. Nothing else.
 - The theme is `data-theme` (`light`, `dark`, `system`) on `<html>`, written
   by the console's server from its cookie, so the first paint is right; with
   no cookie it follows the system. Every top bar carries the one theme

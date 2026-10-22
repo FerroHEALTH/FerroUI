@@ -60,7 +60,7 @@ impl Brand {
     }
 
     /// The brand's theme file: the accent of each theme over the roles of
-    /// [`STYLESHEET`].
+    /// [`STYLESHEET`], and the accents its theme previews draw.
     #[must_use]
     pub const fn theme(self) -> &'static str {
         match self {

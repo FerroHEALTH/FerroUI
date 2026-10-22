@@ -30,7 +30,8 @@ never publish under it.
 - **One stylesheet** (`css/ferrohealth-ui.css`), plain CSS in Tailwind 4's
   layer order, defining every `fui-` class a component writes, so a console
   needs no scan of the crate. A console sets its brand in a theme file
-  (`themes/*.css`): five custom properties per theme. `tests/it/contrast.rs`
+  (`themes/*.css`): seven custom properties, five per theme and the two
+  preview accents. `tests/it/contrast.rs`
   holds every role pairing of every brand to WCAG 2.2 AA.
 - **Highlighters** for YAML, JSON, XML and AQL (`highlight`), total and
   deterministic, compiled into both halves.
@@ -71,7 +72,7 @@ the workspace pins decides.
   `FERROUI_SCREENSHOTS=1`) and the images under `docs/screenshots/`.
 - `design/`: the approved console design and the source of truth for
   0.3.0 (`design/README.md`): `COMPONENTS.md` (the family rules, the
-  templates and every component spec), the console stylesheet, the five
+  templates and every component spec), the `mk-` capture scaffolding, the five
   brand themes, the reference templates and each console's page sources
   under `consoles/<console>/`, with the shared tools in `tools/` (build,
   render, the overflow, hover, contrast, selects, popups and forms

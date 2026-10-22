@@ -35,6 +35,37 @@ and this project adheres to
   the skills `/new-component` and `/leptos-check` walk a component and a
   review against the rules.
 
+### Changed
+
+- The console layer of the approved design moves into
+  `css/ferrohealth-ui.css` (#150): the class of every console component in
+  `design/COMPONENTS.md` and the family rules as CSS, in the `components`
+  layer, so a console copies no second stylesheet. `design/css/ferroui-console.css`
+  keeps only the mockups' `mk-` capture scaffolding. The sizes of type the
+  layer wrote off the scale now name a step, and every step carries its
+  leading. A console drops any copy of the design's layer it carries.
+- A brand theme file sets seven custom properties instead of five:
+  `--preview-accent-light` and `--preview-accent-dark`, each the accent of
+  its theme, in a closing `:root` block, read by the theme previews in Your
+  preferences. The stylesheet defaults them to the FerroHEALTH steel. A
+  console with its own theme file adds the two.
+- The family rules change the paint of existing classes: hover and focus
+  change paint only and move nothing (rule 3), a link in a table is ink
+  with no underline (rule 4), no key hint shows below 40 rem (rule 6),
+  comfortable is the default density and compact the preference (rule 10),
+  and a state is a shape, a colour and a word together, so a status pill's
+  dot is a diamond when degraded, a cross when unreachable and a hollow
+  ring when unknown (rule 12). A console looks at its screens.
+- Every control shows one focus ring (R18), and every popup (menu,
+  popover, listbox, date picker) is one overlay surface: a full border in
+  the strong hairline and, in dark, a ground lifted above the raised cards.
+- The form grid's fields share their label line (`align-items: start`, R11),
+  and a field holding a long token takes the row with `fui-span-row`, which
+  moves fields `view::form::columns` draws today. A console looks at its
+  forms.
+- A stacked table on a phone draws its rows as hairline-separated lines,
+  with no gap between bodies, in place of cards.
+
 ### Fixed
 
 - The gallery's state capture lists the card-header action's hover and

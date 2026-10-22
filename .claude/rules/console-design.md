@@ -8,7 +8,7 @@ paths: ["design/**", "crates/**", "app/**"]
 # The console design library and its family rules
 
 `design/` holds the approved console design (owner, 2026-10-21): the
-specification `design/COMPONENTS.md`, the console stylesheet, the five
+specification `design/COMPONENTS.md`, the capture scaffolding, the five
 brand themes, the reference templates and every page of the five console
 mockups, with the tools that build, render and check them
 (`design/README.md`). It is the source of truth for FerroUI 0.3.0. No
@@ -17,10 +17,11 @@ and WAI-ARIA 1.2 like every component (`spec-adherence.md`).
 
 ## The order of a change
 
-A component change lands in `design/COMPONENTS.md` and
-`design/css/ferroui-console.css` first, then every console is re-rendered
-and checked (`design/tools/render.sh all`, `design/tools/check.sh all`),
-then the Rust component follows. A component that differs from the design
+A component change lands in `design/COMPONENTS.md` and the crate's
+stylesheet (`crates/ferrohealth-ui/css/ferrohealth-ui.css`, which holds
+every component rule and the family rules as CSS) first, then every
+console is re-rendered and checked (`design/tools/render.sh all`,
+`design/tools/check.sh all`), then the Rust component follows. A component that differs from the design
 is a defect in the component, or a design change made in that order.
 
 ## The family rules

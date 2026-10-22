@@ -28,3 +28,10 @@
     --focus: #7dd3fc;
   }
 }
+
+/* The accents the theme previews in Your preferences draw, one per theme,
+   whatever theme the page itself is in. */
+:root {
+  --preview-accent-light: #0369a1;
+  --preview-accent-dark: #7dd3fc;
+}

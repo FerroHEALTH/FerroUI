@@ -522,14 +522,15 @@ async fn every_page_reflows_at_320_pixels_with_no_sideways_scroll() -> Result<()
                     ))
                     .await?;
                 assert!(named.is_displayed().await?, "a stacked cell is hidden");
-                // A table of several bodies stacks each body's rows as cards,
-                // the bodies spaced as its rows are.
+                // NOTE: design/COMPONENTS.md, The table, Phone; a table of several bodies stacks
+                // each body's rows as hairline-separated lines, the bodies joined as its rows are.
                 let paged = browser
                     .element(By::Css("tbody[data-page='2'] > tr"))
                     .await?;
                 assert_eq!("block", paged.css_value("display").await?);
+                assert_eq!("1px", paged.css_value("border-top-width").await?);
                 let second = browser.element(By::Css("tbody[data-page='2']")).await?;
-                assert_eq!("8px", second.css_value("margin-top").await?);
+                assert_eq!("0px", second.css_value("margin-top").await?);
             }
         }
         browser.console_clean("the reflow").await

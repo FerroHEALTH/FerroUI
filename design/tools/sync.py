@@ -8,8 +8,10 @@ The source root holds FerroUI-ontwerp/ (COMPONENTS.md, css/, themes/,
 tools/) and one <Console>-ontwerp/ per console (src/tools/*.py and the
 brand icons in src/). The sync:
 
-- copies COMPONENTS.md, css/ferroui-console.css and themes/*.css; the base
-  stylesheet stays the crate's own copy, so the library's is never copied;
+- copies COMPONENTS.md and themes/*.css; the stylesheets are never
+  copied: the component layer lives in the crate's ferrohealth-ui.css and
+  the mk- capture scaffolding in design/css/ferroui-console.css, so a
+  revised layer is merged into those two by hand, and the sync says so;
 - writes the library's helpers tpl.py, parts.py and pg_about.py into
   design/tools/ and its common.py, data.py and pages.py into
   design/templates/, with templates.py turned into templates/catalog.py;
@@ -134,7 +136,7 @@ def console_py(index_src, brand):
 
 def sync_library(lib):
     copy_text(os.path.join(lib, "COMPONENTS.md"), os.path.join(DESIGN, "COMPONENTS.md"), MD)
-    copy_text(os.path.join(lib, "css", "ferroui-console.css"), os.path.join(DESIGN, "css", "ferroui-console.css"), CSS)
+    print("sync: css/ferroui-console.css is not copied; merge its component rules into crates/ferrohealth-ui/css/ferrohealth-ui.css and its mk- rules into design/css/ferroui-console.css by hand", file=sys.stderr)
     themes = os.path.join(DESIGN, "themes")
     shutil.rmtree(themes, ignore_errors=True)
     for f in sorted(os.listdir(os.path.join(lib, "themes"))):
