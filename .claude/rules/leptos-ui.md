@@ -311,10 +311,10 @@ their words up in the browser, which linked the Fluent loader and the whole
 catalog again (49840 bytes). A build without each family showed what it
 cost: the date pickers 72105, the four mapping editors 51074, the masked
 identifiers 33665 and the concept tree 22285. With the words back as props
-and those eight islands lazy, the entry is 360405 bytes and the chunks
-296519. The forms page, which draws seven of them, loads 259542 bytes of
-chunks beside the entry, the layouts page the concept tree's 41690, and
-every other page none. The combobox, the pick-or-type field and the upload
+and those eight islands lazy, the entry is 363730 bytes and the chunks
+294040, with the pair input of #259 in the entry. The forms page, which
+draws seven of them, loads 257104 bytes of chunks beside the entry, the
+layouts page the concept tree's 41313, and every other page none. The combobox, the pick-or-type field and the upload
 field stay in the entry: lazy, they cut 43 KB from every page and added
 46 KB to the forms page, in chunks that compress worse alone. The budget
 stayed where it was.
@@ -330,7 +330,7 @@ The gallery's measures in bytes, the first three rows the spike of #196
 | v0.3.0 (c429eea) | 1668471 | 648775 | 474239 | 26531 / 6729 |
 | v0.3.1 islands, one piece (b742acc) | 2071614 | 809209 | 588808 | 28335 / 7123 |
 | Words as props again (#262) | 1934809 | 744438 | 538968 | 28337 / 7090 |
-| Entry with eight lazy islands (#262) | 1247250 | 481840 | 360405 | 29052 / 7264 |
+| Entry with eight lazy islands (#262) | 1259810 | 486607 | 363730 | 29138 / 7285 |
 
 Time to interactive on the forms page, Chrome for Testing with the CPU
 slowed 4x (the mid-tier phone rate) and the bundle served locally, the
