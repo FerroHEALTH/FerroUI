@@ -27,8 +27,19 @@ fn formats() -> Vec<(&'static str, std::borrow::Cow<'static, str>)> {
     vec![("json", tr(Msg::Json).into()), ("xml", tr(Msg::Xml).into())]
 }
 
-/// The document pane over the JSON and XML samples, with a rendered view.
+/// The document pane over the JSON and XML samples, with a rendered view,
+/// drawn by the island [`crate::islands::ObservationDocument`].
 fn document() -> AnyView {
+    card(
+        tr(Msg::DocumentPane),
+        view! { <crate::islands::ObservationDocument /> },
+    )
+    .into_any()
+}
+
+/// The document pane over the JSON and XML samples, its format and view
+/// chosen in place.
+pub(crate) fn observation_document() -> AnyView {
     let format = RwSignal::new("json");
     let text = Signal::derive(move || String::from(if format.get() == "xml" { XML } else { JSON }));
     let language = Signal::derive(move || {
@@ -45,22 +56,18 @@ fn document() -> AnyView {
         (tr(Msg::Value), tr(Msg::N725BeatsMin).into_any()),
     ])
     .into_any();
-    card(
-        tr(Msg::DocumentPane),
-        document_pane(
-            DocumentPane {
-                id: "document",
-                label: tr(Msg::Observation).into(),
-                formats: formats(),
-                format: format.into(),
-                text,
-                language,
-                rendered: Some(rendered),
-            },
-            move |key| format.set(key),
-        ),
+    document_pane(
+        DocumentPane {
+            id: "document",
+            label: tr(Msg::Observation).into(),
+            formats: formats(),
+            format: format.into(),
+            text,
+            language,
+            rendered: Some(rendered),
+        },
+        move |key| format.set(key),
     )
-    .into_any()
 }
 
 /// A panel in each language.

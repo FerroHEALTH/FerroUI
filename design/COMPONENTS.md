@@ -59,6 +59,19 @@ These hold on every page of every console. A page that breaks one is a defect.
 
 13. **Console configuration mode exists only for a product with its own configuration store.** Such a product offers one mode per deployment under a key of its own choosing (FerroFED: `config.ui = "managed" | "off"`), the core always in the file, the mode badge and the "How configuration works" dialog; the library names no key. A product without a store (FerroBRIDGE, FerroTERM, FerroEHR, whose PostgreSQL holds clinical data and never configuration) runs in file mode only: Configuration and every Settings tab are read-only views of its TOML, with one quiet line, "Set in <file> · read at start · How configuration works", and no per-row Next start markers.
 
+## Interaction
+
+Every component follows one interaction contract, so the consoles behave alike and every page keeps working when its WebAssembly has not loaded (FerroUI#196):
+
+1. **Native elements first:** `<dialog>`, the `popover` attribute, `<details>`, plain links, and GET and POST forms.
+2. **Behaviour in Rust compiled to WebAssembly:** menus and sheets (F13), keyboard tabs (R3), the date picker (R25), toasts with actions (R17), the reveal countdown (R13), live polling, topology pan and zoom (F9), work-list focus (R9), and the YAML and AQL editor (B2).
+3. **Every page works without the WebAssembly:** complete server-rendered HTML, and a link or a form behind every important action.
+4. **No hand-written JavaScript and no npm:** only the `wasm-bindgen` glue and the island loader Leptos writes. The strict CSP stays.
+
+The consoles render in **Leptos islands mode** (the Leptos book, "Guide: Islands"): the server draws every page whole, and the browser hydrates only the interactive parts, each a small island of its own. Navigation is plain links and forms, with no client router. An island's props, its words among them, are resolved on the server and are page content, so no island carries clinical data the page does not already show. Toasts come from one region island in the shell; with no WebAssembly the server draws the outcome of a form post in it.
+
+Hydrating the whole page was measured against islands on the gallery and rejected: 685903 bytes of brotli-compressed WebAssembly against 427449, and on a slowed phone profile 315 ms against 277 ms to interactive on the forms page. The gallery's budget is 552960 bytes; each console keeps its own (FerroBRIDGE: 458752). The islands router is revisited when Leptos ships it stable.
+
 ## Page templates
 
 Every page uses one of three templates, or the simple About page. Each template's parts are optional, and each part below says when it appears. The dashboard (an overview) and a query console (a workbench) are the only exceptions.

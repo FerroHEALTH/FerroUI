@@ -211,3 +211,21 @@ fn a_button_inside_a_field_keeps_its_own_width_at_the_start() {
         "a button in a field's grid would stretch across it"
     );
 }
+
+#[test]
+fn an_island_wrapper_draws_no_box_of_its_own() {
+    assert!(
+        STYLESHEET.contains("  leptos-island,\n  leptos-children {\n    display: contents;"),
+        "an island's wrapper would break the flex or grid it sits in"
+    );
+}
+
+#[test]
+fn a_cards_rhythm_reaches_through_an_islands_wrapper() {
+    assert!(
+        STYLESHEET.contains(
+            "  .fui-card > * + *,\n  .fui-card > :where(leptos-island, leptos-children) > * + *,\n  .fui-card > * + :where(leptos-island, leptos-children) > :where(:first-child) {"
+        ),
+        "the parts an island draws in a card would lose the space between them"
+    );
+}

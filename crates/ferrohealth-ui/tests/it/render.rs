@@ -7,6 +7,7 @@
 
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::icon::Glyph;
+use ferrohealth_ui::island::{KeyboardTabs, ToastRegion};
 use ferrohealth_ui::table::model::{Paging, Sort, Window};
 use ferrohealth_ui::table::view::{
     Body, Column, DataTable, data_table, data_table_unstacked, link_pager,
@@ -33,8 +34,12 @@ use ferrohealth_ui::view::tabs::{Tab, link_tabs};
 use ferrohealth_ui::view::theme_switch::{theme_switch, theme_toggle};
 use ferrohealth_ui::widget::chart::line_chart;
 use ferrohealth_ui::widget::document::{DocumentPane, document_pane_opening};
+use ferrohealth_ui::widget::editor::{Editor, code_editor};
 use ferrohealth_ui::widget::help::explained_check_field;
+use ferrohealth_ui::widget::nav::{Entry, Group, sidebar};
 use ferrohealth_ui::widget::pick_or_type::{PickOrType, Picker, pick_or_type};
+use ferrohealth_ui::widget::tabs::tab_panels;
+use ferrohealth_ui::widget::toast::{Flash, RegionWords};
 use ferrohealth_ui::widget::tree::{Tree, TreeNode, tree_view};
 use leptos::prelude::*;
 
@@ -44,6 +49,15 @@ use crate::markup::{has, tags};
 /// runs.
 fn html(view: impl FnOnce() -> AnyView) -> String {
     let owner = Owner::new();
+    owner.with(|| view().to_html())
+}
+
+/// `view` rendered to HTML in a page tree with the server's shared
+/// context, as a page draws an island that takes children.
+fn page_html(view: impl FnOnce() -> AnyView) -> String {
+    let owner = Owner::new_root(Some(std::sync::Arc::new(
+        hydration_context::SsrSharedContext::new(),
+    )));
     owner.with(|| view().to_html())
 }
 
@@ -1022,4 +1036,124 @@ fn a_row_depth_names_its_level_and_holds_at_the_deepest_step() {
             "{class} is defined"
         );
     }
+}
+
+#[test]
+fn an_editor_carries_its_text_escaped_so_a_form_posts_it_with_no_webassembly() {
+    // HTML Living Standard §13.1.2.2: a text area's text is escapable raw text.
+    let page = html(|| {
+        code_editor(
+            Editor {
+                id: "draft",
+                language: Language::Yaml,
+                text: Signal::stored(String::from("a: </textarea><b>&")),
+                marks: Signal::stored(Vec::new()),
+                editable: Signal::stored(true),
+            },
+            |_| {},
+        )
+    });
+    assert!(
+        page.contains(">a: &lt;/textarea&gt;&lt;b&gt;&amp;</textarea>"),
+        "the text area holds its text, escaped: {page}"
+    );
+}
+
+#[test]
+fn the_navigation_is_plain_links_with_the_page_marked_inside_its_drawer_island() {
+    let page = page_html(|| {
+        sidebar(
+            "sidebar",
+            "Pages",
+            vec![Group {
+                id: "nav-pages",
+                title: "Pages".into(),
+                entries: vec![
+                    Entry {
+                        href: "/files",
+                        label: "Files".into(),
+                        glyph: Glyph::DATABASE,
+                        exact: false,
+                    },
+                    Entry {
+                        href: "/about",
+                        label: "About".into(),
+                        glyph: Glyph::INFO,
+                        exact: true,
+                    },
+                ],
+            }],
+            "/files/synthetic-007",
+        )
+    });
+    assert!(
+        page.contains("<leptos-island"),
+        "the drawer is an island: {page}"
+    );
+    assert!(
+        page.contains(r#"<a href="/files" aria-current="page" class="fui-nav-entry">"#),
+        "the section of the page is marked: {page}"
+    );
+    assert!(
+        page.contains(r#"<a href="/about" class="fui-nav-entry">"#),
+        "another page is a plain link, unmarked: {page}"
+    );
+}
+
+#[test]
+fn the_keyboard_tabs_show_the_first_panel_and_hide_the_others_before_any_webassembly() {
+    // WAI-ARIA Authoring Practices 1.2, the tabs pattern.
+    let page = page_html(|| {
+        view! {
+            <KeyboardTabs
+                label=String::from("Answer")
+                prefix=String::from("answer")
+                tabs=vec![String::from("Table"), String::from("Raw")]
+            >
+                {tab_panels("answer", vec![
+                    view! { <p>"Rows"</p> }.into_any(),
+                    view! { <p>"Text"</p> }.into_any(),
+                ])}
+            </KeyboardTabs>
+        }
+        .into_any()
+    });
+    assert!(page.contains(r#"id="answer-tab-0""#), "{page}");
+    assert!(
+        page.contains(r#"aria-selected="true""#),
+        "the first tab is selected: {page}"
+    );
+    assert!(
+        page.contains(r#"id="answer-panel-0" aria-labelledby="answer-tab-0" tabindex="0" class="fui-tab-panel">"#),
+        "the first panel shows: {page}"
+    );
+    assert!(
+        page.contains(r#"id="answer-panel-1" aria-labelledby="answer-tab-1" hidden tabindex="0""#),
+        "the second panel is hidden: {page}"
+    );
+}
+
+#[test]
+fn the_toast_region_draws_the_flash_toasts_the_server_hands_it() {
+    let page = html(|| {
+        view! {
+            <ToastRegion
+                words=RegionWords { region: String::from("Notices"), dismiss: String::from("Dismiss") }
+                flash=vec![Flash { tone: Tone::Ok, text: String::from("Saved.") }]
+            />
+        }
+        .into_any()
+    });
+    assert!(
+        page.contains(r#"role="status" aria-live="polite" aria-label="Notices""#),
+        "{page}"
+    );
+    assert!(
+        page.contains(r#"<p class="fui-toast-text">Saved.</p>"#),
+        "the flash toast shows: {page}"
+    );
+    assert!(
+        page.contains("Dismiss"),
+        "its close button is named: {page}"
+    );
 }

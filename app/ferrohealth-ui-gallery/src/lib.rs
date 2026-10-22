@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The gallery of the FerroHEALTH UI components: every component in every
-//! product theme, light and dark, rendered on the server and hydrated in the
-//! browser, as the consoles render them.
+//! product theme, light and dark, rendered on the server, with its interactive
+//! components hydrated in the browser as islands, as the consoles render them.
 //!
 //! It is the library's visual review surface and its proof in CI: the
 //! journeys drive it in a browser and its screenshots show every page in
@@ -16,16 +16,21 @@
 
 pub mod app;
 pub mod data;
+pub mod islands;
 pub mod locale;
 pub mod pages;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod server;
 
-/// Attaches the browser half to the page the server rendered.
+/// Hydrates the islands of the page the server rendered, in the locale the
+/// server wrote as its `<html lang>`.
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen::prelude::wasm_bindgen]
 pub fn hydrate() {
     console_error_panic_hook::set_once();
-    leptos::mount::hydrate_body(app::App);
+    ferrohealth_ui::i18n::provide_page_locale(locale::gallery_locale(
+        &ferrohealth_ui::i18n::document_lang().unwrap_or_default(),
+    ));
+    leptos::mount::hydrate_islands();
 }

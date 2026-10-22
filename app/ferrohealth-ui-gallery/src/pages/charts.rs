@@ -27,8 +27,19 @@ fn days() -> [String; 7] {
     .map(tr)
 }
 
-/// The line chart of three synthetic series, one with a gap.
+/// The line chart of three synthetic series, one with a gap, drawn by the
+/// island [`crate::islands::RequestsChart`].
 fn lines() -> AnyView {
+    card(
+        tr(Msg::LineChart),
+        view! { <crate::islands::RequestsChart /> },
+    )
+    .into_any()
+}
+
+/// The line chart of three synthetic series, its legend showing and hiding
+/// each.
+pub(crate) fn requests_chart() -> AnyView {
     let series = |name: &str, palette: u8, values: [f64; 7]| Series {
         name: name.to_owned(),
         points: (0_u8..7)
@@ -65,7 +76,7 @@ fn lines() -> AnyView {
         y_range: None,
     };
     let shown = RwSignal::new(vec![true, true, true]);
-    card(tr(Msg::LineChart), line_chart(chart, shown)).into_any()
+    line_chart(chart, shown)
 }
 
 /// The activity line of thirty synthetic days.

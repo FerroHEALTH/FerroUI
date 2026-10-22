@@ -7,8 +7,7 @@
 //! Each button posts its theme as a plain form to the console's own route,
 //! before the page has hydrated and after, so it needs no script; the
 //! console keeps the choice and sends the browser back to `back`, which it
-//! checks is one of its own pages. A console that switches in place adds an
-//! action of its own over the same form.
+//! checks is one of its own pages.
 
 use leptos::prelude::*;
 
@@ -38,9 +37,8 @@ pub const TO_LIGHT: &str = "theme-to-light";
 /// The form holds both buttons and the stylesheet shows the one that leads
 /// away from the theme on screen, read from `data-theme` on `<html>` and,
 /// for the system theme, from `prefers-color-scheme`, so the right glyph
-/// shows on the first paint with no script and no cookie. A hydrated console
-/// that swaps the theme in place uses [`crate::widget::theme::theme_toggle`]
-/// over the same markup.
+/// shows on the first paint with no script and no cookie. The console's
+/// route keeps the choice and answers with the page in the new theme.
 #[must_use]
 pub fn theme_toggle(action: String, back: String) -> AnyView {
     let to_dark = tr(Text::ThemeToDark);

@@ -26,45 +26,54 @@ use ferrohealth_ui::widget::help::{
 use ferrohealth_ui::widget::picker::{Picker, picker_field};
 use ferrohealth_ui::widget::tree::{Tree, TreeNode, tree_view_collapsing};
 use leptos::prelude::*;
-use leptos_router::NavigateOptions;
-use leptos_router::hooks::{use_navigate, use_query_map};
+use leptos_router::hooks::use_query_map;
 
-/// The page of the brand in force, with `query`.
-fn here(query: &str) -> String {
-    let brand = crate::app::route_brand().map_or("ferrobridge", |brand| brand.key());
+/// The key of the brand the route names, FerroBRIDGE's for none.
+fn brand_key() -> String {
+    crate::app::route_brand()
+        .map_or("ferrobridge", |brand| brand.key())
+        .to_owned()
+}
+
+/// The layouts page of the brand `brand`, with `query`.
+fn here(brand: &str, query: &str) -> String {
     format!("/{brand}/layouts{query}")
 }
 
 /// A synthetic concept of the tree, a link to itself.
-fn concept(code: &str, words: &str) -> TreeNode {
+fn concept(brand: &str, code: &str, words: &str) -> TreeNode {
     TreeNode::new(code, words)
         .code(code)
-        .href(here(&format!("?concept={code}")))
+        .href(here(brand, &format!("?concept={code}")))
 }
 
 /// The synthetic hierarchy: the top read at once, a branch read when it
 /// opens.
-fn hierarchy() -> Vec<TreeNode> {
+fn hierarchy(brand: &str) -> Vec<TreeNode> {
     vec![
-        concept("SYN-100", &tr(Msg::SyntheticFinding)).children(vec![
-            concept("SYN-110", &tr(Msg::SyntheticFindingArm)),
-            concept("SYN-120", &tr(Msg::SyntheticFindingLeg)).expandable(),
+        concept(brand, "SYN-100", &tr(Msg::SyntheticFinding)).children(vec![
+            concept(brand, "SYN-110", &tr(Msg::SyntheticFindingArm)),
+            concept(brand, "SYN-120", &tr(Msg::SyntheticFindingLeg)).expandable(),
         ]),
-        concept("SYN-200", &tr(Msg::SyntheticProcedure)).expandable(),
-        concept("SYN-300", &tr(Msg::SyntheticBodySite)),
+        concept(brand, "SYN-200", &tr(Msg::SyntheticProcedure)).expandable(),
+        concept(brand, "SYN-300", &tr(Msg::SyntheticBodySite)),
     ]
 }
 
 /// The children read when the item `key` opens, the first time.
-fn read_children(nodes: &mut [TreeNode], key: &str) {
+fn read_children(brand: &str, nodes: &mut [TreeNode], key: &str) {
     for node in nodes.iter_mut() {
         if node.key == key && node.children.is_empty() {
             node.children = vec![
-                concept(&format!("{key}-1"), &tr(Msg::SyntheticChildReadOpening)),
-                concept(&format!("{key}-2"), &tr(Msg::AnotherSyntheticChild)),
+                concept(
+                    brand,
+                    &format!("{key}-1"),
+                    &tr(Msg::SyntheticChildReadOpening),
+                ),
+                concept(brand, &format!("{key}-2"), &tr(Msg::AnotherSyntheticChild)),
             ];
         } else {
-            read_children(&mut node.children, key);
+            read_children(brand, &mut node.children, key);
         }
     }
 }
@@ -84,15 +93,15 @@ fn open_in(query: Option<String>) -> BTreeSet<String> {
 
 /// The address of the layouts page with the open items `open` and the
 /// selected concept `selected`.
-fn address(open: &BTreeSet<String>, selected: Option<&str>) -> String {
+fn address(brand: &str, open: &BTreeSet<String>, selected: Option<&str>) -> String {
     let open = open
         .iter()
         .map(String::as_str)
         .collect::<Vec<_>>()
         .join(",");
     match selected {
-        Some(code) => here(&format!("?open={open}&concept={code}")),
-        None => here(&format!("?open={open}")),
+        Some(code) => here(brand, &format!("?open={open}&concept={code}")),
+        None => here(brand, &format!("?open={open}")),
     }
 }
 
@@ -101,51 +110,15 @@ fn address(open: &BTreeSet<String>, selected: Option<&str>) -> String {
 /// The tree keeps its open items in the address, so a reload or a shared
 /// link opens the same items: opening adds an item, closing removes it.
 fn browser() -> AnyView {
+    let brand = brand_key();
     let query = use_query_map();
-    let selected = Signal::derive(move || query.with(|query| query.get("concept")));
-    let opened = open_in(query.with_untracked(|query| query.get("open")));
-    let mut first = hierarchy();
-    for key in &opened {
-        read_children(&mut first, key);
-    }
-    let nodes = RwSignal::new(first);
-    let expanded = RwSignal::new(opened);
-    let navigate = use_navigate();
-    let remember = move || {
-        let url = address(
-            &expanded.get_untracked(),
-            selected.get_untracked().as_deref(),
-        );
-        navigate(
-            &url,
-            NavigateOptions {
-                replace: true,
-                scroll: false,
-                ..NavigateOptions::default()
-            },
-        );
-    };
-    let on_open = remember.clone();
-    let tree = tree_view_collapsing(
-        Tree {
-            id: "gallery-tree",
-            label: tr(Msg::SyntheticHierarchy).into(),
-            nodes: nodes.into(),
-            expanded,
-            selected,
-            on_expand: Some(Callback::new(move |key: String| {
-                nodes.update(|nodes| read_children(nodes, &key));
-                on_open();
-            })),
-            actions: None,
-        },
-        Callback::new(move |_key: String| remember()),
-    );
+    let concept = query.with_untracked(|query| query.get("concept"));
+    let open = query.with_untracked(|query| query.get("open"));
     let found = ["SYN-110", "SYN-120", "SYN-300"]
         .into_iter()
         .map(|code| {
             view! {
-                <a href=here(&format!("?concept={code}"))>
+                <a href=here(&brand, &format!("?concept={code}"))>
                     <code>{code}</code>
                 </a>
             }
@@ -161,18 +134,17 @@ fn browser() -> AnyView {
         )}
         {divided_list(Some(tr(Msg::Matches).into()), found)}
     };
-    let detail = move || {
-        let code = selected.get().unwrap_or_else(|| String::from("SYN-100"));
-        view! {
-            <h2 class="fui-card-title">{code.clone()}</h2>
-            {definitions(vec![
-                (tr(Msg::Code), view! { <code>{code}</code> }.into_any()),
-                (tr(Msg::System), String::from("http://example.org/synthetic").into_any()),
-                (tr(Msg::Status), String::from("active").into_any()),
-                (tr(Msg::Parent), or_none(String::new()).into_any()),
-            ])}
-        }
+    let code = concept.clone().unwrap_or_else(|| String::from("SYN-100"));
+    let detail = view! {
+        <h2 class="fui-card-title">{code.clone()}</h2>
+        {definitions(vec![
+            (tr(Msg::Code), view! { <code>{code}</code> }.into_any()),
+            (tr(Msg::System), String::from("http://example.org/synthetic").into_any()),
+            (tr(Msg::Status), String::from("active").into_any()),
+            (tr(Msg::Parent), or_none(String::new()).into_any()),
+        ])}
     };
+    let tree = view! { <crate::islands::ConceptTree brand concept open /> };
     card(
         tr(Msg::ThreePanesTree),
         three_panes(
@@ -184,6 +156,66 @@ fn browser() -> AnyView {
     .into_any()
 }
 
+/// The hierarchy of the brand `brand`, with the concept `concept` selected
+/// and the items `open` names open, keeping its open items in the address
+/// as they change.
+pub(crate) fn concept_tree(
+    brand: String,
+    concept: Option<String>,
+    open: Option<String>,
+) -> AnyView {
+    let selected = Signal::stored(concept);
+    let opened = open_in(open);
+    let mut first = hierarchy(&brand);
+    for key in &opened {
+        read_children(&brand, &mut first, key);
+    }
+    let nodes = RwSignal::new(first);
+    let expanded = RwSignal::new(opened);
+    let brand = StoredValue::new(brand);
+    let remember = move || {
+        let url = brand.with_value(|brand| {
+            address(
+                brand,
+                &expanded.get_untracked(),
+                selected.get_untracked().as_deref(),
+            )
+        });
+        replace_address(&url);
+    };
+    tree_view_collapsing(
+        Tree {
+            id: "gallery-tree",
+            label: tr(Msg::SyntheticHierarchy).into(),
+            nodes: nodes.into(),
+            expanded,
+            selected,
+            on_expand: Some(Callback::new(move |key: String| {
+                brand.with_value(|brand| nodes.update(|nodes| read_children(brand, nodes, &key)));
+                remember();
+            })),
+            actions: None,
+        },
+        Callback::new(move |_key: String| remember()),
+    )
+}
+
+/// Replaces the page's address with `url`, keeping the page and its
+/// scroll, so a reload or a shared link opens the same items.
+fn replace_address(url: &str) {
+    #[cfg(target_arch = "wasm32")]
+    {
+        let replaced = window().history().and_then(|history| {
+            history.replace_state_with_url(&wasm_bindgen::JsValue::NULL, "", Some(url))
+        });
+        if replaced.is_err() {
+            leptos::logging::warn!("the browser refused to keep the open items in the address");
+        }
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    let _: &str = url;
+}
+
 /// A list of value sets beside the one it opens.
 fn listing() -> AnyView {
     let items = [
@@ -192,7 +224,7 @@ fn listing() -> AnyView {
         tr(Msg::SyntheticUnits),
     ]
     .into_iter()
-    .map(|name| view! { <a href=here("")>{name}</a> }.into_any())
+    .map(|name| view! { <a href=here(&brand_key(), "")>{name}</a> }.into_any())
     .collect();
     card(
         tr(Msg::MasterDetail),
@@ -219,7 +251,16 @@ fn listing() -> AnyView {
 
 /// The runner's form: the help switch, the picker, a number, a select, a
 /// prose text area and a checkbox with help.
+///
+/// The help switch and the fields it explains share one state, so the form
+/// is the island [`crate::islands::RunnerForm`].
 fn runner_form() -> AnyView {
+    let brand = brand_key();
+    view! { <crate::islands::RunnerForm brand /> }.into_any()
+}
+
+/// The runner's form on the layouts page of the brand `brand`.
+pub(crate) fn runner_form_in(brand: &str) -> AnyView {
     let ferrohealth_ui::widget::help::HelpShown(_shown) = provide_help();
     let choices = Signal::derive(|| {
         vec![
@@ -272,7 +313,7 @@ fn runner_form() -> AnyView {
         <input id="run-inactive" name="inactive" type="checkbox" aria-describedby=help_id("run-inactive") />
     };
     view! {
-        <form method="get" action=here("") class=FORM>
+        <form method="get" action=here(brand, "") class=FORM>
             {split(view! { <h2 class="fui-card-title">{tr(Msg::ListValueSet)}</h2> }, help_switch())}
             {picker}
             {explained_field("run-count", tr(Msg::PageSize), tr(Msg::HowManyConceptsOnePage), count)}

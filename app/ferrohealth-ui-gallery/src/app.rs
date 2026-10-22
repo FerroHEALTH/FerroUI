@@ -13,6 +13,7 @@
 
 use ferrohealth_ui::i18n::{Locale, provide_locale};
 use ferrohealth_ui::icon::Glyph;
+use ferrohealth_ui::island::ToastRegion;
 use ferrohealth_ui::style::Brand;
 use ferrohealth_ui::theme::{Density, Theme};
 use ferrohealth_ui::tone::Tone;
@@ -24,7 +25,7 @@ use ferrohealth_ui::view::shell::{
 };
 use ferrohealth_ui::view::status::{banner, pill};
 use ferrohealth_ui::widget::nav::{Entry, Group, sidebar};
-use ferrohealth_ui::widget::toast::{provide_toasts, toast_region};
+use ferrohealth_ui::widget::toast::RegionWords;
 use leptos::prelude::*;
 use leptos_meta::{Stylesheet, Title, provide_meta_context};
 use leptos_router::components::{Outlet, ParentRoute, Route, Router, Routes};
@@ -142,7 +143,7 @@ pub fn document(options: LeptosOptions) -> impl IntoView {
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
                 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
                 <link rel="stylesheet" href=STYLESHEET />
-                <HydrationScripts options />
+                <HydrationScripts options islands=true />
                 <leptos_meta::MetaTags />
             </head>
             <body>
@@ -214,6 +215,9 @@ pub struct InForce(pub Theme);
 pub struct DensityInForce(pub Density);
 
 /// The root component: the routes, the toast region and the title.
+///
+/// It runs on the server alone: the gallery renders in islands mode, so
+/// the browser hydrates the islands of a page and nothing else.
 #[component]
 pub fn App() -> impl IntoView {
     provide_meta_context();
@@ -225,7 +229,6 @@ pub fn App() -> impl IntoView {
     provide_context(DensityInForce(density));
     let tag = SharedValue::new_str(locale_requested);
     provide_locale(gallery_locale(&tag));
-    let toasts = provide_toasts();
     view! {
         <Title text=product() />
         <Router>
@@ -243,7 +246,7 @@ pub fn App() -> impl IntoView {
                 </ParentRoute>
             </Routes>
         </Router>
-        {toast_region(toasts)}
+        <ToastRegion words=RegionWords::of_page() flash=Vec::new() />
     }
 }
 
@@ -423,42 +426,6 @@ fn BrandShell() -> impl IntoView {
     }
 }
 
-/// Keeps `theme`, which the toggle has set in place, in the gallery's
-/// cookie by posting it to the theme route, as the toggle's form would.
-fn keep_theme(theme: Theme) {
-    #[cfg(target_arch = "wasm32")]
-    leptos::task::spawn_local(async move {
-        use wasm_bindgen::JsValue;
-        let init = web_sys::RequestInit::new();
-        init.set_method("POST");
-        init.set_body(&JsValue::from_str(&format!(
-            "theme={}&back=%2F",
-            theme.key()
-        )));
-        let Ok(headers) = web_sys::Headers::new() else {
-            leptos::logging::warn!("the browser refused the headers of the theme post");
-            return;
-        };
-        if headers
-            .set("content-type", "application/x-www-form-urlencoded")
-            .is_err()
-        {
-            leptos::logging::warn!("the browser refused the content type of the theme post");
-            return;
-        }
-        init.set_headers(&headers);
-        let Some(window) = web_sys::window() else {
-            return;
-        };
-        let sent = window.fetch_with_str_and_init(THEME_ROUTE, &init);
-        if wasm_bindgen_futures::JsFuture::from(sent).await.is_err() {
-            leptos::logging::warn!("the theme choice was not kept: the post failed");
-        }
-    });
-    #[cfg(not(target_arch = "wasm32"))]
-    let _: Theme = theme;
-}
-
 /// The shell of `brand`'s pages, whose theme switch returns to `back`.
 fn brand_shell(brand: Brand, back: String) -> AnyView {
     let start = view! {
@@ -466,6 +433,7 @@ fn brand_shell(brand: Brand, back: String) -> AnyView {
         {lockup("/", mark(brand_glyph(brand)), brand.product(), tr(Msg::Gallery))}
     };
     let switch = brand_switch(brand, &back).into_any();
+    let nav = sidebar(SIDEBAR_ID, tr(Msg::Pages), navigation(brand).into(), &back);
     let end = view! {
         <span class="fui-wide-only">{switch}</span>
         <span class="fui-roomy-only">{pill(Tone::Ok, &tr(Msg::LibraryV017))}</span>
@@ -481,11 +449,7 @@ fn brand_shell(brand: Brand, back: String) -> AnyView {
             },
             (),
         )}
-        {ferrohealth_ui::widget::theme::theme_toggle(
-            String::from(THEME_ROUTE),
-            back,
-            Callback::new(keep_theme),
-        )}
+        {ferrohealth_ui::view::theme_switch::theme_toggle(String::from(THEME_ROUTE), back)}
     };
     let search = search_box(SearchBox {
         id: "gallery-search",
@@ -495,7 +459,6 @@ fn brand_shell(brand: Brand, back: String) -> AnyView {
         action: format!("/{}/tables", brand.key()),
         value: String::new(),
     });
-    let groups = navigation(brand);
     let page = shell(Shell {
         topbar: topbar_with(start, search, end).into_any(),
         banner: Some(
@@ -507,7 +470,7 @@ fn brand_shell(brand: Brand, back: String) -> AnyView {
             )
             .into_any(),
         ),
-        sidebar: sidebar(SIDEBAR_ID, tr(Msg::Pages), groups.into()),
+        sidebar: nav,
         content: view! { <Outlet /> }.into_any(),
         footer: footer(),
     });

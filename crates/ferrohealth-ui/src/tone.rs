@@ -8,7 +8,7 @@
 //! SC 1.4.1).
 
 /// A status tone.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub enum Tone {
     /// It works.
     Ok,

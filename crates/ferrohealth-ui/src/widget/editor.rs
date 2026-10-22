@@ -178,6 +178,13 @@ pub(crate) fn drawn(drawn: Drawn, on_input: impl Fn(String) + 'static) -> AnyVie
         })
     };
     let name = id.clone();
+    // NOTE: HTML Living Standard §13.1.2.2: a text area's text is escapable raw text, so
+    // the server writes it escaped, and a form posts it before any WebAssembly loads.
+    let first = text.with_untracked(|text| {
+        let mut out = String::with_capacity(text.len());
+        crate::highlight::escape(text, &mut out);
+        out
+    });
     view! {
         <div class="fui-editor">
             <div class="fui-editor-stack">
@@ -192,6 +199,7 @@ pub(crate) fn drawn(drawn: Drawn, on_input: impl Fn(String) + 'static) -> AnyVie
                     wrap="soft"
                     placeholder=placeholder
                     readonly=move || !editable.get()
+                    inner_html=first
                     prop:value=move || text.get()
                     on:input:target=move |event| on_input(event.target().value())
                 ></textarea>

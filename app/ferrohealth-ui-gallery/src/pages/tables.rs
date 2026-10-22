@@ -152,8 +152,18 @@ fn url_table() -> AnyView {
 }
 
 /// The same rows paged in the page's own state, never in the URL, as a
-/// screen that can show patient data pages them.
+/// screen that can show patient data pages them, drawn by the island
+/// [`crate::islands::SessionTable`].
 fn session_table() -> AnyView {
+    card(
+        tr(Msg::PagedPage),
+        view! { <crate::islands::SessionTable /> },
+    )
+    .into_any()
+}
+
+/// The rows paged in the page's own state, and their pager.
+pub(crate) fn session_rows() -> AnyView {
     let paging = RwSignal::new(Paging::default());
     let all = StoredValue::new(rows());
     let drawn = move || {
@@ -176,7 +186,7 @@ fn session_table() -> AnyView {
             )}
         }
     };
-    card(tr(Msg::PagedPage), drawn).into_any()
+    drawn.into_any()
 }
 
 /// A result set whose columns are the query's own aliases, known only once
@@ -414,7 +424,8 @@ fn open_rows(paging: Paging) -> u32 {
 }
 
 /// The pagers of a listing whose total the server does not report: as links
-/// under their own query keys, and in the page's own state.
+/// under their own query keys, and in the page's own state, the island
+/// [`crate::islands::OpenSessionPager`].
 fn open_listing() -> AnyView {
     let query = use_query_map();
     let location = use_location();
@@ -433,6 +444,19 @@ fn open_listing() -> AnyView {
             &page_href,
         )
     };
+    card(
+        tr(Msg::NoStatedTotal),
+        view! {
+            {linked}
+            <crate::islands::OpenSessionPager />
+        },
+    )
+    .into_any()
+}
+
+/// The pager of a listing with no stated total, in the page's own state.
+pub(crate) fn open_session_pager() -> AnyView {
+    let ehrs = Noun::new(message(Msg::NounEhrs));
     let paging = RwSignal::new(Paging::default());
     let kept = move || {
         let window = OpenWindow::of(paging.get(), open_rows(paging.get()));
@@ -442,14 +466,7 @@ fn open_listing() -> AnyView {
             paging,
         )
     };
-    card(
-        tr(Msg::NoStatedTotal),
-        view! {
-            {linked}
-            {kept}
-        },
-    )
-    .into_any()
+    kept.into_any()
 }
 
 /// The table while it loads, and the table with no row.

@@ -13,6 +13,35 @@ and this project adheres to
 
 ### Added
 
+- The interaction contract every component follows, written into
+  `design/COMPONENTS.md` § Interaction and the crate's `CLAUDE.md` (#196):
+  native elements first, behaviour in Rust compiled to WebAssembly, every
+  page working without the WebAssembly, and no hand-written JavaScript.
+- Leptos islands mode, the one rendering mode the library supports (#196).
+  The server draws every page whole and the browser hydrates only its
+  islands. The gallery's brotli-compressed WebAssembly falls from 685903
+  bytes hydrated to 427449, and the data its server components read no
+  longer reaches the page as hydration state. `ferrohealth_ui::island`
+  holds the ready islands: `ToastRegion`, `NavDrawer` and `KeyboardTabs`,
+  each taking its words as props. The stylesheet gives `leptos-island` and
+  `leptos-children` `display: contents`. A console turns on the `leptos`
+  feature `islands`, writes `<HydrationScripts options islands=true/>`, and
+  calls `leptos::mount::hydrate_islands()` from a browser entry that names
+  this crate.
+- `widget::toast::raise(tone, text)`, which any island calls to show a
+  toast, and `widget::toast::Flash` and `RegionWords`: the region draws the
+  flash toasts the server hands it, so a form post's outcome shows with no
+  WebAssembly.
+- `widget::tabs::tab_panels` and `tab_list`: the panels are drawn on the
+  server, every one, and stay out of the WebAssembly.
+- `widget::nav::marks`, `widget::nav::drawer`, and the `current` path
+  `sidebar` takes to mark the page.
+- `i18n::provide_page_locale` and `i18n::document_lang`, which give the
+  islands of a page the locale of its `<html lang>` for a widget that still
+  looks its words up.
+- The gallery's no-WebAssembly journey (`tests/it/no_wasm.rs`): every page
+  loaded with the bundle refused keeps its content, and its links, forms
+  and popovers still work.
 - The FerroPIX brand, Plum and Iron: `style::Brand::Pix` and its theme file
   `themes/ferropix.css`, plum `#6b21a8` in light and `#c084fc` in dark with
   dark ink on the accent, and the two preview accents
@@ -65,6 +94,15 @@ and this project adheres to
   forms.
 - A stacked table on a phone draws its rows as hairline-separated lines,
   with no gap between bodies, in place of cards.
+- `widget::nav::sidebar(id, label, groups, current)` draws plain links with
+  the page at `current` marked `aria-current="page"`, inside the
+  `NavDrawer` island, and no longer depends on `leptos_router`. A console
+  passes the request's path.
+- `widget::toast::toast_region(words, flash)` replaces the context-based
+  region; a console draws `island::ToastRegion` once in its shell.
+- `tone::Tone` is `Serialize` and `Deserialize`, so it crosses to an island.
+- The gallery's bundle budget is 552960 bytes of brotli-compressed
+  WebAssembly, down from 716800 (`.claude/rules/leptos-ui.md` §12).
 
 ### Fixed
 
@@ -74,6 +112,19 @@ and this project adheres to
   longer rejects them after a capture run (#201). The capture now refuses to
   write a state its list does not name and fails when it did not write
   every listed state.
+- The editor's text area carries its text in the page the server draws,
+  escaped, so a form posts it before or without the WebAssembly; before,
+  it arrived empty and only the highlight layer showed the text.
+
+### Removed
+
+- `widget::theme::theme_toggle`, the toggle that swapped the theme in
+  place. `view::theme_switch::theme_toggle` is the toggle: a plain form
+  post the console answers with the page in the new theme.
+- `widget::toast::Toasts`, `provide_toasts` and `use_toasts`: an island
+  raises a toast with `raise`.
+- `widget::tabs::tabs` and `widget::tabs::Panel`: draw the panels with
+  `tab_panels` inside `island::KeyboardTabs`.
 
 ## [0.2.2] - 2026-10-21
 
