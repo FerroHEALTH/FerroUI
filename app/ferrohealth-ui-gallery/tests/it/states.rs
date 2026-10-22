@@ -34,7 +34,7 @@ use crate::journeys::window;
 use crate::stack::Gallery;
 
 /// Every state, by the name its images take.
-pub(crate) const STATES: [&str; 46] = [
+pub(crate) const STATES: [&str; 48] = [
     "hover-nav",
     "focus-nav",
     "hover-stat",
@@ -49,6 +49,8 @@ pub(crate) const STATES: [&str; 46] = [
     "hover-tab",
     "focus-keyboard-tabs",
     "hover-row",
+    "focus-row",
+    "focus-sort",
     "editor-diagnostic",
     "drop-empty",
     "drop-over",
@@ -316,6 +318,16 @@ async fn tables_and_editor(
         .await?;
     hover(browser, &row).await?;
     shot_of(browser, brand, theme, "hover-row", &region).await?;
+    away(browser).await?;
+    let link = row.find(By::Css("a.fui-row-link")).await?;
+    focus(browser, &link).await?;
+    shot_of(browser, brand, theme, "focus-row", &row).await?;
+    let header = browser.element(By::XPath("(//table)[1]/thead/tr")).await?;
+    let sort = header
+        .find(By::XPath(".//th[contains(., 'Lines')]//button"))
+        .await?;
+    focus(browser, &sort).await?;
+    shot_of(browser, brand, theme, "focus-sort", &header).await?;
     browser
         .goto(&gallery.url(&format!("/{}/forms", brand.key())))
         .await?;

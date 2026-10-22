@@ -146,13 +146,15 @@ Measured on the FerroPIX identifier domains table at 1440 px. Every console's ta
 |---|---|
 | Card | The card edge is the only frame. A table inside a card or a tab panel has no box of its own: no border, radius or shadow. Its last row has no bottom line. |
 | Card header row | 12 px 16 px padding, a hairline under it; the title at weight 600, the count muted after a middle dot. |
-| Column header | 35 px high, cells 8 px 12 px, 13 px text at weight 600 in the muted ink on `--surface-sunken`. The sort arrow is inline after the label. A sort is a button that sorts in place, never a link. |
+| Column header | 35 px high, cells 8 px 12 px, 13 px text at weight 600 in the muted ink on `--surface-sunken`. The sort arrow is inline after the label. A sort is a `<button>` in a `GET` form that carries the sort (`sort`, `order`) and the rest of the listing's query, so a page sorts with no script; never a link (owner, 2026-10-22). A listing that keeps its state out of the URL posts the same fields. |
 | Body rows | 43 px high, cells 8 px 12 px, hairline separators only, no vertical borders. |
 | Numbers | Right-aligned, tabular figures. |
 | Row menu column | Narrow, right-aligned, the ⋯ icon button. |
 | Excluded row | Muted (`is-excluded`). The State column says so; the name carries no second tag. |
-| Phone (below 40 rem) | Rows stack into cards (`fui-table-stack`). A cell's quiet note takes its own line, and ids and changed values never break inside themselves. A title cell with a second line (`fui-row-sub`) wraps across the card, and an empty cell takes no line. Inside a card or a panel the stacked rows are hairline-separated lines that keep the panel's inset, never cards in a card; a group row is a full-width band; the row ⋯ sits on the row's first line; a count cell carries its noun (`data-unit`). |
+| Phone (below 40 rem) | Rows stack into cards (`fui-table-stack`). A cell's quiet note takes its own line, and ids and changed values never break inside themselves. A title cell with a second line (`fui-row-sub`) wraps across the card, and an empty cell takes no line. Inside a card or a panel the stacked rows are hairline-separated lines that keep the panel's inset, never cards in a card; a group row is a full-width band; the row ⋯ sits on the row's first line; a row's checkbox sits on its first line, at its start; a count cell carries its noun (`data-unit`). A column marked `data-role="wide"` leaves the phone row, so it holds only what a phone reader finds again on the row's own page: never a selection, a state or the row's name. |
 | Group row | `tr.fui-group-row` in the sunken band; its links follow rule 4. |
+| Find field | The toolbar's find field is a form the server answers: a `GET` with the words in the query, or a `POST` when the words can be clinical. Enter submits it, and it filters the whole listing, never only the rows already in the page. |
+| Pager | In the card foot. A listing that keeps its position out of the URL pages through a `POST` form: each step and each size is a submit button carrying `page` and `size`, so no position reaches a URL or the history. |
 | Empty list | The title-row primary stays. The empty state offers the same action as a quiet text link ("Add the first organisation"), never a second primary button. |
 
 ## Components

@@ -93,6 +93,24 @@ and this project adheres to
 - The gallery's Page templates group: every template, the 403 and 404 in
   the shell and the 500 in the centred layout, in every brand.
 
+- The table's cell helpers and a stated order (#155): `title_cell`,
+  `row_link`, `cell`, `count_cell`, `menu_cell`, `check_cell` and
+  `group_row` write each cell's label and its `Role` (`Column::role`), so a
+  row takes the design's phone form; `EXCLUDED` mutes an excluded row.
+  `Sorting::stated` puts an order of several keys on the leading column's
+  header, and `view::template::list::ListCard::order` states it in the
+  card's header row beside the count. The Lucide
+  `ellipsis` glyph (`Glyph::ELLIPSIS`) draws the row menu's ⋯.
+- The find field as a form the server answers (#211):
+  `table::filter::find_form` is the toolbar's find field, a `GET` form whose
+  words land in the query, or a `POST` form when the words can be clinical.
+  It carries the rest of the listing's query (`table::model::fields`) and
+  works with no WebAssembly.
+- The `POST` pager (#215): `table::pager::post_pager` and `post_open_pager`
+  page a listing that keeps its position out of the URL through a form whose
+  buttons carry `page` and `size` to the console's route (`PostTo`), so the
+  position never reaches a URL or the history and no row is an island prop.
+
 ### Changed
 
 - `view::surface::page_heading` draws the trail's back arrow, so below
@@ -117,6 +135,28 @@ and this project adheres to
 - `.claude/rules/leptos-ui.md` §11: an editor's title is "New <thing>" or
   "Edit", and its trail ends with the resource.
 
+- A sortable header is a submit button in a `GET` form that carries `sort`,
+  `order` and the rest of the listing's query, never a link (#155), so a
+  page sorts with no script. This breaks the public API: `DataTable`'s
+  `sort` and `sort_href` give way to `sorting: Sorting`, which names the
+  sort in force, the form's action and the fields it carries; a listing in
+  session state posts the same fields. A console passes
+  `Sorting::default()` for a table that does not sort, and reads `sort` and
+  `order` from the query or its handler as before.
+- The table follows the design's measures (#155): inside a card or a panel
+  its rows are hairline lines on a phone, a list card's row is the compact
+  work-list line (the checkbox, the name and the ⋯ on the first line, the
+  facts on the second, a wide column left out), a count carries its noun,
+  and a name is ink with no underline while the whole row is the target. A
+  row's checkbox sits on its row's first line on a phone instead of
+  leaving the row, and a menu or checkbox column's header is hidden to the
+  eye. A console moves its rows onto the cell helpers or writes the same
+  `data-label`, `data-role` and `data-unit`.
+- The pagers move from `table::view` to `table::pager` (`Step`,
+  `step_label`, `Listing`, `pager`, `open_pager`, `link_pager`,
+  `link_open_pager`). A console changes its imports.
+- `widget::filter::table_filter` is only for rows that are already island
+  data; a listing's filter is `table::filter::find_form`.
 - The console layer of the approved design moves into
   `css/ferrohealth-ui.css` (#150): the class of every console component in
   `design/COMPONENTS.md` and the family rules as CSS, in the `components`
@@ -206,6 +246,10 @@ and this project adheres to
   raises a toast with `raise`.
 - `widget::tabs::tabs` and `widget::tabs::Panel`: draw the panels with
   `tab_panels` inside `island::KeyboardTabs`.
+- `widget::pager::session_pager` and `session_open_pager` (#215): their
+  buttons paged only with the WebAssembly loaded and needed the listing's
+  rows as island data. A console pages a session listing with
+  `table::pager::post_pager` and keeps the position in its session.
 
 ## [0.2.2] - 2026-10-21
 

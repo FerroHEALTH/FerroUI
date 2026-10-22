@@ -12,7 +12,7 @@
 use leptos::prelude::*;
 
 use crate::i18n::{Text, tr};
-use crate::table::view::{Body, Column, DataTable, data_table};
+use crate::table::view::{Body, Column, DataTable, Sorting, data_table};
 
 /// One setting's change.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -87,8 +87,7 @@ pub fn change_table(caption: impl Into<String>, changes: &[Change]) -> AnyView {
     data_table(DataTable {
         caption: &caption,
         columns: &columns(),
-        sort: None,
-        sort_href: &|_| String::new(),
+        sorting: Sorting::default(),
         body: Body::Rows(rows),
     })
     .into_any()

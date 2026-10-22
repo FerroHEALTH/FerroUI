@@ -134,8 +134,9 @@ pub enum StateSource {
     /// before the page hydrates.
     #[default]
     Url,
-    /// In the page's own state, never in a URL or the history: for a screen
-    /// that can show patient data.
+    /// Out of the URL and the history: the listing's forms post it and the
+    /// console keeps it in its session, for a screen that can show patient
+    /// data.
     Session,
 }
 
@@ -532,6 +533,17 @@ pub fn href(path: &str, query: &ParamsMap) -> String {
     format!("{path}{}", query.to_query_string())
 }
 
+/// The keys and values of `query` in order, for the hidden fields of a form
+/// that keeps the rest of a listing's query when it submits (a sort that
+/// keeps the filter and the size).
+#[must_use]
+pub fn fields(query: &ParamsMap) -> Vec<(String, String)> {
+    query
+        .into_iter()
+        .map(|(key, value)| (key.to_string(), value.to_owned()))
+        .collect()
+}
+
 /// The columns of `columns` that some row of `rows` fills, in their order.
 ///
 /// A table then draws no column that shows nothing in every row. `filled`
@@ -719,6 +731,20 @@ mod tests {
             "{link}"
         );
         assert!(link.contains("filter=a%20b%26c"), "{link}");
+    }
+
+    #[test]
+    fn the_fields_of_a_query_keep_its_keys_values_and_order() {
+        let mut query = ParamsMap::new();
+        query.insert("q", String::from("a b&c"));
+        query.insert("size", String::from("50"));
+        assert_eq!(
+            vec![
+                (String::from("q"), String::from("a b&c")),
+                (String::from("size"), String::from("50")),
+            ],
+            super::fields(&query)
+        );
     }
 
     #[test]

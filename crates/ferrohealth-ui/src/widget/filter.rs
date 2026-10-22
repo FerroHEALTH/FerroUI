@@ -1,11 +1,16 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The filter over the rows of the current page.
+//! The in-place filter over rows that are already in the browser.
 //!
-//! A search box whose words narrow what the page shows, with a live count of
-//! the rows kept. The filter names no patient and lives in the page alone; a
-//! filter the server applies is a form of the console's own.
+//! A search box whose words narrow the rows a widget already holds as its
+//! own data, with a live count of the rows kept. It is only for rows that
+//! are island data anyway (a picker's options, a tree's loaded level),
+//! never for a listing: a listing's filter is
+//! [`crate::table::filter::find_form`], a form the server answers, so it
+//! works with no WebAssembly and no listing row reaches the page as island
+//! props. Without the WebAssembly this filter does nothing, so the rows it
+//! narrows must read whole without it.
 
 use leptos::prelude::*;
 

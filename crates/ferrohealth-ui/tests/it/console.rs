@@ -8,7 +8,7 @@
 use ferrohealth_ui::i18n::Message;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::table::model::{Noun, OpenWindow, Paging, Window};
-use ferrohealth_ui::table::view::{Listing, link_open_pager, link_pager};
+use ferrohealth_ui::table::pager::{Listing, link_open_pager, link_pager};
 use ferrohealth_ui::view::dialog::{Confirmation, confirm_dialog};
 use ferrohealth_ui::view::surface::{
     Crumb, Header, Mode, card_action, editor_heading, editor_title, titled_panel,

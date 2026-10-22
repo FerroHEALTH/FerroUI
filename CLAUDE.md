@@ -29,7 +29,8 @@ never publish under it.
   effects behind `#[cfg(target_arch = "wasm32")]`. Every page works with no
   WebAssembly: a link or a form is behind every important action.
 - **One table model** (`table`): page and size read defensively and clamped,
-  the row window, the range label, `aria-sort` sorting, and the state source
+  the row window, the range label, sorting, filtering and paging by links
+  and forms that work with no script, and the state source
   `Url` or `Session` (a screen that can show patient data keeps its position
   out of the URL).
 - **One stylesheet** (`css/ferrohealth-ui.css`), plain CSS in Tailwind 4's

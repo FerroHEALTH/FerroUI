@@ -15,6 +15,7 @@ use ferrohealth_ui::i18n::{Locale, provide_locale};
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::island::ToastRegion;
 use ferrohealth_ui::style::Brand;
+use ferrohealth_ui::table::model::Paging;
 use ferrohealth_ui::theme::{Density, Theme};
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::menu::{OperatorMenu, operator_menu};
@@ -66,6 +67,18 @@ pub const LOCALE_ROUTE: &str = "/locale";
 /// The name of the cookie the language choice is kept in.
 pub const LOCALE_COOKIE: &str = "gallery-locale";
 
+/// The path of the route a session listing's pager posts its page and size
+/// to.
+pub const PAGING_ROUTE: &str = "/paging";
+
+/// The listings that keep their position in the gallery's session, each
+/// under the cookie its key names after [`PAGING_COOKIE`].
+pub const PAGED_LISTINGS: [&str; 2] = ["files", "ehrs"];
+
+/// The prefix of the cookie a session listing's position is kept in, for
+/// the browser's session alone and never in a URL.
+pub const PAGING_COOKIE: &str = "gallery-paging-";
+
 /// The id of the navigation, which the drawer button opens.
 const SIDEBAR_ID: &str = "sidebar";
 
@@ -106,6 +119,34 @@ pub fn density_of(cookies: &str) -> Density {
 #[must_use]
 pub fn locale_of(cookies: &str) -> Locale {
     gallery_locale(cookie(cookies, LOCALE_COOKIE).unwrap_or_default())
+}
+
+/// The paging of the session listing `listing` that the `Cookie` header
+/// value `cookies` keeps, as `<page>.<size>`, the first page for none.
+#[must_use]
+pub fn paging_of(cookies: &str, listing: &str) -> Paging {
+    let kept = cookie(cookies, &format!("{PAGING_COOKIE}{listing}"))
+        .and_then(|value| value.split_once('.'));
+    Paging::read(kept.map(|(page, _)| page), kept.map(|(_, size)| size))
+}
+
+/// The paging of the session listing `listing` the request keeps.
+///
+/// The tables page is server HTML with no island around its listings, so
+/// only the server draws it and reads the cookie.
+#[must_use]
+pub fn session_paging(listing: &'static str) -> Paging {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        paging_of(&request_cookies(), listing)
+    }
+    // NOTE: no specification governs this: our own design; the browser never draws
+    // a server-only page, so its half names the first page.
+    #[cfg(target_arch = "wasm32")]
+    {
+        let _: &str = listing;
+        Paging::default()
+    }
 }
 
 /// The value of the cookie `name` in the `Cookie` header value `cookies`.

@@ -19,6 +19,7 @@ use axum::middleware::Next;
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
 use ferrohealth_ui::style::{Brand, STYLESHEET};
+use ferrohealth_ui::table::model::Paging;
 use ferrohealth_ui::theme::{Density, Theme};
 use http::header::{
     CACHE_CONTROL, CONTENT_SECURITY_POLICY, CONTENT_TYPE, REFERRER_POLICY, SET_COOKIE,
@@ -31,8 +32,8 @@ use leptos_axum::LeptosRoutes as _;
 use tower_http::set_header::SetResponseHeaderLayer;
 
 use crate::app::{
-    DENSITY_COOKIE, DENSITY_ROUTE, LOCALE_COOKIE, LOCALE_ROUTE, STYLESHEET as STYLESHEET_PATH,
-    THEME_COOKIE, THEME_ROUTE,
+    DENSITY_COOKIE, DENSITY_ROUTE, LOCALE_COOKIE, LOCALE_ROUTE, PAGED_LISTINGS, PAGING_COOKIE,
+    PAGING_ROUTE, STYLESHEET as STYLESHEET_PATH, THEME_COOKIE, THEME_ROUTE,
 };
 
 /// The name cargo-leptos gives the site bundle's files under `pkg/`.
@@ -62,6 +63,7 @@ pub fn router(options: LeptosOptions) -> axum::Router {
         .route(THEME_ROUTE, post(choose_theme))
         .route(DENSITY_ROUTE, post(choose_density))
         .route(LOCALE_ROUTE, post(choose_locale))
+        .route(PAGING_ROUTE, post(choose_paging))
         .leptos_routes_with_context(&options, routes, provide_request_nonce, {
             let options = options.clone();
             move || crate::app::document(options.clone())
@@ -200,14 +202,52 @@ async fn choose_locale(Form(choice): Form<LocaleChoice>) -> Response {
 /// The redirect to `back` that keeps `value` in the cookie `name`.
 fn kept(name: &str, value: &str, back: &str) -> Response {
     let cookie = format!("{name}={value}; Path=/; SameSite=Lax; HttpOnly; Max-Age=31536000");
+    with_cookie(&cookie, back)
+}
+
+/// The redirect to `back` that sets `cookie`.
+fn with_cookie(cookie: &str, back: &str) -> Response {
     let mut response = Redirect::to(return_path(back)).into_response();
-    match HeaderValue::from_str(&cookie) {
+    match HeaderValue::from_str(cookie) {
         Ok(value) => {
             response.headers_mut().insert(SET_COOKIE, value);
             response
         }
         Err(_invalid) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }
+}
+
+/// What a session listing's pager posts: a step carries the page beside the
+/// size in force, a size the first page beside the size chosen.
+#[derive(Debug, serde::Deserialize)]
+struct PagingChoice {
+    /// The key of the listing paged, one of [`PAGED_LISTINGS`].
+    listing: String,
+    /// The 1-based page asked for, read defensively.
+    page: String,
+    /// The page size asked for, read defensively and clamped.
+    size: String,
+    /// The page to return to.
+    back: String,
+}
+
+/// Keeps the position a session listing's pager posted in a cookie that
+/// lasts the browser's session, never in a URL, and sends the browser back
+/// to the page, which the server draws at that position.
+async fn choose_paging(Form(choice): Form<PagingChoice>) -> Response {
+    if !PAGED_LISTINGS.contains(&choice.listing.as_str()) {
+        return (
+            StatusCode::BAD_REQUEST,
+            "the listing is not one the gallery pages in its session",
+        )
+            .into_response();
+    }
+    let paging = Paging::read(Some(&choice.page), Some(&choice.size));
+    let cookie = format!(
+        "{PAGING_COOKIE}{}={}.{}; Path=/; SameSite=Lax; HttpOnly",
+        choice.listing, paging.page, paging.size
+    );
+    with_cookie(&cookie, &choice.back)
 }
 
 /// Wraps `router` in the browser security headers every response carries.

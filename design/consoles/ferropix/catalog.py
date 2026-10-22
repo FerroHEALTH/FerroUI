@@ -176,13 +176,11 @@ def queue_rows(focused=None, hover=None, kb_focus=None, selected=(), menu_open=N
         tone = "neutral" if deferred else GRADE_TONE[p["grade"]]
         gp = '<span class="fui-muted">Deferred</span>' if deferred else pill(GRADE_TONE[p["grade"]], p["grade"])
         box = (
-            f'<td class="fui-row-check" data-role="wide"><input type="checkbox" aria-label="Select {e(a)} and {e(b)}"{" checked" if i in selected else ""} /></td>'
+            f'<td class="fui-row-check" data-role="check"><input type="checkbox" aria-label="Select {e(a)} and {e(b)}"{" checked" if i in selected else ""} /></td>'
             if checks else ""
         )
         href = pair_href(p)
         title_a = f'<a class="fui-row-link" href="{href}">{e(a)}</a>' if href else e(a)
-        if selecting:
-            title_a = (f'<input type="checkbox" class="fui-narrow-only" aria-label="Select {e(a)} and {e(b)}"{" checked" if i in selected else ""} /> ' + title_a)
         wait = (f'<span class="fui-time" title="Deferred: back in the queue on {p["back"]}">back {p["back"]}</span>' if deferred
                 else f'<span class="fui-time">{p["wait"]}</span>')
         out.append(
@@ -359,7 +357,7 @@ def page_queue_no_match():
 
 def page_queue_loading():
     rows = "".join(
-        '<tr aria-hidden="true"><td class="fui-row-check" data-role="wide"><span class="fui-skeleton mk-w100 mk-sk-box"></span></td>'
+        '<tr aria-hidden="true"><td class="fui-row-check" data-role="check"><span class="fui-skeleton mk-w100 mk-sk-box"></span></td>'
         f'<th data-role="title">{skeleton_lines([70])}</th><td data-role="title-2">{skeleton_lines([60])}</td>'
         f'<td data-role="wide">{skeleton_lines([80])}</td><td data-role="meta-1">{skeleton_lines([70])}</td>'
         f'<td data-role="meta-2">{skeleton_lines([50])}</td><td data-role="meta-back">{skeleton_lines([40])}</td><td></td></tr>'

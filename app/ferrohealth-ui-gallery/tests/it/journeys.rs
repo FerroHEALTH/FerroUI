@@ -240,7 +240,7 @@ async fn the_editor_keeps_every_byte_typed_and_a_diagnostic_leads_to_its_line()
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn the_url_pager_and_sort_are_links_and_the_session_pager_stays_out_of_the_url()
+async fn the_url_pager_is_links_the_sort_a_get_form_and_the_session_pager_posts()
 -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
         return Ok(());
@@ -258,9 +258,8 @@ async fn the_url_pager_and_sort_are_links_and_the_session_pager_stays_out_of_the
             region.rect().await?.height >= table.rect().await?.height,
             "the table box clips its rows"
         );
-        let next = By::XPath(
-            "//nav[@aria-label = 'Pages of the mapping files']//a[contains(., 'Next')]",
-        );
+        let next =
+            By::XPath("//nav[@aria-label = 'Pages of the mapping files']//a[contains(., 'Next')]");
         browser.element(next).await?.click().await?;
         until("the page is in the URL", async || {
             Ok(browser
@@ -272,8 +271,9 @@ async fn the_url_pager_and_sort_are_links_and_the_session_pager_stays_out_of_the
         })
         .await?;
         browser.text("p", "26-50 of 137").await?;
+        // design/COMPONENTS.md, § The table: a sort is a button in a GET form.
         browser
-            .element(By::XPath("//th[contains(., 'Lines')]//a"))
+            .element(By::XPath("(//table)[1]//th[contains(., 'Lines')]//button"))
             .await?
             .click()
             .await?;
@@ -287,29 +287,37 @@ async fn the_url_pager_and_sort_are_links_and_the_session_pager_stays_out_of_the
                 "//th[@aria-sort = 'ascending' and contains(., 'Lines')]",
             ))
             .await?;
-        let before = browser.driver().current_url().await?;
-        let last = By::XPath(
-            "//nav[@aria-label = 'Pages of the mapping files, in the page']//button[contains(., 'Last')]",
-        );
-        until("the session pager moves to the last page", async || {
-            browser.driver().find(last.clone()).await?.click().await?;
-            Ok(!browser
-                .driver()
-                .find_all(By::XPath("//p[contains(., '126-137 of 137')]"))
-                .await?
-                .is_empty())
-        })
-        .await?;
-        let session_rows = By::XPath("(//table)[2]/tbody/tr");
-        assert_eq!(12, browser.driver().find_all(session_rows).await?.len());
-        assert_eq!(
-            before,
-            browser.driver().current_url().await?,
-            "the session pager puts no position in the URL"
-        );
-        browser.console_clean("the pagers").await
+        browser.console_clean("the URL pager and the sort").await?;
+        session_pager_posts(browser, &gallery).await?;
+        browser.console_clean("the session pager").await
     })
     .await
+}
+
+/// Pages the session listing to its last page through its `POST` form, and
+/// checks that neither the address nor the history names the position.
+async fn session_pager_posts(browser: &Browser, gallery: &Gallery) -> Result<(), Box<dyn Error>> {
+    browser.goto(&gallery.url("/ferrobridge/tables")).await?;
+    let before = browser.driver().current_url().await?;
+    let last = By::XPath(
+        "//nav[@aria-label = 'Pages of the mapping files, in the page']//button[contains(., 'Last')]",
+    );
+    browser.element(last).await?.click().await?;
+    browser.text("p", "126-137 of 137").await?;
+    let session_rows = By::XPath("(//table)[2]/tbody/tr");
+    assert_eq!(12, browser.driver().find_all(session_rows).await?.len());
+    assert_eq!(
+        before,
+        browser.driver().current_url().await?,
+        "the session pager puts no position in the URL"
+    );
+    browser.driver().back().await?;
+    let earlier = browser.driver().current_url().await?;
+    assert!(
+        !earlier.as_str().contains("page=") && !earlier.as_str().contains("size="),
+        "no entry of the history names the position: {earlier}"
+    );
+    Ok(())
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -511,15 +519,57 @@ async fn every_page_reflows_at_320_pixels_with_no_sideways_scroll() -> Result<()
                     );
                 }
                 let row = browser
-                    .element(By::XPath("(//table)[1]/tbody/tr[1]"))
+                    .element(By::XPath(
+                        "(//table[not(ancestor::*[contains(@class, 'fui-worklist')])])[1]/tbody/tr[1]",
+                    ))
                     .await?;
                 assert_eq!("block", row.css_value("display").await?);
+                // NOTE: design/COMPONENTS.md, The table, Phone; in a list card the row is the
+                // work-list line: the name and the row menu first, then the facts.
+                let line = browser
+                    .element(By::XPath("(//table)[1]/tbody/tr[1]"))
+                    .await?;
+                assert_eq!("flex", line.css_value("display").await?);
                 let named = browser
                     .element(By::XPath(
                         "(//table)[1]/tbody/tr[1]/td[@data-label = 'Lines']",
                     ))
                     .await?;
                 assert!(named.is_displayed().await?, "a stacked cell is hidden");
+                let wide = browser
+                    .element(By::XPath(
+                        "(//table)[1]/tbody/tr[1]/td[@data-role = 'wide']",
+                    ))
+                    .await?;
+                assert!(!wide.is_displayed().await?, "a wide cell leaves the phone row");
+                let title = browser
+                    .element(By::XPath("(//table)[1]/tbody/tr[1]/th"))
+                    .await?
+                    .rect()
+                    .await?;
+                let menu = browser
+                    .element(By::XPath("(//table)[1]/tbody/tr[1]/td[@data-role = 'menu']"))
+                    .await?
+                    .rect()
+                    .await?;
+                assert!(
+                    menu.y < title.y + title.height,
+                    "the row menu sits on the row's first line"
+                );
+                let check = browser
+                    .element(By::XPath("(//table)[3]/tbody/tr[2]/td[@data-role = 'check']"))
+                    .await?;
+                assert!(check.is_displayed().await?, "a phone row keeps its checkbox");
+                let checked = check.rect().await?;
+                let named_row = browser
+                    .element(By::XPath("(//table)[3]/tbody/tr[2]/th"))
+                    .await?
+                    .rect()
+                    .await?;
+                assert!(
+                    checked.y < named_row.y + named_row.height && checked.x < named_row.x,
+                    "the checkbox leads the row's first line"
+                );
                 // NOTE: design/COMPONENTS.md, The table, Phone; a table of several bodies stacks
                 // each body's rows as hairline-separated lines, the bodies joined as its rows are.
                 let paged = browser
@@ -1123,10 +1173,12 @@ async fn a_timestamp_keeps_one_line_in_tables_cards_and_facts_in_every_brand()
                     browser.element(By::Css("time.fui-time")).await?;
                     // A value broken over lines draws one box per line; each
                     // must keep inside the card, row or definition it sits in.
+                    // A wide column a phone row leaves out draws no box at all.
                     let (count, broken, outside, page, view): (usize, Vec<String>, Vec<String>, f64, f64) =
                         measure(
                             browser,
-                            r"const times = Array.from(document.querySelectorAll('time.fui-time'));
+                            r"const times = Array.from(document.querySelectorAll('time.fui-time'))
+                              .filter((time) => time.checkVisibility());
                             const broken = times.filter((time) => time.getClientRects().length !== 1)
                               .map((time) => time.textContent);
                             const outside = times.filter((time) => {

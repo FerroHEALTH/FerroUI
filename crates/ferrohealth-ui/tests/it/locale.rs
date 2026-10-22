@@ -7,7 +7,7 @@
 
 use ferrohealth_ui::i18n::{Locale, locale, provide_locale};
 use ferrohealth_ui::table::model::{Paging, Window};
-use ferrohealth_ui::table::view::link_pager;
+use ferrohealth_ui::table::pager::link_pager;
 use ferrohealth_ui::view::dialog::{Confirmation, confirm_dialog};
 use ferrohealth_ui::view::theme_switch::locale_switch;
 use leptos::prelude::*;

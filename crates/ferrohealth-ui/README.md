@@ -82,9 +82,12 @@ which your server writes from its own cookie or setting (`theme::Theme`).
   island: `nav` (the sidebar, plain links with the page marked, inside its
   drawer island), `tabs` (the panels for `KeyboardTabs`), `toast` (`raise`
   from any island), `editor` (the highlighted overlay editor with line
-  marks), `pager` (the session pager), `filter` and the rest.
+  marks), `filter` (an in-place filter over rows that are already island
+  data) and the rest.
 - `table`: the paging and sorting model (`Paging`, `Window`, `Sort`,
-  `StateSource`) and the data table with its link pager.
+  `StateSource`), the data table with its cells and list card (`view`), the
+  link and `POST` pagers (`pager`) and the find field (`filter`), each a
+  link or a form that works with no script.
 - `highlight::html(language, text, lines, marked)`, `icon::icon(glyph, size)`,
   `tone::Tone`, `theme::Theme`.
 

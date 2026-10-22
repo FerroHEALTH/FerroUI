@@ -477,6 +477,21 @@ noun-ehrs =
     }
     .empty = No EHRs
     .opening = EHRs
+actions-for = Actions for { $name }
+find-file = Find a mapping file
+more-actions = More actions
+noun-lines =
+    { $count ->
+        [one] line
+       *[other] lines
+    }
+    .empty = No lines
+    .opening = Lines
+review-caption = Mapping files to review, sorted by state, then lines, then name
+review-files = Mapping files to review
+review-order = Sorted by state, then lines, then name
+select-file = Select { $name }
+selected-column = Selected
 clause-code-system = Clause { $place }: code system
 files-on-page = { $kept } of { $total } files on this page.
 issue-line = line { $line }

@@ -16,7 +16,7 @@ pub struct Row {
     pub kind: &'static str,
     /// Its size in lines.
     pub lines: u32,
-    /// Whether it compiled.
+    /// Whether it compiled, or whether the set leaves it out (`excluded`).
     pub state: &'static str,
     /// When it last changed, as a server writes an instant: RFC 3339 with
     /// microseconds and an offset.
@@ -38,6 +38,8 @@ pub fn rows() -> Vec<Row> {
             };
             let state = if index % 11 == 0 {
                 "refused"
+            } else if index % 13 == 0 {
+                "excluded"
             } else if index % 7 == 0 {
                 "warning"
             } else {
