@@ -121,6 +121,21 @@ jobs:
           persist-credentials: false
       - run: bash scripts/checks/stray-literals.sh crates/ferrohealth-ui/src app/ferrohealth-ui-gallery/src
 
+  # The mechanical part of the Leptos rules (.claude/rules/leptos-ui.md
+  # §14 and §15), with its self-test.
+  leptos-rules:
+    name: leptos-rules
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: bash scripts/checks/leptos-rules.sh --self-test
+      - run: bash scripts/checks/leptos-rules.sh
+
   # Every TODO(#N) names an open issue.
   todo-issues:
     name: todo-issues
@@ -497,6 +512,7 @@ jobs:
       - shellcheck
       - comment-style
       - stray-literals
+      - leptos-rules
       - todo-issues
       - contribution-licence
       - detect

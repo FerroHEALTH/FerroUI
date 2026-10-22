@@ -11,7 +11,9 @@ This is the one component rule set of the FerroHEALTH consoles. Each
 console's own `leptos-ui.md` keeps only what is particular to it (its server
 functions, its session, its bundle budget) and points here. The oracle for
 every Leptos question is the official Leptos book
-(<https://github.com/leptos-rs/book>, `main`, Leptos 0.8), never memory; the
+(<https://github.com/leptos-rs/book>, `main`, Leptos 0.8), never memory, and
+where the book lags behind 0.8, the Leptos 0.8 source the consoles resolve
+and the leptos repository's examples at the matching tag (§14); the
 oracles for roles, keyboard paths and contrast are WCAG 2.2, WAI-ARIA 1.2 and
 the Authoring Practices (`spec-adherence.md`).
 
@@ -92,9 +94,14 @@ lock picks its wasm-bindgen and the CLI that must equal it
 
 - Every control carries an explicit, stable `id` and `name`; a label names it
   with `for`; help is named by `aria-describedby` (`view::form::help_id`).
-- A `<textarea>` takes its text through `prop:value` alone, never a text
-  child: the server writes a child as it stands, so `</textarea>` in the text
-  would end the element.
+- A `<textarea>` carries its text in the server HTML and takes the live
+  text through `prop:value` (book `view/05_forms`, "`<textarea>`"). The
+  server writes a textarea's children unescaped (tachys 0.2.19
+  `src/html/element/elements.rs`, `textarea ... false`), so the initial text
+  is `inner_html` of text escaped with `highlight::escape`, never a raw
+  child; the browser decodes it as RCDATA, so `</textarea>` in the text
+  stays text. A field with no server text is empty for a page whose
+  WebAssembly has not loaded (#205).
 - The sign-in form is a plain `POST` with plain, uncontrolled inputs and the
   `username` / `current-password` autocomplete tokens; it works before the
   page hydrates and hydration never wipes what was typed.
@@ -270,11 +277,11 @@ the lookup order: our own design; the message syntax is Project Fluent's.
 - **The locale is chosen once per render.** The console builds an
   `i18n::Locale` from its configuration or the request
   (`Locale::negotiate` reads `Accept-Language`), hands it to
-  `i18n::provide_locale` at the root of its page tree on the server and in
-  the hydrating browser alike (a value the server decided reaches the
-  browser serialized, `SharedValue`), and writes `Locale::tag` as
-  `<html lang>` (WCAG 2.2 SC 3.1.1). A page that provides none draws
-  English.
+  `i18n::provide_locale` at the root of its page tree on the server, and
+  writes `Locale::tag` as `<html lang>` (WCAG 2.2 SC 3.1.1). A page that
+  provides none draws English. Under islands that root context never
+  reaches the browser, and a `SharedValue` at the root serializes nothing:
+  an island gets its words as props (§15.4).
 - **A component reads its words while the page tree is in reach.** A view
   function calls the crate's lookup as it builds its view; a widget reads
   every word it may draw at setup and moves the strings into its handlers
@@ -307,3 +314,389 @@ the lookup order: our own design; the message syntax is Project Fluent's.
   width; the gallery's pseudo-locale (`qps`) draws every library string
   accented and two fifths longer, and a change that moves a component's
   layout is captured in it at 1440 and 390 px, light and dark.
+
+## 14. Leptos the book's way
+
+Every rule below says what to do, why, where the book and the Leptos 0.8
+source say so, and what holds it: **[check Ln]** is a finding of
+`scripts/checks/leptos-rules.sh` (CI job `leptos-rules`; an exception is a
+line of `scripts/checks/leptos-rules.allow` with its reason and issue),
+**[compiler]** is a build or `-D warnings` failure, **[test]** names the
+test, and **[review]** is a reviewer's call, which `/leptos-check` walks.
+Book paths are files under the book's `src/`; source paths are files of
+the crate at the version the workspace pins (leptos 0.8.22, leptos_macro
+0.8.19, leptos_server 0.8.8, tachys 0.2.19, reactive_graph 0.2.16,
+server_fn 0.8.13). Where they disagree, the source decides and the
+difference is named.
+
+### 14.1 Components and props
+
+- **A changing input is a `Signal<T>` taken with `#[prop(into)]`, and a
+  constant is `Signal::stored(v)`.** `Signal` holds a plain value, any
+  readable signal and `Signal::derive(f)`, so one prop type serves every
+  caller (book `view/03_components`, "`into` Props"); `MaybeSignal` is
+  deprecated for it (reactive_graph `src/wrappers.rs`). A
+  `Signal::derive(|| constant)` builds a closure for a value that never
+  changes. [check L7; compiler for `MaybeSignal`]
+- **Optional props say their default.** `#[prop(optional)]` is
+  `Default::default()`, `#[prop(default = x)]` names it; an optional closure
+  is `Option<Callback<T>>`, never an optional generic, which does not
+  compile (book `view/03_components`). [compiler]
+- **A generic used by no prop is `#[prop(marker)] PhantomData<T>`**, which
+  leaves the builder and the docs and is skipped when an island serializes
+  its props (book `view/03_components`, "`marker` Props"). [review]
+- **Every component and every prop has a doc comment**: the macro writes them
+  onto the props builder (book `view/03_components`, "Documenting
+  Components"). [compiler: `missing_docs`]
+- **Attributes a caller adds land where the component means them.** By
+  default they spread onto every top-level element of the view; a component
+  that wants them on an inner element uses `AttributeInterceptor` (book
+  `view/03_components`, "Spreading Attributes"; leptos
+  `src/attribute_interceptor.rs`). [review]
+- **Child to parent is a callback or an `on:` listener; context is a
+  newtype.** A `WriteSignal` handed down lets any child mutate the parent's
+  state; context is found by type at run time, so a bare `bool` or
+  `String` context collides (book `view/08_parent_child`). `<Provider>`
+  provides without shadowing a same-type context of the caller (leptos
+  `src/provider.rs`). Under islands a callback never crosses an island
+  boundary (§15.2). [review]
+- **Children:** `Children` once, `ChildrenFn` when rendered more than once,
+  `ChildrenFragment` to wrap each child, `#[slot]` for typed children, and
+  `StoredValue` to project `ChildrenFn` through nested components (book
+  `view/09_component_children`, `interlude_projecting_children`). [compiler]
+
+### 14.2 Reactivity
+
+- **A component body runs once.** Anything that changes is a signal or a
+  closure that reads one; `{x.get()}` in a view is a value drawn once (book
+  `view/01_basic_component`, `reactivity/interlude_functions`). [review]
+- **Read a collection by reference.** `.get()` clones the whole value, so
+  `rows.get().len()` copies every row to count them; use `.read()` or
+  `.with()`, and `.write()` or `.update()` to change one in place (book
+  `reactivity/working_with_signals`). [check L4]
+- **Never hold a read guard across a write**: it panics at run time (book
+  `reactivity/working_with_signals`, "Getting"). [review]
+- **A value that follows another is derived, never written by an effect.** B
+  from A is a closure or a `Memo`; two values changed together are two
+  `set`s in the handler. An `Effect` that reads A and writes B is "officially
+  discouraged": two passes through the graph and a route to loops (book
+  `reactivity/working_with_signals`, "If you really must...",
+  `reactivity/14_create_effect`). [review]
+- **A `Memo` is for an expensive computation or the step before an expensive
+  effect.** It costs a `PartialEq`, a node and a traversal, more than a cheap
+  closure (book `appendix_reactive_graph`, "Memos vs. Derived Signals").
+  [review]
+- **An `Effect` synchronizes with the world outside the graph** (the DOM, a
+  focus, a browser API) and runs in the browser only, a tick after mount;
+  `Effect::watch(deps, handler, immediate)` when the handler needs the
+  previous value or must stop (book `reactivity/14_create_effect`). [review]
+- **`Send + Sync` signals; the `_local` forms only for a `!Send` browser
+  value** (book `reactivity/working_with_signals`, "Thread Safety"). [review]
+- **Signals live as long as their owner.** A signal made in a branch and
+  stored above it is read after disposal (a panic); a signal made high and
+  kept in a removed row leaks. Make it where it lives, or use `ArcRwSignal`
+  for a collection of signals; `on_cleanup` is the unmount hook (book
+  `appendix_life_cycle`). [review]
+- **State escalates in this order:** local, the URL, a signal in context, a
+  `Store` in context (book `15_global_state`; reactive_stores 0.4). [review]
+
+### 14.3 Views
+
+- **A list that changes is `<For each key children>` with a stable key from
+  the data, never an index**; an index is `<ForEnumerate>`; a row's field
+  that changes in place is a nested signal, a per-row `Memo` under
+  `<ForEnumerate>` or a keyed `Store` field (book `view/04_iteration`,
+  `view/04b_iteration`). [review]
+- **An expensive branch is behind `<Show when fallback>`**, which memoizes
+  the condition; `<ShowLet>` for an `Option` (leptos `src/show_let.rs`);
+  divergent branches are `Either`/`EitherOf3` or `.into_any()` (book
+  `view/06_control_flow`). [review]
+- **`inner_html` only for markup the library escaped itself**, in the files
+  the check lists, each with an escaping test; it does not escape (book
+  `view/02_dynamic_attributes`, "Injecting Raw HTML"). [check L6; test:
+  the escaping tests of `highlight` and `view::chart`]
+- **A dynamic class is `class:name=` or `class=("name", f)`**; a dynamic
+  style is forbidden (§0). [check L9; test:
+  `stylesheet::the_layer_order_comes_first_and_no_style_is_inline`]
+- **Valid HTML only** (§4): hydration walks the DOM, so a block in a `<p>`
+  or a `<table>` without `<tbody>` breaks it (book `ssr/24_hydration_bugs`).
+  [review]
+
+### 14.4 Forms and inputs
+
+- **A controlled input is `prop:value` (or `prop:checked`) with
+  `on:input:target`, or `bind:value`, `bind:checked`, `bind:group`**; the
+  `value` attribute is the initial value only (book `view/05_forms`).
+  [review]
+- **A `<select>` is controlled by `prop:value` on the select**, never by a
+  reactive `selected` on its options, which sets the initial choice only
+  (book `view/05_forms`, "`<select>`"; #206). [review]
+- **A `<textarea>` carries its escaped text in the server HTML** (§5, #205).
+  [review]
+- **Native submission is the floor.** A form posts with no WebAssembly;
+  an inline handler such as the book's `oninput="this.form.requestSubmit()"`
+  (book `router/20_form`) is JavaScript the strict CSP refuses. [check L2]
+- **Parse input yourself**: `type="number"` is not validation (book
+  `view/07_errors`). [review]
+
+### 14.5 Errors and async data (a console's side)
+
+The library loads nothing (§0) [check L3]; these bind a console and the
+gallery.
+
+- **A `Resource` is the default, and its fetcher reads no signal**: the
+  source is tracked and memoized, the value serialized once (book
+  `async/10_resources`). A `LocalResource` where a `Resource` works is a
+  deoptimization (book `ssr/23_ssr_modes`). [review]
+- **Await resources in `move || Suspend::new(async move { .. })` under
+  `<Suspense>`, and under `<Transition>` once the page is up**, so a reload
+  keeps the old view (book `async/11_suspense`, `async/12_transition`).
+  Never create a resource inside a `Suspend`, and never set a signal from a
+  resource's fetcher: the fetcher does not run during hydration, so the two
+  halves differ (book `server/28_async_quick_reference`). [review]
+- **An error renders where it arrives** (§4); an `<ErrorBoundary>` is the
+  net for an `Err` drawn in a view (book `view/07_errors`), and a server
+  function's error is a typed `FromServerFnError` enum (book
+  `server/25_server_functions`, "Using Custom Errors"). [review]
+- **A primary content that must read with no script is
+  `Resource::new_blocking` on a `SsrMode::PartiallyBlocked` route, or
+  `SsrMode::Async`; out-of-order streaming only for secondary parts.**
+  Out-of-order fragments arrive in a `<template>` an inline script swaps in
+  (book `ssr/23_ssr_modes`, `progressive_enhancement/README`). [review]
+- **The streaming and hydration scripts carry the nonce**: `leptos` with
+  `nonce` on the server half, and the request's nonce provided to the render
+  (leptos `src/nonce.rs`; the gallery's `server::provide_request_nonce`).
+  [test: the gallery's CSP tests]
+
+### 14.6 Server functions and actions (a console's side)
+
+- **A server function is a public endpoint** and checks the session
+  itself (book `server/25_server_functions`, "An Important Note about
+  Security"). [review]
+- **No `usize` or `isize` in a server function's arguments or result, or in
+  any serialized type** (book `server/25_server_functions`, "Quirks").
+  [review; check L8 for island props]
+- **A mutation is a `ServerAction`, and the default form is `<ActionForm>`
+  in a server component** (§15.7): it posts with no WebAssembly, returns
+  through the form redirect, and shows an error from `__err` (book
+  `progressive_enhancement/action_form`; server_fn 0.8.13 `src/lib.rs`,
+  `form-redirects`). Its fields are named after the function's arguments,
+  nested as `arg[field]`, with the default `PostUrl` encoding only (leptos
+  `src/form.rs`). [review]
+- **Client validation runs in `on:submit:capture`** with `F::from_event`
+  (book `progressive_enhancement/action_form`). [review]
+- **Request data comes through extractors and context**:
+  `leptos_axum::extract`, `leptos_routes_with_context`, `ResponseOptions`,
+  `leptos_axum::redirect` (book `server/26_extractors`, `server/27_response`).
+  [review]
+
+### 14.7 Router and navigation
+
+- **One `<Router>` and `<Routes fallback>` on the server**, a real 404 that
+  sets its status through `ResponseOptions`, and nested routes as layout with
+  `<Outlet/>` (book `router/16_routes`, `router/17_nested_routing`). The
+  router also supplies the `__err` of a no-script form (§15.7). [review]
+- **Navigation is `<a>` and `<form>`.** A click handler that navigates is an
+  accessibility defect (book `router/19_a`). The current page is
+  `aria-current="page"` the server writes. [review]
+- **Typed params and queries** with `#[derive(Params)]` and
+  `use_params::<T>()`, handling `Err` and `None` as user input (book
+  `router/18_params_and_queries`). [review]
+- **Filter, search and paging state is in the URL**, except what can
+  identify a patient (§0), which posts (book `15_global_state`, "URL as
+  Global State"). [review]
+
+### 14.8 Hydration correctness
+
+- **Both halves draw the same tree.** No `cfg!(target_arch)` value in view
+  code; browser calls go behind `#[cfg(target_arch = "wasm32")]` inside a
+  handler or an effect (book `ssr/24_hydration_bugs`). [check L5]
+- **No non-determinism in the first render**: a random id or a timestamp
+  that differs between server and browser (book `ssr/24_hydration_bugs`).
+  [review]
+
+### 14.9 The document head
+
+- **The head is the console's**: the library draws no `leptos_meta` tag
+  [check L10]. A console calls `provide_meta_context()` at the root, writes
+  `<MetaTags/>` in its shell, and sets `<Title>`, `<Meta>`, `<Link>`,
+  `<Stylesheet>`, `<Html {..} lang>` from component bodies, never by editing
+  the shell's head (book `metadata`; leptos_meta `src/`). [review]
+- **One title format**: a `<Title formatter>` at the root and a `<Title
+  text>` per page (book `metadata`). Head content that depends on data needs
+  a blocking resource or `SsrMode::Async` (book `ssr/23_ssr_modes`). [review]
+
+### 14.10 Browser code
+
+- **`leptos-use`-style wrappers or `web_sys` with its features, never a
+  JavaScript library** (§0; book `web_sys`). An element is reached through
+  a typed `NodeRef`, filled when it mounts (book `web_sys`, "Accessing raw
+  `HtmlElement`s"). [review]
+- **A behaviour shared by several elements is a directive**: `use:f` runs in
+  the browser when the element is created or hydrated, never on the server,
+  and cleans up with `on_cleanup` (tachys `src/html/directive.rs`; leptos
+  `examples/directives` at `v0.8.22`; the book does not cover it; #214).
+  [review]
+
+### 14.11 The bundle
+
+- **The browser bundle builds under `wasm-release`** (`opt-level = "z"`,
+  `lto = true`, `codegen-units = 1`) and cargo-leptos runs `wasm-opt -Oz` on
+  it (book `deployment/binary_size`; cargo-leptos 0.3.11
+  `src/compile/front.rs`). A console serves it compressed. [review; the
+  budget of §12 in CI]
+- **Size sources are checked before they land**: `regex` (about 500 KB),
+  a generic with a large body used with several types (keep one concrete
+  inner function), `serde` where `serde-lite` serves (book
+  `deployment/binary_size`). [review]
+- **Code that one screen needs is split, measured first**: `cargo leptos
+  --split` with `#[lazy]`, `#[lazy_route]` or `#[island(lazy)]` (book
+  `deployment/binary_size`, "Code Splitting"; leptos_macro `src/lib.rs`).
+  [review]
+
+### 14.12 Testing
+
+- **Logic lives in plain functions with unit tests**, so a component stays
+  thin (book `testing`): `widget::tabs::moved`, `widget::filter::keeps`.
+  [review]
+- **Behaviour is proven in a real browser**, by the gallery's journeys over
+  thirtyfour (book `testing`, end-to-end; the book's Playwright is
+  JavaScript, §0). [test: the gallery journeys]
+
+## 15. Islands: the rules a component obeys
+
+The library and the consoles use Leptos islands (owner decision on #196,
+2026-10-22): a page is server HTML, and only an island ships code to the
+browser. The authority is the book's islands chapter (book `islands`) with
+the 0.8 source: leptos_macro `src/lib.rs` (the `#[island]` docs and their
+"Present Limitations") and `src/component.rs` (the code the macro writes),
+leptos `src/hydration/island_script.js` and `islands_routing.js`, tachys
+`src/html/islands.rs`, leptos_server `src/resource.rs` and `src/shared.rs`,
+and the `islands` and `islands_router` examples at `v0.8.22`. #196 owns the
+interaction contract and the budget; this section is the component's side.
+
+### 15.1 When something is an island
+
+- **A server view is the default.** A part is an island only when it needs
+  browser code that HTML, CSS and native elements (`<dialog>`, `popover`,
+  `<details>`, links and forms) cannot give (#196 layers 1 and 2). Every
+  `#[component]` that no island uses runs on the server only, and the bundle
+  grows with interactivity, never with pages (book `islands`, "Using Islands
+  Effectively"). [review]
+- **An island is as small as its behaviour**: the interactive control is the
+  island, and everything static around and inside it is server children
+  (book `islands`, "Passing Server Children to Islands"). [review]
+- **Each island is a WebAssembly export of the crate that defines it**, so
+  a console's browser build links `ferrohealth-ui` (book `islands`, the
+  workspace note; leptos issue 2083); the island script logs "Could not find
+  WASM function for the island" when one is missing. [review]
+
+### 15.2 Props
+
+- **Every prop other than `children` is `Serialize + DeserializeOwned` and
+  round-trips through JSON.** The macro writes the props as JSON into
+  `data-props` and decodes them with `.expect(...)` in the browser, so a prop
+  that does not round-trip panics at hydration (leptos_macro
+  `src/component.rs`). [compiler for the traits; review for the round trip]
+- **No callback, closure or `Box<dyn Fn>` prop**; a change reaches the server
+  through a form or a server function, and another island through context
+  (§15.4). [compiler]
+- **No `usize` or `isize`**: fixed-width integers (book
+  `server/25_server_functions`, "Quirks"). [check L8]
+- **`#[prop(marker)]` fields are skipped** in the JSON (book
+  `view/03_components`). [review]
+- **`RwSignal<T>` and `Signal<T>` props seed from plain values**
+  (`#[prop(into)]`; reactive_graph `src/serde.rs`; the `#[island]` doc's own
+  example). [compiler]
+- **Props are page content.** Every prop is in the HTML source: pass ids and
+  words, never clinical data the page does not already show, and never a
+  record where an id serves. [review]
+
+### 15.3 Children passed from the server
+
+- **Server children are opaque to the island**: they render on the server in
+  one `<leptos-children>` element, the island does not hydrate them and
+  cannot iterate them (leptos_macro `src/lib.rs`, limitation 1). [review]
+- **A child the island may show is rendered and hidden**, with `hidden` or a
+  class, never placed under `<Show>` or `if`: its server HTML is all the
+  browser ever gets (limitation 2). [review]
+- **A nested island is built inside the parent's children**, so on the server
+  the parent has provided its context first (book `islands`, the `tabs`
+  closure). [review]
+- **The stylesheet lays out `leptos-island` and `leptos-children` as
+  `display: contents`**, so the wrappers add no box. [test: the stylesheet
+  rules (#196)]
+
+### 15.4 Context between islands, locale and toasts
+
+- **An island reads only context an enclosing island provided, or its
+  props.** Each island runs under a fresh owner; only an island inside
+  another's children inherits its owner (leptos
+  `src/hydration/island_script.js`, `$$on_hydrate`). Sibling islands share
+  nothing, and root context never reaches an island: reading it renders one
+  thing on the server and another in the browser. [review]
+- **Words are props.** The server-side wrapper resolves every word the island
+  draws through the catalog and passes them as `String` props, so the island
+  carries no Fluent loader and no catalog. Only an island that formats at
+  run time (a plural over a live count) takes the locale tag as a prop.
+  `SharedValue` and root `provide_locale` reach no island (leptos_server
+  `src/shared.rs`, serialized only while hydrating; §13). [review]
+- **Toasts go through one `toast_region` island in the shell**, fed by a
+  WebAssembly-only `thread_local` queue in the crate that any island pushes
+  onto. The queue never exists on the server, where one static would be
+  shared by every request. With no WebAssembly the server renders the flash
+  toasts of a post-redirect-get into the region from a prop. [review]
+
+### 15.5 What reaches the page
+
+- **An island's own HTML, its `data-props` JSON and its children's HTML.**
+  A `Resource` or `SharedValue` serializes only while the shared context is
+  hydrating; `<HydrationScripts islands=true>` turns that off for the page,
+  and only island bodies turn it on (leptos_server `src/resource.rs`,
+  `src/shared.rs`; leptos `src/hydration/mod.rs`). Data read in server
+  components therefore reaches the page as HTML alone, never as hydration
+  state (book `islands`, "Reduced data serialization costs"). [review]
+- **Load data in server components** with `Resource` and `<Suspense>`, so it
+  is never serialized; a resource inside an island is, and needs a reason.
+  [review]
+
+### 15.6 Navigation
+
+- **Plain links and forms; no client router and no islands router.** In
+  0.8.22 the islands router is experimental: it never re-diffs an island's
+  children, drops a form submitter's `name=value`, loses file inputs, and
+  has no base path (leptos `src/hydration/islands_routing.js`). [review]
+- **The library's view and widget tiers draw plain `<a>`**, the current page
+  marked by the server; `leptos_router` stays in the server's `<Router>`,
+  which also supplies the `__err` of a no-script form (leptos_router
+  `src/location/mod.rs`). [check L1]
+
+### 15.7 Server functions and ActionForm from islands
+
+- **The default form is `<ActionForm>` in a server component**: a plain
+  `POST` to the function's URL that ships no WebAssembly; server_fn's
+  `form-redirects` (on in leptos) answers it with a redirect to the
+  `Referer`, an error encoded as `__err`, which `ServerAction::new()` reads
+  back so the page draws `action.value()` with no script (server_fn 0.8.13
+  `src/lib.rs`; leptos_server `src/action.rs`; the `islands_router`
+  example's `Home`). [review]
+- **An island gets an `<ActionForm>` only when it needs `pending()` or
+  `value()` live, or client validation**; it then carries the server_fn
+  client and `serde_qs`. With no router, an island's `ActionForm` sets its
+  own redirect hook (leptos `src/form.rs`); a server function called outside
+  a form needs `set_redirect_hook` (book `islands`). [review]
+- **The library defines no server function** (§0): a library form view takes
+  the console's `ActionForm` as children, or renders fields named after the
+  function's arguments (`arg[field]`). [check L3]
+
+### 15.8 The no-WebAssembly floor
+
+- **Every island has a fallback that works with the WebAssembly withheld**:
+  its server HTML shows the content, and a link or a form does the important
+  action (#196 layer 3). A control that can only work with script is absent
+  or disabled before hydration, and says why. [test: the gallery's
+  no-WebAssembly journey (#196); review]
+- **Lazy islands are measured before they land**: `#[island(lazy)]` with
+  `cargo leptos --split` loads an island's code from its own chunk, a
+  candidate for the code editor and the topology (leptos_macro `src/lib.rs`;
+  B2, B9, F9). [review]
