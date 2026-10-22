@@ -10655,6 +10655,7 @@
 
   .fui-diags-file {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
     gap: var(--space-default);
     padding: 0.5rem 1rem;
