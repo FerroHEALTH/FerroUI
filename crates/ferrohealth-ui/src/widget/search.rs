@@ -49,6 +49,7 @@ pub fn search_control(
         shortcut,
         busy,
         disabled,
+        post,
     } = search;
     let field = NodeRef::<leptos::html::Input>::new();
     let busy = RwSignal::new(busy);
@@ -92,7 +93,7 @@ pub fn search_control(
     view! {
         <form
             role="search"
-            method="get"
+            method=if post { "post" } else { "get" }
             action=action
             class="fui-search"
             aria-busy=move || busy.get().then_some("true")

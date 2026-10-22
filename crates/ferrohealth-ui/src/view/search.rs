@@ -10,7 +10,8 @@
 //! hover and focus outline the whole group. It is a plain `GET` form with
 //! `role="search"` (WAI-ARIA 1.2, the `search` landmark), so it works with no
 //! WebAssembly: Enter submits it to the console's route, which reads the
-//! query. The field's label is visually hidden, so its accessible name is the
+//! query. A search that can carry clinical content posts it instead
+//! ([`SearchBox::post`]), so the query never reaches a URL. The field's label is visually hidden, so its accessible name is the
 //! label and never the placeholder.
 //!
 //! The control is the island [`crate::island::Search`], which owns its keys
@@ -64,6 +65,10 @@ pub struct SearchBox {
     /// index is rebuilding": the field and the submit are disabled and the
     /// field shows the reason in place of its hint.
     pub disabled: Option<String>,
+    /// Whether the form posts its query instead of putting it in the
+    /// address: for a search that can carry clinical content, such as a
+    /// patient's name, which never goes into a URL (`leptos-ui.md` §5).
+    pub post: bool,
 }
 
 impl Default for SearchBox {
@@ -79,6 +84,7 @@ impl Default for SearchBox {
             shortcut: Some('/'),
             busy: false,
             disabled: None,
+            post: false,
         }
     }
 }

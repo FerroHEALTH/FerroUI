@@ -53,7 +53,7 @@ diffing, the form submitter, file inputs and the base path.
 - `view`: plain functions, drawn on the server alone.
 - `island`: the ready islands, each a thin `#[island]` over its widget
   function: `ToastRegion`, `NavDrawer`, `UserMenuButton`, `KeyboardTabs`,
-  `KeyHint`, `DocumentViews`, `TabSelect`. The module's `#![expect]` lines cover what
+  `KeyHint`, `DocumentViews`, `TabSelect`, `Search`. The module's `#![expect]` lines cover what
   the island macro writes (a forgotten view state, an undocumented props
   struct, a dropped `#[must_use]`).
 - `widget`: the interactive components as functions a page calls inside

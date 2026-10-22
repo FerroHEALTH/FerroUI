@@ -352,3 +352,12 @@ fn the_answer_is_one_overlay_surface_and_a_hits_line_keeps_its_row() {
         "a tag can clip the hit's line"
     );
 }
+
+#[test]
+fn a_search_that_can_carry_clinical_content_posts_its_query() {
+    let html = drawn(search(|search| search.post = true), None);
+    assert!(
+        has(&html, "form", &[("role", "search"), ("method", "post")]),
+        "{html}"
+    );
+}
