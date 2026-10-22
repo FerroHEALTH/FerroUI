@@ -1,18 +1,22 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The confirmation dialog: an HTML popover with a title, a sentence, a
+//! The confirmation dialog: an HTML `dialog` with a title, a sentence, a
 //! cancel and the console's own confirming control.
 //!
 //! Its trigger is an action whose act is
 //! [`crate::widget::action_menu::Act::Dialog`]: a title row's primary
 //! ([`crate::view::action::action_button`]) or, for a destructive action,
 //! an item of the More menu, last, never a danger button beside the
-//! primary (family rule 7). The trigger opens it and Cancel closes it with
-//! no script, the browser closes it on Escape and returns the focus to the
-//! trigger (HTML, the `popover` attribute), so it works before the page
-//! hydrates. The confirming control is the console's: a submit button of a
-//! form that posts, or a button whose listener acts and closes the dialog.
+//! primary (family rule 7). The trigger opens it as a modal and Cancel
+//! closes it with no script, through the `show-modal` and `close` commands:
+//! the page behind is inert, the focus moves to its first control, Escape
+//! and a press outside close it, and the browser returns the focus to the
+//! trigger (HTML Living Standard, the `dialog` element and the `command`
+//! attribute; WAI-ARIA Authoring Practices, the dialog (modal) pattern), so
+//! it works before the page hydrates. The confirming control is the
+//! console's: a submit button of a form that posts, or a button whose
+//! listener acts and closes the dialog.
 
 use std::borrow::Cow;
 
@@ -61,13 +65,7 @@ fn frame(confirmation: Confirmation, danger: bool, confirm: impl IntoView) -> im
         "fui-dialog"
     };
     view! {
-        <div
-            id=confirmation.id
-            popover="auto"
-            role="dialog"
-            aria-labelledby=labelled_by
-            class=class
-        >
+        <dialog id=confirmation.id closedby="any" aria-labelledby=labelled_by class=class>
             <h2 id=title_id class="fui-dialog-title">
                 {danger.then(|| icon(Glyph::TRIANGLE_ALERT, "18"))}
                 {confirmation.title}
@@ -77,14 +75,14 @@ fn frame(confirmation: Confirmation, danger: bool, confirm: impl IntoView) -> im
                 <button
                     type="button"
                     class=Variant::Secondary.class()
-                    popovertarget=confirmation.id
-                    popovertargetaction="hide"
+                    command="close"
+                    commandfor=confirmation.id
                 >
                     {icon(Glyph::X, "16")}
                     {tr(Text::Cancel)}
                 </button>
                 {confirm}
             </div>
-        </div>
+        </dialog>
     }
 }

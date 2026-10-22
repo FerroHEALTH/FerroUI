@@ -118,7 +118,7 @@ pub(super) async fn overlays(
     let opened = [
         (
             "dialog-open",
-            "//button[@popovertarget = 'reload-set' and not(@role)]",
+            "//button[@commandfor = 'reload-set' and not(@role)]",
             "reload-set",
         ),
         (
@@ -144,7 +144,7 @@ pub(super) async fn overlays(
         ),
         (
             "popover-form",
-            "//button[@popovertarget = 'save-query']",
+            "//button[@commandfor = 'save-query']",
             "save-query",
         ),
     ];
@@ -175,7 +175,7 @@ async fn phone_overlays(
         brand,
         theme,
         "popover-form-390",
-        By::XPath("//button[@popovertarget = 'save-query']"),
+        By::XPath("//button[@commandfor = 'save-query']"),
         By::Id("save-query"),
     )
     .await?;
@@ -184,7 +184,7 @@ async fn phone_overlays(
         brand,
         theme,
         "side-panel-390",
-        By::XPath("//button[@popovertarget = 'access']"),
+        By::XPath("//button[@commandfor = 'access']"),
         By::Id("access"),
     )
     .await?;

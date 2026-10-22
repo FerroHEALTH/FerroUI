@@ -237,20 +237,23 @@ pub fn NavDrawer(
     crate::widget::nav::drawer(id, label, close, rail, children().into_any())
 }
 
-/// The user menu `id`, named `label`, its button showing `name`, around the
-/// items the server drew as its children, its sheet's Cancel saying
-/// `cancel`. A console draws it through [`crate::widget::menu::user_menu`].
+/// The user menu `id`, its sheet titled `label`, its button showing `name`,
+/// around the head and the ARIA menu the server drew as its children, its
+/// sheet's Cancel saying `cancel`. A console draws it through
+/// [`crate::widget::menu::user_menu`].
 #[island]
 pub fn UserMenuButton(
-    /// The menu's id, which its button opens.
+    /// The popup's id, which its button opens; its ARIA menu's is this and
+    /// `-menu`.
     id: String,
-    /// The menu's name and its sheet's title, in the page's locale.
+    /// The sheet's title, and the button's name when it shows no `name`,
+    /// in the page's locale.
     label: String,
     /// The name its button shows, or `None` for its icon alone.
     name: Option<String>,
     /// The sheet's Cancel, in the page's locale.
     cancel: String,
-    /// The items, drawn on the server.
+    /// The head and the menu, drawn on the server.
     children: Children,
 ) -> impl IntoView {
     crate::widget::menu::menu_button(id, label, name, cancel, children().into_any())

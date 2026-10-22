@@ -135,7 +135,7 @@ async fn press(browser: &Browser, by: By) -> Result<(), Box<dyn Error>> {
 /// More opens with no script.
 async fn more_opens(browser: &Browser) -> Result<(), Box<dyn Error>> {
     browser
-        .element(By::Css("button[popovertarget='reload-set']"))
+        .element(By::Css("button[commandfor='reload-set']"))
         .await?;
     let more = browser
         .element(By::Css("summary[aria-controls='overlays-more']"))
@@ -160,7 +160,7 @@ async fn side_panel_floor(browser: &Browser) -> Result<(), Box<dyn Error>> {
     assert!(link.is_displayed().await?, "the opener is a link");
     let button = browser
         .element(By::Css(
-            "button[popovertarget='access'][aria-controls='access']",
+            "button[commandfor='access'][aria-controls='access']",
         ))
         .await?;
     assert!(
@@ -277,7 +277,7 @@ async fn preferences_content(browser: &Browser, page: &str) -> Result<(), Box<dy
             .await?;
     }
     browser
-        .element(By::Css("button[popovertarget='preferences-reset']"))
+        .element(By::Css("button[commandfor='preferences-reset']"))
         .await?;
     Ok(())
 }
@@ -309,14 +309,10 @@ async fn preferences_post_and_reset(
     browser
         .element(By::Css(r#"html[data-density="compact"]"#))
         .await?;
-    press(
-        browser,
-        By::Css("button[popovertarget='preferences-reset']"),
-    )
-    .await?;
+    press(browser, By::Css("button[commandfor='preferences-reset']")).await?;
     let confirm = browser
         .element(By::XPath(
-            "//div[@id = 'preferences-reset']//button[@type = 'submit']",
+            "//dialog[@id = 'preferences-reset']//button[@type = 'submit']",
         ))
         .await?;
     until("the reset dialog opens", async || {
@@ -987,10 +983,11 @@ async fn popovers_open_with_the_webassembly_withheld() -> Result<(), Box<dyn Err
             Ok(menu.is_displayed().await?)
         })
         .await?;
-        // A confirmation dialog is a popover its trigger opens.
+        // A confirmation dialog is a modal dialog its trigger opens, and
+        // Escape closes.
         browser.goto(&gallery.url("/ferrofed/overlays")).await?;
         browser
-            .element(By::Css("button[popovertarget='reload-set']"))
+            .element(By::Css("button[commandfor='reload-set']"))
             .await?
             .click()
             .await?;
@@ -999,9 +996,19 @@ async fn popovers_open_with_the_webassembly_withheld() -> Result<(), Box<dyn Err
             Ok(dialog.is_displayed().await?)
         })
         .await?;
-        // The popover form is a popover its trigger opens, and Escape closes.
         browser
-            .element(By::Css("button[popovertarget='save-query']"))
+            .driver()
+            .action_chain()
+            .send_keys(Key::Escape)
+            .perform()
+            .await?;
+        until("Escape closes the confirmation", async || {
+            Ok(!dialog.is_displayed().await?)
+        })
+        .await?;
+        // The popover form is a modal dialog its trigger opens.
+        browser
+            .element(By::Css("button[commandfor='save-query']"))
             .await?
             .click()
             .await?;

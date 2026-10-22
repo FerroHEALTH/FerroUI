@@ -45,7 +45,7 @@ pub(super) async fn preferences(
     shot_of_view(browser, brand, theme, "preferences-saved").await?;
     browser.goto(&gallery.url(&root)).await?;
     let reset = browser
-        .element(By::Css("button[popovertarget='preferences-reset']"))
+        .element(By::Css("button[commandfor='preferences-reset']"))
         .await?;
     press(browser, &reset).await?;
     let dialog = browser.element(By::Id("preferences-reset")).await?;

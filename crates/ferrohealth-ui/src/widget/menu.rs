@@ -3,10 +3,9 @@
 
 //! The user menu (F13), the one place in the top bar that sets the theme.
 //!
-//! A button with the operator's name opens an ARIA menu with who is
-//! signed in, Your preferences, the theme as three choices, Keyboard
-//! shortcuts with its key, and Sign out, last after a separator (family
-//! rule 7). The theme is set here and in Your preferences alone (family
+//! A button with the operator's name opens who is signed in over an ARIA
+//! menu of Your preferences, the theme as three choices, Keyboard shortcuts
+//! with its key, and Sign out, last after a separator (family rule 7). The theme is set here and in Your preferences alone (family
 //! rule 5). Below 40 rem the menu opens as a bottom sheet with Cancel.
 //!
 //! The menu is an HTML popover its button opens, so the browser opens it,
@@ -16,7 +15,7 @@
 //! plain forms that post to the console's routes. The island
 //! [`crate::island::UserMenuButton`] adds the menu button pattern of the
 //! WAI-ARIA Authoring Practices 1.2: the button says whether the menu is
-//! open, the focus moves to the first item as it opens, Up and Down move
+//! open, once the island runs and never before, the focus moves to the first item as it opens, Up and Down move
 //! between the items and wrap, Home and End go to the first and the last,
 //! and Tab closes the menu.
 
@@ -118,9 +117,9 @@ pub fn step(key: &str, current: Option<u32>, count: u32) -> Option<u32> {
     }
 }
 
-/// Returns the separator between the menu's parts.
-fn separator() -> impl IntoView {
-    view! { <div class="fui-menu-sep" role="separator"></div> }
+/// The id of the ARIA menu inside the user menu's popup `id`.
+fn list_id(id: &str) -> String {
+    format!("{id}-menu")
 }
 
 /// Returns a menu item that leads to `href`, with `glyph`, `words` and the
@@ -233,8 +232,9 @@ fn sign_out_item(action: String) -> impl IntoView {
 /// Returns the user menu `menu`: its button and, behind it, the menu the
 /// island [`crate::island::UserMenuButton`] opens.
 ///
-/// The items are drawn on the server and handed to the island as its
-/// children, so their words and links never reach the WebAssembly.
+/// Who is signed in heads the popup outside the ARIA menu, which holds the
+/// items alone. Both are drawn on the server and handed to the island as
+/// its children, so their words and links never reach the WebAssembly.
 #[must_use]
 pub fn user_menu(menu: UserMenu) -> AnyView {
     let head = view! {
@@ -243,6 +243,8 @@ pub fn user_menu(menu: UserMenu) -> AnyView {
             <span>{menu.line}</span>
         </div>
     };
+    let list_id = list_id(menu.id);
+    let label = menu.label.clone();
     let preferences = link_item(
         menu.preferences,
         Glyph::SETTINGS,
@@ -275,21 +277,25 @@ pub fn user_menu(menu: UserMenu) -> AnyView {
             cancel=tr(Text::Cancel)
         >
             {head}
-            {separator()}
-            {preferences}
-            {choices}
-            {theme}
-            {shortcuts}
-            {sign_out}
+            <div class="fui-menu-sep"></div>
+            <div id=list_id role="menu" aria-label=label class="fui-menu-items">
+                {preferences}
+                {choices}
+                {theme}
+                {shortcuts}
+                {sign_out}
+            </div>
         </crate::island::UserMenuButton>
     }
     .into_any()
 }
 
-/// Returns the menu button `id` and its menu, with the menu button's behaviour.
+/// Returns the menu button `id` and its popup, with the menu button's
+/// behaviour.
 ///
 /// The button shows `name` beside its icon, or is named `label` with none;
-/// the menu, named `label`, holds `items` and its sheet's Cancel says
+/// the popup, its sheet titled `label`, holds `items`, among them the ARIA
+/// menu whose id is `id` and `-menu`, and its sheet's Cancel says
 /// `cancel`. A console draws it through [`user_menu`].
 #[must_use]
 pub fn menu_button(
@@ -299,12 +305,15 @@ pub fn menu_button(
     cancel: String,
     items: AnyView,
 ) -> AnyView {
-    let open = RwSignal::new(false);
+    let open = RwSignal::new(None::<bool>);
     let trigger = NodeRef::<leptos::html::Button>::new();
     let menu = NodeRef::<leptos::html::Div>::new();
+    // NOTE: leptos-ui.md §15.8: `aria-expanded` needs the island, so it
+    // appears once it runs, reading whether the menu is already open.
+    Effect::new(move || open.set(Some(browser::is_open(menu))));
     let on_toggle = move |_| {
         let now = browser::is_open(menu);
-        open.set(now);
+        open.set(Some(now));
         if now {
             browser::focus_item(menu, 0);
         } else {
@@ -334,8 +343,8 @@ pub fn menu_button(
     let shown = name.map(|name| view! { <span class="fui-operator-name">{name}</span> });
     let target = id.clone();
     let cancel_target = id.clone();
-    let controls = id.clone();
-    let sheet_title = label.clone();
+    let controls = list_id(&id);
+    let sheet_title = label;
     view! {
         <span class="fui-anchor">
             <button
@@ -343,7 +352,7 @@ pub fn menu_button(
                 class="fui-button fui-button-ghost fui-operator"
                 popovertarget=target
                 aria-haspopup="menu"
-                aria-expanded=move || open.get().to_string()
+                aria-expanded=move || open.get().map(|open| open.to_string())
                 aria-controls=controls
                 aria-label=named
                 title=title
@@ -357,8 +366,6 @@ pub fn menu_button(
             <div
                 id=id
                 popover="auto"
-                role="menu"
-                aria-label=label
                 class="fui-menu fui-menu-compact fui-menu-anchored fui-menu-sheet fui-user-menu"
                 node_ref=menu
                 on:toggle=on_toggle
@@ -367,7 +374,7 @@ pub fn menu_button(
                 <p class="fui-menu-sheet-title" aria-hidden="true">
                     {sheet_title}
                 </p>
-                <div class="fui-menu-items">{items}</div>
+                {items}
                 <button
                     type="button"
                     class="fui-menu-cancel"

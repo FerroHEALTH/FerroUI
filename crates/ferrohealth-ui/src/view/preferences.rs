@@ -744,7 +744,8 @@ pub fn preferences_page(page: PreferencesPage) -> AnyView {
                 <button
                     type="button"
                     class=Variant::Ghost.small()
-                    popovertarget=RESET_DIALOG
+                    command="show-modal"
+                    commandfor=RESET_DIALOG
                     aria-haspopup="dialog"
                 >
                     {label(Some(Glyph::ROTATE_CCW), tr(Text::PreferencesReset))}
