@@ -221,6 +221,21 @@ pub fn ReloadingEditor(
     crate::pages::forms::reloading_editor_body(words)
 }
 
+/// The input editor of one of the operations page's transform pairs.
+#[island]
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "an island takes its props by value, as they arrive from the page"
+)]
+pub fn PairInput(
+    /// The pair whose input it is.
+    pair: String,
+    /// The text area's name, in the page's locale.
+    label: String,
+) -> impl IntoView {
+    crate::pages::operations::pair_input(&pair, label)
+}
+
 /// The forms page's filter and the list it filters.
 #[island]
 #[expect(

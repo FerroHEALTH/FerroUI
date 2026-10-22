@@ -64,6 +64,7 @@ not-found = Not found
 not-found-body = 404: the gallery has no page at this address.
 open = Open
 open-the-document = Open the document
+operations = Operations
 overlays = Overlays
 overview = Overview
 pages = Pages

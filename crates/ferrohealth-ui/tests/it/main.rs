@@ -25,6 +25,7 @@ mod figures;
 mod kbd;
 mod locale;
 mod markup;
+mod operations;
 mod preferences;
 mod records;
 mod render;

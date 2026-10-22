@@ -437,6 +437,23 @@ async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error
             document_views(browser).await?;
             copy_waits(browser, "file-copy").await?;
         }
+        "/operations" => {
+            // NOTE: leptos-ui.md §5: a text area carries its text in the server HTML, so
+            // Run posts the input with no WebAssembly.
+            let input = browser.element(By::Id("pair-answered-input")).await?;
+            assert!(
+                input
+                    .prop("value")
+                    .await?
+                    .is_some_and(|text| text.contains("ctx/language")),
+                "the input pane's editor holds its text"
+            );
+            browser
+                .element(By::Css("#pair-answered-run[type='submit']"))
+                .await?;
+            let raw = text_of(browser, By::Css(".fui-hl7-raw")).await?;
+            assert!(raw.starts_with("MSH|"), "the raw message shows: {raw}");
+        }
         "/overlays" => overlays_content(browser).await?,
         "/charts" => colour_key(browser).await?,
         "/layouts" => {

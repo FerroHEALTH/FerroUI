@@ -202,7 +202,7 @@ PROPOSED_TABS = [("tofhir", "openEHR → FHIR", "playground.html"), ("toopenehr"
 
 def rowgraph():
     """B6: each row the engine would write, as column and value pairs."""
-    cz = f'<span class="fui-concept-zero">{icon("triangle-alert", "12")}0, concept 0</span>'
+    cz = f'<span class="fui-concept-zero">{icon("triangle-alert", "12")}0, no matching concept</span>'
 
     def tb(name, note, fields):
         rows = "".join(f'<div><dt>{c}</dt><dd>{v}</dd></div>' for c, v in fields)

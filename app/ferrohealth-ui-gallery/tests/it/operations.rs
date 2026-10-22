@@ -1,0 +1,94 @@
+// SPDX-FileCopyrightText: Cadasto B.V.
+// SPDX-License-Identifier: BUSL-1.1
+
+//! The operations page laid out at a wide and at a phone width: the
+//! transform pair side by side and stacked with Run across the row, the
+//! load report's glyph beside its title, the OMOP row preview's columns
+//! over their values, and the HL7 v2 viewer's field names dropped on a
+//! phone. Every width is measured against the layout viewport, which a
+//! classic scrollbar narrows.
+
+use std::error::Error;
+
+use thirtyfour::ElementRect;
+use thirtyfour::prelude::*;
+
+use crate::browser::{Browser, with_browser};
+use crate::journeys::window;
+use crate::journeys_enabled;
+use crate::stack::Gallery;
+
+/// The rectangle of the first element `css` names.
+async fn rect(browser: &Browser, css: &str) -> Result<ElementRect, Box<dyn Error>> {
+    Ok(browser.element(By::Css(css)).await?.rect().await?)
+}
+
+/// Whether `a` and `b` start within a pixel of each other.
+fn level(a: f64, b: f64) -> bool {
+    (a - b).abs() <= 1.0
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_pair_stands_side_by_side_wide_and_stacks_on_a_phone_with_run_across_the_row()
+-> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        window(browser, 1440, 900).await?;
+        browser
+            .goto(&gallery.url("/ferrobridge/operations"))
+            .await?;
+        browser.element(By::Css("main h1")).await?;
+        let input = rect(browser, ".fui-transform > .fui-transform-pane:first-child").await?;
+        let answer = rect(browser, ".fui-transform > .fui-transform-pane:last-child").await?;
+        assert!(level(input.y, answer.y), "side by side at 1440 px: {input:?} {answer:?}");
+        assert!(answer.x > input.x + input.width - 2.0, "{input:?} {answer:?}");
+        let name = browser.element(By::Css(".fui-hl7-fields .fui-hl7-name")).await?;
+        assert!(name.is_displayed().await?, "a field's name shows at 1440 px");
+        let column = rect(browser, ".fui-rowgraph-fields dt").await?;
+        let value = rect(browser, ".fui-rowgraph-fields dd").await?;
+        assert!(level(column.y, value.y), "a column beside its value: {column:?} {value:?}");
+
+        window(browser, 390, 900).await?;
+        browser
+            .goto(&gallery.url("/ferrobridge/operations"))
+            .await?;
+        browser.element(By::Css("main h1")).await?;
+        let input = rect(browser, ".fui-transform > .fui-transform-pane:first-child").await?;
+        let answer = rect(browser, ".fui-transform > .fui-transform-pane:last-child").await?;
+        assert!(level(input.x, answer.x), "stacked at 390 px: {input:?} {answer:?}");
+        assert!(answer.y >= input.y + input.height - 1.0, "{input:?} {answer:?}");
+        // NOTE: CSSOM View, `clientWidth`: a classic scrollbar narrows the root's client box.
+        let [run, inner, right, client]: [f64; 4] = browser
+            .driver()
+            .execute(
+                "const row = document.querySelector('.fui-transform-options');
+                 const run = row.querySelector('.fui-transform-run .fui-button');
+                 const style = getComputedStyle(row);
+                 return [run.getBoundingClientRect().width,
+                         row.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight),
+                         row.getBoundingClientRect().right, document.documentElement.clientWidth];",
+                Vec::new(),
+            )
+            .await?
+            .convert()?;
+        assert!(level(run, inner), "Run spans the options row on a phone ({run} of {inner})");
+        assert!(right <= client + 0.5, "the row fits the layout viewport ({right} in {client})");
+        let glyph = rect(browser, ".fui-load-report > .fui-icon").await?;
+        let title = rect(browser, ".fui-load-report > .fui-load-report-title").await?;
+        assert!(
+            glyph.x < title.x && glyph.y < title.y + title.height,
+            "the glyph keeps its line beside the title: {glyph:?} {title:?}"
+        );
+        let column = rect(browser, ".fui-rowgraph-fields dt").await?;
+        let value = rect(browser, ".fui-rowgraph-fields dd").await?;
+        assert!(level(column.x, value.x), "a column over its value: {column:?} {value:?}");
+        assert!(value.y >= column.y + column.height - 1.0, "{column:?} {value:?}");
+        let name = browser.element(By::Css(".fui-hl7-fields .fui-hl7-name")).await?;
+        assert!(!name.is_displayed().await?, "a field's name drops on a phone");
+        browser.console_clean("the operations page").await
+    })
+    .await
+}

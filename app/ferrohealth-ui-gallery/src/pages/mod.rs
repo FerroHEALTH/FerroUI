@@ -4,7 +4,8 @@
 //! The gallery's pages.
 //!
 //! They are the overview of the static views, the forms and the editor, the
-//! tables and their paging, the code panels, and the sign-in cards. Each
+//! tables and their paging, the code panels, the operation parts, and the
+//! sign-in cards. Each
 //! page is built from erased sections, so rustc sees a shallow tree.
 
 pub mod charts;
@@ -12,6 +13,7 @@ pub mod code;
 pub mod dock;
 pub mod forms;
 pub mod layouts;
+pub mod operations;
 pub mod overlays;
 pub mod overview;
 pub mod preferences;

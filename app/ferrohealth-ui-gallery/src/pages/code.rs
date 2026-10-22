@@ -104,7 +104,7 @@ fn language_tag(language: Language) -> String {
         Language::Yaml => Msg::Yaml,
         Language::Json => Msg::Json,
         Language::Xml => Msg::Xml,
-        Language::Aql | Language::Plain => Msg::Aql,
+        Language::Aql | Language::Hl7v2 | Language::Plain => Msg::Aql,
     })
 }
 
