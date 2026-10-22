@@ -247,6 +247,162 @@ WHERE c/context/start_time > '2026-01-01' AND rate >= 40
 ORDER BY c/context/start_time DESC
 LIMIT 25";
 
+/// The keys that press an operation's Run.
+pub const RUN_KEYS: &str = "Ctrl Enter";
+
+/// The operation a transform pair's Run calls, its tooltip.
+pub const RUN_OPERATION: &str = "$tofhir";
+
+/// The format tags of a transform pair's input and answer.
+pub const PAIR_TAGS: [&str; 2] = ["FLAT", "FHIR R4"];
+
+/// A synthetic composition in the FLAT format, a transform pair's input.
+pub const FLAT: &str = r#"{
+  "ctx/language": "en",
+  "ctx/territory": "NL",
+  "ctx/composer_name": "Synthetic Clinician",
+  "vitals/body_weight/any_event:0/time": "2026-10-20T08:15:00+02:00",
+  "vitals/body_weight/any_event:0/weight|magnitude": 72.4,
+  "vitals/body_weight/any_event:0/weight|unit": "kg"
+}"#;
+
+/// The request a transform pair's answer came from.
+pub const PAIR_REQUEST: &str =
+    "POST https://bridge.example.org/fhir/$tofhir?templateId=synthetic.vital_signs.v1&format=FLAT";
+
+/// The EHR id of an options row's id field: a whole uuid.
+pub const EHR_ID: &str = "7d44b88c-4199-4bad-97dc-d78268e01398";
+
+/// The templates an options row offers.
+pub const TEMPLATES: [&str; 2] = ["synthetic.vital_signs.v1", "synthetic.lab_report.v1"];
+
+/// A synthetic HL7 v2 message, one segment per line, the message viewer's
+/// input.
+pub const HL7_MESSAGE: &str = "MSH|^~\\&|GALLERY|SYNTHETIC|FERROBRIDGE|SYNTHETIC|20261020081500||ORU^R01^ORU_R01|MSG-0001|P|2.5.1
+PID|1||SYN-0042^^^GALLERY^MR||Synthetic^Example||19800101|U
+OBR|1||ORD-0001|29463-7^Body weight^LN|||20261020081500
+OBX|1|NM|29463-7^Body weight^LN||72.4|kg^kilogram^UCUM|||||F";
+
+/// The version tag of the OMOP row preview.
+pub const OMOP_VERSION: &str = "OMOP CDM v5.4";
+
+/// The version tag of [`HL7_MESSAGE`].
+pub const HL7_VERSION: &str = "v2.5.1";
+
+/// One parsed segment: its id, its name, and its fields by position, name
+/// and value.
+pub type Hl7Parsed = (
+    &'static str,
+    &'static str,
+    &'static [(&'static str, &'static str, &'static str)],
+);
+
+/// [`HL7_MESSAGE`] as read, segment by segment.
+pub const HL7_SEGMENTS: [Hl7Parsed; 4] = [
+    (
+        "MSH",
+        "Message header",
+        &[
+            ("MSH-3", "Sending application", "GALLERY"),
+            ("MSH-4", "Sending facility", "SYNTHETIC"),
+            ("MSH-7", "Date/time of message", "20261020081500"),
+            ("MSH-9", "Message type", "ORU^R01^ORU_R01"),
+            ("MSH-10", "Message control id", "MSG-0001"),
+            ("MSH-12", "Version id", "2.5.1"),
+        ],
+    ),
+    (
+        "PID",
+        "Patient identification",
+        &[
+            ("PID-3", "Patient identifier list", "SYN-0042^^^GALLERY^MR"),
+            ("PID-5", "Patient name", "Synthetic^Example"),
+            ("PID-8", "Administrative sex", "U"),
+        ],
+    ),
+    (
+        "OBR",
+        "Observation request",
+        &[
+            ("OBR-3", "Filler order number", "ORD-0001"),
+            (
+                "OBR-4",
+                "Universal service identifier",
+                "29463-7^Body weight^LN",
+            ),
+            ("OBR-7", "Observation date/time", "20261020081500"),
+        ],
+    ),
+    (
+        "OBX",
+        "Observation/result",
+        &[
+            ("OBX-2", "Value type", "NM"),
+            ("OBX-3", "Observation identifier", "29463-7^Body weight^LN"),
+            ("OBX-5", "Observation value", "72.4"),
+            ("OBX-6", "Units", "kg^kilogram^UCUM"),
+            ("OBX-11", "Observation result status", "F"),
+        ],
+    ),
+];
+
+/// One previewed table: its name, the mapping that writes it, and its rows,
+/// each its columns and values, `None` for a concept that did not resolve.
+pub type OmopTable = (
+    &'static str,
+    &'static str,
+    &'static [&'static [(&'static str, Option<&'static str>)]],
+);
+
+/// The rows the synthetic composition becomes, table by table.
+pub const OMOP_TABLES: [OmopTable; 2] = [
+    (
+        "MEASUREMENT",
+        "synthetic_measurement",
+        &[
+            &[
+                ("measurement_concept_id", Some("3025315 · Body weight")),
+                ("value_as_number", Some("72.4")),
+                ("unit_concept_id", Some("9529 · kilogram")),
+                ("measurement_date", Some("2026-10-20")),
+                (
+                    "person_source_value",
+                    Some("0199c2a4-77e1-7c3a-9b1e-5d0f4c2e8a17"),
+                ),
+            ],
+            &[
+                ("measurement_concept_id", Some("3027018 · Heart rate")),
+                ("value_as_number", Some("64")),
+                ("unit_concept_id", Some("8541 · per minute")),
+                ("measurement_date", Some("2026-10-20")),
+                (
+                    "person_source_value",
+                    Some("0199c2a4-77e1-7c3a-9b1e-5d0f4c2e8a17"),
+                ),
+            ],
+        ],
+    ),
+    (
+        "OBSERVATION",
+        "synthetic_observation",
+        &[
+            &[
+                ("observation_concept_id", None),
+                ("value_as_concept_id", None),
+                ("observation_date", Some("2026-10-20")),
+            ],
+            &[
+                (
+                    "observation_concept_id",
+                    Some("4275495 · Synthetic finding"),
+                ),
+                ("value_as_concept_id", None),
+                ("observation_date", Some("2026-10-20")),
+            ],
+        ],
+    ),
+];
+
 #[cfg(test)]
 mod tests {
     use super::{ROWS, rows, sorted};

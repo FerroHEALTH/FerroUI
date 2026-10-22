@@ -8,7 +8,8 @@
 //! the tag, the tabs as links, the empty and loading states, the refusal, the error
 //! page, the code viewer, the diagnostics list, the document pane, the sign-in card, Your
 //! preferences, the confirmation dialog, the popover form, the timestamp,
-//! the record compare and the timeline.
+//! the record compare, the timeline, and the operation parts: the load
+//! report, the transform pair, the OMOP row preview and the HL7 v2 viewer.
 //! Each is a plain function
 //! returning its typed view, never a `#[component]`: a component
 //! writes a props type and a builder the browser bundle carries for each,
@@ -35,12 +36,15 @@ pub mod flow;
 pub mod form;
 pub mod funnel;
 pub mod help;
+pub mod hl7v2;
 pub mod kbd;
 pub mod layout;
+pub mod load_report;
 pub mod notice;
 pub mod popover;
 pub mod preferences;
 pub mod refusal;
+pub mod row_preview;
 pub mod score;
 pub mod search;
 pub mod segmented;
@@ -53,3 +57,4 @@ pub mod tag;
 pub mod template;
 pub mod time;
 pub mod timeline;
+pub mod transform;

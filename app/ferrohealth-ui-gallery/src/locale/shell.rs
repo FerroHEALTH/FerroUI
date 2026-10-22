@@ -126,6 +126,8 @@ messages! {
     Open = "open",
     /// `Open the document`
     OpenTheDocument = "open-the-document",
+    /// `Operations`
+    Operations = "operations",
     /// `Overlays`
     Overlays = "overlays",
     /// `Overview`

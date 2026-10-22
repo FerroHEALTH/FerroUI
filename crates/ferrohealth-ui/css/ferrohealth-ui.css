@@ -11115,6 +11115,29 @@
     font-weight: 600;
   }
 
+  /* A table of several rows: a sunken band between two rows, so a row's
+     end reads apart from the hairline between its fields. */
+  .fui-rowgraph-fields + .fui-rowgraph-fields {
+    border-top: 0.375rem solid var(--surface-sunken);
+  }
+
+  /* On a phone each column stacks over its value, which keeps the full
+     width, so an id never breaks inside. */
+  @media (width < 40rem) {
+    .fui-rowgraph-fields {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .fui-rowgraph-fields dt {
+      padding-bottom: 0;
+    }
+
+    .fui-rowgraph-fields dd {
+      padding-top: 0.125rem;
+      border-top: 0;
+    }
+  }
+
   /* ---- B7 ETL run report: where the compositions went, and the rows (FerroBRIDGE, for every console) ---- */
 
   .fui-funnel {
@@ -12334,6 +12357,11 @@
     border-top: 1px solid var(--edge);
   }
 
+  /* A section after the pair, such as the message as read. */
+  .fui-transform + .fui-panel-section {
+    border-top: 1px solid var(--edge);
+  }
+
   .fui-transform-options .fui-field-checks {
     align-self: flex-end;
     display: flex;
@@ -12354,6 +12382,11 @@
      Run stays on it at wide widths. */
   .fui-transform-options.is-dense .fui-field:not(:has(.fui-segmented), .fui-field-checks) {
     flex: 1 1 auto;
+  }
+
+  /* A dense row's id field keeps its 24 rem start. */
+  .fui-transform-options.is-dense .fui-field.is-id {
+    flex: 1 1 24rem;
   }
 
   /* A select is never narrower than its chosen value. */

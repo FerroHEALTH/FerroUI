@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The syntax highlighting of YAML, JSON, XML and AQL, compiled into both
-//! halves, so the server and the browser draw the same text the same way.
+//! The syntax highlighting of YAML, JSON, XML, AQL and HL7 v2, compiled
+//! into both halves, so the server and the browser draw the same text the
+//! same way.
 //!
 //! Each tokenizer is one linear pass over the characters of its input, so a
 //! multi-byte character is never split, and the texts of its tokens joined
@@ -12,9 +13,11 @@
 //! text that reads the same without them. [`html`] writes a text as escaped,
 //! classed lines, which the code panel and the editor draw. The YAML
 //! tokenizer is FerroBRIDGE's, the AQL and JSON ones FerroFED's, the XML one
-//! FerroEHR's. No specification governs the highlighting: our own design.
+//! FerroEHR's, the HL7 v2 one the library's own for FerroBRIDGE's message
+//! viewer. No specification governs the highlighting: our own design.
 
 mod aql;
+mod hl7v2;
 mod json;
 mod xml;
 mod yaml;
@@ -40,13 +43,22 @@ pub enum Language {
     Xml,
     /// openEHR AQL.
     Aql,
+    /// An HL7 v2 message, one segment per line.
+    Hl7v2,
     /// Text drawn as it stands.
     Plain,
 }
 
 impl Language {
     /// Every language, in the order the gallery shows them.
-    pub const ALL: [Self; 5] = [Self::Yaml, Self::Json, Self::Xml, Self::Aql, Self::Plain];
+    pub const ALL: [Self; 6] = [
+        Self::Yaml,
+        Self::Json,
+        Self::Xml,
+        Self::Aql,
+        Self::Hl7v2,
+        Self::Plain,
+    ];
 
     /// The language's name, as a label shows it.
     #[must_use]
@@ -56,6 +68,7 @@ impl Language {
             Self::Json => "JSON",
             Self::Xml => "XML",
             Self::Aql => "AQL",
+            Self::Hl7v2 => "HL7 v2",
             Self::Plain => "text",
         }
     }
@@ -100,6 +113,11 @@ pub enum Kind {
     Parameter,
     /// An AQL identifier: a variable, an RM type, a function.
     Identifier,
+    /// An HL7 v2 segment's id, such as `PID`.
+    Segment,
+    /// An HL7 v2 separator: the field, component, repetition, escape or
+    /// subcomponent separator.
+    Separator,
 }
 
 impl Kind {
@@ -118,6 +136,8 @@ impl Kind {
             Self::Attribute => Some("fui-tok-attribute"),
             Self::Path => Some("fui-tok-path"),
             Self::Parameter => Some("fui-tok-parameter"),
+            Self::Segment => Some("fui-hl7-segid"),
+            Self::Separator => Some("fui-hl7-sep"),
         }
     }
 }
@@ -142,6 +162,7 @@ pub fn tokens(language: Language, text: &str) -> Vec<Token> {
         Language::Json => json::tokens(text),
         Language::Xml => xml::tokens(text),
         Language::Aql => aql::tokens(text),
+        Language::Hl7v2 => hl7v2::tokens(text),
         Language::Plain => plain(text),
     }
 }

@@ -188,6 +188,7 @@ pub struct Field {
     id: String,
     label: Oco<'static, str>,
     label_hidden: bool,
+    holds_id: bool,
     help: Option<Oco<'static, str>>,
     after: Option<AnyView>,
     leading: Option<Inner>,
@@ -201,6 +202,7 @@ impl Field {
             id: id.into(),
             label: label.into(),
             label_hidden: false,
+            holds_id: false,
             help: None,
             after: None,
             leading: None,
@@ -229,6 +231,16 @@ impl Field {
         self
     }
 
+    /// Widens the field for a whole id in an operation's options row
+    /// (`is-id`, [`crate::view::transform`]): it starts at 24 rem, wide
+    /// enough for a uuid or a versioned object uid, and takes the rest of
+    /// the row. A field for another long token, such as a list of scopes,
+    /// takes it too.
+    pub fn holds_id(mut self) -> Self {
+        self.holds_id = true;
+        self
+    }
+
     /// Adds `line` after the help, such as the control's error line
     /// ([`ERROR`]).
     pub fn after(mut self, line: impl IntoView + 'static) -> Self {
@@ -254,6 +266,7 @@ impl Field {
             id,
             label,
             label_hidden,
+            holds_id,
             help,
             after,
             leading,
@@ -273,7 +286,7 @@ impl Field {
             "fui-label"
         };
         view! {
-            <div class="fui-field">
+            <div class="fui-field" class:is-id=holds_id>
                 <label for=id class=class>
                     {label}
                 </label>

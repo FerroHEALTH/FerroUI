@@ -186,6 +186,7 @@ mod code;
 mod dock;
 mod forms;
 mod layouts;
+mod operations;
 mod overlays;
 mod overview;
 mod preferences;
@@ -202,6 +203,7 @@ const AREAS: &[&[Msg]] = &[
     dock::ALL,
     forms::ALL,
     layouts::ALL,
+    operations::ALL,
     overlays::ALL,
     overview::ALL,
     preferences::ALL,
