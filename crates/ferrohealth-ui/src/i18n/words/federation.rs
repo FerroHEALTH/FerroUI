@@ -15,6 +15,8 @@ texts! {
     FanoutIncomplete = "fanout-incomplete",
     /// The words that open a fan-out's notice when a node failed.
     FanoutIncompleteAnswer = "fanout-incomplete-answer",
+    /// A fan-out's verdict when no node was asked.
+    FanoutUnasked = "fanout-unasked",
     /// The replica line's words before the replica's name.
     ReplicaAnswered = "replica-answered",
     /// A group card's control that folds it: `$title` is its name.

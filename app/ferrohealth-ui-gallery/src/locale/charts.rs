@@ -110,6 +110,14 @@ messages! {
     Fri = "fri",
     /// `Line chart`
     LineChart = "line-chart",
+    /// `Line chart with eight series`
+    LineChartMany = "line-chart-many",
+    /// `Lane { $index }`
+    ManyLane = "many-lane",
+    /// `Requests per lane`
+    ManySeriesLabel = "many-series-label",
+    /// `Eight synthetic lanes over twelve days, each under 0.001 requests a second.`
+    ManySeriesSummary = "many-series-summary",
     /// `Mon`
     Mon = "mon",
     /// `48 synthetic commits over 30 days, most on day 21.`
@@ -134,12 +142,16 @@ messages! {
     RunReport = "run-report",
     /// `Run report with nothing refused`
     RunReportClean = "run-report-clean",
+    /// `Run report with a tiny part`
+    RunReportTiny = "run-report-tiny",
     /// `Rows per table`
     RunRowsPerTable = "run-rows-per-table",
     /// `Of 1,240 compositions read: 1,180 written, 52 skipped, 8 refused.`
     RunSentence = "run-sentence",
     /// `Skipped`
     RunSkipped = "run-skipped",
+    /// `Of 2,000,003 compositions read: 2,000,000 written, 0 skipped, 3 refused.`
+    RunTinySentence = "run-tiny-sentence",
     /// `Written`
     RunWritten = "run-written",
     /// `Sat`
@@ -154,8 +166,12 @@ messages! {
     ScoreCells = "score-cells",
     /// `Certain`
     ScoreCertain = "score-certain",
+    /// `Score with close thresholds`
+    ScoreClose = "score-close",
     /// `exact match`
     ScoreExact = "score-exact",
+    /// `Exact`
+    ScoreExactBand = "score-exact-band",
     /// `Family name: close match`
     ScoreFamilyName = "score-family-name",
     /// `Given name: different`
@@ -164,6 +180,8 @@ messages! {
     ScoreJaroFar = "score-jaro-far",
     /// `Jaro-Winkler 0.94`
     ScoreJaroNear = "score-jaro-near",
+    /// `Field: Datenschutzgrundverordnungskonformitätsprüfung`
+    ScoreLongField = "score-long-field",
     /// `missing on one side`
     ScoreMissing = "score-missing",
     /// `Possible`

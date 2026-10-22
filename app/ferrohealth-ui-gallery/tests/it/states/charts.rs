@@ -3,11 +3,14 @@
 
 //! The charts page's figures: a flow's card hovered and focused, which
 //! shows its path, the busy bridge folded and unfolded, and the run report,
-//! the flows' lists and the score breakdown on a phone.
+//! the flows' lists and the score breakdown on a phone; the eight series
+//! chart and the score among close thresholds on a phone, and the charts
+//! and the forms under forced colours.
 
 use std::error::Error;
 
 use ferrohealth_ui::style::Brand;
+use serde_json::json;
 use thirtyfour::prelude::*;
 
 use super::{HEIGHT, WIDTH, away, card, focus, shot_of};
@@ -25,7 +28,30 @@ pub(super) const STATES: &[&str] = &[
     "flow-list-390",
     "run-report-390",
     "score-390",
+    "many-series-390",
+    "score-close-390",
+    "forced-colours-charts",
+    "forced-colours-forms",
 ];
+
+/// Emulates forced colours, or ends it, in `theme`'s colour scheme with
+/// reduced motion, as the capture runs.
+async fn forced_colours(browser: &Browser, theme: &str, on: bool) -> Result<(), Box<dyn Error>> {
+    let forced = if on { "active" } else { "none" };
+    browser
+        .driver()
+        .cdp()
+        .send_raw(
+            "Emulation.setEmulatedMedia",
+            json!({ "features": [
+                { "name": "forced-colors", "value": forced },
+                { "name": "prefers-color-scheme", "value": theme },
+                { "name": "prefers-reduced-motion", "value": "reduce" },
+            ] }),
+        )
+        .await?;
+    Ok(())
+}
 
 /// The flow with problem edges, its CDR card hovered and then focused, and
 /// at 390 px its list, the run report and the score breakdown.
@@ -87,9 +113,23 @@ pub(super) async fn charts(
         ("Flow with problem edges", "flow-list-390"),
         ("Run report", "run-report-390"),
         ("Score breakdown", "score-390"),
+        ("Line chart with eight series", "many-series-390"),
+        ("Score with close thresholds", "score-close-390"),
     ] {
         let section = browser.element(card(title)).await?;
         shot_of(browser, brand, theme, state, &section).await?;
     }
-    window(browser, WIDTH, HEIGHT).await
+    window(browser, WIDTH, HEIGHT).await?;
+    forced_colours(browser, theme, true).await?;
+    browser.goto(&page).await?;
+    let lines = browser
+        .element(card("Line chart with eight series"))
+        .await?;
+    shot_of(browser, brand, theme, "forced-colours-charts", &lines).await?;
+    browser
+        .goto(&gallery.url(&format!("/{}/forms", brand.key())))
+        .await?;
+    let query = browser.element(card("A federated query")).await?;
+    shot_of(browser, brand, theme, "forced-colours-forms", &query).await?;
+    forced_colours(browser, theme, false).await
 }

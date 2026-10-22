@@ -56,6 +56,8 @@ one is a defect. In short:
     diamond, a cross, a hollow ring, a muted row.
 13. Console configuration mode exists only for a product with its own
     configuration store; the others are file mode only.
+14. Every mark keeps its meaning under forced colours: a mark drawn by a
+    ground, a shadow or a gradient is drawn again in system colours.
 
 ## The checks
 

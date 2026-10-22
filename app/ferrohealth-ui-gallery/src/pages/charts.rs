@@ -4,13 +4,15 @@
 //! The charts page: the charts and the figures drawn as SVG.
 //!
 //! A line chart of three synthetic series over a week, its legend showing
-//! and hiding each, the activity line of a dashboard, the ETL run report
-//! with refusals and with none, the flow at rest and with problem edges,
-//! a busy bridge of thirty callers and thirty upstreams as a flow whose
-//! lanes fold, and the score breakdown and its compact cell. The query's
-//! `open` names the busy flow's lanes unfolded (`callers`, `upstreams`).
+//! and hiding each, and one of eight lanes of small values over twelve
+//! days; the activity line of a dashboard, the ETL run report with
+//! refusals, with none and with a tiny part, the flow at rest and with
+//! problem edges, a busy bridge of thirty callers and thirty upstreams as
+//! a flow whose lanes fold, and the score breakdown, among close
+//! thresholds too, and its compact cell. The query's `open` names the busy
+//! flow's lanes unfolded (`callers`, `upstreams`).
 
-use crate::locale::{Msg, tr};
+use crate::locale::{Msg, tr, tr_with};
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::action::ActionGroup;
@@ -111,6 +113,41 @@ fn requests_chart(words: RequestsWords) -> AnyView {
     line_chart(&chart, chart_words)
 }
 
+/// The line chart of eight synthetic lanes of small values over twelve
+/// days: past the six colours a lane takes its own mark, the value axis
+/// keeps the decimals of its step, and a narrow card thins the dates.
+fn many_lines() -> AnyView {
+    let series = (0_u8..8)
+        .map(|lane| Series {
+            name: tr_with(Msg::ManyLane, &[("index", (lane + 1).to_string().into())]),
+            points: (0_u8..12)
+                .map(|day| {
+                    (
+                        f64::from(day),
+                        (f64::from(lane) + 1.0 + f64::from(day % 4) * 0.25) * 0.0001,
+                    )
+                })
+                .collect(),
+            palette: lane,
+        })
+        .collect();
+    let chart = LineChart {
+        id: "lanes",
+        label: tr(Msg::ManySeriesLabel),
+        summary: tr(Msg::ManySeriesSummary),
+        series,
+        x_ticks: (0_u8..12)
+            .map(|day| (f64::from(day), format!("2026-10-{:02}", day + 1)))
+            .collect(),
+        y_range: None,
+    };
+    card(
+        tr(Msg::LineChartMany),
+        line_chart(&chart, ChartWords::of_page()),
+    )
+    .into_any()
+}
+
 /// The activity line of thirty synthetic days.
 fn activity() -> AnyView {
     let counts = [
@@ -128,6 +165,22 @@ fn activity() -> AnyView {
         }),
     )
     .into_any()
+}
+
+/// The run report of a run that refused 3 compositions of two million: the
+/// refused part keeps a width that shows.
+fn tiny_report() -> AnyView {
+    let body = funnel(&Funnel {
+        figure: String::from("2,000,003"),
+        words: tr(Msg::RunCompositionsRead),
+        label: tr(Msg::RunTinySentence),
+        parts: vec![
+            part(Msg::RunWritten, 2_000_000, "2,000,000", Tone::Ok),
+            part(Msg::RunSkipped, 0, "0", Tone::Neutral),
+            part(Msg::RunRefused, 3, "3", Tone::Bad),
+        ],
+    });
+    card(tr(Msg::RunReportTiny), body).into_any()
 }
 
 /// One part of a run report's stacked bar.
@@ -629,6 +682,33 @@ fn breakdown(at_threshold: bool) -> AnyView {
     card(tr(title), score_breakdown(&score)).into_any()
 }
 
+/// A score among four close thresholds, its field's long word wrapping:
+/// the labels too close for one row take more.
+fn close_breakdown() -> AnyView {
+    let thresholds = [
+        (Msg::ScorePossible, 0.80),
+        (Msg::ScoreProbable, 0.83),
+        (Msg::ScoreCertain, 0.86),
+        (Msg::ScoreExactBand, 0.99),
+    ]
+    .map(|(label, at)| Threshold {
+        label: tr(label),
+        at,
+    })
+    .to_vec();
+    let score = Score {
+        total: 2.9,
+        value: 0.84,
+        grade: tr(Msg::ScoreProbable),
+        contributions: vec![
+            contribution(Msg::ScoreLongField, Msg::ScoreExact, 2.4),
+            contribution(Msg::ScoreSex, Msg::ScoreExact, 0.5),
+        ],
+        thresholds,
+    };
+    card(tr(Msg::ScoreClose), score_breakdown(&score)).into_any()
+}
+
 /// The compact score of a table cell, once per grade.
 fn score_cells() -> AnyView {
     card(
@@ -655,8 +735,8 @@ pub fn ChartsPage() -> impl IntoView {
         ActionGroup::none(),
     )
     .into_any();
-    let sections = (lines(), activity());
-    let reports = (run_report(true), run_report(false));
+    let sections = (lines(), many_lines(), activity());
+    let reports = (run_report(true), run_report(false), tiny_report());
     let open: Vec<String> = use_query_map().with_untracked(|query| {
         query
             .get_str("open")
@@ -667,7 +747,12 @@ pub fn ChartsPage() -> impl IntoView {
             .collect()
     });
     let flows = (bridge_flow(false), bridge_flow(true), busy_flow(&open));
-    let scores = (breakdown(false), breakdown(true), score_cells());
+    let scores = (
+        breakdown(false),
+        breakdown(true),
+        close_breakdown(),
+        score_cells(),
+    );
     view! {
         {super::title(tr(Msg::Charts))}
         {header}
@@ -675,14 +760,17 @@ pub fn ChartsPage() -> impl IntoView {
             view! {
                 {sections.0}
                 {sections.1}
+                {sections.2}
                 {reports.0}
                 {reports.1}
+                {reports.2}
                 {flows.0}
                 {flows.1}
                 {flows.2}
                 {scores.0}
                 {scores.1}
                 {scores.2}
+                {scores.3}
             },
         )}
     }

@@ -12,11 +12,13 @@
 //! the score, the grade, the thresholds and every contribution (WCAG 2.2
 //! SC 1.1.1). No specification governs the drawing: our own design.
 
+use std::cmp::Ordering;
+
 use leptos::prelude::*;
 
 use crate::i18n::{Text, tr, tr_with};
 use crate::tone::Tone;
-use crate::view::chart::proportion;
+use crate::view::chart::{nice_step, proportion};
 use crate::view::status::pill;
 
 /// One compared field's part of a score.
@@ -45,14 +47,17 @@ pub struct Threshold {
 pub struct Score {
     /// The sum of the weights.
     pub total: f64,
-    /// The score the total maps to, between 0 and 1.
+    /// The score the total maps to, usually between 0 and 1; the scale
+    /// widens to show a score outside its thresholds, and a score that is
+    /// not a number reads "no value" with no point drawn.
     pub value: f64,
     /// The grade the score falls in, such as "Probable".
     pub grade: String,
     /// The contributions, in the order they are drawn.
     pub contributions: Vec<Contribution>,
-    /// The thresholds, lowest first: up to three, which take the possible,
-    /// the probable and the certain band of the scale.
+    /// The thresholds, lowest first, as many as the matcher has: the band
+    /// of the first takes the possible tone, the band of the last the
+    /// certain tone, and every band between them the probable tone.
     pub thresholds: Vec<Threshold>,
 }
 
@@ -61,11 +66,14 @@ impl Score {
     /// reaches, or neutral under the first.
     #[must_use]
     pub fn tone(&self) -> Tone {
-        match self.reached() {
+        match self
+            .reached()
+            .map(|index| band(index, self.thresholds.len()))
+        {
             None => Tone::Neutral,
-            Some(0) => Tone::Warn,
-            Some(1) => Tone::Info,
-            Some(_) => Tone::Ok,
+            Some(Band::Possible) => Tone::Warn,
+            Some(Band::Probable) => Tone::Info,
+            Some(Band::Certain) => Tone::Ok,
         }
     }
 
@@ -77,12 +85,144 @@ impl Score {
     }
 }
 
-/// The band classes of the scale, after the one under the first threshold.
-const BANDS: [&str; 3] = [
-    "fui-score-scale-band-possible",
-    "fui-score-scale-band-probable",
-    "fui-score-scale-band-certain",
-];
+/// The grade band a threshold starts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Band {
+    /// The first band: the possible tone.
+    Possible,
+    /// A band between the first and the last: the probable tone.
+    Probable,
+    /// The last band: the certain tone.
+    Certain,
+}
+
+/// The band the threshold at `index` of `count` starts: the last is
+/// certain, the first possible, and every one between them probable.
+fn band(index: usize, count: usize) -> Band {
+    if index + 1 >= count {
+        Band::Certain
+    } else if index == 0 {
+        Band::Possible
+    } else {
+        Band::Probable
+    }
+}
+
+impl Band {
+    /// The class of the band on the scale.
+    const fn class(self) -> &'static str {
+        match self {
+            Self::Possible => "fui-score-scale-band-possible",
+            Self::Probable => "fui-score-scale-band-probable",
+            Self::Certain => "fui-score-scale-band-certain",
+        }
+    }
+}
+
+/// The width of one character of a scale label, in rem: the micro step of
+/// the type scale (0.75 rem) at 0.6 em, wide for the system face.
+const CHAR_REM: f64 = 0.45;
+
+/// The share of its box the scale's track takes, as the inner drawing's
+/// `width` says.
+const TRACK: f64 = 0.84;
+
+/// The box widths, in rem, the scale's label rows are worked out for: a
+/// phone's card, and from 40 rem, where the stylesheet moves each label
+/// to the row the wider track gives it.
+const NARROW_REM: f64 = 20.0;
+const WIDE_REM: f64 = 40.0;
+
+/// The most rows the scale's labels take, and the height of one.
+const ROWS: usize = 4;
+const ROW_PX: f64 = 14.0;
+
+/// The classes of a scale whose labels take `narrow` rows on a phone and
+/// `wide` rows from 40 rem.
+fn rows_class(narrow: usize, wide: usize) -> String {
+    let narrow = match narrow {
+        0 | 1 => "",
+        2 => " fui-score-rows-2",
+        3 => " fui-score-rows-3",
+        _ => " fui-score-rows-4",
+    };
+    let wide = match wide {
+        0 | 1 => "fui-score-wide-1",
+        2 => "fui-score-wide-2",
+        3 => "fui-score-wide-3",
+        _ => "fui-score-wide-4",
+    };
+    format!("fui-score-scale{narrow} {wide}")
+}
+
+/// The class that moves a label from its row on a phone, `row`, to its
+/// row from 40 rem, `wide`.
+fn shift_class(row: usize, wide: usize) -> &'static str {
+    match (row.cmp(&wide), row.abs_diff(wide)) {
+        (Ordering::Equal, _) => "fui-score-mark-label",
+        (Ordering::Greater, 1) => "fui-score-mark-label fui-score-up-1",
+        (Ordering::Greater, 2) => "fui-score-mark-label fui-score-up-2",
+        (Ordering::Greater, _) => "fui-score-mark-label fui-score-up-3",
+        (Ordering::Less, 1) => "fui-score-mark-label fui-score-down-1",
+        (Ordering::Less, 2) => "fui-score-mark-label fui-score-down-2",
+        (Ordering::Less, _) => "fui-score-mark-label fui-score-down-3",
+    }
+}
+
+/// The row of each label on a track `width` rem wide, the labels given as
+/// their share of the track and their length in rem, in order along it:
+/// each takes the first row where it clears the label before it.
+fn label_rows(labels: &[(f64, f64)], width: f64) -> Vec<usize> {
+    let track = width * TRACK;
+    let mut ends: Vec<f64> = Vec::new();
+    labels
+        .iter()
+        .map(|&(share, length)| {
+            let start = share * track - length / 2.0;
+            let row = ends
+                .iter()
+                .position(|end| start >= end + 0.5)
+                .unwrap_or(ends.len())
+                .min(ROWS - 1);
+            match ends.get_mut(row) {
+                Some(end) => *end = end.max(start + length),
+                None => ends.push(start + length),
+            }
+            row
+        })
+        .collect()
+}
+
+/// The range the scale draws: from a round step under the lowest
+/// threshold or score to 1, or to a round step over the highest when
+/// something lies past 1.
+fn domain(score: &Score) -> (f64, f64) {
+    let values: Vec<f64> = score
+        .thresholds
+        .iter()
+        .map(|threshold| threshold.at)
+        .chain([score.value])
+        .filter(|value| value.is_finite())
+        .collect();
+    let Some((least, most)) = values
+        .iter()
+        .fold(None, |range: Option<(f64, f64)>, &value| match range {
+            None => Some((value, value)),
+            Some((low, high)) => Some((low.min(value), high.max(value))),
+        })
+    else {
+        return (0.0, 1.0);
+    };
+    let step = nice_step(((most.max(1.0) - least) / 4.0).max(0.01));
+    let high = if most <= 1.0 {
+        1.0
+    } else {
+        (most / step - 1e-9).ceil() * step
+    };
+    let low = (least / step + 1e-9).floor() * step - step;
+    let low = if least >= 0.0 { low.max(0.0) } else { low };
+    (low, high)
+}
 
 /// The share of a bar's width left of its zero line.
 const ZERO: f64 = 40.0;
@@ -99,9 +239,13 @@ fn signed(weight: f64) -> String {
     }
 }
 
-/// A score as the breakdown prints it, with two decimals.
+/// A score as the breakdown prints it, with two decimals, or "no value".
 fn figure(score: f64) -> String {
-    format!("{score:.2}")
+    if score.is_finite() {
+        format!("{score:.2}")
+    } else {
+        tr(Text::ChartNoValueCell)
+    }
 }
 
 /// The bar of one weight on a track whose ends stand for `largest`.
@@ -218,14 +362,10 @@ fn scale_name(score: &Score) -> String {
 /// label centred on its mark, the start labelled, and the score as the
 /// point.
 fn scale(score: &Score) -> AnyView {
-    let floor = score
-        .thresholds
-        .iter()
-        .map(|threshold| threshold.at)
-        .chain([score.value])
-        .fold(f64::INFINITY, f64::min);
-    let low = if floor >= 0.5 { 0.5 } else { 0.0 };
-    let at = move |value: f64| ((value - low) / (1.0 - low)).clamp(0.0, 1.0) * 100.0;
+    let (low, high) = domain(score);
+    let share = move |value: f64| ((value - low) / (high - low)).clamp(0.0, 1.0);
+    let at = move |value: f64| share(value) * 100.0;
+    let count = score.thresholds.len();
     let starts: Vec<f64> = score
         .thresholds
         .iter()
@@ -233,55 +373,89 @@ fn scale(score: &Score) -> AnyView {
         .collect();
     let bands = starts
         .iter()
-        .zip(BANDS)
         .enumerate()
-        .map(|(index, (start, class))| {
-            let end = starts.get(index + 1).copied().unwrap_or(1.0);
+        .map(|(index, start)| {
+            let end = starts.get(index + 1).copied().unwrap_or(high);
             let x = format!("{:.1}%", at(*start));
             let width = format!("{:.1}%", (at(end) - at(*start)).max(0.0));
+            let class = band(index, count).class();
             view! { <rect class=class x=x y="8" width=width height="10"></rect> }
         })
         .collect_view();
+    // The start's label and each threshold's, along the track, with the
+    // rows they take on a phone and from 40 rem.
+    let mut labels: Vec<(f64, String)> = vec![(low, figure(low))];
+    labels.extend(score.thresholds.iter().map(|threshold| {
+        (
+            threshold.at,
+            format!("{} {}", threshold.label, figure(threshold.at)),
+        )
+    }));
+    labels.sort_by(|a, b| a.0.total_cmp(&b.0));
+    let placed: Vec<(f64, f64)> = labels
+        .iter()
+        .map(|(value, words)| {
+            let length = u32::try_from(words.chars().count()).unwrap_or(u32::MAX);
+            (share(*value), f64::from(length) * CHAR_REM)
+        })
+        .collect();
+    let narrow = label_rows(&placed, NARROW_REM);
+    let wide = label_rows(&placed, WIDE_REM);
+    let rows = |of: &[usize]| of.iter().copied().max().unwrap_or(0) + 1;
+    let class = rows_class(rows(&narrow), rows(&wide));
+    let height = format!(
+        "{:.0}",
+        30.0 + ROW_PX * f64::from(u8::try_from(rows(&narrow)).unwrap_or(1))
+    );
     let marks = score
         .thresholds
         .iter()
         .map(|threshold| {
             let x = format!("{:.1}%", at(threshold.at));
-            let words = format!("{} {}", threshold.label, figure(threshold.at));
+            view! { <line class="fui-score-mark" x1=x.clone() x2=x y1="4" y2="24"></line> }
+        })
+        .collect_view();
+    let words = labels
+        .into_iter()
+        .zip(narrow.into_iter().zip(wide))
+        .map(|((value, words), (row, wide))| {
+            let x = format!("{:.1}%", at(value));
+            let y = format!(
+                "{:.0}",
+                38.0 + ROW_PX * f64::from(u8::try_from(row).unwrap_or(0))
+            );
+            let class = shift_class(row, wide);
             view! {
-                <line class="fui-score-mark" x1=x.clone() x2=x.clone() y1="4" y2="24"></line>
-                <text class="fui-score-mark-label" x=x y="38" text-anchor="middle">
+                <text class=class x=x y=y text-anchor="middle">
                     {words}
                 </text>
             }
         })
         .collect_view();
-    let point = format!("{:.1}%", at(score.value));
+    let point = score.value.is_finite().then(|| {
+        let point = format!("{:.1}%", at(score.value));
+        view! { <circle class="fui-score-point" cx=point cy="13" r="6"></circle> }
+    });
+    let inner = height.clone();
     view! {
-        <svg
-            class="fui-score-scale"
-            width="100%"
-            height="44"
-            role="img"
-            aria-label=scale_name(score)
-        >
-            <svg x="8%" width="84%" height="44" overflow="visible">
-                <rect
-                    class="fui-score-scale-band-none"
-                    x="0"
-                    y="8"
-                    width="100%"
-                    height="10"
-                    rx="3"
-                ></rect>
-                {bands}
-                {marks}
-                <text class="fui-score-mark-label" x="0" y="38" text-anchor="middle">
-                    {figure(low)}
-                </text>
-                <circle class="fui-score-point" cx=point cy="13" r="6"></circle>
+        <div class="fui-score-scale-box">
+            <svg class=class width="100%" height=height role="img" aria-label=scale_name(score)>
+                <svg x="8%" width="84%" height=inner overflow="visible">
+                    <rect
+                        class="fui-score-scale-band-none"
+                        x="0"
+                        y="8"
+                        width="100%"
+                        height="10"
+                        rx="3"
+                    ></rect>
+                    {bands}
+                    {marks}
+                    {words}
+                    {point}
+                </svg>
             </svg>
-        </svg>
+        </div>
     }
     .into_any()
 }
@@ -347,7 +521,7 @@ pub fn score_bar(score: f64, tone: Tone) -> AnyView {
 
 #[cfg(test)]
 mod tests {
-    use super::{Score, Threshold, signed};
+    use super::{NARROW_REM, Score, Threshold, WIDE_REM, domain, label_rows, signed};
     use crate::tone::Tone;
 
     #[test]
@@ -382,5 +556,95 @@ mod tests {
         assert_eq!(Tone::Ok, score.tone());
         score.value = 0.40;
         assert_eq!(Tone::Neutral, score.tone());
+    }
+
+    fn graded(value: f64, at: &[f64]) -> Score {
+        Score {
+            total: 0.0,
+            value,
+            grade: String::new(),
+            contributions: Vec::new(),
+            thresholds: at
+                .iter()
+                .map(|at| Threshold {
+                    label: String::new(),
+                    at: *at,
+                })
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn four_thresholds_take_four_bands_the_last_certain() {
+        let at = [0.80, 0.83, 0.86, 0.99];
+        assert_eq!(Tone::Warn, graded(0.81, &at).tone(), "the first band");
+        assert_eq!(Tone::Info, graded(0.84, &at).tone(), "a middle band");
+        assert_eq!(Tone::Info, graded(0.90, &at).tone(), "a middle band");
+        assert_eq!(Tone::Ok, graded(0.995, &at).tone(), "the last band");
+        assert_eq!(
+            Tone::Ok,
+            graded(0.9, &[0.5]).tone(),
+            "one threshold is certain"
+        );
+    }
+
+    #[test]
+    fn the_scale_spans_the_thresholds_and_a_score_outside_them() {
+        let close = domain(&graded(0.84, &[0.80, 0.83, 0.86, 0.99]));
+        assert!(
+            (close.0 - 0.75).abs() < 1e-9 && (close.1 - 1.0).abs() < 1e-9,
+            "{close:?}"
+        );
+        let past = domain(&graded(1.3, &[0.6, 0.8]));
+        assert!(past.1 >= 1.3, "a score past 1 is on the scale: {past:?}");
+        let under = domain(&graded(-0.2, &[0.6, 0.8]));
+        assert!(
+            under.0 <= -0.2,
+            "a score under 0 is on the scale: {under:?}"
+        );
+        let nothing = domain(&graded(f64::NAN, &[]));
+        assert!(
+            (nothing.1 - 1.0).abs() < 1e-9 && nothing.0.abs() < 1e-9,
+            "{nothing:?}"
+        );
+    }
+
+    #[test]
+    fn close_labels_take_rows_on_a_phone_and_fewer_when_wide() {
+        // The start and four thresholds at 0.75 to 1: 0.80, 0.83, 0.86, 0.99.
+        let labels = [
+            (0.0, 1.8),
+            (0.2, 5.85),
+            (0.32, 5.85),
+            (0.44, 5.4),
+            (0.96, 4.5),
+        ];
+        let narrow = label_rows(&labels, NARROW_REM);
+        assert_eq!(
+            vec![0, 1, 0, 2, 0],
+            narrow,
+            "a label clear of the one before shares its row"
+        );
+        for (width, rows) in [
+            (NARROW_REM, &narrow),
+            (WIDE_REM, &label_rows(&labels, WIDE_REM)),
+        ] {
+            let track = width * 0.84;
+            for (index, (share, length)) in labels.iter().enumerate() {
+                for (other, (next, next_length)) in labels.iter().enumerate().skip(index + 1) {
+                    let apart =
+                        (next * track - next_length / 2.0) >= (share * track + length / 2.0);
+                    assert!(
+                        rows.get(index) != rows.get(other) || apart,
+                        "labels {index} and {other} overlap at {width} rem: {rows:?}"
+                    );
+                }
+            }
+        }
+        let wide = label_rows(&labels, WIDE_REM);
+        assert!(
+            wide.iter().max() < narrow.iter().max(),
+            "a wide track needs fewer rows: {wide:?}"
+        );
     }
 }

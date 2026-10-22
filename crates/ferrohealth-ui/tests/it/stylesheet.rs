@@ -520,3 +520,107 @@ fn reduce_motion_chosen_in_your_preferences_stills_the_page_as_the_system_does()
         "a cut fade would hide Saved at once"
     );
 }
+
+/// The rules of the stylesheet's forced colours block.
+fn forced_colours() -> &'static str {
+    let start = STYLESHEET
+        .find("@media (forced-colors: active) {")
+        .expect("a forced colours block");
+    STYLESHEET.get(start..).expect("the block's text")
+}
+
+#[test]
+fn every_mark_drawn_by_a_ground_or_a_shadow_is_drawn_again_under_forced_colours() {
+    // NOTE: CSS Color Adjustment Module Level 1 § 3.1: forced colours replace each colour and drop box shadows and gradient images.
+    let forced = forced_colours();
+    for (rule, what) in [
+        (
+            "    .fui-pill::before,\n    .fui-dot,\n    .fui-editor-dirty::before,\n    .is-current > .fui-lifecycle-dot::after {\n      forced-color-adjust: none;\n      background: CanvasText;",
+            "a state's shape in the status pill, the health dot and the editor's dirty mark",
+        ),
+        (
+            "    .fui-dot.fui-tone-neutral,\n    .fui-inactive-mark::before {\n      forced-color-adjust: none;\n      border: 1.5px solid CanvasText;",
+            "the hollow ring, an inset shadow elsewhere",
+        ),
+        (
+            ":is(.fui-check > input.fui-switch, input.fui-switch)::before {\n      forced-color-adjust: none;\n      background: ButtonText;",
+            "the switch's knob",
+        ),
+        (
+            ":is(.fui-check > input.fui-switch, input.fui-switch):checked {\n      border-color: Highlight;\n      background: Highlight;",
+            "the switch's on state",
+        ),
+        (
+            "    .fui-segment:is([aria-pressed=\"true\"], [aria-current=\"true\"], [aria-checked=\"true\"], :has(> input:checked)),\n    .fui-chip-check:has(:checked) {\n      forced-color-adjust: none;\n      border-color: Highlight;\n      background: Highlight;\n      color: HighlightText;",
+            "a pressed segment, the theme choice and a chosen radio among them",
+        ),
+        (
+            "    .fui-select:not([multiple], [size]),\n    .fui-combobox-input {\n      forced-color-adjust: none;",
+            "the select's chevron, a gradient image",
+        ),
+        (
+            "    .fui-nav-entry[aria-current=\"page\"]:not(:focus-visible),",
+            "the current page in the sidebar",
+        ),
+        (
+            "    .fui-tab:is([aria-current=\"page\"], [aria-current=\"true\"], [aria-selected=\"true\"]):not(:focus-visible),",
+            "the current tab",
+        ),
+        (
+            "    .fui-table tbody tr[aria-current=\"true\"] > :first-child,",
+            "a current row's edge, an inset shadow elsewhere",
+        ),
+        (
+            "    .fui-worklist .fui-table tbody tr:is(:focus-visible, :has(.fui-row-link:focus-visible)) {\n      outline: 2px solid CanvasText;",
+            "the worklist row's focus ring, a shadow elsewhere",
+        ),
+        (
+            "    .fui-swatch,\n    .fui-chart-line,\n    .fui-chart-gap,\n    .fui-chart-point {\n      forced-color-adjust: none;",
+            "a series keeps the colour its swatch names",
+        ),
+        (
+            "    .fui-funnel-swatch {\n      forced-color-adjust: none;\n      border: 1px solid CanvasText;",
+            "the run report's swatches, a ground elsewhere",
+        ),
+        (
+            "    .fui-chart-label,\n    .fui-score-mark-label,\n    .fui-score-point-label {\n      fill: CanvasText;\n      stroke: Canvas;",
+            "the chart's labels on the canvas, not on a halo of the card's ground",
+        ),
+    ] {
+        assert!(
+            forced.contains(rule),
+            "{what} is drawn under forced colours"
+        );
+    }
+}
+
+#[test]
+fn a_chart_hides_by_container_query_only_the_x_labels_its_width_has_no_room_for() {
+    assert!(
+        STYLESHEET.contains("  .fui-chart-frame {\n    container-type: inline-size;"),
+        "the chart's frame is the container its labels query"
+    );
+    for width in ["15", "20", "25", "30", "40", "50", "60", "80"] {
+        assert!(
+            STYLESHEET.contains(&format!(
+                "  @container (width < {width}rem) {{\n    .fui-chart-tick-{width} {{\n      display: none;"
+            )),
+            "a label thinned below {width} rem is hidden there"
+        );
+    }
+}
+
+#[test]
+fn a_long_node_name_and_a_long_score_field_wrap_inside_their_row() {
+    // NOTE: WCAG 2.2 SC 1.4.10: content reflows at 320 px with no two-dimensional scroll.
+    assert!(
+        STYLESHEET.contains(
+            "  .fui-fanout-line > code {\n    min-width: 0;\n    overflow-wrap: anywhere;"
+        ),
+        "a node's name never runs into the next node"
+    );
+    assert!(
+        STYLESHEET.contains("  .fui-score-label {\n    min-width: 0;\n    font-weight: 500;\n    overflow-wrap: anywhere;"),
+        "a field's long word never runs over its bar"
+    );
+}

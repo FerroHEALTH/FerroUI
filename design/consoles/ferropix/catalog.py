@@ -67,6 +67,16 @@ def nice_range(low, high):
     return lo, hi, step
 
 
+# The point marks of a chart's series, as the library draws them: a series'
+# palette index picks its colour and its mark (view::chart::series_look).
+SWATCH_MARKS = ("M-3 0A3 3 0 1 0 3 0A3 3 0 1 0 -3 0Z", "M-3 -3H3V3H-3Z", "M0 -4L4 0L0 4L-4 0Z", "M0 -4L3.6 3H-3.6Z")
+
+
+def swatch(pal):
+    mark = SWATCH_MARKS[(pal % 4 + pal // 6 % 4) % 4]
+    return f'<svg class="fui-swatch fui-series-{pal}" viewBox="-5 -5 10 10" focusable="false" aria-hidden="true"><path d="{mark}"/></svg>'
+
+
 def line_chart(id_, label, summary, series, x_ticks, height=220, legend=True):
     """series: [(name, [y...], palette_index)]; x evenly spaced."""
     ys = [y for _, pts, _ in series for y in pts]
@@ -107,7 +117,7 @@ def line_chart(id_, label, summary, series, x_ticks, height=220, legend=True):
     chips = ""
     if legend and len(series) > 1:
         chips = '<figcaption class="fui-legend" aria-label="Series">' + "".join(
-            f'<button type="button" class="fui-legend-chip" aria-pressed="true"><span class="fui-swatch fui-series-{pal}" aria-hidden="true"></span>{e(name)}</button>'
+            f'<button type="button" class="fui-legend-chip" aria-pressed="true">{swatch(pal)}{e(name)}</button>'
             for name, _, pal in series
         ) + "</figcaption>"
     return f'<figure class="fui-chart"><div class="fui-chart-plot">{svg}</div>{chips}</figure>'

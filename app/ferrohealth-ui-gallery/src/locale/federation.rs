@@ -56,6 +56,8 @@ messages! {
     FedLineComplete = "fed-line-complete",
     /// `0 of 4 asked nodes answered · 2,500 ms · all or nothing`
     FedLineFailed = "fed-line-failed",
+    /// `0 of 3 nodes asked · every node excluded`
+    FedLineNoneAsked = "fed-line-none-asked",
     /// `3 of 4 asked nodes answered · 412 ms · best effort`
     FedLinePartial = "fed-line-partial",
     /// `The federation as a list`
@@ -88,6 +90,8 @@ messages! {
     FedNodePage = "fed-node-page",
     /// `All nodes reachable`
     FedNodesReachable = "fed-nodes-reachable",
+    /// `No node asked`
+    FedNoneAsked = "fed-none-asked",
     /// `not asked`
     FedNotAsked = "fed-not-asked",
     /// `Not probed`
