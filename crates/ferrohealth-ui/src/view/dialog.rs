@@ -4,11 +4,15 @@
 //! The confirmation dialog: an HTML popover with a title, a sentence, a
 //! cancel and the console's own confirming control.
 //!
-//! The trigger opens it and Cancel closes it with no script, the browser
-//! closes it on Escape and returns the focus to the trigger (HTML, the
-//! `popover` attribute), so it works before the page hydrates. The
-//! confirming control is the console's: a submit button of a form that
-//! posts, or a button whose listener acts and closes the dialog.
+//! Its trigger is an action whose act is
+//! [`crate::widget::action_menu::Act::Dialog`]: a title row's primary
+//! ([`crate::view::action::action_button`]) or, for a destructive action,
+//! an item of the More menu, last, never a danger button beside the
+//! primary (family rule 7). The trigger opens it and Cancel closes it with
+//! no script, the browser closes it on Escape and returns the focus to the
+//! trigger (HTML, the `popover` attribute), so it works before the page
+//! hydrates. The confirming control is the console's: a submit button of a
+//! form that posts, or a button whose listener acts and closes the dialog.
 
 use std::borrow::Cow;
 
@@ -27,25 +31,6 @@ pub struct Confirmation {
     pub title: Cow<'static, str>,
     /// The sentence that says what confirming does.
     pub message: Cow<'static, str>,
-}
-
-/// Returns the button that opens the dialog `id`, of `variant`, with
-/// `glyph` beside `label`.
-#[must_use]
-pub fn confirm_trigger(
-    id: &'static str,
-    variant: Variant,
-    glyph: Glyph,
-    label: impl Into<String>,
-) -> AnyView {
-    let label = label.into();
-    view! {
-        <button type="button" class=variant.class() popovertarget=id aria-controls=id>
-            {icon(glyph, "16")}
-            {label}
-        </button>
-    }
-    .into_any()
 }
 
 /// Returns the dialog asking `confirmation`, with Cancel and `confirm`.

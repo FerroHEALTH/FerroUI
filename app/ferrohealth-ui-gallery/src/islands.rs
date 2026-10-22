@@ -30,15 +30,6 @@ use leptos::prelude::*;
 
 use crate::locale::Words;
 
-/// The charts page's line chart and its legend.
-#[island]
-pub fn RequestsChart(
-    /// Its words, in the page's locale.
-    words: crate::pages::charts::RequestsWords,
-) -> impl IntoView {
-    crate::pages::charts::requests_chart(words)
-}
-
 /// The confirm button of a confirmation dialog, which raises a toast.
 #[island]
 #[expect(
@@ -204,36 +195,4 @@ pub fn FileFilter(
     words: Words,
 ) -> impl IntoView {
     crate::pages::forms::filter_body(&words)
-}
-
-/// The forms page's code system combobox.
-#[island]
-#[expect(
-    clippy::needless_pass_by_value,
-    reason = "an island takes its props by value, as they arrive from the page"
-)]
-pub fn SystemPicker(
-    /// Its words, in the page's locale.
-    words: Words,
-    /// The combobox's own words, in the page's locale.
-    combo: ComboboxWords,
-) -> impl IntoView {
-    crate::pages::forms::system_picker(&words, combo)
-}
-
-/// The forms page's combobox of one clause.
-#[island]
-#[expect(
-    clippy::needless_pass_by_value,
-    reason = "an island takes its props by value, as they arrive from the page"
-)]
-pub fn ClausePicker(
-    /// The clause's place, from 1.
-    place: u8,
-    /// Its words, in the page's locale.
-    words: Words,
-    /// The combobox's own words, in the page's locale.
-    combo: ComboboxWords,
-) -> impl IntoView {
-    crate::pages::forms::clause_picker(place, &words, combo)
 }

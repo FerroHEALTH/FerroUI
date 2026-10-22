@@ -52,6 +52,9 @@ tab-draft-choice = { $tab } (draft)
 help-show = Explain these parameters
 help-hide = Hide help
 combobox-no-match = No match
+menu-more = More
+menu-variants = { $action }: variants
+select-name = { $label }: { $value }
 
 ## Sign-in
 

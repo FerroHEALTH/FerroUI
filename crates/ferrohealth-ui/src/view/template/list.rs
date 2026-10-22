@@ -18,6 +18,7 @@ use leptos::prelude::*;
 
 use crate::i18n::{Text, tr, tr_with};
 use crate::icon::{Glyph, icon};
+use crate::view::action::ActionGroup;
 use crate::view::surface::{Header, page_heading};
 use crate::view::tabs::{TabRow, joined};
 
@@ -94,9 +95,9 @@ pub struct ListCard {
 pub struct ListPage {
     /// The title, its one-sentence intro and, under a parent, the trail.
     pub header: Header,
-    /// The title row's one primary action, when items can be created here;
-    /// it stays when the list is empty.
-    pub primary: Option<AnyView>,
+    /// The title row's action group (F14): its one primary action when
+    /// items can be created here, which stays when the list is empty.
+    pub actions: ActionGroup,
     /// How many items the list holds, unfiltered; `None` for a list with no
     /// stated end (a history, an audit log, routes).
     pub total: Option<u64>,
@@ -117,14 +118,14 @@ pub struct ListPage {
 pub fn list_page(page: ListPage) -> AnyView {
     let ListPage {
         header,
-        primary,
+        actions,
         total,
         summary,
         toolbar,
         filters,
         card,
     } = page;
-    let heading = page_heading(header, primary).into_any();
+    let heading = page_heading(header, actions).into_any();
     let summary = summary.filter(|_| shows_summary(total));
     let toolbar = toolbar.filter(|_| shows_toolbar(total));
     let filters = (!filters.chips.is_empty()).then(|| active_filters(filters, total));

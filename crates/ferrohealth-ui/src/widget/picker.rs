@@ -10,30 +10,53 @@
 //! that is not among the choices opens on the input and stays there, so a
 //! reader's own value never snaps back to the list, and choices that arrive
 //! after the value select it once they do. The select follows the value
-//! through its `value` property, since an option's `selected` attribute is
-//! its initial state only; the server marks the initial choice and fills
-//! the input. Before the page hydrates both controls show and the form
+//! through its `selectedIndex` property, since an option's `selected`
+//! attribute is its initial state only; the server marks the initial choice
+//! and fills the input. "Another" is the last option, known by its place
+//! and marked `data-other`, so it reserves no value a choice could take. Before the page hydrates both controls show and the form
 //! posts the input, so nothing depends on script.
 
 use std::borrow::Cow;
 
 use leptos::prelude::*;
+use leptos::web_sys::HtmlSelectElement;
 
 use crate::view::form::{INPUT, SELECT, help_id};
 
-/// The select's value for the "another" choice, which no key a server holds
-/// starts with.
-// NOTE: HTML Living Standard, tokenization, "Attribute value (double-quoted)
-// state": the parser turns U+0000 into U+FFFD, so a NUL never matches.
-const OTHER: &str = "\u{FFFD}another";
+/// Which option of the select stands for the input's value.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Selection {
+    /// The empty choice: no value.
+    Empty,
+    /// A listed choice, by the console's value.
+    Listed(String),
+    /// "Another", which opens the input. It is the select's last option,
+    /// told apart by its place and its `data-other` marker, never by a
+    /// value, so no value a console passes can take it.
+    Other,
+}
+
+/// The place among the select's options of `selection` over `choices`:
+/// the empty choice first, then the choices, then "another".
+fn place(selection: &Selection, choices: &[(String, String)]) -> i32 {
+    let at = match selection {
+        Selection::Empty => 0,
+        Selection::Listed(value) => choices
+            .iter()
+            .position(|(choice, _)| choice == value)
+            .map_or(0, |at| at.saturating_add(1)),
+        Selection::Other => choices.len().saturating_add(1),
+    };
+    i32::try_from(at).unwrap_or(i32::MAX)
+}
 
 /// What a picker field shows.
 #[derive(Debug, Clone)]
 pub struct Picker {
     /// The text input's id; the select's is this with `-choice`.
-    pub id: &'static str,
+    pub id: String,
     /// The name the input submits as.
-    pub name: &'static str,
+    pub name: String,
     /// The input's label, such as "Value set".
     pub label: Cow<'static, str>,
     /// The select's label, read by a screen reader, such as "Choose a value
@@ -52,15 +75,15 @@ pub struct Picker {
     pub other_word: Cow<'static, str>,
 }
 
-/// The select's value for `value` among `choices`: the value itself when it
-/// is listed, the empty choice for no value, and "another" otherwise.
-fn chosen(value: &str, choices: &[(String, String)]) -> String {
+/// The option for `value` among `choices`: its listed choice when it is
+/// listed, the empty choice for no value, and "another" otherwise.
+fn chosen(value: &str, choices: &[(String, String)]) -> Selection {
     if value.is_empty() {
-        String::new()
+        Selection::Empty
     } else if choices.iter().any(|(choice, _)| choice == value) {
-        value.to_owned()
+        Selection::Listed(value.to_owned())
     } else {
-        String::from(OTHER)
+        Selection::Other
     }
 }
 
@@ -83,19 +106,25 @@ pub fn picker_field(picker: Picker) -> AnyView {
     Effect::new(move || hydrated.set(true));
     let selected = move || {
         if typing.get() {
-            String::from(OTHER)
+            Selection::Other
         } else {
             value.with(|value| choices.with(|choices| chosen(value, choices)))
         }
     };
-    let input_hidden = move || hydrated.get() && selected() != OTHER;
-    let described = help.as_ref().map(|_| help_id(id));
+    let input_hidden = move || hydrated.get() && selected() != Selection::Other;
+    let selected_place = move || {
+        let selection = selected();
+        choices.with(|choices| place(&selection, choices))
+    };
+    let described = help.as_ref().map(|_| help_id(&id));
     let select_id = format!("{id}-choice");
+    let focus_id = id.clone();
+    let help = help.map(|help| picker_help(&id, help));
     // NOTE: HTML Living Standard, "The option element": the
     // `selected` attribute sets an option's selectedness only until the
     // select is used, so it marks the choice an option is created with.
     let options = move |(choice, words): (String, String)| {
-        let on = untrack(selected) == choice;
+        let on = untrack(selected) == Selection::Listed(choice.clone());
         view! {
             <option value=choice.clone() title=choice selected=on>
                 {words}
@@ -105,13 +134,14 @@ pub fn picker_field(picker: Picker) -> AnyView {
     let initial = untrack(selected);
     let typed = value.get_untracked();
     let on_change = move |event: leptos::ev::Event| {
-        let option = event_target_value(&event);
-        if option == OTHER {
+        let select = event_target::<HtmlSelectElement>(&event);
+        let last = i32::try_from(select.length()).map_or(0, |count| count.saturating_sub(1));
+        if select.selected_index() == last {
             typing.set(true);
-            focus_input(id);
+            focus_input(&focus_id);
         } else {
             typing.set(false);
-            value.set(option);
+            value.set(select.value());
         }
     };
     view! {
@@ -123,19 +153,19 @@ pub fn picker_field(picker: Picker) -> AnyView {
                 id=select_id
                 class=SELECT
                 aria-describedby=described.clone()
-                prop:value=selected
+                prop:selectedIndex=selected_place
                 on:change=on_change
             >
-                <option value="" selected=initial.is_empty()>
+                <option value="" selected=initial == Selection::Empty>
                     {empty_word}
                 </option>
                 <For each=move || choices.get() key=|(choice, _)| choice.clone() children=options />
-                <option value=OTHER selected=initial == OTHER>
+                <option value="" data-other="" selected=initial == Selection::Other>
                     {other_word}
                 </option>
             </select>
             <div class="fui-field" class:fui-picker-hidden=input_hidden>
-                <label for=id class="fui-label">
+                <label for=id.clone() class="fui-label">
                     {label}
                 </label>
                 <input
@@ -150,7 +180,7 @@ pub fn picker_field(picker: Picker) -> AnyView {
                     on:input=move |event| value.set(event_target_value(&event))
                 />
             </div>
-            {help.map(|help| picker_help(id, help))}
+            {help}
         </div>
     }
     .into_any()
@@ -158,7 +188,7 @@ pub fn picker_field(picker: Picker) -> AnyView {
 
 /// Returns the picker's help line: under the form's help switch when the
 /// form has one, always shown when it has none.
-fn picker_help(id: &'static str, help: Cow<'static, str>) -> AnyView {
+fn picker_help(id: &str, help: Cow<'static, str>) -> AnyView {
     if use_context::<crate::widget::help::HelpShown>().is_some() {
         crate::widget::help::help_line(id, help)
     } else {
@@ -189,7 +219,7 @@ fn focus_input(id: &str) {
 
 #[cfg(test)]
 mod tests {
-    use super::{OTHER, chosen};
+    use super::{Selection, chosen, place};
 
     #[test]
     fn a_listed_value_is_chosen_and_any_other_opens_the_input() {
@@ -197,16 +227,40 @@ mod tests {
             String::from("http://example.org/vs/a"),
             String::from("Synthetic A"),
         )];
-        assert_eq!("", chosen("", &choices));
+        assert_eq!(Selection::Empty, chosen("", &choices));
         assert_eq!(
-            "http://example.org/vs/a",
+            Selection::Listed(String::from("http://example.org/vs/a")),
             chosen("http://example.org/vs/a", &choices)
         );
-        assert_eq!(OTHER, chosen("http://example.org/vs/mine", &choices));
         assert_eq!(
-            OTHER,
+            Selection::Other,
+            chosen("http://example.org/vs/mine", &choices)
+        );
+        assert_eq!(
+            Selection::Other,
             chosen("http://example.org/vs/a", &[]),
             "before the choices arrive"
         );
+    }
+
+    #[test]
+    fn no_value_a_console_passes_takes_the_other_choice() {
+        for name in [
+            "another",
+            "\u{FFFD}another",
+            "Another canonical",
+            "data-other",
+        ] {
+            let choices = vec![
+                (String::from("first"), String::from("First")),
+                (name.to_owned(), String::from("A real choice")),
+            ];
+            let selection = chosen(name, &choices);
+            assert_eq!(Selection::Listed(name.to_owned()), selection, "{name:?}");
+            assert_eq!(2, place(&selection, &choices), "{name:?} is its own option");
+            assert_eq!(3, place(&Selection::Other, &choices), "another is last");
+        }
+        assert_eq!(0, place(&Selection::Empty, &[]));
+        assert_eq!(1, place(&Selection::Other, &[]));
     }
 }

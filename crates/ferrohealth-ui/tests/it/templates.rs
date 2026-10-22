@@ -9,6 +9,7 @@
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::tone::Tone;
+use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::error_page::{Detail, ErrorPage, Status, Way, error_page};
 use ferrohealth_ui::view::shell::{Footer, footer};
 use ferrohealth_ui::view::status::pill;
@@ -24,6 +25,7 @@ use ferrohealth_ui::view::template::list::{
 use ferrohealth_ui::view::template::settings::{
     Managed, Setting, SettingsPage, Source, revision_line, settings_page,
 };
+use ferrohealth_ui::widget::action_menu::{Act, Action};
 use leptos::prelude::*;
 
 use crate::markup::{has, tags};
@@ -58,10 +60,11 @@ fn list(total: Option<u64>, filters: ActiveFilters, tabs: bool) -> String {
     html(move || {
         list_page(ListPage {
             header: header("Locations"),
-            primary: Some(
-                view! { <a href="/new" class="fui-button fui-button-primary">"New location"</a> }
-                    .into_any(),
-            ),
+            actions: ActionGroup::primary(Action::new(
+                None,
+                "New location",
+                Act::Link(String::from("/new")),
+            )),
             total,
             summary: Some(view! { <div class="fui-summary-chips">"summary"</div> }.into_any()),
             toolbar: Some(view! { <div class="fui-list-toolbar">"toolbar"</div> }.into_any()),
@@ -241,7 +244,7 @@ fn the_trail_turns_into_a_back_link_and_the_badge_sits_beside_the_title() {
                 badge: Some(pill(Tone::Ok, "Reachable").into_any()),
                 ..Header::default()
             },
-            (),
+            ActionGroup::none(),
         )
         .into_any()
     });
@@ -270,7 +273,8 @@ fn a_detail_page_puts_its_one_section_under_binder_tabs() {
     let page = html(|| {
         detail_page(DetailPage {
             header: header("Locatie Noord"),
-            actions: None,
+            actions: ActionGroup::none(),
+            stepper: None,
             tabs: Some(row()),
             body: view! { <p>"Overview"</p> }.into_any(),
         })
@@ -282,7 +286,8 @@ fn a_detail_page_puts_its_one_section_under_binder_tabs() {
     let plain = html(|| {
         detail_page(DetailPage {
             header: header("Locatie Noord"),
-            actions: None,
+            actions: ActionGroup::none(),
+            stepper: None,
             tabs: None,
             body: view! { <p>"Overview"</p> }.into_any(),
         })
@@ -362,7 +367,7 @@ fn a_file_only_configuration_says_where_it_is_set_and_has_no_badge_or_marker() {
                 badge: Some(view! { <span class="fui-mode-badge">"Managed"</span> }.into_any()),
                 ..header("Configuration")
             },
-            actions: None,
+            actions: ActionGroup::none(),
             source: Source::File {
                 file: String::from("ferrobridge.toml"),
                 how: String::from("/configuration/how"),
@@ -394,7 +399,7 @@ fn a_setting_names_its_key_with_a_labelled_copy_button() {
     let page = html(|| {
         settings_page(SettingsPage {
             header: header("Configuration"),
-            actions: None,
+            actions: ActionGroup::none(),
             source: Source::File {
                 file: String::from("ferrobridge.toml"),
                 how: String::from("#"),
@@ -430,7 +435,7 @@ fn a_managed_configuration_shows_its_badge_revision_intro_and_marker() {
     let page = html(|| {
         settings_page(SettingsPage {
             header: header("Settings"),
-            actions: None,
+            actions: ActionGroup::none(),
             source: Source::Managed(Box::new(Managed {
                 badge: view! { <span class="fui-mode-badge">"Managed"</span> }.into_any(),
                 revision: Some(revision_line(
@@ -635,4 +640,33 @@ fn the_error_page_folds_the_time_and_request_id_away() {
     );
     assert!(page.contains("2026-10-21 09:42:11 UTC"), "{page}");
     assert!(!page.contains("style="), "{page}");
+}
+
+#[test]
+fn a_detail_page_of_a_queue_holds_its_stepper_in_the_title_row() {
+    let page = html(|| {
+        detail_page(DetailPage {
+            header: header("Candidate 3"),
+            actions: ActionGroup::primary(Action::new(
+                None,
+                "Link",
+                Act::Link(String::from("/link")),
+            )),
+            stepper: Some(Stepper {
+                label: String::from("Candidates"),
+                position: String::from("Candidate 3 of 12"),
+                what: String::from("candidate"),
+                previous: Some(String::from("/queue/2")),
+                next: Some(String::from("/queue/4")),
+            }),
+            tabs: None,
+            body: view! { <p>"Overview"</p> }.into_any(),
+        })
+    });
+    assert!(
+        page.contains(
+            r#"<div class="fui-actions"><nav aria-label="Candidates" class="fui-stepper">"#
+        ),
+        "{page}"
+    );
 }

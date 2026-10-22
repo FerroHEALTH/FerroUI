@@ -17,6 +17,7 @@ use leptos::prelude::*;
 use crate::highlight::Language;
 use crate::i18n::{Text, tr};
 use crate::icon::{Glyph, icon};
+use crate::view::action::ActionGroup;
 use crate::view::button::Variant;
 use crate::view::code::self_description;
 use crate::view::shell::MAKER;
@@ -136,7 +137,7 @@ pub fn about_page(page: AboutPage) -> AnyView {
         cards,
         self_description,
     } = page;
-    let heading = page_heading(header, ()).into_any();
+    let heading = page_heading(header, ActionGroup::none()).into_any();
     let mut rows = vec![(tr(Text::AboutConsole), release.into_any())];
     rows.extend(versions);
     let versions = card(tr(Text::AboutVersions), definitions(rows)).into_any();

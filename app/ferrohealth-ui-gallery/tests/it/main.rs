@@ -25,6 +25,7 @@
 mod browser;
 mod http;
 mod journeys;
+mod menus;
 mod no_wasm;
 mod painted;
 mod screenshots;

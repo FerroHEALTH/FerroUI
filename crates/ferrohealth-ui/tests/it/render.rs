@@ -8,15 +8,16 @@
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::i18n::Phrase;
 use ferrohealth_ui::icon::Glyph;
-use ferrohealth_ui::island::{KeyboardTabs, ToastRegion};
+use ferrohealth_ui::island::{Combobox, KeyboardTabs, PickerField, ToastRegion};
 use ferrohealth_ui::theme::Theme;
 use ferrohealth_ui::tone::Tone;
+use ferrohealth_ui::view::action::{ActionGroup, action_button, action_group};
 use ferrohealth_ui::view::button::{Variant, link_button};
 use ferrohealth_ui::view::chart::{LineChart, Series};
 use ferrohealth_ui::view::code::{
     Code, CodeHead, Digest, Gravity, LineDiagnostic, code_card, code_section, code_viewer,
 };
-use ferrohealth_ui::view::dialog::{Confirmation, confirm_dialog, confirm_trigger};
+use ferrohealth_ui::view::dialog::{Confirmation, confirm_dialog};
 use ferrohealth_ui::view::document::{Document, document_pane};
 use ferrohealth_ui::view::empty::{empty_state, skeleton};
 use ferrohealth_ui::view::form::{
@@ -32,7 +33,11 @@ use ferrohealth_ui::view::surface::{
 };
 use ferrohealth_ui::view::tabs::{Tab, binder};
 use ferrohealth_ui::view::theme_switch::theme_switch;
+use ferrohealth_ui::widget::action_menu::{
+    Act, Action, Choice, Item, Listbox, Menu, Pick, listbox, row_menu,
+};
 use ferrohealth_ui::widget::chart::{ChartWords, line_chart};
+use ferrohealth_ui::widget::combobox::{ComboOption, ComboboxWords};
 use ferrohealth_ui::widget::document::DocumentView;
 use ferrohealth_ui::widget::editor::{Editor, code_editor};
 use ferrohealth_ui::widget::help::explained_check_field;
@@ -352,7 +357,7 @@ fn panel_sections_draw_a_heading_row_with_its_count_and_no_card_of_their_own() {
 
 #[test]
 fn a_page_heading_in_the_body_face_writes_no_class_on_its_title() {
-    let plain = html(|| page_header("Dashboard", None, ()).into_any());
+    let plain = html(|| page_header("Dashboard", None, ActionGroup::none()).into_any());
     assert!(plain.contains("<h1>Dashboard</h1>"), "{plain}");
     let mono = html(|| {
         page_heading(
@@ -361,7 +366,7 @@ fn a_page_heading_in_the_body_face_writes_no_class_on_its_title() {
                 mono: true,
                 ..Header::default()
             },
-            (),
+            ActionGroup::none(),
         )
         .into_any()
     });
@@ -455,11 +460,11 @@ fn a_document_pane_with_no_rendered_view_offers_none_and_opens_highlighted() {
     );
 }
 
-#[test]
-fn the_last_series_shown_cannot_be_hidden_and_each_chip_names_its_series() {
-    let chart = || LineChart {
+/// A line chart of two synthetic series, named `label`.
+fn trend(label: &str) -> LineChart {
+    LineChart {
         id: "trend",
-        label: String::from("Readings"),
+        label: label.to_owned(),
         summary: String::from("Two series."),
         series: vec![
             Series {
@@ -468,99 +473,83 @@ fn the_last_series_shown_cannot_be_hidden_and_each_chip_names_its_series() {
                 palette: 0,
             },
             Series {
-                name: String::from("diastolic"),
+                name: String::from("diastolic <b>"),
                 points: vec![(0.0, 80.0), (1.0, 85.0)],
                 palette: 1,
             },
         ],
         x_ticks: vec![(0.0, String::from("Mon")), (1.0, String::from("Tue"))],
         y_range: None,
-    };
-    let both = html(move || {
-        line_chart(
-            chart(),
-            RwSignal::new(vec![true, true]),
-            ChartWords::of_page(),
-        )
-    });
-    assert!(both.contains(r#"data-series="systolic""#), "{both}");
-    assert!(!both.contains("disabled"), "{both}");
-    let one = html(move || {
-        line_chart(
-            chart(),
-            RwSignal::new(vec![false, true]),
-            ChartWords::of_page(),
-        )
-    });
-    assert_eq!(1, one.matches("disabled").count(), "{one}");
+    }
+}
+
+#[test]
+fn the_legend_is_a_static_key_before_the_page_hydrates() {
+    let page = html(|| line_chart(&trend("Readings"), ChartWords::of_page()));
     assert!(
-        has(
-            &one,
-            "button",
-            &[
-                ("data-series", "diastolic"),
-                ("aria-pressed", "true"),
-                ("disabled", "")
-            ]
-        ),
-        "{one}"
+        page.contains("<leptos-island"),
+        "the legend is an island: {page}"
+    );
+    let keys = tags(&page, "span")
+        .into_iter()
+        .filter(|span| span.get("class").map(String::as_str) == Some("fui-legend-key"))
+        .filter_map(|span| span.get("data-series").cloned())
+        .collect::<Vec<_>>();
+    assert_eq!(
+        vec![
+            String::from("systolic"),
+            String::from("diastolic &lt;b&gt;")
+        ],
+        keys,
+        "every series is named beside its swatch, escaped: {page}"
+    );
+    assert!(page.contains("fui-swatch fui-series-0"), "{page}");
+    assert!(page.contains("fui-swatch fui-series-1"), "{page}");
+    assert!(
+        tags(&page, "button").is_empty(),
+        "no chip offers a press before the page hydrates: {page}"
+    );
+    assert!(
+        has(&page, "div", &[("role", "group"), ("aria-label", "Series")]),
+        "{page}"
     );
 }
 
 #[test]
-fn every_series_is_drawn_once_and_a_hidden_one_is_hidden_in_place() {
-    let chart = || LineChart {
-        id: "trend",
-        label: String::from("Readings <mmHg>"),
-        summary: String::from("Two series."),
-        series: vec![
-            Series {
-                name: String::from("systolic"),
-                points: vec![(0.0, 120.0), (1.0, 130.0)],
-                palette: 0,
-            },
-            Series {
-                name: String::from("diastolic"),
-                points: vec![(0.0, 80.0), (1.0, 85.0)],
-                palette: 1,
-            },
-        ],
-        x_ticks: vec![(0.0, String::from("Mon")), (1.0, String::from("Tue"))],
-        y_range: None,
-    };
-    let one = html(move || {
-        line_chart(
-            chart(),
-            RwSignal::new(vec![false, true]),
-            ChartWords::of_page(),
-        )
-    });
-    assert!(one.contains("fui-chart-line fui-series-0"), "{one}");
-    assert!(one.contains("fui-chart-line fui-series-1"), "{one}");
-    let groups = tags(&one, "g");
-    let hidden = groups
-        .iter()
-        .filter(|group| group.contains_key("hidden"))
-        .count();
-    assert_eq!(2, hidden, "the hidden series' lines and points: {one}");
-    assert!(one.contains("Readings &lt;mmHg&gt;"), "{one}");
+fn every_series_is_drawn_once_and_shown_in_the_plot_the_legend_names() {
+    let page = html(|| line_chart(&trend("Readings <mmHg>"), ChartWords::of_page()));
+    assert!(page.contains("fui-chart-line fui-series-0"), "{page}");
+    assert!(page.contains("fui-chart-line fui-series-1"), "{page}");
+    assert!(
+        tags(&page, "g")
+            .iter()
+            .all(|group| !group.contains_key("hidden")),
+        "every series shows as the page arrives: {page}"
+    );
+    assert!(page.contains("Readings &lt;mmHg&gt;"), "{page}");
     assert!(
         has(
-            &one,
+            &page,
+            "div",
+            &[("id", "trend-plot"), ("class", "fui-chart-plot")]
+        ),
+        "{page}"
+    );
+    assert!(
+        page.contains("trend-plot") && page.contains("data-props"),
+        "the island is told the plot it shows and hides series in: {page}"
+    );
+    assert!(
+        has(
+            &page,
             "svg",
             &[("aria-labelledby", "trend-title trend-desc")]
         ),
-        "{one}"
+        "{page}"
     );
     assert!(
-        tags(&one, "button")
-            .iter()
-            .all(|chip| chip.contains_key("hidden")),
-        "no chip offers a press before the page hydrates: {one}"
-    );
-    assert!(
-        one.contains("<table"),
-        "the figures table reads alone: {one}"
+        page.contains("<table"),
+        "the figures table reads alone: {page}"
     );
 }
 
@@ -569,8 +558,8 @@ fn picker_holding(value: &str) -> String {
     let value = value.to_owned();
     html(move || {
         picker_field(picker::Picker {
-            id: "run-value-set",
-            name: "url",
+            id: String::from("run-value-set"),
+            name: String::from("url"),
             label: "Value set".into(),
             choose_label: "Choose a value set".into(),
             help: None,
@@ -602,8 +591,13 @@ fn the_server_marks_the_pickers_initial_choice_and_fills_its_input() {
     assert_eq!(1, chosen.len(), "{listed}");
     assert_eq!(
         Some(&String::from("http://example.org/vs/b")),
-        chosen.first().and_then(|option| option.get("value")),
+        chosen.first().and_then(|option| option.get("title")),
         "{listed}"
+    );
+    assert_ne!(
+        Some(&String::from("another")),
+        chosen.first().and_then(|option| option.get("value")),
+        "a listed choice never takes the other choice's value: {listed}"
     );
     assert!(
         has(
@@ -671,7 +665,7 @@ fn the_surfaces_render_and_none_writes_a_style_attribute() {
             {empty_state(Glyph::INBOX, "Nothing here", "No file yet.", ())}
             {skeleton(3, "Loading the files.")}
             {link_button(String::from("/new"), Variant::Primary, Some(Glyph::PLUS), "New")}
-            {confirm_trigger("delete", Variant::Danger, Glyph::TRASH, "Delete")}
+            {action_button(Action::new(Some(Glyph::REFRESH_CW), "Reload", Act::Dialog(String::from("delete"))), Variant::Secondary)}
             {confirm_dialog(Confirmation { id: "delete", title: "Delete it?".into(), message: "It goes for good.".into() }, ())}
             {footer(Footer { product: "FerroUI Gallery".into(), version: "0.1.0", about: "/about" })}
         }
@@ -1361,5 +1355,439 @@ fn a_phrase_fills_its_open_placeables_and_leaves_the_rest() {
         Phrase::new("No rows").fill(&[("first", "1")]),
         "No rows",
         "a phrase with nothing open is its words"
+    );
+}
+
+/// The picker over choices that include one named like the old reserved
+/// value and one named like the other choice, holding `value`.
+fn picker_named_like_another(value: &str) -> String {
+    let value = value.to_owned();
+    html(move || {
+        picker_field(picker::Picker {
+            id: String::from("run-value-set"),
+            name: String::from("url"),
+            label: "Value set".into(),
+            choose_label: "Choose a value set".into(),
+            help: None,
+            choices: Signal::stored(vec![
+                (
+                    String::from("\u{FFFD}another"),
+                    String::from("Old sentinel"),
+                ),
+                (String::from("another"), String::from("Named another")),
+            ]),
+            value: RwSignal::new(value),
+            empty_word: "Choose one".into(),
+            other_word: "Another".into(),
+        })
+    })
+}
+
+#[test]
+fn a_choice_named_like_the_other_choice_is_chosen_as_itself() {
+    for name in ["\u{FFFD}another", "another"] {
+        let page = picker_named_like_another(name);
+        let chosen: Vec<_> = tags(&page, "option")
+            .into_iter()
+            .filter(|option| option.contains_key("selected"))
+            .collect();
+        assert_eq!(1, chosen.len(), "{name:?}: {page}");
+        assert_eq!(
+            Some(&name.to_owned()),
+            chosen.first().and_then(|option| option.get("title")),
+            "the listed choice is chosen, not the other one: {page}"
+        );
+        let other = tags(&page, "option").pop().expect("the other choice");
+        assert!(
+            other.contains_key("data-other") && other.get("value").is_some_and(String::is_empty),
+            "another is marked, holding no value a choice could take: {page}"
+        );
+    }
+}
+
+/// A file's More menu: two plain items, a disabled one with its reason, and
+/// the destructive delete a confirmation follows.
+fn file_menu() -> Menu {
+    Menu::new(
+        "file-more",
+        "More actions for the file",
+        vec![
+            Item::new(Action::new(
+                Some(Glyph::COPY),
+                "Copy path",
+                Act::Link(String::from("/files/a?copy")),
+            )),
+            Item::new(Action::new(
+                Some(Glyph::LIST_CHECKS),
+                "Check against the set",
+                Act::Post {
+                    action: String::from("/check"),
+                    fields: vec![(String::from("path"), String::from("a <b>.yml"))],
+                },
+            ))
+            .note("Compiles the file; writes nothing"),
+            Item::new(Action::new(
+                Some(Glyph::DOWNLOAD),
+                "Download",
+                Act::Link(String::from("/files/a/raw")),
+            ))
+            .disabled("The file is provisioned & read-only"),
+        ],
+    )
+    .destructive(vec![Item::new(Action::new(
+        Some(Glyph::TRASH),
+        "Delete the file",
+        Act::Dialog(String::from("delete-file")),
+    ))])
+}
+
+/// The action group of an Edit link and the file's More menu, rendered.
+fn file_group() -> String {
+    page_html(|| {
+        action_group(
+            ActionGroup::primary(Action::new(
+                Some(Glyph::PENCIL),
+                "Edit",
+                Act::Link(String::from("/files/a/edit")),
+            ))
+            .more(file_menu()),
+        )
+    })
+}
+
+#[test]
+fn the_action_group_draws_one_primary_then_more_with_the_destructive_item_last() {
+    let page = file_group();
+    assert!(
+        has(
+            &page,
+            "a",
+            &[
+                ("href", "/files/a/edit"),
+                ("class", "fui-button fui-button-primary")
+            ]
+        ),
+        "the primary is a link: {page}"
+    );
+    assert_eq!(
+        1,
+        page.matches("fui-button-primary").count(),
+        "one primary action: {page}"
+    );
+    assert!(
+        !page.contains("fui-button-danger") && !page.contains("fui-button-destructive"),
+        "no danger button beside the primary: {page}"
+    );
+    assert!(
+        has(
+            &page,
+            "details",
+            &[("class", "fui-anchor"), ("name", "fui-menu")]
+        ),
+        "More is a details the browser opens with no script: {page}"
+    );
+    assert!(
+        has(
+            &page,
+            "summary",
+            &[
+                ("aria-haspopup", "menu"),
+                ("aria-controls", "file-more"),
+                ("aria-label", "More actions for the file")
+            ]
+        ),
+        "{page}"
+    );
+    assert!(
+        !page.contains("aria-expanded"),
+        "the server leaves the state to the summary until the island runs: {page}"
+    );
+    let separator = page.find(r#"role="separator""#).expect("a separator");
+    let delete = page
+        .find("Delete the file\u{2026}")
+        .expect("the delete, with an ellipsis");
+    let download = page.find("Download").expect("the download");
+    assert!(
+        download < separator && separator < delete,
+        "the destructive item is last: {page}"
+    );
+    assert!(
+        has(
+            &page,
+            "button",
+            &[
+                ("role", "menuitem"),
+                ("popovertarget", "delete-file"),
+                ("class", "fui-menu-item fui-menu-danger")
+            ]
+        ),
+        "the delete opens its confirmation with no script: {page}"
+    );
+}
+
+#[test]
+fn every_item_of_more_works_with_no_webassembly_and_a_disabled_one_says_why() {
+    let page = file_group();
+    assert!(
+        has(&page, "form", &[("method", "post"), ("action", "/check")]),
+        "an item posts a plain form: {page}"
+    );
+    assert!(
+        has(
+            &page,
+            "input",
+            &[
+                ("type", "hidden"),
+                ("name", "path"),
+                ("value", "a &lt;b&gt;.yml")
+            ]
+        ),
+        "its fields are escaped: {page}"
+    );
+    assert!(
+        has(
+            &page,
+            "button",
+            &[("role", "menuitem"), ("aria-disabled", "true")]
+        ),
+        "{page}"
+    );
+    assert!(
+        page.contains(
+            r#"<span class="fui-menu-item-desc">The file is provisioned &amp; read-only</span>"#
+        ),
+        "a disabled item says its reason as a line of its own: {page}"
+    );
+    assert!(
+        !tags(&page, "button")
+            .iter()
+            .any(|button| button.get("aria-disabled").is_some() && button.contains_key("title")),
+        "the reason is never a tooltip alone: {page}"
+    );
+    assert!(
+        has(
+            &page,
+            "button",
+            &[("class", "fui-menu-cancel"), ("hidden", "")]
+        ),
+        "Cancel waits for the island: {page}"
+    );
+    assert!(
+        page.contains("fui-menu-sheet"),
+        "a sheet below 40 rem: {page}"
+    );
+    assert!(!page.contains("style="), "{page}");
+}
+
+#[test]
+fn a_split_primary_carries_its_variants_and_more_alone_has_no_primary() {
+    let split = page_html(|| {
+        action_group(
+            ActionGroup::primary(Action::new(
+                Some(Glyph::SAVE),
+                "Save",
+                Act::Submit(String::from("editor")),
+            ))
+            .variants(Menu::new(
+                "save-variants",
+                "Ways to save",
+                vec![Item::new(Action::new(
+                    None,
+                    "Save as a draft",
+                    Act::Submit(String::from("editor-draft")),
+                ))],
+            )),
+        )
+    });
+    assert!(split.contains("fui-split-button"), "{split}");
+    assert!(
+        has(&split, "button", &[("type", "submit"), ("form", "editor")]),
+        "{split}"
+    );
+    assert!(
+        has(
+            &split,
+            "summary",
+            &[
+                ("class", "fui-button fui-button-secondary fui-split-toggle"),
+                ("aria-label", "Save: variants")
+            ]
+        ),
+        "{split}"
+    );
+    let alone = page_html(|| action_group(ActionGroup::more_only(file_menu())));
+    assert!(!alone.contains("fui-button-primary"), "{alone}");
+    assert!(alone.contains("fui-more"), "{alone}");
+    let none = page_html(|| action_group(ActionGroup::none()));
+    assert!(!none.contains("<div"), "{none}");
+    let empty = page_html(|| action_group(ActionGroup::more_only(Menu::new("x", "X", Vec::new()))));
+    assert!(
+        !empty.contains("<div"),
+        "a More with no item is left out: {empty}"
+    );
+}
+
+#[test]
+fn a_row_menu_is_a_named_icon_button() {
+    let page = page_html(|| row_menu(file_menu()));
+    assert!(
+        has(
+            &page,
+            "summary",
+            &[
+                ("class", "fui-icon-button"),
+                ("aria-label", "More actions for the file")
+            ]
+        ),
+        "{page}"
+    );
+}
+
+#[test]
+fn the_select_button_shows_its_choice_and_each_option_works_with_no_webassembly() {
+    let page = page_html(|| {
+        listbox(Listbox {
+            id: String::from("lang-list"),
+            label: String::from("Language"),
+            value: String::from("English"),
+            choices: vec![
+                Choice {
+                    label: String::from("English"),
+                    note: None,
+                    lang: Some(String::from("en")),
+                    selected: true,
+                    pick: Pick::Post {
+                        action: String::from("/locale"),
+                        fields: vec![(String::from("locale"), String::from("en"))],
+                    },
+                },
+                Choice {
+                    label: String::from("1.0.0"),
+                    note: Some(String::from("Older")),
+                    lang: None,
+                    selected: false,
+                    pick: Pick::Link(String::from("?version=1.0.0")),
+                },
+            ],
+        })
+    });
+    assert!(
+        has(&page, "details", &[("class", "fui-select-anchor")]),
+        "{page}"
+    );
+    assert!(
+        has(
+            &page,
+            "summary",
+            &[
+                ("class", "fui-select fui-select-button"),
+                ("aria-haspopup", "listbox"),
+                ("aria-label", "Language: English")
+            ]
+        ),
+        "{page}"
+    );
+    assert!(
+        has(
+            &page,
+            "div",
+            &[
+                ("role", "listbox"),
+                ("id", "lang-list"),
+                ("aria-label", "Language")
+            ]
+        ),
+        "{page}"
+    );
+    assert!(
+        has(
+            &page,
+            "button",
+            &[
+                ("type", "submit"),
+                ("role", "option"),
+                ("aria-selected", "true"),
+                ("lang", "en")
+            ]
+        ),
+        "the choice in force posts and is selected: {page}"
+    );
+    assert!(
+        has(
+            &page,
+            "a",
+            &[
+                ("role", "option"),
+                ("href", "?version=1.0.0"),
+                ("aria-selected", "false")
+            ]
+        ),
+        "a choice is a link: {page}"
+    );
+    assert!(
+        page.contains(r#"<span class="fui-listbox-note">Older</span>"#),
+        "{page}"
+    );
+}
+
+#[test]
+fn the_combobox_and_picker_islands_draw_their_native_floor_on_the_server() {
+    let combo = html(|| {
+        view! {
+            <Combobox
+                id=String::from("choose-system")
+                name=String::from("system")
+                label=String::from("Code system")
+                placeholder=String::from("Choose one")
+                options=vec![ComboOption::new("loinc", "LOINC <lab>")]
+                selected=Some(String::from("loinc"))
+                described_by=None
+                words=ComboboxWords { no_match: String::from("No match") }
+            />
+        }
+        .into_any()
+    });
+    assert!(combo.contains("<leptos-island"), "{combo}");
+    assert!(
+        has(
+            &combo,
+            "select",
+            &[("id", "choose-system"), ("name", "system")]
+        ),
+        "a native select posts with no WebAssembly: {combo}"
+    );
+    assert!(
+        has(&combo, "option", &[("value", "loinc"), ("selected", "")]),
+        "{combo}"
+    );
+    assert!(combo.contains("LOINC &lt;lab&gt;"), "{combo}");
+    let picker = html(|| {
+        view! {
+            <PickerField
+                id=String::from("run-value-set")
+                name=String::from("url")
+                label=String::from("Value set")
+                choose_label=String::from("Choose a value set")
+                help=Some(String::from("The set to expand."))
+                choices=vec![(String::from("http://example.org/vs/a"), String::from("Synthetic A"))]
+                value=String::from("http://example.org/vs/mine")
+                empty_word=String::from("Choose one")
+                other_word=String::from("Another")
+            />
+        }
+        .into_any()
+    });
+    assert!(picker.contains("<leptos-island"), "{picker}");
+    assert!(
+        has(
+            &picker,
+            "input",
+            &[("name", "url"), ("value", "http://example.org/vs/mine")]
+        ),
+        "the input posts the value with no WebAssembly: {picker}"
+    );
+    assert!(
+        picker.contains(r#"<p id="run-value-set-help" class="fui-help">The set to expand.</p>"#),
+        "{picker}"
     );
 }

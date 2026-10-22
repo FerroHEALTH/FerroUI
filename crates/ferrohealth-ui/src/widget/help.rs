@@ -84,8 +84,9 @@ pub fn help_switch(words: HelpWords) -> AnyView {
 /// Returns the help line `text` of the control `id`, its id [`help_id`],
 /// shown while the form's switch is on and visually hidden while it is off.
 #[must_use]
-pub fn help_line(id: &'static str, text: impl Into<String>) -> AnyView {
+pub fn help_line(id: &str, text: impl Into<String>) -> AnyView {
     let text = text.into();
+    let line_id = help_id(id);
     let HelpShown(shown) = help_shown();
     let class = move || {
         if shown.get() {
@@ -95,7 +96,7 @@ pub fn help_line(id: &'static str, text: impl Into<String>) -> AnyView {
         }
     };
     view! {
-        <p id=help_id(id) class=class>
+        <p id=line_id class=class>
             {text}
         </p>
     }

@@ -10,6 +10,7 @@ use ferrohealth_ui::i18n::Phrase;
 use ferrohealth_ui::icon::{Glyph, icon};
 use ferrohealth_ui::island::KeyboardTabs;
 use ferrohealth_ui::tone::Tone;
+use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::button::{Variant, label, link_button};
 use ferrohealth_ui::view::empty::{Busy, busy, empty_quiet, empty_state, skeleton, spinner};
 use ferrohealth_ui::view::form::field;
@@ -25,6 +26,7 @@ use ferrohealth_ui::view::surface::{
 use ferrohealth_ui::view::tabs::{Tab, binder};
 use ferrohealth_ui::view::theme_switch::{density_switch, locale_switch, theme_switch};
 use ferrohealth_ui::view::time::timestamp;
+use ferrohealth_ui::widget::action_menu::{Act, Action, Item, Menu};
 use ferrohealth_ui::widget::segmented::segmented;
 use ferrohealth_ui::widget::tabs::tab_panels;
 use leptos::prelude::*;
@@ -52,6 +54,41 @@ fn preview() -> AnyView {
 /// The path of the page `page` of the brand the route names.
 pub(crate) fn brand_page(page: &str) -> Option<String> {
     crate::app::route_brand().map(|brand| format!("/{}/{page}", brand.key()))
+}
+
+/// The title row's actions: New file, and More with a link and a plain
+/// form post, each of which works with no WebAssembly.
+fn overview_actions() -> ActionGroup {
+    let back = brand_page("").unwrap_or_else(|| String::from("/"));
+    let back = back.trim_end_matches('/').to_owned();
+    ActionGroup::primary(Action::new(
+        Some(Glyph::PLUS),
+        tr(Msg::NewFile),
+        Act::Link(brand_page("forms").unwrap_or_else(|| String::from("/"))),
+    ))
+    .more(Menu::new(
+        "overview-more",
+        tr(Msg::MoreActionsSet),
+        vec![
+            Item::new(Action::new(
+                Some(Glyph::FILE_CODE),
+                tr(Msg::OpenTheDocument),
+                Act::Link(brand_page("code").unwrap_or_else(|| String::from("/"))),
+            )),
+            Item::new(Action::new(
+                Some(Glyph::SLIDERS_HORIZONTAL),
+                tr(Msg::SwitchToCompact),
+                Act::Post {
+                    action: String::from(crate::app::DENSITY_ROUTE),
+                    fields: vec![
+                        (String::from("density"), String::from("compact")),
+                        (String::from("back"), back),
+                    ],
+                },
+            ))
+            .note(tr(Msg::PostsTheDensity)),
+        ],
+    ))
 }
 
 /// The stat cards: three that lead to a page, two with a mark after their
@@ -633,14 +670,7 @@ pub fn OverviewPage() -> impl IntoView {
     let header = page_header(
         tr(Msg::Overview),
         Some(tr(Msg::EveryStaticViewLibraryBrand)),
-        view! {
-            <button type="button" class=Variant::Secondary.class()>
-                {label(Some(Glyph::REFRESH_CW), tr(Msg::Reload))}
-            </button>
-            <button type="button" class=Variant::Primary.class()>
-                {label(Some(Glyph::PLUS), tr(Msg::NewFile))}
-            </button>
-        },
+        overview_actions(),
     )
     .into_any();
     let marks = stack(view! {

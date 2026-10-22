@@ -14,7 +14,9 @@ use ferrohealth_ui::table::model::{Paging, Window};
 use ferrohealth_ui::table::pager::{Listing, link_pager};
 use ferrohealth_ui::table::view::{Body, Column, DataTable, Role, Sorting, data_table};
 use ferrohealth_ui::tone::Tone;
+use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::button::{Variant, label, link_button};
+use ferrohealth_ui::view::dialog::{Confirmation, danger_dialog};
 use ferrohealth_ui::view::error_page::{Detail, ErrorPage, Status, Way, error_page};
 use ferrohealth_ui::view::shell::centred;
 use ferrohealth_ui::view::status::{badge, pill};
@@ -30,6 +32,7 @@ use ferrohealth_ui::view::template::list::{
 use ferrohealth_ui::view::template::settings::{
     Managed, Setting, SettingsPage, Source, revision_line, settings_page,
 };
+use ferrohealth_ui::widget::action_menu::{Act, Action, Item, Menu};
 use leptos::prelude::*;
 use leptos_router::hooks::use_params_map;
 
@@ -74,13 +77,12 @@ fn list_header() -> Header {
 }
 
 /// The list's one primary action.
-fn new_location() -> AnyView {
-    link_button(
-        at("list"),
-        Variant::Primary,
+fn new_location() -> ActionGroup {
+    ActionGroup::primary(Action::new(
         Some(Glyph::PLUS),
         tr(Msg::NewLocation),
-    )
+        Act::Link(at("list")),
+    ))
 }
 
 /// The state cell of a location in `state`.
@@ -171,7 +173,7 @@ fn short_card(tabs: bool) -> ListCard {
 fn list() -> AnyView {
     list_page(ListPage {
         header: list_header(),
-        primary: Some(new_location()),
+        actions: new_location(),
         total: Some(5),
         summary: None,
         toolbar: None,
@@ -184,7 +186,7 @@ fn list() -> AnyView {
 fn list_tabs() -> AnyView {
     list_page(ListPage {
         header: list_header(),
-        primary: Some(new_location()),
+        actions: new_location(),
         total: Some(5),
         summary: None,
         toolbar: None,
@@ -237,7 +239,7 @@ fn list_many() -> AnyView {
     };
     list_page(ListPage {
         header: list_header(),
-        primary: Some(new_location()),
+        actions: new_location(),
         total: Some(30),
         summary: Some(summary),
         toolbar: Some(toolbar),
@@ -269,7 +271,7 @@ fn list_many() -> AnyView {
 fn list_empty_page() -> AnyView {
     list_page(ListPage {
         header: list_header(),
-        primary: Some(new_location()),
+        actions: new_location(),
         total: Some(0),
         summary: None,
         toolbar: None,
@@ -336,15 +338,73 @@ fn detail() -> AnyView {
             badge: Some(pill(Tone::Ok, &tr(Msg::StateReachable)).into_any()),
             ..Header::default()
         },
-        actions: Some(link_button(
-            at("detail"),
-            Variant::Primary,
-            Some(Glyph::PLUS),
-            tr(Msg::AddUnit),
-        )),
+        actions: location_actions(),
+        stepper: None,
         tabs: Some(tabs),
-        body,
+        body: view! {
+            {body}
+            {delete_location()}
+        }
+        .into_any(),
     })
+}
+
+/// The detail page's title row (F14): Add unit, and More with two plain
+/// items, one disabled with its reason, and the destructive delete last.
+fn location_actions() -> ActionGroup {
+    ActionGroup::primary(Action::new(
+        Some(Glyph::PLUS),
+        tr(Msg::AddUnit),
+        Act::Link(at("detail")),
+    ))
+    .more(
+        Menu::new(
+            "location-more",
+            tr(Msg::MoreActionsLocation),
+            vec![
+                Item::new(Action::new(
+                    Some(Glyph::COPY),
+                    tr(Msg::CopyLocationId),
+                    Act::Link(at("detail")),
+                )),
+                Item::new(Action::new(
+                    Some(Glyph::DOWNLOAD),
+                    tr(Msg::ExportJson),
+                    Act::Link(at("detail")),
+                )),
+                Item::new(Action::new(
+                    Some(Glyph::LAYERS),
+                    tr(Msg::MergeLocation),
+                    Act::Link(at("detail")),
+                ))
+                .disabled(tr(Msg::MergeReason)),
+            ],
+        )
+        .destructive(vec![Item::new(Action::new(
+            Some(Glyph::TRASH),
+            tr(Msg::DeleteLocation),
+            Act::Dialog(String::from("delete-location")),
+        ))]),
+    )
+}
+
+/// The confirmation the detail page's delete opens; its confirm leads back
+/// to the list, as a console's would post and redirect.
+fn delete_location() -> AnyView {
+    danger_dialog(
+        Confirmation {
+            id: "delete-location",
+            title: tr(Msg::DeleteTheLocation).into(),
+            message: tr(Msg::DeleteLocationBody).into(),
+        },
+        link_button(
+            at("list"),
+            Variant::Destructive,
+            Some(Glyph::TRASH),
+            tr(Msg::Delete),
+        ),
+    )
+    .into_any()
 }
 
 /// The settings both T3 pages show, `managed` marking Mode at the next
@@ -427,7 +487,7 @@ fn settings_header() -> Header {
 fn settings_file() -> AnyView {
     settings_page(SettingsPage {
         header: settings_header(),
-        actions: None,
+        actions: ActionGroup::none(),
         source: Source::File {
             file: String::from(CONFIG_FILE),
             how: at("settings"),
@@ -441,11 +501,14 @@ fn settings_file() -> AnyView {
 fn settings_managed() -> AnyView {
     settings_page(SettingsPage {
         header: settings_header(),
-        actions: Some(link_button(
-            at("settings-managed"),
-            Variant::Ghost,
-            Some(Glyph::INFO),
-            tr(Msg::HowSettingsWork),
+        actions: ActionGroup::more_only(Menu::new(
+            "settings-more",
+            tr(Msg::MoreActionsSettings),
+            vec![Item::new(Action::new(
+                Some(Glyph::INFO),
+                tr(Msg::HowSettingsWork),
+                Act::Link(at("settings-managed")),
+            ))],
         )),
         source: Source::Managed(Box::new(Managed {
             badge: badge(Tone::Neutral, &tr(Msg::ManagedBadge)).into_any(),

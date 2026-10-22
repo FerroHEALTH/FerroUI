@@ -15,6 +15,7 @@ use leptos::prelude::*;
 use crate::i18n::{Message, Text, tr};
 
 use crate::icon::{Glyph, icon};
+use crate::view::action::{ActionGroup, action_group};
 
 /// One ancestor of a page in its breadcrumb trail.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -63,8 +64,8 @@ enum Trail {
 }
 
 /// Returns the header that opens a page: the trail of its ancestors when it
-/// has one, its title with its badge and `actions` at the far end, and its
-/// subtitle line.
+/// has one, its title with its badge and the action group `actions` (F14)
+/// at the far end, and its subtitle line.
 ///
 /// The trail is a `nav` named "Breadcrumb" holding an ordered list, the
 /// current page last and marked `aria-current="page"`, the separators hidden
@@ -72,8 +73,14 @@ enum Trail {
 /// pattern). Below 40 rem it is one back link to the parent, the title
 /// under it saying where you are.
 #[must_use]
-pub fn page_heading(header: Header, actions: impl IntoView) -> impl IntoView {
-    heading(header, Trail::Here, actions)
+pub fn page_heading(header: Header, actions: ActionGroup) -> impl IntoView {
+    heading(header, Trail::Here, action_group(actions))
+}
+
+/// Returns the header [`page_heading`] draws, with `steps` (the previous
+/// and next of a queue, R5) at the far end in place of an action group.
+pub(crate) fn stepped_heading(header: Header, steps: AnyView) -> AnyView {
+    heading(header, Trail::Here, steps).into_any()
 }
 
 /// Returns a crumb's link, with the arrow it shows as a back link.
@@ -126,7 +133,7 @@ fn trail_of(crumbs: Vec<Crumb>, trail: Trail, title: &str) -> AnyView {
 }
 
 /// The header [`page_heading`] and [`editor_heading`] draw.
-fn heading(header: Header, trail: Trail, actions: impl IntoView) -> impl IntoView {
+fn heading(header: Header, trail: Trail, actions: AnyView) -> impl IntoView {
     let Header {
         title,
         subtitle,
@@ -157,12 +164,12 @@ fn heading(header: Header, trail: Trail, actions: impl IntoView) -> impl IntoVie
 }
 
 /// Returns the header that opens a page: its `title`, one `subtitle` line
-/// when there is one, and `actions` at the far end.
+/// when there is one, and the action group `actions` at the far end.
 #[must_use]
 pub fn page_header(
     title: impl Into<String>,
     subtitle: Option<String>,
-    actions: impl IntoView,
+    actions: ActionGroup,
 ) -> impl IntoView {
     page_heading(
         Header {
@@ -237,7 +244,7 @@ pub fn editor_heading(
     message: Message,
     mode: &Mode,
     header: Header,
-    actions: impl IntoView + 'static,
+    actions: ActionGroup,
 ) -> AnyView {
     let title = editor_title(message, mode);
     heading(
@@ -247,7 +254,7 @@ pub fn editor_heading(
             ..header
         },
         Trail::Parent,
-        actions,
+        action_group(actions),
     )
     .into_any()
 }

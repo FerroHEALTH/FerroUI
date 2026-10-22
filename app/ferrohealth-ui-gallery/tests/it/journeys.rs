@@ -165,9 +165,14 @@ async fn the_dialog_confirms_and_a_toast_says_so() -> Result<(), Box<dyn Error>>
     with_browser(async |browser| {
         browser.goto(&gallery.url("/ferroehr/overlays")).await?;
         hydrated_toasts(browser).await?;
+        // The delete is More's last item, never a button beside the primary.
+        crate::menus::hydrated_trigger(browser, "overlays-more")
+            .await?
+            .click()
+            .await?;
         browser
             .element(By::XPath(
-                "//button[normalize-space(.) = 'Delete the file']",
+                "//button[@role = 'menuitem' and contains(., 'Delete the file')]",
             ))
             .await?
             .click()

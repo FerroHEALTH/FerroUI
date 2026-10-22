@@ -9,6 +9,7 @@
 //! with a breadcrumb trail and a title in the code face.
 
 use ferrohealth_ui::highlight::Language;
+use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::code::{Code, CodeHead, Digest, Gravity, LineDiagnostic, code_card};
 use ferrohealth_ui::view::document::{Document, document_pane};
 use ferrohealth_ui::view::surface::{
@@ -160,7 +161,7 @@ pub fn CodePage() -> impl IntoView {
             mono: true,
             badge: None,
         },
-        (),
+        ActionGroup::none(),
     )
     .into_any();
     let meta = page_meta(Some(tr(Msg::AnsweredSyntheticReplicaGallery1))).into_any();

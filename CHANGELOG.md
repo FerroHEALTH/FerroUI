@@ -200,8 +200,58 @@ and this project adheres to
   hydrated; `widget::document::DocumentView`, `ViewChoice` and
   `view_switch` are its parts.
 
+- The title row's action group (F14), `view::action`: `ActionGroup` with
+  one optional primary `Action`, a split primary's `variants` menu, and the
+  More menu; `action_group` draws it and `action_button` draws one action
+  as a button (#153). An action is a link, a plain form post, a submit of a
+  form on the page, or a button that opens a confirmation popover
+  (`widget::menu::Act`), so every one works with no WebAssembly.
+- The menu (F13) and the select button with its listbox (R29),
+  `widget::menu`: `more_menu`, `row_menu`, `variants_menu` and `listbox`,
+  over the island `island::MenuButton` (#153). Each is a `<details>` the
+  browser opens with no script, its items links or form buttons; the
+  island adds the menu button and listbox keyboard paths (the arrows,
+  Home, End and a letter, a disabled item skipped), Escape returning the
+  focus to the trigger, closing on a focus or a press outside, the flip
+  above or to the other edge, and the phone's bottom sheet with its own
+  scrim, its title and Cancel. A destructive item comes last after a
+  separator in the danger tone, with an ellipsis when a confirmation
+  follows, and a disabled item says its reason on a second line.
+  `view::theme_switch::locale_select` is the language choice as a select
+  button.
+- Ready islands for three self-contained widgets (#220):
+  `island::Combobox`, `island::PickerField` and `island::ChartLegend`, each
+  with serde props and its words as props.
+- The Lucide `ellipsis` glyph, `Glyph::ELLIPSIS`, for the row menu's ⋯.
+
 ### Changed
 
+- `view::surface::page_heading`, `editor_heading` and `page_header` take an
+  `ActionGroup` in place of a free view, and the templates' title rows
+  follow: `ListPage::actions` replaces `ListPage::primary`,
+  `DetailPage::actions` and `SettingsPage::actions` are an `ActionGroup`,
+  and `DetailPage::stepper` draws a queue's previous and next (R5) in the
+  title row (#153). A destructive action moves into More, last; no
+  component draws a danger button beside the primary any more. A console
+  passes `ActionGroup::none()` where it passed `()`.
+- The combobox's listbox is a keyed `<For>` over the shown options, keyed
+  by the option's value, with the empty state outside it, so moving the
+  highlight changes only that option's attributes and no row is drawn
+  again (#207). `KeyedCombobox` carries its `no_match` words
+  (`widget::combobox::no_match()`), and `ComboOption` is `Serialize` and
+  `Deserialize`.
+- The chart's legend is a static key in the server HTML, each swatch beside
+  its series' name, and becomes a toggle per series once its island
+  hydrates, so a sighted reader keeps the colour key with no WebAssembly
+  (#227). `widget::chart::line_chart(&chart)` draws the plot and the table
+  on the server and takes no `shown` signal; the legend is
+  `island::ChartLegend` (`widget::chart::legend`).
+- The picker's "another" choice is its select's last option, marked
+  `data-other` and known by its place, so no value a console passes can
+  collide with it; the select follows the value through `selectedIndex`,
+  and a listed option's value is the console's own (#227). `Picker::id` and
+  `Picker::name` are `String`, and `widget::help::help_line` takes a `&str`
+  id.
 - The document pane is a server view with an island over its views
   (#212): `widget::document::document_pane`, `document_pane_opening` and
   `DocumentPane` give way to `view::document::document_pane` and
@@ -381,6 +431,9 @@ and this project adheres to
 
 ### Removed
 
+- `view::dialog::confirm_trigger`: open a confirmation from an action
+  whose act is `widget::menu::Act::Dialog`, a title row's primary or an
+  item of More (#153).
 - `view::code::code_panel`, `view::code::code_lines`,
   `widget::document::document_pane`, `document_pane_opening` and
   `DocumentPane`, which the code viewer and `view::document::document_pane`

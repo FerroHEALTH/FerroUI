@@ -8,16 +8,21 @@
 //! popover form. The user menu, which sets the theme, is in the top bar,
 //! and the drawer is the navigation on a narrow screen.
 
-use crate::locale::{Msg, Words, tr};
+use crate::locale::{Msg, Words, tr, tr_with};
 use ferrohealth_ui::icon::{Glyph, icon};
 use ferrohealth_ui::tone::Tone;
+use ferrohealth_ui::view::action::{ActionGroup, action_group};
 use ferrohealth_ui::view::button::{Variant, label};
-use ferrohealth_ui::view::dialog::{Confirmation, confirm_dialog, confirm_trigger, danger_dialog};
+use ferrohealth_ui::view::dialog::{Confirmation, confirm_dialog, danger_dialog};
 use ferrohealth_ui::view::form::{INPUT, field};
 use ferrohealth_ui::view::layout::divided_list;
 use ferrohealth_ui::view::popover::{PopoverForm, popover_form};
 use ferrohealth_ui::view::surface::{
     card, chip, cluster, definitions, grid, page_header, split, stack,
+};
+use ferrohealth_ui::view::theme_switch::locale_select;
+use ferrohealth_ui::widget::action_menu::{
+    Act, Action, Choice, Item, Listbox, Menu, Pick, listbox, row_menu,
 };
 use ferrohealth_ui::widget::dialog::{Modal, ModalWords, Width, modal_dialog};
 use ferrohealth_ui::widget::side_panel::{
@@ -26,9 +31,9 @@ use ferrohealth_ui::widget::side_panel::{
 use ferrohealth_ui::widget::toast::{Toast, ToastAction, ToastLink, raise};
 use leptos::prelude::*;
 
-/// The confirmation dialogs a trigger opens with no script: the plain one
-/// and the danger one, whose confirm, the island
-/// [`crate::islands::ConfirmAndToast`], raises a toast.
+/// The confirmation dialogs the title row opens with no script: the plain
+/// one its primary opens and the danger one More's delete opens, whose
+/// confirm, the island [`crate::islands::ConfirmAndToast`], raises a toast.
 fn confirmations() -> AnyView {
     let plain = confirm_dialog(
         Confirmation {
@@ -54,12 +59,6 @@ fn confirmations() -> AnyView {
             <p class="fui-muted">
                 {tr(Msg::OpenedTheirTriggerNoScript)}
             </p>
-            {cluster(
-                view! {
-                    {confirm_trigger("reload-set", Variant::Secondary, Glyph::REFRESH_CW, tr(Msg::ReloadSet))}
-                    {confirm_trigger("delete-file", Variant::Danger, Glyph::TRASH, tr(Msg::DeleteFile))}
-                },
-            )}
             {plain}
             {danger}
         },
@@ -110,6 +109,160 @@ pub(crate) fn confirm_and_toast(dialog: String, danger: bool, words: &Words) -> 
             {words}
         </button>
     }
+    .into_any()
+}
+
+/// The path of this brand's page `page`.
+fn page_path(page: &str) -> String {
+    crate::app::route_brand().map_or_else(
+        || String::from("/"),
+        |brand| format!("/{}/{page}", brand.key()),
+    )
+}
+
+/// A file's menu `id`, named `label`: a link, a disabled item with its
+/// reason, and the destructive delete last.
+fn file_menu(id: &str, label: String) -> Menu {
+    Menu::new(
+        id,
+        label,
+        vec![
+            Item::new(Action::new(
+                Some(Glyph::FILE_CODE),
+                tr(Msg::OpenTheDocument),
+                Act::Link(page_path("code")),
+            )),
+            Item::new(Action::new(
+                Some(Glyph::DOWNLOAD),
+                tr(Msg::DownloadTheFile),
+                Act::Link(page_path("code")),
+            ))
+            .disabled(tr(Msg::ProvisionedReadOnly)),
+        ],
+    )
+    .destructive(vec![Item::new(Action::new(
+        Some(Glyph::TRASH),
+        tr(Msg::DeleteFile),
+        Act::Dialog(String::from("delete-file")),
+    ))])
+}
+
+/// The title row's actions: Reload the set, which a confirmation follows,
+/// and More with the file's other actions, its delete last.
+fn overlays_actions() -> ActionGroup {
+    ActionGroup::primary(Action::new(
+        Some(Glyph::REFRESH_CW),
+        tr(Msg::ReloadSet),
+        Act::Dialog(String::from("reload-set")),
+    ))
+    .more(file_menu("overlays-more", tr(Msg::MoreActionsFile)))
+}
+
+/// The action group's other shapes: a primary alone, a split primary with
+/// its variants, and More alone.
+fn action_groups() -> AnyView {
+    let alone = ActionGroup::primary(Action::new(
+        Some(Glyph::FILE_CODE),
+        tr(Msg::OpenTheDocument),
+        Act::Link(page_path("code")),
+    ));
+    let split = ActionGroup::primary(Action::new(
+        Some(Glyph::SAVE),
+        tr(Msg::Save),
+        Act::Link(page_path("forms")),
+    ))
+    .variants(Menu::new(
+        "save-variants",
+        tr(Msg::WaysToSave),
+        vec![
+            Item::new(Action::new(
+                None,
+                tr(Msg::SaveAsDraft),
+                Act::Link(page_path("forms")),
+            )),
+            Item::new(Action::new(
+                None,
+                tr(Msg::SaveAndReload),
+                Act::Link(page_path("forms")),
+            )),
+        ],
+    ));
+    let more = ActionGroup::more_only(Menu::new(
+        "alone-more",
+        tr(Msg::MoreActionsSet),
+        vec![Item::new(Action::new(
+            Some(Glyph::FILE_CODE),
+            tr(Msg::OpenTheDocument),
+            Act::Link(page_path("code")),
+        ))],
+    ));
+    card(
+        tr(Msg::ActionGroups),
+        definitions(vec![
+            (tr(Msg::APrimaryAlone), action_group(alone)),
+            (tr(Msg::ASplitPrimary), action_group(split)),
+            (tr(Msg::MoreAlone), action_group(more)),
+        ]),
+    )
+    .into_any()
+}
+
+/// A row menu per file, and the select buttons: the language, which posts,
+/// and the version, whose choices are links.
+fn menus() -> AnyView {
+    let rows = ["synthetic-007.model.yml", "synthetic-011.extension.yml"]
+        .into_iter()
+        .enumerate()
+        .map(|(at, row)| {
+            let label = tr_with(Msg::ActionsFor, &[("name", row.into())]);
+            split(
+                view! { <code>{row}</code> },
+                row_menu(file_menu(&format!("row-menu-{at}"), label)),
+            )
+            .into_any()
+        })
+        .collect();
+    let here = page_path("overlays");
+    let version = listbox(Listbox {
+        id: String::from("version-list"),
+        label: tr(Msg::Version),
+        value: tr_with(
+            Msg::VersionLatestOf,
+            &[("version", "1.1.0".into()), ("count", 2.into())],
+        ),
+        choices: vec![
+            Choice {
+                label: String::from("1.1.0"),
+                note: Some(tr(Msg::Latest)),
+                lang: None,
+                selected: true,
+                pick: Pick::Link(format!("{here}?version=1.1.0")),
+            },
+            Choice {
+                label: String::from("1.0.0"),
+                note: None,
+                lang: None,
+                selected: false,
+                pick: Pick::Link(format!("{here}?version=1.0.0")),
+            },
+        ],
+    });
+    let language = locale_select(
+        "language-list",
+        &crate::locale::choices(),
+        crate::app::LOCALE_ROUTE,
+        &here,
+    );
+    card(
+        tr(Msg::MenusAndSelects),
+        stack(view! {
+            {divided_list(Some(tr(Msg::Files).into()), rows)}
+            {definitions(vec![
+                (tr(Msg::Language), language),
+                (tr(Msg::Version), version),
+            ])}
+        }),
+    )
     .into_any()
 }
 
@@ -453,10 +606,11 @@ pub fn OverlaysPage() -> impl IntoView {
     let header = page_header(
         tr(Msg::OverlaysFeedback),
         Some(tr(Msg::DialogsModalsSidePanelToasts)),
-        (),
+        overlays_actions(),
     )
     .into_any();
     let sections = (confirmations(), modals(), panel(), toasts(), popover());
+    let shapes = (action_groups(), menus());
     view! {
         {super::title(tr(Msg::OverlaysFeedback))}
         {header}
@@ -464,6 +618,10 @@ pub fn OverlaysPage() -> impl IntoView {
             {grid(view! {
                 {sections.0}
                 {sections.2}
+            })}
+            {grid(view! {
+                {shapes.0}
+                {shapes.1}
             })}
             {sections.1}
             {grid(view! {

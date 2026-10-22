@@ -3,7 +3,7 @@
 
 //! The static view functions.
 //!
-//! They are the shell, the page templates, the surfaces, the status marks,
+//! They are the title row's action group, the shell, the page templates, the surfaces, the status marks,
 //! the buttons and fields, the tabs as links, the empty and loading states,
 //! the refusal, the error page, the code viewer, the document pane, the
 //! sign-in card, the theme switch, the confirmation dialog, the popover
@@ -17,6 +17,7 @@
 //! itself: a popover opens and closes with no script, a `<details>` folds,
 //! a form posts.
 
+pub mod action;
 pub mod button;
 pub mod change;
 pub mod chart;

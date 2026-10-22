@@ -114,6 +114,55 @@ async fn document_views(browser: &Browser) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+/// Scrolls the element `by` names to the middle of the viewport, clear of
+/// the sticky top bar, and clicks it.
+async fn press(browser: &Browser, by: By) -> Result<(), Box<dyn Error>> {
+    let element = browser.element(by).await?;
+    browser
+        .driver()
+        .execute(
+            "arguments[0].scrollIntoView({block: 'center'});",
+            vec![element.to_json()?],
+        )
+        .await?;
+    element.click().await?;
+    Ok(())
+}
+
+/// Checks that the overlays page's confirmation trigger is there and its
+/// More opens with no script.
+async fn more_opens(browser: &Browser) -> Result<(), Box<dyn Error>> {
+    browser
+        .element(By::Css("button[popovertarget='reload-set']"))
+        .await?;
+    let more = browser
+        .element(By::Css("summary[aria-controls='overlays-more']"))
+        .await?;
+    more.click().await?;
+    let item = browser
+        .element(By::XPath(
+            "//div[@id = 'overlays-more']//a[@role = 'menuitem']",
+        ))
+        .await?;
+    assert!(item.is_displayed().await?, "More opens with no script");
+    more.click().await?;
+    Ok(())
+}
+
+/// Checks that the chart shows its colour key to a sighted reader.
+async fn colour_key(browser: &Browser) -> Result<(), Box<dyn Error>> {
+    browser.element(By::Css("main svg")).await?;
+    let keys = browser
+        .driver()
+        .find_all(By::Css(".fui-legend-key"))
+        .await?;
+    assert_eq!(3, keys.len(), "the colour key names every series");
+    for key in keys {
+        assert!(key.is_displayed().await?, "a sighted reader sees the key");
+    }
+    Ok(())
+}
+
 /// Checks what a brand's page at `page` must show with no WebAssembly,
 /// beyond its heading and its navigation.
 async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error>> {
@@ -161,14 +210,8 @@ async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error
             assert!(!shown.is_empty(), "the document pane shows its document");
             document_views(browser).await?;
         }
-        "/overlays" => {
-            browser
-                .element(By::Css("button[popovertarget='reload-set']"))
-                .await?;
-        }
-        "/charts" => {
-            browser.element(By::Css("main svg")).await?;
-        }
+        "/overlays" => more_opens(browser).await?,
+        "/charts" => colour_key(browser).await?,
         "/layouts" => {
             let items = browser
                 .driver()
@@ -559,6 +602,63 @@ async fn a_listing_filters_sorts_and_pages_with_the_webassembly_withheld()
             "the session pager posts and the URL names no position: {after}"
         );
         leave(browser, "the listing").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn every_item_of_more_works_with_the_webassembly_withheld() -> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        withhold_the_webassembly(browser).await?;
+        // A form button inside the menu posts.
+        browser.goto(&gallery.url("/ferrobridge")).await?;
+        press(browser, By::Css("summary[aria-controls='overview-more']")).await?;
+        press(
+            browser,
+            By::XPath(
+                "//button[@role = 'menuitem' and contains(., 'Switch to the compact density')]",
+            ),
+        )
+        .await?;
+        browser
+            .element(By::Css(r#"html[data-density="compact"]"#))
+            .await?;
+        // A link inside the menu leads on.
+        browser.goto(&gallery.url("/ferrobridge/overlays")).await?;
+        press(browser, By::Css("summary[aria-controls='overlays-more']")).await?;
+        press(
+            browser,
+            By::XPath("//a[@role = 'menuitem' and contains(., 'Open the document')]"),
+        )
+        .await?;
+        browser.at(&gallery.url("/ferrobridge/code")).await?;
+        // The destructive item opens its confirmation.
+        browser.goto(&gallery.url("/ferrobridge/overlays")).await?;
+        press(browser, By::Css("summary[aria-controls='overlays-more']")).await?;
+        press(
+            browser,
+            By::XPath("//button[@role = 'menuitem' and contains(., 'Delete the file')]"),
+        )
+        .await?;
+        let dialog = browser.element(By::Id("delete-file")).await?;
+        until("the confirmation opens", async || {
+            Ok(dialog.is_displayed().await?)
+        })
+        .await?;
+        // A choice of the listbox posts too.
+        browser.goto(&gallery.url("/ferrobridge/overlays")).await?;
+        press(browser, By::Css("summary[aria-controls='language-list']")).await?;
+        press(
+            browser,
+            By::XPath("//div[@id = 'language-list']//button[@role = 'option' and @lang = 'qps']"),
+        )
+        .await?;
+        browser.element(By::Css(r#"html[lang="qps"]"#)).await?;
+        leave(browser, "the menus").await
     })
     .await
 }

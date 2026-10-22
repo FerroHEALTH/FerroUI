@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The theme switch: light, dark and system, the one in force pressed; and
-//! the density and language switches of the same shape.
+//! the density and language switches of the same shape, and the language
+//! choice as a select button.
 //!
 //! Each button posts its theme as a plain form to the console's own route,
 //! before the page has hydrated and after, so it needs no script; the
@@ -14,6 +15,7 @@ use leptos::prelude::*;
 use crate::i18n::{Locale, Text, locale, tr};
 use crate::icon::{Glyph, icon};
 use crate::theme::{Density, Theme};
+use crate::widget::action_menu::{Choice, Listbox, Pick, listbox};
 
 /// The glyph a theme is drawn with.
 pub(crate) const fn glyph(theme: Theme) -> Glyph {
@@ -137,4 +139,38 @@ pub fn locale_switch(choices: &[Locale], action: String, back: String) -> AnyVie
         </form>
     }
     .into_any()
+}
+
+/// Returns the language choice over `choices` as a select button and its
+/// listbox (R29), the page's locale chosen, its listbox `id`.
+///
+/// Each choice is named in its own language and marked with it in `lang`
+/// (WCAG 2.2 SC 3.1.2), and posts `locale` and `back` to `action` as a
+/// plain form, the same post as [`locale_switch`], so it works with no
+/// WebAssembly.
+#[must_use]
+pub fn locale_select(id: &str, choices: &[Locale], action: &str, back: &str) -> AnyView {
+    let current = locale();
+    let choices = choices
+        .iter()
+        .map(|choice| Choice {
+            label: choice.text(Text::LanguageName),
+            note: None,
+            lang: Some(choice.tag()),
+            selected: *choice == current,
+            pick: Pick::Post {
+                action: action.to_owned(),
+                fields: vec![
+                    (String::from("locale"), choice.tag()),
+                    (String::from("back"), back.to_owned()),
+                ],
+            },
+        })
+        .collect();
+    listbox(Listbox {
+        id: id.to_owned(),
+        label: tr(Text::LanguageSwitch),
+        value: current.text(Text::LanguageName),
+        choices,
+    })
 }
