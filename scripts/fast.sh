@@ -60,7 +60,10 @@ self_test() {
   local out
   bash scripts/checks/affected.sh --self-test
   out="$(bash "$0" --base HEAD --dry-run 2>&1)" || die "self-test: a dry run failed: $out"
-  out="$(bash "$0" --change HEAD --dry-run 2>&1)" || die "self-test: a dry run of one commit failed: $out"
+  # A shallow checkout (CI's) holds no parent to replay a commit against.
+  if git rev-parse --verify --quiet HEAD^ > /dev/null; then
+    out="$(bash "$0" --change HEAD --dry-run 2>&1)" || die "self-test: a dry run of one commit failed: $out"
+  fi
   out="$(bash "$0" --all --dry-run --no-browser 2>&1)"
   case "$out" in *"cargo fmt --all --check"*"cargo clippy"*"wasm32-unknown-unknown"*"cargo nextest run"*) ;; *) die "self-test: --all plans no full Rust tier: $out" ;; esac
   case "$out" in *"journeys"*"skipped"*) ;; *) die "self-test: --no-browser still plans the journeys: $out" ;; esac
