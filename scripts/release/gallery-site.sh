@@ -12,12 +12,15 @@
 # resolution nothing to change, and --locked is passed to the compile itself.
 #
 # The bundle is target/site: pkg/ferrohealth-ui-gallery.wasm and its
-# JavaScript glue. The gallery has no stylesheet of its own: its server serves
-# the library's stylesheet and the brand themes from the library's constants,
-# as a console does. A release build that succeeds writes the digests of the
-# two files to target/gallery-site.sha256, which
-# scripts/checks/gallery-bundle.sh reads; the build removes it first, so a
-# failed build leaves no stamp and a stale bundle is never measured.
+# JavaScript glue, the entry every page loads, and beside them the chunks of
+# the lazy islands (`#[island(lazy)]`), which `--split` cuts out of the entry
+# with the loader __wasm_split.*.js and its manifest (leptos-ui.md §12). The
+# gallery has no stylesheet of its own: its server serves the library's
+# stylesheet and the brand themes from the library's constants, as a console
+# does. A release build that succeeds writes the digests of every file under
+# pkg/ to target/gallery-site.sha256, which scripts/checks/gallery-bundle.sh
+# reads; the build removes it first, so a failed build leaves no stamp and a
+# stale bundle is never measured.
 #
 # Usage: scripts/release/gallery-site.sh [--release]
 #   --release builds the wasm-release profile CI and the budget measure;
@@ -37,6 +40,9 @@ esac
 
 stamp="$root/target/gallery-site.sha256"
 rm -f -- "$stamp"
+# The chunks of an earlier build would outlive a split that no longer names
+# them, so the bundle directory starts empty.
+rm -rf -- "$root/target/site/pkg"
 
 if ! cargo metadata --locked --format-version 1 \
   --manifest-path "$gallery/Cargo.toml" > /dev/null; then
@@ -77,10 +83,11 @@ bash "$root/scripts/release/gallery-tools.sh" --check
 # cargo-leptos reads its configuration from the crate's own manifest
 # directory, so the build runs from there.
 cd "$gallery"
-cargo leptos build --frontend-only --lib-cargo-args=--locked "$@"
+cargo leptos build --frontend-only --split --lib-cargo-args=--locked "$@"
 
 missing=0
-for file in pkg/ferrohealth-ui-gallery.wasm pkg/ferrohealth-ui-gallery.js; do
+for file in pkg/ferrohealth-ui-gallery.wasm pkg/ferrohealth-ui-gallery.js \
+  pkg/__wasm_split_manifest.json; do
   if [ ! -s "$root/target/site/$file" ]; then
     echo "gallery-site: the bundle has no $file" >&2
     missing=1
@@ -89,6 +96,7 @@ done
 [ "$missing" -eq 0 ] || exit 1
 if [ "${1:-}" = --release ]; then
   if command -v sha256sum > /dev/null; then sum=(sha256sum); else sum=(shasum -a 256); fi
-  (cd "$root/target/site/pkg" && "${sum[@]}" ferrohealth-ui-gallery.wasm ferrohealth-ui-gallery.js) > "$stamp"
+  (cd "$root/target/site/pkg" && LC_ALL=C find . -type f | LC_ALL=C sort | sed 's|^\./||' |
+    tr '\n' '\0' | xargs -0 "${sum[@]}") > "$stamp"
 fi
 echo "gallery-site: the bundle is in target/site"

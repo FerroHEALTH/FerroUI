@@ -7,7 +7,10 @@
 //! The pages draw everything else on the server alone. Each island is a
 //! thin wrapper over the builder its page defines, so the page reads as
 //! one piece and the island only marks what the browser hydrates (the
-//! Leptos book, "Guide: Islands").
+//! Leptos book, "Guide: Islands"). The mapping editors, the masked
+//! identifiers and the concept tree are lazy: the site builds with
+//! `cargo leptos --split`, so their code loads from chunks of its own on
+//! the page that draws them, measured on #262 (`leptos-ui.md` §12).
 #![expect(
     clippy::mem_forget,
     reason = "the island macro of leptos_macro 0.8 keeps each hydrated island alive by forgetting its view state, in the browser entry it writes"
@@ -91,7 +94,7 @@ pub fn FormatSegments(
 
 /// The layouts page's concept tree, which keeps its open items in the
 /// address.
-#[island]
+#[island(lazy)]
 pub fn ConceptTree(
     /// The key of the brand whose page it is on.
     brand: String,
@@ -124,7 +127,7 @@ pub fn RunnerForm(
 }
 
 /// The forms page's masked identifiers, each row's reveal its own.
-#[island]
+#[island(lazy)]
 #[expect(
     clippy::needless_pass_by_value,
     reason = "an island takes its props by value, as they arrive from the page"
@@ -173,7 +176,7 @@ pub fn UploadField(
 }
 
 /// The forms page's highlighted editor and the size it reports.
-#[island]
+#[island(lazy)]
 pub fn DraftEditor(
     /// Its words, in the page's locale.
     words: Words,
@@ -183,7 +186,7 @@ pub fn DraftEditor(
 
 /// The forms page's code editor beside its diagnostics, in step with its
 /// cursor.
-#[island]
+#[island(lazy)]
 #[expect(
     clippy::needless_pass_by_value,
     reason = "an island takes its props by value, as they arrive from the page"
@@ -200,7 +203,7 @@ pub fn MappingEditor(
 }
 
 /// The forms page's code editor of a new, empty file.
-#[island]
+#[island(lazy)]
 #[expect(
     clippy::needless_pass_by_value,
     reason = "an island takes its props by value, as they arrive from the page"
@@ -215,7 +218,7 @@ pub fn NewMappingEditor(
 }
 
 /// The forms page's editor inside a reloading transition.
-#[island]
+#[island(lazy)]
 pub fn ReloadingEditor(
     /// Its words, in the page's locale.
     words: Words,
