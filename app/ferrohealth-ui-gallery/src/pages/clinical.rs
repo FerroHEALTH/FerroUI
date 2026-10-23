@@ -28,6 +28,7 @@ use ferrohealth_ui::view::surface::{
     Crumb, Header, SectionHead, page_heading, panel_section, panel_sections_card, stack,
     titled_panel,
 };
+use ferrohealth_ui::view::template::list::HeadingCount;
 use ferrohealth_ui::view::time::{reading as time_reading, timestamp};
 use ferrohealth_ui::view::versions::{
     AtTime, Standing, Version, VersionHistory, at_time_label, older_version, version_history,
@@ -265,7 +266,7 @@ fn histories(brand: &str) -> AnyView {
                     {panel_section(
                         Some(SectionHead {
                             title: tr(Msg::ClVersionsTitle),
-                            count: Some(u64::from(count)),
+                            count: Some(HeadingCount::All(u64::from(count))),
                             actions: None,
                         }),
                         open,
@@ -273,7 +274,7 @@ fn histories(brand: &str) -> AnyView {
                     {panel_section(
                         Some(SectionHead {
                             title: tr(Msg::ClVersionsDeleted),
-                            count: Some(u64::from(count) + 1),
+                            count: Some(HeadingCount::All(u64::from(count) + 1)),
                             actions: None,
                         }),
                         deleted,

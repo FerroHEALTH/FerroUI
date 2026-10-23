@@ -111,6 +111,9 @@ impl Glyph {
     pub const COPY: Self = Self(
         r#"<rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />"#,
     );
+    /// Lucide `corner-down-right`.
+    pub const CORNER_DOWN_RIGHT: Self =
+        Self(r#"<path d="m15 10 5 5-5 5" /><path d="M4 4v7a4 4 0 0 0 4 4h12" />"#);
     /// Lucide `database`.
     pub const DATABASE: Self = Self(
         r#"<ellipse cx="12" cy="5" rx="9" ry="3" /><path d="M3 5V19A9 3 0 0 0 21 19V5" /><path d="M3 12A9 3 0 0 0 21 12" />"#,
@@ -190,6 +193,10 @@ impl Glyph {
     /// Lucide `gauge`.
     pub const GAUGE: Self =
         Self(r#"<path d="m12 14 4-4" /><path d="M3.34 19a10 10 0 1 1 17.32 0" />"#);
+    /// Lucide `git-branch`.
+    pub const GIT_BRANCH: Self = Self(
+        r#"<path d="M15 6a9 9 0 0 0-9 9V3" /><circle cx="18" cy="6" r="3" /><circle cx="6" cy="18" r="3" />"#,
+    );
     /// Lucide `heart-pulse`.
     pub const HEART_PULSE: Self = Self(
         r#"<path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5" /><path d="M3.22 13H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27" />"#,
@@ -220,6 +227,13 @@ impl Glyph {
     /// Lucide `list-checks`.
     pub const LIST_CHECKS: Self = Self(
         r#"<path d="M13 5h8" /><path d="M13 12h8" /><path d="M13 19h8" /><path d="m3 17 2 2 4-4" /><path d="m3 7 2 2 4-4" />"#,
+    );
+    /// Lucide `list-filter`.
+    pub const LIST_FILTER: Self =
+        Self(r#"<path d="M2 5h20" /><path d="M6 12h12" /><path d="M9 19h6" />"#);
+    /// Lucide `list-tree`.
+    pub const LIST_TREE: Self = Self(
+        r#"<path d="M8 5h13" /><path d="M13 12h8" /><path d="M13 19h8" /><path d="M3 10a2 2 0 0 0 2 2h3" /><path d="M3 5v12a2 2 0 0 0 2 2h3" />"#,
     );
     /// Lucide `lock`.
     pub const LOCK: Self = Self(
@@ -381,7 +395,7 @@ impl Glyph {
     pub const X: Self = Self(r#"<path d="M18 6 6 18" /><path d="m6 6 12 12" />"#);
 
     /// Every glyph, with the Lucide name of its vendored file.
-    pub const ALL: [(&str, Self); 99] = [
+    pub const ALL: [(&str, Self); 103] = [
         ("activity", Self::ACTIVITY),
         ("arrow-down", Self::ARROW_DOWN),
         ("arrow-left", Self::ARROW_LEFT),
@@ -411,6 +425,7 @@ impl Glyph {
         ("code", Self::CODE),
         ("compass", Self::COMPASS),
         ("copy", Self::COPY),
+        ("corner-down-right", Self::CORNER_DOWN_RIGHT),
         ("database", Self::DATABASE),
         ("download", Self::DOWNLOAD),
         ("ellipsis", Self::ELLIPSIS),
@@ -431,6 +446,7 @@ impl Glyph {
         ("folder", Self::FOLDER),
         ("funnel", Self::FUNNEL),
         ("gauge", Self::GAUGE),
+        ("git-branch", Self::GIT_BRANCH),
         ("heart-pulse", Self::HEART_PULSE),
         ("inbox", Self::INBOX),
         ("info", Self::INFO),
@@ -439,6 +455,8 @@ impl Glyph {
         ("layout-dashboard", Self::LAYOUT_DASHBOARD),
         ("link", Self::LINK),
         ("list-checks", Self::LIST_CHECKS),
+        ("list-filter", Self::LIST_FILTER),
+        ("list-tree", Self::LIST_TREE),
         ("lock", Self::LOCK),
         ("log-in", Self::LOG_IN),
         ("log-out", Self::LOG_OUT),

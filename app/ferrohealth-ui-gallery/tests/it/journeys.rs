@@ -216,6 +216,49 @@ async fn the_dialog_confirms_and_a_toast_says_so() -> Result<(), Box<dyn Error>>
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn an_informational_dialog_opens_on_close_and_gives_the_focus_back()
+-> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/ferroterm/overlays")).await?;
+        let trigger = browser
+            .element(By::Css("button[commandfor='how-reloading']"))
+            .await?;
+        trigger.scroll_into_view().await?;
+        trigger.click().await?;
+        let dialog = browser.element(By::Id("how-reloading")).await?;
+        until("the dialog opens", async || {
+            Ok(dialog.is_displayed().await?)
+        })
+        .await?;
+        // NOTE: WAI-ARIA Authoring Practices, the dialog (modal) pattern: a dialog that asks nothing focuses Close.
+        let active = browser.driver().active_element().await?;
+        assert_eq!(Some(String::from("close")), active.attr("command").await?);
+        assert_eq!(
+            1,
+            dialog.find_all(By::Css("button")).await?.len(),
+            "Close alone"
+        );
+        active.send_keys(Key::Enter).await?;
+        until("Close closes it", async || {
+            Ok(!dialog.is_displayed().await?)
+        })
+        .await?;
+        let back = browser.driver().active_element().await?;
+        assert_eq!(
+            Some(String::from("how-reloading")),
+            back.attr("commandfor").await?,
+            "the focus returns to the trigger"
+        );
+        browser.console_clean("the informational dialog").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn the_editor_keeps_every_byte_typed_and_a_diagnostic_leads_to_its_line()
 -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
@@ -1820,6 +1863,48 @@ async fn measure<T: serde::de::DeserializeOwned>(
 ) -> Result<T, Box<dyn Error>> {
     let answer = browser.driver().execute(script, vec![]).await?;
     Ok(serde_json::from_value(answer.json().clone())?)
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn at_320_pixels_a_long_pill_in_a_stacked_card_wraps_inside_the_card()
+-> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        window(browser, 320, 800).await?;
+        browser.goto(&gallery.url("/ferrofed/tables")).await?;
+        browser.element(By::Css("main h1")).await?;
+        // NOTE: WCAG 2.2 SC 1.4.10; a state longer than the value column stays inside the card.
+        let [pill, card, edge]: [f64; 3] = browser
+            .driver()
+            .execute(
+                "const table = [...document.querySelectorAll('.fui-table-stack .fui-table')]
+                   .find(each => !each.closest('.fui-worklist'));
+                 const cell = table.querySelector('tbody tr td[data-label]');
+                 cell.innerHTML = '<span class=\"fui-pill fui-tone-warn\">saved, not applied to the running configuration</span>';
+                 const pill = cell.querySelector('.fui-pill').getBoundingClientRect();
+                 const card = cell.closest('tr').getBoundingClientRect();
+                 return [pill.right, card.right, document.documentElement.clientWidth];",
+                Vec::new(),
+            )
+            .await?
+            .convert()?;
+        assert!(pill <= card + 0.5, "the pill ends at {pill}, past its card at {card}");
+        assert!(card <= edge + 0.5, "the card ends at {card}, past the page at {edge}");
+        let wider: bool = browser
+            .driver()
+            .execute(
+                "const root = document.documentElement; return root.scrollWidth > root.clientWidth + 1;",
+                Vec::new(),
+            )
+            .await?
+            .convert()?;
+        assert!(!wider, "the page scrolls sideways");
+        browser.console_clean("a long pill at 320 px").await
+    })
+    .await
 }
 
 #[tokio::test(flavor = "multi_thread")]

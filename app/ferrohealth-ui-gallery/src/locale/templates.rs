@@ -146,6 +146,8 @@ messages! {
     StateExcluded = "state-excluded",
     /// `Reachable`
     StateReachable = "state-reachable",
+    /// `Show states`
+    StatesShow = "states-show",
     /// `Example content: the template's parts, not a product's.`
     TemplateExample = "template-example",
     /// `The FerroBRIDGE book`

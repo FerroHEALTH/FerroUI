@@ -49,14 +49,10 @@ texts! {
     TopologyMinimap = "topology-minimap",
     /// The accessible name of the minimap.
     TopologyMinimapFrame = "topology-minimap-frame",
-    /// The Status menu's submit button.
-    TopologyShow = "topology-show",
     /// The accessible name of the Status menu.
     TopologyStates = "topology-states",
     /// The Status button with every state shown.
     TopologyStatus = "topology-status",
-    /// The Status button with some states shown: `$shown` of `$total`.
-    TopologyStatusSome = "topology-status-some",
     /// The accessible name of the view switch.
     TopologyView = "topology-view",
     /// The view switch's List.

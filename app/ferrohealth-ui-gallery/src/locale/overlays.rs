@@ -32,6 +32,8 @@ messages! {
     FileGoesGoodRunningSet = "file-goes-good-running-set",
     /// `The files on disk compile and replace the running set when they compile.`
     FilesDiskCompileReplaceRunning = "files-disk-compile-replace-running",
+    /// `How reloading works`
+    HowReloadingWorks = "how-reloading-works",
     /// `Information`
     Information = "information",
     /// `Keyboard shortcuts`
@@ -76,6 +78,10 @@ messages! {
     ReloadSet = "reload-set",
     /// `Reload the set?`
     ReloadTheSet = "reload-the-set",
+    /// `The console compiles the files on disk and swaps the running set...`
+    ReloadingCompiles = "reloading-compiles",
+    /// `A file that does not compile leaves the running set as it was...`
+    ReloadingKeeps = "reloading-keeps",
     /// The Remove of the member `$member`.
     RemoveMember = "remove-member",
     /// The sentence of the confirmation that removes the member `$member`.

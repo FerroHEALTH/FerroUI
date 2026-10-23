@@ -17,7 +17,7 @@ use ferrohealth_ui::view::error_page::Status;
 use ferrohealth_ui::view::kbd::{Shortcut, shortcut_hint};
 use ferrohealth_ui::view::preferences::{Post, language_select};
 use ferrohealth_ui::view::refusal::{Refusal, refusal};
-use ferrohealth_ui::view::template::list::counted;
+use ferrohealth_ui::view::template::list::{HeadingCount, counted};
 use ferrohealth_ui::widget::copy::{CopySource, CopyWords};
 use ferrohealth_ui::widget::editor::{Editor, EditorWords, Opened, Panel, editor_panel};
 use ferrohealth_ui::widget::identifier::{
@@ -238,7 +238,7 @@ fn a_number_a_message_takes_is_grouped_in_the_marks_of_the_page_language() {
 
 #[test]
 fn a_count_drawn_outside_a_message_is_grouped_in_the_page_language() {
-    let count = || counted(String::from("Rows"), 4_000_000_000).into_any();
+    let count = || counted(String::from("Rows"), HeadingCount::All(4_000_000_000)).into_any();
     let english = render(Some(Locale::english()), count);
     assert!(english.contains("· 4,000,000,000"), "{english}");
     let throwaway = render(Some(throwaway()), count);

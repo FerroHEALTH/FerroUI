@@ -18,7 +18,7 @@ use ferrohealth_ui::view::chart::{LineChart, Series};
 use ferrohealth_ui::view::code::{
     Code, CodeHead, Digest, Gravity, LineDiagnostic, code_card, code_section, code_viewer,
 };
-use ferrohealth_ui::view::dialog::{Confirmation, confirm_dialog};
+use ferrohealth_ui::view::dialog::{Confirmation, Explanation, confirm_dialog, info_dialog};
 use ferrohealth_ui::view::document::{Document, document_pane};
 use ferrohealth_ui::view::empty::{empty_state, skeleton};
 use ferrohealth_ui::view::form::{
@@ -34,6 +34,7 @@ use ferrohealth_ui::view::surface::{
     panel_sections, section_intro, source_split, stat_card,
 };
 use ferrohealth_ui::view::tabs::{Tab, binder};
+use ferrohealth_ui::view::template::list::HeadingCount;
 use ferrohealth_ui::widget::action_menu::{
     Act, Action, Choice, Item, Listbox, Menu, Pick, listbox, row_menu,
 };
@@ -420,13 +421,88 @@ fn a_code_section_carries_the_head_in_its_heading_row_and_the_viewer_has_none() 
 }
 
 #[test]
+fn an_informational_dialog_explains_and_offers_only_close() {
+    let dialog = html(|| {
+        info_dialog(
+            Explanation {
+                id: "how-config".into(),
+                title: Word::from("How <configuration> works"),
+            },
+            view! { <p>"Read at start."</p> },
+        )
+        .into_any()
+    });
+    assert!(
+        dialog.starts_with(
+            r#"<dialog id="how-config" closedby="any" aria-labelledby="how-config-title""#
+        ),
+        "{dialog}"
+    );
+    assert!(
+        has(&dialog, "h2", &[("id", "how-config-title")]),
+        "{dialog}"
+    );
+    assert!(
+        dialog.contains("How &lt;configuration&gt; works"),
+        "{dialog}"
+    );
+    assert!(dialog.contains("<p>Read at start.</p>"), "{dialog}");
+    assert_eq!(
+        1,
+        tags(&dialog, "button").len(),
+        "Close is the one action: {dialog}"
+    );
+    assert!(
+        has(
+            &dialog,
+            "button",
+            &[
+                ("command", "close"),
+                ("commandfor", "how-config"),
+                ("autofocus", "")
+            ]
+        ),
+        "{dialog}"
+    );
+    assert!(dialog.contains("Close"), "{dialog}");
+    assert!(!dialog.contains("style="), "{dialog}");
+}
+
+#[test]
+fn a_heading_counts_the_items_it_shows_of_a_larger_set() {
+    let section = html(|| {
+        panel_section(
+            Some(SectionHead {
+                title: String::from("Code systems"),
+                count: Some(HeadingCount::Shown {
+                    shown: 6,
+                    total: 15_000,
+                }),
+                actions: None,
+            }),
+            view! { <p>"Rows"</p> },
+        )
+    });
+    let count = section
+        .split_once(r#"<span class="fui-list-count">"#)
+        .and_then(|(_, rest)| rest.split_once("</span>"))
+        .map(|(count, _)| count.replace("<!---->", ""))
+        .unwrap_or_default();
+    assert!(count.starts_with("· "), "after a middle dot: {section}");
+    assert!(
+        count.ends_with("6 of 15,000"),
+        "shown of total, each number grouped: {section}"
+    );
+}
+
+#[test]
 fn panel_sections_draw_a_heading_row_with_its_count_and_no_card_of_their_own() {
     let panel = html(|| {
         panel_sections(view! {
             {panel_section(
                 Some(SectionHead {
                     title: String::from("Models <x>"),
-                    count: Some(3),
+                    count: Some(HeadingCount::All(3)),
                     actions: Some(view! { <a href="/add">"Add"</a> }.into_any()),
                 }),
                 view! {

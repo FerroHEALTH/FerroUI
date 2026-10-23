@@ -10,6 +10,7 @@
 
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::icon::Glyph;
+use ferrohealth_ui::table::filter::{FilterChoice, FilterMenu, MenuForm, filter_menu};
 use ferrohealth_ui::table::model::{Paging, Window};
 use ferrohealth_ui::table::pager::{Listing, link_pager};
 use ferrohealth_ui::table::view::{Body, Column, DataTable, Role, Sorting, data_table};
@@ -27,7 +28,7 @@ use ferrohealth_ui::view::template::about::{
 };
 use ferrohealth_ui::view::template::detail::{DetailPage, Stepper, detail_page, stepper};
 use ferrohealth_ui::view::template::list::{
-    ActiveFilters, FilterChip, ListCard, ListPage, list_empty, list_page,
+    ActiveFilters, FilterChip, HeadingCount, ListCard, ListPage, list_empty, list_page,
 };
 use ferrohealth_ui::view::template::settings::{
     Managed, Setting, SettingsPage, Source, revision_line, settings_page,
@@ -160,7 +161,7 @@ fn short_card(tabs: bool) -> ListCard {
     });
     ListCard {
         title: tr(Msg::Locations),
-        count: Some(5),
+        count: Some(HeadingCount::All(5)),
         order: None,
         tabs,
         actions: None,
@@ -229,6 +230,20 @@ fn list_many() -> AnyView {
                         aria-label=tr(Msg::FindLocation)
                     />
                 </div>
+                {filter_menu(FilterMenu {
+                    id: "l-state",
+                    name: "state",
+                    glyph: Glyph::LIST_FILTER,
+                    label: tr(Msg::State).into(),
+                    title: tr(Msg::StatesShow),
+                    choices: vec![
+                        FilterChoice::new("reachable", tr(Msg::StateReachable), 28, true),
+                        FilterChoice::new("degraded", tr(Msg::StateDegraded), 1, false),
+                        FilterChoice::new("excluded", tr(Msg::StateExcluded), 1, false),
+                    ],
+                    note: None,
+                    form: MenuForm::Enclosing,
+                })}
             </div>
         </form>
     }
@@ -253,7 +268,7 @@ fn list_many() -> AnyView {
         },
         card: ListCard {
             title: tr(Msg::Locations),
-            count: Some(30),
+            count: Some(HeadingCount::All(30)),
             order: None,
             tabs: None,
             actions: None,
@@ -278,7 +293,7 @@ fn list_empty_page() -> AnyView {
         filters: ActiveFilters::default(),
         card: ListCard {
             title: tr(Msg::Locations),
-            count: Some(0),
+            count: Some(HeadingCount::All(0)),
             order: None,
             tabs: None,
             actions: None,

@@ -20,6 +20,11 @@ texts! {
     ChangeRemoved = "change-removed",
     /// The change table's setting column.
     ChangeSetting = "change-setting",
+    /// The button that applies a filter menu's checked choices.
+    FilterMenuShow = "filter-menu-show",
+    /// A filter menu's button while it keeps `$shown` of its `$total`
+    /// choices, after its `$label`.
+    FilterMenuSome = "filter-menu-some",
     /// The range of a listing with no total: `$nouns` opens it.
     OpenRangeOf = "open-range-of",
     /// The range of a listing with no total whose page `$page` came back

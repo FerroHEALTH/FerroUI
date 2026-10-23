@@ -17,6 +17,7 @@ use crate::stack::Gallery;
 pub(super) const STATES: &[&str] = &[
     "dialog-open",
     "dialog-danger",
+    "dialog-info",
     "modal-open",
     "modal-wide",
     "side-panel",
@@ -127,6 +128,11 @@ pub(super) async fn overlays(
             "dialog-danger",
             "//button[@role = 'menuitem' and contains(., 'Delete the file')]",
             "delete-file",
+        ),
+        (
+            "dialog-info",
+            "//button[@commandfor = 'how-reloading']",
+            "how-reloading",
         ),
         (
             "modal-open",

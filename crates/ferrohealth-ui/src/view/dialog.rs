@@ -17,6 +17,11 @@
 //! it works before the page hydrates. The confirming control is the
 //! console's: a submit button of a form that posts, or a button whose
 //! listener acts and closes the dialog.
+//!
+//! The informational dialog ([`info_dialog`]) is the same frame for a page
+//! of explanation, such as "How configuration works": the info glyph beside
+//! its title, a few paragraphs, and Close as its only action, which takes
+//! the focus as it opens.
 
 use std::borrow::Cow;
 
@@ -84,6 +89,55 @@ fn frame(confirmation: Confirmation, danger: bool, confirm: impl IntoView) -> im
                     {tr(Text::Cancel)}
                 </button>
                 {confirm}
+            </div>
+        </dialog>
+    }
+}
+
+/// What an informational dialog explains.
+#[derive(Debug, Clone)]
+pub struct Explanation {
+    /// The dialog's id, which its trigger opens with the `show-modal`
+    /// command.
+    pub id: Cow<'static, str>,
+    /// What it explains, such as "How configuration works".
+    pub title: Word,
+}
+
+/// Returns the dialog explaining `explanation` with `body`, a few
+/// paragraphs, and Close as its one action.
+///
+/// It is 48 rem wide, so two short columns of prose fit side by side, and
+/// Close takes the focus as it opens: the dialog asks nothing (WAI-ARIA
+/// Authoring Practices, the dialog (modal) pattern, initial focus).
+#[must_use]
+pub fn info_dialog(explanation: Explanation, body: impl IntoView) -> impl IntoView {
+    let Explanation { id, title } = explanation;
+    let title_id = format!("{id}-title");
+    let labelled_by = title_id.clone();
+    view! {
+        <dialog
+            id=id.clone()
+            closedby="any"
+            aria-labelledby=labelled_by
+            class="fui-dialog fui-dialog-wide"
+        >
+            <h2 id=title_id class="fui-dialog-title">
+                {icon(Glyph::INFO, "18")}
+                {title}
+            </h2>
+            <div class="fui-modal-body">{body}</div>
+            <div class="fui-dialog-actions">
+                <button
+                    type="button"
+                    class=Variant::Secondary.class()
+                    command="close"
+                    commandfor=id.clone()
+                    autofocus=true
+                >
+                    {icon(Glyph::X, "16")}
+                    {tr(Text::Close)}
+                </button>
             </div>
         </dialog>
     }

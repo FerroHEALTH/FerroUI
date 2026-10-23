@@ -31,6 +31,7 @@ use leptos::prelude::*;
 
 use crate::i18n::{Arg, Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
+use crate::table::filter::{FilterChoice, FilterMenu, MenuForm, filter_menu};
 use crate::view::button::Variant;
 use crate::view::flow::{
     CardDrawing, FlowState, LabelAt, Place, card_drawing, curve, edge_line, ends, path_drawing,
@@ -856,74 +857,39 @@ fn state_word(state: FlowState, detail: Option<String>) -> AnyView {
     crate::view::state::state(state.into(), word, detail)
 }
 
-/// The Status menu: a `<details>` whose summary is the button, holding the
-/// `GET` form of the states, each its line, its dot, its word and its
-/// count.
+/// The Status menu: the filter menu of the states, each its line, its dot,
+/// its word and its count.
 fn status_menu(menu: StatusMenu) -> AnyView {
     let StatusMenu {
         action,
         name,
         states,
     } = menu;
-    let total = u32::try_from(states.len()).unwrap_or(u32::MAX);
-    let shown = u32::try_from(states.iter().filter(|each| each.shown).count()).unwrap_or(u32::MAX);
-    let filtered = shown < total;
-    let words = if filtered {
-        tr_with(
-            Text::TopologyStatusSome,
-            &[("shown", Arg::from(shown)), ("total", Arg::from(total))],
-        )
-    } else {
-        tr(Text::TopologyStatus)
-    };
-    let items = states
+    let choices = states
         .into_iter()
         .map(|each| {
-            let id = format!("topology-show-{}", each.state.key());
-            let label_for = id.clone();
-            view! {
-                <label class="fui-menu-item fui-menu-check" for=label_for>
-                    <input
-                        type="checkbox"
-                        id=id
-                        name=name.clone()
-                        value=each.state.key()
-                        checked=each.shown
-                    />
-                    {line_sample(each.state)}
-                    {state_dot(each.state)}
-                    <span class="fui-menu-item-text">
-                        <span class="fui-menu-item-label">{each.state.word()}</span>
-                    </span>
-                    <span class="fui-menu-count">{each.count}</span>
-                </label>
-            }
+            FilterChoice::new(
+                each.state.key(),
+                each.state.word(),
+                u64::from(each.count),
+                each.shown,
+            )
+            .mark(view! { {line_sample(each.state)} {state_dot(each.state)} })
         })
-        .collect_view();
-    let class = Variant::Secondary.class();
-    view! {
-        <details class="fui-anchor">
-            <summary class=class class:is-filtered=filtered>
-                {icon(Glyph::FUNNEL, "16")} {words} {icon(Glyph::CHEVRON_DOWN, "16")}
-            </summary>
-            <form
-                method="get"
-                action=action
-                class="fui-menu fui-menu-compact fui-menu-anchored fui-menu-start"
-                aria-label=tr(Text::TopologyStates)
-            >
-                <div class="fui-menu-items">{items}</div>
-                <div class="fui-menu-sep" role="separator"></div>
-                <div class="fui-menu-foot">
-                    <p class="fui-small fui-muted">{tr(Text::TopologyLegend)}</p>
-                    <button type="submit" class=Variant::Secondary.small()>
-                        {tr(Text::TopologyShow)}
-                    </button>
-                </div>
-            </form>
-        </details>
-    }
-    .into_any()
+        .collect();
+    filter_menu(FilterMenu {
+        id: "topology-show",
+        name: &name,
+        glyph: Glyph::FUNNEL,
+        label: tr(Text::TopologyStatus),
+        title: tr(Text::TopologyStates).text().to_owned(),
+        choices,
+        note: Some(tr(Text::TopologyLegend)),
+        form: MenuForm::Own {
+            action: Some(&action),
+            fields: &[],
+        },
+    })
 }
 
 /// The Map and List switch: two links, the view in force pressed, and in
