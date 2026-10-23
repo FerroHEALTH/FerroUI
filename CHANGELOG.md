@@ -11,6 +11,166 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.3.4] - 2026-10-23
+
+### Added
+
+- The user menu (F13) takes a console's own links: `UserMenu::links`, each
+  a `widget::menu::UserLink` with its words, its address and its glyph,
+  drawn between Your preferences and the theme, such as FerroEHR's Your
+  access (#347).
+- The banner under the top bar ends with a link after its sentence:
+  `view::status::banner` takes a fifth argument, `Option<BannerLink>`, its
+  words and its address, drawn after a middle dot in the banner's tone,
+  such as a sandbox band's Details (#348).
+- A relative time for family rule 11: `view::time::relative(raw, now)`
+  draws a `<time>` that reads `13 s ago`, `30 min ago`, `2 h ago` the same
+  day, `yesterday`, then days, weeks, months and years, against the now the
+  console hands it, with the full timestamp as its title and the machine
+  form as its `datetime`; `view::time::relative_reading` gives the words
+  alone. The words are in the library's catalog, so every console rounds
+  and says them alike. A moment after now reads as its full timestamp (#349).
+- E8's operations can be built by a console that parses scopes with its own
+  grammar: `view::scope::Operations::of(&[Operation])` and
+  `Operations: FromIterator<Operation>`, so a `Scope` literal draws the
+  console's own parse in `scope_grants` (#350).
+- A copy item for the menus (F13): `widget::action_menu::Act::Copy(text)`
+  puts the text on the clipboard with the copy button's clipboard code and
+  says so in a toast, Copied to the clipboard or the browser's refusal. Only
+  script can copy, so the item is hidden until the menu's island runs and
+  the text stays where the page shows it. In a title row a copy action is
+  the copy button (#351).
+- Two Lucide glyphs for the FerroEHR design: `Glyph::GIT_COMMIT` (Lucide
+  `git-commit-horizontal`, a contribution) and `Glyph::KEY_ROUND` (Your
+  access), vendored from Lucide 1.51.0 (#352).
+- The page header's action group (F14) holds a popover form beside its
+  primary: `ActionGroup::popover`, set with `ActionGroup::popover(form)`,
+  draws an R17 anchored popover form after the primary and before More,
+  such as Save to the CDR beside Run (#354).
+- E7's results pane rides the console's own form for a run that is a form
+  post: `Switch::Form { form }` draws Table and Chart as submits of that
+  form posting `shown`, and each export is a `view::results::Export`, a
+  link (`Export::Link`) or a submit of that form with `formaction`
+  (`Export::Submit`), so no form of the pane's own sits inside the
+  console's (#355).
+- The line chart's figures table names each point by its own label:
+  `LineChart::x_labels`, each an X value and its label, such as a point's
+  time on a time axis, which the table under the plot reads before a tick's
+  label and the number; the axis draws `x_ticks` alone (#358).
+- Three Lucide 1.51.0 glyphs for the FerroBRIDGE flow, the FerroTERM
+  sidebar and the FerroPIX navigation: `Glyph::SEND`, `Glyph::BOOK_OPEN`
+  and `Glyph::USER_ROUND_SEARCH`. A console replaces its stand-ins
+  (`RADIO_TOWER`, `BOOK_A`, `SEARCH`) with them (#360).
+- B9's edge rule is public: `view::flow::edge_rule` draws one line per
+  `EdgeRule` (the state's line sample, word and line style in the library's
+  words, then the console's meaning), and F9 can use it too.
+  `view::flow::rule_dialog(FlowRule)` puts it in the short "How the flow is
+  drawn" dialog with the console's closing paragraph. `rule_button(id)` is
+  the "How it is drawn" button for the flow panel's head, which opens the
+  dialog with no script. `FlowState::line` gives each state's line style (#361).
+- Two Lucide 1.51.0 glyphs for the FerroTERM design: `Glyph::ARROW_LEFT_RIGHT`
+  (Concept maps) and `Glyph::GIT_COMPARE` (Compare). The design's `history`
+  is the release's deprecated alias of `rotate-ccw-clock`, so
+  `Glyph::ROTATE_CCW_CLOCK` stays the Recent writes glyph (#363).
+
+### Changed
+
+- Breaking: `widget::menu::UserMenu` gains the public field `links`, so a
+  console that writes a `UserMenu` literal adds `links: Vec::new()`, or its
+  own `UserLink`s (#347).
+- Breaking: `view::status::banner` takes a fifth argument, an
+  `Option<view::status::BannerLink>`, so every call adds one: `None` for a
+  banner with no link (#348).
+- Breaking: the library's catalog adds the relative-time messages
+  `time-ago-seconds`, `time-ago-minutes`, `time-ago-hours`, `time-yesterday`,
+  `time-ago-days`, `time-ago-weeks`, `time-ago-months` and `time-ago-years`
+  (each but `time-yesterday` taking `$count`), so a console that translates
+  the library's catalog adds the eight (#349).
+- Breaking: `widget::action_menu::Act` gains the `Copy` variant, so a
+  console that matches on `Act` exhaustively adds a `Copy` arm.
+  `widget::action_menu::menu_button` takes a `copy` argument
+  (`Option<widget::copy::CopyWords>`) before its children, and
+  `island::MenuButton` a `copy` prop: `None` for a menu with no copy item
+  (#351).
+- Breaking: `Glyph::ALL` is a `[(&str, Glyph); 110]`, up from 103 in 0.3.3
+  with the seven glyphs this release vendors (#352, #360, #363), so a
+  console that names the array's length writes 110, or reads it as a slice.
+- `widget::editor::Editor::id` takes a `Cow<'static, str>`, so a page with a
+  number of editors known only at run time gives each its own id and field
+  name, such as `staged-3`. Breaking: a static id becomes `"draft".into()` (#353).
+- Breaking: `view::action::ActionGroup` gains the public field `popover`,
+  so a console that writes an `ActionGroup` literal adds `popover: None`, or
+  builds the group with `ActionGroup::popover(form)` (#354).
+- Breaking: `view::results::ResultsPane::csv` and `ResultsPane::json` take a
+  `view::results::Export`, so an address becomes `Export::Link(address)`,
+  and `view::results::Switch` gains the `Form` variant, so a console that
+  matches on `Switch` exhaustively adds an arm (#355).
+- Breaking: `widget::editor::Editor::editable` says whether the text may be
+  edited at all, and an editable text area takes keys from the first paint.
+  A console that passed a signal turning true as the page hydrated passes
+  `Signal::stored(true)` for an editable text, and false only for a text
+  the reader may only read (#356).
+- Breaking: `view::dock::Decision` gains the public field `leaves`, so a
+  console that writes a `Decision` literal without `..Decision::default()`
+  adds `leaves: false`, and sets `leaves: true` on its Discard (#357).
+- Breaking: `view::chart::LineChart` gains the public field `x_labels`, so a
+  console that writes a `LineChart` literal adds `x_labels: Vec::new()`, or
+  each point's own label (#358).
+- Breaking: the library's catalog adds the flow rule's messages
+  `flow-rule-button`, `flow-rule-title`, `flow-style-up`,
+  `flow-style-degraded`, `flow-style-unreachable`, `flow-style-not-checked`
+  and `flow-style-off`, so a console that translates the library's catalog
+  adds the seven (#361).
+- T3's file line can open the informational dialog: `Source::File::how` and
+  the second argument of `file_line` are a `view::template::settings::How`.
+  `How::Page(url)` keeps the link, and `How::Dialog(id)` draws a button
+  styled as the link (`fui-link-button`) that opens `info_dialog` by its id
+  with the `show-modal` command, with no script. Breaking: a console wraps
+  its URL in `How::Page(…)`, or passes `How::Dialog(…)` and drops a
+  title-row button that opened the same dialog (#364).
+- Breaking: `widget::repeat::Repeat` gains the public field `token`, so a
+  console that writes a `Repeat` literal adds `token: ROW`, and a list
+  nested in a `Fields::Card` row names a token of its own there and in its
+  blank row's ids and names (#366).
+
+### Removed
+
+- The gallery's `cl-minutes-ago` message: the clinical version history
+  reads its times through `view::time::relative`, whose words are the
+  library's `time-ago-*` messages. A console that copied the gallery's
+  catalog drops it and translates the library's messages instead (#349).
+- Breaking: `widget::editor::Editor` no longer implements `Copy`, since its
+  id may be made at run time; it is `Clone`. An editor used twice, as by
+  `editor_panel` and `editor_diagnostics`, is cloned for the first use
+  (#353).
+- Breaking: `view::action::ActionGroup` no longer implements `Clone`,
+  `PartialEq` or `Eq`, since its popover form holds a view. A console that
+  cloned or compared a group builds it again where it needs a second one
+  (#354).
+
+### Fixed
+
+- The code editor (B2), the YAML editor and the upload field work with no
+  WebAssembly: an editable text area takes keys from the first paint, shows
+  its own text in ink over the layer's gutter until its island runs
+  (`fui-editor-stack.is-static`), and hands what it holds as the page
+  hydrates to `on_input`, so an early key is never lost or written over (#356).
+- A decision of the docked bar (R4) that leaves without keeping what the
+  form holds, such as Discard, skips the form's checks: `Decision::leaves`
+  draws `formnovalidate`, so a required field left empty no longer holds
+  the reader on the page (#357).
+- F7: Add and Remove on `Fields::Card` rows move the focus to a card's
+  first field. Before, they moved it to the Remove in the card's head, so a
+  keyboard user's next Enter took the new card back out (#365).
+- F7: a list nested in a `Fields::Card` row adds rows in place in a card
+  that Add inserted. `Repeat::token` names each list's own key token
+  (`ROW` for a top-level list, a token of its own such as `__profile__` for
+  a nested one), and the island rekeys the content of nested templates. It
+  also takes the presses of a nested list in a card it copied, and finds
+  only its own blank row, rows, empty line and Add. Before, a list whose
+  drawn cards held a nested blank row copied that nested row when Add was
+  pressed (#366).
+
 ## [0.3.3] - 2026-10-23
 
 ### Added
@@ -2260,7 +2420,8 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.3...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.4...HEAD
+[0.3.4]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.3...v0.3.4
 [0.3.3]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.0...v0.3.1
