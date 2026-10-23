@@ -20,3 +20,4 @@ rows =
        *[other] qows
     }
 cancel = Qancel
+date-order = dmy

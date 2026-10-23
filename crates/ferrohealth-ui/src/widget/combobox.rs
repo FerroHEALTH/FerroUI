@@ -11,9 +11,16 @@
 //! it, Home and End go to its ends, Enter chooses, Escape closes it. Each
 //! option shows its words and a muted second line, the chosen one is
 //! checked, an empty filter says "No match", and the list scrolls within a
-//! bounded height. A hidden input carries the `name`, so the form posts the
-//! same value either way. A short fixed list keeps the plain styled select
-//! (`view::form::SELECT`).
+//! bounded height. It draws at most [`ROWS`] options and says when more
+//! match, so typing narrows a long list. Clearing the words clears the
+//! value, as the native select's empty choice does. A hidden input carries
+//! the `name`, so the form posts the same value either way. A short fixed
+//! list keeps the plain styled select (`view::form::SELECT`).
+//!
+//! A list too long to send to the browser whole, such as a code system's
+//! concepts, takes a [`Remote`] ([`searched_combobox`]): the combobox writes
+//! the words typed and shows the options the console's own search answers,
+//! since the library fetches nothing.
 
 use std::borrow::Cow;
 
@@ -66,12 +73,17 @@ impl ComboOption {
     }
 }
 
+/// The most options the list draws at once.
+pub const ROWS: usize = 100;
+
 /// The words a combobox draws itself, resolved on the server in the page's
 /// locale, so an island that draws it carries no catalog.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ComboboxWords {
     /// The line the list shows when no option matches.
     pub no_match: String,
+    /// The line under the list when more options match than it draws.
+    pub more: String,
 }
 
 impl ComboboxWords {
@@ -80,8 +92,25 @@ impl ComboboxWords {
     pub fn of_page() -> Self {
         Self {
             no_match: tr(Text::ComboboxNoMatch),
+            more: tr(Text::ComboboxMore),
         }
     }
+}
+
+/// A console's own search behind a combobox, for a list too long to send to
+/// the browser whole.
+///
+/// The combobox writes the words typed into `query` and shows `options` as
+/// they stand, filtering none itself; the console answers `query` with the
+/// options that match, through its own server function, which the library
+/// never defines.
+#[derive(Debug, Clone, Copy)]
+pub struct Remote {
+    /// The words typed, written as the reader types, empty once the list
+    /// closes.
+    pub query: RwSignal<String>,
+    /// The options that match `query`, in their order.
+    pub options: Signal<Vec<ComboOption>>,
 }
 
 /// What a combobox shows.
@@ -152,6 +181,21 @@ pub fn combobox(combo: Combobox) -> AnyView {
 /// Returns the combobox `combo`, whose ids are made at run time.
 #[must_use]
 pub fn keyed_combobox(combo: KeyedCombobox) -> AnyView {
+    drawn(combo, None)
+}
+
+/// Returns the combobox `combo` over the console's search `remote`.
+///
+/// Its `options` are what the native select offers before the page
+/// hydrates, the chosen one among them; once it hydrates the list shows
+/// what `remote` answers.
+#[must_use]
+pub fn searched_combobox(combo: KeyedCombobox, remote: Remote) -> AnyView {
+    drawn(combo, Some(remote))
+}
+
+/// Returns the combobox `combo`, over `remote` when it has one.
+fn drawn(combo: KeyedCombobox, remote: Option<Remote>) -> AnyView {
     let enhanced = RwSignal::new(false);
     // An effect runs in the browser alone, after hydration, so the server's
     // native select is what hydrates, and the combobox replaces it.
@@ -160,7 +204,7 @@ pub fn keyed_combobox(combo: KeyedCombobox) -> AnyView {
     let id = combo.id.clone();
     let body = move || {
         if enhanced.get() {
-            enhanced_view(combo.clone())
+            enhanced_view(combo.clone(), remote)
         } else {
             native_view(&combo)
         }
@@ -219,8 +263,14 @@ fn option_id(id: &str, place: usize) -> String {
 struct State {
     /// The control's id.
     id: StoredValue<String>,
-    /// The choices.
-    options: StoredValue<Vec<ComboOption>>,
+    /// The choices: the combobox's own, or what the console's search
+    /// answered.
+    options: Signal<Vec<ComboOption>>,
+    /// The console's search, when the list is too long to filter here.
+    remote: Option<Remote>,
+    /// The words of the chosen option, kept while a search's answer no
+    /// longer holds it.
+    chosen_label: RwSignal<Option<String>>,
     /// The value chosen.
     selected: RwSignal<Option<String>>,
     /// Whether the list is open.
@@ -231,20 +281,34 @@ struct State {
     query: RwSignal<String>,
     /// The highlighted row, a place in `shown`.
     active: RwSignal<Option<usize>>,
-    /// The places of the options the typed words keep.
+    /// The places of the options the typed words keep, at most [`ROWS`].
     shown: Memo<Vec<usize>>,
+    /// Whether more options match than [`ROWS`].
+    more: Memo<bool>,
 }
 
 impl State {
-    /// The state of a combobox over `options`, choosing into `selected`.
-    fn new(id: String, options: Vec<ComboOption>, selected: RwSignal<Option<String>>) -> Self {
-        let options = StoredValue::new(options);
+    /// The state of a combobox over `options`, or over the console's search
+    /// `remote`, choosing into `selected`.
+    fn new(
+        id: String,
+        options: Vec<ComboOption>,
+        selected: RwSignal<Option<String>>,
+        remote: Option<Remote>,
+    ) -> Self {
+        let chosen_label = RwSignal::new(selected.with_untracked(|value| {
+            options
+                .iter()
+                .find(|option| Some(&option.value) == value.as_ref())
+                .map(|option| option.label.clone())
+        }));
+        let options = remote.map_or_else(|| Signal::stored(options), |remote| remote.options);
         let typing = RwSignal::new(false);
         let query = RwSignal::new(String::new());
-        let shown = Memo::new(move |_| {
+        let matches = Memo::new(move |_| {
             let needle = query.get().trim().to_lowercase();
-            let filtering = typing.get() && !needle.is_empty();
-            options.with_value(|options| {
+            let filtering = remote.is_none() && typing.get() && !needle.is_empty();
+            options.with(|options| {
                 options
                     .iter()
                     .enumerate()
@@ -253,22 +317,28 @@ impl State {
                     .collect::<Vec<_>>()
             })
         });
+        let shown =
+            Memo::new(move |_| matches.with(|all| all.iter().take(ROWS).copied().collect()));
+        let more = Memo::new(move |_| matches.with(Vec::len) > ROWS);
         Self {
             id: StoredValue::new(id),
             options,
+            remote,
+            chosen_label,
             selected,
             open: RwSignal::new(false),
             typing,
             query,
             active: RwSignal::new(None),
             shown,
+            more,
         }
     }
 
     /// The place of the chosen option, if any.
     fn chosen(self) -> Option<usize> {
         self.selected.with(|value| {
-            self.options.with_value(|options| {
+            self.options.with(|options| {
                 options
                     .iter()
                     .position(|option| Some(&option.value) == value.as_ref())
@@ -281,21 +351,41 @@ impl State {
         if self.typing.get() {
             return self.query.get();
         }
+        if self.selected.with(Option::is_none) {
+            return String::new();
+        }
         self.chosen()
             .and_then(|place| {
                 self.options
-                    .with_value(|options| options.get(place).map(|option| option.label.clone()))
+                    .with(|options| options.get(place).map(|option| option.label.clone()))
             })
+            .or_else(|| self.chosen_label.get())
             .unwrap_or_default()
+    }
+
+    /// Takes the words `typed`: they filter the list, or go to the console's
+    /// search, and clearing them clears the value, as choosing the native
+    /// select's empty option does.
+    fn typed(self, typed: String) {
+        if typed.trim().is_empty() {
+            self.selected.set(None);
+            self.chosen_label.set(None);
+        }
+        if let Some(remote) = self.remote {
+            remote.query.set(typed.clone());
+        }
+        self.query.set(typed);
+        self.typing.set(true);
+        self.open.set(true);
+        self.active
+            .set((!self.shown.with_untracked(Vec::is_empty)).then_some(0));
     }
 
     /// Chooses the option at `place` and closes the list.
     fn choose(self, place: usize) {
-        if let Some(value) = self
-            .options
-            .with_value(|options| options.get(place).map(|option| option.value.clone()))
-        {
-            self.selected.set(Some(value));
+        if let Some(option) = self.options.with(|options| options.get(place).cloned()) {
+            self.chosen_label.set(Some(option.label));
+            self.selected.set(Some(option.value));
         }
         self.close();
     }
@@ -305,6 +395,9 @@ impl State {
         self.open.set(false);
         self.typing.set(false);
         self.query.set(String::new());
+        if let Some(remote) = self.remote {
+            remote.query.set(String::new());
+        }
     }
 
     /// Opens the list, highlighting the option at `place` or the first.
@@ -389,15 +482,17 @@ impl State {
     }
 }
 
-/// The key of the option at `place`: its value, stable while the typed
-/// words change which options show.
-fn key(state: State, place: usize) -> String {
-    state.options.with_value(|options| {
+/// The key of the option at `place`: its place and its value, stable while
+/// the typed words change which options show, and new when a search's
+/// answer puts another option at the place.
+fn key(state: State, place: usize) -> (usize, String) {
+    let value = state.options.with_untracked(|options| {
         options
             .get(place)
             .map(|option| option.value.clone())
             .unwrap_or_default()
-    })
+    });
+    (place, value)
 }
 
 /// The row of the option at `place`.
@@ -407,7 +502,7 @@ fn key(state: State, place: usize) -> String {
 fn row(state: State, place: usize) -> AnyView {
     let Some(option) = state
         .options
-        .with_value(|options| options.get(place).cloned())
+        .with_untracked(|options| options.get(place).cloned())
     else {
         return ().into_any();
     };
@@ -459,8 +554,8 @@ fn row(state: State, place: usize) -> AnyView {
     .into_any()
 }
 
-/// The combobox a hydrated page shows.
-fn enhanced_view(combo: KeyedCombobox) -> AnyView {
+/// The combobox a hydrated page shows, over `remote` when it has one.
+fn enhanced_view(combo: KeyedCombobox, remote: Option<Remote>) -> AnyView {
     let KeyedCombobox {
         id,
         name,
@@ -469,10 +564,10 @@ fn enhanced_view(combo: KeyedCombobox) -> AnyView {
         options,
         selected,
         described_by,
-        words: ComboboxWords { no_match },
+        words: ComboboxWords { no_match, more },
     } = combo;
     let list_id = format!("{id}-list");
-    let state = State::new(id.clone(), options, selected);
+    let state = State::new(id.clone(), options, selected, remote);
     let list = NodeRef::<leptos::html::Ul>::new();
     Effect::new(move |_| {
         if let Some(row) = state.active_row() {
@@ -502,12 +597,7 @@ fn enhanced_view(combo: KeyedCombobox) -> AnyView {
                         state.open_at(state.chosen());
                     }
                 }
-                on:input:target=move |event| {
-                    state.query.set(event.target().value());
-                    state.typing.set(true);
-                    state.open.set(true);
-                    state.active.set((!state.shown.with_untracked(Vec::is_empty)).then_some(0));
-                }
+                on:input:target=move |event| state.typed(event.target().value())
                 on:keydown=move |event| state.key(&event)
                 on:blur=move |_| state.close()
             />
@@ -538,6 +628,23 @@ fn enhanced_view(combo: KeyedCombobox) -> AnyView {
                                     aria-selected="false"
                                 >
                                     {no_match.clone()}
+                                </li>
+                            }
+                        })
+                }}
+                {move || {
+                    state
+                        .more
+                        .get()
+                        .then(|| {
+                            view! {
+                                <li
+                                    class="fui-combobox-empty"
+                                    role="option"
+                                    aria-disabled="true"
+                                    aria-selected="false"
+                                >
+                                    {more.clone()}
                                 </li>
                             }
                         })
@@ -580,7 +687,79 @@ fn reveal(list: NodeRef<leptos::html::Ul>, row: usize) {
 
 #[cfg(test)]
 mod tests {
-    use super::ComboOption;
+    use leptos::prelude::*;
+
+    use super::{ComboOption, ROWS, Remote, State};
+
+    fn options(count: usize) -> Vec<ComboOption> {
+        (0..count)
+            .map(|place| ComboOption::new(format!("code-{place}"), format!("Concept {place}")))
+            .collect()
+    }
+
+    #[test]
+    fn clearing_the_words_clears_the_value() {
+        let owner = Owner::new();
+        owner.with(|| {
+            let selected = RwSignal::new(Some(String::from("code-1")));
+            let state = State::new(String::from("c"), options(3), selected, None);
+            assert_eq!("Concept 1", state.words());
+            state.typed(String::from("Conc"));
+            assert_eq!(
+                Some(String::from("code-1")),
+                selected.get(),
+                "typing keeps it"
+            );
+            state.typed(String::new());
+            assert_eq!(None, selected.get(), "an optional field empties again");
+            state.close();
+            assert_eq!("", state.words());
+        });
+    }
+
+    #[test]
+    fn the_list_draws_at_most_its_rows_and_says_more_match() {
+        let owner = Owner::new();
+        owner.with(|| {
+            let state = State::new(
+                String::from("c"),
+                options(ROWS + 5),
+                RwSignal::new(None),
+                None,
+            );
+            assert_eq!(ROWS, state.shown.with(Vec::len));
+            assert!(state.more.get(), "the reader is told to type to narrow it");
+            state.typed(String::from("concept 10"));
+            assert!(!state.more.get(), "narrowed below the limit");
+        });
+    }
+
+    #[test]
+    fn a_console_search_gets_the_words_and_its_answer_shows_unfiltered() {
+        let owner = Owner::new();
+        owner.with(|| {
+            let query = RwSignal::new(String::new());
+            let answer = RwSignal::new(options(2));
+            let remote = Remote {
+                query,
+                options: answer.into(),
+            };
+            let selected = RwSignal::new(None);
+            let state = State::new(String::from("c"), Vec::new(), selected, Some(remote));
+            state.typed(String::from("zzz"));
+            assert_eq!("zzz", query.get(), "the console's search reads the words");
+            assert_eq!(
+                vec![0, 1],
+                state.shown.get(),
+                "its answer is not filtered again"
+            );
+            state.choose(1);
+            answer.set(Vec::new());
+            assert_eq!(Some(String::from("code-1")), selected.get());
+            assert_eq!("Concept 1", state.words(), "the choice keeps its words");
+            assert_eq!("", query.get(), "closing the list ends the search");
+        });
+    }
 
     #[test]
     fn an_option_matches_its_words_its_value_and_its_second_line() {

@@ -9,6 +9,8 @@
 //! the year 9999, written `YYYY-MM-DD` (ISO 8601-1:2019, 5.2.2.1, the
 //! calendar date in its extended format), and a typed value is that date
 //! with a time to the minute when the field takes one (`YYYY-MM-DD HH:MM`).
+//! A field also takes a date typed in the order its page's language writes
+//! one ([`DateOrder`], the catalog's `date-order`), such as `23.10.2026`.
 //! A console's server reads a posted value with the same functions the
 //! picker reads a typed one with, so both refuse a value for the same
 //! reason. No specification governs the picker's arithmetic otherwise: our
@@ -282,7 +284,87 @@ fn civil_from_days(days: i32) -> Option<(u16, u8, u8)> {
     ))
 }
 
+/// The order a language writes a date's day, month and year in, which its
+/// catalog names as `date-order`: `ymd`, `dmy` or `mdy`.
+///
+/// A field always takes `YYYY-MM-DD`; a language that writes the day or the
+/// month first adds its own order, its parts split by `.`, `/` or `-`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum DateOrder {
+    /// Year, month, day: ISO 8601 alone.
+    #[default]
+    Ymd,
+    /// Day, month, year, such as `23.10.2026`.
+    Dmy,
+    /// Month, day, year, such as `10/23/2026`.
+    Mdy,
+}
+
+impl DateOrder {
+    /// The order a catalog names by `key` (`ymd`, `dmy`, `mdy`).
+    #[must_use]
+    pub fn parse(key: &str) -> Option<Self> {
+        match key.trim() {
+            "ymd" => Some(Self::Ymd),
+            "dmy" => Some(Self::Dmy),
+            "mdy" => Some(Self::Mdy),
+            _ => None,
+        }
+    }
+
+    /// The order of the page being drawn, from its catalog's `date-order`.
+    #[must_use]
+    pub fn of_page() -> Self {
+        // NOTE: no specification governs this: our own design; a catalog that names
+        // no order the library knows takes ISO 8601 alone.
+        Self::parse(&crate::i18n::tr(crate::i18n::Text::DateOrder)).unwrap_or_default()
+    }
+}
+
 impl Day {
+    /// Reads `text` as a day written `YYYY-MM-DD`, or in `order` with its
+    /// day and month of one or two digits and its year of four, split by
+    /// `.`, `/` or `-`; surrounding space ignored.
+    ///
+    /// # Errors
+    ///
+    /// [`NotADay`] says why the text is no day.
+    pub fn parse_in(text: &str, order: DateOrder) -> Result<Self, NotADay> {
+        let iso = Self::parse(text);
+        if order == DateOrder::Ymd || !matches!(iso, Err(NotADay::Format)) {
+            return iso;
+        }
+        let parts: Vec<&str> = text.trim().split(['.', '/', '-']).collect();
+        let [first, second, year] = parts.as_slice() else {
+            return Err(NotADay::Format);
+        };
+        let (day, month) = if order == DateOrder::Dmy {
+            (first, second)
+        } else {
+            (second, first)
+        };
+        let short = |part: &str| {
+            (1..=2)
+                .contains(&part.len())
+                .then(|| number(part.as_bytes()))
+                .flatten()
+                .and_then(|value| u8::try_from(value).ok())
+        };
+        let (Some(day), Some(month)) = (short(day), short(month)) else {
+            return Err(NotADay::Format);
+        };
+        let year = (year.len() == 4)
+            .then(|| number(year.as_bytes()))
+            .flatten()
+            .and_then(|year| u16::try_from(year).ok())
+            .filter(|year| YEARS.contains(year))
+            .ok_or(NotADay::Format)?;
+        if !(1..=12).contains(&month) {
+            return Err(NotADay::Month { month });
+        }
+        Self::new(year, month, day).ok_or(NotADay::Day { year, month })
+    }
+
     /// The day `year`-`month`-`day`, when it is one of the calendar's.
     #[must_use]
     pub fn new(year: u16, month: u8, day: u8) -> Option<Self> {
@@ -496,14 +578,24 @@ impl Moment {
     ///
     /// [`NotADay`] says why the text is no such value.
     pub fn parse(text: &str, with_time: bool) -> Result<Self, NotADay> {
+        Self::parse_in(text, with_time, DateOrder::Ymd)
+    }
+
+    /// Reads `text` as [`Moment::parse`] does, its date also in `order`
+    /// ([`Day::parse_in`]).
+    ///
+    /// # Errors
+    ///
+    /// [`NotADay`] says why the text is no such value.
+    pub fn parse_in(text: &str, with_time: bool, order: DateOrder) -> Result<Self, NotADay> {
         let text = text.trim();
         if !with_time {
-            return Day::parse(text).map(|day| Self { day, time: None });
+            return Day::parse_in(text, order).map(|day| Self { day, time: None });
         }
         let (date, time) = text
             .split_once([' ', 'T'])
-            .ok_or_else(|| Day::parse(text).err().unwrap_or(NotADay::Format))?;
-        let day = Day::parse(date)?;
+            .ok_or_else(|| Day::parse_in(text, order).err().unwrap_or(NotADay::Format))?;
+        let day = Day::parse_in(date, order)?;
         let time = Clock::parse(time)?;
         Ok(Self {
             day,
@@ -603,10 +695,60 @@ impl Preset {
 
 #[cfg(test)]
 mod tests {
-    use super::{Bounds, Clock, Day, Moment, Month, NotADay, Preset, Quick, Weekday, days_in};
+    use super::{
+        Bounds, Clock, DateOrder, Day, Moment, Month, NotADay, Preset, Quick, Weekday, days_in,
+    };
 
     fn day(text: &str) -> Day {
         Day::parse(text).expect("a test day")
+    }
+
+    #[test]
+    fn a_date_is_read_in_the_order_of_the_pages_language_and_always_as_iso() {
+        assert_eq!(
+            Ok(day("2026-10-23")),
+            Day::parse_in("23.10.2026", DateOrder::Dmy)
+        );
+        assert_eq!(
+            Ok(day("2026-03-04")),
+            Day::parse_in("4/3/2026", DateOrder::Dmy)
+        );
+        assert_eq!(
+            Ok(day("2026-10-23")),
+            Day::parse_in("10/23/2026", DateOrder::Mdy)
+        );
+        assert_eq!(
+            Ok(day("2026-10-23")),
+            Day::parse_in("2026-10-23", DateOrder::Dmy)
+        );
+        assert_eq!(
+            Err(NotADay::Format),
+            Day::parse_in("23.10.2026", DateOrder::Ymd),
+            "ISO 8601 alone where the language writes the year first"
+        );
+        assert_eq!(
+            Err(NotADay::Month { month: 13 }),
+            Day::parse_in("01.13.2026", DateOrder::Dmy)
+        );
+        assert_eq!(
+            Err(NotADay::Day {
+                year: 2026,
+                month: 2
+            }),
+            Day::parse_in("30.02.2026", DateOrder::Dmy)
+        );
+        assert_eq!(
+            Err(NotADay::Format),
+            Day::parse_in("23.10.26", DateOrder::Dmy)
+        );
+        assert_eq!(
+            Err(NotADay::Format),
+            Day::parse_in("123.10.2026", DateOrder::Dmy)
+        );
+        assert_eq!(Some(DateOrder::Dmy), DateOrder::parse("dmy"));
+        assert_eq!(None, DateOrder::parse("day first"));
+        let moment = Moment::parse_in("23.10.2026 14:30", true, DateOrder::Dmy).expect("a moment");
+        assert_eq!("2026-10-23 14:30", moment.to_string());
     }
 
     #[test]

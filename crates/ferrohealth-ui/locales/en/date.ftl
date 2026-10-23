@@ -38,6 +38,7 @@ date-not-a-day = { $value } is not a date: { $why }.
 date-not-a-time = { $value } is not a time of day: type it as HH:MM.
 date-not-format = { $value } is not written as YYYY-MM-DD.
 date-not-format-time = { $value } is not written as YYYY-MM-DD HH:MM.
+date-order = ymd
 date-previous-month = Previous month
 date-previous-year = Previous year
 date-quick = Quick choices

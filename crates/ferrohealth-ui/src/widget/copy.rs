@@ -7,7 +7,8 @@
 //! It is a small secondary button with the `copy` glyph. Pressed, it writes
 //! the text with the browser's asynchronous clipboard (W3C Clipboard API and
 //! events, `writeText`), then reads "Copied" with a check for two seconds,
-//! or says the browser refused; a polite live region announces either. A
+//! or says the browser refused, as it does on a page served over plain
+//! HTTP, which has no clipboard; a polite live region announces either. A
 //! page draws it through [`crate::island::CopyButton`]. The server draws it
 //! hidden and it shows once the page has hydrated, so with no WebAssembly
 //! the text it copies stays on the page as selectable text and no button
@@ -312,11 +313,21 @@ fn copy(source: &CopySource, state: RwSignal<State>) {
 fn write(value: &str, state: RwSignal<State>) {
     #[cfg(target_arch = "wasm32")]
     {
-        let Some(window) = web_sys::window() else {
+        use leptos::wasm_bindgen::JsCast as _;
+        // NOTE: W3C Clipboard API and events, `Navigator.clipboard` is
+        // [SecureContext]: over plain HTTP it is undefined, which is a refusal too.
+        let clipboard = web_sys::window()
+            .map(|window| window.navigator())
+            .and_then(|navigator| {
+                web_sys::js_sys::Reflect::get(&navigator, &"clipboard".into()).ok()
+            })
+            .filter(|clipboard| !clipboard.is_undefined() && !clipboard.is_null())
+            .and_then(|clipboard| clipboard.dyn_into::<web_sys::Clipboard>().ok());
+        let Some(clipboard) = clipboard else {
             state.set(State::Refused);
             return;
         };
-        let promise = window.navigator().clipboard().write_text(value);
+        let promise = clipboard.write_text(value);
         wasm_bindgen_futures::spawn_local(async move {
             match wasm_bindgen_futures::JsFuture::from(promise).await {
                 Ok(_) => {

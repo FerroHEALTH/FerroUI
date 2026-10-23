@@ -11,6 +11,16 @@ issues-left-out =
         [one] { $count } information issue with no text left out.
        *[other] { $count } information issues with no text left out.
     }
+issues-more =
+    { $count ->
+        [one] { $count } more issue
+       *[other] { $count } more issues
+    }
+issues-not-drawn =
+    { $count ->
+        [one] { $count } more issue is not shown here.
+       *[other] { $count } more issues are not shown here.
+    }
 refusal-evidence = What the server sent
 refusal-no-answer = No answer: { $summary }
 refusal-status = { $status }: { $summary }

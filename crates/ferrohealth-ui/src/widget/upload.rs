@@ -8,12 +8,16 @@
 //! The drop zone takes a file dragged onto it and reads "Drop to read the
 //! file" while one is over it; the button beside its words opens the
 //! browser's file chooser. A file is refused, with the reason shown and
-//! announced, when its name ends in none of the accepted extensions or it
-//! is larger than the limit. A file read replaces the text, and the field
-//! names it. The library sends nothing: the console posts the text, and
-//! shows its in-flight state and its refusal in the slots here. The file
-//! is read with `Blob.text()` in a handler (W3C File API), so the server
-//! draws the field ready and nothing runs before hydration.
+//! announced, when its name ends in none of the accepted extensions (a
+//! field that names none takes any) or it is larger than the limit. A file
+//! read replaces the text, and the field names it; of several dropped at
+//! once it reads the first and says so, and a file that is not UTF-8 text
+//! is read with each byte it could not decode as U+FFFD, and the field
+//! says that too. The library sends nothing: the console posts the text,
+//! and shows its in-flight state and its refusal in the slots here. The
+//! file's bytes are read with `Blob.arrayBuffer()` in a handler (W3C File
+//! API), so the server draws the field ready and nothing runs before
+//! hydration.
 
 use std::borrow::Cow;
 
@@ -35,7 +39,8 @@ pub struct Upload {
     pub label: Cow<'static, str>,
     /// The chooser's words, such as "Choose OPT file".
     pub choose: Cow<'static, str>,
-    /// The extensions accepted, with their dots, such as `[".opt", ".xml"]`.
+    /// The extensions accepted, with their dots, such as `[".opt", ".xml"]`;
+    /// none takes a file of any kind.
     pub accept: &'static [&'static str],
     /// The largest file read, in bytes.
     pub max_bytes: u64,
@@ -105,6 +110,12 @@ pub struct UploadWords {
     pub busy: String,
     /// The line once a file is read, around the open `file`.
     pub read: Phrase,
+    /// The line once the first of several files dropped at once is read,
+    /// around the open `file`.
+    pub read_one: Phrase,
+    /// The line under it when the file was not UTF-8 text, around the open
+    /// `file`.
+    pub read_lossy: Phrase,
     /// A file of a kind the field does not take, around the open `file`.
     pub refused_kind: Phrase,
     /// A file over the limit, around the open `file` and `size`.
@@ -124,18 +135,25 @@ impl UploadWords {
         let kinds = accept.join(", ");
         let limit = sizes.size(max_bytes);
         let file = || ("file", Phrase::open("file"));
-        Self {
-            drop_invite: tr(Text::UploadDropInvite),
-            drop_over: tr(Text::UploadDropOver),
-            rule: tr_with(
+        let rule = if accept.is_empty() {
+            tr_with(Text::UploadRuleAny, &[("limit", limit.clone().into())])
+        } else {
+            tr_with(
                 Text::UploadRule,
                 &[
                     ("kinds", kinds.clone().into()),
                     ("limit", limit.clone().into()),
                 ],
-            ),
+            )
+        };
+        Self {
+            drop_invite: tr(Text::UploadDropInvite),
+            drop_over: tr(Text::UploadDropOver),
+            rule,
             busy: tr(Text::UploadBusy),
             read: Phrase::new(tr_with(Text::UploadRead, &[file()])),
+            read_one: Phrase::new(tr_with(Text::UploadReadOne, &[file()])),
+            read_lossy: Phrase::new(tr_with(Text::UploadReadLossy, &[file()])),
             refused_kind: Phrase::new(tr_with(
                 Text::UploadRefusedKind,
                 &[file(), ("kinds", kinds.into())],
@@ -215,10 +233,13 @@ impl Rule {
     fn admit(self, name: &str, bytes: u64) -> Result<(), Refused> {
         let upload = self;
         let lower = name.to_ascii_lowercase();
-        if !upload
-            .accept
-            .iter()
-            .any(|extension| lower.ends_with(extension))
+        // NOTE: HTML Living Standard, the `accept` attribute: absent or empty, the
+        // chooser offers a file of any type, and the drop zone takes the same.
+        if !upload.accept.is_empty()
+            && !upload
+                .accept
+                .iter()
+                .any(|extension| lower.ends_with(&extension.to_ascii_lowercase()))
         {
             return Err(Refused::Kind {
                 name: name.to_owned(),
@@ -234,6 +255,33 @@ impl Rule {
     }
 }
 
+/// Returns the text of a file whose bytes are `bytes`, decoded as UTF-8
+/// with a leading byte order mark dropped, and whether any byte was no
+/// UTF-8, each such run written as U+FFFD.
+///
+/// It decodes as `Blob.text()` does (W3C File API; the Encoding Standard,
+/// "UTF-8 decode"), and says when the decoding lost bytes, which
+/// `Blob.text()` cannot.
+#[must_use]
+pub fn decode(bytes: &[u8]) -> (String, bool) {
+    let bytes = bytes.strip_prefix(&[0xEF, 0xBB, 0xBF]).unwrap_or(bytes);
+    match std::str::from_utf8(bytes) {
+        Ok(text) => (text.to_owned(), false),
+        Err(_) => (String::from_utf8_lossy(bytes).into_owned(), true),
+    }
+}
+
+/// A file read into the text.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Read {
+    /// The file's name.
+    name: String,
+    /// Whether it was the first of several dropped at once.
+    one_of_many: bool,
+    /// Whether some of its bytes were no UTF-8.
+    lossy: bool,
+}
+
 /// What the field is doing.
 #[cfg_attr(
     not(target_arch = "wasm32"),
@@ -244,8 +292,8 @@ enum Picked {
     /// No file read.
     #[default]
     None,
-    /// The file named was read into the text.
-    Read(String),
+    /// The file was read into the text.
+    Read(Read),
     /// The file was refused, with the sentence that says why.
     Refused(String),
 }
@@ -267,15 +315,38 @@ pub fn upload_field(
     let label_for = text_id.clone();
     let state = move || match picked.get() {
         Picked::None => None,
-        Picked::Read(name) => Some(
-            view! {
-                <p class="fui-drop-state" role="status">
-                    {icon(Glyph::FILE_TEXT, "14")}
-                    {words.with_value(|words| words.read.fill(&[("file", &name)]))}
-                </p>
-            }
-            .into_any(),
-        ),
+        Picked::Read(read) => {
+            let file = [("file", read.name.as_str())];
+            let (line, lossy) = words.with_value(|words| {
+                let line = if read.one_of_many {
+                    &words.read_one
+                } else {
+                    &words.read
+                };
+                (
+                    line.fill(&file),
+                    read.lossy.then(|| words.read_lossy.fill(&file)),
+                )
+            });
+            let lossy = lossy.map(|lossy| {
+                view! {
+                    <p class="fui-drop-state fui-drop-state-warn" role="alert">
+                        {icon(Glyph::TRIANGLE_ALERT, "14")}
+                        {lossy}
+                    </p>
+                }
+            });
+            Some(
+                view! {
+                    <p class="fui-drop-state" role="status">
+                        {icon(Glyph::FILE_TEXT, "14")}
+                        {line}
+                    </p>
+                    {lossy}
+                }
+                .into_any(),
+            )
+        }
         Picked::Refused(sentence) => Some(
             view! {
                 <p class="fui-drop-state fui-drop-state-refused" role="alert">
@@ -421,7 +492,7 @@ fn chosen(
             .and_then(|input| input.files())
             .and_then(|files| files.get(0));
         if let Some(file) = file {
-            read(upload, words, &file, source, picked);
+            read(upload, words, &file, false, source, picked);
         }
     }
     #[cfg(not(target_arch = "wasm32"))]
@@ -444,12 +515,10 @@ fn dropped(
 ) {
     #[cfg(target_arch = "wasm32")]
     {
-        let file = event
-            .data_transfer()
-            .and_then(|transfer| transfer.files())
-            .and_then(|files| files.get(0));
-        if let Some(file) = file {
-            read(upload, words, &file, source, picked);
+        let files = event.data_transfer().and_then(|transfer| transfer.files());
+        let several = files.as_ref().is_some_and(|files| files.length() > 1);
+        if let Some(file) = files.and_then(|files| files.get(0)) {
+            read(upload, words, &file, several, source, picked);
         }
     }
     #[cfg(not(target_arch = "wasm32"))]
@@ -463,12 +532,13 @@ fn dropped(
 }
 
 /// Reads `file` into `source` when [`admit`] lets it, and says so in
-/// `picked`.
+/// `picked`, naming it the first of several when `one_of_many`.
 #[cfg(target_arch = "wasm32")]
 fn read(
     upload: Rule,
     words: StoredValue<UploadWords>,
     file: &web_sys::File,
+    one_of_many: bool,
     source: RwSignal<String>,
     picked: RwSignal<Picked>,
 ) {
@@ -480,18 +550,20 @@ fn read(
         return;
     }
     let unreadable = words.with_value(|words| words.unreadable.fill(&[("file", &name)]));
-    let promise = file.text();
+    let promise = file.array_buffer();
     wasm_bindgen_futures::spawn_local(async move {
-        let read = wasm_bindgen_futures::JsFuture::from(promise)
-            .await
-            .ok()
-            .and_then(|text| text.as_string());
-        match read {
-            Some(text) => {
+        match wasm_bindgen_futures::JsFuture::from(promise).await {
+            Ok(buffer) => {
+                let bytes = web_sys::js_sys::Uint8Array::new(&buffer).to_vec();
+                let (text, lossy) = decode(&bytes);
                 source.set(text);
-                picked.set(Picked::Read(name));
+                picked.set(Picked::Read(Read {
+                    name,
+                    one_of_many,
+                    lossy,
+                }));
             }
-            None => picked.set(Picked::Refused(unreadable)),
+            Err(_) => picked.set(Picked::Refused(unreadable)),
         }
     });
 }
@@ -520,7 +592,7 @@ fn whole_bytes(size: f64) -> u64 {
 mod tests {
     use std::borrow::Cow;
 
-    use super::{Refused, SizeWords, Upload, UploadWords, admit};
+    use super::{Refused, SizeWords, Upload, UploadWords, admit, decode};
 
     const ACCEPT: &[&str] = &[".opt", ".xml"];
     const MAX_BYTES: u64 = 2 * 1024 * 1024;
@@ -552,6 +624,40 @@ mod tests {
                 bytes: 3 * 1024 * 1024
             }),
             admit(&upload(), "big.xml", 3 * 1024 * 1024)
+        );
+    }
+
+    #[test]
+    fn a_field_that_names_no_kind_takes_any_file() {
+        let any = Upload {
+            accept: &[],
+            words: UploadWords::of_page(&[], MAX_BYTES),
+            ..upload()
+        };
+        assert_eq!(Ok(()), admit(&any, "notes.txt", 10));
+        assert_eq!(Ok(()), admit(&any, "no extension", 10));
+        assert!(
+            admit(&any, "big.bin", MAX_BYTES + 1).is_err(),
+            "the limit holds"
+        );
+        assert_eq!("Any file, up to 2 MiB.", any.words.rule);
+    }
+
+    #[test]
+    fn a_file_is_decoded_as_utf8_and_a_lossy_decoding_is_flagged() {
+        assert_eq!(
+            (String::from("caf\u{e9}"), false),
+            decode("caf\u{e9}".as_bytes())
+        );
+        assert_eq!(
+            (String::from("<x/>"), false),
+            decode(b"\xEF\xBB\xBF<x/>"),
+            "the byte order mark is dropped, as Blob.text() drops it"
+        );
+        assert_eq!(
+            (String::from("caf\u{FFFD}"), true),
+            decode(b"caf\xE9"),
+            "Latin-1 bytes are no UTF-8"
         );
     }
 

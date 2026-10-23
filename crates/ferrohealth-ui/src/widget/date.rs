@@ -29,7 +29,7 @@
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::calendar::{Bounds, Day, Moment, Month, NotADay, Preset, Quick, Weekday};
+use crate::calendar::{Bounds, DateOrder, Day, Moment, Month, NotADay, Preset, Quick, Weekday};
 use crate::i18n::{Phrase, Text, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::view::button::Variant;
@@ -54,6 +54,9 @@ const COUNTED: u32 = 366;
 pub struct DateWords {
     /// The format the field is typed in, its placeholder.
     pub format: String,
+    /// The order the page's language writes a date in, which a field takes
+    /// beside `YYYY-MM-DD`.
+    pub order: DateOrder,
     /// The format again, as the quiet hint after the label.
     pub format_hint: String,
     /// The calendar button's name.
@@ -177,6 +180,7 @@ impl DateWords {
         ));
         Self {
             format: tr(format),
+            order: DateOrder::of_page(),
             format_hint: tr(format_hint),
             choose: tr(Text::DateChoose),
             needs_script: tr(Text::DateNeedsScript),
@@ -262,7 +266,7 @@ impl DateWords {
         if text.is_empty() {
             return None;
         }
-        let moment = match Moment::parse(text, with_time) {
+        let moment = match Moment::parse_in(text, with_time, self.order) {
             Ok(moment) => moment,
             Err(NotADay::Format) => return Some(self.not_format.fill(&[("value", text)])),
             Err(NotADay::Time) => return Some(self.not_a_time.fill(&[("value", text)])),
@@ -454,6 +458,8 @@ enum Pick {
         text: RwSignal<String>,
         /// The time row's hours and minutes, for a field that takes them.
         clock: Option<(RwSignal<String>, RwSignal<String>)>,
+        /// The order the page's language writes a date in.
+        order: DateOrder,
     },
     /// A range, written into two texts, the day under the pointer previewing
     /// its end.
@@ -472,9 +478,9 @@ impl Pick {
     /// chosen.
     fn ends(self) -> (Option<Day>, Option<Day>) {
         match self {
-            Self::One { text, clock } => {
+            Self::One { text, clock, order } => {
                 let day = text.with(|text| {
-                    Moment::parse(text, clock.is_some())
+                    Moment::parse_in(text, clock.is_some(), order)
                         .ok()
                         .map(|moment| moment.day)
                 });
@@ -534,7 +540,7 @@ impl Pick {
     /// Chooses `day`: the field's day, or the next end of the range.
     fn choose(self, day: Day) {
         match self {
-            Self::One { text, clock } => text.set(compose(day, clock)),
+            Self::One { text, clock, .. } => text.set(compose(day, clock)),
             Self::Two { from, to, hover } => {
                 let (first, last) = self.ends();
                 match (first, last) {
@@ -1082,7 +1088,8 @@ pub fn date_field(field: DateField) -> AnyView {
     let months = RwSignal::new(false);
     let hydrated = RwSignal::new(false);
     Effect::new(move || hydrated.set(true));
-    let initial = Moment::parse(&value, with_time).ok();
+    let order = words.order;
+    let initial = Moment::parse_in(&value, with_time, order).ok();
     let clock = with_time.then(|| {
         let time = initial.and_then(|moment| moment.time);
         (
@@ -1095,7 +1102,7 @@ pub fn date_field(field: DateField) -> AnyView {
             )),
         )
     });
-    let pick = Pick::One { text, clock };
+    let pick = Pick::One { text, clock, order };
     let opening = opening_day(initial.map(|moment| moment.day), today, bounds);
     let panel = NodeRef::<leptos::html::Div>::new();
     let root = NodeRef::<leptos::html::Div>::new();
@@ -1137,7 +1144,7 @@ pub fn date_field(field: DateField) -> AnyView {
         parts.join(" ")
     };
     let follow = move |typed: String| {
-        if let Ok(moment) = Moment::parse(&typed, with_time) {
+        if let Ok(moment) = Moment::parse_in(&typed, with_time, order) {
             if let (Some((hours, minutes)), Some(time)) = (clock, moment.time) {
                 hours.set(format!("{:02}", time.hour()));
                 minutes.set(format!("{:02}", time.minute()));
@@ -1276,7 +1283,7 @@ pub fn date_field(field: DateField) -> AnyView {
             let status = move || {
                 if let Some(reason) = reason() {
                     return grid.words.with_value(|words| {
-                        if text.with(|text| Moment::parse(text, with_time).is_err()) {
+                        if text.with(|text| Moment::parse_in(text, with_time, order).is_err()) {
                             words.type_format.clone()
                         } else {
                             reason

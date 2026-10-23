@@ -22,6 +22,7 @@ mod code;
 mod config;
 mod console;
 mod contrast;
+mod controls;
 mod dock;
 mod editor;
 mod federation;

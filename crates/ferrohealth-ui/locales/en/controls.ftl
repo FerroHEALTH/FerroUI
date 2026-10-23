@@ -6,6 +6,7 @@
 # their ids.
 
 cancel = Cancel
+combobox-more = More options match than the list shows: type to narrow it.
 combobox-no-match = No match
 help-show = Explain these parameters
 menu-more = More

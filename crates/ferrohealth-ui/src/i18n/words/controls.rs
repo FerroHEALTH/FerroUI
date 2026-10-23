@@ -9,6 +9,8 @@ use crate::i18n::Text;
 texts! {
     /// A dialog's button that leaves without acting.
     Cancel = "cancel",
+    /// The line under a combobox list that draws fewer options than match.
+    ComboboxMore = "combobox-more",
     /// The combobox list when the filter keeps no option.
     ComboboxNoMatch = "combobox-no-match",
     /// The help switch's label.
