@@ -11,6 +11,66 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.3.5] - 2026-10-23
+
+### Added
+
+- A danger confirmation that asks for the reader's words, such as the
+  required Reason a removal keeps with the revision:
+  `view::dialog::danger_form_dialog(confirmation, form, confirm)` draws the
+  console's fields (`view::dialog::ConfirmForm::fields`) between the
+  sentence and the actions, inside one `POST` form to
+  `ConfirmForm::action` that the confirm submits, so a required field holds
+  the post with no script. A row menu's Remove… (`Act::Dialog(id)`) opens
+  it, one dialog per row, and the focus moves to its first field. The
+  stylesheet's dialog rhythm reaches inside its form (`fui-dialog-form`).
+  The gallery's members on the overlays page are removed this way (#374).
+- A menu item (F13) and a title row's action (F14) can submit the console's
+  own form to another address: `widget::action_menu::Act::SubmitTo { action,
+  form }` draws a submit button with `formaction`, of the form with the id
+  `form` or of the form it sits in, so no nested `<form>` is dropped by the
+  parser (#375).
+- A menu behind a small labelled button: `widget::action_menu::labelled_menu(glyph,
+  words, menu)` and its trigger `widget::action_menu::Trigger::Labelled { glyph,
+  words }`, such as E7's Export (#375).
+- The Lucide 1.51.0 glyph `Glyph::SCROLL_TEXT` for the FerroEHR design's
+  Stored queries, which a console draws in place of its stand-in
+  `SEARCH_CODE` (#376).
+
+### Changed
+
+- Breaking: `view::scope::Request` gains the `Profile` variant, so a console
+  that matches on `Request` exhaustively adds a `Profile` arm. The library's
+  catalog adds `scope-profile`, "Your profile: your name, picture and the
+  like", so a console that translates the library's catalog adds it (#373).
+- Breaking: E7's results pane draws its exports as one small Export button
+  opening a menu of the formats (F13), CSV then JSON, as the FerroEHR
+  design draws it; with no row Export is disabled. An `Export::Submit`
+  item submits the console's form by `formaction`, so the pane still draws
+  no form of its own inside the console's. `view::results::results_pane`
+  now holds a menu island, so a console renders it inside a page with the
+  server's shared context, as it does every menu. A console's own code
+  needs no other change (#375).
+- Breaking: the library's catalog adds `results-export`, "Export", and
+  rewords `results-export-csv` and `results-export-json` to "CSV" and
+  "JSON", the menu's items under Export. A console that translates the
+  library's catalog adds `results-export` and rewords the two (#375).
+- Breaking: `widget::action_menu::Act` gains the `SubmitTo` variant, so a
+  console that matches on `Act` exhaustively adds a `SubmitTo` arm (#375).
+- Breaking: `widget::action_menu::Trigger` gains the `Labelled` variant, so
+  a console that matches on `Trigger` exhaustively adds a `Labelled` arm (#375).
+- Breaking: `Glyph::ALL` is a `[(&str, Glyph); 111]`, up from 110 in 0.3.4
+  with the glyph this release vendors, so a console that names the array's
+  length writes 111, or reads it as a slice (#376).
+
+### Fixed
+
+- E8 reads the OpenID Connect `profile` scope as the request it is: the new
+  `view::scope::Request::Profile` is read from `profile` by
+  `Request::parse`, so `ScopeGrant::read` no longer draws it refused, and it
+  says "Your profile: your name, picture and the like" (OpenID Connect Core
+  1.0, § 5.4) (#373).
+
 ## [0.3.4] - 2026-10-23
 
 ### Added
@@ -2420,7 +2480,8 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.4...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.5...HEAD
+[0.3.5]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.4...v0.3.5
 [0.3.4]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.3...v0.3.4
 [0.3.3]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.1...v0.3.2
