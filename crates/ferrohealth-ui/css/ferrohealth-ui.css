@@ -6590,7 +6590,7 @@
     padding-inline-start: 0.125rem;
   }
 
-  .fui-input-group > .fui-input:has(+ :is(.fui-input-suffix, .fui-input-toggle)) {
+  .fui-input-group > .fui-input:has(+ :is(.fui-input-suffix, .fui-input-toggle, leptos-island)) {
     padding-inline-end: 0.25rem;
   }
 
@@ -6604,6 +6604,18 @@
   }
 
   .fui-input-group > .fui-input-toggle:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: -2px;
+  }
+
+  /* An inner button that is an island, such as a masked input's eye, sits
+     in the group through its island's box-less wrapper. */
+  .fui-input-group > leptos-island > .fui-input-toggle {
+    width: 1.875rem;
+    height: 1.875rem;
+  }
+
+  .fui-input-group > leptos-island > .fui-input-toggle:focus-visible {
     outline: 2px solid var(--focus);
     outline-offset: -2px;
   }
@@ -6622,6 +6634,13 @@
   .fui-input-toggle[aria-expanded="true"] {
     background: var(--accent-tint);
     color: var(--accent);
+  }
+
+  /* A masked input's hold-to-show eye: a long press on a touch screen
+     holds it, so it neither scrolls the page nor selects its glyph. */
+  .fui-input-hold {
+    touch-action: none;
+    user-select: none;
   }
 
   /* ---- R23. The date field: year first, the calendar behind a button ---- */

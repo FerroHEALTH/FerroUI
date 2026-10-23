@@ -18,7 +18,7 @@ texts! {
     IssuesNotDrawn = "issues-not-drawn",
     /// The accessible name of the body a refusal keeps as evidence.
     RefusalEvidence = "refusal-evidence",
-    /// A refusal's title when no answer came.
+    /// The visually hidden lead of a refusal's title when no answer came.
     RefusalNoAnswer = "refusal-no-answer",
     /// A refusal's title: the upstream's `$status` and the `$summary`.
     RefusalStatus = "refusal-status",

@@ -136,6 +136,22 @@ pub fn CopyButton(
     crate::widget::copy::copy_from(id, label, source, words)
 }
 
+/// The hold-to-show button of the masked input `input` (R10): held, it
+/// shows what was typed, and released, it masks it again. It names the
+/// input by its id alone, so the typed value is never a prop; until the
+/// page's WebAssembly runs it is disabled and says the field stays masked.
+/// A console draws it through [`crate::view::form::Inner::HoldToShow`].
+#[island]
+pub fn HoldToShow(
+    /// The id of the masked input it shows.
+    input: String,
+    /// Its words, in the page's locale
+    /// ([`crate::widget::masked::HoldWords::of_page`]).
+    words: crate::widget::masked::HoldWords,
+) -> impl IntoView {
+    crate::widget::masked::hold_to_show(input, words)
+}
+
 /// The side panel `id` headed `title`, around the body the server drew as
 /// its children, and its `opener`: a link to the content's own route until
 /// the page hydrates, then the button that opens the panel

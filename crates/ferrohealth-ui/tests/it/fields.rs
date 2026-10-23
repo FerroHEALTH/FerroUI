@@ -11,9 +11,12 @@ use ferrohealth_ui::i18n::Phrase;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::island::{DatePicker, DateRangePicker};
 use ferrohealth_ui::style::STYLESHEET;
-use ferrohealth_ui::view::form::{Field, INNER_BUTTON, INPUT, Inner, described_with_unit, unit_id};
+use ferrohealth_ui::view::form::{
+    Field, INNER_BUTTON, INPUT, Inner, described_by, described_with_unit, masked_input, unit_id,
+};
 use ferrohealth_ui::view::tag::{Tag, tag};
 use ferrohealth_ui::widget::date::{DateField, DateRange, DateWords, RangeEnd, RangePreset};
+use ferrohealth_ui::widget::masked::HoldWords;
 use leptos::prelude::*;
 
 use crate::markup::{has, tags};
@@ -189,6 +192,115 @@ fn a_field_holds_a_prefix_and_a_named_button_inside_its_edge() {
         !plain.contains("fui-input-group"),
         "no part, no group: {plain}"
     );
+}
+
+/// The masked identifier field with its hold-to-show eye, as a page draws
+/// it.
+fn masked_field() -> String {
+    page_html(|| {
+        Field::new("identifier", "Identifier")
+            .help("Nine digits.")
+            .trailing(Inner::HoldToShow(
+                HoldWords::of_page().named("Show the identifier while held"),
+            ))
+            .view(masked_input(
+                "identifier",
+                "identifier",
+                described_by("identifier", true, false),
+            ))
+    })
+}
+
+#[test]
+fn a_masked_field_draws_its_input_masked_with_no_autocomplete_capitals_or_spelling() {
+    let page = masked_field();
+    assert!(
+        has(
+            &page,
+            "input",
+            &[
+                ("id", "identifier"),
+                ("name", "identifier"),
+                ("type", "password"),
+                ("autocomplete", "off"),
+                ("autocapitalize", "off"),
+                ("spellcheck", "false"),
+                ("aria-describedby", "identifier-help"),
+            ]
+        ),
+        "{page}"
+    );
+    assert!(
+        tags(&page, "input")
+            .iter()
+            .all(|input| !input.contains_key("value")),
+        "the masked input carries no value: {page}"
+    );
+}
+
+#[test]
+fn the_eye_is_disabled_and_says_the_field_stays_masked_until_the_webassembly_runs() {
+    // leptos-ui.md §15.8; WAI-ARIA 1.2 `button`: a toggle button says whether it is pressed.
+    let page = masked_field();
+    assert!(
+        has(
+            &page,
+            "button",
+            &[
+                ("type", "button"),
+                ("aria-pressed", "false"),
+                ("disabled", ""),
+                (
+                    "aria-label",
+                    "The text stays masked: showing it works once the page has loaded"
+                ),
+            ]
+        ),
+        "{page}"
+    );
+    assert!(
+        page.contains("fui-input-hold"),
+        "the eye is the hold button: {page}"
+    );
+}
+
+#[test]
+fn the_typed_value_is_no_prop_of_the_eyes_island() {
+    // leptos-ui.md §15.2: an island's props are page content, so the eye names its input by id.
+    let page = masked_field();
+    let islands = tags(&page, "leptos-island");
+    assert_eq!(1, islands.len(), "the eye alone is the island: {page}");
+    let props = islands[0].get("data-props").cloned().unwrap_or_default();
+    let props = props.replace("&quot;", "\"");
+    let read: serde_json::Value = serde_json::from_str(&props).expect("the props are JSON");
+    let names: Vec<&str> = read
+        .as_object()
+        .expect("the props are an object")
+        .keys()
+        .map(String::as_str)
+        .collect();
+    assert_eq!(vec!["input", "words"], names, "{props}");
+    assert_eq!(Some("identifier"), read["input"].as_str());
+    assert!(
+        !page
+            .split("<leptos-island")
+            .nth(1)
+            .unwrap_or_default()
+            .contains("<input"),
+        "the input stays outside the island: {page}"
+    );
+}
+
+#[test]
+fn an_islands_inner_button_keeps_the_groups_target_size() {
+    // WCAG 2.2 SC 2.5.8: the eye in its island's wrapper is the same 30 px target.
+    for rule in [
+        "  .fui-input-group > leptos-island > .fui-input-toggle {\n    width: 1.875rem;\n    height: 1.875rem;",
+        "  .fui-input-group > .fui-input:has(+ :is(.fui-input-suffix, .fui-input-toggle, leptos-island)) {",
+        "  .fui-input-hold {\n    touch-action: none;",
+    ] {
+        assert!(STYLESHEET.contains(rule), "missing: {rule}");
+    }
 }
 
 #[test]

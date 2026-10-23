@@ -13,6 +13,8 @@
 use leptos::prelude::*;
 
 use crate::i18n::Word;
+use crate::island::HoldToShow;
+use crate::widget::masked::HoldWords;
 
 /// The classes of a text input.
 pub const INPUT: &str = "fui-input";
@@ -119,9 +121,15 @@ pub enum Inner {
     /// the id [`unit_id`], and the control names it in `aria-describedby`
     /// ([`described_with_unit`]), so the unit is read with the value.
     Unit(String),
-    /// A button, such as a reveal, a clear or the date picker's: give it
+    /// A button, such as a clear or the date picker's: give it
     /// [`INNER_BUTTON`] and a name.
     Button(AnyView),
+    /// The eye of a masked input ([`masked_input`]), after it: held by the
+    /// pointer, by touch or by Space or Enter, it shows what was typed, and
+    /// released, it masks it again ([`crate::island::HoldToShow`]). Until
+    /// the page's WebAssembly runs it is disabled and says the field stays
+    /// masked.
+    HoldToShow(HoldWords),
 }
 
 impl Inner {
@@ -141,8 +149,52 @@ impl Inner {
             }
             .into_any(),
             Self::Button(button) => button,
+            Self::HoldToShow(words) => {
+                view! { <HoldToShow input=id.to_owned() words /> }.into_any()
+            }
         }
     }
+}
+
+/// Returns the masked text input `id` named `name` (R10), described by
+/// `described_by` when it has help or an error line.
+///
+/// It is `type="password"`, so what is typed shows as dots, with no
+/// autocomplete, no capitals and no spelling check, as for an identifier.
+///
+/// It carries no value: what is typed stays in the input and posts with its
+/// form. Put [`Inner::HoldToShow`] after it to show the text while held.
+///
+/// ```
+/// use ferrohealth_ui::view::form::{Field, Inner, described_by, masked_input};
+/// use ferrohealth_ui::widget::masked::HoldWords;
+/// use leptos::prelude::*;
+///
+/// let html = Owner::new().with(|| {
+///     Field::new("identifier", "Identifier")
+///         .help("Nine digits.")
+///         .trailing(Inner::HoldToShow(HoldWords::of_page().named("Show the identifier while held")))
+///         .view(masked_input("identifier", "identifier", described_by("identifier", true, false)))
+///         .to_html()
+/// });
+/// assert!(html.contains(r#"type="password""#));
+/// assert!(html.contains("Show the text") || html.contains("stays masked"));
+/// ```
+#[must_use]
+pub fn masked_input(id: &str, name: &str, described_by: Option<String>) -> AnyView {
+    view! {
+        <input
+            id=id.to_owned()
+            name=name.to_owned()
+            type="password"
+            class=INPUT
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+            aria-describedby=described_by
+        />
+    }
+    .into_any()
 }
 
 /// The classes of a field's error line: the help's size in the refusal's

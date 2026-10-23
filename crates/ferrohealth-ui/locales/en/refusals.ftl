@@ -22,7 +22,7 @@ issues-not-drawn =
        *[other] { $count } more issues are not shown here.
     }
 refusal-evidence = What the server sent
-refusal-no-answer = No answer: { $summary }
+refusal-no-answer = No answer:
 refusal-status = { $status }: { $summary }
 severity-error = error
 severity-fatal = fatal
