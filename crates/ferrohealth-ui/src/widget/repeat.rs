@@ -22,19 +22,26 @@
 //! (`leptos-ui.md` §15.8). The island [`crate::island::Repeater`] does both
 //! in place: Remove takes its row out and moves the focus to the next row's
 //! first control (the previous row's at the end, Add when none is left),
-//! and Add inserts a copy of the blank row, its key [`ROW`] replaced by a
-//! fresh one, and focuses its first control. Either way the console reads
-//! the rows the form posts as the whole list. No specification governs the
-//! layout: our own design.
+//! and Add inserts a copy of the blank row, its key token
+//! ([`Repeat::token`], [`ROW`] by default) replaced by a fresh key, and
+//! focuses its first control. A sub-card's first control is its first
+//! field, never the Remove in its head. A list nested in a sub-card has a
+//! token of its own, so a copied card's nested list adds its rows in place
+//! too. Either way the console reads the rows the form posts as the whole
+//! list. No specification governs the layout: our own design.
 
 use leptos::prelude::*;
 
 use crate::icon::{Glyph, icon};
 use crate::view::button::Variant;
 
-/// The key of the blank row, which the island replaces in the row's every
-/// id, name and key with `new-1`, `new-2` and so on, the first one no row
-/// of the list holds.
+/// The key token of a list's blank row, which the island replaces in the
+/// row's every id, name and key with `new-1`, `new-2` and so on, the first
+/// one no row of the list holds.
+///
+/// A list nested in a [`Fields::Card`] row names a token of its own in
+/// [`Repeat::token`], one that neither holds nor is held in the token of
+/// the list around it.
 pub const ROW: &str = "__row__";
 
 /// How a row's fields share its width.
@@ -139,8 +146,11 @@ pub struct Repeat {
     pub head: Vec<String>,
     /// The rows, in order.
     pub rows: Vec<RepeatRow>,
+    /// The key token of the blank row: [`ROW`], or a token of its own for
+    /// a list nested in a [`Fields::Card`] row, such as `__profile__`.
+    pub token: &'static str,
     /// The blank row Add inserts with WebAssembly, its key, ids and names
-    /// holding [`ROW`]; `None` leaves Add to the form post.
+    /// holding [`Repeat::token`]; `None` leaves Add to the form post.
     pub blank: Option<RepeatRow>,
     /// The Add button, if the list grows here.
     pub add: Option<RepeatAdd>,
@@ -236,6 +246,7 @@ pub fn repeat(repeat: Repeat) -> AnyView {
         fields,
         head,
         rows,
+        token,
         blank,
         add,
         empty,
@@ -259,7 +270,7 @@ pub fn repeat(repeat: Repeat) -> AnyView {
         .collect_view();
     let blank = blank.map(|each| {
         let inside = row(&id, each, fields, form.clone());
-        view! { <template data-repeat="blank">{inside}</template> }
+        view! { <template data-repeat="blank" data-token=token>{inside}</template> }
     });
     let add = add.map(|RepeatAdd { label, name, value }| {
         view! {
@@ -335,6 +346,49 @@ mod browser {
     #[cfg(target_arch = "wasm32")]
     const CONTROLS: &str = "input:not([type=hidden]):not([disabled]),select:not([disabled]),textarea:not([disabled]),button:not([disabled])";
 
+    /// The marker of a list inside a row the island inserted: the browser
+    /// never hydrates it, so the list around it takes its presses.
+    #[cfg(target_arch = "wasm32")]
+    const COPIED: &str = "data-repeat-copied";
+
+    /// The nearest list around `element`, if it has one.
+    #[cfg(target_arch = "wasm32")]
+    fn list_of(element: &web_sys::Element) -> Option<web_sys::Element> {
+        element.closest(".fui-repeat").ok().flatten()
+    }
+
+    /// The list whose handler takes a press inside `list`: `list` itself,
+    /// or for a list in a copied row the nearest list around it the browser
+    /// hydrated.
+    #[cfg(target_arch = "wasm32")]
+    fn handler_of(list: &web_sys::Element) -> Option<web_sys::Element> {
+        let mut at = list.clone();
+        while at.has_attribute(COPIED) {
+            at = at.parent_element().as_ref().and_then(list_of)?;
+        }
+        Some(at)
+    }
+
+    /// The elements matching `selector` inside `list` that belong to it,
+    /// leaving out those of the lists nested in its rows.
+    #[cfg(target_arch = "wasm32")]
+    fn own(list: &web_sys::Element, selector: &str) -> Vec<web_sys::Element> {
+        let Ok(found) = list.query_selector_all(selector) else {
+            return Vec::new();
+        };
+        (0..found.length())
+            .filter_map(|index| found.item(index))
+            .filter_map(|node| node.dyn_into::<web_sys::Element>().ok())
+            .filter(|element| list_of(element).is_some_and(|nearest| &nearest == list))
+            .collect()
+    }
+
+    /// The first element matching `selector` that belongs to `list`.
+    #[cfg(target_arch = "wasm32")]
+    fn own_first(list: &web_sys::Element, selector: &str) -> Option<web_sys::Element> {
+        own(list, selector).into_iter().next()
+    }
+
     /// Takes a press on Remove or Add inside the list.
     pub(super) fn clicked(event: &leptos::ev::MouseEvent) {
         #[cfg(target_arch = "wasm32")]
@@ -352,21 +406,20 @@ mod browser {
             else {
                 return;
             };
-            // A list nested in a sub-card takes its own presses.
-            let own = button
-                .closest(".fui-repeat")
-                .ok()
-                .flatten()
-                .is_some_and(|list| list == root);
-            if !own {
+            // A list nested in a sub-card takes its own presses, unless it
+            // sits in a row this island inserted.
+            let Some(list) = list_of(&button) else {
+                return;
+            };
+            if handler_of(&list).is_none_or(|handler| handler != root) {
                 return;
             }
             match button.get_attribute("data-repeat").as_deref() {
                 Some("remove") => {
                     event.prevent_default();
-                    remove(&root, &button);
+                    remove(&list, &button);
                 }
-                Some("add") if add(&root) => event.prevent_default(),
+                Some("add") if add(&list) => event.prevent_default(),
                 _ => {}
             }
         }
@@ -391,15 +444,10 @@ mod browser {
         None
     }
 
-    /// Moves the focus to the first control inside `within`, if it has one.
+    /// Moves the focus to `control`.
     #[cfg(target_arch = "wasm32")]
-    fn focus_first(within: &web_sys::Element, selector: &str) -> bool {
-        let Some(control) = within
-            .query_selector(selector)
-            .ok()
-            .flatten()
-            .and_then(|found| found.dyn_into::<web_sys::HtmlElement>().ok())
-        else {
+    fn focus(control: web_sys::Element) -> bool {
+        let Ok(control) = control.dyn_into::<web_sys::HtmlElement>() else {
             return false;
         };
         if control.focus().is_err() {
@@ -408,18 +456,40 @@ mod browser {
         true
     }
 
+    /// Moves the focus to the first control of the row `row`: its first
+    /// field, a sub-card's head left out, or its Remove when it has none.
+    #[cfg(target_arch = "wasm32")]
+    fn focus_row(row: &web_sys::Element) -> bool {
+        let Ok(found) = row.query_selector_all(CONTROLS) else {
+            return false;
+        };
+        let controls: Vec<web_sys::Element> = (0..found.length())
+            .filter_map(|index| found.item(index))
+            .filter_map(|node| node.dyn_into::<web_sys::Element>().ok())
+            .collect();
+        let in_head = |control: &web_sys::Element| {
+            control
+                .closest(".fui-repeater-card-head")
+                .ok()
+                .flatten()
+                .is_some()
+        };
+        let first = controls
+            .iter()
+            .find(|control| !in_head(control))
+            .or_else(|| controls.first())
+            .cloned();
+        first.is_some_and(focus)
+    }
+
     /// Shows the quiet line when the list `root` holds no row, and hides it
     /// otherwise.
     #[cfg(target_arch = "wasm32")]
     fn mark_empty(root: &web_sys::Element) {
-        let Some(empty) = root.query_selector("[data-repeat='empty']").ok().flatten() else {
+        let Some(empty) = own_first(root, "[data-repeat='empty']") else {
             return;
         };
-        let any = root
-            .query_selector("[data-repeat='rows'] > .fui-repeat-item")
-            .ok()
-            .flatten()
-            .is_some();
+        let any = !own(root, "[data-repeat='rows'] > .fui-repeat-item").is_empty();
         let done = if any {
             empty.set_attribute("hidden", "")
         } else {
@@ -440,17 +510,17 @@ mod browser {
             .or_else(|| sibling_row(&item, web_sys::Element::previous_element_sibling));
         item.remove();
         mark_empty(root);
-        let moved = next.is_some_and(|row| focus_first(&row, CONTROLS));
-        if !moved {
-            focus_first(root, "[data-repeat='add']");
+        let moved = next.is_some_and(|row| focus_row(&row));
+        if !moved && let Some(add) = own_first(root, "[data-repeat='add']") {
+            focus(add);
         }
     }
 
-    /// Replaces [`super::ROW`] with `key` in every attribute of every
-    /// element of `copy`: its key, its ids, its names and the labels that
-    /// name them.
+    /// Replaces `token` with `key` in every attribute of every element of
+    /// `copy`, the content of its nested templates included: its key, its
+    /// ids, its names and the labels that name them.
     #[cfg(target_arch = "wasm32")]
-    fn rekey(copy: &web_sys::DocumentFragment, key: &str) {
+    fn rekey(copy: &web_sys::DocumentFragment, token: &str, key: &str) {
         let Ok(found) = copy.query_selector_all("*") else {
             return;
         };
@@ -462,10 +532,30 @@ mod browser {
             for at in 0..attributes.length() {
                 if let Some(attribute) = attributes.item(at) {
                     let value = attribute.value();
-                    if value.contains(super::ROW) {
-                        attribute.set_value(&value.replace(super::ROW, key));
+                    if value.contains(token) {
+                        attribute.set_value(&value.replace(token, key));
                     }
                 }
+            }
+            if let Some(template) = element.dyn_ref::<web_sys::HtmlTemplateElement>() {
+                rekey(&template.content(), token, key);
+            }
+        }
+    }
+
+    /// Marks every list inside `copy` as one in a copied row, whose
+    /// presses the list around it takes.
+    #[cfg(target_arch = "wasm32")]
+    fn mark_copied(copy: &web_sys::DocumentFragment) {
+        let Ok(found) = copy.query_selector_all(".fui-repeat") else {
+            return;
+        };
+        let lists = (0..found.length())
+            .filter_map(|index| found.item(index))
+            .filter_map(|node| node.dyn_into::<web_sys::Element>().ok());
+        for list in lists {
+            if list.set_attribute(COPIED, "").is_err() {
+                leptos::logging::warn!("the browser refused to mark a copied list");
             }
         }
     }
@@ -475,18 +565,16 @@ mod browser {
     #[cfg(target_arch = "wasm32")]
     fn add(root: &web_sys::Element) -> bool {
         let (Some(blank), Some(rows)) = (
-            root.query_selector("template[data-repeat='blank']")
-                .ok()
-                .flatten(),
-            root.query_selector("[data-repeat='rows']").ok().flatten(),
+            own_first(root, "template[data-repeat='blank']"),
+            own_first(root, "[data-repeat='rows']"),
         ) else {
             return false;
         };
+        let token = blank
+            .get_attribute("data-token")
+            .unwrap_or_else(|| String::from(super::ROW));
         let key = super::fresh_key(|key| {
-            rows.query_selector(&format!("[data-row='{key}']"))
-                .ok()
-                .flatten()
-                .is_some()
+            !own(root, &format!("[data-row='{key}']")).is_empty()
         });
         let Some(copy) = blank
             .dyn_ref::<web_sys::HtmlTemplateElement>()
@@ -495,14 +583,15 @@ mod browser {
         else {
             return false;
         };
-        rekey(&copy, &key);
+        rekey(&copy, &token, &key);
+        mark_copied(&copy);
         if rows.append_child(&copy).is_err() {
             leptos::logging::warn!("the browser refused to add a repeatable row");
             return false;
         }
         mark_empty(root);
         if let Some(added) = rows.last_element_child() {
-            focus_first(&added, CONTROLS);
+            focus_row(&added);
         }
         true
     }
