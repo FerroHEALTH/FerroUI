@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The clinical record parts: the subject revealed, a version row under
-//! the pointer, At a time's picker open, a group's choice focused, and the
-//! subject line, the history, the builder and the scopes at 390 px.
+//! the pointer, At a time's picker open, a group's choice focused, the
+//! results pane's Export menu open, and the subject line, the history, the
+//! builder and the scopes at 390 px.
 
 use std::error::Error;
 
@@ -21,6 +22,7 @@ pub(super) const STATES: &[&str] = &[
     "clinical-version-hover",
     "clinical-at-time-open",
     "clinical-group-focus",
+    "clinical-export-open",
     "clinical-phone-subject",
     "clinical-phone-versions",
     "clinical-phone-query",
@@ -100,6 +102,30 @@ pub(super) async fn clinical(
     .await?;
     let query = browser.element(By::Id("query")).await?;
     shot_of(browser, brand, theme, "clinical-group-focus", &query).await?;
+    // The menu's id is a digest of its exports, so its trigger is found in the pane.
+    let export = browser
+        .element(By::Css(
+            "#results-form summary[aria-controls^='results-export-']",
+        ))
+        .await?;
+    let menu = export
+        .attr("aria-controls")
+        .await?
+        .ok_or("the Export trigger names no menu")?;
+    let export = crate::menus::hydrated_trigger(browser, &menu).await?;
+    browser
+        .driver()
+        .execute(
+            "arguments[0].scrollIntoView({block: 'center'});",
+            vec![export.to_json()?],
+        )
+        .await?;
+    press(browser, &export).await?;
+    until("the Export menu opens", async || {
+        Ok(export.attr("aria-expanded").await?.as_deref() == Some("true"))
+    })
+    .await?;
+    shot_of_view(browser, brand, theme, "clinical-export-open").await?;
     window(browser, PHONE, HEIGHT).await?;
     browser.goto(&page).await?;
     for (id, state) in [
