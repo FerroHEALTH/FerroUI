@@ -7533,11 +7533,13 @@
   }
 
   /* With anchor positioning the tooltip is placed beside its entry in the
-     top layer's coordinates, so the rail keeps scrolling. */
+     viewport's coordinates, so the rail keeps scrolling, by the wheel and
+     by the focus, with no scrollbar that would squeeze its glyphs. */
   @supports (position-area: center inline-end) {
     @media (width >= 48rem) {
       .fui-sidebar.fui-sidebar-rail {
         overflow-y: auto;
+        scrollbar-width: none;
       }
 
       .fui-sidebar-rail .fui-nav-list > li {

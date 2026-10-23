@@ -738,25 +738,30 @@ async fn a_rail_entry_shows_its_words_on_keyboard_focus_until_escape() -> Result
             Ok(tooltip.is_displayed().await?)
         })
         .await?;
-        let beside: bool = browser
-            .driver()
-            .execute(
-                "const tip = arguments[0].getBoundingClientRect();
-                const rail = document.getElementById('sidebar').getBoundingClientRect();
-                const entry = arguments[1].getBoundingClientRect();
-                return tip.left >= rail.right - 1 && tip.top < entry.bottom && tip.bottom > entry.top;",
-                vec![tooltip.to_json()?, entry.to_json()?],
-            )
-            .await?
-            .convert()?;
-        assert!(beside, "the tooltip sits beside its entry, past the rail");
-        browser
-            .driver()
-            .action_chain()
-            .send_keys(Key::Escape)
-            .perform()
-            .await?;
+        let [tip_left, tip_top, tip_bottom, rail_right, entry_top, entry_bottom]: [f64; 6] =
+            browser
+                .driver()
+                .execute(
+                    "const tip = arguments[0].getBoundingClientRect();
+                    const rail = document.getElementById('sidebar').getBoundingClientRect();
+                    const entry = arguments[1].getBoundingClientRect();
+                    return [tip.left, tip.top, tip.bottom, rail.right, entry.top, entry.bottom];",
+                    vec![tooltip.to_json()?, entry.to_json()?],
+                )
+                .await?
+                .convert()?;
+        assert!(
+            tip_left >= rail_right - 1.0 && tip_top < entry_bottom && tip_bottom > entry_top,
+            "the tooltip sits beside its entry, past the rail: tooltip {tip_left} {tip_top}-{tip_bottom}, rail right {rail_right}, entry {entry_top}-{entry_bottom}"
+        );
+        // Escape is the island's, so it is pressed again until the island has hydrated.
         until("Escape hides the tooltip", async || {
+            browser
+                .driver()
+                .action_chain()
+                .send_keys(Key::Escape)
+                .perform()
+                .await?;
             Ok(!tooltip.is_displayed().await?)
         })
         .await?;
