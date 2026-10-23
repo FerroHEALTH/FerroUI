@@ -17,7 +17,7 @@
 
 use leptos::prelude::*;
 
-use crate::i18n::{Text, tr};
+use crate::i18n::{Text, Word, tr};
 use crate::icon::{Glyph, icon};
 use crate::table::view::{Column, Role, cell, title_cell};
 use crate::view::coding::{Coding, Layout, coding};
@@ -95,7 +95,7 @@ impl Relationship {
 
     /// The words of the relationship in the page's locale.
     #[must_use]
-    pub fn words(self) -> String {
+    pub fn words(self) -> Word {
         tr(match self {
             Self::RelatedTo => Text::RelationRelated,
             Self::Equivalent => Text::RelationEquivalent,
@@ -178,7 +178,7 @@ pub fn mapping_row(columns: &[Column], mapping: Mapping) -> AnyView {
     };
     let head = title_cell(None, coding(source, Layout::Stacked), None);
     let related = columns.get(1).map(|column| {
-        let label = column.label.to_string();
+        let label = column.label.text().to_owned();
         view! {
             <td data-label=label data-role=column.role.key() class="fui-relation-cell">
                 {relation(relationship)}

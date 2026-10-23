@@ -22,7 +22,7 @@
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::i18n::{Text, tr, tr_with};
+use crate::i18n::{Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::view::button::Variant;
 
@@ -34,13 +34,13 @@ pub const COPIED_MS: u64 = 2000;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CopyWords {
     /// The button's words once the text is on the clipboard.
-    pub copied: String,
+    pub copied: Word,
     /// What the live region says once the text is on the clipboard.
-    pub said_copied: String,
+    pub said_copied: Word,
     /// What the live region says when the browser refused.
-    pub said_refused: String,
+    pub said_refused: Word,
     /// The line beside the button when the browser refused.
-    pub refused: String,
+    pub refused: Word,
 }
 
 impl CopyWords {
@@ -131,7 +131,7 @@ enum Copied {
 #[must_use]
 pub fn copy_button(
     id: impl Into<String>,
-    label: impl Into<Oco<'static, str>>,
+    label: impl Into<Word>,
     text: Signal<String>,
     words: CopyWords,
 ) -> impl IntoView {
@@ -144,7 +144,7 @@ pub fn copy_button(
 #[must_use]
 pub fn copy_from(
     id: impl Into<String>,
-    label: impl Into<Oco<'static, str>>,
+    label: impl Into<Word>,
     source: CopySource,
     words: CopyWords,
 ) -> impl IntoView {
@@ -152,7 +152,7 @@ pub fn copy_from(
 }
 
 /// Returns the copy button `id` labelled `label` over `what`, in `words`.
-fn drawn(id: String, label: Oco<'static, str>, what: Copied, words: CopyWords) -> impl IntoView {
+fn drawn(id: String, label: Word, what: Copied, words: CopyWords) -> impl IntoView {
     let state = RwSignal::new(State::Ready);
     let hydrated = RwSignal::new(false);
     Effect::new(move |_| hydrated.set(true));
@@ -166,10 +166,13 @@ fn drawn(id: String, label: Oco<'static, str>, what: Copied, words: CopyWords) -
         said_refused,
         refused,
     } = words;
-    let said = move || match state.get() {
-        State::Ready => String::new(),
-        State::Copied => said_copied.clone(),
-        State::Refused => said_refused.clone(),
+    let said = move || {
+        match state.get() {
+            State::Ready => Word::default(),
+            State::Copied => said_copied.clone(),
+            State::Refused => said_refused.clone(),
+        }
+        .into_render()
     };
     view! {
         <span class="fui-copy">
@@ -219,13 +222,13 @@ fn drawn(id: String, label: Oco<'static, str>, what: Copied, words: CopyWords) -
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct KeyHintWords {
     /// The button's name: "Copy the key" and the key.
-    pub label: String,
+    pub label: Word,
     /// The button's tooltip.
-    pub title: String,
+    pub title: Word,
     /// What the live region says once the key is copied.
-    pub copied: String,
+    pub copied: Word,
     /// What the live region says when the browser refuses.
-    pub refused: String,
+    pub refused: Word,
 }
 
 impl KeyHintWords {
@@ -263,10 +266,13 @@ pub fn key_hint(key: String, words: KeyHintWords) -> impl IntoView {
     Effect::new(move |_| hydrated.set(true));
     let copied = key.clone();
     let press = move |_| write(&copied, state);
-    let said = move || match state.get() {
-        State::Ready => String::new(),
-        State::Copied => said_copied.clone(),
-        State::Refused => said_refused.clone(),
+    let said = move || {
+        match state.get() {
+            State::Ready => Word::default(),
+            State::Copied => said_copied.clone(),
+            State::Refused => said_refused.clone(),
+        }
+        .into_render()
     };
     let glyph = move || {
         if state.get() == State::Copied {

@@ -27,7 +27,7 @@ use std::borrow::Cow;
 use leptos::prelude::*;
 
 use crate::i18n::number::grouped;
-use crate::i18n::{Text, tr};
+use crate::i18n::{Text, Word, tr};
 use crate::icon::{Glyph, icon};
 use crate::view::button::Variant;
 use crate::view::flow::FlowState;
@@ -311,7 +311,7 @@ pub fn sidebar(sidebar: Sidebar) -> AnyView {
 /// button saying `close`, folded to its glyphs while `rail`, with the
 /// drawer's behaviour. A console draws it through [`sidebar`].
 #[must_use]
-pub fn drawer(id: String, label: String, close: String, rail: bool, entries: AnyView) -> AnyView {
+pub fn drawer(id: String, label: String, close: Word, rail: bool, entries: AnyView) -> AnyView {
     let dialog = NodeRef::<leptos::html::Dialog>::new();
     let quiet = RwSignal::new(false);
     let button = format!("{} fui-drawer-only", Variant::Ghost.class());

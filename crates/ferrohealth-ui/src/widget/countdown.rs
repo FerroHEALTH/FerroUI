@@ -22,7 +22,7 @@
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::i18n::{Text, tr, tr_with};
+use crate::i18n::{Text, Word, tr, tr_with};
 
 /// The seconds left at which the live region says how many remain.
 pub const ANNOUNCE_AT: [u32; 3] = [60, 30, 10];
@@ -34,13 +34,13 @@ const RING: f64 = 81.68;
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct CountdownWords {
     /// The line under the time left, such as "left, until 10:14:42".
-    pub left: String,
+    pub left: Word,
     /// The line once the time is up, such as "ended at 10:14:42".
-    pub ended: String,
+    pub ended: Word,
     /// What the live region says at each of [`ANNOUNCE_AT`], in order.
-    pub said: Vec<String>,
+    pub said: Vec<Word>,
     /// What the live region says once the time is up.
-    pub up: String,
+    pub up: Word,
 }
 
 impl CountdownWords {
@@ -178,7 +178,7 @@ pub fn countdown(countdown: Countdown) -> AnyView {
         up,
     } = words;
     let left = RwSignal::new(start);
-    let said = RwSignal::new(String::new());
+    let said = RwSignal::new(Word::default());
     tick(start, left, said, points, up);
     view! {
         <span class="fui-countdown" id=id>
@@ -195,10 +195,14 @@ pub fn countdown(countdown: Countdown) -> AnyView {
             </svg>
             <span class="fui-countdown-words" role="timer" aria-live="off">
                 <strong>{move || clock(left.get())}</strong>
-                <span>{move || if left.get() == 0 { ended.clone() } else { left_line.clone() }}</span>
+                <span>
+                    {move || {
+                        if left.get() == 0 { ended.clone() } else { left_line.clone() }.into_render()
+                    }}
+                </span>
             </span>
             <span class="fui-sr-only" role="status">
-                {move || said.get()}
+                {move || said.get().into_render()}
             </span>
         </span>
     }
@@ -208,7 +212,7 @@ pub fn countdown(countdown: Countdown) -> AnyView {
 /// Counts `left` down from `start` in the browser by the seconds elapsed
 /// since the page hydrated, putting the words of each set point crossed
 /// (`points`) and of the end (`up`) in `said`.
-fn tick(start: u32, left: RwSignal<u32>, said: RwSignal<String>, points: Vec<String>, up: String) {
+fn tick(start: u32, left: RwSignal<u32>, said: RwSignal<Word>, points: Vec<Word>, up: Word) {
     #[cfg(target_arch = "wasm32")]
     {
         let handle: StoredValue<Option<IntervalHandle>> = StoredValue::new(None);
@@ -262,7 +266,7 @@ fn tick(start: u32, left: RwSignal<u32>, said: RwSignal<String>, points: Vec<Str
     }
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let _: (u32, RwSignal<u32>, RwSignal<String>) = (start, left, said);
+        let _: (u32, RwSignal<u32>, RwSignal<Word>) = (start, left, said);
         drop((points, up));
     }
 }

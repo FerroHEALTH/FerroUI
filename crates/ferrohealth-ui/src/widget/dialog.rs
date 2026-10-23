@@ -16,7 +16,7 @@
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::i18n::{Text, tr};
+use crate::i18n::{Text, Word, tr};
 use crate::icon::{Glyph, icon};
 
 /// How wide a modal dialog is.
@@ -34,7 +34,7 @@ pub enum Width {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ModalWords {
     /// The Cancel button's words.
-    pub cancel: String,
+    pub cancel: Word,
 }
 
 impl ModalWords {
@@ -53,7 +53,7 @@ pub struct Modal {
     /// The dialog's id; its heading is `id` and `-title`.
     pub id: &'static str,
     /// The heading.
-    pub title: Signal<String>,
+    pub title: Signal<Word>,
     /// Whether it is the danger form, the bad tone's glyph beside the
     /// heading, for an action that cannot be undone.
     pub danger: bool,
@@ -109,7 +109,7 @@ pub fn modal_dialog(modal: Modal, open: Signal<bool>, on_dismiss: Callback<()>) 
         >
             <h2 id=title_id class="fui-dialog-title">
                 {danger.then(|| icon(Glyph::TRIANGLE_ALERT, "18"))}
-                {move || title.get()}
+                {move || title.get().into_render()}
             </h2>
             <div class="fui-modal-body">{body}</div>
             <div class="fui-dialog-actions">

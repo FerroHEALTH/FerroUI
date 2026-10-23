@@ -1269,10 +1269,10 @@ pub(crate) fn filter_body(words: &Words) -> AnyView {
     let on_page = words.get(Msg::FilesOnPage);
     let total = total.to_string();
     let count = Signal::derive(move || {
-        Phrase::new(on_page.clone()).fill(&[
+        String::from(Phrase::new(on_page.clone()).fill(&[
             ("kept", &kept.with(Vec::len).to_string()),
             ("total", &total),
-        ])
+        ]))
     });
     view! {
         {table_filter("gallery-filter", words.get(Msg::FilterFiles), typed, count)}

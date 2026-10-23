@@ -337,13 +337,15 @@ impl Words {
             .iter()
             .map(|(name, value)| (*name, value.as_str()))
             .collect();
-        Phrase::new(self.held(&format!("{}#{mask}", msg.id()))).fill(&filled)
+        Phrase::new(self.held(&format!("{}#{mask}", msg.id())))
+            .fill(&filled)
+            .into()
     }
 
     /// The message `msg`, its open placeables filled with `values`.
     #[must_use]
     pub fn fill(&self, msg: Msg, values: &[(&str, &str)]) -> String {
-        Phrase::new(self.get(msg)).fill(values)
+        Phrase::new(self.get(msg)).fill(values).into()
     }
 }
 

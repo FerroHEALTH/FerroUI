@@ -22,7 +22,7 @@
 use leptos::either::Either;
 use leptos::prelude::*;
 
-use crate::i18n::{Text, tr};
+use crate::i18n::{Text, Word, tr};
 use crate::icon::{Glyph, icon};
 use crate::tone::Tone;
 use crate::view::button::Variant;
@@ -271,10 +271,12 @@ fn provider_action(provider: Provider, state: &State) -> impl IntoView + use<> {
 /// provider's action, disabled while `disabled`.
 fn basic_form(basic: Basic, after_provider: bool, disabled: bool) -> impl IntoView + use<> {
     let divider = after_provider.then(|| {
-        let words = basic.divider.unwrap_or_else(|| tr(Text::SignInOr));
+        let words = basic.divider.map_or_else(|| tr(Text::SignInOr), Word::from);
         view! { <div class="fui-divider">{words}</div> }
     });
-    let submit = basic.submit.unwrap_or_else(|| tr(Text::SignInSubmit));
+    let submit = basic
+        .submit
+        .map_or_else(|| tr(Text::SignInSubmit), Word::from);
     let invalid = basic.error.is_some().then_some("true");
     let described = basic.error.is_some().then_some("sign-in-password-error");
     let error = basic.error.map(|error| {

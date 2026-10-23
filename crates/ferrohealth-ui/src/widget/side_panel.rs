@@ -21,7 +21,7 @@
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::i18n::{Text, tr};
+use crate::i18n::{Text, Word, tr};
 use crate::icon::{Glyph, icon};
 use crate::view::button::Variant;
 
@@ -60,7 +60,7 @@ pub struct SidePanel {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SidePanelWords {
     /// The Close button's name.
-    pub close: String,
+    pub close: Word,
 }
 
 impl SidePanelWords {

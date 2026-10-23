@@ -317,7 +317,7 @@ impl DateOrder {
     pub fn of_page() -> Self {
         // NOTE: no specification governs this: our own design; a catalog that names
         // no order the library knows takes ISO 8601 alone.
-        Self::parse(&crate::i18n::tr(crate::i18n::Text::DateOrder)).unwrap_or_default()
+        Self::parse(crate::i18n::tr(crate::i18n::Text::DateOrder).text()).unwrap_or_default()
     }
 }
 

@@ -18,7 +18,7 @@
 
 use leptos::prelude::*;
 
-use crate::i18n::{Arg, Text, tr, tr_with};
+use crate::i18n::{Arg, Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::tone::Tone;
 use crate::view::coding::{Coding, Layout, MoreCodes, coding, more_codes};
@@ -35,7 +35,7 @@ pub enum ClauseKind {
 
 impl ClauseKind {
     /// The mark's word in the page's locale.
-    fn word(self) -> String {
+    fn word(self) -> Word {
         tr(match self {
             Self::Include => Text::ClauseInclude,
             Self::Exclude => Text::ClauseExclude,

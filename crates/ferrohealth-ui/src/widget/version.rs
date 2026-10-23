@@ -18,7 +18,7 @@
 
 use leptos::prelude::*;
 
-use crate::i18n::{Arg, Text, tr, tr_with};
+use crate::i18n::{Arg, Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon_classed};
 use crate::widget::action_menu::Trigger;
 use crate::widget::menu::{Choice, Choices};
@@ -90,7 +90,7 @@ fn item(root: VersionRoot, chosen: bool) -> AnyView {
     let line = if default {
         tr_with(Text::VersionDefault, &[("note", Arg::from(release))])
     } else {
-        release
+        Word::new(release)
     };
     view! {
         <a
@@ -140,7 +140,7 @@ pub fn version_select(select: VersionSelect) -> AnyView {
         <crate::island::MenuButton
             id
             label
-            name
+            name=String::from(name)
             trigger=Trigger::Version {
                 value: shown.name,
             }

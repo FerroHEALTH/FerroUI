@@ -760,8 +760,8 @@ fn self_description(brand: Brand) -> AnyView {
     };
     settings_page(SettingsPage {
         header: Header {
-            title: tr(Msg::FedSelfDescription),
-            subtitle: Some(tr(Msg::FedSelfDescriptionLine)),
+            title: tr(Msg::FedSelfDescription).into(),
+            subtitle: Some(tr(Msg::FedSelfDescriptionLine).into()),
             crumbs: vec![Crumb::new(tr(Msg::Federation), home(brand))],
             ..Header::default()
         },
@@ -813,12 +813,15 @@ pub fn FederationPart() -> impl IntoView {
         };
         let heading = page_heading(
             Header {
-                title,
-                subtitle: Some(tr(if organisation {
-                    Msg::FedOrganisationPage
-                } else {
-                    Msg::FedNodePage
-                })),
+                title: title.into(),
+                subtitle: Some(
+                    tr(if organisation {
+                        Msg::FedOrganisationPage
+                    } else {
+                        Msg::FedNodePage
+                    })
+                    .into(),
+                ),
                 crumbs: vec![Crumb::new(tr(Msg::Federation), home(brand))],
                 mono: !organisation,
                 badge: None,

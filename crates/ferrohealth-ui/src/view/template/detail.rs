@@ -14,7 +14,7 @@
 
 use leptos::prelude::*;
 
-use crate::i18n::{Text, tr, tr_with};
+use crate::i18n::{Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::view::action::ActionGroup;
 use crate::view::button::Variant;
@@ -82,7 +82,7 @@ pub struct Stepper {
 /// Returns one step of a [`stepper`]: a link to `href`, or, at the end of
 /// the queue, a link with no address marked unavailable (WAI-ARIA 1.2,
 /// `aria-disabled`).
-fn step(href: Option<String>, words: String, name: String, glyph: Glyph, last: bool) -> AnyView {
+fn step(href: Option<String>, words: Word, name: Word, glyph: Glyph, last: bool) -> AnyView {
     let words = view! { <span class="fui-step-words">{words}</span> }.into_any();
     let inner = if last {
         view! {

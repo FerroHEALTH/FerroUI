@@ -18,7 +18,7 @@ use std::borrow::Cow;
 
 use leptos::prelude::*;
 
-use crate::i18n::{Text, tr, tr_with};
+use crate::i18n::{Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::table::model::{
     Noun, OpenWindow, PAGE_KEY, Paging, SIZE_KEY, SIZES, StateSource, Window, partial_note,
@@ -56,7 +56,7 @@ impl Step {
 
     /// The step's words in the page's locale.
     #[must_use]
-    pub fn label(self) -> String {
+    pub fn label(self) -> Word {
         tr(match self {
             Self::First => Text::StepFirst,
             Self::Previous => Text::StepPrevious,
@@ -103,7 +103,7 @@ pub fn step_label(step: Step, available: bool) -> impl IntoView + use<> {
         {(!forward).then(|| icon(step.glyph(), "14"))}
         <span class="fui-step-words">{step.label()}</span>
         {(!available)
-            .then(|| view! { <span class="fui-sr-only">{format!(" {}", tr(Text::StepUnavailable))}</span> })}
+            .then(|| view! { <span class="fui-sr-only">{tr(Text::StepUnavailable).map(|words| format!(" {words}"))}</span> })}
         {forward.then(|| icon(step.glyph(), "14"))}
     }
 }

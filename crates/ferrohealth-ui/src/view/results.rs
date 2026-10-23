@@ -21,7 +21,7 @@ use std::borrow::Cow;
 
 use leptos::prelude::*;
 
-use crate::i18n::{Text, tr};
+use crate::i18n::{Text, Word, tr};
 use crate::icon::Glyph;
 use crate::view::button::{Variant, label};
 use crate::view::segmented::{SegmentedForm, segmented_form, segmented_links};
@@ -119,7 +119,7 @@ fn switch_view(switch: Switch, shown: Shown) -> AnyView {
         }
         Switch::Session { action, back } => segmented_form(SegmentedForm {
             name: SHOWN,
-            label: Cow::Owned(tr(Text::ResultsShowAs)),
+            label: Cow::Owned(tr(Text::ResultsShowAs).into()),
             prefix: None,
             choices: views
                 .into_iter()
@@ -135,7 +135,7 @@ fn switch_view(switch: Switch, shown: Shown) -> AnyView {
 /// Returns an export link `words` to `href`, or the same control disabled,
 /// saying "(unavailable)" to assistive technology, when there is nothing to
 /// export.
-fn export(href: String, words: String, available: bool) -> AnyView {
+fn export(href: String, words: Word, available: bool) -> AnyView {
     if available {
         return view! {
             <a href=href class=Variant::Secondary.small()>

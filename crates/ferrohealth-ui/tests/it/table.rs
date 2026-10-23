@@ -992,12 +992,12 @@ fn a_count_cell_groups_its_digits_and_keeps_them_on_one_line() {
 #[test]
 fn a_range_past_a_thousand_groups_its_digits() {
     let window = Window::over(312_000, Paging::read(Some("2"), Some("25")));
-    let label = html(|| window.range_of(Noun::ROWS).into_any());
+    let label = html(|| window.range_of(Noun::ROWS).into_render());
     assert_eq!("26-50 of 312,000 rows", label);
     let past = html(|| {
         OpenWindow::of(Paging::read(Some("1200"), Some("25")), 0)
             .range_of(Noun::ROWS)
-            .into_any()
+            .into_render()
     });
     assert_eq!("Page 1,200 is past the last row.", past);
 }

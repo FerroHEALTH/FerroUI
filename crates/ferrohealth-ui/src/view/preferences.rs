@@ -25,12 +25,10 @@
 //! the preview cards are a radio group (WAI-ARIA 1.2, `radiogroup`, by a
 //! `fieldset` of native radios) and the language select is R29.
 
-use std::borrow::Cow;
-
 use leptos::prelude::*;
 
 use crate::calendar::Weekday;
-use crate::i18n::{Arg, Locale, Text, tr, tr_with};
+use crate::i18n::{Arg, Locale, Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::theme::{Density, Hints, Language, Motion, Preference, Preferences, Theme, WeekStart};
 use crate::view::action::ActionGroup;
@@ -152,9 +150,9 @@ pub struct PreferencesPage {
 #[derive(Debug)]
 pub struct PreferenceRow {
     /// The preference's name.
-    pub label: String,
+    pub label: Word,
     /// One line on what it governs.
-    pub description: String,
+    pub description: Word,
     /// The id of the control the label names, when the control is one
     /// field; a group names itself.
     pub control_id: Option<String>,
@@ -205,7 +203,7 @@ pub struct SelectPreference {
     /// The select's id and the name it posts, the preference's cookie name.
     pub name: String,
     /// Each choice: the value it posts and its words.
-    pub choices: Vec<(String, String)>,
+    pub choices: Vec<(String, Word)>,
     /// The value in force.
     pub current: String,
     /// Where it posts.
@@ -229,9 +227,10 @@ pub fn select_preference(select: SelectPreference) -> AnyView {
         .into_iter()
         .map(|(value, words)| {
             let chosen = value == current;
+            let lang = words.lang();
             view! {
-                <option value=value selected=chosen>
-                    {words}
+                <option value=value selected=chosen lang=lang>
+                    {String::from(words)}
                 </option>
             }
         })
@@ -367,14 +366,14 @@ struct Card {
     /// Its preview.
     preview: Preview,
     /// Its title.
-    title: String,
+    title: Word,
     /// The note under the title.
-    note: String,
+    note: Word,
 }
 
 /// Returns the radio preview cards (R28) named `legend`, posting `name`,
 /// the card whose value is `current` checked.
-fn choice_cards(name: &'static str, legend: String, current: &str, cards: Vec<Card>) -> AnyView {
+fn choice_cards(name: &'static str, legend: Word, current: &str, cards: Vec<Card>) -> AnyView {
     let cards = cards
         .into_iter()
         .map(|card| {
@@ -542,10 +541,10 @@ pub fn language_select(
         let selected = current.tag() == Some(tag.as_str());
         let name = language.text(Text::LanguageName);
         if selected {
-            value.clone_from(&name);
+            value = Word::new(name.clone());
         }
         choices.push(Choice {
-            label: name,
+            label: Word::new(name),
             note: None,
             lang: Some(tag.clone()),
             selected,
@@ -554,7 +553,7 @@ pub fn language_select(
     }
     listbox(Listbox {
         id: id.to_owned(),
-        label: tr(Text::LanguageSwitch),
+        label: tr(Text::LanguageSwitch).into(),
         value,
         choices,
     })
@@ -718,7 +717,7 @@ pub fn preferences_page(page: PreferencesPage) -> AnyView {
     .into_any();
     let sheet = joined(
         TabRow {
-            label: tr(Text::PreferencesSections),
+            label: tr(Text::PreferencesSections).into(),
             tabs,
             current: String::from(section.key()),
         },
@@ -771,8 +770,8 @@ fn reset_dialog(reset: String, back: String) -> impl IntoView {
     confirm_dialog(
         Confirmation {
             id: RESET_DIALOG,
-            title: Cow::Owned(tr(Text::PreferencesResetTitle)),
-            message: Cow::Owned(tr(Text::PreferencesResetBody)),
+            title: tr(Text::PreferencesResetTitle),
+            message: tr(Text::PreferencesResetBody),
         },
         confirm,
     )

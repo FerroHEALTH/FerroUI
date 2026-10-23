@@ -21,7 +21,7 @@
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::i18n::{Text, tr};
+use crate::i18n::{Text, Word, tr};
 use crate::view::kbd::{ShortcutGroup, shortcut_keys};
 use crate::widget::dialog::{Modal, ModalWords, Width, modal_dialog};
 
@@ -33,14 +33,14 @@ pub const LEGEND_ID: &str = "shortcuts";
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LegendWords {
     /// The heading, "Keyboard shortcuts".
-    pub title: String,
+    pub title: Word,
     /// The sentence under the heading.
-    pub intro: String,
+    pub intro: Word,
     /// The word between the alternative keys of one shortcut.
-    pub or: String,
+    pub or: Word,
     /// The button that dismisses the legend, "Close": it only shows
     /// information, so there is nothing to cancel.
-    pub close: String,
+    pub close: Word,
 }
 
 impl LegendWords {

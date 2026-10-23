@@ -153,8 +153,8 @@ pub fn CodePage() -> impl IntoView {
     let xml = use_query_map().with_untracked(|query| query.get("format").as_deref() == Some("xml"));
     let header = page_heading(
         Header {
-            title: String::from("gallery.context.v1"),
-            subtitle: Some(tr(Msg::BoundedScrollableHighlightedNeverPage)),
+            title: String::from("gallery.context.v1").into(),
+            subtitle: Some(tr(Msg::BoundedScrollableHighlightedNeverPage).into()),
             crumbs: vec![
                 Crumb::new(tr(Msg::Gallery), root.clone()),
                 Crumb::new(tr(Msg::CodeDocuments), here.clone()),

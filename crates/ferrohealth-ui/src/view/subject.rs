@@ -15,7 +15,7 @@
 
 use leptos::prelude::*;
 
-use crate::i18n::{Text, tr};
+use crate::i18n::{Text, Word, tr};
 use crate::tone::Tone;
 
 /// Whose record it is.
@@ -45,7 +45,7 @@ pub struct SubjectLine {
 /// Returns an F12 state: a filled dot in the ok tone beside `word` when
 /// `on`, the hollow ring in the muted colour beside it when not, so the
 /// state is a shape, a colour and a word together (family rule 12).
-pub(crate) fn state_mark(on: bool, word: String) -> AnyView {
+pub(crate) fn state_mark(on: bool, word: Word) -> AnyView {
     let tone = if on { Tone::Ok } else { Tone::Neutral };
     let mark = format!("fui-state {}", tone.class());
     let dot = format!("fui-dot {}", tone.class());

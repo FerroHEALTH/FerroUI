@@ -15,7 +15,7 @@
 
 use leptos::prelude::*;
 
-use crate::i18n::{Text, tr};
+use crate::i18n::{Text, Word, tr};
 use crate::tone::Tone;
 use crate::view::notice::{Announce, notice};
 
@@ -123,7 +123,7 @@ impl Verdict {
     }
 
     /// The verdict in a word.
-    fn word(self) -> String {
+    fn word(self) -> Word {
         tr(match self {
             Self::Complete => Text::FanoutComplete,
             Self::Incomplete => Text::FanoutIncomplete,

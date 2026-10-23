@@ -17,7 +17,7 @@
 
 use leptos::prelude::*;
 
-use crate::i18n::{Text, tr, tr_with};
+use crate::i18n::{Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::view::button::{Variant, link_button};
 
@@ -54,7 +54,7 @@ impl Status {
 
     /// The status in words, then its number: "Not allowed · 403".
     #[must_use]
-    pub fn line(self) -> String {
+    pub fn line(self) -> Word {
         let words = match self {
             Self::Forbidden => tr(Text::ErrorForbidden),
             Self::NotFound => tr(Text::ErrorNotFound),

@@ -27,7 +27,7 @@ use std::borrow::Cow;
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::i18n::{Text, tr};
+use crate::i18n::{Text, Word, tr};
 use crate::icon::{Glyph, icon};
 use crate::view::form::SELECT;
 
@@ -81,9 +81,9 @@ pub const ROWS: usize = 100;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ComboboxWords {
     /// The line the list shows when no option matches.
-    pub no_match: String,
+    pub no_match: Word,
     /// The line under the list when more options match than it draws.
-    pub more: String,
+    pub more: Word,
 }
 
 impl ComboboxWords {

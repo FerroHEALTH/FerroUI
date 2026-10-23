@@ -16,7 +16,7 @@ use std::cmp::Ordering;
 
 use leptos::prelude::*;
 
-use crate::i18n::{Text, tr, tr_with};
+use crate::i18n::{Text, Word, tr, tr_with};
 use crate::tone::Tone;
 use crate::view::chart::{nice_step, proportion};
 use crate::view::status::pill;
@@ -244,7 +244,7 @@ fn figure(score: f64) -> String {
     if score.is_finite() {
         format!("{score:.2}")
     } else {
-        tr(Text::ChartNoValueCell)
+        tr(Text::ChartNoValueCell).into()
     }
 }
 
@@ -318,7 +318,7 @@ fn row(contribution: &Contribution, largest: f64) -> AnyView {
 
 /// The accessible name of the scale: the score, the grade, the thresholds
 /// and every contribution.
-fn scale_name(score: &Score) -> String {
+fn scale_name(score: &Score) -> Word {
     let thresholds = score
         .thresholds
         .iter()
@@ -331,6 +331,7 @@ fn scale_name(score: &Score) -> String {
                 ],
             )
         })
+        .map(String::from)
         .collect::<Vec<_>>()
         .join(", ");
     let contributions = score
@@ -345,6 +346,7 @@ fn scale_name(score: &Score) -> String {
                 ],
             )
         })
+        .map(String::from)
         .collect::<Vec<_>>()
         .join(", ");
     tr_with(

@@ -19,7 +19,7 @@
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::i18n::{Text, tr};
+use crate::i18n::{Text, Word, tr};
 
 /// A shortcut of the page and the words of what it does.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -151,7 +151,8 @@ pub fn kbd(keys: &str) -> AnyView {
 /// Returns the keys of `keys` with each alternative's caps, the word `or`
 /// between them, such as "J or ↓".
 #[must_use]
-pub fn shortcut_keys(keys: &str, or: &str) -> AnyView {
+pub fn shortcut_keys(keys: &str, or: impl Into<Word>) -> AnyView {
+    let or = or.into();
     let alternatives: Vec<&str> = keys
         .split('|')
         .map(str::trim)
@@ -162,8 +163,7 @@ pub fn shortcut_keys(keys: &str, or: &str) -> AnyView {
         .into_iter()
         .enumerate()
         .map(|(place, alternative)| {
-            let or =
-                (place < last).then(|| view! { <span class="fui-muted">{or.to_owned()}</span> });
+            let or = (place < last).then(|| view! { <span class="fui-muted">{or.clone()}</span> });
             view! {
                 {kbd(alternative)}
                 {or}

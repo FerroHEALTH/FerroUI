@@ -358,10 +358,10 @@ fn group_view(group: ConditionGroup, depth: u32) -> AnyView {
         .map(|inner| view! { <li>{group_view(inner, depth + 1)}</li> })
         .collect_view();
     let add_said = nested.then(|| {
-        tr_with(
+        String::from(tr_with(
             Text::CondAddConditionTo,
             &[("label", Arg::from(number.to_string()))],
-        )
+        ))
     });
     let condition_value = key.clone();
     let add_group = (!nested).then(|| {

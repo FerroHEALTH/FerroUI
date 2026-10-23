@@ -609,8 +609,8 @@ pub fn TreesPage() -> impl IntoView {
         crate::app::route_brand().map_or_else(String::new, |brand| format!("/{}", brand.key()));
     let header = page_heading(
         Header {
-            title: tr(Msg::Trees),
-            subtitle: Some(tr(Msg::TreesSubtitle)),
+            title: tr(Msg::Trees).into(),
+            subtitle: Some(tr(Msg::TreesSubtitle).into()),
             crumbs: vec![Crumb::new(tr(Msg::Gallery), root)],
             mono: false,
             badge: None,

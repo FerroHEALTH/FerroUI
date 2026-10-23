@@ -23,7 +23,7 @@
 
 use leptos::prelude::*;
 
-use crate::i18n::{Text, tr, tr_with};
+use crate::i18n::{Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::tone::Tone;
 use crate::view::status::badge;
@@ -200,7 +200,7 @@ fn all_agree(rows: &[Row<'_>]) -> bool {
 
 /// The caption: the console's, the console's saying there is no other
 /// record, or the console's saying every field agrees.
-fn caption(table: &Compare<'_>, rows: &[Row<'_>]) -> String {
+fn caption(table: &Compare<'_>, rows: &[Row<'_>]) -> Word {
     if table.others.is_empty() {
         tr_with(
             Text::CompareNoOthers,
@@ -212,7 +212,7 @@ fn caption(table: &Compare<'_>, rows: &[Row<'_>]) -> String {
             &[("label", table.caption.to_owned().into())],
         )
     } else {
-        table.caption.to_owned()
+        Word::new(table.caption)
     }
 }
 
@@ -277,7 +277,7 @@ fn cell(record: &CompareRecord, index: usize, verdict: Option<Verdict>) -> AnyVi
 /// Returns a record's column header: its title, the leading badge, and its
 /// quiet line.
 fn head(record: &CompareRecord, leading: bool) -> AnyView {
-    let badge = leading.then(|| badge(Tone::Accent, &tr(Text::CompareLeading)));
+    let badge = leading.then(|| badge(Tone::Accent, tr(Text::CompareLeading)));
     let sub = record
         .sub
         .clone()

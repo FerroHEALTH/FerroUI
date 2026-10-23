@@ -44,7 +44,8 @@ use leptos::web_sys::HtmlTextAreaElement;
 use serde::{Deserialize, Serialize};
 
 use crate::highlight::{Language, escape, lines_html, push_line};
-use crate::i18n::{Phrase, Text, tr, tr_with};
+use crate::i18n::number::Grouping;
+use crate::i18n::{Phrase, Text, Word, tr, tr_with};
 use crate::view::diagnostics::{DiagnosticsWords, FileFindings, Position, rows};
 
 /// How a marked line reads: the severity of the diagnostic that names it.
@@ -615,24 +616,26 @@ pub(crate) fn drawn(drawn: Drawn, on_input: impl Fn(String) + 'static) -> AnyVie
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EditorWords {
     /// The toolbar's count of one line, whole.
-    pub one_line: String,
+    pub one_line: Word,
     /// The toolbar's count of lines other than one, around the open
     /// `count`.
     pub lines: Phrase,
     /// The cursor's place, around the open `line` and `column`.
     pub position: Phrase,
     /// The state of a file not saved yet.
-    pub new_file: String,
+    pub new_file: Word,
     /// The state of a draft changed since it was opened.
-    pub changed: String,
+    pub changed: Word,
     /// The state of a draft as it was opened.
-    pub unchanged: String,
+    pub unchanged: Word,
     /// What the status line says on a line an error names, around the
     /// open `line`.
     pub error_on: Phrase,
     /// What the status line says on a line a warning names, around the
     /// open `line`.
     pub warning_on: Phrase,
+    /// The mark the line count and the cursor's place are grouped by.
+    pub grouping: Grouping,
 }
 
 impl EditorWords {
@@ -655,16 +658,23 @@ impl EditorWords {
             unchanged: tr(Text::EditorUnchanged),
             error_on: Phrase::new(tr_with(Text::EditorErrorOn, &[line()])),
             warning_on: Phrase::new(tr_with(Text::EditorWarningOn, &[line()])),
+            grouping: Grouping::of_page(),
         }
     }
 
-    /// The toolbar's line count of `count` lines.
-    fn line_count(&self, count: u32) -> String {
+    /// The toolbar's line count of `count` lines, its digits grouped as
+    /// the page's language groups them.
+    fn line_count(&self, count: u32) -> Word {
         if count == 1 {
             self.one_line.clone()
         } else {
-            self.lines.fill(&[("count", &count.to_string())])
+            self.lines.fill(&[("count", &self.number(count))])
         }
+    }
+
+    /// The number `number` with its digits grouped.
+    fn number(&self, number: u32) -> String {
+        self.grouping.write(u64::from(number))
     }
 }
 
@@ -729,16 +739,15 @@ fn said(
     current: Signal<Option<u32>>,
     marks: Signal<Vec<LineMark>>,
     words: StoredValue<EditorWords>,
-) -> Option<String> {
+) -> Option<Word> {
     let line = current.get()?;
     let kind = marks.with(|marks| mark_kind(marks, line))?;
-    let line = line.to_string();
     Some(words.with_value(|words| {
         let phrase = match kind {
             MarkKind::Error => &words.error_on,
             MarkKind::Warning => &words.warning_on,
         };
-        phrase.fill(&[("line", &line)])
+        phrase.fill(&[("line", &words.number(line))])
     }))
 }
 
@@ -773,16 +782,23 @@ pub fn editor_panel(panel: Panel, on_input: impl Fn(String) + 'static) -> AnyVie
     let bar = move || {
         let count = text.with(|text| crate::view::code::line_count(text));
         let lines = words.with_value(|words| words.line_count(count));
-        format!("{lead} · {lines}")
+        if lines.fell_back() {
+            let lead = format!("{lead} · ");
+            view! { {lead} {lines} }.into_any()
+        } else {
+            format!("{lead} · {}", lines.text()).into_any()
+        }
     };
     let position = move || {
         let at = caret.get();
-        words.with_value(|words| {
-            words.position.fill(&[
-                ("line", &at.line.to_string()),
-                ("column", &at.column.to_string()),
-            ])
-        })
+        words
+            .with_value(|words| {
+                words.position.fill(&[
+                    ("line", &words.number(at.line)),
+                    ("column", &words.number(at.column)),
+                ])
+            })
+            .into_render()
     };
     let is_new = matches!(opened, Opened::New);
     let opened = StoredValue::new(opened);
@@ -793,13 +809,15 @@ pub fn editor_panel(panel: Panel, on_input: impl Fn(String) + 'static) -> AnyVie
         })
     };
     let state = move || {
-        words.with_value(|words| match (is_new, dirty()) {
-            (true, _) => words.new_file.clone(),
-            (false, true) => words.changed.clone(),
-            (false, false) => words.unchanged.clone(),
-        })
+        words
+            .with_value(|words| match (is_new, dirty()) {
+                (true, _) => words.new_file.clone(),
+                (false, true) => words.changed.clone(),
+                (false, false) => words.unchanged.clone(),
+            })
+            .into_render()
     };
-    let said = move || said(current, marks, words);
+    let said = move || said(current, marks, words).map(IntoRender::into_render);
     let facts = facts
         .into_iter()
         .map(|fact| view! { <span>{fact}</span> })

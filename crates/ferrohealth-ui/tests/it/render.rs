@@ -6,7 +6,7 @@
 //! what each must never carry, and the escaping of what it is given.
 
 use ferrohealth_ui::highlight::Language;
-use ferrohealth_ui::i18n::Phrase;
+use ferrohealth_ui::i18n::{Phrase, Word};
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::island::{
     Combobox, CopyButton, KeyboardTabs, PickerField, SidePanel, ToastRegion,
@@ -354,7 +354,7 @@ fn a_page_heading_in_the_body_face_writes_no_class_on_its_title() {
     let mono = html(|| {
         page_heading(
             Header {
-                title: String::from("vitals.v1"),
+                title: Word::from("vitals.v1"),
                 mono: true,
                 ..Header::default()
             },
@@ -1133,7 +1133,7 @@ fn the_toast_region_draws_the_flash_toasts_the_server_hands_it() {
     let page = html(|| {
         view! {
             <ToastRegion
-                words=RegionWords { region: String::from("Notices"), dismiss: String::from("Dismiss") }
+                words=RegionWords { region: Word::from("Notices"), dismiss: Word::from("Dismiss") }
                 flash=vec![
                     Flash {
                         tone: Tone::Ok,
@@ -1219,7 +1219,7 @@ fn the_toast_region_shows_a_few_toasts_and_keeps_each_refusal_and_each_with_an_a
     let page = html(|| {
         view! {
             <ToastRegion
-                words=RegionWords { region: String::from("Notices"), dismiss: String::from("Dismiss") }
+                words=RegionWords { region: Word::from("Notices"), dismiss: Word::from("Dismiss") }
                 flash=vec![
                     flash("Zeroth.", false),
                     flash("First.", false),
@@ -1758,10 +1758,10 @@ fn the_select_button_shows_its_choice_and_each_option_works_with_no_webassembly(
         listbox(Listbox {
             id: String::from("lang-list"),
             label: String::from("Language"),
-            value: String::from("English"),
+            value: Word::from("English"),
             choices: vec![
                 Choice {
-                    label: String::from("English"),
+                    label: Word::from("English"),
                     note: None,
                     lang: Some(String::from("en")),
                     selected: true,
@@ -1771,8 +1771,8 @@ fn the_select_button_shows_its_choice_and_each_option_works_with_no_webassembly(
                     },
                 },
                 Choice {
-                    label: String::from("1.0.0"),
-                    note: Some(String::from("Older")),
+                    label: Word::from("1.0.0"),
+                    note: Some(Word::from("Older")),
                     lang: None,
                     selected: false,
                     pick: Pick::Link(String::from("?version=1.0.0")),
@@ -1851,7 +1851,7 @@ fn the_combobox_and_picker_islands_draw_their_native_floor_on_the_server() {
                 options=vec![ComboOption::new("loinc", "LOINC <lab>")]
                 selected=Some(String::from("loinc"))
                 described_by=None
-                words=ComboboxWords { no_match: String::from("No match"), more: String::from("Type to narrow") }
+                words=ComboboxWords { no_match: Word::from("No match"), more: Word::from("Type to narrow") }
             />
         }
         .into_any()
@@ -1907,10 +1907,10 @@ fn the_combobox_and_picker_islands_draw_their_native_floor_on_the_server() {
 /// The copy button's words, as a test gives them.
 fn copy_words() -> CopyWords {
     CopyWords {
-        copied: String::from("Copied"),
-        said_copied: String::from("Copied to the clipboard."),
-        said_refused: String::from("Copy failed."),
-        refused: String::from("The browser refused."),
+        copied: Word::from("Copied"),
+        said_copied: Word::from("Copied to the clipboard."),
+        said_refused: Word::from("Copy failed."),
+        refused: Word::from("The browser refused."),
     }
 }
 
@@ -1969,7 +1969,7 @@ fn the_side_panel_island_opens_from_a_link_to_its_route_until_it_hydrates() {
                     variant: Variant::Secondary,
                     href: String::from("/session/access"),
                 }
-                words=SidePanelWords { close: String::from("Close") }
+                words=SidePanelWords { close: Word::from("Close") }
             >
                 <p>"Signed in as a synthetic operator."</p>
             </SidePanel>

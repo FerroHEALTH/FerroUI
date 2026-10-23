@@ -27,6 +27,7 @@ use std::borrow::Cow;
 
 use leptos::prelude::*;
 
+use crate::i18n::Word;
 use crate::icon::{Glyph, icon};
 use crate::table::model::{Noun, ORDER_KEY, PAGE_KEY, SORT_KEY, Sort, StateSource};
 use crate::view::path::path;
@@ -85,7 +86,7 @@ pub struct Column {
     /// The column's key, as a sort names it.
     pub key: Cow<'static, str>,
     /// The header's words.
-    pub label: Cow<'static, str>,
+    pub label: Word,
     /// Whether the column holds numbers, which align right.
     pub numeric: bool,
     /// Whether the listing sorts by the column.
@@ -108,7 +109,7 @@ impl Column {
     /// page's locale; a console keeps its columns in a function rather than
     /// a `const`.
     #[must_use]
-    pub fn text(key: &'static str, label: impl Into<Cow<'static, str>>) -> Self {
+    pub fn text(key: &'static str, label: impl Into<Word>) -> Self {
         Self {
             key: Cow::Borrowed(key),
             label: label.into(),
@@ -126,7 +127,7 @@ impl Column {
     pub fn owned(key: impl Into<String>, label: impl Into<String>) -> Self {
         Self {
             key: Cow::Owned(key.into()),
-            label: Cow::Owned(label.into()),
+            label: Word::new(label),
             numeric: false,
             sortable: false,
             mono: false,
@@ -309,7 +310,7 @@ fn header(column: &Column, sorting: &Sorting<'_>) -> AnyView {
         classes.push("fui-row-check");
     }
     let class = (!classes.is_empty()).then(|| classes.join(" "));
-    let label = column.label.to_string();
+    let label = column.label.clone();
     let leads = sorting
         .sort
         .is_some_and(|sort| sort.column == column.key.as_ref());
@@ -321,7 +322,7 @@ fn header(column: &Column, sorting: &Sorting<'_>) -> AnyView {
     if column.role == Role::Check {
         // NOTE: leptos-ui.md §15.8: a select-all only script can work stays hidden until a
         // work-list island shows it (`crate::widget::worklist`).
-        let name = label.clone();
+        let name = String::from(label.clone());
         return view! {
             <th scope="col" title=title>
                 <span class="fui-sr-only">{label}</span>
@@ -343,9 +344,9 @@ fn header(column: &Column, sorting: &Sorting<'_>) -> AnyView {
     // NOTE: no specification governs this: our own design; a code header breaks only
     // where a path does, so it never sets its column's width alone.
     let words = if column.mono {
-        path(&label)
+        path(label.text())
     } else {
-        label.into_any()
+        label.into_render()
     };
     if !column.sortable {
         return view! {
@@ -546,7 +547,7 @@ pub fn cell(column: &Column, value: impl IntoView + 'static) -> AnyView {
 fn valued(column: &Column, value: AnyView) -> AnyView {
     let class = column.numeric.then_some(NUM);
     view! {
-        <td data-label=column.label.to_string() data-role=column.role.key()>
+        <td data-label=column.label.text().to_owned() data-role=column.role.key()>
             <span>{value}</span>
         </td>
     }
@@ -563,7 +564,7 @@ fn valued(column: &Column, value: AnyView) -> AnyView {
 pub fn count_cell(column: &Column, count: u32, noun: Noun) -> AnyView {
     view! {
         <td
-            data-label=column.label.to_string()
+            data-label=column.label.text().to_owned()
             data-role=column.role.key()
             data-unit=noun.word(count)
             class=NUM

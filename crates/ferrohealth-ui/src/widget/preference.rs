@@ -24,7 +24,7 @@ use crate::view::button::Variant;
 pub fn preference_form(
     action: String,
     back: String,
-    save: String,
+    save: crate::i18n::Word,
     saved: bool,
     control: AnyView,
 ) -> AnyView {

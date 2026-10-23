@@ -130,7 +130,7 @@ impl SecretField {
     pub fn refuse_value(self) -> Self {
         Self {
             choice: SecretChoice::Value,
-            error: Some(tr(Text::SecretNoDirectory)),
+            error: Some(tr(Text::SecretNoDirectory).into()),
             ..self
         }
     }
@@ -157,8 +157,8 @@ pub fn secret_state(state: &SecretState) -> AnyView {
 fn state_view(state: &SecretState, id: Option<String>) -> AnyView {
     let (glyph, words) = match state {
         SecretState::Set(file) => (Glyph::LOCK, around(Text::SecretSet, file)),
-        SecretState::Redacted => (Glyph::LOCK, tr(Text::SecretRedacted).into_any()),
-        SecretState::Unset => (Glyph::LOCK, tr(Text::SecretUnset).into_any()),
+        SecretState::Redacted => (Glyph::LOCK, tr(Text::SecretRedacted).into_render()),
+        SecretState::Unset => (Glyph::LOCK, tr(Text::SecretUnset).into_render()),
         SecretState::Unreadable(file) => (Glyph::TRIANGLE_ALERT, around(Text::SecretBroken, file)),
     };
     let modifier = match state {
@@ -184,15 +184,19 @@ fn state_view(state: &SecretState, id: Option<String>) -> AnyView {
 fn around(text: Text, file: &str) -> AnyView {
     let mark = Phrase::open_mark("file");
     let words = tr_with(text, &[("file", Phrase::open("file"))]);
-    let (before, after) = words.split_once(&mark).unwrap_or((words.as_str(), ""));
+    let lang = words.lang();
+    let (before, after) = words.text().split_once(&mark).unwrap_or((words.text(), ""));
     let (before, after) = (before.to_owned(), after.to_owned());
     let file = file.to_owned();
-    view! {
+    let drawn = view! {
         {before}
         <code>{file}</code>
         {after}
+    };
+    match lang {
+        Some(lang) => view! { <span lang=lang>{drawn}</span> }.into_any(),
+        None => drawn.into_any(),
     }
-    .into_any()
 }
 
 /// Returns the secret field `field`, with `hint` (a key hint, R15) after

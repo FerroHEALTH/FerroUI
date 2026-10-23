@@ -196,7 +196,7 @@ fn at_field() -> AnyView {
     let field = DateField {
         id: String::from("history-at"),
         name: String::from("at"),
-        label: at_time_label(),
+        label: at_time_label().into(),
         value: String::from("2026-10-21 08:05"),
         help: None,
         error: None,
@@ -648,7 +648,7 @@ fn scopes() -> AnyView {
         .collect::<Vec<_>>();
     grants.push(ScopeGrant {
         raw: String::from(FOREIGN),
-        grant: Grant::Refused(tr(Msg::ClNotOpenehr)),
+        grant: Grant::Refused(tr(Msg::ClNotOpenehr).into()),
     });
     view! {
         <div id="scopes">
@@ -669,8 +669,8 @@ pub fn ClinicalPage() -> impl IntoView {
     };
     let header = page_heading(
         Header {
-            title: tr(Msg::ClinicalRecords),
-            subtitle: Some(tr(Msg::ClSubtitle)),
+            title: tr(Msg::ClinicalRecords).into(),
+            subtitle: Some(tr(Msg::ClSubtitle).into()),
             crumbs: vec![Crumb::new(tr(Msg::Gallery), root)],
             mono: false,
             badge: None,

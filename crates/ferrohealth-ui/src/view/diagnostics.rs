@@ -22,7 +22,7 @@
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::i18n::{Phrase, Text, tr, tr_with};
+use crate::i18n::{Phrase, Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::view::code::Gravity;
 
@@ -115,7 +115,7 @@ pub fn ordered_files(files: &[FileFindings]) -> Vec<&FileFindings> {
 
 /// The counts of `file` as its head says them, such as "2 errors, 1
 /// warning".
-fn counts(file: &FileFindings) -> String {
+fn counts(file: &FileFindings) -> Word {
     let errors = file
         .findings
         .iter()
@@ -132,7 +132,7 @@ fn counts(file: &FileFindings) -> String {
             &[("errors", errors.into()), ("warnings", warnings.into())],
         ),
         (Some(one), None) | (None, Some(one)) => one,
-        (None, None) => String::new(),
+        (None, None) => Word::default(),
     }
 }
 
@@ -141,11 +141,11 @@ fn counts(file: &FileFindings) -> String {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DiagnosticsWords {
     /// The word of an error.
-    pub error: String,
+    pub error: Word,
     /// The word of a warning.
-    pub warning: String,
+    pub warning: Word,
     /// The place of a finding about the whole document.
-    pub whole: String,
+    pub whole: Word,
     /// The place of a finding, around the open `line` and `column`.
     pub line: Phrase,
     /// The mapping a finding belongs to, around the open `mapping`.
@@ -155,7 +155,7 @@ pub struct DiagnosticsWords {
     /// That row's link to every finding, around the open `total`.
     pub more_all: Phrase,
     /// What a list with no finding says.
-    pub none: String,
+    pub none: Word,
 }
 
 impl DiagnosticsWords {

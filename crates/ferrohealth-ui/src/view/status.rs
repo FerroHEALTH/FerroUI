@@ -6,6 +6,7 @@
 
 use leptos::prelude::*;
 
+use crate::i18n::Word;
 use crate::icon::{Glyph, icon};
 use crate::tone::Tone;
 
@@ -17,8 +18,9 @@ pub fn pill(tone: Tone, word: &str) -> impl IntoView + use<> {
 
 /// Returns a badge: `word` on the ground of `tone`, with no dot.
 #[must_use]
-pub fn badge(tone: Tone, word: &str) -> impl IntoView + use<> {
-    view! { <span class=tone.badge()>{word.to_owned()}</span> }
+pub fn badge<W: Into<Word>>(tone: Tone, word: W) -> impl IntoView + use<W> {
+    let word: Word = word.into();
+    view! { <span class=tone.badge()>{word}</span> }
 }
 
 /// Returns a status indicator: `glyph` beside `word`, in `tone`, with a

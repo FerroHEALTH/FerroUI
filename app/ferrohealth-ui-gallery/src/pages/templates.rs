@@ -70,8 +70,8 @@ fn at(variant: &str) -> String {
 /// The intro every list template carries.
 fn list_header() -> Header {
     Header {
-        title: tr(Msg::Locations),
-        subtitle: Some(tr(Msg::TemplateExample)),
+        title: tr(Msg::Locations).into(),
+        subtitle: Some(tr(Msg::TemplateExample).into()),
         ..Header::default()
     }
 }
@@ -332,8 +332,8 @@ fn detail() -> AnyView {
     .into_any();
     detail_page(DetailPage {
         header: Header {
-            title: tr(Msg::LocatieNoord),
-            subtitle: Some(tr(Msg::LocationSubtitle)),
+            title: tr(Msg::LocatieNoord).into(),
+            subtitle: Some(tr(Msg::LocationSubtitle).into()),
             crumbs: vec![Crumb::new(tr(Msg::Locations), at("list"))],
             badge: Some(pill(Tone::Ok, &tr(Msg::StateReachable)).into_any()),
             ..Header::default()
@@ -477,8 +477,8 @@ fn settings_tabs(variant: &str, draft: bool) -> TabRow {
 /// The header of the settings pages.
 fn settings_header() -> Header {
     Header {
-        title: tr(Msg::SettingsTab),
-        subtitle: Some(tr(Msg::SettingsIntro)),
+        title: tr(Msg::SettingsTab).into(),
+        subtitle: Some(tr(Msg::SettingsIntro).into()),
         ..Header::default()
     }
 }
@@ -534,8 +534,8 @@ fn settings_managed() -> AnyView {
 fn about() -> AnyView {
     about_page(AboutPage {
         header: Header {
-            title: tr(Msg::AboutTitle),
-            subtitle: Some(tr(Msg::AboutIntro)),
+            title: tr(Msg::AboutTitle).into(),
+            subtitle: Some(tr(Msg::AboutIntro).into()),
             ..Header::default()
         },
         release: crate::app::footer().release(),

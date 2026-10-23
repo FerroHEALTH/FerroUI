@@ -32,7 +32,7 @@
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::i18n::{Text, tr};
+use crate::i18n::{Text, Word, tr};
 use crate::icon::{Glyph, icon};
 use crate::tone::Tone;
 
@@ -56,7 +56,7 @@ pub struct SearchBox {
     /// The text already searched for, on a result page.
     pub value: String,
     /// The submit's words, which below 40 rem only a screen reader reads.
-    pub submit: String,
+    pub submit: Word,
     /// The key that focuses the field from anywhere on the page, drawn as
     /// a quiet key cap in the field; `None` draws no cap and binds no key.
     pub shortcut: Option<char>,

@@ -77,6 +77,54 @@ pub fn grouped(count: u64) -> String {
     Marks::of(&locale()).write(&count.to_string(), true)
 }
 
+/// The mark the page's language groups the digits of a count by, resolved
+/// on the server, so an island writes a count it learns in the browser as
+/// the server writes one.
+///
+/// An island carries no catalog (`leptos-ui.md` §15.4), so a widget whose
+/// island counts takes this as part of its words.
+///
+/// # Examples
+///
+/// ```
+/// use ferrohealth_ui::i18n::number::Grouping;
+///
+/// assert_eq!("12,480", Grouping::default().write(12_480));
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct Grouping {
+    group: String,
+}
+
+impl Default for Grouping {
+    fn default() -> Self {
+        Self {
+            group: String::from(","),
+        }
+    }
+}
+
+impl Grouping {
+    /// The grouping of the page being drawn.
+    #[must_use]
+    pub fn of_page() -> Self {
+        Self {
+            group: locale().text(Text::NumberGroup),
+        }
+    }
+
+    /// Returns `count` with its digits grouped in threes: "12,480" in
+    /// English.
+    #[must_use]
+    pub fn write(&self, count: u64) -> String {
+        Marks {
+            group: self.group.clone(),
+            decimal: String::new(),
+        }
+        .write(&count.to_string(), true)
+    }
+}
+
 /// The language of the bundle a formatter runs in, read from the bundle's
 /// memoizer, which builds each of its formatters for that language.
 struct Language(LanguageIdentifier);

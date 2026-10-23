@@ -47,7 +47,7 @@ fn reveal_rows(cookies: &str, post: &Post, saved: Option<&str>) -> Vec<AnyView> 
                 let count = seconds.parse::<f64>().unwrap_or_default();
                 (
                     String::from(seconds),
-                    tr_with(Msg::RevealSeconds, &[("count", Arg::Number(count))]),
+                    tr_with(Msg::RevealSeconds, &[("count", Arg::Number(count))]).into(),
                 )
             })
             .collect(),
@@ -64,15 +64,15 @@ fn reveal_rows(cookies: &str, post: &Post, saved: Option<&str>) -> Vec<AnyView> 
     });
     vec![
         preference_row(PreferenceRow {
-            label: tr(Msg::RevealFor),
-            description: tr(Msg::RevealForDesc),
+            label: tr(Msg::RevealFor).into(),
+            description: tr(Msg::RevealForDesc).into(),
             control_id: Some(String::from("reveal")),
             control: reveal,
             saved: reveal_saved,
         }),
         preference_row(PreferenceRow {
-            label: tr(Msg::HideOnLeave),
-            description: tr(Msg::HideOnLeaveDesc),
+            label: tr(Msg::HideOnLeave).into(),
+            description: tr(Msg::HideOnLeaveDesc).into(),
             control_id: Some(String::from("hide")),
             control: hide,
             saved: hide_saved,
@@ -90,8 +90,8 @@ fn region_rows() -> Vec<AnyView> {
     .into_iter()
     .map(|(label, description, value)| {
         preference_row(PreferenceRow {
-            label: tr(label),
-            description: tr(description),
+            label: tr(label).into(),
+            description: tr(description).into(),
             control_id: None,
             control: view! { <span class="fui-setting-value">{tr(value)}</span> }.into_any(),
             saved: false,

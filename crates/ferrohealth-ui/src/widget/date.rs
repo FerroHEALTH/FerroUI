@@ -30,7 +30,7 @@ use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::calendar::{Bounds, DateOrder, Day, Moment, Month, NotADay, Preset, Quick, Weekday};
-use crate::i18n::{Phrase, Text, tr, tr_with};
+use crate::i18n::{Phrase, Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::view::button::Variant;
 use crate::view::form::{ERROR, INNER_BUTTON, error_id, help_id};
@@ -53,59 +53,59 @@ const COUNTED: u32 = 366;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DateWords {
     /// The format the field is typed in, its placeholder.
-    pub format: String,
+    pub format: Word,
     /// The order the page's language writes a date in, which a field takes
     /// beside `YYYY-MM-DD`.
     pub order: DateOrder,
     /// The format again, as the quiet hint after the label.
-    pub format_hint: String,
+    pub format_hint: Word,
     /// The calendar button's name.
-    pub choose: String,
+    pub choose: Word,
     /// The calendar button's name before the page's WebAssembly runs.
-    pub needs_script: String,
+    pub needs_script: Word,
     /// The arrow to the month before.
-    pub previous_month: String,
+    pub previous_month: Word,
     /// The arrow to the month after.
-    pub next_month: String,
+    pub next_month: Word,
     /// The month chooser's arrow to the year before.
-    pub previous_year: String,
+    pub previous_year: Word,
     /// The month chooser's arrow to the year after.
-    pub next_year: String,
+    pub next_year: Word,
     /// The month chooser's title, back to the days.
-    pub back_to_days: String,
+    pub back_to_days: Word,
     /// The button that chooses today.
-    pub today: String,
+    pub today: Word,
     /// The button that empties the field.
-    pub clear: String,
+    pub clear: Word,
     /// The button that closes the picker and keeps the field as it was.
-    pub cancel: String,
+    pub cancel: Word,
     /// The button that keeps the choice and closes the picker.
-    pub apply: String,
+    pub apply: Word,
     /// The time row's label.
-    pub time: String,
+    pub time: Word,
     /// The time row's quiet hint.
-    pub time_hint: String,
+    pub time_hint: Word,
     /// The hours' name.
-    pub hours: String,
+    pub hours: Word,
     /// The minutes' name.
-    pub minutes: String,
+    pub minutes: Word,
     /// The quick choices' name.
-    pub quick: String,
+    pub quick: Word,
     /// The presets' name.
-    pub ranges: String,
+    pub ranges: Word,
     /// A range button with no range.
-    pub any: String,
+    pub any: Word,
     /// The picker's line for a typed text that is no date.
-    pub type_format: String,
+    pub type_format: Word,
     /// The twelve months' names, January first.
-    pub months: Vec<String>,
+    pub months: Vec<Word>,
     /// The seven days' names, Monday first.
-    pub weekdays: Vec<String>,
+    pub weekdays: Vec<Word>,
     /// The seven days' short names over the columns, Monday first.
-    pub weekdays_short: Vec<String>,
+    pub weekdays_short: Vec<Word>,
     /// How many days each month has, January to December, then February
     /// of a leap year.
-    pub month_lengths: Vec<String>,
+    pub month_lengths: Vec<Word>,
     /// A month's title: the month and the year.
     pub month_title: Phrase,
     /// A day's full name: its weekday, its day, its month and its year.
@@ -134,7 +134,7 @@ pub struct DateWords {
     pub after: Phrase,
     /// The number of days a range holds, from 1 to 366, each resolved with
     /// its plural on the server.
-    pub day_counts: Vec<String>,
+    pub day_counts: Vec<Word>,
 }
 
 impl DateWords {
@@ -157,8 +157,8 @@ impl DateWords {
                 Text::DateNotFormat,
             )
         };
-        let months: Vec<String> = MONTHS.iter().map(|month| tr(*month)).collect();
-        let mut month_lengths: Vec<String> = (1_u8..=12)
+        let months: Vec<Word> = MONTHS.iter().map(|month| tr(*month)).collect();
+        let mut month_lengths: Vec<Word> = (1_u8..=12)
             .zip(&months)
             .map(|(month, name)| {
                 let days = crate::calendar::days_in(2026, month);
@@ -228,11 +228,11 @@ impl DateWords {
     fn month_name(&self, month: u8) -> &str {
         self.months
             .get(usize::from(month.saturating_sub(1)))
-            .map_or("", String::as_str)
+            .map_or("", Word::text)
     }
 
     /// The title of `month`.
-    fn month_title(&self, month: Month) -> String {
+    fn month_title(&self, month: Month) -> Word {
         self.month_title.fill(&[
             ("month", self.month_name(month.month())),
             ("year", &month.year().to_string()),
@@ -240,11 +240,11 @@ impl DateWords {
     }
 
     /// The full name of `day`, its accessible name in the grid.
-    fn day_name(&self, day: Day) -> String {
+    fn day_name(&self, day: Day) -> Word {
         let weekday = self
             .weekdays
             .get(usize::from(day.weekday().index()))
-            .map_or("", String::as_str);
+            .map_or("", Word::text);
         self.day_name.fill(&[
             ("weekday", weekday),
             ("day", &day.day().to_string()),
@@ -256,12 +256,12 @@ impl DateWords {
     /// The number of days `count`, for a range of at most [`COUNTED`] days.
     fn days(&self, count: u32) -> Option<&str> {
         let place = usize::try_from(count.checked_sub(1)?).ok()?;
-        self.day_counts.get(place).map(String::as_str)
+        self.day_counts.get(place).map(Word::text)
     }
 
     /// Why the typed `text` is no value the field takes, or `None` when it
     /// is one or is empty.
-    fn reason(&self, text: &str, with_time: bool, bounds: Bounds) -> Option<String> {
+    fn reason(&self, text: &str, with_time: bool, bounds: Bounds) -> Option<Word> {
         let text = text.trim();
         if text.is_empty() {
             return None;
@@ -282,7 +282,7 @@ impl DateWords {
                 } else {
                     usize::from(month.saturating_sub(1))
                 };
-                let why = self.month_lengths.get(place).map_or("", String::as_str);
+                let why = self.month_lengths.get(place).map_or("", Word::text);
                 return Some(self.not_a_day.fill(&[("value", text), ("why", why)]));
             }
         };
@@ -356,7 +356,7 @@ pub struct RangePreset {
     /// The range it fills.
     pub preset: Preset,
     /// Its words, which name exactly that range.
-    pub words: String,
+    pub words: Word,
 }
 
 impl RangePreset {
@@ -787,7 +787,7 @@ fn opening_day(chosen: Option<Day>, today: Day, bounds: Bounds) -> Day {
 /// Returns an arrow named `name` showing `glyph`, disabled when `blocked`.
 fn arrow(
     glyph: Glyph,
-    name: String,
+    name: Word,
     class: &'static str,
     blocked: impl Fn() -> bool + Send + Sync + 'static,
     press: impl Fn() + 'static,
@@ -944,7 +944,8 @@ fn month_head(
     let gap = |show: bool| (!show).then(|| view! { <span class="fui-datepicker-navgap"></span> });
     let title = match chooser {
         Some(months) => {
-            let name = words.with_value(|words| words.choose_month.fill(&[("title", &title)]));
+            let name =
+                words.with_value(|words| words.choose_month.fill(&[("title", title.text())]));
             view! {
                 <button
                     type="button"
@@ -1033,7 +1034,9 @@ fn month_chooser(grid: Grid, months: RwSignal<bool>) -> AnyView {
             .collect_view()
     };
     let label = move || {
-        words.with_value(|words| words.months_of.fill(&[("year", &year.get().to_string())]))
+        words.with_value(|words| {
+            String::from(words.months_of.fill(&[("year", &year.get().to_string())]))
+        })
     };
     view! {
         <div class="fui-datepicker-month">
@@ -1129,7 +1132,7 @@ pub fn date_field(field: DateField) -> AnyView {
         if touched.get() {
             reason()
         } else {
-            error.get_value()
+            error.get_value().map(Word::new)
         }
     };
     let invalid = move || refusal().is_some().then_some("true");
@@ -1181,11 +1184,11 @@ pub fn date_field(field: DateField) -> AnyView {
         let choose = words.choose.clone();
         let needs = words.needs_script.clone();
         move || {
-            if hydrated.get() {
+            String::from(if hydrated.get() {
                 choose.clone()
             } else {
                 needs.clone()
-            }
+            })
         }
     };
     let help = help.map(|help| view! { <p id=help_id(&id) class="fui-help">{help}</p> });
@@ -1292,9 +1295,9 @@ pub fn date_field(field: DateField) -> AnyView {
                 }
                 match (pick.ends().0, chosen.as_ref()) {
                     (Some(day), Some(sentence)) => {
-                        grid.words.with_value(|words| sentence.fill(&[("day", &words.day_name(day))]))
+                        grid.words.with_value(|words| sentence.fill(&[("day", words.day_name(day).text())]))
                     }
-                    _ => String::new(),
+                    _ => Word::default(),
                 }
             };
             let today_allowed = bounds.allows(today);
@@ -1305,7 +1308,7 @@ pub fn date_field(field: DateField) -> AnyView {
                     {days}
                     {time}
                     <p class="fui-datepicker-status" role="status" hidden=move || status().is_empty()>
-                        {status.clone()}
+                        {let status = status.clone(); move || status().into_render()}
                     </p>
                 </div>
             </div>
@@ -1415,7 +1418,7 @@ pub fn date_field(field: DateField) -> AnyView {
             </div>
             {help}
             <p id=error_line class=ERROR aria-live="polite" hidden=move || refusal().is_none()>
-                {move || refusal().unwrap_or_default()}
+                {move || refusal().unwrap_or_default().into_render()}
             </p>
             {picker}
         </div>
@@ -1462,7 +1465,7 @@ fn range_field(
 }
 
 /// The range's words for the button, or "Any date" when it holds none.
-fn range_summary(words: &DateWords, from: &str, to: &str) -> String {
+fn range_summary(words: &DateWords, from: &str, to: &str) -> Word {
     match (Day::parse(from), Day::parse(to)) {
         (Ok(from), Ok(to)) => words
             .range_words
@@ -1473,7 +1476,7 @@ fn range_summary(words: &DateWords, from: &str, to: &str) -> String {
 
 /// The range picker's line: the first day and what to do next, or the
 /// whole range and the days it holds.
-fn range_status(words: &DateWords, first: Option<Day>, last: Option<Day>) -> String {
+fn range_status(words: &DateWords, first: Option<Day>, last: Option<Day>) -> Word {
     match (first, last) {
         (Some(first), Some(last)) => {
             let (from, to) = (first.to_string(), last.to_string());
@@ -1487,7 +1490,7 @@ fn range_status(words: &DateWords, first: Option<Day>, last: Option<Day>) -> Str
             }
         }
         (Some(first), None) => words.range_half.fill(&[("from", &first.to_string())]),
-        _ => String::new(),
+        _ => Word::default(),
     }
 }
 
@@ -1655,7 +1658,7 @@ pub fn date_range(range: DateRange) -> AnyView {
                 <div class="fui-datepicker-main">
                     <div class="fui-datepicker-pair">{months}</div>
                     <p class="fui-datepicker-status" role="status" hidden=move || status().is_empty()>
-                        {status}
+                        {move || status().into_render()}
                     </p>
                 </div>
             </div>
@@ -1733,7 +1736,7 @@ pub fn date_range(range: DateRange) -> AnyView {
                 on:click=toggle
             >
                 {icon(Glyph::CALENDAR, "16")}
-                {summary}
+                {move || summary().into_render()}
             </button>
             {picker}
         </div>
@@ -1792,31 +1795,33 @@ mod tests {
             Some(String::from(
                 "2026-10-41 is not a date: October has 31 days."
             )),
-            words.reason("2026-10-41", false, open)
+            words.reason("2026-10-41", false, open).map(String::from),
         );
         assert_eq!(
             Some(String::from(
                 "2028-02-30 is not a date: February has 29 days."
             )),
-            words.reason("2028-02-30", false, open),
+            words.reason("2028-02-30", false, open).map(String::from),
             "a leap year's February"
         );
         assert_eq!(
             Some(String::from(
                 "2026-13-01 is not a date: there is no month 13."
             )),
-            words.reason("2026-13-01", false, open)
+            words.reason("2026-13-01", false, open).map(String::from),
         );
         assert_eq!(
             Some(String::from("14/10/2026 is not written as YYYY-MM-DD.")),
-            words.reason("14/10/2026", false, open)
+            words.reason("14/10/2026", false, open).map(String::from),
         );
         let timed = self::words(true);
         assert_eq!(
             Some(String::from(
                 "2026-10-14 25:00 is not a time of day: type it as HH:MM."
             )),
-            timed.reason("2026-10-14 25:00", true, open)
+            timed
+                .reason("2026-10-14 25:00", true, open)
+                .map(String::from)
         );
     }
 
@@ -1831,7 +1836,7 @@ mod tests {
             Some(String::from(
                 "2026-10-22 is after 2026-10-21, the latest date allowed."
             )),
-            words.reason("2026-10-22", false, past)
+            words.reason("2026-10-22", false, past).map(String::from),
         );
         let future = Bounds {
             earliest: Some(day("2026-10-22")),
@@ -1841,7 +1846,7 @@ mod tests {
             Some(String::from(
                 "2026-10-21 is before 2026-10-22, the earliest date allowed."
             )),
-            words.reason("2026-10-21", false, future)
+            words.reason("2026-10-21", false, future).map(String::from),
         );
     }
 

@@ -14,7 +14,7 @@
 
 use leptos::prelude::*;
 
-use crate::i18n::{Phrase, Text, tr_with};
+use crate::i18n::{Phrase, Text, Word, tr_with};
 
 /// A date, `YYYY-MM-DD`, its parts checked against the calendar.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -270,10 +270,10 @@ impl Parsed {
 
     /// The form a person reads in `words`: `2026-10-18 23:18:37 UTC` for
     /// an instant.
-    fn reading(&self, words: &TimeWords) -> String {
+    fn reading(&self, words: &TimeWords) -> Word {
         match self {
-            Self::Date(date) => day(*date),
-            Self::Local(date, clock) => format!("{} {}", day(*date), time(clock, false)),
+            Self::Date(date) => Word::new(day(*date)),
+            Self::Local(date, clock) => Word::new(format!("{} {}", day(*date), time(clock, false))),
             Self::Instant(date, clock) => words
                 .utc
                 .fill(&[("date", &day(*date)), ("time", &time(clock, false))]),
@@ -369,7 +369,7 @@ pub fn reading(raw: &str) -> String {
 /// [`reading`] in `words`.
 #[must_use]
 pub fn reading_in(raw: &str, words: &TimeWords) -> String {
-    Parsed::parse(raw).map_or_else(|| raw.to_owned(), |parsed| parsed.reading(words))
+    Parsed::parse(raw).map_or_else(|| raw.to_owned(), |parsed| parsed.reading(words).into())
 }
 
 /// Returns `raw` drawn for reading on one line, never broken.
