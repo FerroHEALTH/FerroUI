@@ -3,5 +3,4 @@
   form posting `shown`, and each export is a `view::results::Export`, a
   link (`Export::Link`) or a submit of that form with `formaction`
   (`Export::Submit`), so no form of the pane's own sits inside the
-  console's. Breaking: `ResultsPane::csv` and `ResultsPane::json` take an
-  `Export`; an address becomes `Export::Link(address)`.
+  console's.
