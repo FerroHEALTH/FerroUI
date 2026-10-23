@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The charts page's figures: a flow's card hovered and focused, which
-//! shows its path, the busy bridge folded and unfolded, and the run report,
+//! shows its path, the flow's "How the flow is drawn" open, the busy bridge folded and unfolded, and the run report,
 //! the flows' lists and the score breakdown on a phone; the eight series
 //! chart and the score among close thresholds on a phone, and the charts
 //! and the forms under forced colours.
@@ -13,8 +13,8 @@ use ferrohealth_ui::style::Brand;
 use serde_json::json;
 use thirtyfour::prelude::*;
 
-use super::{HEIGHT, WIDTH, away, card, focus, shot_of};
-use crate::browser::Browser;
+use super::{HEIGHT, WIDTH, away, card, escape, focus, press, shot_of, shot_of_view};
+use crate::browser::{Browser, until};
 use crate::journeys::window;
 use crate::stack::Gallery;
 
@@ -25,6 +25,7 @@ pub(super) const STATES: &[&str] = &[
     "flow-busy-open",
     "flow-hover",
     "flow-focus",
+    "flow-rule",
     "flow-list-390",
     "run-report-390",
     "score-390",
@@ -97,6 +98,20 @@ pub(super) async fn charts(
     away(browser).await?;
     focus(browser, &cdr).await?;
     shot_of(browser, brand, theme, "flow-focus", &flow).await?;
+    let how = browser
+        .element(By::Css("button[commandfor='flow-rule']"))
+        .await?;
+    let rule = browser.element(By::Id("flow-rule")).await?;
+    until("the flow rule opens", async || {
+        if !rule.is_displayed().await? {
+            press(browser, &how).await?;
+        }
+        Ok(rule.is_displayed().await?)
+    })
+    .await?;
+    away(browser).await?;
+    shot_of_view(browser, brand, theme, "flow-rule").await?;
+    escape(browser).await?;
     for (query, state) in [
         ("", "flow-busy"),
         ("?open=callers,upstreams", "flow-busy-open"),
