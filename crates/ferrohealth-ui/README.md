@@ -11,7 +11,7 @@ Every pairing of every theme is held to WCAG 2.2 AA by the crate's tests.
 
 ```toml
 [dependencies]
-ferrohealth-ui = "=0.3.3"
+ferrohealth-ui = "=0.3.4"
 ```
 
 Pin the version exactly: a console moves its pin after looking at its own
