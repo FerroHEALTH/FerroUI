@@ -152,7 +152,7 @@ fn a_consoles_words_made_at_run_time_reach_every_label() {
         id: "nav-files",
         title: String::from("Files").into(),
         entries: vec![Entry {
-            href: "/files",
+            href: "/files".into(),
             label: format!("{} files", 3).into(),
             glyph: Glyph::FILES,
             exact: false,

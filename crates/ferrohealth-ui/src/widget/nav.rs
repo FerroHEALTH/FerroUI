@@ -56,8 +56,9 @@ pub enum Count {
 /// One entry of the navigation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Entry {
-    /// Where it leads.
-    pub href: &'static str,
+    /// Where it leads, such as a path under a base the console learns at
+    /// run time.
+    pub href: Cow<'static, str>,
     /// What it says.
     pub label: Cow<'static, str>,
     /// The glyph beside it, which alone stands for it in the rail.
@@ -191,10 +192,11 @@ fn entry(
     nest: &mut Option<Nest>,
 ) -> impl IntoView + use<> {
     let nest = nest.take_if(|nest| nest.under == entry.href);
+    let href = entry.href.to_string();
     let here = if nest.is_some() {
         Some("location")
     } else {
-        marks(entry.href, entry.exact, current).then_some("page")
+        marks(&href, entry.exact, current).then_some("page")
     };
     // NOTE: WCAG 2.2 SC 1.4.13; a title shows on hover alone, so the rail draws its own tooltip.
     let tooltip = rail.then(|| {
@@ -208,7 +210,7 @@ fn entry(
     let nest = nest.map(|nest| nested::section(nest, current));
     view! {
         <li>
-            <a href=entry.href class="fui-nav-entry" aria-current=here>
+            <a href=href class="fui-nav-entry" aria-current=here>
                 {icon(entry.glyph, "16")}
                 <span class="fui-nav-word">{entry.label}</span>
                 {count}
@@ -376,7 +378,7 @@ pub struct NestItem {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Nest {
     /// The `href` of the entry it opens under, such as the organisations.
-    pub under: &'static str,
+    pub under: Cow<'static, str>,
     /// The accessible name of the section, such as "Ziekenhuis
     /// Voorbeeldstad and its nodes".
     pub label: String,

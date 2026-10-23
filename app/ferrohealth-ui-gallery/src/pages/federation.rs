@@ -724,7 +724,7 @@ pub fn nest(brand: Brand, path: &str, under: &'static str) -> Option<Nest> {
     let part = path.strip_prefix(&format!("{}/", home(brand)))?;
     let inside = part == ORGANISATION || ITS_NODES.iter().any(|(id, _)| *id == part);
     inside.then(|| Nest {
-        under,
+        under: under.into(),
         label: tr(Msg::FedNestLabel),
         parent: NestItem {
             label: tr(Msg::FedOrgVoorbeeldstad),

@@ -185,7 +185,7 @@ fn navigation_of(current: &str, collapsed: bool, children: Vec<NestItem>) -> Str
                 id: "nav-fed",
                 title: "Federation".into(),
                 entries: vec![Entry {
-                    href: "/organisations",
+                    href: "/organisations".into(),
                     label: "Organisations".into(),
                     glyph: Glyph::USERS,
                     exact: false,
@@ -199,7 +199,7 @@ fn navigation_of(current: &str, collapsed: bool, children: Vec<NestItem>) -> Str
                 back: current.to_owned(),
             }),
             nest: Some(Nest {
-                under: "/organisations",
+                under: "/organisations".into(),
                 label: String::from("Voorbeeldstad and its nodes"),
                 parent: NestItem {
                     state_words: String::from("Worst node: reachable"),
