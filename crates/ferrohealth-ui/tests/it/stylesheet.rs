@@ -622,6 +622,8 @@ fn a_long_node_name_and_a_long_score_field_wrap_inside_their_row() {
     assert!(
         STYLESHEET.contains("  .fui-score-label {\n    min-width: 0;\n    font-weight: 500;\n    overflow-wrap: anywhere;"),
         "a field's long word never runs over its bar"
+    );
+}
 
 #[test]
 fn the_toast_region_stays_above_the_decision_bar_and_scrolls() {
