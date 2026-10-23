@@ -30,6 +30,22 @@ texts! {
     SeverityInformation = "severity-information",
     /// An issue's severity: warning.
     SeverityWarning = "severity-warning",
+    /// A time `$count` days ago.
+    TimeAgoDays = "time-ago-days",
+    /// A time `$count` hours ago the same day.
+    TimeAgoHours = "time-ago-hours",
+    /// A time `$count` minutes ago.
+    TimeAgoMinutes = "time-ago-minutes",
+    /// A time `$count` months ago.
+    TimeAgoMonths = "time-ago-months",
+    /// A time `$count` seconds ago.
+    TimeAgoSeconds = "time-ago-seconds",
+    /// A time `$count` weeks ago.
+    TimeAgoWeeks = "time-ago-weeks",
+    /// A time `$count` years ago.
+    TimeAgoYears = "time-ago-years",
+    /// A time the day before today.
+    TimeYesterday = "time-yesterday",
     /// An instant read in UTC: its `$date` and `$time`.
     TimestampUtc = "timestamp-utc",
 }

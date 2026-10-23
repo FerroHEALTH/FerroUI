@@ -12,7 +12,10 @@
 //! the table model keeps a listing's
 //! ([`crate::table::model::StateSource`]): as links in the URL, or as a
 //! plain form the console answers from its session, so it works with no
-//! WebAssembly either way. The chart is
+//! WebAssembly either way. A console whose run is a form post and that
+//! keeps no answer between requests lets the switch and the exports ride
+//! its own form instead ([`Switch::Form`], [`Export::Submit`]): each is a
+//! submit of that form, which posts the query again. The chart is
 //! [`crate::widget::chart::line_chart`], which carries its accessible name
 //! and its figures table. No specification governs the pane: our own
 //! design.
@@ -69,6 +72,31 @@ pub enum Switch {
         /// The page to return to.
         back: String,
     },
+    /// In the console's own form, such as the query form whose post ran
+    /// the query: each view is a submit button of that form posting
+    /// [`SHOWN`] beside its fields, so the run is posted again with the
+    /// view chosen.
+    Form {
+        /// The id of the console's form, when the pane sits outside it;
+        /// `None` inside it.
+        form: Option<String>,
+    },
+}
+
+/// How an export of the answer is had.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Export {
+    /// A link to the answer in this format at this address.
+    Link(String),
+    /// A submit button of the console's own form posting it to `action`
+    /// (`formaction`), so a run that is a form post is exported whole.
+    Submit {
+        /// The console's route that answers with the export.
+        action: String,
+        /// The id of the console's form, when the pane sits outside it;
+        /// `None` inside it.
+        form: Option<String>,
+    },
 }
 
 /// What a results pane shows.
@@ -87,10 +115,10 @@ pub struct ResultsPane {
     pub shown: Shown,
     /// Where the switch keeps its state.
     pub switch: Switch,
-    /// The address of the answer as CSV.
-    pub csv: String,
-    /// The address of the answer as JSON.
-    pub json: String,
+    /// The answer as CSV.
+    pub csv: Export,
+    /// The answer as JSON.
+    pub json: Export,
     /// The row window in one sentence, such as "Rows 1 to 3 of 3, inside
     /// the query's own LIMIT 50."
     pub window: String,
@@ -129,20 +157,59 @@ fn switch_view(switch: Switch, shown: Shown) -> AnyView {
             action,
             back,
         }),
+        Switch::Form { form } => {
+            let buttons = views
+                .into_iter()
+                .map(|(view, words)| {
+                    view! {
+                        <button
+                            type="submit"
+                            form=form.clone()
+                            name=SHOWN
+                            value=view.key()
+                            class="fui-segment"
+                            aria-pressed=(view == shown).to_string()
+                        >
+                            {words}
+                        </button>
+                    }
+                })
+                .collect_view();
+            view! {
+                <div role="group" aria-label=tr(Text::ResultsShowAs) class="fui-segmented">
+                    {buttons}
+                </div>
+            }
+            .into_any()
+        }
     }
 }
 
-/// Returns an export link `words` to `href`, or the same control disabled,
-/// saying "(unavailable)" to assistive technology, when there is nothing to
-/// export.
-fn export(href: String, words: Word, available: bool) -> AnyView {
+/// Returns the export `export` saying `words`, or the same control
+/// disabled, saying "(unavailable)" to assistive technology, when there is
+/// nothing to export.
+fn export(export: Export, words: Word, available: bool) -> AnyView {
     if available {
-        return view! {
-            <a href=href class=Variant::Secondary.small()>
-                {label(Some(Glyph::DOWNLOAD), words)}
-            </a>
-        }
-        .into_any();
+        let inside = label(Some(Glyph::DOWNLOAD), words);
+        return match export {
+            Export::Link(href) => view! {
+                <a href=href class=Variant::Secondary.small()>
+                    {inside}
+                </a>
+            }
+            .into_any(),
+            Export::Submit { action, form } => view! {
+                <button
+                    type="submit"
+                    form=form
+                    formaction=action
+                    class=Variant::Secondary.small()
+                >
+                    {inside}
+                </button>
+            }
+            .into_any(),
+        };
     }
     view! {
         <span class=Variant::Secondary.small() aria-disabled="true">

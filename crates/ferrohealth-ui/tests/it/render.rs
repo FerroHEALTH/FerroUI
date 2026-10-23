@@ -36,7 +36,7 @@ use ferrohealth_ui::view::surface::{
 use ferrohealth_ui::view::tabs::{Tab, binder};
 use ferrohealth_ui::view::template::list::HeadingCount;
 use ferrohealth_ui::widget::action_menu::{
-    Act, Action, Choice, Item, Listbox, Menu, Pick, listbox, row_menu,
+    Act, Action, Choice, Item, Listbox, Menu, Pick, listbox, more_menu, row_menu,
 };
 use ferrohealth_ui::widget::chart::{ChartWords, line_chart};
 use ferrohealth_ui::widget::combobox::{ComboOption, ComboboxWords};
@@ -694,8 +694,35 @@ fn trend(label: &str) -> LineChart {
             },
         ],
         x_ticks: vec![(0.0, String::from("Mon")), (1.0, String::from("Tue"))],
+        x_labels: Vec::new(),
         y_range: None,
     }
+}
+
+#[test]
+fn the_figures_table_names_each_point_by_its_own_label() {
+    let mut chart = trend("Readings");
+    chart.series[0].points.push((2.0, 125.0));
+    chart.x_ticks = vec![(0.0, String::from("Mon")), (2.0, String::from("Wed"))];
+    chart.x_labels = vec![
+        (1.0, String::from("Tue 09:00")),
+        (2.0, String::from("Wed 09:00")),
+    ];
+    let page = html(|| line_chart(&chart, ChartWords::of_page()));
+    let rows: Vec<&str> = page
+        .split(r#"<th scope="row">"#)
+        .skip(1)
+        .filter_map(|row| row.split("</th>").next())
+        .collect();
+    assert_eq!(
+        vec!["Mon", "Tue 09:00", "Wed 09:00"],
+        rows,
+        "a point's own label, then a tick's: {page}"
+    );
+    assert!(
+        !page.contains(">Tue 09:00</text>") && page.contains("Wed"),
+        "the axis keeps its ticks: {page}"
+    );
 }
 
 #[test]
@@ -905,6 +932,29 @@ fn a_timestamp_is_a_time_element_with_the_reading_form_and_the_raw_title() {
     ] {
         assert!(drawn.contains(expected), "{expected}: {drawn}");
     }
+}
+
+#[test]
+fn a_relative_time_carries_its_full_timestamp_as_its_title() {
+    // NOTE: COMPONENTS.md family rule 11: relative in lists, the full timestamp in the tooltip.
+    let drawn = html(|| {
+        ferrohealth_ui::view::time::relative("2026-10-21T09:12:11+00:00", "2026-10-21T09:42:11Z")
+            .into_any()
+    });
+    for expected in [
+        r#"class="fui-time""#,
+        r#"datetime="2026-10-21T09:12:11Z""#,
+        r#"title="2026-10-21 09:12:11 UTC""#,
+        ">30 min ago</time>",
+    ] {
+        assert!(drawn.contains(expected), "{expected}: {drawn}");
+    }
+    let verbatim =
+        html(|| ferrohealth_ui::view::time::relative("<never>", "2026-10-21T09:42:11Z").into_any());
+    assert!(
+        verbatim.contains("&lt;never&gt;") && !verbatim.contains("<time"),
+        "{verbatim}"
+    );
 }
 
 #[test]
@@ -1292,7 +1342,7 @@ fn an_editor_carries_its_text_escaped_so_a_form_posts_it_with_no_webassembly() {
     let page = html(|| {
         code_editor(
             Editor {
-                id: "draft",
+                id: "draft".into(),
                 language: Language::Yaml,
                 text: Signal::stored(String::from("a: </textarea><b>&")),
                 marks: Signal::stored(Vec::new()),
@@ -1951,6 +2001,96 @@ fn a_split_primary_carries_its_variants_and_more_alone_has_no_primary() {
     assert!(
         !empty.contains("<div"),
         "a More with no item is left out: {empty}"
+    );
+}
+
+#[test]
+fn a_copy_item_waits_hidden_and_its_menu_carries_the_copy_words() {
+    // NOTE: leptos-ui.md §15.8: a control only script can work is absent before hydration.
+    let menu = Menu::new(
+        "ehr-more",
+        "More actions for the EHR",
+        vec![Item::new(Action::new(
+            Some(Glyph::COPY),
+            "Copy EHR id",
+            Act::Copy(String::from("7d44b88c-4199-4bad-97dc-d78268e01398")),
+        ))],
+    );
+    let page = page_html(|| more_menu(menu));
+    assert!(
+        has(
+            &page,
+            "button",
+            &[
+                ("type", "button"),
+                ("role", "menuitem"),
+                ("data-fui-copy", "7d44b88c-4199-4bad-97dc-d78268e01398")
+            ]
+        ),
+        "{page}"
+    );
+    let item = tags(&page, "button")
+        .into_iter()
+        .find(|button| button.contains_key("data-fui-copy"))
+        .expect("the copy item");
+    assert!(item.contains_key("hidden"), "{page}");
+    assert!(
+        page.contains("Copied to the clipboard."),
+        "the island carries what it says once copied: {page}"
+    );
+    let plain = page_html(|| more_menu(file_menu()));
+    assert!(
+        !plain.contains("Copied to the clipboard."),
+        "a menu with no copy item carries no copy words: {plain}"
+    );
+    let button = page_html(|| {
+        action_button(
+            Action::new(None, "Copy the id", Act::Copy(String::from("id-1"))),
+            Variant::Secondary,
+        )
+    });
+    assert!(
+        button.contains("<leptos-island"),
+        "the copy button: {button}"
+    );
+    assert!(button.contains("Copy the id"), "{button}");
+}
+
+#[test]
+fn a_popover_form_sits_beside_the_primary_before_more() {
+    let save = || PopoverForm {
+        id: "save".into(),
+        variant: Variant::Secondary,
+        glyph: Glyph::SAVE,
+        label: "Save to the CDR".into(),
+        title: "Save to the CDR".into(),
+        body: view! { <form method="post"><button type="submit">"Save"</button></form> }.into_any(),
+    };
+    let page = page_html(|| {
+        action_group(
+            ActionGroup::primary(Action::new(
+                Some(Glyph::PLAY),
+                "Run",
+                Act::Submit(String::from("query")),
+            ))
+            .popover(save())
+            .more(file_menu()),
+        )
+    });
+    let run = page.find(">Run<").expect("the primary");
+    let anchor = page
+        .find(r#"<span class="fui-anchor">"#)
+        .expect("the popover's anchor");
+    let more = page.find("fui-more").expect("More");
+    assert!(run < anchor && anchor < more, "{page}");
+    assert!(
+        has(&page, "dialog", &[("id", "save"), ("class", "fui-popover")]),
+        "{page}"
+    );
+    let alone = page_html(|| action_group(ActionGroup::none().popover(save())));
+    assert!(
+        alone.contains("fui-action-group"),
+        "a popover alone draws: {alone}"
     );
 }
 

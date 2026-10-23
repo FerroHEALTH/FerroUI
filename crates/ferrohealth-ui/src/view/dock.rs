@@ -86,6 +86,11 @@ pub struct Decision {
     pub shortcut: Option<String>,
     /// Whether it can be taken now.
     pub state: DecisionState,
+    /// Whether it leaves the form without keeping what it holds, such as
+    /// Discard: drawn with `formnovalidate`, so a required field left
+    /// empty never holds the reader on the page (HTML Living Standard,
+    /// form submission, the `formnovalidate` attribute).
+    pub leaves: bool,
 }
 
 impl Default for Decision {
@@ -98,6 +103,7 @@ impl Default for Decision {
             glyph: None,
             shortcut: None,
             state: DecisionState::Ready,
+            leaves: false,
         }
     }
 }
@@ -367,6 +373,7 @@ fn decision_view(decision: Decision, form: &str, why: String) -> impl IntoView {
         glyph,
         shortcut,
         state,
+        leaves,
     } = decision;
     let busy = state == DecisionState::Busy;
     let keys = shortcut.as_deref().and_then(aria_keys);
@@ -389,6 +396,7 @@ fn decision_view(decision: Decision, form: &str, why: String) -> impl IntoView {
             aria-describedby=described
             aria-busy=busy.then_some("true")
             disabled=held
+            formnovalidate=leaves
         >
             {lead}
             {label}

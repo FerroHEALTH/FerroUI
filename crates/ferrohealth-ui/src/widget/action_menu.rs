@@ -30,6 +30,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::i18n::{Arg, Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
+use crate::widget::copy::CopyWords;
 
 /// The `name` every menu's `<details>` shares, so one opens at a time.
 const GROUP: &str = "fui-menu";
@@ -57,6 +58,11 @@ pub enum Act {
     /// Opens the confirmation dialog with this id as a modal
     /// ([`crate::view::dialog`]); its words end in an ellipsis.
     Dialog(String),
+    /// Puts this text on the clipboard, as the copy button does
+    /// ([`crate::widget::copy`]), and says so in a toast. Only script can
+    /// copy, so the item is hidden until the menu's island runs; the text
+    /// stays where the page shows it.
+    Copy(String),
 }
 
 /// One action: its icon, its words and what it does.
@@ -88,7 +94,7 @@ impl Action {
     pub fn words(&self) -> String {
         match self.act {
             Act::Dialog(_) => format!("{}{ELLIPSIS}", self.label),
-            Act::Link(_) | Act::Post { .. } | Act::Submit(_) => self.label.clone(),
+            Act::Link(_) | Act::Post { .. } | Act::Submit(_) | Act::Copy(_) => self.label.clone(),
         }
     }
 }
@@ -339,7 +345,23 @@ fn item(item: Item, danger: bool) -> AnyView {
             </button>
         }
         .into_any(),
+        // NOTE: leptos-ui.md §15.8: a control only script can work is absent before
+        // hydration; the menu's island shows it.
+        Act::Copy(text) => view! {
+            <button type="button" role="menuitem" class=class data-fui-copy=text hidden>
+                {inside}
+            </button>
+        }
+        .into_any(),
     }
+}
+
+/// Whether `menu` holds a copy item, whose island needs the copy words.
+fn copies(menu: &Menu) -> bool {
+    menu.items
+        .iter()
+        .chain(&menu.destructive)
+        .any(|item| matches!(item.action.act, Act::Copy(_)) && item.disabled.is_none())
 }
 
 /// Returns the items of `menu`: its items, then its destructive ones after
@@ -423,8 +445,9 @@ fn placed(menu: Menu, trigger: Trigger, name: String) -> AnyView {
     let id = menu.id.clone();
     let label = menu.label.clone();
     let cancel = tr(Text::Cancel);
+    let copy = copies(&menu).then(CopyWords::of_page);
     view! {
-        <crate::island::MenuButton id label name trigger cancel>
+        <crate::island::MenuButton id label name trigger cancel copy>
             {items(menu)}
         </crate::island::MenuButton>
     }
@@ -488,7 +511,7 @@ pub fn listbox(listbox: Listbox) -> AnyView {
     let cancel = tr(Text::Cancel);
     let name = String::from(name);
     view! {
-        <crate::island::MenuButton id label name trigger=Trigger::Select { value } cancel>
+        <crate::island::MenuButton id label name trigger=Trigger::Select { value } cancel copy=None>
             {options(choices)}
         </crate::island::MenuButton>
     }
@@ -529,9 +552,10 @@ pub fn typed(letter: &str, current: Option<usize>, words: &[String]) -> Option<u
 /// Returns the menu or listbox `id` behind `trigger`, around `entries`.
 ///
 /// `label` names its list and titles the phone's sheet, `name` names its
-/// trigger, `entries` are the items or options the server drew, and the
-/// sheet's Cancel says `cancel`. A console draws it through [`more_menu`],
-/// [`row_menu`], [`variants_menu`] or [`listbox`].
+/// trigger, `entries` are the items or options the server drew, the
+/// sheet's Cancel says `cancel`, and a copy item says what came of it in
+/// `copy`. A console draws it through [`more_menu`], [`row_menu`],
+/// [`variants_menu`] or [`listbox`].
 #[must_use]
 pub fn menu_button(
     id: String,
@@ -539,6 +563,7 @@ pub fn menu_button(
     name: String,
     trigger: Trigger,
     cancel: Word,
+    copy: Option<CopyWords>,
     entries: AnyView,
 ) -> AnyView {
     let details = NodeRef::<leptos::html::Details>::new();
@@ -611,7 +636,7 @@ pub fn menu_button(
             }
             on:keydown=move |event| browser::key(details, list, &event)
             on:focusout=move |event| browser::left(details, &event)
-            on:click=move |event| browser::clicked(details, &event)
+            on:click=move |event| browser::clicked(details, &event, copy.as_ref())
         >
             <summary
                 class=trigger_class
@@ -762,13 +787,17 @@ mod browser {
         }
     }
 
-    /// Takes the walked items out of the browser's tab order, so the arrows
-    /// walk them, and says whether the menu is open.
+    /// Shows the copy items, takes the walked items out of the browser's
+    /// tab order, so the arrows walk them, and says whether the menu is
+    /// open.
     pub(super) fn prepare(details: Details, list: List) -> bool {
         #[cfg(target_arch = "wasm32")]
         {
             if let Some(list) = list.get_untracked() {
                 for item in dom::walked(&list) {
+                    if item.has_attribute("data-fui-copy") {
+                        item.set_hidden(false);
+                    }
                     item.set_tab_index(-1);
                 }
             }
@@ -916,8 +945,13 @@ mod browser {
     }
 
     /// Closes the menu when one of its items is chosen; a disabled item
-    /// takes no press.
-    pub(super) fn clicked(details: Details, event: &leptos::ev::MouseEvent) {
+    /// takes no press, and a copy item copies its text and says so in
+    /// `copy`.
+    pub(super) fn clicked(
+        details: Details,
+        event: &leptos::ev::MouseEvent,
+        copy: Option<&crate::widget::copy::CopyWords>,
+    ) {
         #[cfg(target_arch = "wasm32")]
         {
             let item = event
@@ -936,10 +970,17 @@ mod browser {
                 event.prevent_default();
                 return;
             }
+            if let (Some(text), Some(words)) = (item.get_attribute("data-fui-copy"), copy) {
+                crate::widget::copy::copy_and_say(&text, words);
+            }
             close(details);
         }
         #[cfg(not(target_arch = "wasm32"))]
-        let _: (Details, &leptos::ev::MouseEvent) = (details, event);
+        let _: (
+            Details,
+            &leptos::ev::MouseEvent,
+            Option<&crate::widget::copy::CopyWords>,
+        ) = (details, event, copy);
     }
 }
 

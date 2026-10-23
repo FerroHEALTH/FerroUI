@@ -4,7 +4,8 @@
 //! The user menu (F13), the one place in the top bar that sets the theme.
 //!
 //! A button with the operator's name opens who is signed in over an ARIA
-//! menu of Your preferences, the theme as three choices, Keyboard shortcuts
+//! menu of Your preferences, the console's own links (Your access), the
+//! theme as three choices, Keyboard shortcuts
 //! with its key, and Sign out, last after a separator (family rule 7). The theme is set here and in Your preferences alone (family
 //! rule 5). Below 40 rem the menu opens as a bottom sheet with Cancel.
 //!
@@ -68,6 +69,17 @@ pub struct Choices {
     pub choices: Vec<Choice>,
 }
 
+/// A link of the console's own in the user menu, such as Your access.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UserLink {
+    /// Its words, such as "Your access".
+    pub words: String,
+    /// Where it leads.
+    pub href: String,
+    /// The glyph beside its words.
+    pub glyph: Glyph,
+}
+
 /// What the user menu shows.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UserMenu {
@@ -87,6 +99,9 @@ pub struct UserMenu {
     pub line: String,
     /// The link to Your preferences.
     pub preferences: String,
+    /// The console's own links, in order, between Your preferences and the
+    /// theme, such as Your access.
+    pub links: Vec<UserLink>,
     /// The theme choice.
     pub theme: ThemeChoice,
     /// The groups the menu holds below 40 rem alone, one per control the
@@ -252,6 +267,19 @@ pub fn user_menu(menu: UserMenu) -> AnyView {
         None,
         "fui-menu-item",
     );
+    let links = menu
+        .links
+        .into_iter()
+        .map(|link| {
+            link_item(
+                link.href,
+                link.glyph,
+                link.words.into(),
+                None,
+                "fui-menu-item",
+            )
+        })
+        .collect_view();
     let choices = menu
         .choices
         .into_iter()
@@ -280,6 +308,7 @@ pub fn user_menu(menu: UserMenu) -> AnyView {
             <div class="fui-menu-sep"></div>
             <div id=list_id role="menu" aria-label=label class="fui-menu-items">
                 {preferences}
+                {links}
                 {choices}
                 {theme}
                 {shortcuts}

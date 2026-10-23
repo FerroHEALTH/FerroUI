@@ -165,6 +165,32 @@ fn a_bar_on_the_pages_form_joins_it_and_draws_no_form_of_its_own() {
 }
 
 #[test]
+fn a_decision_that_leaves_skips_the_forms_checks() {
+    let mut decisions = decisions(DecisionState::Ready, DecisionState::Ready);
+    decisions.push(Decision {
+        value: String::from("discard"),
+        label: String::from("Discard"),
+        leaves: true,
+        ..Decision::default()
+    });
+    let html = bar(vec![reason(|_| {})], None, decisions);
+    let buttons = tags(&html, "button");
+    let discard = buttons
+        .iter()
+        .find(|button| button.get("value").map(String::as_str) == Some("discard"))
+        .expect("Discard is drawn");
+    assert!(discard.contains_key("formnovalidate"), "{html}");
+    assert_eq!(
+        1,
+        buttons
+            .iter()
+            .filter(|button| button.contains_key("formnovalidate"))
+            .count(),
+        "a decision that keeps what the form holds is checked: {html}"
+    );
+}
+
+#[test]
 fn a_shortcut_is_a_quiet_cap_and_announced() {
     let html = idle();
     assert!(

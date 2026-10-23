@@ -440,6 +440,20 @@ impl Browser {
         .await
     }
 
+    /// Whether the editor around the text area `area` has hydrated: its
+    /// stack drops `is-static` once its island runs. The text area takes
+    /// keys from the first paint, so its `readonly` tells nothing (#356).
+    pub(crate) async fn editor_live(&self, area: &WebElement) -> Result<bool, Box<dyn Error>> {
+        let live = self
+            .driver
+            .execute(
+                "return !arguments[0].closest('.fui-editor-stack').classList.contains('is-static');",
+                vec![area.to_json()?],
+            )
+            .await?;
+        Ok(live.convert()?)
+    }
+
     /// Waits until the browser is at `url`.
     pub(crate) async fn at(&self, url: &str) -> Result<(), Box<dyn Error>> {
         let arrived = until(&format!("the browser is at {url}"), async || {

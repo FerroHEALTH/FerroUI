@@ -21,7 +21,7 @@ use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::segmented::segmented_links;
 use ferrohealth_ui::view::shell::{Footer, Shell, TopBar, centred, lockup, mark, shell, topbar};
 use ferrohealth_ui::view::status::{Reach, StatusPill, banner, status_pill};
-use ferrohealth_ui::widget::menu::{Choice, Choices, ThemeChoice, UserMenu, user_menu};
+use ferrohealth_ui::widget::menu::{Choice, Choices, ThemeChoice, UserLink, UserMenu, user_menu};
 use ferrohealth_ui::widget::nav::{Count, Entry, Group, Rail, Sidebar, sidebar};
 use ferrohealth_ui::widget::toast::RegionWords;
 use ferrohealth_ui::widget::version::{VersionSelect, version_select};
@@ -798,6 +798,11 @@ fn brand_shell(brand: Brand, back: String, search: Option<&str>, fhir: Option<&s
         who: operator,
         line: tr(Msg::GalleryOperatorLine),
         preferences: format!("/{}/preferences", brand.key()),
+        links: vec![UserLink {
+            words: tr(Msg::Access),
+            href: format!("/{}/overlays/access", brand.key()),
+            glyph: Glyph::KEY_ROUND,
+        }],
         theme: ThemeChoice {
             current: theme,
             action: String::from(PREFERENCE_ROUTE),
@@ -836,6 +841,7 @@ fn brand_shell(brand: Brand, back: String, search: Option<&str>, fhir: Option<&s
                 Glyph::TRIANGLE_ALERT,
                 tr(Msg::Gallery),
                 &tr(Msg::EveryRowTextThesePages),
+                None,
             )
             .into_any(),
         ),

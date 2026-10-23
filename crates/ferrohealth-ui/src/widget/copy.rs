@@ -315,21 +315,55 @@ fn copy(source: &CopySource, state: RwSignal<State>) {
     let (_source, _state): (&CopySource, RwSignal<State>) = (source, state);
 }
 
+/// Writes `value` to the clipboard from a menu's copy item and says what
+/// came of it in a toast, in `words`: the menu closes as it is chosen, so
+/// the toast region's live region speaks for it.
+#[cfg(target_arch = "wasm32")]
+pub(crate) fn copy_and_say(value: &str, words: &CopyWords) {
+    {
+        let said_copied = String::from(words.said_copied.clone());
+        let said_refused = String::from(words.said_refused.clone());
+        let refused = move || {
+            crate::widget::toast::raise(crate::widget::toast::Toast::new(
+                crate::tone::Tone::Bad,
+                said_refused,
+            ));
+        };
+        let Some(clipboard) = clipboard() else {
+            refused();
+            return;
+        };
+        let promise = clipboard.write_text(value);
+        wasm_bindgen_futures::spawn_local(async move {
+            match wasm_bindgen_futures::JsFuture::from(promise).await {
+                Ok(_) => crate::widget::toast::raise(crate::widget::toast::Toast::new(
+                    crate::tone::Tone::Ok,
+                    said_copied,
+                )),
+                Err(_) => refused(),
+            }
+        });
+    }
+}
+
+/// The browser's clipboard, or `None` where it has none.
+#[cfg(target_arch = "wasm32")]
+fn clipboard() -> Option<web_sys::Clipboard> {
+    use leptos::wasm_bindgen::JsCast as _;
+    // NOTE: W3C Clipboard API and events, `Navigator.clipboard` is
+    // [SecureContext]: over plain HTTP it is undefined, which is a refusal too.
+    web_sys::window()
+        .map(|window| window.navigator())
+        .and_then(|navigator| web_sys::js_sys::Reflect::get(&navigator, &"clipboard".into()).ok())
+        .filter(|clipboard| !clipboard.is_undefined() && !clipboard.is_null())
+        .and_then(|clipboard| clipboard.dyn_into::<web_sys::Clipboard>().ok())
+}
+
 /// Writes `value` to the clipboard and sets `state` to what came of it.
 fn write(value: &str, state: RwSignal<State>) {
     #[cfg(target_arch = "wasm32")]
     {
-        use leptos::wasm_bindgen::JsCast as _;
-        // NOTE: W3C Clipboard API and events, `Navigator.clipboard` is
-        // [SecureContext]: over plain HTTP it is undefined, which is a refusal too.
-        let clipboard = web_sys::window()
-            .map(|window| window.navigator())
-            .and_then(|navigator| {
-                web_sys::js_sys::Reflect::get(&navigator, &"clipboard".into()).ok()
-            })
-            .filter(|clipboard| !clipboard.is_undefined() && !clipboard.is_null())
-            .and_then(|clipboard| clipboard.dyn_into::<web_sys::Clipboard>().ok());
-        let Some(clipboard) = clipboard else {
+        let Some(clipboard) = clipboard() else {
             state.set(State::Refused);
             return;
         };

@@ -770,8 +770,6 @@ fn editor() -> AnyView {
 /// [`crate::islands::DraftEditor`].
 pub(crate) fn editor_body(words: Words) -> AnyView {
     let text = RwSignal::new(String::from(crate::data::YAML));
-    let ready = RwSignal::new(false);
-    Effect::new(move |_| ready.set(true));
     let marks = Signal::stored(vec![
         LineMark {
             line: 4,
@@ -784,11 +782,11 @@ pub(crate) fn editor_body(words: Words) -> AnyView {
     ]);
     let field = code_editor(
         Editor {
-            id: DRAFT,
+            id: DRAFT.into(),
             language: Language::Yaml,
             text: text.into(),
             marks,
-            editable: ready.into(),
+            editable: Signal::stored(true),
         },
         move |typed| text.set(typed),
     );
@@ -875,8 +873,6 @@ pub(crate) fn mapping_editor_body(
     diagnostics: &DiagnosticsWords,
 ) -> AnyView {
     let text = RwSignal::new(String::from(DRAFT_TEXT));
-    let ready = RwSignal::new(false);
-    Effect::new(move |_| ready.set(true));
     let caret = RwSignal::new(Position::default());
     let [(note, note_line, note_column), (retries, line, column)] = DRAFT_FINDINGS;
     let marks = Signal::stored(vec![
@@ -890,11 +886,11 @@ pub(crate) fn mapping_editor_body(
         },
     ]);
     let field = Editor {
-        id: MAPPING_DRAFT,
+        id: MAPPING_DRAFT.into(),
         language: Language::Yaml,
         text: text.into(),
         marks,
-        editable: ready.into(),
+        editable: Signal::stored(true),
     };
     let found = |gravity, code: &str, (line, column), message| Finding {
         gravity,
@@ -931,7 +927,7 @@ pub(crate) fn mapping_editor_body(
     };
     let panel = editor_panel(
         Panel {
-            editor: field,
+            editor: field.clone(),
             label: words.fill(Msg::DraftOf, &[("name", DRAFT_PATH)]),
             lead: words.get(Msg::YamlFhirconnectContext),
             facts: vec![words.get(Msg::Utf8Lf)],
@@ -987,16 +983,14 @@ fn new_mapping() -> AnyView {
 /// [`crate::islands::NewMappingEditor`].
 pub(crate) fn new_mapping_body(words: &Words, editor: EditorWords) -> AnyView {
     let text = RwSignal::new(String::new());
-    let ready = RwSignal::new(false);
-    Effect::new(move |_| ready.set(true));
     editor_panel(
         Panel {
             editor: Editor {
-                id: NEW_MAPPING,
+                id: NEW_MAPPING.into(),
                 language: Language::Yaml,
                 text: text.into(),
                 marks: Signal::stored(Vec::new()),
-                editable: ready.into(),
+                editable: Signal::stored(true),
             },
             label: words.get(Msg::NewMappingFile),
             lead: words.get(Msg::YamlFhirconnectContext),
@@ -1192,8 +1186,6 @@ pub(crate) fn reloading_editor_body(words: Words) -> AnyView {
     let reloads = RwSignal::new(0_u32);
     let text = RwSignal::new(String::from("{\n  \"synthetic\": true\n}\n"));
     let marks = Signal::stored(Vec::<LineMark>::new());
-    let ready = RwSignal::new(false);
-    Effect::new(move |_| ready.set(true));
     // A local resource: the browser's timer is not Send, and the screen
     // this stands for reads in the browser after hydration.
     let read = LocalResource::new(move || {
@@ -1210,11 +1202,11 @@ pub(crate) fn reloading_editor_body(words: Words) -> AnyView {
                 <p id="reloaded" class="fui-help">{words.with_value(|words| words.count(Msg::ReadTimesAgain, &[("count", u64::from(count))]))}</p>
                 {code_editor(
                     Editor {
-                        id: "reloading-draft",
+                        id: "reloading-draft".into(),
                         language: Language::Json,
                         text: text.into(),
                         marks,
-                        editable: ready.into(),
+                        editable: Signal::stored(true),
                     },
                     move |typed| text.set(typed),
                 )}

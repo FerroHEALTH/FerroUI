@@ -42,20 +42,45 @@ pub fn status(
     }
 }
 
+/// The link a banner ends with, after its sentence: where the reader
+/// learns more, such as "Details".
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BannerLink {
+    /// Its words.
+    pub words: String,
+    /// Where it leads.
+    pub href: String,
+}
+
 /// Returns a banner across the page in `tone`: `glyph`, the bold `title`
-/// and the sentence `body`, such as the notice that a deployment is a
-/// sandbox that must hold no real patient data.
+/// and the sentence `body`, then `link` when there is one.
+///
+/// A sandbox's banner says it must hold no real patient data, and its
+/// link after a middle dot leads to where the open safeguards are named.
 #[must_use]
-pub fn banner(tone: Tone, glyph: Glyph, title: impl Into<String>, body: &str) -> AnyView {
+pub fn banner(
+    tone: Tone,
+    glyph: Glyph,
+    title: impl Into<String>,
+    body: &str,
+    link: Option<BannerLink>,
+) -> AnyView {
     let title = title.into();
     let words = title.clone();
     let class = format!("fui-banner {}", tone.class());
+    let link = link.map(|link| {
+        view! {
+            " · "
+            <a href=link.href>{link.words}</a>
+        }
+    });
     view! {
         <div role="note" aria-label=title class=class>
             {icon(glyph, "16")}
             <p>
                 <strong>{words} ": "</strong>
                 {body.to_owned()}
+                {link}
             </p>
         </div>
     }

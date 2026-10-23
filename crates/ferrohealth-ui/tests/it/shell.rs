@@ -13,14 +13,40 @@ use ferrohealth_ui::view::shell::{TopBar, lockup, lockup_plain, mark, topbar};
 use ferrohealth_ui::view::sign_in::{
     Basic, NOTICE_ID, Notice, Provider, Retry, SignIn, State, sign_in,
 };
-use ferrohealth_ui::view::status::{Reach, StatusPill, badge, banner, pill, status, status_pill};
+use ferrohealth_ui::view::status::{
+    BannerLink, Reach, StatusPill, badge, banner, pill, status, status_pill,
+};
 use ferrohealth_ui::view::tabs::{Tab, binder};
-use ferrohealth_ui::widget::menu::{Choice, Choices, ThemeChoice, UserMenu, user_menu};
+use ferrohealth_ui::widget::menu::{Choice, Choices, ThemeChoice, UserLink, UserMenu, user_menu};
 use ferrohealth_ui::widget::nav::{Count, Entry, Group, Nest, NestItem, Rail, Sidebar, sidebar};
 use leptos::prelude::*;
 
 use crate::markup::{has, tags};
 use crate::render::{html, page_html};
+
+#[test]
+fn a_banner_ends_with_its_link_after_the_sentence() {
+    let shown = html(|| {
+        banner(
+            Tone::Warn,
+            Glyph::TRIANGLE_ALERT,
+            "Sandbox",
+            "3 production safeguards are off",
+            Some(BannerLink {
+                words: String::from("Details"),
+                href: String::from("/server/sandbox"),
+            }),
+        )
+    });
+    assert!(
+        shown.replace("<!>", "").contains(
+            r#"3 production safeguards are off · <a href="/server/sandbox">Details</a></p>"#
+        ),
+        "{shown}"
+    );
+    let plain = html(|| banner(Tone::Warn, Glyph::TRIANGLE_ALERT, "Sandbox", "Off.", None));
+    assert!(!plain.contains("<a"), "{plain}");
+}
 
 #[test]
 fn a_status_is_a_word_as_well_as_a_tint() {
@@ -29,7 +55,7 @@ fn a_status_is_a_word_as_well_as_a_tint() {
             {pill(Tone::Ok, "Bridge UP")}
             {badge(Tone::Bad, "down")}
             {status(Tone::Info, Glyph::INFO, "Serving", Some(String::from("R4")))}
-            {banner(Tone::Warn, Glyph::TRIANGLE_ALERT, "Sandbox", "Holds no real patient data.")}
+            {banner(Tone::Warn, Glyph::TRIANGLE_ALERT, "Sandbox", "Holds no real patient data.", None)}
         }
         .into_any()
     });
@@ -456,6 +482,11 @@ fn menu_html(name: Option<&str>, sign_out: bool) -> String {
             who: name.unwrap_or("No sign-in").to_owned(),
             line: String::from("Bridge operator · FerroHEALTH ID"),
             preferences: String::from("/preferences"),
+            links: vec![UserLink {
+                words: String::from("Your access"),
+                href: String::from("/access"),
+                glyph: Glyph::KEY_ROUND,
+            }],
             theme: ThemeChoice {
                 current: Theme::Dark,
                 action: String::from("/theme"),
@@ -658,6 +689,30 @@ fn the_narrow_choices_are_links_and_sign_out_comes_last_after_a_separator() {
         menu.find("Keyboard shortcuts") < Some(sign_out),
         "nothing follows Sign out: {menu}"
     );
+}
+
+#[test]
+fn a_consoles_own_link_sits_between_your_preferences_and_the_theme() {
+    let menu = menu_html(Some("Demo Operator"), true);
+    assert!(
+        has(
+            &menu,
+            "a",
+            &[
+                ("role", "menuitem"),
+                ("href", "/access"),
+                ("class", "fui-menu-item")
+            ]
+        ),
+        "{menu}"
+    );
+    let preferences = menu
+        .find(r#"href="/preferences""#)
+        .expect("Your preferences");
+    let access = menu.find(r#"href="/access""#).expect("Your access");
+    let theme = menu.find(r#"action="/theme""#).expect("the theme");
+    assert!(preferences < access && access < theme, "{menu}");
+    assert!(menu.contains(Glyph::KEY_ROUND.markup()), "{menu}");
 }
 
 #[test]

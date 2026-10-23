@@ -121,8 +121,8 @@ async fn the_editor_keeps_a_key_typed_while_its_store_answers_an_earlier_one()
             .goto(&gallery.url("/ferrobridge/operations"))
             .await?;
         let input = browser.element(By::Id("pair-running-input")).await?;
-        until("the editor may be edited", async || {
-            Ok(input.attr("readonly").await?.is_none())
+        until("the editor hydrates", async || {
+            browser.editor_live(&input).await
         })
         .await?;
         let start = input.prop("value").await?.unwrap_or_default();

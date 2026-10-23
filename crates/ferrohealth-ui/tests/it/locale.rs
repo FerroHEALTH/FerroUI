@@ -263,7 +263,7 @@ fn editor_of(lines: usize) -> AnyView {
     editor_panel(
         Panel {
             editor: Editor {
-                id: "draft",
+                id: "draft".into(),
                 language: ferrohealth_ui::highlight::Language::Yaml,
                 text: Signal::stored("a\n".repeat(lines)),
                 marks: Signal::stored(Vec::new()),

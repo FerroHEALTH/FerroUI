@@ -268,8 +268,8 @@ async fn the_editor_keeps_every_byte_typed_and_a_diagnostic_leads_to_its_line()
     with_browser(async |browser| {
         browser.goto(&gallery.url("/ferroterm/forms")).await?;
         let draft = browser.element(By::Id("gallery-draft")).await?;
-        until("the editor may be edited", async || {
-            Ok(draft.attr("readonly").await?.is_none())
+        until("the editor hydrates", async || {
+            browser.editor_live(&draft).await
         })
         .await?;
         draft.clear().await?;
@@ -340,8 +340,8 @@ async fn the_editor_redraws_only_the_lines_an_edit_changes() -> Result<(), Box<d
     with_browser(async |browser| {
         browser.goto(&gallery.url("/ferroterm/forms")).await?;
         let draft = browser.element(By::Id("gallery-draft")).await?;
-        until("the editor may be edited", async || {
-            Ok(draft.attr("readonly").await?.is_none())
+        until("the editor hydrates", async || {
+            browser.editor_live(&draft).await
         })
         .await?;
         // Each line element carries its number as a mark the page never
@@ -432,8 +432,8 @@ async fn the_code_editor_keeps_its_cursor_its_marks_and_its_diagnostics_in_step(
     with_browser(async |browser| {
         browser.goto(&gallery.url("/ferrobridge/forms")).await?;
         let draft = browser.element(By::Id("gallery-mapping")).await?;
-        until("the code editor may be edited", async || {
-            Ok(draft.attr("readonly").await?.is_none())
+        until("the code editor hydrates", async || {
+            browser.editor_live(&draft).await
         })
         .await?;
         browser.text("span", "Changed since opened").await?;
@@ -690,6 +690,16 @@ async fn the_keyboard_walks_the_user_menu_and_the_focus_returns_to_its_button()
         .await?;
         let active = browser.driver().active_element().await?;
         active.send_keys(Key::Down).await?;
+        until("Down moves to the console's own link", async || {
+            Ok(focused_text(browser).await? == "Access")
+        })
+        .await?;
+        browser
+            .driver()
+            .active_element()
+            .await?
+            .send_keys(Key::Down)
+            .await?;
         until("Down moves to the theme", async || {
             Ok(focused_text(browser).await? == "Light")
         })
@@ -1017,7 +1027,7 @@ async fn the_side_panel_takes_the_focus_to_its_close_button_and_gives_it_back()
         })
         .await?;
         let link = browser
-            .element(By::Css("a[href='/ferrofed/overlays/access']"))
+            .element(By::Css("main a[href='/ferrofed/overlays/access']"))
             .await?;
         assert!(
             !link.is_displayed().await?,
@@ -1786,8 +1796,8 @@ async fn an_editor_inside_a_reloading_transition_keeps_taking_keys() -> Result<(
     with_browser(async |browser| {
         browser.goto(&gallery.url("/ferroterm/forms")).await?;
         let draft = browser.element(By::Id("reloading-draft")).await?;
-        until("the editor may be edited", async || {
-            Ok(draft.attr("readonly").await?.is_none())
+        until("the editor hydrates", async || {
+            browser.editor_live(&draft).await
         })
         .await?;
         draft.send_keys("x").await?;

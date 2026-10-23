@@ -29,8 +29,8 @@ ICONS=(
   chevrons-left chevrons-right circle-alert circle-check circle-user
   circle-x clipboard-copy clock code compass copy corner-down-right database download ellipsis equal-not eye eye-off
   file-clock file-code file-plus file-text files flame flask-conical folder
-  folder-open folder-plus folder-search folder-x funnel gauge git-branch heart-pulse
-  inbox info keyboard layers layout-dashboard link list-checks list-filter list-tree lock log-in
+  folder-open folder-plus folder-search folder-x funnel gauge git-branch git-commit-horizontal heart-pulse
+  inbox info key-round keyboard layers layout-dashboard link list-checks list-filter list-tree lock log-in
   log-out menu message-square minus monitor moon network panel-left-close panel-left-open
   panel-right pencil play plug plus
   radio-tower refresh-cw rotate-ccw rotate-ccw-clock route save search search-code search-x

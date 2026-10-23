@@ -145,6 +145,7 @@ pub fn version_select(select: VersionSelect) -> AnyView {
                 value: shown.name,
             }
             cancel
+            copy=None
         >
             {items}
         </crate::island::MenuButton>

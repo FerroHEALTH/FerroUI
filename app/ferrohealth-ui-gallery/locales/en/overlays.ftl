@@ -5,11 +5,13 @@
 # `src/locale/overlays.rs`, in the order of their ids.
 
 a-primary-alone = A primary alone
+a-primary-popover = A primary beside a popover form
 a-split-primary = A split primary and its variants
 access = Access
 action-groups = Action groups
 confirmation-dialogs = Confirmation dialogs
 content-no-navigation-from-end = Content that is no navigation, from the end of the page.
+copy-the-set-name = Copy the set's name
 delete-file = Delete the file
 delete-row = Delete { $row }?
 delete-the-file = Delete the file?

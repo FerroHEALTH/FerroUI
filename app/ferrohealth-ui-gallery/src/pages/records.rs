@@ -21,7 +21,7 @@ use ferrohealth_ui::view::compare::{
     Compare, CompareField, CompareRecord, Verdict, compare, compare_stacked,
 };
 use ferrohealth_ui::view::kbd::{Shortcut, shortcut_hint};
-use ferrohealth_ui::view::status::{badge, banner};
+use ferrohealth_ui::view::status::{BannerLink, badge, banner};
 use ferrohealth_ui::view::surface::{card, titled_panel};
 use ferrohealth_ui::view::template::list::{HeadingCount, ListCard, list_card};
 use ferrohealth_ui::view::timeline::{Event, timeline};
@@ -482,6 +482,10 @@ pub fn identifiers_section() -> AnyView {
             Glyph::EYE,
             tr_with(Msg::RecordsRevealTitle, &[("name", each.domain.into())]),
             &tr(Msg::RecordsRevealPage),
+            Some(BannerLink {
+                words: tr(Msg::RecordsRevealStay),
+                href: String::from("?"),
+            }),
         )
     });
     let rows = identifier_rows();

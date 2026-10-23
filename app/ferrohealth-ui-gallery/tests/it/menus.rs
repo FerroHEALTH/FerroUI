@@ -183,6 +183,57 @@ async fn more_walks_by_the_keyboard_reaches_a_disabled_item_and_returns_the_focu
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn a_copy_item_copies_its_text_and_says_so_in_a_toast() -> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser
+            .driver()
+            .cdp()
+            .send_raw(
+                "Browser.grantPermissions",
+                serde_json::json!({ "permissions": ["clipboardReadWrite", "clipboardSanitizedWrite"] }),
+            )
+            .await?;
+        browser.goto(&gallery.url("/ferrobridge/overlays")).await?;
+        let more = hydrated_trigger(browser, "alone-more").await?;
+        more.scroll_into_view().await?;
+        more.click().await?;
+        let copy = browser
+            .element(By::XPath(
+                "//button[@role = 'menuitem' and contains(., \"Copy the set's name\")]",
+            ))
+            .await?;
+        until("the copy item shows once the menu hydrates", async || {
+            Ok(copy.is_displayed().await?)
+        })
+        .await?;
+        copy.click().await?;
+        browser.text("strong", "Copied to the clipboard.").await?;
+        assert!(
+            !is_open(browser, "alone-more").await?,
+            "choosing the copy item closes the menu"
+        );
+        let held = browser
+            .driver()
+            .execute_async(
+                "navigator.clipboard.readText().then(arguments[0], () => arguments[0](null));",
+                Vec::new(),
+            )
+            .await?;
+        assert_eq!(
+            Some(ferrohealth_ui_gallery::data::SET_NAME),
+            held.json().as_str(),
+            "the clipboard holds the set's name"
+        );
+        browser.console_clean("the copy item").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn more_is_a_bottom_sheet_with_its_cancel_on_a_phone() -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
         return Ok(());

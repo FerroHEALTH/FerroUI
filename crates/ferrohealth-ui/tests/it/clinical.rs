@@ -11,9 +11,9 @@ use ferrohealth_ui::view::conditions::{
     REMOVE_GROUP, condition_groups,
 };
 use ferrohealth_ui::view::reading::{Element, INDENTED, Level, Reading, Section, Value, reading};
-use ferrohealth_ui::view::results::{ResultsPane, SHOWN, Shown, Switch, results_pane};
+use ferrohealth_ui::view::results::{Export, ResultsPane, SHOWN, Shown, Switch, results_pane};
 use ferrohealth_ui::view::scope::{
-    Compartment, Grant, Operation, Request, Scope, ScopeError, ScopeGrant, scope_grants,
+    Compartment, Grant, Operation, Operations, Request, Scope, ScopeError, ScopeGrant, scope_grants,
 };
 use ferrohealth_ui::view::subject::{Subject, SubjectLine, subject_line};
 use ferrohealth_ui::view::versions::{
@@ -651,8 +651,8 @@ fn pane(shown: Shown, switch: Switch) -> String {
             numeric: true,
             shown,
             switch,
-            csv: String::from("/answer.csv"),
-            json: String::from("/answer.json"),
+            csv: Export::Link(String::from("/answer.csv")),
+            json: Export::Link(String::from("/answer.json")),
             window: String::from("Rows 1 to 6 of 6, inside the query's own LIMIT 50."),
             body: view! { <div class="fui-table-scroll">"table"</div> }.into_any(),
         })
@@ -731,6 +731,85 @@ fn a_session_switch_posts_and_a_chart_keeps_its_inset() {
     );
 }
 
+#[test]
+fn a_pane_rides_the_consoles_form_with_no_form_of_its_own() {
+    let shown = html(|| {
+        results_pane(ResultsPane {
+            title: String::from("Results"),
+            count: 6,
+            numeric: true,
+            shown: Shown::Chart,
+            switch: Switch::Form {
+                form: Some(String::from("query")),
+            },
+            csv: Export::Submit {
+                action: String::from("/query/answer.csv"),
+                form: Some(String::from("query")),
+            },
+            json: Export::Submit {
+                action: String::from("/query/answer.json"),
+                form: Some(String::from("query")),
+            },
+            window: String::from("Rows 1 to 6 of 6."),
+            body: view! { <div class="fui-table-scroll">"chart"</div> }.into_any(),
+        })
+    });
+    assert!(
+        tags(&shown, "form").is_empty(),
+        "a form inside the console's form is dropped by the parser: {shown}"
+    );
+    assert!(
+        has(
+            &shown,
+            "button",
+            &[
+                ("type", "submit"),
+                ("form", "query"),
+                ("name", SHOWN),
+                ("value", "chart"),
+                ("aria-pressed", "true")
+            ]
+        ),
+        "{shown}"
+    );
+    assert!(
+        has(
+            &shown,
+            "button",
+            &[
+                ("form", "query"),
+                ("value", "table"),
+                ("aria-pressed", "false")
+            ]
+        ),
+        "{shown}"
+    );
+    assert!(
+        has(
+            &shown,
+            "button",
+            &[
+                ("type", "submit"),
+                ("form", "query"),
+                ("formaction", "/query/answer.csv")
+            ]
+        ) && shown.contains("Export CSV"),
+        "{shown}"
+    );
+    assert!(
+        has(&shown, "button", &[("formaction", "/query/answer.json")]),
+        "{shown}"
+    );
+    assert!(
+        has(
+            &shown,
+            "div",
+            &[("role", "group"), ("aria-label", "Show the results as")]
+        ),
+        "{shown}"
+    );
+}
+
 /// A table pane over `count` rows, with or without a numeric column.
 fn answered(count: u64, numeric: bool) -> String {
     html(move || {
@@ -743,8 +822,8 @@ fn answered(count: u64, numeric: bool) -> String {
                 table: String::from("?shown=table"),
                 chart: String::from("?shown=chart"),
             },
-            csv: String::from("/answer.csv"),
-            json: String::from("/answer.json"),
+            csv: Export::Link(String::from("/answer.csv")),
+            json: Export::Link(String::from("/answer.json")),
             window: String::from("No rows."),
             body: view! { <div class="fui-table-scroll">"table"</div> }.into_any(),
         })
@@ -840,6 +919,37 @@ fn a_scope_parses_by_the_smart_grammar() {
     ] {
         assert_eq!(Err(error), Scope::parse(raw), "{raw}");
     }
+}
+
+#[test]
+fn a_scope_a_console_parsed_itself_draws_as_the_parsed_one() {
+    let built = Scope {
+        compartment: Compartment::Patient,
+        resource: String::from("composition-*"),
+        operations: Operations::of(&[Operation::Read, Operation::Search]),
+        constraint: None,
+    };
+    assert_eq!(Scope::parse("patient/composition-*.rs").unwrap(), built);
+    let draw = |scope: Scope| {
+        html(move || {
+            scope_grants(
+                "Scopes",
+                vec![ScopeGrant {
+                    raw: String::from("patient/composition-*.rs"),
+                    grant: Grant::Granted {
+                        scope,
+                        resource: String::from("Compositions of any template"),
+                        broad: false,
+                    },
+                }],
+            )
+        })
+    };
+    let parsed = Scope::parse("patient/composition-*.rs").unwrap();
+    assert_eq!(draw(parsed), draw(built));
+    let every: Operations = Operation::ALL.into_iter().collect();
+    assert!(Operation::ALL.into_iter().all(|each| every.permits(each)));
+    assert_eq!(Operations::default(), Operations::of(&[]));
 }
 
 #[test]

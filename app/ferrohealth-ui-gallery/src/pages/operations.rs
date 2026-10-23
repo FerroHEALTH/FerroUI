@@ -86,15 +86,13 @@ pub(crate) fn pair_input(key: &str, label: String) -> AnyView {
     };
     let text = RwSignal::new(text);
     let answers = StoredValue::new(VecDeque::new());
-    let ready = RwSignal::new(false);
-    Effect::new(move |_| ready.set(true));
     let editor = code_editor(
         Editor {
-            id,
+            id: id.into(),
             language: Language::Json,
             text: text.into(),
             marks: Signal::stored(Vec::new()),
-            editable: ready.into(),
+            editable: Signal::stored(true),
         },
         move |typed| store(answers, typed, text),
     );

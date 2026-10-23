@@ -11,10 +11,17 @@
 //! element is `<time>` with the value exactly as the server sent it in its
 //! `title`, and anything that is no date-time is drawn verbatim. No line
 //! ever breaks inside the value (`fui-time`).
+//!
+//! A list says when something happened relative to now, with the full
+//! timestamp as its title (family rule 11): [`relative`] reads `13 s ago`,
+//! `30 min ago`, `2 h ago` the same day, `yesterday`, then days, weeks,
+//! months and years, against the now the console hands it, so the server
+//! and the hydrated page draw the same words. The rounding is our own
+//! design, the one every console mockup draws.
 
 use leptos::prelude::*;
 
-use crate::i18n::{Phrase, Text, Word, tr_with};
+use crate::i18n::{Phrase, Text, Word, tr, tr_with};
 
 /// A date, `YYYY-MM-DD`, its parts checked against the calendar.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -280,6 +287,17 @@ impl Parsed {
         }
     }
 
+    /// The date and the second of the day it names, an instant in UTC and
+    /// a date at its start.
+    fn day_and_second(&self) -> (Date, u32) {
+        match self {
+            Self::Date(date) => (*date, 0),
+            Self::Local(date, clock) | Self::Instant(date, clock) => {
+                (*date, clock.minute * 60 + clock.second.unwrap_or(0))
+            }
+        }
+    }
+
     /// The machine form for the `datetime` attribute: a valid date string,
     /// local date and time string, or global date and time string in UTC.
     fn machine(&self) -> String {
@@ -288,6 +306,92 @@ impl Parsed {
             Self::Local(date, clock) => format!("{}T{}", day(*date), time(clock, true)),
             Self::Instant(date, clock) => format!("{}T{}Z", day(*date), time(clock, true)),
         }
+    }
+}
+
+/// The days from 0000-03-01 to `date` in the proleptic Gregorian calendar.
+// NOTE: H. Hinnant, "chrono-Compatible Low-Level Date Algorithms", days_from_civil:
+// a year that starts in March puts the leap day last, so each era is 146097 days.
+fn day_number(date: Date) -> i64 {
+    let (year, month) = if date.month > 2 {
+        (i64::from(date.year), i64::from(date.month) - 3)
+    } else {
+        (i64::from(date.year) - 1, i64::from(date.month) + 9)
+    };
+    let era = year.div_euclid(400);
+    let of_era = year.rem_euclid(400);
+    let of_year = (153 * month + 2).div_euclid(5) + i64::from(date.day) - 1;
+    let of_era_days = of_era * 365 + of_era.div_euclid(4) - of_era.div_euclid(100) + of_year;
+    era * 146_097 + of_era_days
+}
+
+/// What `then` reads as seen at `now`: the words of [`relative`], or
+/// `None` for a moment after `now`.
+fn ago(then: &Parsed, now: &Parsed) -> Option<Word> {
+    let (then_day, then_second) = then.day_and_second();
+    let (now_day, now_second) = now.day_and_second();
+    let days = day_number(now_day) - day_number(then_day);
+    let seconds = days * 86_400 + i64::from(now_second) - i64::from(then_second);
+    // NOTE: a moment after now is none of these words; a count of zero or more
+    // seconds holds a count of zero or more days.
+    let (Ok(days), Ok(seconds)) = (u64::try_from(days), u64::try_from(seconds)) else {
+        return None;
+    };
+    let count = |text: Text, value: u64| tr_with(text, &[("count", value.into())]);
+    Some(match (days, seconds) {
+        (_, 0..60) => count(Text::TimeAgoSeconds, seconds),
+        (_, 60..3600) => count(Text::TimeAgoMinutes, seconds.div_euclid(60)),
+        (0, _) => count(Text::TimeAgoHours, seconds.div_euclid(3600)),
+        (1, _) => tr(Text::TimeYesterday),
+        (2..14, _) => count(Text::TimeAgoDays, days),
+        (14..60, _) => count(Text::TimeAgoWeeks, days.div_euclid(7)),
+        (60..365, _) => count(Text::TimeAgoMonths, days.div_euclid(30)),
+        _ => count(Text::TimeAgoYears, days.div_euclid(365)),
+    })
+}
+
+/// The relative form of `raw` seen at `now`, such as `30 min ago`; the
+/// [`reading`] form for a moment after `now`, and `raw` verbatim when
+/// either is no date-time.
+///
+/// # Examples
+///
+/// ```
+/// use ferrohealth_ui::view::time::relative_reading;
+///
+/// let now = "2026-10-21T09:42:11Z";
+/// assert_eq!("13 s ago", relative_reading("2026-10-21T09:41:58Z", now));
+/// assert_eq!("yesterday", relative_reading("2026-10-20T23:30:00Z", now));
+/// ```
+#[must_use]
+pub fn relative_reading(raw: &str, now: &str) -> String {
+    let Some(then) = Parsed::parse(raw) else {
+        return raw.to_owned();
+    };
+    Parsed::parse(now)
+        .and_then(|now| ago(&then, &now))
+        .map_or_else(|| reading(raw), String::from)
+}
+
+/// Returns `raw` relative to `now` on one line, never broken (family rule
+/// 11).
+///
+/// A date-time is a `<time>` element whose text is the
+/// [`relative_reading`] form, whose `datetime` is its machine form, and
+/// whose `title` is the full [`reading`] form; anything else is `raw`
+/// verbatim. `now` is the console's clock as it draws the page, an
+/// instant such as `2026-10-21T09:42:11Z`; an instant is compared in
+/// UTC, and a date-time with no offset as it stands.
+#[must_use]
+pub fn relative(raw: &str, now: &str) -> impl IntoView + use<> {
+    match Parsed::parse(raw) {
+        Some(parsed) => view! {
+            <time class="fui-time" datetime=parsed.machine() title=reading(raw)>
+                {relative_reading(raw, now)}
+            </time>
+        }
+        .into_any(),
+        None => view! { <span class="fui-time">{raw.to_owned()}</span> }.into_any(),
     }
 }
 
@@ -400,7 +504,55 @@ pub fn timestamp_in(raw: &str, words: &TimeWords) -> impl IntoView + use<> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Parsed, reading};
+    use super::{Parsed, reading, relative_reading};
+
+    /// The console's clock in the tests: the mockups' now.
+    const NOW: &str = "2026-10-21T09:42:11Z";
+
+    #[test]
+    fn a_time_reads_relative_to_now_as_every_mockup_rounds_it() {
+        for (raw, words) in [
+            ("2026-10-21T09:42:11Z", "0 s ago"),
+            ("2026-10-21T09:41:58Z", "13 s ago"),
+            ("2026-10-21T09:12:11Z", "30 min ago"),
+            ("2026-10-21T11:12:11+02:00", "30 min ago"),
+            ("2026-10-21T01:00:00Z", "8 h ago"),
+            ("2026-10-20T23:30:00Z", "yesterday"),
+            ("2026-10-20", "yesterday"),
+            ("2026-10-16T09:00:00Z", "5 days ago"),
+            ("2026-10-07T12:00:00Z", "2 weeks ago"),
+            ("2026-08-01T12:00:00Z", "2 months ago"),
+            ("2025-10-21T09:42:11Z", "1 year ago"),
+            ("2023-03-01T00:00:00Z", "3 years ago"),
+            ("2026-10-21T09:42", "11 s ago"),
+        ] {
+            assert_eq!(relative_reading(raw, NOW), words, "{raw}");
+        }
+    }
+
+    #[test]
+    fn a_moment_after_now_or_no_date_time_is_not_relative() {
+        assert_eq!(
+            relative_reading("2026-10-21T10:00:00Z", NOW),
+            "2026-10-21 10:00:00 UTC"
+        );
+        assert_eq!(relative_reading("soon", NOW), "soon");
+        assert_eq!(
+            relative_reading("2026-10-21T09:00:00Z", "later"),
+            "2026-10-21 09:00:00 UTC"
+        );
+    }
+
+    #[test]
+    fn the_day_number_counts_leap_days() {
+        let day = |year, month, day| {
+            super::day_number(super::Date::new(year, month, day).expect("a calendar date"))
+        };
+        assert_eq!(1, day(2024, 3, 1) - day(2024, 2, 29));
+        assert_eq!(366, day(2025, 1, 1) - day(2024, 1, 1));
+        assert_eq!(365, day(2101, 1, 1) - day(2100, 1, 1));
+        assert_eq!(146_097, day(2400, 1, 1) - day(2000, 1, 1));
+    }
 
     /// The machine form of `raw`, when it is a date-time.
     fn machine(raw: &str) -> Option<String> {
