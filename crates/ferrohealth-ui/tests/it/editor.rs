@@ -9,13 +9,14 @@
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::view::code::Gravity;
 use ferrohealth_ui::view::diagnostics::{
-    DiagnosticsWords, FileFindings, Finding, Position, diagnostics, diagnostics_by_file,
+    DiagnosticsWords, FileFindings, Finding, Position, WINDOW, diagnostics, diagnostics_by_file,
 };
 use ferrohealth_ui::widget::editor::{
-    Editor, EditorWords, LineMark, MarkKind, Opened, Panel, editor_diagnostics, editor_panel,
-    editor_split,
+    Editor, EditorWords, LineMark, MarkKind, Opened, Panel, code_editor, editor_diagnostics,
+    editor_panel, editor_split,
 };
 use leptos::prelude::*;
+use std::time::{Duration, Instant};
 
 use crate::markup::{has, tags};
 use crate::render::html;
@@ -39,6 +40,7 @@ fn file(name: &str, lines: &str, current: Option<u32>, findings: Vec<Finding>) -
         lines: lines.to_owned(),
         current,
         findings,
+        all: None,
     }
 }
 
@@ -371,4 +373,127 @@ fn on_a_marked_line_the_line_and_its_row_are_current_and_the_status_says_so() {
         "the row of the line the cursor is on is current: {beside}"
     );
     assert!(has(&beside, "a", &[("href", "#draft-L3")]), "{beside}");
+}
+
+#[test]
+fn a_list_with_no_finding_says_so_in_one_line() {
+    let clean = file("a.yml", "#L", None, Vec::new());
+    for (what, shown) in [
+        (
+            "one clean file",
+            html(|| diagnostics("Diagnostics", &clean)),
+        ),
+        (
+            "a clean file among others",
+            html(|| diagnostics_by_file("Diagnostics", std::slice::from_ref(&clean))),
+        ),
+        ("no file", html(|| diagnostics_by_file("Diagnostics", &[]))),
+    ] {
+        assert!(
+            has(&shown, "li", &[("class", "fui-diags-empty")])
+                && shown.contains("No errors or warnings."),
+            "{what} says it holds no finding: {shown}"
+        );
+        assert!(!shown.contains("fui-diag "), "{what}: {shown}");
+    }
+}
+
+/// The findings of a file of `count` warnings, linked to all of them at
+/// `all`.
+fn many(count: u32, all: Option<&str>) -> FileFindings {
+    let mut many = file(
+        "a.yml",
+        "#L",
+        None,
+        (1..=count)
+            .map(|line| finding(Gravity::Warning, "W", Some((line, 1))))
+            .collect(),
+    );
+    many.all = all.map(str::to_owned);
+    many
+}
+
+/// The number of finding rows in `html`.
+fn rows(html: &str) -> usize {
+    html.matches("<li class=\"fui-diag ").count()
+}
+
+#[test]
+fn a_file_past_the_window_draws_its_first_rows_and_a_link_to_them_all() {
+    let windowed = html(|| diagnostics("Diagnostics", &many(2_000, Some("?findings=all"))));
+    assert_eq!(WINDOW, rows(&windowed), "the window holds the first rows");
+    assert!(
+        has(&windowed, "li", &[("class", "fui-diags-more")])
+            && windowed.contains(&format!("{WINDOW} of 2000 findings shown."))
+            && has(&windowed, "a", &[("href", "?findings=all")])
+            && windowed.contains("Show all 2000"),
+        "one quiet row says how many more there are and links to them: {windowed}"
+    );
+    let whole = html(|| diagnostics("Diagnostics", &many(2_000, None)));
+    assert_eq!(
+        2_000,
+        rows(&whole),
+        "the page the link opens draws them all"
+    );
+    assert!(!whole.contains("fui-diags-more"));
+    let full = html(|| {
+        diagnostics(
+            "Diagnostics",
+            &many(u32::try_from(WINDOW).unwrap(), Some("?findings=all")),
+        )
+    });
+    assert_eq!(WINDOW, rows(&full));
+    assert!(
+        !full.contains("fui-diags-more"),
+        "a window that holds every row offers no more"
+    );
+}
+
+/// The quickest of three draws of a code editor of `lines` lines with a
+/// mark on every line.
+fn layer_time(lines: u32) -> Duration {
+    let text: String = (1..=lines)
+        .map(|line| format!("key_{line}: value {line}\n"))
+        .collect::<Vec<_>>()
+        .concat();
+    let marks: Vec<LineMark> = (1..=lines)
+        .map(|line| LineMark {
+            line,
+            kind: MarkKind::Warning,
+        })
+        .collect();
+    (0..3)
+        .map(|_| {
+            let (text, marks) = (text.clone(), marks.clone());
+            let start = Instant::now();
+            let drawn = html(move || {
+                code_editor(
+                    Editor {
+                        id: "draft",
+                        language: Language::Yaml,
+                        text: Signal::stored(text),
+                        marks: Signal::stored(marks),
+                        editable: Signal::stored(true),
+                    },
+                    |_| {},
+                )
+            });
+            let took = start.elapsed();
+            assert!(drawn.contains("fui-mark-warning"), "the marks are drawn");
+            took
+        })
+        .min()
+        .unwrap_or_default()
+}
+
+#[test]
+fn an_editor_with_a_mark_on_every_line_draws_its_layer_in_linear_time() {
+    // Sixteen times the lines and marks: linear work takes about sixteen
+    // times as long, and a scan of every mark for every line 256.
+    let small = layer_time(1_000);
+    let large = layer_time(16_000);
+    assert!(
+        large < small * 64,
+        "16000 lines took {large:?} against {small:?} for 1000"
+    );
 }

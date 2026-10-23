@@ -18,6 +18,7 @@
 
 mod chrome;
 mod clinical;
+mod code;
 mod config;
 mod console;
 mod contrast;

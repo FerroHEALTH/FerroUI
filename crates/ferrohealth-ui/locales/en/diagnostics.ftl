@@ -13,6 +13,9 @@ diagnostics-errors =
 diagnostics-errors-warnings = { $errors }, { $warnings }
 diagnostics-line = line { $line }, column { $column }
 diagnostics-mapping = Mapping { $mapping }
+diagnostics-more = { $shown } of { $total } findings shown.
+diagnostics-more-all = Show all { $total }
+diagnostics-none = No errors or warnings.
 diagnostics-warning = Warning
 diagnostics-warnings =
     { $count ->

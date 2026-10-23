@@ -17,6 +17,12 @@ texts! {
     DiagnosticsLine = "diagnostics-line",
     /// The `$mapping` a finding belongs to.
     DiagnosticsMapping = "diagnostics-mapping",
+    /// The more row under a window: `$shown` of `$total` findings shown.
+    DiagnosticsMore = "diagnostics-more",
+    /// The more row's link to every finding, `$total` of them.
+    DiagnosticsMoreAll = "diagnostics-more-all",
+    /// What a list with no finding says.
+    DiagnosticsNone = "diagnostics-none",
     /// The word of a warning.
     DiagnosticsWarning = "diagnostics-warning",
     /// A file's count of warnings, by `$count`.

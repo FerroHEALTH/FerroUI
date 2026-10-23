@@ -12,6 +12,11 @@
 //! hidden and it shows once the page has hydrated, so with no WebAssembly
 //! the text it copies stays on the page as selectable text and no button
 //! offers what only script can do (`leptos-ui.md` §15.8).
+//!
+//! What it copies is a [`CopySource`]: a short text carried as the island's
+//! prop, or the text of an element the page already draws, which keeps a
+//! large document out of the island's data so the page carries it once
+//! less.
 
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -50,6 +55,57 @@ impl CopyWords {
     }
 }
 
+/// What a copy button puts on the clipboard.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CopySource {
+    /// This text, carried as the island's prop: for a short text such as
+    /// a request line.
+    Text(String),
+    /// The text of the element with this id, as the page draws it: for a
+    /// document the page shows whole, such as a raw view's `<pre>`.
+    Element(String),
+    /// The code lines (`fui-code-line`) inside the element with this id,
+    /// one per line, with a final line break when `final_break` is true:
+    /// for a code viewer, whose diagnostics sit between its lines.
+    Lines {
+        /// The id of the element that holds the lines.
+        id: String,
+        /// Whether the text ends in a line break, which opens no line.
+        final_break: bool,
+    },
+}
+
+impl CopySource {
+    /// The text the source names now, or `None` when the page holds no
+    /// element of its id.
+    #[cfg(target_arch = "wasm32")]
+    fn read(&self) -> Option<String> {
+        match self {
+            Self::Text(text) => Some(text.clone()),
+            Self::Element(id) => document()
+                .get_element_by_id(id)
+                .map(|element| element.text_content().unwrap_or_default()),
+            Self::Lines { id, final_break } => {
+                let holder = document().get_element_by_id(id)?;
+                let lines = holder.query_selector_all(".fui-code-line").ok()?;
+                let mut text = String::new();
+                for index in 0..lines.length() {
+                    if index > 0 {
+                        text.push('\n');
+                    }
+                    if let Some(line) = lines.item(index) {
+                        text.push_str(&line.text_content().unwrap_or_default());
+                    }
+                }
+                if *final_break {
+                    text.push('\n');
+                }
+                Some(text)
+            }
+        }
+    }
+}
+
 /// What the copy button says.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum State {
@@ -61,6 +117,14 @@ enum State {
     Refused,
 }
 
+/// What a drawn copy button copies: a text a signal holds, or a source.
+enum Copied {
+    /// The text the signal holds when pressed.
+    Live(Signal<String>),
+    /// What the source names when pressed.
+    Source(CopySource),
+}
+
 /// Returns the copy button `id` labelled `label`, copying `text` when
 /// pressed and saying what came of it in `words`.
 #[must_use]
@@ -70,14 +134,30 @@ pub fn copy_button(
     text: Signal<String>,
     words: CopyWords,
 ) -> impl IntoView {
-    let id = id.into();
-    let label = label.into();
+    drawn(id.into(), label.into(), Copied::Live(text), words)
+}
+
+/// Returns the copy button `id` labelled `label`, copying what `source`
+/// names when pressed and saying what came of it in `words`, as
+/// [`crate::island::CopyButton`] draws it.
+#[must_use]
+pub fn copy_from(
+    id: impl Into<String>,
+    label: impl Into<Oco<'static, str>>,
+    source: CopySource,
+    words: CopyWords,
+) -> impl IntoView {
+    drawn(id.into(), label.into(), Copied::Source(source), words)
+}
+
+/// Returns the copy button `id` labelled `label` over `what`, in `words`.
+fn drawn(id: String, label: Oco<'static, str>, what: Copied, words: CopyWords) -> impl IntoView {
     let state = RwSignal::new(State::Ready);
     let hydrated = RwSignal::new(false);
     Effect::new(move |_| hydrated.set(true));
-    let press = move |_| {
-        let value = text.get_untracked();
-        write(&value, state);
+    let press = move |_| match &what {
+        Copied::Live(text) => write(&text.get_untracked(), state),
+        Copied::Source(source) => copy(source, state),
     };
     let CopyWords {
         copied,
@@ -214,6 +294,18 @@ pub fn key_hint(key: String, words: KeyHintWords) -> impl IntoView {
             {said}
         </span>
     }
+}
+
+/// Writes what `source` names to the clipboard and sets `state` to what
+/// came of it; a source the page no longer holds is refused.
+fn copy(source: &CopySource, state: RwSignal<State>) {
+    #[cfg(target_arch = "wasm32")]
+    match source.read() {
+        Some(value) => write(&value, state),
+        None => state.set(State::Refused),
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    let (_source, _state): (&CopySource, RwSignal<State>) = (source, state);
 }
 
 /// Writes `value` to the clipboard and sets `state` to what came of it.

@@ -117,22 +117,22 @@ pub fn CommitCountdown(
     crate::widget::countdown::countdown(countdown)
 }
 
-/// The copy button `id` saying `label`, putting `text` on the clipboard
-/// when pressed ([`crate::widget::copy`]). The server draws it hidden, so
-/// with no WebAssembly the text stays on the page to select.
+/// The copy button `id` saying `label`, putting what `source` names on the
+/// clipboard when pressed ([`crate::widget::copy`]). The server draws it
+/// hidden, so with no WebAssembly the text stays on the page to select.
 #[island]
 pub fn CopyButton(
     /// The button's id.
     id: String,
     /// Its words, in the page's locale, such as "Copy".
     label: String,
-    /// The text it copies, which the page already shows.
-    text: String,
+    /// What it copies, which the page already shows.
+    source: crate::widget::copy::CopySource,
     /// The words it draws itself, in the page's locale
     /// ([`crate::widget::copy::CopyWords::of_page`]).
     words: crate::widget::copy::CopyWords,
 ) -> impl IntoView {
-    crate::widget::copy::copy_button(id, label, Signal::stored(text), words)
+    crate::widget::copy::copy_from(id, label, source, words)
 }
 
 /// The side panel `id` headed `title`, around the body the server drew as

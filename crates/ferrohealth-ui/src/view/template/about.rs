@@ -24,7 +24,7 @@ use crate::view::code::self_description;
 use crate::view::replica::{Replica, replica_line};
 use crate::view::shell::MAKER;
 use crate::view::surface::{Header, card, definitions, page_heading};
-use crate::widget::copy::CopyWords;
+use crate::widget::copy::{CopySource, CopyWords};
 
 /// A fact's link: its words and where it leads.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -103,7 +103,7 @@ fn self_description_card(document: SelfDescription) -> AnyView {
     } = document;
     let panel = self_description(&title, language, &text).into_any();
     let copy = view! {
-        <CopyButton id=copy_id label=tr(Text::DocumentCopy) text=text words=CopyWords::of_page() />
+        <CopyButton id=copy_id label=tr(Text::DocumentCopy) source=CopySource::Text(text) words=CopyWords::of_page() />
     }
     .into_any();
     view! {

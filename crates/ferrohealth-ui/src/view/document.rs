@@ -6,7 +6,9 @@
 //!
 //! The formats are links the console answers with the document in that
 //! format, the one in force marked current, and Copy puts the document in
-//! that format on the clipboard ([`crate::island::CopyButton`]). The views are drawn on the
+//! that format on the clipboard ([`crate::island::CopyButton`]), read from
+//! the raw view the page draws, so the document is no island data and the
+//! page carries it twice, never three times. The views are drawn on the
 //! server, every one of them: the highlighted view is the code viewer
 //! (B1), the raw view the text as it stands, and the rendered view the
 //! console's own drawing, when it has one. The view switch is the island
@@ -21,14 +23,15 @@ use crate::i18n::{Text, tr, tr_with};
 use crate::island::{CopyButton, DocumentViews};
 use crate::view::code::{Code, code_viewer};
 use crate::view::segmented::segmented_links;
-use crate::widget::copy::CopyWords;
+use crate::widget::copy::{CopySource, CopyWords};
 use crate::widget::document::{DocumentView, ViewChoice};
 
 /// What a document pane shows.
 #[derive(Debug)]
 pub struct Document {
-    /// The pane's id: each view's id is `id`, a dash and the view's key, and
-    /// the highlighted lines' ids are `id`, `-L` and the line's number.
+    /// The pane's id: each view's id is `id`, a dash and the view's key, the
+    /// raw view's text is `id` and `-text`, and the highlighted lines' ids
+    /// are `id`, `-L` and the line's number.
     pub id: String,
     /// The document's name, such as "Observation".
     pub label: String,
@@ -56,6 +59,18 @@ fn view_of(id: &str, view: DocumentView, body: AnyView) -> AnyView {
         </div>
     }
     .into_any()
+}
+
+/// The text of the raw view's `<pre>` as the server writes it: one more
+/// line break before a text that opens with one.
+fn raw_text(text: String) -> String {
+    // NOTE: HTML Living Standard §13.2.6.4.7: the parser drops one line break right after
+    // `<pre>`, so a text that opens with one is written with two.
+    if text.starts_with('\n') {
+        format!("\n{text}")
+    } else {
+        text
+    }
 }
 
 /// Returns the document pane `document`: its format links, its view switch
@@ -112,10 +127,11 @@ pub fn document_pane(document: Document) -> AnyView {
         Text::DocumentRawRegion,
         &[("document", label.clone().into())],
     );
-    let copied = text.clone();
+    let text_id = format!("{id}-text");
+    let copied = CopySource::Element(text_id.clone());
     let raw = view! {
         <div class="fui-code-panel fui-scroll-cue" role="region" aria-label=raw_label tabindex="0">
-            <pre>{text}</pre>
+            <pre id=text_id>{raw_text(text)}</pre>
         </div>
     }
     .into_any();
@@ -143,7 +159,7 @@ pub fn document_pane(document: Document) -> AnyView {
             <CopyButton
                 id=copy_id
                 label=tr(Text::DocumentCopy)
-                text=copied
+                source=copied
                 words=CopyWords::of_page()
             />
         </section>

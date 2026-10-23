@@ -98,6 +98,8 @@ messages! {
     DeferUntil = "defer-until",
     /// `Diagnostics by file`
     DiagnosticsByFile = "diagnostics-by-file",
+    /// `Diagnostics at real size`
+    DiagnosticsRealSize = "diagnostics-real-size",
     /// `Download the whole configuration as TOML`
     DownloadWholeConfigurationToml = "download-whole-configuration-toml",
     /// The label of the draft of the file `$name`.
@@ -202,6 +204,8 @@ messages! {
     OneServerResolves = "one-server-resolves",
     /// `Operational template`
     OperationalTemplate = "operational-template",
+    /// A finding whose message holds a long openEHR path.
+    PathNamesNoNode = "path-names-no-node",
     /// `Pick or type`
     PickType = "pick-type",
     /// `Primary`

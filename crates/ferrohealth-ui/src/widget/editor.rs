@@ -18,8 +18,12 @@
 //! text, so `</textarea>` in the text stays text), and a form around the
 //! editor posts it before any WebAssembly loads; once the page hydrates the
 //! text area takes the live text through `prop:value`. The layer is escaped
-//! by [`crate::highlight::html`], so the server draws it too. The text area
-//! is read-only until the page hydrates, so no keystroke is lost.
+//! as [`crate::highlight::html`] escapes it, so the server draws it too. The
+//! text area is read-only until the page hydrates, so no keystroke is lost.
+//! After an edit the text is tokenized once, in time linear in its length,
+//! and the layer redraws only the lines whose highlighting or mark changed:
+//! the lines an edit leaves alike keep their elements, and the lines after
+//! an added or removed line change only their ids.
 //!
 //! The code editor ([`editor_panel`]) puts F8's toolbar above the editor
 //! (what the text is, its line count and the console's tools) and a status
@@ -32,11 +36,14 @@
 //! editor's one tab stop. No specification governs the editor: our own
 //! design.
 
+use std::collections::BTreeMap;
+use std::rc::Rc;
+
 use leptos::prelude::*;
 use leptos::web_sys::HtmlTextAreaElement;
 use serde::{Deserialize, Serialize};
 
-use crate::highlight::{Language, Lines, html};
+use crate::highlight::{Language, escape, lines_html, push_line};
 use crate::i18n::{Phrase, Text, tr, tr_with};
 use crate::view::diagnostics::{DiagnosticsWords, FileFindings, Position, rows};
 
@@ -103,15 +110,245 @@ pub fn mark_class(marks: &[LineMark], line: u32) -> Option<&'static str> {
     mark_kind(marks, line).map(MarkKind::class)
 }
 
-/// The class of line `line` under `marks` while the cursor's marked line is
-/// `current`: a marked line the cursor is on is current too.
-fn layer_class(marks: &[LineMark], line: u32, current: Option<u32>) -> Option<&'static str> {
-    let kind = mark_kind(marks, line)?;
+/// The kind of each line `marks` names: an error outranks a warning.
+fn mark_index(marks: &[LineMark]) -> BTreeMap<u32, MarkKind> {
+    let mut out = BTreeMap::new();
+    for mark in marks {
+        out.entry(mark.line)
+            .and_modify(|kind| {
+                if mark.kind == MarkKind::Error {
+                    *kind = MarkKind::Error;
+                }
+            })
+            .or_insert(mark.kind);
+    }
+    out
+}
+
+/// The class of a line marked `kind`, if any, while the cursor's marked
+/// line is `current`: a marked line the cursor is on is current too.
+fn layer_class(kind: Option<MarkKind>, line: u32, current: Option<u32>) -> Option<&'static str> {
+    let kind = kind?;
     Some(if current == Some(line) {
         kind.current_class()
     } else {
         kind.class()
     })
+}
+
+/// One line of the highlighted layer: the class its mark gives it and its
+/// highlighted, escaped HTML.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct LayerLine {
+    /// The mark's class, if a diagnostic names the line.
+    class: Option<&'static str>,
+    /// The line's tokens as HTML, shared with the next layer while the
+    /// text stays the same.
+    body: Rc<str>,
+}
+
+/// The lines of the layer of `text` in `language`, marked by `marks`
+/// while the cursor's marked line is `current`.
+fn layer_lines(
+    language: Language,
+    text: &str,
+    marks: &[LineMark],
+    current: Option<u32>,
+) -> Vec<LayerLine> {
+    let kinds = mark_index(marks);
+    (1_u32..)
+        .zip(lines_html(language, text))
+        .map(|(line, body)| LayerLine {
+            class: layer_class(kinds.get(&line).copied(), line, current),
+            body: Rc::from(body),
+        })
+        .collect()
+}
+
+/// What the layer draws: the grammar and the text it highlighted, and its
+/// lines.
+#[derive(Debug)]
+struct Layer {
+    /// The grammar the text was highlighted as.
+    language: Language,
+    /// The text it highlighted.
+    text: String,
+    /// Its lines.
+    lines: Vec<LayerLine>,
+}
+
+impl Layer {
+    /// The layer of `text` in `language`, marked by `marks` while the
+    /// cursor's marked line is `current`.
+    fn of(language: Language, text: &str, marks: &[LineMark], current: Option<u32>) -> Self {
+        Self {
+            language,
+            text: text.to_owned(),
+            lines: layer_lines(language, text, marks, current),
+        }
+    }
+
+    /// The layer after this one for `text` in `language`, `marks` and
+    /// `current`: while the text and the grammar stay, as when the caret
+    /// moves or a check marks other lines, it keeps this layer's
+    /// highlighting and changes only the marks.
+    fn next(
+        &self,
+        language: Language,
+        text: &str,
+        marks: &[LineMark],
+        current: Option<u32>,
+    ) -> Self {
+        if language != self.language || text != self.text {
+            return Self::of(language, text, marks, current);
+        }
+        let kinds = mark_index(marks);
+        let lines = (1_u32..)
+            .zip(&self.lines)
+            .map(|(line, drawn)| LayerLine {
+                class: layer_class(kinds.get(&line).copied(), line, current),
+                body: Rc::clone(&drawn.body),
+            })
+            .collect();
+        Self {
+            language,
+            text: self.text.clone(),
+            lines,
+        }
+    }
+}
+
+/// Appends `lines` to `out` as the layer's line elements, the first
+/// numbered `first`, each with its id after `prefix`.
+fn push_layer(out: &mut String, lines: &[LayerLine], prefix: &str, first: u32) {
+    for (number, line) in (first..).zip(lines) {
+        push_line(out, number, line.class, Some(prefix), &line.body);
+    }
+}
+
+/// How the layer goes from its old lines to its new ones: the first `head`
+/// lines stay, the next `removed` old lines go and `inserted` new lines
+/// take their place, and the last `tail` lines keep their elements, with
+/// a new id when the lines before them grew or shrank and a new class when
+/// their mark changed.
+#[cfg_attr(
+    all(not(target_arch = "wasm32"), not(test)),
+    expect(
+        dead_code,
+        reason = "the layer is patched only in the browser half; the server half draws it whole"
+    )
+)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Patch {
+    /// The lines at the start that stay as they are.
+    head: usize,
+    /// The old lines after them that go.
+    removed: usize,
+    /// The new lines in their place.
+    inserted: usize,
+    /// The lines at the end whose highlighting stays.
+    tail: usize,
+}
+
+/// The patch from the layer lines `old` to `new`.
+#[cfg_attr(
+    all(not(target_arch = "wasm32"), not(test)),
+    expect(
+        dead_code,
+        reason = "the layer is patched only in the browser half; the server half draws it whole"
+    )
+)]
+fn patch(old: &[LayerLine], new: &[LayerLine]) -> Patch {
+    let head = old
+        .iter()
+        .zip(new)
+        .take_while(|(old, new)| old == new)
+        .count();
+    let room = old.len().min(new.len()).saturating_sub(head);
+    let tail = old
+        .iter()
+        .skip(head)
+        .rev()
+        .zip(new.iter().skip(head).rev())
+        .take(room)
+        .take_while(|(old, new)| old.body == new.body)
+        .count();
+    Patch {
+        head,
+        removed: old.len().saturating_sub(head).saturating_sub(tail),
+        inserted: new.len().saturating_sub(head).saturating_sub(tail),
+        tail,
+    }
+}
+
+/// Brings the layer element `layer`, which draws `old`, to `new`, its line
+/// ids after `prefix`: only the lines [`patch`] names are touched, and a
+/// layer that no longer holds one element per old line is drawn whole.
+#[cfg(target_arch = "wasm32")]
+fn apply(layer: &web_sys::Element, prefix: &str, old: &[LayerLine], new: &[LayerLine]) {
+    use leptos::wasm_bindgen::JsCast as _;
+    let nodes = layer.child_nodes();
+    if usize::try_from(nodes.length()).ok() != Some(old.len()) {
+        let mut html = String::new();
+        push_layer(&mut html, new, prefix, 1);
+        layer.set_inner_html(&html);
+        return;
+    }
+    let Patch {
+        head,
+        removed,
+        inserted,
+        tail,
+    } = patch(old, new);
+    let index = |at: usize| u32::try_from(at).unwrap_or(u32::MAX);
+    for _ in 0..removed {
+        if let Some(node) = nodes.item(index(head))
+            && layer.remove_child(&node).is_err()
+        {
+            leptos::logging::warn!("the browser refused to remove an editor line");
+        }
+    }
+    if inserted > 0 {
+        let mut html = String::new();
+        let first = u32::try_from(head).map_or(u32::MAX, |head| head.saturating_add(1));
+        let lines = new
+            .get(head..head.saturating_add(inserted))
+            .unwrap_or_default();
+        push_layer(&mut html, lines, prefix, first);
+        let placed = match nodes.item(index(head)) {
+            Some(next) => next.dyn_into::<web_sys::Element>().map_or(Ok(()), |next| {
+                next.insert_adjacent_html("beforebegin", &html)
+            }),
+            None => layer.insert_adjacent_html("beforeend", &html),
+        };
+        if placed.is_err() {
+            leptos::logging::warn!("the browser refused the editor's new lines");
+        }
+    }
+    let shifted = old.len() != new.len();
+    let old_tail = old.iter().skip(old.len().saturating_sub(tail));
+    let new_start = new.len().saturating_sub(tail);
+    for ((at, line), was) in (new_start..).zip(new.iter().skip(new_start)).zip(old_tail) {
+        if !shifted && line.class == was.class {
+            continue;
+        }
+        let Some(element) = nodes
+            .item(index(at))
+            .and_then(|node| node.dyn_into::<web_sys::Element>().ok())
+        else {
+            continue;
+        };
+        if shifted {
+            element.set_id(&format!("{prefix}{}", at.saturating_add(1)));
+        }
+        if line.class != was.class {
+            let class = line.class.map_or_else(
+                || String::from("fui-code-line"),
+                |class| format!("fui-code-line {class}"),
+            );
+            element.set_class_name(&class);
+        }
+    }
 }
 
 /// The place in `text` of the caret at `offset`, a count of UTF-16 code
@@ -228,6 +465,14 @@ impl Grammar {
             Self::Following(language) => language.get(),
         }
     }
+
+    /// The grammar now, untracked.
+    fn get_untracked(self) -> Language {
+        match self {
+            Self::Fixed(language) => language,
+            Self::Following(language) => language.get_untracked(),
+        }
+    }
 }
 
 /// What [`drawn`] draws: an [`Editor`] whose id is known at run time, whose
@@ -264,7 +509,7 @@ fn server_text(text: &str) -> String {
     }
     // NOTE: HTML Living Standard §13.1.2.2: a text area's text is escapable raw text, so
     // the server writes it escaped, and a form posts it before any WebAssembly loads.
-    crate::highlight::escape(text, &mut out);
+    escape(text, &mut out);
     out
 }
 
@@ -283,16 +528,34 @@ pub(crate) fn drawn(drawn: Drawn, on_input: impl Fn(String) + 'static) -> AnyVie
         current,
     } = drawn;
     let prefix = format!("{id}-L");
-    let layer = move || {
-        let marks = marks.get();
-        let current = current.get();
-        let language = language.get();
-        text.with(|text| {
-            html(language, text, Lines { ids: Some(&prefix) }, |line| {
-                layer_class(&marks, line, current)
-            })
-        })
-    };
+    let drawn_layer = text.with_untracked(|text| {
+        Layer::of(
+            language.get_untracked(),
+            text,
+            &marks.get_untracked(),
+            current.get_untracked(),
+        )
+    });
+    let mut layer = String::new();
+    push_layer(&mut layer, &drawn_layer.lines, &prefix, 1);
+    let layer_ref = NodeRef::<leptos::html::Pre>::new();
+    let mut first = Some(drawn_layer);
+    Effect::new(move |old: Option<Layer>| {
+        let Some(old) = old.or_else(|| first.take()) else {
+            return text.with(|text| Layer::of(language.get(), text, &marks.read(), current.get()));
+        };
+        let new = text.with(|text| old.next(language.get(), text, &marks.read(), current.get()));
+        #[cfg(target_arch = "wasm32")]
+        {
+            let Some(element) = layer_ref.get() else {
+                return old;
+            };
+            apply(&element, &prefix, &old.lines, &new.lines);
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        let (_old, _prefix) = (old, &prefix);
+        new
+    });
     let name = id.clone();
     let first = text.with_untracked(|text| server_text(text));
     let follow = move |area: &HtmlTextAreaElement| {
@@ -313,7 +576,12 @@ pub(crate) fn drawn(drawn: Drawn, on_input: impl Fn(String) + 'static) -> AnyVie
     view! {
         <div class="fui-editor">
             <div class="fui-editor-stack">
-                <pre class="fui-editor-layer" aria-hidden="true" inner_html=layer></pre>
+                <pre
+                    class="fui-editor-layer"
+                    aria-hidden="true"
+                    node_ref=layer_ref
+                    inner_html=layer
+                ></pre>
                 <textarea
                     id=id
                     name=name
@@ -655,9 +923,12 @@ pub fn editor_split(editor: AnyView, side: AnyView) -> AnyView {
 #[cfg(test)]
 mod tests {
     use super::{
-        LineMark, MarkKind, caret_at, layer_class, line_id, mark_class, offset_of, server_text,
+        Layer, LayerLine, LineMark, MarkKind, Patch, caret_at, layer_class, layer_lines, line_id,
+        mark_class, mark_index, offset_of, patch, push_layer, server_text,
     };
+    use crate::highlight::{Language, Lines, html};
     use crate::view::diagnostics::Position;
+    use std::rc::Rc;
 
     #[test]
     fn an_error_outranks_a_warning_on_its_line() {
@@ -690,16 +961,17 @@ mod tests {
 
     #[test]
     fn a_marked_line_the_cursor_is_on_is_current_and_keeps_its_mark() {
-        let marks = [LineMark {
+        let marks = mark_index(&[LineMark {
             line: 4,
             kind: MarkKind::Warning,
-        }];
+        }]);
+        let kind = |line| marks.get(&line).copied();
         assert_eq!(
             Some("fui-mark-warning is-current"),
-            layer_class(&marks, 4, Some(4))
+            layer_class(kind(4), 4, Some(4))
         );
-        assert_eq!(Some("fui-mark-warning"), layer_class(&marks, 4, Some(7)));
-        assert_eq!(None, layer_class(&marks, 7, Some(7)));
+        assert_eq!(Some("fui-mark-warning"), layer_class(kind(4), 4, Some(7)));
+        assert_eq!(None, layer_class(kind(7), 7, Some(7)));
     }
 
     #[test]
@@ -728,5 +1000,154 @@ mod tests {
         let at = |line, column| Position { line, column };
         assert_eq!(2, offset_of(text, at(1, 40)), "past the line is its end");
         assert_eq!(19, offset_of(text, at(9, 1)), "past the text is its end");
+    }
+
+    /// The text of `count` lines, each naming its number.
+    fn numbered(count: u32) -> String {
+        (1..=count)
+            .map(|line| format!("key_{line}: value {line}\n"))
+            .collect::<Vec<_>>()
+            .concat()
+    }
+
+    /// The layer of `text`, unmarked.
+    fn layer(text: &str) -> Vec<LayerLine> {
+        layer_lines(Language::Yaml, text, &[], None)
+    }
+
+    #[test]
+    fn the_layer_draws_the_lines_the_highlighter_draws() {
+        let text = "a: 1\n# b <c> & 'd'\n";
+        let marks = [LineMark {
+            line: 2,
+            kind: MarkKind::Error,
+        }];
+        let mut drawn = String::new();
+        push_layer(
+            &mut drawn,
+            &layer_lines(Language::Yaml, text, &marks, Some(2)),
+            "d-L",
+            1,
+        );
+        let marked = |line| (line == 2).then_some("fui-mark-error is-current");
+        assert_eq!(
+            html(Language::Yaml, text, Lines { ids: Some("d-L") }, marked),
+            drawn
+        );
+    }
+
+    #[test]
+    fn one_keystroke_redraws_one_line_of_ten_thousand() {
+        let text = numbered(10_000);
+        let typed = text.replacen("value 5000\n", "value 50000\n", 1);
+        assert_eq!(
+            Patch {
+                head: 4999,
+                removed: 1,
+                inserted: 1,
+                tail: 5001,
+            },
+            patch(&layer(&text), &layer(&typed))
+        );
+    }
+
+    #[test]
+    fn a_new_line_inserts_one_line_and_keeps_the_rest() {
+        let text = numbered(10_000);
+        let typed = text.replacen("value 10\n", "value 10\n\n", 1);
+        assert_eq!(
+            Patch {
+                head: 10,
+                removed: 0,
+                inserted: 1,
+                tail: 9991,
+            },
+            patch(&layer(&text), &layer(&typed))
+        );
+        let joined = text.replacen("value 10\n", "value 10", 1);
+        assert_eq!(
+            Patch {
+                head: 9,
+                removed: 2,
+                inserted: 1,
+                tail: 9990,
+            },
+            patch(&layer(&text), &layer(&joined))
+        );
+    }
+
+    #[test]
+    fn a_moved_mark_touches_no_line_body() {
+        let text = numbered(100);
+        let mark = |line| {
+            [LineMark {
+                line,
+                kind: MarkKind::Warning,
+            }]
+        };
+        let before = layer_lines(Language::Yaml, &text, &mark(10), None);
+        let after = layer_lines(Language::Yaml, &text, &mark(20), None);
+        assert_eq!(
+            Patch {
+                head: 9,
+                removed: 0,
+                inserted: 0,
+                tail: 92,
+            },
+            patch(&before, &after),
+            "the lines whose class changed keep their elements"
+        );
+    }
+
+    #[test]
+    fn a_caret_move_keeps_the_highlighting_and_moves_the_current_mark() {
+        let text = numbered(10);
+        let marks = [LineMark {
+            line: 4,
+            kind: MarkKind::Error,
+        }];
+        let rested = Layer::of(Language::Yaml, &text, &marks, None);
+        let moved = rested.next(Language::Yaml, &text, &marks, Some(4));
+        assert!(
+            rested
+                .lines
+                .iter()
+                .zip(&moved.lines)
+                .all(|(rested, moved)| Rc::ptr_eq(&rested.body, &moved.body)),
+            "no line is highlighted again"
+        );
+        assert_eq!(
+            Some("fui-mark-error is-current"),
+            moved.lines.get(3).and_then(|line| line.class)
+        );
+        let typed = rested.next(Language::Yaml, &format!("{text}x"), &marks, None);
+        assert!(
+            !Rc::ptr_eq(&rested.lines[0].body, &typed.lines[0].body),
+            "a changed text is highlighted again"
+        );
+    }
+
+    #[test]
+    fn an_edit_to_nothing_and_back_redraws_every_line() {
+        let text = "a: 1\nb: 2\nc: 3";
+        let empty = layer("");
+        assert_eq!(
+            Patch {
+                head: 0,
+                removed: 3,
+                inserted: 1,
+                tail: 0,
+            },
+            patch(&layer(text), &empty)
+        );
+        assert_eq!(
+            Patch {
+                head: 0,
+                removed: 1,
+                inserted: 3,
+                tail: 0,
+            },
+            patch(&empty, &layer(text))
+        );
     }
 }
