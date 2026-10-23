@@ -147,8 +147,10 @@ pub fn drawer_button(sidebar_id: &'static str) -> impl IntoView {
         <button
             type="button"
             class="fui-icon-button fui-drawer-only"
-            popovertarget=sidebar_id
+            command="show-modal"
+            commandfor=sidebar_id
             aria-controls=sidebar_id
+            aria-haspopup="dialog"
             aria-label=tr(Text::OpenMenu)
         >
             {icon(Glyph::MENU, "18")}

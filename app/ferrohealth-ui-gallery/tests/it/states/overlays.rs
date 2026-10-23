@@ -57,7 +57,8 @@ async fn overlay(
     .await
 }
 
-/// The four toasts raised at once, then dismissed.
+/// The four toasts raised at once, of which the region shows the newest
+/// three, then dismissed.
 async fn raised_toasts(browser: &Browser, brand: Brand, theme: &str) -> Result<(), Box<dyn Error>> {
     for tone in ["ok", "info", "warn", "bad"] {
         let raise = browser
@@ -66,8 +67,9 @@ async fn raised_toasts(browser: &Browser, brand: Brand, theme: &str) -> Result<(
         press(browser, &raise).await?;
     }
     let region = browser.element(By::Css(".fui-toasts")).await?;
-    until("four toasts show", async || {
-        Ok(region.find_all(By::Css(".fui-toast")).await?.len() >= 4)
+    until("the region shows as many toasts as it holds", async || {
+        Ok(region.find_all(By::Css(".fui-toast")).await?.len()
+            >= ferrohealth_ui::widget::toast::SHOWN_MAX)
     })
     .await?;
     shot_of(browser, brand, theme, "toasts", &region).await?;

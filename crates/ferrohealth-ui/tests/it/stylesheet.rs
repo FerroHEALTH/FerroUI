@@ -624,3 +624,65 @@ fn a_long_node_name_and_a_long_score_field_wrap_inside_their_row() {
         "a field's long word never runs over its bar"
     );
 }
+
+#[test]
+fn the_toast_region_stays_above_the_decision_bar_and_scrolls() {
+    // Shell edge audit, row 3; WCAG 2.2 SC 1.4.10 and SC 2.4.11: toasts never cover the decisions.
+    let region = rule("  .fui-toasts");
+    assert!(
+        region.contains("overflow-y: auto;")
+            && region.contains("align-content: safe end;")
+            && region.contains("pointer-events: none;"),
+        "{region}"
+    );
+    assert!(
+        STYLESHEET.contains("  .fui-toasts .fui-toast {\n    pointer-events: auto;"),
+        "a toast takes the pointer"
+    );
+    assert!(
+        STYLESHEET.contains("    .fui-dock {\n      anchor-name: --fui-dock;"),
+        "the decision bar names its anchor"
+    );
+    assert!(
+        rule("    :root:has(.fui-dock) .fui-toasts")
+            .contains("position-anchor: --fui-dock;\n      inset-block-end: max(var(--space-loose), calc(anchor(top, var(--space-loose))"),
+        "the region's foot is the decision bar's top"
+    );
+    assert!(
+        STYLESHEET
+            .contains("  .fui-toast:has(> .fui-toast-close:not([open])) {\n    display: none;"),
+        "a toast closed with no WebAssembly hides"
+    );
+    assert!(
+        rule("  .fui-toast code").contains("overflow-wrap: anywhere;"),
+        "a long file name in a toast wraps"
+    );
+}
+
+#[test]
+fn the_navigation_wraps_a_long_word_and_the_rail_shows_its_tooltip_on_focus() {
+    // Shell edge audit, rows 11 to 13; WCAG 2.2 SC 1.4.10 and SC 1.4.13.
+    let word = rule("  .fui-nav-word");
+    assert!(
+        word.contains("min-width: 0;")
+            && word.contains("overflow-wrap: anywhere;")
+            && word.contains("hyphens: auto;"),
+        "{word}"
+    );
+    assert!(
+        STYLESHEET.contains(
+            "    .fui-sidebar-rail:not([data-tips=\"off\"]) .fui-nav-entry:is(:hover, :focus-visible) > .fui-tooltip {\n      display: block;"
+        ),
+        "the rail's tooltip shows on keyboard focus, until Escape"
+    );
+    assert!(
+        STYLESHEET.contains(
+            "    .fui-sidebar-rail .fui-nav-count.is-long > .fui-nav-count-whole {\n      display: none;"
+        ),
+        "a long count leaves the rail's badge"
+    );
+    assert!(
+        rule("  .fui-sidebar[open]").contains("max-width: none;"),
+        "the open drawer is a modal dialog the full height of the screen"
+    );
+}

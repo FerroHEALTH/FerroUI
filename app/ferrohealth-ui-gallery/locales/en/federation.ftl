@@ -7,6 +7,7 @@
 fed-503 = 503
 fed-all-answered = Every node answered
 fed-all-failing = Every node failing
+fed-all-nodes = All nodes
 fed-answered = Answered
 fed-answered503 = It answered 503 Service Unavailable.
 fed-asked-nothing = asked nothing

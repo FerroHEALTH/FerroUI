@@ -1131,8 +1131,9 @@
     text-align: center;
   }
 
-  /* The navigation: a drawer the browser opens as a popover below the first
-     breakpoint, and the column beside the page from it. */
+  /* The navigation: a drawer the browser opens as a modal dialog below the
+     first breakpoint, and from it the closed dialog drawn as the column
+     beside the page. */
   .fui-sidebar {
     flex-shrink: 0;
     background: var(--surface-raised);
@@ -1140,11 +1141,12 @@
     color: var(--ink);
   }
 
-  .fui-sidebar:popover-open {
+  .fui-sidebar[open] {
     position: fixed;
     inset: 0 auto 0 0;
     width: min(18rem, 85vw);
     height: 100dvh;
+    max-width: none;
     max-height: none;
     margin: 0;
     border: 0;
@@ -1159,8 +1161,8 @@
   }
 
   @media (width < 48rem) {
-    .fui-sidebar > .fui-drawer-only + .fui-nav-group + .fui-nav-list,
-    .fui-sidebar > .fui-drawer-only + leptos-children > .fui-nav-group:first-child + .fui-nav-list {
+    .fui-sidebar > .fui-drawer-only + .fui-sidebar-nav > .fui-nav-group:first-child + .fui-nav-list,
+    .fui-sidebar > .fui-drawer-only + .fui-sidebar-nav > leptos-children > .fui-nav-group:first-child + .fui-nav-list {
       border-top: 1px solid var(--edge);
       padding-block-start: 0.375rem;
     }
@@ -1240,6 +1242,15 @@
     background: var(--accent-tint);
     color: var(--accent);
     font-weight: 600;
+  }
+
+  /* An entry's words wrap, a long translated word broken at a hyphenation
+     point or anywhere, so the column never scrolls sideways (WCAG 2.2
+     SC 1.4.10). */
+  .fui-nav-word {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    hyphens: auto;
   }
 
   /* ---- Buttons ---- */
@@ -3452,13 +3463,56 @@
 
   /* ---- Toasts ---- */
 
+  /* The region spans the viewport's height at its inline end, its toasts
+     packed at its foot; past its height it scrolls, and only the toasts
+     take the pointer, so the empty part covers nothing (WCAG 2.2 SC 1.4.10,
+     SC 2.4.11). */
   .fui-toasts {
     position: fixed;
-    inset: auto var(--space-loose) var(--space-loose) auto;
+    inset: var(--space-default) var(--space-loose) var(--space-loose) auto;
     z-index: 50;
     display: grid;
+    align-content: safe end;
     width: min(24rem, calc(100vw - 2rem));
     gap: var(--space-default);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    pointer-events: none;
+  }
+
+  .fui-toasts .fui-toast {
+    pointer-events: auto;
+  }
+
+  /* With a decision bar on the page (R4) the region's foot is the bar's top
+     while the bar is on the screen, so a toast never covers the decisions;
+     where the bar leaves no room the region keeps one toast's height at the
+     top of the screen. */
+  @supports (anchor-name: --fui-dock) {
+    .fui-dock {
+      anchor-name: --fui-dock;
+    }
+
+    :root:has(.fui-dock) .fui-toasts {
+      position-anchor: --fui-dock;
+      inset-block-end: max(var(--space-loose), calc(anchor(top, var(--space-loose)) + var(--space-default)));
+      min-height: 4.5rem;
+    }
+  }
+
+  /* Dismiss before the page hydrates: a native disclosure whose summary is
+     the button; closing it hides its toast. */
+  .fui-toast-close > summary {
+    list-style: none;
+    cursor: pointer;
+  }
+
+  .fui-toast-close > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .fui-toast:has(> .fui-toast-close:not([open])) {
+    display: none;
   }
 
   .fui-toast {
@@ -7370,6 +7424,32 @@
     color: var(--muted);
   }
 
+  /* A count past 99 shows whole in the full sidebar, and as "99+" on the
+     rail's badge, which stays on its glyph; its phrase is its name. */
+  .fui-nav-count {
+    flex: none;
+  }
+
+  .fui-nav-count-short {
+    display: none;
+  }
+
+  @media (width >= 48rem) {
+    .fui-sidebar-rail .fui-nav-count.is-long > .fui-nav-count-whole {
+      display: none;
+    }
+
+    .fui-sidebar-rail .fui-nav-count.is-long > .fui-nav-count-short {
+      display: inline;
+    }
+
+    /* The wider badge starts at the glyph's middle, so it covers only its
+       corner and stays inside the rail. */
+    .fui-sidebar-rail .fui-nav-count.is-long {
+      inset: 0.125rem auto auto calc(50% + 0.125rem);
+    }
+  }
+
   /* The navigation is the shell's: the same metrics on every page,
      whatever the page's density (review round 1, item 7). */
   .fui-sidebar {
@@ -7381,16 +7461,25 @@
   /* The collapsed rail: the glyphs alone, each named by its title and its
      accessible name; the count rides on the glyph as a dot. */
   @media (width >= 48rem) {
+    /* It stacks above the page's sticky heads and below the top bar, so an
+       entry's tooltip is drawn over the page. */
     .fui-sidebar.fui-sidebar-rail {
+      z-index: 25;
       width: 3.75rem;
       padding-inline: 0.5rem;
       overflow: visible;
     }
 
-    /* A rail that draws no tooltip box of its own, its entries named by their
-       title, scrolls as the full sidebar does, so its foot stays in reach. */
+    /* A rail that draws no tooltip box of its own scrolls as the full
+       sidebar does, so its foot stays in reach. */
     .fui-sidebar.fui-sidebar-rail:not(:has(.fui-tooltip)) {
       overflow-y: auto;
+    }
+
+    /* A rail entry's words show as its tooltip on hover and on keyboard
+       focus, until Escape (WCAG 2.2 SC 1.4.13). */
+    .fui-sidebar-rail:not([data-tips="off"]) .fui-nav-entry:is(:hover, :focus-visible) > .fui-tooltip {
+      display: block;
     }
 
     .fui-sidebar-rail .fui-nav-entry {
@@ -7439,6 +7528,39 @@
   }
 
   /* The tooltip a rail glyph shows on hover or focus. */
+  .fui-nav-entry > .fui-tooltip {
+    display: none;
+  }
+
+  /* With anchor positioning the tooltip is placed beside its entry in the
+     viewport's coordinates, so the rail keeps scrolling, by the wheel and
+     by the focus, with no scrollbar that would squeeze its glyphs. */
+  @supports (position-area: center inline-end) {
+    @media (width >= 48rem) {
+      .fui-sidebar.fui-sidebar-rail {
+        overflow-y: auto;
+        scrollbar-width: none;
+      }
+
+      .fui-sidebar-rail .fui-nav-list > li {
+        anchor-scope: --fui-rail-entry;
+      }
+
+      .fui-sidebar-rail .fui-nav-list > li > .fui-nav-entry {
+        anchor-name: --fui-rail-entry;
+      }
+
+      .fui-sidebar-rail .fui-nav-entry > .fui-tooltip {
+        position: fixed;
+        inset: auto;
+        position-anchor: --fui-rail-entry;
+        position-area: center inline-end;
+        margin-inline-start: 0.5rem;
+        transform: none;
+      }
+    }
+  }
+
   .fui-tooltip {
     white-space: nowrap;
     position: absolute;
@@ -7781,7 +7903,7 @@
     line-height: var(--leading-small);
   }
 
-  .fui-toast > .fui-icon-button {
+  .fui-toast > :is(.fui-icon-button, .fui-toast-close) {
     margin: -0.25rem -0.375rem 0 0;
   }
 
@@ -8720,6 +8842,11 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  /* The link to every child past the ones drawn reads as a link. */
+  .fui-nav-tree .fui-nav-all {
+    color: var(--accent);
   }
 
   .fui-nav-child code {
@@ -13518,7 +13645,7 @@
     justify-self: start;
   }
 
-  .fui-toast:has(> .fui-button) > .fui-icon-button {
+  .fui-toast:has(> .fui-button) > :is(.fui-icon-button, .fui-toast-close) {
     grid-column: 3;
     grid-row: 1;
   }
@@ -13920,11 +14047,16 @@
     padding-inline: 0;
   }
 
-  /* A name, a queue or a file name never breaks inside itself. */
-  :is(.fui-toast, .fui-dialog) code,
+  /* A name, a queue or a file name never breaks inside itself, except in a
+     toast, which is narrower than a long file name. */
+  .fui-dialog code,
   .fui-table-stack .fui-table [data-role="title"] code {
     white-space: nowrap;
     overflow-wrap: normal;
+  }
+
+  .fui-toast code {
+    overflow-wrap: anywhere;
   }
 
   /* On a phone the toast region keeps clear of the page's last row. */

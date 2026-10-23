@@ -303,3 +303,98 @@ async fn the_popover_form_opens_under_its_trigger_or_as_a_sheet_and_escape_retur
     })
     .await
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_toasts_wait_under_the_pointer_show_a_few_and_stay_above_the_decision_bar()
+-> Result<(), Box<dyn Error>> {
+    // Shell edge audit, rows 3 and 27; WCAG 2.2 SC 2.2.1 and SC 2.4.11.
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/ferrobridge/overlays")).await?;
+        hydrated_toasts(browser).await?;
+        dismiss_all(browser).await?;
+        let info = browser
+            .element(By::Css("button[data-toast='info']"))
+            .await?;
+        info.click().await?;
+        let toast = browser.element(By::Css(".fui-toast.fui-tone-info")).await?;
+        browser
+            .driver()
+            .action_chain()
+            .move_to_element_center(&toast)
+            .perform()
+            .await?;
+        tokio::time::sleep(std::time::Duration::from_millis(
+            ferrohealth_ui::widget::toast::DWELL_MS + 1500,
+        ))
+        .await;
+        assert!(
+            toast.is_displayed().await?,
+            "a toast under the pointer stays past its dwell"
+        );
+        browser
+            .driver()
+            .action_chain()
+            .move_to_element_center(&info)
+            .perform()
+            .await?;
+        until("the toast goes once the pointer leaves", async || {
+            Ok(browser
+                .driver()
+                .find_all(By::Css(".fui-toast.fui-tone-info"))
+                .await?
+                .is_empty())
+        })
+        .await?;
+        for _ in 0..5 {
+            info.click().await?;
+        }
+        let shown = browser
+            .driver()
+            .find_all(By::Css(".fui-toast"))
+            .await?
+            .len();
+        assert_eq!(
+            ferrohealth_ui::widget::toast::SHOWN_MAX,
+            shown,
+            "the region shows a few toasts at once"
+        );
+        dismiss_all(browser).await?;
+        // The decision bar on the forms page: a toast's foot stays above its top.
+        window(browser, 390, 844).await?;
+        browser
+            .goto(&gallery.url("/ferrobridge/forms?dock=idle"))
+            .await?;
+        let dock = browser.element(By::Css(".fui-dock")).await?;
+        browser
+            .driver()
+            .execute(
+                "arguments[0].scrollIntoView({block: 'end'});
+                const region = document.querySelector('.fui-toasts');
+                for (let at = 0; at < 4; at++) {
+                    const toast = document.createElement('div');
+                    toast.className = 'fui-toast fui-tone-ok';
+                    toast.textContent = 'Saved ' + at;
+                    region.append(toast);
+                }",
+                vec![dock.to_json()?],
+            )
+            .await?;
+        let clear: bool = browser
+            .driver()
+            .execute(
+                "const dock = document.querySelector('.fui-dock').getBoundingClientRect();
+                const region = document.querySelector('.fui-toasts').getBoundingClientRect();
+                return region.bottom <= dock.top + 1 && region.height > 0;",
+                Vec::new(),
+            )
+            .await?
+            .convert()?;
+        assert!(clear, "no toast covers the decision bar");
+        Ok(())
+    })
+    .await
+}

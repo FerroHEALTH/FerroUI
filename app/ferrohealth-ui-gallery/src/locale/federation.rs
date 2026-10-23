@@ -12,6 +12,8 @@ messages! {
     FedAllAnswered = "fed-all-answered",
     /// `Every node failing`
     FedAllFailing = "fed-all-failing",
+    /// `All nodes`
+    FedAllNodes = "fed-all-nodes",
     /// `Answered`
     FedAnswered = "fed-answered",
     /// `It answered 503 Service Unavailable.`

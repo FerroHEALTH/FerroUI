@@ -1192,6 +1192,63 @@ fn the_toast_region_draws_the_flash_toasts_the_server_hands_it() {
         ),
         "Dismiss is named, and absent until the page hydrates: {page}"
     );
+    // Shell edge audit, row 3: with no WebAssembly a flash toast still closes.
+    assert_eq!(
+        2,
+        page.matches(r#"<details open class="fui-toast-close"><summary aria-label="Dismiss" title="Dismiss" class="fui-icon-button">"#).count(),
+        "each flash toast closes as a native disclosure: {page}"
+    );
+}
+
+#[test]
+fn the_toast_region_shows_a_few_toasts_and_keeps_each_refusal_and_each_with_an_action() {
+    // Shell edge audit, row 3: four flash toasts covered the decision bar.
+    let flash = |title: &str, action: bool| Flash {
+        tone: if title == "Zeroth." {
+            Tone::Bad
+        } else {
+            Tone::Ok
+        },
+        title: title.to_owned(),
+        line: None,
+        action: action.then(|| ToastLink {
+            label: String::from("Open"),
+            href: String::from("/open"),
+        }),
+    };
+    let page = html(|| {
+        view! {
+            <ToastRegion
+                words=RegionWords { region: String::from("Notices"), dismiss: String::from("Dismiss") }
+                flash=vec![
+                    flash("Zeroth.", false),
+                    flash("First.", false),
+                    flash("Second.", true),
+                    flash("Third.", false),
+                    flash("Fourth.", false),
+                    flash("Fifth.", false),
+                ]
+            />
+        }
+        .into_any()
+    });
+    assert_eq!(
+        ferrohealth_ui::widget::toast::SHOWN_MAX,
+        page.matches("<strong>").count(),
+        "{page}"
+    );
+    for gone in ["First.", "Third.", "Fourth."] {
+        assert!(
+            !page.contains(&format!("<strong>{gone}</strong>")),
+            "the oldest without an action leave: {page}"
+        );
+    }
+    for kept in ["Zeroth.", "Second.", "Fifth."] {
+        assert!(
+            page.contains(&format!("<strong>{kept}</strong>")),
+            "{kept} stays: {page}"
+        );
+    }
 }
 
 #[test]

@@ -162,6 +162,21 @@ fn item(label: &str, href: &str, mono: bool) -> NestItem {
 }
 
 fn navigation(current: &str, collapsed: bool) -> String {
+    navigation_of(
+        current,
+        collapsed,
+        vec![
+            item("node-a", "/nodes/node-a", true),
+            NestItem {
+                state: FlowState::Off,
+                state_words: String::from("Excluded"),
+                ..item("node-e", "/nodes/node-e", true)
+            },
+        ],
+    )
+}
+
+fn navigation_of(current: &str, collapsed: bool, children: Vec<NestItem>) -> String {
     page_html(|| {
         sidebar(Sidebar {
             id: "sidebar",
@@ -190,15 +205,9 @@ fn navigation(current: &str, collapsed: bool) -> String {
                     state_words: String::from("Worst node: reachable"),
                     ..item("Voorbeeldstad", "/organisations/voorbeeldstad", false)
                 },
-                count_words: String::from("2 nodes"),
-                children: vec![
-                    item("node-a", "/nodes/node-a", true),
-                    NestItem {
-                        state: FlowState::Off,
-                        state_words: String::from("Excluded"),
-                        ..item("node-e", "/nodes/node-e", true)
-                    },
-                ],
+                count_words: format!("{} nodes", children.len()),
+                children,
+                all: String::from("All nodes"),
             }),
         })
     })
@@ -217,7 +226,7 @@ fn the_nested_section_marks_the_entry_as_the_location_and_the_node_as_the_page()
     );
     assert!(
         page.contains(
-            r#"<a href="/nodes/node-a" aria-current="page" class="fui-nav-entry fui-nav-child">"#
+            r#"<a href="/nodes/node-a" aria-current="page" title="node-a" class="fui-nav-entry fui-nav-child">"#
         ),
         "{page}"
     );
@@ -244,6 +253,44 @@ fn the_nested_section_marks_the_entry_as_the_location_and_the_node_as_the_page()
             r#"aria-current="page" title="Voorbeeldstad" class="fui-nav-entry fui-nav-parent""#
         ),
         "{parent}"
+    );
+}
+
+#[test]
+fn a_nested_section_with_hundreds_of_children_draws_a_few_the_page_and_a_link_to_all() {
+    // A parent with 300 nodes buried the groups under it (shell edge audit, row 6).
+    let children: Vec<NestItem> = (0..300)
+        .map(|at| {
+            item(
+                &format!("node-{at:03}"),
+                &format!("/nodes/node-{at:03}"),
+                true,
+            )
+        })
+        .collect();
+    let page = navigation_of("/nodes/node-250", false, children);
+    let drawn = page.matches("fui-nav-entry fui-nav-child\"").count();
+    assert_eq!(
+        ferrohealth_ui::widget::nav::NEST_SHOWN,
+        drawn,
+        "the section draws a few children: {page}"
+    );
+    assert!(
+        page.contains(r#"<a href="/nodes/node-250" aria-current="page" title="node-250""#),
+        "the page in view is always drawn: {page}"
+    );
+    assert!(
+        page.contains(r#"<a href="/organisations/voorbeeldstad" class="fui-nav-entry fui-nav-child fui-nav-all"><span class="fui-nav-word">All nodes</span></a>"#),
+        "a link leads to every child: {page}"
+    );
+    assert!(
+        page.contains(r#"<span class="fui-sr-only">300 nodes</span>"#),
+        "the count still says all of them: {page}"
+    );
+    let few = navigation("/nodes/node-a", false);
+    assert!(
+        !few.contains("fui-nav-all"),
+        "a few children need no link: {few}"
     );
 }
 
