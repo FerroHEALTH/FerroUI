@@ -27,6 +27,7 @@ mod configuration;
 mod dates;
 mod federation;
 mod filter;
+mod form_edges;
 mod http;
 mod journeys;
 mod keys;

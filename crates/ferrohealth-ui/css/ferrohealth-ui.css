@@ -1392,13 +1392,25 @@
     line-height: var(--leading-body);
     font-weight: 500;
     text-decoration: none;
-    white-space: nowrap;
+    min-width: 0;
+    overflow-wrap: anywhere;
     cursor: pointer;
     transition: color var(--motion-state) ease-out, background-color var(--motion-state) ease-out;
   }
 
-  .fui-segment + .fui-segment {
+  /* Every segment draws its start and top edge 1px outside itself, which
+     the group's clip hides on its first row and column, so a row that
+     wraps, or a stack, keeps a hairline between every two segments and a
+     long word wraps inside its segment (WCAG 2.2 SC 1.4.10). */
+  .fui-segmented > .fui-segment {
+    margin-block-start: -1px;
+    margin-inline-start: -1px;
+    border-block-start: 1px solid var(--edge-strong);
     border-inline-start: 1px solid var(--edge-strong);
+  }
+
+  .fui-segmented-prefix + .fui-segment {
+    border-inline-start-color: transparent;
   }
 
   .fui-segment:hover {
@@ -3740,6 +3752,15 @@
     border-top-color: color-mix(in srgb, var(--bad) 20%, transparent);
   }
 
+  /* The issues past the first ones, folded under a summary that opens
+     them with no script. */
+  .fui-issues-more > summary {
+    cursor: pointer;
+    padding-block: 0.375rem;
+    color: var(--ink);
+    font-weight: 500;
+  }
+
   /* ---- Code ---- */
 
   /* A bounded code panel: highlighted text in a box that scrolls in both
@@ -4100,6 +4121,17 @@
 
   .fui-drop-state-refused {
     color: var(--bad);
+  }
+
+  .fui-drop-state-warn {
+    color: var(--warn);
+  }
+
+  /* The file input is visually hidden, so its focus shows on the chooser
+     that names it (WCAG 2.2 SC 2.4.7). */
+  .fui-drop:has(> input[type="file"]:focus-visible) > label.fui-button {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
   }
 
   /* ---- Charts ---- */

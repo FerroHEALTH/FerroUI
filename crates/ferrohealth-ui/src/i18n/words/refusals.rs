@@ -12,6 +12,10 @@ texts! {
     IssuePlace = "issue-place",
     /// The information issues with no text that are counted, `$count` of them.
     IssuesLeftOut = "issues-left-out",
+    /// The summary that opens the folded issues, `$count` of them.
+    IssuesMore = "issues-more",
+    /// The issues past the most a list draws, `$count` of them.
+    IssuesNotDrawn = "issues-not-drawn",
     /// The accessible name of the body a refusal keeps as evidence.
     RefusalEvidence = "refusal-evidence",
     /// A refusal's title when no answer came.

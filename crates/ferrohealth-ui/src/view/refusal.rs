@@ -11,7 +11,7 @@
 
 use leptos::prelude::*;
 
-use crate::i18n::{Text, tr, tr_with};
+use crate::i18n::{Text, tr, tr_with, tr_word};
 use crate::icon::{Glyph, icon};
 use crate::tone::Tone;
 
@@ -33,12 +33,23 @@ impl Severity {
     /// The word a reader sees, in the page's locale.
     #[must_use]
     pub fn word(self) -> String {
-        tr(match self {
+        tr(self.text())
+    }
+
+    /// The word as a view, marked English on a page in another language
+    /// when no catalog of the page's language holds it.
+    fn drawn(self) -> AnyView {
+        tr_word(self.text(), &[])
+    }
+
+    /// The word's message.
+    const fn text(self) -> Text {
+        match self {
             Self::Fatal => Text::SeverityFatal,
             Self::Error => Text::SeverityError,
             Self::Warning => Text::SeverityWarning,
             Self::Information => Text::SeverityInformation,
-        })
+        }
     }
 
     /// The tone the word is drawn in.
@@ -142,25 +153,80 @@ pub fn shown_issues(issues: &[Issue]) -> (Vec<&Issue>, usize) {
     (shown, left_out)
 }
 
+/// The issues [`issue_list`] lists in the open, gravest first.
+pub const ISSUES_OPEN: usize = 20;
+
+/// The most issues [`issue_list`] draws: past [`ISSUES_OPEN`] they fold
+/// under a "more" summary, and past this many it counts the rest.
+pub const ISSUES_DRAWN: usize = 200;
+
+/// The issues of `shown` split as [`issue_list`] draws them: the ones in the
+/// open, the ones folded under "more", and how many are counted only.
+#[must_use]
+pub fn split_issues<'a>(shown: &'a [&'a Issue]) -> (&'a [&'a Issue], &'a [&'a Issue], usize) {
+    let drawn = shown.len().min(ISSUES_DRAWN);
+    let (drawn, counted) = shown.split_at(drawn);
+    let (open, folded) = drawn.split_at(drawn.len().min(ISSUES_OPEN));
+    (open, folded, counted.len())
+}
+
 /// Returns `issues` as a list, gravest first, each with its severity as a
 /// word, its code, where it points and its text, and a sentence for the
 /// information issues left out.
+///
+/// An upstream may answer with thousands of issues: the list shows the
+/// [`ISSUES_OPEN`] gravest, folds the rest up to [`ISSUES_DRAWN`] under a
+/// native `<details>`, which opens with no script, and counts any past that.
 #[must_use]
 pub fn issue_list(issues: &[Issue]) -> impl IntoView + use<> {
     let (shown, left_out) = shown_issues(issues);
-    let items = shown
-        .into_iter()
+    let (open, folded, counted) = split_issues(&shown);
+    let items = issue_items(open);
+    let more = (!folded.is_empty()).then(|| {
+        let summary = tr_word(Text::IssuesMore, &[("count", folded.len().into())]);
+        let items = issue_items(folded);
+        view! {
+            <details class="fui-issues-more">
+                <summary>{summary}</summary>
+                <ul class="fui-issues">{items}</ul>
+            </details>
+        }
+    });
+    let not_drawn = (counted > 0).then(|| {
+        view! {
+            <p class="fui-muted">{tr_word(Text::IssuesNotDrawn, &[("count", counted.into())])}</p>
+        }
+    });
+    let left = (left_out > 0).then(|| {
+        view! {
+            <p class="fui-muted">
+                {tr_word(Text::IssuesLeftOut, &[("count", left_out.into())])}
+            </p>
+        }
+    });
+    view! {
+        <ul class="fui-issues">{items}</ul>
+        {more}
+        {not_drawn}
+        {left}
+    }
+}
+
+/// Returns `issues` as the items of an issue list.
+fn issue_items(issues: &[&Issue]) -> impl IntoView + use<> {
+    issues
+        .iter()
         .map(|issue| {
             let text = match &issue.text {
                 Some(text) => text.clone().into_any(),
                 None => view! {
-                    <span class="fui-muted">{tr(Text::IssueBlank)}</span>
+                    <span class="fui-muted">{tr_word(Text::IssueBlank, &[])}</span>
                 }
                 .into_any(),
             };
             let place = (!issue.place.is_empty()).then(|| {
                 view! {
-                    {format!(" {} ", tr(Text::IssuePlace))}
+                    " " {tr_word(Text::IssuePlace, &[])} " "
                     <code>{issue.place.clone()}</code>
                 }
             });
@@ -171,7 +237,7 @@ pub fn issue_list(issues: &[Issue]) -> impl IntoView + use<> {
                 .collect_view();
             view! {
                 <li>
-                    <span class=issue.severity.tone().badge()>{issue.severity.word()}</span>
+                    <span class=issue.severity.tone().badge()>{issue.severity.drawn()}</span>
                     <span class="fui-issue-head">
                         <code>{issue.code.clone()}</code>
                         {place}
@@ -181,18 +247,7 @@ pub fn issue_list(issues: &[Issue]) -> impl IntoView + use<> {
                 </li>
             }
         })
-        .collect_view();
-    let left = (left_out > 0).then(|| {
-        view! {
-            <p class="fui-muted">
-                {tr_with(Text::IssuesLeftOut, &[("count", left_out.into())])}
-            </p>
-        }
-    });
-    view! {
-        <ul class="fui-issues">{items}</ul>
-        {left}
-    }
+        .collect_view()
 }
 
 /// The title of `refusal`: its status, or "No answer" when none came,
@@ -217,7 +272,9 @@ pub fn refusal_title(refusal: &Refusal) -> String {
 /// Returns `refusal` as an alert: its status, its summary, the request it
 /// answered, its issues, and the evidence of a body that held none.
 ///
-/// The request and the evidence are text, never markup.
+/// The request and the evidence are text, never markup. The title alone is
+/// the live region (WAI-ARIA 1.2, `alert`), so an assistive technology says
+/// what was refused and never reads a long list of issues at once.
 #[must_use]
 pub fn refusal(refusal: &Refusal) -> impl IntoView + use<> {
     let title = refusal_title(refusal);
@@ -239,8 +296,8 @@ pub fn refusal(refusal: &Refusal) -> impl IntoView + use<> {
         }
     });
     view! {
-        <div role="alert" class="fui-alert">
-            <p class="fui-alert-title">{icon(Glyph::CIRCLE_ALERT, "16")} {title}</p>
+        <div class="fui-alert">
+            <p class="fui-alert-title" role="alert">{icon(Glyph::CIRCLE_ALERT, "16")} {title}</p>
             {request}
             {issues}
             {evidence}

@@ -6,7 +6,11 @@
 //! A `<select>` with no `name` (it submits nothing) offers the empty choice,
 //! the console's choices and "another"; the text input beside it carries the
 //! `name` and is what the form submits. Choosing an option writes its value
-//! into the input; choosing "another" shows the input for typing. A value
+//! into the input; choosing "another" shows the input for typing, and moves
+//! the focus to it only when chosen by pointer or by Enter: a closed select
+//! that changes at each arrow key, as on Windows and Linux, keeps the focus
+//! while the reader arrows through it (WCAG 2.2 SC 3.2.2). Both controls
+//! carry a visible label. A value
 //! that is not among the choices opens on the input and stays there, so a
 //! reader's own value never snaps back to the list, and choices that arrive
 //! after the value select it once they do. The select follows the value
@@ -104,6 +108,7 @@ pub fn picker_field(picker: Picker) -> AnyView {
         other_word,
     } = picker;
     let typing = RwSignal::new(false);
+    let stepping = RwSignal::new(false);
     let input = NodeRef::<leptos::html::Input>::new();
     let hydrated = RwSignal::new(false);
     Effect::new(move || hydrated.set(true));
@@ -135,20 +140,10 @@ pub fn picker_field(picker: Picker) -> AnyView {
     };
     let initial = untrack(selected);
     let typed = value.get_untracked();
-    let on_change = move |event: leptos::ev::Event| {
-        let select = event_target::<HtmlSelectElement>(&event);
-        let last = i32::try_from(select.length()).map_or(0, |count| count.saturating_sub(1));
-        if select.selected_index() == last {
-            typing.set(true);
-            focus_input(input);
-        } else {
-            typing.set(false);
-            value.set(select.value());
-        }
-    };
+    let (on_change, on_key) = select_handlers(typing, stepping, input, value);
     view! {
         <div class="fui-field fui-picker">
-            <label for=select_id.clone() class="fui-sr-only">
+            <label for=select_id.clone() class="fui-label">
                 {choose_label}
             </label>
             <select
@@ -156,6 +151,8 @@ pub fn picker_field(picker: Picker) -> AnyView {
                 class=SELECT
                 aria-describedby=described.clone()
                 prop:selectedIndex=selected_place
+                on:keydown=on_key
+                on:pointerdown=move |_| stepping.set(false)
                 on:change=on_change
             >
                 <option value="" selected=initial == Selection::Empty>
@@ -187,6 +184,43 @@ pub fn picker_field(picker: Picker) -> AnyView {
         </div>
     }
     .into_any()
+}
+
+/// The select's change and key handlers: a change to "another" sets
+/// `typing` and moves the focus to `input` unless the reader is `stepping`
+/// through the closed select by key, any other change writes `value`, and
+/// Enter or Space on "another" moves the focus then.
+fn select_handlers(
+    typing: RwSignal<bool>,
+    stepping: RwSignal<bool>,
+    input: NodeRef<leptos::html::Input>,
+    value: RwSignal<String>,
+) -> (
+    impl Fn(leptos::ev::Event) + Clone + 'static,
+    impl Fn(leptos::ev::KeyboardEvent) + Clone + 'static,
+) {
+    let on_change = move |event: leptos::ev::Event| {
+        let select = event_target::<HtmlSelectElement>(&event);
+        let last = i32::try_from(select.length()).map_or(0, |count| count.saturating_sub(1));
+        if select.selected_index() == last {
+            typing.set(true);
+            if !stepping.get_untracked() {
+                focus_input(input);
+            }
+        } else {
+            typing.set(false);
+            value.set(select.value());
+        }
+    };
+    let on_key = move |event: leptos::ev::KeyboardEvent| {
+        let key = event.key();
+        let explicit = key == "Enter" || key == " ";
+        stepping.set(!explicit);
+        if explicit && typing.get_untracked() {
+            focus_input(input);
+        }
+    };
+    (on_change, on_key)
 }
 
 /// Moves the keyboard focus to the input `input`, once it shows.

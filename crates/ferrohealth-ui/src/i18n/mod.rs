@@ -287,23 +287,34 @@ impl Locale {
     // so the lookup is not repeated in each view that draws a word.
     #[inline(never)]
     fn library(&self, id: &str, args: &[(&'static str, Arg)]) -> String {
+        self.library_word(id, args).0
+    }
+
+    /// The library's message `id` in this locale, with `args` filled in,
+    /// and whether it is English drawn on a page in another language
+    /// because no catalog of the page's language holds it.
+    fn library_word(&self, id: &str, args: &[(&'static str, Arg)]) -> (String, bool) {
         let args = fluent_args(args);
         // NOTE: no specification governs this: our own design; a message a catalog
         // lacks, or cannot format, is looked for in the next one, ending in English.
-        self.served
+        let own = self
+            .served
             .as_ref()
             .and_then(|served| CATALOG.lookup_single_language(served, id, Some(&args)).ok())
             .or_else(|| {
                 self.supplement.and_then(|catalog| {
                     catalog.try_lookup_complete(&self.language, id, Some(&args))
                 })
-            })
-            .or_else(|| {
-                CATALOG
-                    .lookup_single_language(&english(), id, Some(&args))
-                    .ok()
-            })
-            .unwrap_or_else(|| missing(id))
+            });
+        if let Some(own) = own {
+            return (own, false);
+        }
+        let fell_back = self.language.language != english().language;
+        let text = CATALOG
+            .lookup_single_language(&english(), id, Some(&args))
+            .ok()
+            .unwrap_or_else(|| missing(id));
+        (text, fell_back)
     }
 }
 
@@ -477,6 +488,19 @@ impl Locale {
     /// The library's message `text` in this locale.
     pub(crate) fn text(&self, text: Text) -> String {
         self.library(text.id(), &[])
+    }
+}
+
+/// The library's message `text` in the page's locale with `args` filled in,
+/// drawn as text, inside `<span lang="en">` when it is English on a page in
+/// another language because no catalog of the page's language holds it
+/// (WCAG 2.2 SC 3.1.2).
+pub(crate) fn tr_word(text: Text, args: &[(&'static str, Arg)]) -> AnyView {
+    let (words, fell_back) = locale().library_word(text.id(), args);
+    if fell_back {
+        view! { <span lang="en">{words}</span> }.into_any()
+    } else {
+        words.into_any()
     }
 }
 

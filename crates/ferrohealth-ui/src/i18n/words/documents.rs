@@ -55,12 +55,18 @@ texts! {
     UploadDropOver = "upload-drop-over",
     /// The line once the `$file` is read.
     UploadRead = "upload-read",
+    /// The line under it when the `$file` was not UTF-8 text.
+    UploadReadLossy = "upload-read-lossy",
+    /// The line once the `$file`, the first of several dropped, is read.
+    UploadReadOne = "upload-read-one",
     /// A `$file` of a kind the field does not take.
     UploadRefusedKind = "upload-refused-kind",
     /// A `$file` of `$size` over the `$limit`.
     UploadRefusedSize = "upload-refused-size",
     /// The kinds of file and the limit the field takes.
     UploadRule = "upload-rule",
+    /// The limit of a field that takes a file of any kind.
+    UploadRuleAny = "upload-rule-any",
     /// A `$file` the browser could not read.
     UploadUnreadable = "upload-unreadable",
 }

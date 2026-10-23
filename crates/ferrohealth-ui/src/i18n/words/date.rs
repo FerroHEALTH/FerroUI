@@ -58,6 +58,9 @@ texts! {
     DateNotFormat = "date-not-format",
     /// A typed text not written as a date and time.
     DateNotFormatTime = "date-not-format-time",
+    /// The order the language writes a date in, beside ISO 8601: `ymd`,
+    /// `dmy` or `mdy`, never shown.
+    DateOrder = "date-order",
     /// The picker's arrow to the month before.
     DatePreviousMonth = "date-previous-month",
     /// The month chooser's arrow to the year before.

@@ -10,9 +10,10 @@
 //! supplies the seconds left as it draws the page and the deadline in its
 //! words, so the server draws the same time the browser starts from and
 //! hydration matches. In the browser the widget counts down from there by
-//! the time elapsed since it hydrated, read from the page's monotonic
-//! clock, so a skewed system clock or a throttled background tab never
-//! shifts it. The time is a `timer` that is not live; a polite live region
+//! the time elapsed since it hydrated ([`elapsed`]): the page's monotonic
+//! clock, so a system clock set back never adds time, or the wall clock
+//! when it has run further, since the monotonic clock may stand still while
+//! the machine sleeps, and a countdown must never show time that has gone. The time is a `timer` that is not live; a polite live region
 //! says the time left at [`ANNOUNCE_AT`] and that the time is up (WAI-ARIA
 //! 1.2, `timer` and `status`). The ring is decorative and its sweep is a
 //! transition, which reduced motion stops. No specification governs the
@@ -141,6 +142,24 @@ pub fn whole_seconds(millis: f64) -> u32 {
     }
 }
 
+/// The milliseconds elapsed since the countdown started: the larger of what
+/// the monotonic clock (`monotonic`) and the wall clock (`wall`) measured.
+///
+/// High Resolution Time leaves the monotonic clock's course while the system
+/// sleeps to the user agent (§ 2.1, § 9.2), and some stop it; the wall clock
+/// runs on through a sleep. Taking the larger never shows time that has
+/// passed, and a wall clock set back adds none.
+#[must_use]
+pub fn elapsed(monotonic: f64, wall: f64) -> f64 {
+    let monotonic = if monotonic.is_finite() {
+        monotonic
+    } else {
+        0.0
+    };
+    let wall = if wall.is_finite() { wall } else { 0.0 };
+    monotonic.max(wall)
+}
+
 /// Returns the countdown `countdown`, counting down by the second once the
 /// page hydrates and stopping at zero.
 #[must_use]
@@ -203,9 +222,14 @@ fn tick(start: u32, left: RwSignal<u32>, said: RwSignal<String>, points: Vec<Str
                 return;
             };
             let began = performance.now();
+            let began_wall = web_sys::js_sys::Date::now();
             let step = move || {
                 let before = left.get_untracked();
-                let now = start.saturating_sub(whole_seconds(performance.now() - began));
+                let spent = elapsed(
+                    performance.now() - began,
+                    web_sys::js_sys::Date::now() - began_wall,
+                );
+                let now = start.saturating_sub(whole_seconds(spent));
                 if now == before {
                     return;
                 }
@@ -245,7 +269,18 @@ fn tick(start: u32, left: RwSignal<u32>, said: RwSignal<String>, points: Vec<Str
 
 #[cfg(test)]
 mod tests {
-    use super::{ANNOUNCE_AT, clock, crossed, ring_offset, whole_seconds};
+    use super::{ANNOUNCE_AT, clock, crossed, elapsed, ring_offset, whole_seconds};
+
+    #[test]
+    fn a_sleep_the_monotonic_clock_missed_still_counts_and_a_clock_set_back_adds_nothing() {
+        assert_eq!(600_000.0, elapsed(2_000.0, 600_000.0), "ten minutes asleep");
+        assert_eq!(
+            2_000.0,
+            elapsed(2_000.0, -3_600_000.0),
+            "the wall clock set back an hour"
+        );
+        assert_eq!(2_000.0, elapsed(2_000.0, f64::NAN));
+    }
 
     #[test]
     fn the_clock_reads_minutes_and_two_digit_seconds_and_hours_from_an_hour() {

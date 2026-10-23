@@ -1851,7 +1851,7 @@ fn the_combobox_and_picker_islands_draw_their_native_floor_on_the_server() {
                 options=vec![ComboOption::new("loinc", "LOINC <lab>")]
                 selected=Some(String::from("loinc"))
                 described_by=None
-                words=ComboboxWords { no_match: String::from("No match") }
+                words=ComboboxWords { no_match: String::from("No match"), more: String::from("Type to narrow") }
             />
         }
         .into_any()
