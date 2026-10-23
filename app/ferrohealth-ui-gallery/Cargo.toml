@@ -40,9 +40,9 @@ leptos = { workspace = true, features = ["hydrate"] }
 wasm-bindgen.workspace = true
 wasm-bindgen-futures.workspace = true
 console_error_panic_hook.workspace = true
-# The concept tree keeps its open items in the address, and a confirm
-# closes its dialog.
-web-sys = { workspace = true, features = ["History", "HtmlElement", "Window"] }
+# The concept tree keeps its open items in the address, a confirm closes its
+# dialog, and the entry marks the root element once the islands hydrate.
+web-sys = { workspace = true, features = ["Document", "Element", "History", "HtmlElement", "Window"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 # The per-request script nonce of the Content-Security-Policy rides `nonce`.

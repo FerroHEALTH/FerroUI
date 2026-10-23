@@ -197,6 +197,7 @@ async fn capture(
     browser
         .element(By::Css(format!(r#"html[data-theme="{theme}"]"#)))
         .await?;
+    browser.hydrated().await?;
     // A taller window can lay the page out taller (the footer follows the
     // viewport), so the height is measured again until it holds.
     browser.settled().await?;

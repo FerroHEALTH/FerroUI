@@ -201,8 +201,22 @@ async fn escape(browser: &Browser) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-/// Writes the screenshot of `element` as `state`.
+/// Writes the screenshot of `element` as `state`, once the page's islands
+/// have hydrated.
 async fn shot_of(
+    browser: &Browser,
+    brand: Brand,
+    theme: &str,
+    state: &str,
+    element: &WebElement,
+) -> Result<(), Box<dyn Error>> {
+    browser.hydrated().await?;
+    shot_of_unhydrated(browser, brand, theme, state, element).await
+}
+
+/// Writes the screenshot of `element` as `state` without waiting for the
+/// islands, for a page whose WebAssembly is withheld.
+async fn shot_of_unhydrated(
     browser: &Browser,
     brand: Brand,
     theme: &str,
@@ -228,6 +242,7 @@ async fn shot_of_view(
     theme: &str,
     state: &str,
 ) -> Result<(), Box<dyn Error>> {
+    browser.hydrated().await?;
     browser.settled().await?;
     let png = browser.driver().screenshot_as_png().await?;
     write(brand, state, theme, &png)

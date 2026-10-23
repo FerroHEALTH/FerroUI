@@ -11,7 +11,7 @@ use ferrohealth_ui::style::Brand;
 use serde_json::json;
 use thirtyfour::prelude::*;
 
-use super::{card, focus, shot_of};
+use super::{card, focus, shot_of, shot_of_unhydrated};
 use crate::browser::{Browser, until};
 use crate::stack::Gallery;
 
@@ -132,7 +132,7 @@ async fn masked_states(
         .send_keys("123456782")
         .await?;
     let field = browser.element(masked_field()).await?;
-    let shot = shot_of(browser, brand, theme, "masked-no-wasm", &field).await;
+    let shot = shot_of_unhydrated(browser, brand, theme, "masked-no-wasm", &field).await;
     cdp.send_raw("Network.setBlockedURLs", json!({ "urls": [] }))
         .await?;
     shot?;
