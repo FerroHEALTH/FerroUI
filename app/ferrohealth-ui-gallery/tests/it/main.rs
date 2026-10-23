@@ -23,6 +23,7 @@
 )]
 
 mod browser;
+mod clinical;
 mod configuration;
 mod dates;
 mod federation;
