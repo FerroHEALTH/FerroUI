@@ -42,9 +42,11 @@ texts! {
     ReadingUcum = "reading-ucum",
     /// The segment that shows a query's answer as a chart.
     ResultsChart = "results-chart",
-    /// The action that downloads a query's answer as CSV.
+    /// The results pane's Export, which opens its menu of the formats.
+    ResultsExport = "results-export",
+    /// The item of Export that downloads a query's answer as CSV.
     ResultsExportCsv = "results-export-csv",
-    /// The action that downloads a query's answer as JSON.
+    /// The item of Export that downloads a query's answer as JSON.
     ResultsExportJson = "results-export-json",
     /// Why a query's answer has no chart: it has no numeric column.
     ResultsNoChart = "results-no-chart",
@@ -86,6 +88,8 @@ texts! {
     ScopeOpenid = "scope-openid",
     /// The compartment `patient` in words.
     ScopePatient = "scope-patient",
+    /// What the `profile` scope asks for.
+    ScopeProfile = "scope-profile",
     /// The operation `r` of a scope.
     ScopeRead = "scope-read",
     /// The operation `s` of a scope.

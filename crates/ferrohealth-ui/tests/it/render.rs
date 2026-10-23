@@ -18,7 +18,9 @@ use ferrohealth_ui::view::chart::{LineChart, Series};
 use ferrohealth_ui::view::code::{
     Code, CodeHead, Digest, Gravity, LineDiagnostic, code_card, code_section, code_viewer,
 };
-use ferrohealth_ui::view::dialog::{Confirmation, Explanation, confirm_dialog, info_dialog};
+use ferrohealth_ui::view::dialog::{
+    ConfirmForm, Confirmation, Explanation, confirm_dialog, danger_form_dialog, info_dialog,
+};
 use ferrohealth_ui::view::document::{Document, document_pane};
 use ferrohealth_ui::view::empty::{empty_state, skeleton};
 use ferrohealth_ui::view::form::{
@@ -36,7 +38,7 @@ use ferrohealth_ui::view::surface::{
 use ferrohealth_ui::view::tabs::{Tab, binder};
 use ferrohealth_ui::view::template::list::HeadingCount;
 use ferrohealth_ui::widget::action_menu::{
-    Act, Action, Choice, Item, Listbox, Menu, Pick, listbox, more_menu, row_menu,
+    Act, Action, Choice, Item, Listbox, Menu, Pick, labelled_menu, listbox, more_menu, row_menu,
 };
 use ferrohealth_ui::widget::chart::{ChartWords, line_chart};
 use ferrohealth_ui::widget::combobox::{ComboOption, ComboboxWords};
@@ -2404,5 +2406,223 @@ fn the_side_panel_island_opens_from_a_link_to_its_route_until_it_hydrates() {
         panel.contains(r#"\"glyph\":\"shield-check\""#)
             || panel.contains("&quot;glyph&quot;:&quot;shield-check&quot;"),
         "the glyph crosses as its Lucide name: {panel}"
+    );
+}
+
+/// A row whose menu's Remove… opens its own danger confirmation, which
+/// asks for a required Reason inside the form it posts.
+fn removal_row(member: &str) -> AnyView {
+    let id = format!("remove-{member}");
+    let menu = Menu::new(
+        format!("row-{member}"),
+        format!("Actions for {member}"),
+        Vec::new(),
+    )
+    .destructive(vec![Item::new(Action::new(
+        Some(Glyph::TRASH),
+        "Remove",
+        Act::Dialog(id.clone()),
+    ))]);
+    let dialog = danger_form_dialog(
+        Confirmation {
+            id: id.into(),
+            title: format!("Remove {member}?").into(),
+            message: String::from("Its endpoints go with it.").into(),
+        },
+        ConfirmForm {
+            action: format!("/members/{member}/remove"),
+            fields: view! {
+                <input type="hidden" name="member" value=member.to_owned() />
+                <textarea id="reason" name="reason" required></textarea>
+            }
+            .into_any(),
+        },
+        view! { <button type="submit" class=Variant::Destructive.class()>"Remove"</button> },
+    );
+    view! {
+        {row_menu(menu)}
+        {dialog}
+    }
+    .into_any()
+}
+
+#[test]
+fn a_danger_confirmation_holds_the_consoles_fields_inside_the_form_it_posts() {
+    let shown = page_html(|| removal_row("node-b"));
+    assert!(
+        has(
+            &shown,
+            "button",
+            &[
+                ("role", "menuitem"),
+                ("command", "show-modal"),
+                ("commandfor", "remove-node-b"),
+                ("aria-haspopup", "dialog")
+            ]
+        ) && shown.contains("Remove\u{2026}"),
+        "the row menu's destructive item opens the dialog with no script: {shown}"
+    );
+    assert!(
+        has(
+            &shown,
+            "dialog",
+            &[
+                ("id", "remove-node-b"),
+                ("class", "fui-dialog fui-dialog-danger"),
+                ("aria-labelledby", "remove-node-b-title")
+            ]
+        ),
+        "{shown}"
+    );
+    assert!(
+        has(
+            &shown,
+            "form",
+            &[
+                ("method", "post"),
+                ("action", "/members/node-b/remove"),
+                ("class", "fui-dialog-form")
+            ]
+        ),
+        "{shown}"
+    );
+    let dialog = shown
+        .split_once("<dialog")
+        .map(|(_, rest)| rest)
+        .expect("the dialog");
+    let at = |needle: &str| dialog.find(needle).unwrap_or(usize::MAX);
+    assert!(
+        at("<form") < at("<h2")
+            && at("Its endpoints go with it.") < at("<textarea")
+            && at("<textarea") < at("fui-dialog-actions")
+            && at("fui-dialog-actions") < at("</form>"),
+        "the question, the sentence, the fields, then the actions, all inside the form: {dialog}"
+    );
+    assert!(
+        has(
+            dialog,
+            "button",
+            &[("type", "button"), ("command", "close")]
+        ),
+        "Cancel closes and never submits: {dialog}"
+    );
+    assert!(
+        has(dialog, "button", &[("type", "submit")]),
+        "the console's confirm submits the form: {dialog}"
+    );
+    assert!(!shown.contains("style="), "{shown}");
+}
+
+#[test]
+fn a_danger_confirmation_with_no_fields_draws_no_form_of_its_own() {
+    let shown = html(|| {
+        ferrohealth_ui::view::dialog::danger_dialog(
+            Confirmation {
+                id: "delete".into(),
+                title: "Delete it?".into(),
+                message: "It goes for good.".into(),
+            },
+            (),
+        )
+        .into_any()
+    });
+    assert!(tags(&shown, "form").is_empty(), "{shown}");
+}
+
+#[test]
+fn a_menu_item_submits_the_consoles_form_to_another_address() {
+    let shown = page_html(|| {
+        labelled_menu(
+            Glyph::DOWNLOAD,
+            "Export".into(),
+            Menu::new(
+                "export",
+                "Export",
+                vec![
+                    Item::new(Action::new(
+                        None,
+                        "CSV",
+                        Act::SubmitTo {
+                            action: String::from("/query/answer.csv"),
+                            form: None,
+                        },
+                    )),
+                    Item::new(Action::new(
+                        None,
+                        "JSON",
+                        Act::SubmitTo {
+                            action: String::from("/query/answer.json"),
+                            form: Some(String::from("query")),
+                        },
+                    )),
+                ],
+            ),
+        )
+    });
+    assert!(
+        tags(&shown, "form").is_empty(),
+        "a form inside the console's form is dropped by the parser: {shown}"
+    );
+    assert!(
+        has(
+            &shown,
+            "button",
+            &[
+                ("type", "submit"),
+                ("formaction", "/query/answer.csv"),
+                ("role", "menuitem")
+            ]
+        ),
+        "{shown}"
+    );
+    assert!(
+        has(
+            &shown,
+            "button",
+            &[
+                ("type", "submit"),
+                ("form", "query"),
+                ("formaction", "/query/answer.json")
+            ]
+        ),
+        "{shown}"
+    );
+    assert!(
+        has(
+            &shown,
+            "summary",
+            &[
+                ("class", "fui-button fui-button-secondary fui-button-small"),
+                ("aria-haspopup", "menu"),
+                ("aria-controls", "export"),
+                ("aria-label", "Export")
+            ]
+        ) && shown.contains(">Export<"),
+        "a small labelled trigger, named by its words (WCAG 2.2 SC 2.5.3): {shown}"
+    );
+    let button = page_html(|| {
+        action_button(
+            Action::new(
+                None,
+                "Export CSV",
+                Act::SubmitTo {
+                    action: String::from("/query/answer.csv"),
+                    form: Some(String::from("query")),
+                },
+            ),
+            Variant::Secondary,
+        )
+    });
+    assert!(
+        has(
+            &button,
+            "button",
+            &[
+                ("type", "submit"),
+                ("form", "query"),
+                ("formaction", "/query/answer.csv")
+            ]
+        ),
+        "{button}"
     );
 }

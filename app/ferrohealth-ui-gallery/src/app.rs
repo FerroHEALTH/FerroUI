@@ -81,9 +81,17 @@ pub const PAGING_COOKIE: &str = "gallery-paging-";
 /// answers with the draft it received.
 pub const DRAFT_ROUTE: &str = "/draft";
 
+/// The path under which an answer riding its query's form is exported, as
+/// `/export/csv` or `/export/json`.
+pub const EXPORT_ROUTE: &str = "/export";
+
 /// The path of the route the topology's Probe now posts to, which sends
 /// the browser back where it came from.
 pub const PROBE_ROUTE: &str = "/probe";
+
+/// The path of the route a member's removal posts to, which returns to the
+/// page naming the member removed.
+pub const REMOVE_ROUTE: &str = "/remove-member";
 
 /// The path of the route the sidebar's Collapse and Expand post to.
 pub const SIDEBAR_ROUTE: &str = "/sidebar";

@@ -23,7 +23,7 @@ use ferrohealth_ui::widget::identifier::{Domain, Masked, identifier_static};
 use leptos::prelude::*;
 
 use crate::markup::{has, tags};
-use crate::render::html;
+use crate::render::{html, page_html};
 
 // ---- E1 ----
 
@@ -644,7 +644,7 @@ fn a_condition_row_stacks_in_a_group_too_narrow_for_its_fields() {
 
 /// A pane showing `shown`, its switch `switch`.
 fn pane(shown: Shown, switch: Switch) -> String {
-    html(move || {
+    page_html(move || {
         results_pane(ResultsPane {
             title: String::from("Results"),
             count: 6,
@@ -675,12 +675,36 @@ fn a_results_pane_draws_its_count_window_switch_and_exports() {
         "{shown}"
     );
     assert!(
-        has(&shown, "a", &[("href", "/answer.csv")]) && shown.contains("Export CSV"),
+        has(
+            &shown,
+            "summary",
+            &[
+                ("class", "fui-button fui-button-secondary fui-button-small"),
+                ("aria-haspopup", "menu"),
+                ("aria-label", "Export")
+            ]
+        ),
+        "one Export opens the menu of the formats (F13): {shown}"
+    );
+    assert!(
+        has(
+            &shown,
+            "a",
+            &[("role", "menuitem"), ("href", "/answer.csv")]
+        ) && shown.contains(">CSV<"),
         "{shown}"
     );
     assert!(
-        has(&shown, "a", &[("href", "/answer.json")]) && shown.contains("Export JSON"),
+        has(
+            &shown,
+            "a",
+            &[("role", "menuitem"), ("href", "/answer.json")]
+        ) && shown.contains(">JSON<"),
         "{shown}"
+    );
+    assert!(
+        !shown.contains("Export CSV") && !shown.contains("Export JSON"),
+        "no export button of its own beside the menu: {shown}"
     );
     assert!(
         has(
@@ -733,7 +757,7 @@ fn a_session_switch_posts_and_a_chart_keeps_its_inset() {
 
 #[test]
 fn a_pane_rides_the_consoles_form_with_no_form_of_its_own() {
-    let shown = html(|| {
+    let shown = page_html(|| {
         results_pane(ResultsPane {
             title: String::from("Results"),
             count: 6,
@@ -791,13 +815,18 @@ fn a_pane_rides_the_consoles_form_with_no_form_of_its_own() {
             &[
                 ("type", "submit"),
                 ("form", "query"),
-                ("formaction", "/query/answer.csv")
+                ("formaction", "/query/answer.csv"),
+                ("role", "menuitem")
             ]
-        ) && shown.contains("Export CSV"),
-        "{shown}"
+        ) && shown.contains(">CSV<"),
+        "an Export item rides the console's form by formaction: {shown}"
     );
     assert!(
-        has(&shown, "button", &[("formaction", "/query/answer.json")]),
+        has(
+            &shown,
+            "button",
+            &[("formaction", "/query/answer.json"), ("role", "menuitem")]
+        ),
         "{shown}"
     );
     assert!(
@@ -812,7 +841,7 @@ fn a_pane_rides_the_consoles_form_with_no_form_of_its_own() {
 
 /// A table pane over `count` rows, with or without a numeric column.
 fn answered(count: u64, numeric: bool) -> String {
-    html(move || {
+    page_html(move || {
         results_pane(ResultsPane {
             title: String::from("Results"),
             count,
@@ -840,8 +869,14 @@ fn an_answer_with_no_row_offers_no_chart_and_no_export_and_says_why() {
         "no export link: {shown}"
     );
     assert!(
-        has(&shown, "span", &[("aria-disabled", "true")]) && shown.contains("(unavailable)"),
-        "the exports stay as disabled controls: {shown}"
+        has(&shown, "span", &[("aria-disabled", "true")])
+            && shown.contains("Export")
+            && shown.contains("(unavailable)"),
+        "Export stays as a disabled control: {shown}"
+    );
+    assert!(
+        !shown.contains("<summary"),
+        "a disabled Export opens no menu: {shown}"
     );
     assert!(
         shown.contains("There is nothing to chart or export: the query returned no rows."),
@@ -1029,6 +1064,7 @@ fn a_scope_that_asks_for_no_resource_reads_as_what_it_asks_for() {
     // refresh token scopes grant no resource and are no malformed resource scope.
     for (raw, request) in [
         ("openid", Request::OpenId),
+        ("profile", Request::Profile),
         ("fhirUser", Request::FhirUser),
         ("launch", Request::Launch),
         ("online_access", Request::OnlineAccess),
@@ -1050,25 +1086,30 @@ fn a_scope_that_asks_for_no_resource_reads_as_what_it_asks_for() {
     ] {
         assert_eq!(Some(request), Request::parse(raw), "{raw}");
     }
-    for raw in [
-        "launch/",
-        "launch/patient?x=1",
-        "patient/Observation.rs",
-        "profile",
-    ] {
+    for raw in ["launch/", "launch/patient?x=1", "patient/Observation.rs"] {
         assert_eq!(None, Request::parse(raw), "{raw}");
     }
     let shown = html(|| {
         scope_grants(
             "Scopes",
-            ["openid", "fhirUser", "launch/patient", "offline_access"]
-                .into_iter()
-                .map(|raw| ScopeGrant::read(raw, |_| (String::new(), false)))
-                .collect(),
+            [
+                "openid",
+                "profile",
+                "fhirUser",
+                "launch/patient",
+                "offline_access",
+            ]
+            .into_iter()
+            .map(|raw| ScopeGrant::read(raw, |_| (String::new(), false)))
+            .collect(),
         )
     });
     assert!(!shown.contains("is-refused"), "none is malformed: {shown}");
     assert!(shown.contains("Who you are, by OpenID Connect"), "{shown}");
+    assert!(
+        shown.contains("Your profile: your name, picture and the like"),
+        "OpenID Connect Core 1.0, § 5.4: profile is a standard scope value: {shown}"
+    );
     assert!(
         shown.contains("The patient in context at launch"),
         "{shown}"

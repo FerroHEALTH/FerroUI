@@ -361,3 +361,131 @@ async fn the_combobox_keeps_its_rows_as_the_highlight_moves() -> Result<(), Box<
     })
     .await
 }
+
+/// The id of the element that holds the focus.
+async fn focused_id(browser: &Browser) -> Result<String, Box<dyn Error>> {
+    Ok(browser
+        .driver()
+        .active_element()
+        .await?
+        .attr("id")
+        .await?
+        .unwrap_or_default())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_row_menus_remove_asks_why_and_removes_the_row_by_keyboard() -> Result<(), Box<dyn Error>>
+{
+    // HTML Living Standard, the `command` attribute and constraint validation: the item opens
+    // the dialog with no script, and a required field holds the post until it is filled.
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/ferrofed/overlays")).await?;
+        let menu = hydrated_trigger(browser, "member-menu-node-b").await?;
+        focus(browser, &menu).await?;
+        press(browser, Key::Down).await?;
+        until("Down opens the row menu on Remove…", async || {
+            Ok(focused_words(browser).await? == "Remove\u{2026}")
+        })
+        .await?;
+        press(browser, Key::Enter).await?;
+        let dialog = browser.element(By::Id("remove-node-b")).await?;
+        until("Remove… opens the row's own confirmation", async || {
+            Ok(dialog.attr("open").await?.is_some())
+        })
+        .await?;
+        until("the focus moves to the Reason", async || {
+            Ok(focused_id(browser).await? == "remove-node-b-reason")
+        })
+        .await?;
+        press(browser, Key::Tab).await?;
+        press(browser, Key::Tab).await?;
+        assert_eq!("Remove node-b", focused_words(browser).await?);
+        press(browser, Key::Enter).await?;
+        until(
+            "a removal with no reason is held at the Reason",
+            async || Ok(focused_id(browser).await? == "remove-node-b-reason"),
+        )
+        .await?;
+        assert!(
+            dialog.attr("open").await?.is_some(),
+            "the dialog stays open"
+        );
+        browser
+            .driver()
+            .active_element()
+            .await?
+            .send_keys("Replaced by node-b2")
+            .await?;
+        press(browser, Key::Tab).await?;
+        press(browser, Key::Tab).await?;
+        press(browser, Key::Enter).await?;
+        browser
+            .at(&gallery.url("/ferrofed/overlays?removed=node-b"))
+            .await?;
+        browser.element(By::Id("member-removed")).await?;
+        assert!(
+            browser
+                .driver()
+                .find_all(By::Id("remove-node-b"))
+                .await?
+                .is_empty(),
+            "the removed row is gone"
+        );
+        browser.element(By::Id("remove-node-c")).await?;
+        browser.console_clean("a row menu's removal").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_results_export_menu_submits_the_query_form_to_its_format() -> Result<(), Box<dyn Error>>
+{
+    // HTML Living Standard, the `formaction` attribute: the item submits the form it sits in
+    // to another address, its fields riding along.
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/ferroehr/clinical")).await?;
+        let export = browser
+            .element(By::Css("#results-form summary[aria-haspopup='menu']"))
+            .await?;
+        until("Export hydrates", async || {
+            Ok(export.attr("aria-expanded").await?.is_some())
+        })
+        .await?;
+        assert_eq!("Export", export.text().await?.trim());
+        focus(browser, &export).await?;
+        press(browser, Key::Down).await?;
+        until("Down opens Export on CSV", async || {
+            Ok(focused_words(browser).await? == "CSV")
+        })
+        .await?;
+        press(browser, Key::Down).await?;
+        assert_eq!("JSON", focused_words(browser).await?);
+        press(browser, Key::Up).await?;
+        press(browser, Key::Enter).await?;
+        let csv = gallery.url("/export/csv?");
+        until("CSV submits the query's form to its address", async || {
+            Ok(browser
+                .driver()
+                .current_url()
+                .await?
+                .as_str()
+                .starts_with(&csv))
+        })
+        .await?;
+        let body = browser.element(By::Tag("body")).await?.text().await?;
+        assert!(
+            body.starts_with("csv\nSELECT "),
+            "the query rode along: {body}"
+        );
+        browser.console_clean("the results pane's Export").await
+    })
+    .await
+}

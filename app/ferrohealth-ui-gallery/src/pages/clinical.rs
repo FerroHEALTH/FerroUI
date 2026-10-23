@@ -20,8 +20,9 @@ use ferrohealth_ui::view::coding::{Coding, Layout, coding};
 use ferrohealth_ui::view::conditions::{
     Choice, Condition, ConditionGroup, Match, Operand, condition_groups,
 };
+use ferrohealth_ui::view::form::{TEXTAREA, field};
 use ferrohealth_ui::view::reading::{Element, Level, Reading, Section, Value, reading};
-use ferrohealth_ui::view::results::{Export, ResultsPane, Shown, Switch, results_pane};
+use ferrohealth_ui::view::results::{Export, ResultsPane, SHOWN, Shown, Switch, results_pane};
 use ferrohealth_ui::view::scope::{Grant, ScopeGrant, scope_grants};
 use ferrohealth_ui::view::subject::{Subject, SubjectLine, subject_line};
 use ferrohealth_ui::view::surface::{
@@ -40,12 +41,13 @@ use ferrohealth_ui::widget::identifier::{
     identifier_static,
 };
 use leptos::prelude::*;
+use leptos_router::hooks::use_query_map;
 
 use crate::clinical_data::{
     AnswerRow, BLOOD_PRESSURE, BODY_TEMPERATURE, CALIBRATED, CALIBRATION, CLINICIAN,
     CODED_OPERATORS, COLUMNS, COMPOSER, Coded, DELETION, DEVICE, DEVICE_NAME, DIASTOLIC, FOREIGN,
     NOW, PATH_POSITION, PATH_RATE, PATH_SYSTOLIC, PATH_TEMPERATURE, POSITION, POSITIONS, PULSE,
-    QUANTITY_OPERATORS, Quantity, RATE, REGULARITY, ROWS, SCOPES, SETTING, START_TIME,
+    QUANTITY_OPERATORS, QUERY, Quantity, RATE, REGULARITY, ROWS, SCOPES, SETTING, START_TIME,
     SUBJECT_NAMESPACE, SUBJECT_VALUE, SYSTOLIC, TEMPERATURE, VERSIONS, VersionRow,
 };
 use crate::locale::{Msg, tr, tr_with};
@@ -576,7 +578,8 @@ fn answer_chart() -> AnyView {
 }
 
 /// One answer as a table, its switch in the URL, and as a chart, its switch
-/// a form the console answers from its session, then an answer with no row.
+/// a form the console answers from its session, then an answer with no row,
+/// and one riding the query's own form ([`riding`]).
 fn results(brand: &str) -> AnyView {
     let count = u64::try_from(ROWS.len()).unwrap_or(u64::MAX);
     let page = format!("/{brand}/clinical");
@@ -626,11 +629,61 @@ fn results(brand: &str) -> AnyView {
         <div id="results">{panel_sections_card(tr(Msg::ClResultsTable), table)}</div>
         <div id="results-chart">{panel_sections_card(tr(Msg::ClResultsChart), chart)}</div>
         <div id="results-empty">{panel_sections_card(tr(Msg::ClResultsEmpty), empty)}</div>
+        {riding(&page, count)}
     }
     .into_any()
 }
 
-/// The scopes an app holds: an identity and a launch context, three
+/// An answer inside the query's own form, as a console whose run is a form
+/// post draws it: the switch submits the form, and Export's items submit it
+/// to [`crate::app::EXPORT_ROUTE`] by `formaction`, the query riding along.
+fn riding(page: &str, count: u64) -> AnyView {
+    let chart = use_query_map()
+        .with_untracked(|query| query.get(SHOWN).as_deref() == Some(Shown::Chart.key()));
+    let (shown, body) = if chart {
+        (Shown::Chart, answer_chart())
+    } else {
+        (Shown::Table, answer_table())
+    };
+    let answer = results_pane(ResultsPane {
+        title: tr(Msg::ClResultsTitle),
+        count,
+        numeric: true,
+        shown,
+        switch: Switch::Form { form: None },
+        csv: Export::Submit {
+            action: format!("{}/csv", crate::app::EXPORT_ROUTE),
+            form: None,
+        },
+        json: Export::Submit {
+            action: format!("{}/json", crate::app::EXPORT_ROUTE),
+            form: None,
+        },
+        window: tr(Msg::ClResultsWindow),
+        body,
+    });
+    let query = panel_section(
+        None,
+        field(
+            "results-query-text",
+            tr(Msg::ClResultsQuery),
+            None,
+            view! {
+                <textarea id="results-query-text" name="query" class=format!("{TEXTAREA} fui-mono") rows="2" spellcheck="false">
+                    {QUERY}
+                </textarea>
+            },
+        ),
+    );
+    view! {
+        <form id="results-form" method="get" action=format!("{page}#results-form")>
+            {panel_sections_card(tr(Msg::ClResultsForm), view! { {query} {answer} })}
+        </form>
+    }
+    .into_any()
+}
+
+/// The scopes an app holds: two identities and a launch context, three
 /// narrow (one constrained), one broad, one malformed and one the grammar
 /// takes and the CDR refuses.
 fn scopes() -> AnyView {

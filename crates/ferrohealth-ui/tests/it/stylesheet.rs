@@ -818,3 +818,12 @@ fn a_menu_segment_keeps_its_word_on_one_line() {
         assert!(segment.contains(property), "missing {property}: {segment}");
     }
 }
+
+#[test]
+fn a_confirmation_with_fields_keeps_the_dialogs_rhythm_inside_its_form() {
+    let rhythm = "  .fui-dialog > * + *,\n  .fui-dialog > .fui-dialog-form > * + *,";
+    assert!(
+        STYLESHEET.contains(rhythm),
+        "the question, the sentence, the fields and the actions keep their spacing inside the form"
+    );
+}

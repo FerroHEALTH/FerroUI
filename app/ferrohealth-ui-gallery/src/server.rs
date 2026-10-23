@@ -14,7 +14,7 @@
 
 use std::process::ExitCode;
 
-use axum::extract::{Form, Path, Request};
+use axum::extract::{Form, Path, Query, Request};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
@@ -34,9 +34,9 @@ use leptos_axum::LeptosRoutes as _;
 use tower_http::set_header::SetResponseHeaderLayer;
 
 use crate::app::{
-    COOKIE_PREFIX, DRAFT_ROUTE, OWN_PREFERENCES, PAGED_LISTINGS, PAGING_COOKIE, PAGING_ROUTE,
-    PREFERENCE_ROUTE, PROBE_ROUTE, RESET_ROUTE, SIDEBAR_COOKIE, SIDEBAR_ROUTE, SIGN_OUT_ROUTE,
-    STYLESHEET as STYLESHEET_PATH,
+    COOKIE_PREFIX, DRAFT_ROUTE, EXPORT_ROUTE, OWN_PREFERENCES, PAGED_LISTINGS, PAGING_COOKIE,
+    PAGING_ROUTE, PREFERENCE_ROUTE, PROBE_ROUTE, REMOVE_ROUTE, RESET_ROUTE, SIDEBAR_COOKIE,
+    SIDEBAR_ROUTE, SIGN_OUT_ROUTE, STYLESHEET as STYLESHEET_PATH,
 };
 
 /// The name cargo-leptos gives the site bundle's files under `pkg/`.
@@ -65,9 +65,11 @@ pub fn router(options: LeptosOptions) -> axum::Router {
         .route("/themes/{file}", get(theme_file))
         .route(PREFERENCE_ROUTE, post(choose_preference))
         .route(PROBE_ROUTE, post(probe))
+        .route(REMOVE_ROUTE, post(remove_member))
         .route(RESET_ROUTE, post(reset_preferences))
         .route(PAGING_ROUTE, post(choose_paging))
         .route(DRAFT_ROUTE, post(receive_draft))
+        .route(&format!("{EXPORT_ROUTE}/{{format}}"), get(export))
         .route(SIDEBAR_ROUTE, post(choose_sidebar))
         .route(&format!("{SIGN_OUT_ROUTE}/{{brand}}"), post(sign_out))
         .leptos_routes_with_context(&options, routes, provide_request_nonce, {
@@ -266,6 +268,55 @@ async fn choose_sidebar(Form(choice): Form<SidebarChoice>) -> Response {
         return (StatusCode::BAD_REQUEST, "the sidebar is not rail or full").into_response();
     }
     kept(SIDEBAR_COOKIE, &choice.sidebar, &choice.back)
+}
+
+/// What an export of an answer riding its query's form receives: the
+/// query, and the form's other fields, which it leaves alone.
+#[derive(Debug, serde::Deserialize)]
+struct Exported {
+    /// The query the form runs.
+    query: String,
+}
+
+/// Answers an export in `format`, `csv` or `json`, with the query that rode
+/// along as plain text: the gallery holds no answer, so it says what it
+/// would export.
+async fn export(Path(format): Path<String>, Query(exported): Query<Exported>) -> Response {
+    if !matches!(format.as_str(), "csv" | "json") {
+        return StatusCode::NOT_FOUND.into_response();
+    }
+    (
+        [(CONTENT_TYPE, "text/plain; charset=utf-8")],
+        format!("{format}\n{}", exported.query),
+    )
+        .into_response()
+}
+
+/// What a member's removal posts: the member, why, and the page to return
+/// to.
+#[derive(Debug, serde::Deserialize)]
+struct Removal {
+    /// The member removed, one of [`crate::data::MEMBERS`].
+    member: String,
+    /// Why, which a console keeps with the revision.
+    reason: String,
+    /// The page to return to.
+    back: String,
+}
+
+/// Removes a synthetic member: it sends the browser back to the page,
+/// naming the member removed. A member the gallery does not list, or a
+/// blank reason, answers `400`, as a console refuses a removal with no
+/// reason.
+async fn remove_member(Form(removal): Form<Removal>) -> Response {
+    if !crate::data::MEMBERS.contains(&removal.member.as_str()) {
+        return (StatusCode::BAD_REQUEST, "no such member").into_response();
+    }
+    if removal.reason.trim().is_empty() {
+        return (StatusCode::BAD_REQUEST, "a removal needs a reason").into_response();
+    }
+    let back = return_path(&removal.back);
+    Redirect::to(&format!("{back}?removed={}", removal.member)).into_response()
 }
 
 /// Answers the topology's Probe now: the gallery probes nothing, so it

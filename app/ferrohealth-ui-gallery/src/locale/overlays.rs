@@ -42,6 +42,8 @@ messages! {
     Information = "information",
     /// `Keyboard shortcuts`
     KeyboardShortcuts = "keyboard-shortcuts",
+    /// The line that says the member `$member` was removed.
+    MemberRemoved = "member-removed",
     /// `Menus and select buttons`
     MenusAndSelects = "menus-and-selects",
     /// `Method`
@@ -76,6 +78,10 @@ messages! {
     ProvisionedReadOnly = "provisioned-read-only",
     /// `Refusal`
     Refusal = "refusal",
+    /// `Reason`
+    Reason = "reason",
+    /// `Required. Kept with the revision.`
+    ReasonKept = "reason-kept",
     /// `Reload`
     Reload = "reload",
     /// `Reload the set`
@@ -92,7 +98,7 @@ messages! {
     RemoveMemberBody = "remove-member-body",
     /// The question of the confirmation that removes the member `$member`.
     RemoveMemberTitle = "remove-member-title",
-    /// `Members, each with its own confirmation`
+    /// `Members, each removed from its row menu with a reason`
     RemoveMembers = "remove-members",
     /// `Rename`
     Rename = "rename",

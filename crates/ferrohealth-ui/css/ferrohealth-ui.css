@@ -3538,7 +3538,10 @@
     width: min(48rem, calc(100vw - 2rem));
   }
 
+  /* A confirmation with fields draws its parts inside the one form it
+     posts, which keeps the dialog's rhythm between them. */
   .fui-dialog > * + *,
+  .fui-dialog > .fui-dialog-form > * + *,
   .fui-dialog > :where(leptos-island, leptos-children) > * + *,
   .fui-dialog > * + :where(leptos-island, leptos-children) > :where(:first-child) {
     margin-block-start: 0.75rem;

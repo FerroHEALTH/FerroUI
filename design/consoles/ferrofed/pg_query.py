@@ -167,7 +167,8 @@ def results(body, count=None, view="table", answered=True, window=None):
     seg = (f'<div role="group" aria-label="Show the answer as" class="fui-segmented">'
            f'<button type="button" class="fui-segment" aria-pressed="{"true" if view == "table" and answered else "false"}"{dis}>Table</button>'
            f'<button type="button" class="fui-segment" aria-pressed="{"true" if view == "raw" else "false"}"{dis}>Raw</button></div>')
-    exp = (button("secondary", "Export CSV", "download", small=True) + button("secondary", "Export JSON", "download", small=True)) if answered and count else ""
+    menu_attrs = 'aria-haspopup="menu" aria-expanded="false"'
+    exp = ('<span class="fui-anchor">' + button("secondary", "Export", "download", small=True, attrs=menu_attrs) + "</span>") if answered and count else ""
     win = f'<p class="fui-results-window">{window}</p>' if window else ""
     head = f'<div class="fui-panel-section"><div class="fui-panel-section-head"><h2 class="fui-panel-section-title">Answer{f" <span class=mk-count>· {count}</span>" if count is not None else ""}</h2><div class="fui-actions">{seg}{exp}</div></div>{win}</div>'
     return f'<section class="fui-card fui-panel">{head}{body}</section>'

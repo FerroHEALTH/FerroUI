@@ -16,9 +16,10 @@ use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::action::{ActionGroup, action_group};
 use ferrohealth_ui::view::button::{Variant, label};
 use ferrohealth_ui::view::dialog::{
-    Confirmation, Explanation, confirm_dialog, danger_dialog, info_dialog,
+    ConfirmForm, Confirmation, Explanation, confirm_dialog, danger_dialog, danger_form_dialog,
+    info_dialog,
 };
-use ferrohealth_ui::view::form::{INPUT, field};
+use ferrohealth_ui::view::form::{INPUT, TEXTAREA, described_by, field, keyed_field};
 use ferrohealth_ui::view::kbd::{Shortcut, ShortcutGroup, kbd, shortcut_hint};
 use ferrohealth_ui::view::layout::divided_list;
 use ferrohealth_ui::view::popover::{PopoverForm, popover_form};
@@ -34,6 +35,7 @@ use ferrohealth_ui::widget::shortcuts::{LegendWords, shortcut_legend};
 use ferrohealth_ui::widget::side_panel::{Opener, SidePanelWords};
 use ferrohealth_ui::widget::toast::{Toast, ToastAction, ToastLink, raise};
 use leptos::prelude::*;
+use leptos_router::hooks::use_query_map;
 
 /// The confirmation dialogs the title row opens with no script: the plain
 /// one its primary opens and the danger one More's delete opens, whose
@@ -93,44 +95,87 @@ fn confirmations() -> AnyView {
     .into_any()
 }
 
-/// The members the per-row confirmations remove.
-const MEMBERS: [&str; 2] = ["node-b", "node-c"];
-
-/// A list whose every row opens a confirmation of its own, each dialog's
-/// id made from its row.
+/// A list whose every row's menu ends in Remove…, which opens a danger
+/// confirmation of its own, each dialog's id made from its row. The
+/// confirmation asks for a required Reason inside the form it posts to
+/// [`crate::app::REMOVE_ROUTE`], which returns naming the member removed,
+/// and the list leaves that row out.
 fn member_removals() -> AnyView {
-    let rows = MEMBERS
+    let removed = use_query_map().with_untracked(|query| query.get("removed"));
+    let back = page_path("overlays");
+    let rows = crate::data::MEMBERS
         .into_iter()
-        .map(|member| {
-            let id = format!("remove-{member}");
-            let named = [("member", Arg::from(member))];
-            let dialog = danger_dialog(
-                Confirmation {
-                    id: id.clone().into(),
-                    title: tr_with(Msg::RemoveMemberTitle, &named).into(),
-                    message: tr_with(Msg::RemoveMemberBody, &named).into(),
-                },
-                view! {
-                    <button type="button" class=Variant::Destructive.class() command="close" commandfor=id.clone()>
-                        {tr_with(Msg::RemoveMember, &named)}
-                    </button>
-                },
-            );
-            view! {
-                <li>
-                    <code>{member}</code>
-                    " "
-                    <button type="button" class=Variant::Secondary.small() command="show-modal" commandfor=id aria-haspopup="dialog">
-                        {tr_with(Msg::RemoveMember, &named)}
-                    </button>
-                    {dialog}
-                </li>
-            }
-        })
+        .filter(|member| removed.as_deref() != Some(*member))
+        .map(|member| member_row(member, &back))
         .collect_view();
+    let said = removed
+        .filter(|member| crate::data::MEMBERS.contains(&member.as_str()))
+        .map(|member| {
+            view! {
+                <p class="fui-small fui-muted" id="member-removed">
+                    {tr_with(Msg::MemberRemoved, &[("member", Arg::from(member))])}
+                </p>
+            }
+        });
     view! {
         <p class="fui-muted">{tr(Msg::RemoveMembers)}</p>
         <ul class="fui-bullets" id="member-removals">{rows}</ul>
+        {said}
+    }
+    .into_any()
+}
+
+/// The row of `member`: its name, its menu with Remove… last, and the
+/// confirmation that asks why, returning to `back`.
+fn member_row(member: &'static str, back: &str) -> AnyView {
+    let id = format!("remove-{member}");
+    let reason = format!("{id}-reason");
+    let named = [("member", Arg::from(member))];
+    let menu = Menu::new(
+        format!("member-menu-{member}"),
+        tr_with(Msg::ActionsFor, &[("name", member.into())]),
+        Vec::new(),
+    )
+    .destructive(vec![Item::new(Action::new(
+        Some(Glyph::TRASH),
+        tr(Msg::Remove),
+        Act::Dialog(id.clone()),
+    ))]);
+    let described = described_by(&reason, true, false);
+    let fields = view! {
+        <input type="hidden" name="member" value=member />
+        <input type="hidden" name="back" value=back.to_owned() />
+        {keyed_field(
+            reason.clone(),
+            tr(Msg::Reason),
+            Some(tr(Msg::ReasonKept)),
+            view! {
+                <textarea id=reason name="reason" class=TEXTAREA required aria-describedby=described></textarea>
+            },
+        )}
+    }
+    .into_any();
+    let dialog = danger_form_dialog(
+        Confirmation {
+            id: id.into(),
+            title: tr_with(Msg::RemoveMemberTitle, &named).into(),
+            message: tr_with(Msg::RemoveMemberBody, &named).into(),
+        },
+        ConfirmForm {
+            action: String::from(crate::app::REMOVE_ROUTE),
+            fields,
+        },
+        view! {
+            <button type="submit" class=Variant::Destructive.class()>
+                {label(Some(Glyph::TRASH), tr_with(Msg::RemoveMember, &named))}
+            </button>
+        },
+    );
+    view! {
+        <li>
+            {split(view! { <code>{member}</code> }, row_menu(menu))}
+            {dialog}
+        </li>
     }
     .into_any()
 }

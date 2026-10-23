@@ -196,13 +196,18 @@ pub const ROWS: &[AnswerRow] = &[
     },
 ];
 
+/// The synthetic query whose answer rides its own form on the clinical
+/// page.
+pub const QUERY: &str = "SELECT o/data/events/data/items[at0004]/value/magnitude AS systolic FROM EHR e CONTAINS OBSERVATION o LIMIT 50";
+
 /// The scopes an app holds: each raw, its resource in words, and whether
 /// it is broad.
 ///
-/// Two ask for no resource, one is narrowed by a search constraint, and
+/// Three ask for no resource, one is narrowed by a search constraint, and
 /// the last breaks the grammar, its permissions out of order.
 pub const SCOPES: &[(&str, &str, bool)] = &[
     ("openid", "", false),
+    ("profile", "", false),
     ("launch/patient", "", false),
     (
         "patient/composition-*.rs",
