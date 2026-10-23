@@ -950,7 +950,7 @@ fn a_navigation_or_tab_count_groups_its_digits() {
                 id: "nav-pages",
                 title: "Pages".into(),
                 entries: vec![Entry {
-                    href: "/findings",
+                    href: "/findings".into(),
                     label: "Findings".into(),
                     glyph: Glyph::DATABASE,
                     exact: false,
