@@ -628,12 +628,12 @@ fn a_large_value_set_on_a_path_node_ends_in_the_more_row_and_counts_its_total() 
             })],
         )
     });
-    assert!(node.contains("Value set · 4000 codes"), "{node}");
+    assert!(node.contains("Value set · 4,000 codes"), "{node}");
     assert!(
         has(&node, "li", &[("class", "fui-code-more")]),
         "the more row is the list's last item: {node}"
     );
-    assert!(node.contains("2 of 4000 codes shown."), "{node}");
+    assert!(node.contains("2 of 4,000 codes shown."), "{node}");
     assert!(has(&node, "a", &[("href", "/node?codes=2")]), "{node}");
     assert!(node.contains("Show the next 25"), "{node}");
 }

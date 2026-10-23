@@ -306,7 +306,7 @@ fn a_count_past_99_shows_whole_and_short_for_the_rail() {
         })
     });
     assert!(
-        page.contains(r#"<span aria-hidden="true" class="fui-nav-count-whole">123456</span><span aria-hidden="true" class="fui-nav-count-short">99+</span><span class="fui-sr-only">123456 errors in the running load</span>"#),
+        page.contains(r#"<span aria-hidden="true" class="fui-nav-count-whole">123,456</span><span aria-hidden="true" class="fui-nav-count-short">99+</span><span class="fui-sr-only">123456 errors in the running load</span>"#),
         "{page}"
     );
     assert!(
@@ -966,7 +966,7 @@ fn a_navigation_or_tab_count_groups_its_digits() {
         })
     });
     assert!(
-        page.contains(r#"<span aria-hidden="true">312,000</span>"#),
+        page.contains(r#"<span aria-hidden="true" class="fui-nav-count-whole">312,000</span>"#),
         "{page}"
     );
     let tabs = html(|| {
