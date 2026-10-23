@@ -107,7 +107,7 @@ for a console: a console never builds from it or syncs from it.
 ## Which version to read
 
 Read FerroUI's documents at the git tag that matches your `ferrohealth-ui`
-pin: with `=0.2.0`, read the tag `v0.2.0`; with `=0.3.2`, read `v0.3.2`.
+pin: with `=0.2.0`, read the tag `v0.2.0`; with `=0.3.3`, read `v0.3.3`.
 Read `main` only when you are moving your console to the next release. The
 rules on `main` describe components your pinned version may not have.
 
