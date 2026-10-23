@@ -6,7 +6,10 @@
 //! language, or a permitted operation of a scope grant.
 //!
 //! A tag is a short word in the UI face on the sunken ground, on one line
-//! that never breaks inside itself, and it is read as the text it shows.
+//! while it fits, and it is read as the text it shows. A tag wider than
+//! its box, such as a domain named by a canonical URL or an OID, wraps
+//! between its words and breaks inside a word only where the word alone
+//! is wider, so it never widens the page (WCAG 2.2 SC 1.4.10).
 //! The word starts with a capital, as every word the family draws for a
 //! state or a kind does; where the value has a raw code (a language key, a
 //! scope operation), the code follows inside the tag as a quiet hint in the

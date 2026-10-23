@@ -52,3 +52,4 @@ allow ^0123456789ab$                    # a synthetic version hash
 allow ^CARGO_PKG_VERSION$               # the environment variable Cargo sets
 allow ^(GET|POST)$                      # an HTTP method
 allow ^theme=\{\}&back=                 # a form body the theme toggle posts
+allow ^fhirUser$                      # a SMART App Launch scope token the scope parser matches; a reader sees the catalog's words

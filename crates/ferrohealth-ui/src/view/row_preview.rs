@@ -7,10 +7,13 @@
 //! count, then each row's column and value pairs, a hairline between rows.
 //! A concept that did not resolve shows as `0` with the warn mark and its
 //! words ([`RowValue::ConceptZero`]), so a missed mapping shows at a
-//! glance and never by colour alone (WCAG 2.2 SC 1.4.1). On a phone each
-//! column stacks over its value, so a value keeps the full width and an id
-//! never breaks inside. No specification governs the preview: our own
-//! design.
+//! glance and never by colour alone (WCAG 2.2 SC 1.4.1). A column with
+//! no value reads `NULL` in the code face ([`RowValue::Null`]) and an
+//! empty text reads "empty text" in muted words, so the two never look
+//! alike. On a phone each column stacks over its value, so a value keeps
+//! the full width and an id breaks inside only where it alone is wider; a
+//! long value wraps inside its cell and is never cut off. No specification
+//! governs the preview: our own design.
 
 use leptos::prelude::*;
 
@@ -25,6 +28,8 @@ pub enum RowValue {
     Value(String),
     /// A concept id that did not resolve, written as `0`.
     ConceptZero,
+    /// No value: the column is written as NULL.
+    Null,
 }
 
 /// One column of a previewed row and its value.
@@ -51,7 +56,14 @@ pub struct RowTable {
 /// Returns `value` as its cell shows it.
 fn value(value: RowValue) -> AnyView {
     match value {
+        RowValue::Value(value) if value.is_empty() => view! {
+            <span class="fui-rowgraph-empty">{tr(Text::RowsEmpty)}</span>
+        }
+        .into_any(),
         RowValue::Value(value) => value.into_any(),
+        RowValue::Null => {
+            view! { <span class="fui-rowgraph-null">{tr(Text::RowsNull)}</span> }.into_any()
+        }
         RowValue::ConceptZero => view! {
             <span class="fui-concept-zero">
                 {icon(Glyph::TRIANGLE_ALERT, "12")}

@@ -11,4 +11,8 @@ texts! {
     RowsConceptZero = "rows-concept-zero",
     /// A table's row count in the row preview, by `$count`.
     RowsCount = "rows-count",
+    /// A value that is an empty text, set apart from NULL.
+    RowsEmpty = "rows-empty",
+    /// A column with no value, as the database writes it.
+    RowsNull = "rows-null",
 }

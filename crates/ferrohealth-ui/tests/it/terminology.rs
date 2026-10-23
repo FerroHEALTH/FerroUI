@@ -849,9 +849,19 @@ fn an_empty_list_says_so_and_a_kept_row_says_why() {
             &[
                 ("type", "button"),
                 ("disabled", ""),
-                ("aria-label", "The editor keeps this property")
+                ("aria-hidden", "true")
             ]
         ),
+        "the lock is shown, never heard: {kept}"
+    );
+    // NOTE: design F13: a disabled control says its reason as visible text, never in a
+    // tooltip or a name alone.
+    assert!(
+        kept.contains(r#"<p class="fui-help fui-repeat-kept">The editor keeps this property</p>"#),
+        "the reason is a visible line: {kept}"
+    );
+    assert!(
+        !kept.contains(r#"title="The editor keeps this property""#),
         "{kept}"
     );
     assert!(

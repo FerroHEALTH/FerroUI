@@ -24,6 +24,8 @@ texts! {
     CondMatch = "cond-match",
     /// The check box that negates a group.
     CondNot = "cond-not",
+    /// A chosen value its select does not list: `$value` is the value.
+    CondNotListed = "cond-not-listed",
     /// The words after a group's All or Any choice.
     CondOfThese = "cond-of-these",
     /// The label of a condition's operator.
@@ -60,8 +62,24 @@ texts! {
     ScopeExpectedPermissions = "scope-expected-permissions",
     /// What a scope with no resource lacks.
     ScopeExpectedResource = "scope-expected-resource",
+    /// What the `fhirUser` scope asks for.
+    ScopeFhirUser = "scope-fhir-user",
+    /// What the `launch` scope asks for.
+    ScopeLaunch = "scope-launch",
+    /// What a `launch/<resource>` scope asks for: `$what` is the resource as the scope names it.
+    ScopeLaunchContext = "scope-launch-context",
+    /// What a scope naming a launch role asks for: `$what` the resource, `$label` the role.
+    ScopeLaunchRole = "scope-launch-role",
     /// The hidden words after an operation a scope does not permit.
     ScopeNotPermitted = "scope-not-permitted",
+    /// What the `offline_access` scope asks for.
+    ScopeOfflineAccess = "scope-offline-access",
+    /// What the `online_access` scope asks for.
+    ScopeOnlineAccess = "scope-online-access",
+    /// The words before a scope's search constraint.
+    ScopeOnlyWhere = "scope-only-where",
+    /// What the `openid` scope asks for.
+    ScopeOpenid = "scope-openid",
     /// The compartment `patient` in words.
     ScopePatient = "scope-patient",
     /// The operation `r` of a scope.

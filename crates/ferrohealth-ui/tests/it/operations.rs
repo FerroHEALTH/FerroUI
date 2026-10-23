@@ -358,6 +358,40 @@ fn the_row_preview_counts_each_tables_rows_and_marks_an_unresolved_concept_in_wo
 }
 
 #[test]
+fn the_row_preview_tells_null_from_an_empty_text_and_wraps_a_long_value() {
+    let field = |column: &str, value: RowValue| RowField {
+        column: column.to_owned(),
+        value,
+    };
+    let preview = html(move || {
+        row_preview(vec![RowTable {
+            name: String::from("OBSERVATION"),
+            detail: None,
+            rows: vec![vec![
+                field("value_as_string", RowValue::Null),
+                field("value_source_value", RowValue::Value(String::new())),
+            ]],
+        }])
+    });
+    assert!(
+        preview.contains(r#"<dd><span class="fui-rowgraph-null">NULL</span></dd>"#),
+        "NULL reads as NULL: {preview}"
+    );
+    assert!(
+        preview.contains(r#"<dd><span class="fui-rowgraph-empty">empty text</span></dd>"#),
+        "an empty text reads apart from NULL: {preview}"
+    );
+    // NOTE: WCAG 2.2 SC 1.4.10: a long unbroken source value wraps inside its cell, never
+    // cut off by the table's rounded edge.
+    assert!(
+        ferrohealth_ui::style::STYLESHEET.contains(
+            "  .fui-rowgraph-fields dd {\n    font-variant-numeric: tabular-nums;\n    overflow-wrap: anywhere;"
+        ),
+        "a long value wraps"
+    );
+}
+
+#[test]
 fn the_raw_message_tints_segment_ids_and_separators_one_segment_per_line() {
     let raw = html(|| {
         hl7v2_raw(

@@ -200,10 +200,20 @@ pub const ROWS: &[AnswerRow] = &[
 ];
 
 /// The scopes an app holds: each raw, its resource in words, and whether
-/// it is broad; the last breaks the grammar, its permissions out of order.
+/// it is broad.
+///
+/// Two ask for no resource, one is narrowed by a search constraint, and
+/// the last breaks the grammar, its permissions out of order.
 pub const SCOPES: &[(&str, &str, bool)] = &[
+    ("openid", "", false),
+    ("launch/patient", "", false),
     (
         "patient/composition-*.rs",
+        "Compositions of any template",
+        false,
+    ),
+    (
+        "patient/composition-*.rs?archetype_id=openEHR-EHR-OBSERVATION.blood_pressure.v2",
         "Compositions of any template",
         false,
     ),

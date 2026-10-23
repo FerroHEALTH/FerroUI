@@ -5,14 +5,15 @@
 //! version history with At a time (E2), the clinical reading (E3), the
 //! condition groups (E6), the results pane (E7) and the scope grant (E8).
 
+use ferrohealth_ui::style::STYLESHEET;
 use ferrohealth_ui::view::conditions::{
     ADD_CONDITION, ADD_GROUP, Choice, Condition, ConditionGroup, Match, Operand, REMOVE,
     REMOVE_GROUP, condition_groups,
 };
-use ferrohealth_ui::view::reading::{Element, Level, Reading, Section, Value, reading};
+use ferrohealth_ui::view::reading::{Element, INDENTED, Level, Reading, Section, Value, reading};
 use ferrohealth_ui::view::results::{ResultsPane, SHOWN, Shown, Switch, results_pane};
 use ferrohealth_ui::view::scope::{
-    Compartment, Grant, Operation, Scope, ScopeError, ScopeGrant, scope_grants,
+    Compartment, Grant, Operation, Request, Scope, ScopeError, ScopeGrant, scope_grants,
 };
 use ferrohealth_ui::view::subject::{Subject, SubjectLine, subject_line};
 use ferrohealth_ui::view::versions::{
@@ -304,6 +305,81 @@ fn a_reading_nests_its_headings_as_the_document_nests() {
     assert!(shown.contains(".<wbr>"), "breaks only after a dot: {shown}");
 }
 
+/// A cluster nested `depth` levels under a top section, each with one
+/// long unbroken value.
+fn nested(depth: usize) -> Section {
+    let mut inner = Section {
+        title: format!("Cluster {depth}"),
+        node: None,
+        elements: vec![Element {
+            label: String::from("Note"),
+            value: Value::Text(String::from(
+                "SYN0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+            )),
+        }],
+        sections: Vec::new(),
+    };
+    for level in (0..depth).rev() {
+        inner = Section {
+            title: format!("Cluster {level}"),
+            node: None,
+            elements: Vec::new(),
+            sections: vec![inner],
+        };
+    }
+    inner
+}
+
+#[test]
+fn a_cluster_past_four_levels_indents_no_further() {
+    // NOTE: WCAG 2.2 SC 1.4.10: a cluster nested twelve deep stays inside a phone's width.
+    let shown = html(|| {
+        reading(Reading {
+            sections: vec![nested(12)],
+            level: Level::Three,
+            folded: None,
+        })
+    });
+    let sections = tags(&shown, "section");
+    assert_eq!(13, sections.len(), "{shown}");
+    let deep = sections
+        .iter()
+        .filter(|section| {
+            section
+                .get("class")
+                .is_some_and(|class| class == "fui-reading-section is-deep")
+        })
+        .count();
+    assert_eq!(
+        12 - INDENTED,
+        deep,
+        "every cluster past {INDENTED} levels: {shown}"
+    );
+    assert!(
+        STYLESHEET.contains(
+            "  .fui-reading-section .fui-reading-section.is-deep {\n    margin-inline-start: 0;\n    padding-inline-start: 0;\n    border-inline-start: 0;"
+        ),
+        "a deep cluster indents no further"
+    );
+    assert!(
+        STYLESHEET.contains("  .fui-reading-rows dd {\n    margin: 0;\n    min-width: 0;\n    overflow-wrap: anywhere;"),
+        "an unbroken value wraps inside its row"
+    );
+}
+
+#[test]
+fn a_reader_hears_a_heading_and_its_node_apart_and_the_ucum_code() {
+    let shown = html(|| reading(composition()));
+    assert!(
+        shown.contains(r#"Blood pressure<span class="fui-sr-only">, </span><code"#),
+        "a hidden comma between the title and its node: {shown}"
+    );
+    assert!(
+        shown.contains(r#"<span class="fui-sr-only">, UCUM mm[Hg]</span>"#),
+        "the UCUM code is said after the unit: {shown}"
+    );
+}
+
 // ---- E6 ----
 
 /// A choice of `options`, `chosen` chosen.
@@ -491,6 +567,57 @@ fn a_group_head_reads_as_one_phrase() {
     assert!(
         has(&shown, "label", &[("for", "c1-path")]),
         "each control is labelled: {shown}"
+    );
+}
+
+#[test]
+fn a_chosen_value_its_select_does_not_list_stays_chosen() {
+    let mut group = query();
+    if let Some(first) = group.conditions.first_mut() {
+        first.operator = choice(&["=", ">"], "matches");
+    }
+    let shown = html(move || condition_groups(group));
+    let select = shown
+        .split(r#"<select id="c1-op""#)
+        .nth(1)
+        .and_then(|rest| rest.split("</select>").next())
+        .expect("the operator's select");
+    let options = tags(select, "option");
+    let chosen: Vec<_> = options
+        .iter()
+        .filter(|option| option.contains_key("selected"))
+        .filter_map(|option| option.get("value").cloned())
+        .collect();
+    assert!(
+        chosen.contains(&String::from("matches")),
+        "the value the condition has posts, never the first option: {shown}"
+    );
+    assert!(
+        shown.contains("matches (not in the list)"),
+        "the select says it is not listed: {shown}"
+    );
+    assert!(
+        !options.iter().any(
+            |option| option.get("value").is_some_and(|value| value == "=")
+                && option.contains_key("selected")
+        ),
+        "{shown}"
+    );
+}
+
+#[test]
+fn a_condition_row_stacks_in_a_group_too_narrow_for_its_fields() {
+    // NOTE: WCAG 2.2 SC 1.4.10: between the phone layout and a width where a nested row
+    // fits, the row stacks inside its group instead of widening the page (#307).
+    assert!(
+        STYLESHEET.contains("  .fui-cond-list {\n    container-type: inline-size;"),
+        "the list measures the room its group leaves"
+    );
+    assert!(
+        STYLESHEET.contains(
+            "  @container (width < 30rem) {\n    .fui-cond {\n      grid-template-columns: minmax(0, 1fr) auto;"
+        ),
+        "a narrow group stacks its rows"
     );
 }
 
@@ -692,5 +819,88 @@ fn a_grant_strikes_an_absent_operation_and_marks_a_broad_one() {
     assert!(
         shown.contains("Expected patient, user or system, then a slash."),
         "{shown}"
+    );
+}
+
+#[test]
+fn a_scope_that_asks_for_no_resource_reads_as_what_it_asks_for() {
+    // NOTE: SMART App Launch 2.2.0, Scopes and Launch Context: identity, launch context and
+    // refresh token scopes grant no resource and are no malformed resource scope.
+    for (raw, request) in [
+        ("openid", Request::OpenId),
+        ("fhirUser", Request::FhirUser),
+        ("launch", Request::Launch),
+        ("online_access", Request::OnlineAccess),
+        ("offline_access", Request::OfflineAccess),
+        (
+            "launch/patient",
+            Request::LaunchContext {
+                resource: String::from("patient"),
+                role: None,
+            },
+        ),
+        (
+            "launch/relatedperson?role=friend",
+            Request::LaunchContext {
+                resource: String::from("relatedperson"),
+                role: Some(String::from("friend")),
+            },
+        ),
+    ] {
+        assert_eq!(Some(request), Request::parse(raw), "{raw}");
+    }
+    for raw in [
+        "launch/",
+        "launch/patient?x=1",
+        "patient/Observation.rs",
+        "profile",
+    ] {
+        assert_eq!(None, Request::parse(raw), "{raw}");
+    }
+    let shown = html(|| {
+        scope_grants(
+            "Scopes",
+            ["openid", "fhirUser", "launch/patient", "offline_access"]
+                .into_iter()
+                .map(|raw| ScopeGrant::read(raw, |_| (String::new(), false)))
+                .collect(),
+        )
+    });
+    assert!(!shown.contains("is-refused"), "none is malformed: {shown}");
+    assert!(shown.contains("Who you are, by OpenID Connect"), "{shown}");
+    assert!(
+        shown.contains("The patient in context at launch"),
+        "{shown}"
+    );
+    assert!(
+        shown.contains("A refresh token that outlasts your session"),
+        "{shown}"
+    );
+}
+
+#[test]
+fn a_constrained_grant_shows_its_constraint_and_its_raw_scope_breaks() {
+    let raw = "patient/Observation.rs?category=http://terminology.hl7.org/CodeSystem/observation-category|laboratory";
+    let shown = html(move || {
+        scope_grants(
+            "Scopes",
+            vec![ScopeGrant::read(raw, |_| {
+                (String::from("Observations"), false)
+            })],
+        )
+    });
+    assert!(
+        has(&shown, "span", &[("class", "fui-scope-constraint")]),
+        "the constraint narrows the grant: {shown}"
+    );
+    assert!(shown.contains("Only where"), "{shown}");
+    assert!(shown.contains("laboratory"), "{shown}");
+    assert!(
+        shown.contains("patient/<wbr>Observation.<wbr>rs?<wbr>category=<wbr>"),
+        "the raw scope breaks after its marks: {shown}"
+    );
+    assert!(
+        STYLESHEET.contains("  .fui-scope-raw {\n    min-width: 0;"),
+        "the raw scope may shrink"
     );
 }

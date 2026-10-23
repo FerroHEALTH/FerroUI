@@ -291,6 +291,73 @@ async fn an_identifier_reveals_counts_down_and_hides_without_moving_its_row()
     .await
 }
 
+/// Whether the focused element matches the CSS `selector`.
+async fn focus_is(browser: &Browser, selector: &str) -> Result<bool, Box<dyn Error>> {
+    let held = browser
+        .driver()
+        .execute(
+            "return document.activeElement !== null && document.activeElement.matches(arguments[0]);",
+            vec![serde_json::Value::from(selector)],
+        )
+        .await?;
+    Ok(held.json().as_bool().unwrap_or(false))
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_focus_follows_reveal_hide_and_a_refusal_to_the_face_that_shows()
+-> Result<(), Box<dyn Error>> {
+    // NOTE: WCAG 2.2 SC 2.4.3: a pressed button that goes away hands the focus to the
+    // button of the face that takes its place, never to the page.
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        window(browser, 1440, 900).await?;
+        open_identifiers(browser, &gallery, "ferropix").await?;
+        let reveal = browser
+            .element(By::Css("#identifier-bsn button[aria-pressed='false']"))
+            .await?;
+        browser
+            .driver()
+            .execute(
+                "arguments[0].scrollIntoView({block: 'center'}); arguments[0].focus();",
+                vec![reveal.to_json()?],
+            )
+            .await?;
+        press(browser, Key::Enter).await?;
+        until("the focus moves to Hide once the value shows", async || {
+            focus_is(browser, "#identifier-bsn button[aria-pressed='true']").await
+        })
+        .await?;
+        press(browser, Key::Enter).await?;
+        until("the focus returns to Reveal once hidden", async || {
+            focus_is(browser, "#identifier-bsn button[aria-pressed='false']").await
+        })
+        .await?;
+        let refused = browser
+            .element(By::Css("#identifier-ssn button[aria-pressed='false']"))
+            .await?;
+        browser
+            .driver()
+            .execute(
+                "arguments[0].scrollIntoView({block: 'center'}); arguments[0].focus();",
+                vec![refused.to_json()?],
+            )
+            .await?;
+        press(browser, Key::Enter).await?;
+        browser
+            .text("span", "Not revealed: the hourly limit is reached")
+            .await?;
+        until("the focus returns to Reveal after a refusal", async || {
+            focus_is(browser, "#identifier-ssn button[aria-pressed='false']").await
+        })
+        .await?;
+        Ok(())
+    })
+    .await
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn the_stacked_compare_reads_the_record_chosen_and_an_event_opens()
 -> Result<(), Box<dyn Error>> {
