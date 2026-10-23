@@ -200,9 +200,18 @@ jobs:
           set -euo pipefail
           bash scripts/release/changelog.sh --self-test
           bash scripts/checks/changelog-guard.sh --self-test
+          bash scripts/checks/changelog-security.sh --self-test
+          bash scripts/release/plan.sh --self-test
           bash scripts/checks/screenshot-paths.sh --self-test
           bash scripts/checks/mod-order.sh --self-test
       - run: bash scripts/release/changelog.sh --check
+      # Regulation (EU) 2024/2847 Annex I Part II(2), (4) and (8), on the
+      # fragments assembled as the next release will carry them: every
+      # Security entry names its GHSA advisory or VEX statement, and a
+      # Security section beside other changes opens with its reason. The
+      # release plan runs the same checks over the section it cuts.
+      - name: The changelog the next release carries holds its structure and Security rules
+        run: bash scripts/checks/changelog-unreleased.sh
       - run: bash scripts/checks/mod-order.sh
       - name: The pull request adds a fragment and commits no screenshot
         if: github.event_name == 'pull_request' && github.event.pull_request.user.type != 'Bot'
@@ -424,6 +433,45 @@ jobs:
         with:
           tool: cargo-deny
       - run: cargo deny check
+      # An `ignore` entry that outlived its finding: cargo-deny reports it as a
+      # warning, so the step above stays green on one; this promotes it to an
+      # error. Here because cargo-deny and the toolchain are installed.
+      - name: No exception for an advisory that no longer fires
+        run: bash scripts/checks/advisory-exceptions.sh
+      # A VEX statement whose published argument names the wrong dependency
+      # path: compared with the graph cargo resolves, in both directions.
+      - name: Every VEX statement names the real dependency path
+        run: bash scripts/checks/vex-reachability.sh
+
+  # The published Rust advisory VEX is exactly what deny.toml and
+  # security/vex/rust-advisories.toml generate, and every hand-written
+  # OpenVEX document is well formed. No specification governs the gate: our
+  # own design, the one FerroEHR and FerroFED run.
+  vex:
+    name: vex
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # deny.toml and the prose file are TOML, which jq cannot read. Pinned by
+      # version and verified by checksum: this binary decides whether the gate
+      # passes.
+      - name: Install yq
+        env:
+          YQ_VERSION: v4.53.3
+          YQ_SHA256: fa52a4e758c63d38299163fbdd1edfb4c4963247918bf9c1c5d31d84789eded4
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 --retry-delay 2 --retry-all-errors -o "$RUNNER_TEMP/yq" "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64"
+          echo "${YQ_SHA256}  $RUNNER_TEMP/yq" | sha256sum -c -
+          sudo install -m 0755 "$RUNNER_TEMP/yq" /usr/local/bin/yq
+          yq --version
+      - name: Every accepted advisory has a published VEX justification
+        run: bash scripts/checks/vex-advisories.sh
 
   # The vendored Lucide set is whole: every listed icon and its licence, and
   # no file the list does not name.
@@ -637,6 +685,7 @@ jobs:
       - test
       - doc
       - cargo-deny
+      - vex
       - lucide
       - publish-dry-run
       - crate-version-guard
