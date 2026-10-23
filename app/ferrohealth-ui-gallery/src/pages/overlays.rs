@@ -9,7 +9,7 @@
 //! and the drawer is the navigation on a narrow screen.
 
 use crate::locale::{Msg, Words, tr, tr_with};
-use ferrohealth_ui::i18n::Word;
+use ferrohealth_ui::i18n::{Arg, Word};
 use ferrohealth_ui::icon::{Glyph, icon};
 use ferrohealth_ui::island::SidePanel;
 use ferrohealth_ui::tone::Tone;
@@ -39,7 +39,7 @@ use leptos::prelude::*;
 fn confirmations() -> AnyView {
     let plain = confirm_dialog(
         Confirmation {
-            id: "reload-set",
+            id: "reload-set".into(),
             title: tr(Msg::ReloadTheSet).into(),
             message: tr(Msg::FilesDiskCompileReplaceRunning).into(),
         },
@@ -48,7 +48,7 @@ fn confirmations() -> AnyView {
     .into_any();
     let danger = danger_dialog(
         Confirmation {
-            id: "delete-file",
+            id: "delete-file".into(),
             title: tr(Msg::DeleteTheFile).into(),
             message: tr(Msg::SyntheticFileGoesGoodRunning).into(),
         },
@@ -63,8 +63,51 @@ fn confirmations() -> AnyView {
             </p>
             {plain}
             {danger}
+            {member_removals()}
         },
     )
+    .into_any()
+}
+
+/// The members the per-row confirmations remove.
+const MEMBERS: [&str; 2] = ["node-b", "node-c"];
+
+/// A list whose every row opens a confirmation of its own, each dialog's
+/// id made from its row.
+fn member_removals() -> AnyView {
+    let rows = MEMBERS
+        .into_iter()
+        .map(|member| {
+            let id = format!("remove-{member}");
+            let named = [("member", Arg::from(member))];
+            let dialog = danger_dialog(
+                Confirmation {
+                    id: id.clone().into(),
+                    title: tr_with(Msg::RemoveMemberTitle, &named).into(),
+                    message: tr_with(Msg::RemoveMemberBody, &named).into(),
+                },
+                view! {
+                    <button type="button" class=Variant::Destructive.class() command="close" commandfor=id.clone()>
+                        {tr_with(Msg::RemoveMember, &named)}
+                    </button>
+                },
+            );
+            view! {
+                <li>
+                    <code>{member}</code>
+                    " "
+                    <button type="button" class=Variant::Secondary.small() command="show-modal" commandfor=id aria-haspopup="dialog">
+                        {tr_with(Msg::RemoveMember, &named)}
+                    </button>
+                    {dialog}
+                </li>
+            }
+        })
+        .collect_view();
+    view! {
+        <p class="fui-muted">{tr(Msg::RemoveMembers)}</p>
+        <ul class="fui-bullets" id="member-removals">{rows}</ul>
+    }
     .into_any()
 }
 
@@ -583,7 +626,7 @@ fn popover() -> AnyView {
         view! {
             <p class="fui-muted" id="popover-form">{tr(Msg::PopoverFormOpensUnderTrigger)}</p>
             {cluster(popover_form(PopoverForm {
-                id: "save-query",
+                id: "save-query".into(),
                 variant: Variant::Secondary,
                 glyph: Glyph::SAVE,
                 label: tr(Msg::SaveTheQuery).into(),

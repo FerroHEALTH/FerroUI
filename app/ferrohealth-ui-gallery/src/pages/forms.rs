@@ -12,7 +12,7 @@ use crate::data::{
 use crate::locale::{Msg, Words, message, tr, tr_with};
 use ferrohealth_ui::calendar::{Bounds, Day, Preset, Quick, Weekday};
 use ferrohealth_ui::highlight::Language;
-use ferrohealth_ui::i18n::Phrase;
+use ferrohealth_ui::i18n::{Arg, Phrase};
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::island::{Combobox, DatePicker, DateRangePicker};
 use ferrohealth_ui::tone::Tone;
@@ -46,6 +46,7 @@ use ferrohealth_ui::widget::editor::{
 use ferrohealth_ui::widget::filter::{keeps, table_filter};
 use ferrohealth_ui::widget::masked::HoldWords;
 use ferrohealth_ui::widget::pick_or_type::{PickOrType, Picker, pick_or_type};
+use ferrohealth_ui::widget::repeat::{Fields, ROW, Repeat, RepeatAdd, RepeatRow, RowEnd, repeat};
 use ferrohealth_ui::widget::upload::{Upload, UploadWords, upload_field};
 use leptos::prelude::*;
 
@@ -1481,6 +1482,128 @@ fn edge_parts() -> AnyView {
     .into_any()
 }
 
+/// A member's endpoints, each as an F7 sub-card row, and in each its
+/// profiles, a list of one-field rows.
+const ENDPOINTS: [(&str, &str, &[&str]); 2] = [
+    (
+        "node-c-pub",
+        "https://node-c.example.org/query",
+        &["https://profiles.example.org/patient-summary"],
+    ),
+    (
+        "node-c-fhir",
+        "https://node-c.example.org/fhir",
+        &[
+            "https://profiles.example.org/patient-summary",
+            "https://profiles.example.org/lab-result",
+        ],
+    ),
+];
+
+/// The profile row `key` of the endpoint row `endpoint`, holding `url`.
+fn profile_row(endpoint: &str, key: &str, url: &str) -> RepeatRow {
+    let id = format!("ep-{endpoint}-profile-{key}");
+    let input = view! {
+        <input id=id.clone() name=format!("endpoint[{endpoint}][profile][{key}]") class=INPUT spellcheck="false" value=url.to_owned() />
+    };
+    RepeatRow {
+        key: key.to_owned(),
+        heading: None,
+        fields: Field::new(id, tr(Msg::EpProfile))
+            .label_hidden()
+            .view(input),
+        end: RowEnd::Remove {
+            label: tr_with(Msg::EpRemoveProfile, &[("value", url.to_owned().into())]),
+            name: String::from("remove-profile"),
+            value: format!("{endpoint}/{key}"),
+        },
+        after: None,
+    }
+}
+
+/// The profiles of the endpoint row `endpoint`, named `name`, with the blank
+/// row Add copies when `blank`.
+fn profiles(endpoint: &str, name: &str, urls: &[&str], blank: bool) -> AnyView {
+    let rows = urls
+        .iter()
+        .zip(1_u32..)
+        .map(|(url, count)| profile_row(endpoint, &format!("p{count}"), url))
+        .collect();
+    repeat(Repeat {
+        id: format!("ep-{endpoint}-profiles"),
+        label: tr_with(Msg::EpProfiles, &[("name", name.to_owned().into())]),
+        fields: Fields::One,
+        head: vec![tr(Msg::EpProfile)],
+        rows,
+        blank: blank.then(|| profile_row(endpoint, ROW, "")),
+        add: Some(RepeatAdd {
+            label: tr(Msg::EpAddProfile),
+            name: String::from("add-profile"),
+            value: endpoint.to_owned(),
+        }),
+        empty: tr(Msg::EpProfilesNone),
+        form: None,
+    })
+}
+
+/// The endpoint row `key` named `name` at `base`, with its profiles.
+fn endpoint_row(key: &str, name: &str, base: &str, urls: &[&str]) -> RepeatRow {
+    let id = format!("ep-{key}-id");
+    let base_id = format!("ep-{key}-base");
+    let named = [("name", Arg::from(name.to_owned()))];
+    let fields = view! {
+        <div class=FIELD_FLOW>
+            {Field::new(id.clone(), tr(Msg::EpId))
+                .view(view! { <input id=id name=format!("endpoint[{key}][id]") class=INPUT spellcheck="false" value=name.to_owned() /> })}
+            {Field::new(base_id.clone(), tr(Msg::EpBase))
+                .view(view! { <input id=base_id name=format!("endpoint[{key}][base]") class=INPUT spellcheck="false" value=base.to_owned() /> })}
+        </div>
+        {profiles(key, name, urls, key != ROW)}
+    }
+    .into_any();
+    RepeatRow {
+        key: key.to_owned(),
+        heading: Some(tr_with(Msg::EpHeading, &named)),
+        fields,
+        end: RowEnd::Remove {
+            label: tr_with(Msg::EpRemove, &named),
+            name: String::from("remove-endpoint"),
+            value: key.to_owned(),
+        },
+        after: None,
+    }
+}
+
+/// A member's endpoints: F7 sub-card rows, each with a list of one-field
+/// rows of its own.
+fn endpoints() -> AnyView {
+    let rows = ENDPOINTS
+        .iter()
+        .zip(1_u32..)
+        .map(|((name, base, urls), count)| endpoint_row(&format!("e{count}"), name, base, urls))
+        .collect();
+    let list = repeat(Repeat {
+        id: String::from("member-endpoints"),
+        label: tr(Msg::EpTitle),
+        fields: Fields::Card,
+        head: Vec::new(),
+        rows,
+        blank: Some(endpoint_row(ROW, "", "", &[])),
+        add: Some(RepeatAdd {
+            label: tr(Msg::EpAdd),
+            name: String::from("add-endpoint"),
+            value: String::from("member"),
+        }),
+        empty: tr(Msg::EpNone),
+        form: None,
+    });
+    card(
+        tr(Msg::EpTitle),
+        view! { <form method="post" action="#" class=FORM>{list}</form> },
+    )
+    .into_any()
+}
+
 /// The forms page.
 #[component]
 #[expect(
@@ -1528,6 +1651,7 @@ pub fn FormsPage() -> impl IntoView {
         {edge_parts()}
     })
     .into_any();
+    let member_endpoints = endpoints();
     let reloading = reloading_editor();
     let mapping = mapping_editor();
     let fresh = new_mapping();
@@ -1541,6 +1665,7 @@ pub fn FormsPage() -> impl IntoView {
         {stack(view! {
             {sections.0}
             {dated}
+            {member_endpoints}
             {headers}
             {sections.4}
             {sections.6}

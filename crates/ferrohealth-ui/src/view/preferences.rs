@@ -769,7 +769,7 @@ fn reset_dialog(reset: String, back: String) -> impl IntoView {
     };
     confirm_dialog(
         Confirmation {
-            id: RESET_DIALOG,
+            id: RESET_DIALOG.into(),
             title: tr(Text::PreferencesResetTitle),
             message: tr(Text::PreferencesResetBody),
         },

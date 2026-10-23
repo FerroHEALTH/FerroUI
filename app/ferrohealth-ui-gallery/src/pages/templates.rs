@@ -393,7 +393,7 @@ fn location_actions() -> ActionGroup {
 fn delete_location() -> AnyView {
     danger_dialog(
         Confirmation {
-            id: "delete-location",
+            id: "delete-location".into(),
             title: tr(Msg::DeleteTheLocation).into(),
             message: tr(Msg::DeleteLocationBody).into(),
         },

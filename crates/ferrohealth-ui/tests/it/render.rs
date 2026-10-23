@@ -206,6 +206,58 @@ fn a_page_header_carries_a_subtitle_with_inline_markup_in_the_subtitle_style() {
     );
 }
 
+#[test]
+fn each_row_gives_its_confirmation_and_popover_form_an_id_of_its_own() {
+    // HTML Living Standard: an id is unique in its tree, so each row's trigger opens its own dialog.
+    let shown = html(|| {
+        ["node-b", "node-c"]
+            .into_iter()
+            .map(|member| {
+                let confirm = confirm_dialog(
+                    Confirmation {
+                        id: format!("remove-{member}").into(),
+                        title: Word::from("Remove it?"),
+                        message: Word::from("It leaves the federation."),
+                    },
+                    (),
+                );
+                let popover = popover_form(PopoverForm {
+                    id: format!("rename-{member}").into(),
+                    variant: Variant::Secondary,
+                    glyph: Glyph::PENCIL,
+                    label: "Rename".into(),
+                    title: "Rename the member".into(),
+                    body: ().into_any(),
+                });
+                view! { {confirm} {popover} }
+            })
+            .collect_view()
+            .into_any()
+    });
+    for member in ["node-b", "node-c"] {
+        let remove = format!("remove-{member}");
+        let rename = format!("rename-{member}");
+        assert!(has(&shown, "dialog", &[("id", &remove)]), "{shown}");
+        assert!(
+            has(
+                &shown,
+                "button",
+                &[("command", "close"), ("commandfor", &remove)]
+            ),
+            "{shown}"
+        );
+        assert!(has(&shown, "dialog", &[("id", &rename)]), "{shown}");
+        assert!(
+            has(
+                &shown,
+                "button",
+                &[("command", "show-modal"), ("commandfor", &rename)]
+            ),
+            "{shown}"
+        );
+    }
+}
+
 /// A code viewer's text: a long line, a current line and two findings.
 fn code(text: &str) -> Code {
     Code {
@@ -732,7 +784,7 @@ fn the_surfaces_render_and_none_writes_a_style_attribute() {
             {skeleton(3, "Loading the files.")}
             {link_button(String::from("/new"), Variant::Primary, Some(Glyph::PLUS), "New")}
             {action_button(Action::new(Some(Glyph::REFRESH_CW), "Reload", Act::Dialog(String::from("delete"))), Variant::Secondary)}
-            {confirm_dialog(Confirmation { id: "delete", title: "Delete it?".into(), message: "It goes for good.".into() }, ())}
+            {confirm_dialog(Confirmation { id: "delete".into(), title: "Delete it?".into(), message: "It goes for good.".into() }, ())}
             {footer(Footer { product: "FerroUI Gallery".into(), version: "0.1.0".into(), about: "/about".into() })}
         }
         .into_any()
@@ -1492,7 +1544,7 @@ fn the_popover_form_is_a_native_modal_dialog_inside_its_anchor() {
     // focus stays inside; HTML Living Standard, the `command` attribute opens it with no script.
     let page = html(|| {
         popover_form(PopoverForm {
-            id: "save",
+            id: "save".into(),
             variant: Variant::Secondary,
             glyph: Glyph::SAVE,
             label: "Save <it>".into(),

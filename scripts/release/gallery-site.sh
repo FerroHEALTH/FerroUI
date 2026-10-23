@@ -94,6 +94,12 @@ for file in pkg/ferrohealth-ui-gallery.wasm pkg/ferrohealth-ui-gallery.js \
   fi
 done
 [ "$missing" -eq 0 ] || exit 1
+# A build that kept lazy islands but missed the split pass leaves the glue
+# importing a module no browser resolves, and no island hydrates (#331).
+if grep -q "__wasm_split_placeholder__" "$root/target/site/pkg/ferrohealth-ui-gallery.js"; then
+  echo "gallery-site: the glue imports __wasm_split_placeholder__: the split pass did not run" >&2
+  exit 1
+fi
 if [ "${1:-}" = --release ]; then
   if command -v sha256sum > /dev/null; then sum=(sha256sum); else sum=(shasum -a 256); fi
   (cd "$root/target/site/pkg" && LC_ALL=C find . -type f | LC_ALL=C sort | sed 's|^\./||' |

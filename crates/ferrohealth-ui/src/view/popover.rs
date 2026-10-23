@@ -27,8 +27,9 @@ use crate::view::button::Variant;
 #[derive(Debug)]
 pub struct PopoverForm {
     /// The popover's id, which its trigger opens; its title is `id` and
-    /// `-title`.
-    pub id: &'static str,
+    /// `-title`. A static id or one made at run time, such as one per
+    /// table row.
+    pub id: Cow<'static, str>,
     /// The trigger's look.
     pub variant: Variant,
     /// The trigger's icon.
@@ -60,8 +61,8 @@ pub fn popover_form(form: PopoverForm) -> AnyView {
                 type="button"
                 class=variant.class()
                 command="show-modal"
-                commandfor=id
-                aria-controls=id
+                commandfor=id.clone()
+                aria-controls=id.clone()
                 aria-haspopup="dialog"
             >
                 {icon(glyph, "16")}

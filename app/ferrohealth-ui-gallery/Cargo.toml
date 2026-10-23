@@ -24,7 +24,9 @@ name = "ferrohealth-ui-gallery"
 path = "src/main.rs"
 
 [dependencies]
-ferrohealth-ui = { path = "../../crates/ferrohealth-ui" }
+# The gallery builds with `cargo leptos build --split`, so the library's
+# lazy islands load from their own chunks (scripts/release/gallery-site.sh).
+ferrohealth-ui = { path = "../../crates/ferrohealth-ui", features = ["split"] }
 # The pseudo-locale's catalog, a Fluent loader over the library's English.
 fluent-templates.workspace = true
 leptos = { workspace = true, features = ["islands"] }

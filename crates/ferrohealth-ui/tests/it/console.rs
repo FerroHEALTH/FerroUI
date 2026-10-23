@@ -166,7 +166,7 @@ fn a_consoles_words_made_at_run_time_reach_every_label() {
     let dialog = html(|| {
         confirm_dialog(
             Confirmation {
-                id: "drop",
+                id: "drop".into(),
                 title: format!("Drop {}?", "vitals").into(),
                 message: String::from("The file goes for good.").into(),
             },

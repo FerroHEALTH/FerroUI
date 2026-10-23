@@ -301,8 +301,8 @@ gallery, which carries every component, is held to a budget in CI:
 WebAssembly is over the number below, which the script reads from this
 table. The entry is what every page loads before any island hydrates; a
 lazy island's code (`#[island(lazy)]`, §15.8) is cut out of it by
-`cargo leptos --split` and loads from its own chunks on a page that draws
-it. The script prints what each lazy island adds and all the chunks
+`cargo leptos build --split` and loads from its own chunks on a page that
+draws it. The script prints what each lazy island adds and all the chunks
 together beside the entry, so a chunk that grows is seen.
 
 | Measure | Budget |
@@ -655,9 +655,12 @@ gallery.
   inner function), `serde` where `serde-lite` serves (book
   `deployment/binary_size`). [review]
 - **Code that one screen needs is split, measured first**: `cargo leptos
-  --split` with `#[lazy]`, `#[lazy_route]` or `#[island(lazy)]` (book
+  build --split` with `#[lazy]`, `#[lazy_route]` or `#[island(lazy)]` (book
   `deployment/binary_size`, "Code Splitting"; leptos_macro `src/lib.rs`).
-  [review]
+  A build with lazy code and no `--split` is broken, never merely unsplit:
+  its glue imports `__wasm_split_placeholder__`, no browser resolves it,
+  and no island hydrates (#331). [review; the glue check of
+  `scripts/release/gallery-site.sh`]
 
 ### 14.12 Testing
 
@@ -802,13 +805,19 @@ interaction contract and the budget; this section is the component's side.
   or disabled before hydration, and says why. [test: the gallery's
   no-WebAssembly journey (#196); review]
 - **Lazy islands are measured before they land**: `#[island(lazy)]` with
-  `cargo leptos --split` loads an island's code from its own chunks once a
+  `cargo leptos build --split` loads an island's code from its own chunks once a
   page that draws it hydrates (leptos_macro `src/component.rs`, the
   `_loader` it writes). An island is lazy when building the gallery without
   it cuts more from the entry than its chunks add to the pages that draw
   it, as §12 records: the date pickers, the mapping editors, the masked
   identifiers and the concept tree are. The topology (F9, #195) was
   measured and stays in the entry: lazy, it cut 19305 bytes from the entry
-  and added 27181 in chunks to the page that draws it. Without `--split` a lazy island hydrates from the entry,
-  so a console that does not split loses nothing. [review; the chunk table
-  of `scripts/checks/gallery-bundle.sh`]
+  and added 27181 in chunks to the page that draws it. A lazy island needs
+  `--split`: without the split pass the glue imports
+  `__wasm_split_placeholder__`, which no browser resolves, and no island on
+  the page hydrates (#331). So the library's lazy islands are lazy only
+  with its `split` feature, which a console turns on when it builds with
+  `cargo leptos build --split`, and a console that does not split gets them
+  as ordinary islands. [review; the chunk table of
+  `scripts/checks/gallery-bundle.sh`; the `split` test of `src/island.rs`;
+  the glue check of `scripts/release/gallery-site.sh`]
