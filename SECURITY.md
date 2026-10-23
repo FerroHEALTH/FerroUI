@@ -22,20 +22,61 @@ newest release (Art 13(10)).
 | --- | --- | --- |
 | The `ferrohealth-ui` crate on crates.io | the newest published release | the newest release |
 
-`main` is unreleased and best effort.
+- **Where fixes ship:** a security fix ships in a new release. Where it is
+  technically feasible, that release is a patch with the fix alone, so the
+  update is provided separately from functionality updates (Annex I Part
+  II(2)); when a functional change has to ship with it, the release's
+  `### Security` section opens with "Shipped with functional changes
+  because:" and the reason, and the release notes carry it
+  ([`changelog.d/README.md`](changelog.d/README.md#security-entries)).
+- **The end month:** the release notes of each release state the month its
+  five years end (Art 13(19)), counted from the date of its changelog
+  heading.
+- **Updates stay available:** a published release, its tag and the crate
+  version on crates.io are never deleted.
+
+A pre-release (a tag with a suffix, such as `v0.4.0-rc.1`) rehearses the
+release lane and has no support period. `main` is unreleased and best
+effort.
 
 ## Reporting a vulnerability
 
 **Do not open a public issue for a security vulnerability.** Report it
-privately through GitHub's private vulnerability reporting:
-<https://github.com/FerroHEALTH/FerroUI/security/advisories/new>, also
-reachable from the repository's **Security** tab under **Report a
-vulnerability**. Describe the issue, the affected version or commit, and a
-reproduction if you have one.
+privately, through either route:
+
+- [GitHub private vulnerability reporting](https://github.com/FerroHEALTH/FerroUI/security/advisories/new)
+  ("Report a vulnerability" on the repository's Security tab), which needs a
+  GitHub account; or
+- email to [info@cadasto.com](mailto:info@cadasto.com), the single point of
+  contact of Cadasto B.V., the manufacturer (CRA Art 13(17)), with "FerroUI
+  vulnerability" in the subject. No account is needed. The address has no
+  published encryption key, so send the details you are comfortable sending
+  by email and say that more is available; a channel for the rest is agreed
+  with you.
+
+Both routes reach the same people and the same procedure. Describe the
+issue, the affected version or commit, and a reproduction if you have one.
 
 **Never include patient data in a report.** The library draws clinical
 screens, so a reproduction is easy to build from real content by accident.
 Redact it, or synthesize an equivalent case.
+
+## Security advisories
+
+A reported vulnerability gets a private draft of a GitHub security advisory
+on this repository the day it is confirmed, and the draft is the record
+until the fix ships. Every fixed vulnerability is published as that
+advisory, in the same hour as the release that fixes it: one in FerroUI's
+own code, and one for a dependency fix that changes what the crate builds
+into a console. The `### Security` entry for the fix in
+[`CHANGELOG.md`](CHANGELOG.md) carries the advisory's `GHSA-` identifier,
+and the release notes repeat it (CRA Annex I Part II(4), (8)). A dependency
+finding that an OpenVEX statement under `security/vex/` shows does not
+affect FerroUI gets no advisory; the changelog entry names that statement
+instead. CI and the release check both rules
+(`scripts/checks/changelog-security.sh`). The advisories are
+machine-readable through the GitHub REST API
+(`GET /repos/FerroHEALTH/FerroUI/security-advisories`).
 
 ## Response times
 
@@ -65,3 +106,12 @@ gh attestation verify ferrohealth-ui-<version>.crate \
 
 The crate on crates.io is published by the same workflow through Trusted
 Publishing, so no long-lived token exists that could publish it elsewhere.
+
+## Vulnerability exploitability (VEX)
+
+A scanner can report a finding in the crate's dependency graph that does
+not affect it, such as an unmaintained crate that only runs inside the
+compiler. Such findings are judged in OpenVEX documents under
+[`security/vex/`](security/vex/README.md), which a scanner reads with
+`trivy --vex`. The document is generated from the advisories `deny.toml`
+accepts, and CI fails when the two disagree.
