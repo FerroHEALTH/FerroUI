@@ -211,3 +211,124 @@ async fn the_copy_button_says_refused_where_the_page_has_no_clipboard() -> Resul
     })
     .await
 }
+
+/// The masked identifier's input and its eye, once the eye works.
+async fn masked(browser: &Browser) -> Result<(WebElement, WebElement), Box<dyn Error>> {
+    let input = browser.element(By::Id("edge-identifier")).await?;
+    let eye = browser
+        .element(By::Css("#edge-identifier + leptos-island > button"))
+        .await?;
+    until("the eye works", async || {
+        eye.is_enabled().await.map_err(Into::into)
+    })
+    .await?;
+    Ok((input, eye))
+}
+
+/// Waits until the input shows its text when `shown`, or masks it, with
+/// the eye's pressed state in step.
+async fn shows(input: &WebElement, eye: &WebElement, shown: bool) -> Result<(), Box<dyn Error>> {
+    let (kind, pressed) = if shown {
+        ("text", "true")
+    } else {
+        ("password", "false")
+    };
+    until(&format!("the input is {kind}"), async || {
+        Ok(input.attr("type").await?.as_deref() == Some(kind)
+            && eye.attr("aria-pressed").await?.as_deref() == Some(pressed))
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_masked_identifier_shows_while_the_eye_is_held_by_the_pointer()
+-> Result<(), Box<dyn Error>> {
+    // WAI-ARIA 1.2 `button`, `aria-pressed`: the eye says it is pressed while it shows the text.
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/ferrobridge/forms")).await?;
+        let (input, eye) = masked(browser).await?;
+        input.send_keys("123456782").await?;
+        assert_eq!(
+            Some(String::from("Show the identifier while held")),
+            eye.attr("aria-label").await?,
+            "the eye names what it shows"
+        );
+        shows(&input, &eye, false).await?;
+        browser
+            .driver()
+            .action_chain()
+            .move_to_element_center(&eye)
+            .click_and_hold()
+            .perform()
+            .await?;
+        shows(&input, &eye, true).await?;
+        browser.driver().action_chain().release().perform().await?;
+        shows(&input, &eye, false).await?;
+        assert_eq!(
+            Some(String::from("123456782")),
+            input.prop("value").await?,
+            "holding never changes what was typed"
+        );
+        browser.console_clean("the eye held by the pointer").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_masked_identifier_shows_while_space_or_enter_is_held_on_the_eye()
+-> Result<(), Box<dyn Error>> {
+    // WAI-ARIA Authoring Practices, button pattern: Space and Enter press the button.
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/ferrobridge/forms")).await?;
+        let (input, eye) = masked(browser).await?;
+        input.send_keys("123456782").await?;
+        for key in [Key::Space, Key::Enter] {
+            browser
+                .driver()
+                .execute("arguments[0].focus();", vec![eye.to_json()?])
+                .await?;
+            browser
+                .driver()
+                .action_chain()
+                .key_down(key.clone())
+                .perform()
+                .await?;
+            shows(&input, &eye, true).await?;
+            browser
+                .driver()
+                .action_chain()
+                .key_up(key)
+                .perform()
+                .await?;
+            shows(&input, &eye, false).await?;
+        }
+        browser
+            .driver()
+            .action_chain()
+            .key_down(Key::Space)
+            .perform()
+            .await?;
+        shows(&input, &eye, true).await?;
+        browser
+            .driver()
+            .execute("arguments[0].focus();", vec![input.to_json()?])
+            .await?;
+        shows(&input, &eye, false).await?;
+        browser
+            .driver()
+            .action_chain()
+            .key_up(Key::Space)
+            .perform()
+            .await?;
+        browser.console_clean("the eye held by the keyboard").await
+    })
+    .await
+}

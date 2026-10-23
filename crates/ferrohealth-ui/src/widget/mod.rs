@@ -38,6 +38,7 @@ pub mod editor;
 pub mod filter;
 pub mod focus;
 pub mod identifier;
+pub mod masked;
 pub mod menu;
 pub mod nav;
 pub mod pick_or_type;

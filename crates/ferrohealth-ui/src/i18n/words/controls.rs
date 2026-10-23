@@ -15,6 +15,11 @@ texts! {
     ComboboxNoMatch = "combobox-no-match",
     /// The help switch's label.
     HelpShow = "help-show",
+    /// The name of a masked field's hold-to-show button.
+    HoldShow = "hold-show",
+    /// The name of a masked field's hold-to-show button until the page's
+    /// script runs, which says the field stays masked.
+    HoldShowNeedsScript = "hold-show-needs-script",
     /// The title row's button that opens the More menu.
     MenuMore = "menu-more",
     /// The name of a split button's toggle: the variants of `$action`.

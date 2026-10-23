@@ -180,6 +180,10 @@ messages! {
     LongButtonLabel = "long-button-label",
     /// The crumb of the files listing above the file editor.
     MappingFilesCrumb = "mapping-files-crumb",
+    /// `Patient identifier`
+    MaskedIdentifier = "masked-identifier",
+    /// `It stays masked; hold the eye to check what you typed.`
+    MaskedIdentifierHelp = "masked-identifier-help",
     /// `Media types`
     MediaTypes = "media-types",
     /// `The member signs in with no secret once this is saved.`
@@ -250,6 +254,8 @@ messages! {
     SetByDeployment = "set-by-deployment",
     /// `Show the actions`
     ShowActions = "show-actions",
+    /// `Show the identifier while held`
+    ShowIdentifierWhileHeld = "show-identifier-while-held",
     /// The editor's size: `$bytes` bytes in `$lines` lines.
     SizeLines = "size-lines",
     /// `Small`

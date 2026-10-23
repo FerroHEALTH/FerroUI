@@ -25,7 +25,7 @@ use ferrohealth_ui::view::diagnostics::{
 use ferrohealth_ui::view::form::{
     ERROR, FIELD_FLOW, FORM, Field, INPUT, Inner, SELECT, SWITCH, TEXTAREA, action_field, check,
     check_field, chip_choices, columns, described_by, described_with_unit, error_id, field,
-    field_flow, help_id, keyed_check_field, keyed_field,
+    field_flow, help_id, keyed_check_field, keyed_field, masked_input,
 };
 use ferrohealth_ui::view::layout::{FieldRow, field_row};
 use ferrohealth_ui::view::notice::{Announce, notice};
@@ -44,6 +44,7 @@ use ferrohealth_ui::widget::editor::{
     editor_panel, editor_split, line_id,
 };
 use ferrohealth_ui::widget::filter::{keeps, table_filter};
+use ferrohealth_ui::widget::masked::HoldWords;
 use ferrohealth_ui::widget::pick_or_type::{PickOrType, Picker, pick_or_type};
 use ferrohealth_ui::widget::upload::{Upload, UploadWords, upload_field};
 use leptos::prelude::*;
@@ -1435,8 +1436,8 @@ fn dates() -> AnyView {
     .into_any()
 }
 
-/// Fields with a part inside their edge: a unit, a prefix, a refused value
-/// and a disabled one (R10).
+/// Fields with a part inside their edge: a unit, a prefix, a refused value,
+/// a disabled one and a masked identifier with its hold-to-show eye (R10).
 fn edge_parts() -> AnyView {
     let timeout = view! {
         <input id="edge-timeout" name="timeout" class=INPUT inputmode="numeric" value="1200" aria-describedby=described_with_unit("edge-timeout", false, false) />
@@ -1468,6 +1469,12 @@ fn edge_parts() -> AnyView {
                     .help(tr(Msg::SetByDeployment))
                     .trailing(Inner::Unit(tr(Msg::DaysUnit)))
                     .view(retention)}
+                {Field::new("edge-identifier", tr(Msg::MaskedIdentifier))
+                    .help(tr(Msg::MaskedIdentifierHelp))
+                    .trailing(Inner::HoldToShow(
+                        HoldWords::of_page().named(tr(Msg::ShowIdentifierWhileHeld)),
+                    ))
+                    .view(masked_input("edge-identifier", "identifier", described_by("edge-identifier", true, false)))}
             </div>
         },
     )

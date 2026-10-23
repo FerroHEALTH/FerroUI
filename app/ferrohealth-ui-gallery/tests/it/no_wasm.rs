@@ -263,7 +263,27 @@ async fn forms_content(browser: &Browser) -> Result<(), Box<dyn Error>> {
     let draft = browser.element(By::Id("gallery-draft")).await?;
     let held = draft.prop("value").await?.unwrap_or_default();
     assert!(!held.is_empty(), "the editor shows its text");
-    date_fields(browser).await
+    date_fields(browser).await?;
+    masked_field(browser).await
+}
+
+/// Checks the masked identifier with no WebAssembly: it stays masked, and
+/// its eye is disabled and says why.
+async fn masked_field(browser: &Browser) -> Result<(), Box<dyn Error>> {
+    let input = browser.element(By::Id("edge-identifier")).await?;
+    input.send_keys("123456782").await?;
+    assert_eq!(Some(String::from("password")), input.attr("type").await?);
+    let eye = browser
+        .element(By::Css("#edge-identifier + leptos-island > button"))
+        .await?;
+    assert!(!eye.is_enabled().await?, "the eye is disabled");
+    assert!(
+        eye.attr("aria-label")
+            .await?
+            .is_some_and(|name| name.starts_with("The text stays masked")),
+        "the eye's name says the field stays masked"
+    );
+    Ok(())
 }
 
 /// Checks that the tab of Your preferences at `page` offers its

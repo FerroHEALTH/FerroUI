@@ -94,6 +94,8 @@ keep-draft-until = Keep the draft until
 loinc = LOINC
 long-button-label = A long button label
 mapping-files-crumb = Mapping files
+masked-identifier = Patient identifier
+masked-identifier-help = It stays masked; hold the eye to check what you typed.
 media-types = Media types
 member-signs-no-secret-once = The member signs in with no secret once this is saved.
 milliseconds = ms
@@ -129,6 +131,7 @@ secondary = Secondary
 secondary-disabled = Secondary, disabled
 set-by-deployment = Set by the deployment.
 show-actions = Show the actions
+show-identifier-while-held = Show the identifier while held
 size-lines = { $bytes ->
         [one] { $bytes } byte
        *[other] { $bytes } bytes

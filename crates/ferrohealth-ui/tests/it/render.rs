@@ -116,6 +116,47 @@ fn a_refusal_lists_its_issues_with_their_text_and_counts_the_silent_ones() {
     );
 }
 
+#[test]
+fn a_refusal_with_no_answer_shows_its_summary_alone_and_says_no_answer_to_assistive_technology() {
+    // WAI-ARIA 1.2 `alert`: the live title still carries "No answer", hidden from sight.
+    let shown = html(|| {
+        refusal(&Refusal {
+            summary: String::from("The identifier index did not answer."),
+            ..Refusal::default()
+        })
+        .into_any()
+    });
+    assert!(
+        !shown.contains("No answer: The identifier index"),
+        "the visible title is the summary alone: {shown}"
+    );
+    let title = shown
+        .split(r#"role="alert""#)
+        .nth(1)
+        .and_then(|rest| rest.split("</p>").next())
+        .unwrap_or_default();
+    assert!(
+        title.contains(r#"<span class="fui-sr-only">No answer:</span>"#),
+        "the live title leads with a hidden No answer: {shown}"
+    );
+    assert!(
+        title.contains("The identifier index did not answer."),
+        "{shown}"
+    );
+    let answered = html(|| {
+        refusal(&Refusal {
+            status: Some(503),
+            summary: String::from("The identifier index is down."),
+            ..Refusal::default()
+        })
+        .into_any()
+    });
+    assert!(
+        !answered.contains("No answer"),
+        "a status says what came: {answered}"
+    );
+}
+
 /// A code viewer's text: a long line, a current line and two findings.
 fn code(text: &str) -> Code {
     Code {

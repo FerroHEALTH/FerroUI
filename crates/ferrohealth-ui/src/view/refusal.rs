@@ -123,7 +123,8 @@ impl Issue {
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Refusal {
     /// The upstream's status, such as `422`, when it answered one; `None`
-    /// when no answer came, which the title says in words.
+    /// when no answer came, which the title's visually hidden lead says in
+    /// words.
     pub status: Option<u16>,
     /// The sentence that says what was refused.
     pub summary: String,
@@ -250,8 +251,11 @@ fn issue_items(issues: &[&Issue]) -> impl IntoView + use<> {
         .collect_view()
 }
 
-/// The title of `refusal`: its status, or "No answer" when none came,
-/// before its summary.
+/// The visible title of `refusal`: its status before its summary, or the
+/// summary alone when no answer came, as the design draws it.
+///
+/// [`refusal`] leads a title with no status with "No answer" for
+/// assistive technology alone ([`refusal_lead`]).
 #[must_use]
 pub fn refusal_title(refusal: &Refusal) -> Word {
     match refusal.status {
@@ -262,11 +266,16 @@ pub fn refusal_title(refusal: &Refusal) -> Word {
                 ("summary", refusal.summary.clone().into()),
             ],
         ),
-        None => tr_with(
-            Text::RefusalNoAnswer,
-            &[("summary", refusal.summary.clone().into())],
-        ),
+        None => Word::new(refusal.summary.clone()),
     }
+}
+
+/// The visually hidden lead of the title of `refusal`: "No answer" when
+/// none came, so assistive technology says so, or `None` when the title's
+/// status says what came.
+#[must_use]
+pub fn refusal_lead(refusal: &Refusal) -> Option<Word> {
+    refusal.status.is_none().then(|| tr(Text::RefusalNoAnswer))
 }
 
 /// Returns `refusal` as an alert: its status, its summary, the request it
@@ -278,6 +287,12 @@ pub fn refusal_title(refusal: &Refusal) -> Word {
 #[must_use]
 pub fn refusal(refusal: &Refusal) -> impl IntoView + use<> {
     let title = refusal_title(refusal);
+    let lead = refusal_lead(refusal).map(|lead| {
+        view! {
+            <span class="fui-sr-only">{lead}</span>
+            " "
+        }
+    });
     let request = refusal
         .request
         .clone()
@@ -297,7 +312,7 @@ pub fn refusal(refusal: &Refusal) -> impl IntoView + use<> {
     });
     view! {
         <div class="fui-alert">
-            <p class="fui-alert-title" role="alert">{icon(Glyph::CIRCLE_ALERT, "16")} {title}</p>
+            <p class="fui-alert-title" role="alert">{icon(Glyph::CIRCLE_ALERT, "16")} {lead}{title}</p>
             {request}
             {issues}
             {evidence}
@@ -317,7 +332,8 @@ pub fn fault(message: impl Into<String>) -> impl IntoView {
 
 #[cfg(test)]
 mod tests {
-    use super::{Issue, Refusal, Severity, refusal_title, shown_issues};
+    use super::{Issue, Refusal, Severity, refusal_lead, refusal_title, shown_issues};
+    use crate::i18n::Word;
 
     /// An issue of `severity`, carrying `text` when given.
     fn issue(severity: Severity, text: Option<&str>) -> Issue {
@@ -329,13 +345,13 @@ mod tests {
     }
 
     #[test]
-    fn a_refusal_with_no_status_says_no_answer_came() {
+    fn a_refusal_with_no_status_titles_itself_with_its_summary_alone() {
         let none = Refusal {
-            summary: String::from("the terminology server did not answer."),
+            summary: String::from("The terminology server did not answer."),
             ..Refusal::default()
         };
         assert_eq!(
-            "No answer: the terminology server did not answer.",
+            "The terminology server did not answer.",
             refusal_title(&none)
         );
         let answered = Refusal {
@@ -343,9 +359,26 @@ mod tests {
             ..none
         };
         assert_eq!(
-            "404: the terminology server did not answer.",
+            "404: The terminology server did not answer.",
             refusal_title(&answered)
         );
+    }
+
+    #[test]
+    fn a_refusal_with_no_status_leads_with_no_answer_and_one_with_a_status_does_not() {
+        let none = Refusal {
+            summary: String::from("The terminology server did not answer."),
+            ..Refusal::default()
+        };
+        assert_eq!(
+            Some("No answer:"),
+            refusal_lead(&none).as_ref().map(Word::text)
+        );
+        let answered = Refusal {
+            status: Some(503),
+            ..none
+        };
+        assert_eq!(None, refusal_lead(&answered));
     }
 
     #[test]
