@@ -8,6 +8,8 @@ use super::Msg;
 messages! {
     /// `A primary alone`
     APrimaryAlone = "a-primary-alone",
+    /// `A primary beside a popover form`
+    APrimaryPopover = "a-primary-popover",
     /// `A split primary and its variants`
     ASplitPrimary = "a-split-primary",
     /// `Access`
@@ -18,6 +20,8 @@ messages! {
     ConfirmationDialogs = "confirmation-dialogs",
     /// `Content that is no navigation, from the end of the page.`
     ContentNoNavigationFromEnd = "content-no-navigation-from-end",
+    /// `Copy the set's name`
+    CopyTheSetName = "copy-the-set-name",
     /// `Delete the file`
     DeleteFile = "delete-file",
     /// The question of the dialog that deletes the row `$row`.

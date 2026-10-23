@@ -20,7 +20,6 @@ cl-device-name = Device name
 cl-diastolic = Diastolic
 cl-folded = The uids, the language, the territory and the encoding are folded away.
 cl-last-calibrated = Last calibrated
-cl-minutes-ago = { $count } min ago
 cl-no-information = No information: unknown
 cl-not-openehr = Not a SMART on openEHR scope. Use composition-<template>, for example composition-*.rs.
 cl-october = { $day } Oct

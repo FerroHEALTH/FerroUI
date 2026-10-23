@@ -21,7 +21,7 @@ use ferrohealth_ui::view::conditions::{
     Choice, Condition, ConditionGroup, Match, Operand, condition_groups,
 };
 use ferrohealth_ui::view::reading::{Element, Level, Reading, Section, Value, reading};
-use ferrohealth_ui::view::results::{ResultsPane, Shown, Switch, results_pane};
+use ferrohealth_ui::view::results::{Export, ResultsPane, Shown, Switch, results_pane};
 use ferrohealth_ui::view::scope::{Grant, ScopeGrant, scope_grants};
 use ferrohealth_ui::view::subject::{Subject, SubjectLine, subject_line};
 use ferrohealth_ui::view::surface::{
@@ -29,7 +29,7 @@ use ferrohealth_ui::view::surface::{
     titled_panel,
 };
 use ferrohealth_ui::view::template::list::HeadingCount;
-use ferrohealth_ui::view::time::{reading as time_reading, timestamp};
+use ferrohealth_ui::view::time::{relative, timestamp};
 use ferrohealth_ui::view::versions::{
     AtTime, Standing, Version, VersionHistory, at_time_label, older_version, version_history,
 };
@@ -44,7 +44,7 @@ use leptos::prelude::*;
 use crate::clinical_data::{
     AnswerRow, BLOOD_PRESSURE, BODY_TEMPERATURE, CALIBRATED, CALIBRATION, CLINICIAN,
     CODED_OPERATORS, COLUMNS, COMPOSER, Coded, DELETION, DEVICE, DEVICE_NAME, DIASTOLIC, FOREIGN,
-    PATH_POSITION, PATH_RATE, PATH_SYSTOLIC, PATH_TEMPERATURE, POSITION, POSITIONS, PULSE,
+    NOW, PATH_POSITION, PATH_RATE, PATH_SYSTOLIC, PATH_TEMPERATURE, POSITION, POSITIONS, PULSE,
     QUANTITY_OPERATORS, Quantity, RATE, REGULARITY, ROWS, SCOPES, SETTING, START_TIME,
     SUBJECT_NAMESPACE, SUBJECT_VALUE, SYSTOLIC, TEMPERATURE, VERSIONS, VersionRow,
 };
@@ -136,19 +136,6 @@ fn subjects(brand: &str) -> AnyView {
     .into_any()
 }
 
-/// A relative time `minutes` before the gallery's now, the full timestamp
-/// of `at` in its tooltip (family rule 11).
-fn ago(at: &str, minutes: u32) -> AnyView {
-    let full = time_reading(at);
-    let words = tr_with(Msg::ClMinutesAgo, &[("count", minutes.into())]);
-    view! {
-        <time datetime=at.to_owned() title=full>
-            {words}
-        </time>
-    }
-    .into_any()
-}
-
 /// One row of the history.
 fn version(row: &VersionRow, standing: Standing, read: bool, change: Msg) -> Version {
     let href = (standing != Standing::Deleted).then(|| format!("#version-{}", row.number));
@@ -163,7 +150,7 @@ fn version(row: &VersionRow, standing: Standing, read: bool, change: Msg) -> Ver
         } else {
             COMPOSER
         }),
-        when: ago(row.at, row.minutes),
+        when: relative(row.at, NOW).into_any(),
         contribution: view! {
             <a href="#contribution">
                 <code>{contribution}</code>
@@ -579,6 +566,10 @@ fn answer_chart() -> AnyView {
             },
         ],
         x_ticks: ticks,
+        x_labels: (0_u32..)
+            .zip(&oldest_first)
+            .map(|(index, row)| (f64::from(index), day_label(row)))
+            .collect(),
         y_range: None,
     };
     line_chart(&chart, ChartWords::of_page())
@@ -598,8 +589,8 @@ fn results(brand: &str) -> AnyView {
             table: format!("{page}#results"),
             chart: format!("{page}#results-chart"),
         },
-        csv: format!("{page}#results"),
-        json: format!("{page}#results"),
+        csv: Export::Link(format!("{page}#results")),
+        json: Export::Link(format!("{page}#results")),
         window: tr(Msg::ClResultsWindow),
         body: answer_table(),
     });
@@ -612,8 +603,8 @@ fn results(brand: &str) -> AnyView {
             action: page.clone(),
             back: format!("{page}#results-chart"),
         },
-        csv: format!("{page}#results-chart"),
-        json: format!("{page}#results-chart"),
+        csv: Export::Link(format!("{page}#results-chart")),
+        json: Export::Link(format!("{page}#results-chart")),
         window: tr(Msg::ClResultsWindow),
         body: answer_chart(),
     });
@@ -626,8 +617,8 @@ fn results(brand: &str) -> AnyView {
             table: format!("{page}#results-empty"),
             chart: format!("{page}#results-empty"),
         },
-        csv: format!("{page}#results-empty"),
-        json: format!("{page}#results-empty"),
+        csv: Export::Link(format!("{page}#results-empty")),
+        json: Export::Link(format!("{page}#results-empty")),
         window: tr(Msg::ClResultsEmptyWindow),
         body: ().into_any(),
     });

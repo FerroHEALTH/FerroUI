@@ -74,7 +74,8 @@ fn asked() -> Option<State> {
 }
 
 /// A long form whose actions are the page's docked bar: a control the
-/// keyboard reaches is scrolled clear of the bar.
+/// keyboard reaches is scrolled clear of the bar. Its first field is
+/// required, which Save waits on and Discard leaves.
 pub(crate) fn long_form() -> AnyView {
     let fields = (1..=14_u32)
         .map(|index| {
@@ -84,7 +85,15 @@ pub(crate) fn long_form() -> AnyView {
                 id,
                 tr_with(Msg::SyntheticSetting, &[("index", index.into())]),
                 None,
-                view! { <input id=input_id type="text" class=INPUT value=format!("value-{index}") /> },
+                view! {
+                    <input
+                        id=input_id
+                        type="text"
+                        class=INPUT
+                        value=format!("value-{index}")
+                        required=index == 1
+                    />
+                },
             )
         })
         .collect_view();
@@ -159,6 +168,7 @@ pub(crate) fn dock() -> Option<AnyView> {
         } else {
             DecisionState::Ready
         },
+        leaves: true,
         ..Decision::default()
     };
     let save = Decision {

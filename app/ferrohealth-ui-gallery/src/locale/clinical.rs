@@ -40,8 +40,6 @@ messages! {
     ClFolded = "cl-folded",
     /// `Last calibrated`
     ClLastCalibrated = "cl-last-calibrated",
-    /// `{ $count } min ago`
-    ClMinutesAgo = "cl-minutes-ago",
     /// `No information: unknown`
     ClNoInformation = "cl-no-information",
     /// `Not a SMART on openEHR scope. Use composition-<template>, for example composition-*.rs.`

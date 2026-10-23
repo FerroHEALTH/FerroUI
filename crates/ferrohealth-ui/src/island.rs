@@ -298,10 +298,21 @@ pub fn MenuButton(
     /// The sheet's Cancel, in the page's locale.
     #[prop(into)]
     cancel: crate::i18n::Word,
+    /// What a copy item says came of it, in the page's locale; `None` for
+    /// a menu with no copy item.
+    copy: Option<crate::widget::copy::CopyWords>,
     /// The items or options, drawn on the server.
     children: Children,
 ) -> impl IntoView {
-    crate::widget::action_menu::menu_button(id, label, name, trigger, cancel, children().into_any())
+    crate::widget::action_menu::menu_button(
+        id,
+        label,
+        name,
+        trigger,
+        cancel,
+        copy,
+        children().into_any(),
+    )
 }
 
 /// The combobox `id`, posting its value as `name`: a native select until

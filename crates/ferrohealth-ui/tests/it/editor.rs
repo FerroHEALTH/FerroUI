@@ -186,7 +186,7 @@ fn the_row_of_the_current_line_is_current() {
 /// The editor over `text` with an error on line 3 and a warning on line 2.
 fn editor(text: &str) -> Editor {
     Editor {
-        id: "draft",
+        id: "draft".into(),
         language: Language::Yaml,
         text: Signal::stored(text.to_owned()),
         marks: Signal::stored(vec![
@@ -219,6 +219,70 @@ fn panel(text: &str, opened: Opened, at: Position) -> AnyView {
         },
         |_| {},
     )
+}
+
+#[test]
+fn an_editable_editor_takes_keys_and_shows_them_before_its_island_runs() {
+    let shown = html(|| {
+        code_editor(
+            Editor {
+                editable: Signal::stored(true),
+                ..editor("a: 1\n")
+            },
+            |_| {},
+        )
+    });
+    let area = tags(&shown, "textarea");
+    let area = area.first().expect("the text area is drawn");
+    assert!(!area.contains_key("readonly"), "{shown}");
+    assert!(
+        has(&shown, "div", &[("class", "fui-editor-stack is-static")]),
+        "{shown}"
+    );
+    let read_only = html(|| code_editor(editor("a: 1\n"), |_| {}));
+    assert!(
+        tags(&read_only, "textarea")
+            .first()
+            .is_some_and(|area| area.contains_key("readonly")),
+        "{read_only}"
+    );
+    let rule = |selector: &str| {
+        let at = ferrohealth_ui::style::STYLESHEET
+            .find(&format!("{selector} {{\n"))
+            .unwrap_or_else(|| panic!("no rule {selector}"));
+        let rest = ferrohealth_ui::style::STYLESHEET
+            .get(at..)
+            .unwrap_or_default();
+        rest.get(..rest.find('}').unwrap_or(rest.len()))
+            .unwrap_or_default()
+    };
+    assert!(
+        rule("  .fui-editor-stack.is-static > .fui-editor-input").contains("color: var(--ink);"),
+        "the text area shows its own text until the island runs"
+    );
+}
+
+#[test]
+fn editors_made_per_row_take_ids_made_at_run_time() {
+    let shown = html(|| {
+        (1..=3_u32)
+            .map(|staged| {
+                let editor = Editor {
+                    id: format!("staged-{staged}").into(),
+                    ..editor("a: 1\n")
+                };
+                code_editor(editor, |_| {})
+            })
+            .collect_view()
+            .into_any()
+    });
+    for staged in 1..=3_u32 {
+        let id = format!("staged-{staged}");
+        assert!(
+            has(&shown, "textarea", &[("id", &id), ("name", &id)]),
+            "{shown}"
+        );
+    }
 }
 
 #[test]
@@ -469,7 +533,7 @@ fn layer_time(lines: u32) -> Duration {
             let drawn = html(move || {
                 code_editor(
                     Editor {
-                        id: "draft",
+                        id: "draft".into(),
                         language: Language::Yaml,
                         text: Signal::stored(text),
                         marks: Signal::stored(marks),

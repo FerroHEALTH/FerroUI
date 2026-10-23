@@ -43,6 +43,7 @@ records-record-a = Record A
 records-record-b = Record B
 records-refused-why = the hourly limit is reached; try again at 10:05
 records-reveal-page = a console's reveal page asks the reason here and reveals with a plain form.
+records-reveal-stay = Leave it masked
 records-reveal-title = Reveal { $name }
 records-review-queue = Review queue
 records-select = Select { $name }

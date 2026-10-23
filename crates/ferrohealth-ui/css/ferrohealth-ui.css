@@ -1583,6 +1583,12 @@
     line-height: var(--leading-small);
   }
 
+  /* The link a banner ends with keeps the banner's tone, underlined. */
+  .fui-banner a {
+    color: inherit;
+    text-decoration: underline;
+  }
+
   /* ---- Surfaces ---- */
 
   .fui-page-header {
@@ -4007,6 +4013,18 @@
 
   .fui-editor-input:focus-visible {
     outline: none;
+  }
+
+  /* Until its island runs, with no WebAssembly too, the text area shows
+     its own text in ink and scrolls itself, and the layer keeps only its
+     gutter and marks, so a key typed before the page hydrates shows. */
+  .fui-editor-stack.is-static > .fui-editor-input {
+    overflow: auto;
+    color: var(--ink);
+  }
+
+  .fui-editor-stack.is-static > .fui-editor-layer :where(.fui-code-line, .fui-code-line *) {
+    color: transparent;
   }
 
   /* ---- The copy button ---- */

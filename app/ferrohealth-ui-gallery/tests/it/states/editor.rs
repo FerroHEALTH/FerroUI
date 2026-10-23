@@ -32,8 +32,8 @@ async fn forms(browser: &Browser, gallery: &Gallery, brand: Brand) -> Result<(),
         .goto(&gallery.url(&format!("/{}/forms", brand.key())))
         .await?;
     let draft = browser.element(By::Id("gallery-mapping")).await?;
-    until("the code editor may be edited", async || {
-        Ok(draft.attr("readonly").await?.is_none())
+    until("the code editor hydrates", async || {
+        browser.editor_live(&draft).await
     })
     .await
 }

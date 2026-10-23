@@ -22,7 +22,9 @@
 //! console coming back is an echo and never written, so a key typed before
 //! the echo of an earlier one arrives is never overwritten. The layer is escaped
 //! as [`crate::highlight::html`] escapes it, so the server draws it too. The
-//! text area is read-only until the page hydrates, so no keystroke is lost.
+//! text area takes keys from the first paint, with no WebAssembly too: until
+//! its island runs it shows its own text over the layer's gutter, and what
+//! it holds as the page hydrates goes to the console, so no keystroke is lost.
 //! After an edit the text is tokenized once, in time linear in its length,
 //! and the layer redraws only the lines whose highlighting or mark changed:
 //! the lines an edit leaves alike keep their elements, and the lines after
@@ -39,6 +41,7 @@
 //! editor's one tab stop. No specification governs the editor: our own
 //! design.
 
+use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::{BTreeMap, VecDeque};
 use std::hash::{DefaultHasher, Hash as _, Hasher as _};
@@ -405,18 +408,21 @@ pub fn offset_of(text: &str, at: Position) -> u32 {
 }
 
 /// What the editor edits and shows.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Editor {
-    /// The text area's id and name.
-    pub id: &'static str,
+    /// The text area's id and name: a static id, or one made at run time,
+    /// such as one per staged change of a page that holds several.
+    pub id: Cow<'static, str>,
     /// The grammar the text is highlighted as.
     pub language: Language,
     /// The text, which the editor reads and never writes.
     pub text: Signal<String>,
     /// The lines a diagnostic names.
     pub marks: Signal<Vec<LineMark>>,
-    /// False until the text area may be edited: before the page hydrates an
-    /// edit would be lost.
+    /// Whether the text may be edited; false for a text the reader may
+    /// only read. An editable text area takes keys from the first paint,
+    /// with no WebAssembly too: before its island runs it shows its own
+    /// text, and what it holds as the page hydrates goes to the console.
     pub editable: Signal<bool>,
 }
 
@@ -437,7 +443,7 @@ pub fn code_editor(editor: Editor, on_input: impl Fn(String) + 'static) -> AnyVi
     } = editor;
     drawn(
         Drawn {
-            id: id.to_owned(),
+            id: id.into_owned(),
             language: Grammar::Fixed(language),
             text,
             marks,
@@ -492,10 +498,10 @@ pub(crate) struct Drawn {
     pub(crate) text: Signal<String>,
     /// The lines a diagnostic names.
     pub(crate) marks: Signal<Vec<LineMark>>,
-    /// False until the text area may be edited.
+    /// Whether the text may be edited.
     pub(crate) editable: Signal<bool>,
     /// The text area's placeholder, shown while the text is empty.
-    pub(crate) placeholder: Option<std::borrow::Cow<'static, str>>,
+    pub(crate) placeholder: Option<Cow<'static, str>>,
     /// The text area's accessible name, when no label names it.
     pub(crate) label: Option<String>,
     /// Where the caret is, which the editor writes as it moves.
@@ -550,16 +556,19 @@ impl Echoes {
 
 /// Writes the console's `text` into the text area `area_ref` when it is an
 /// outside change, and returns the record of the texts handed to the
-/// console, which the text area's input fills.
+/// console, which the text area's input fills. A text typed before the
+/// page hydrated is handed to the console through `on_input` as the page
+/// hydrates, and never written over.
 fn follow_console(
     text: Signal<String>,
     area_ref: NodeRef<leptos::html::Textarea>,
+    on_input: Rc<dyn Fn(String)>,
 ) -> Rc<RefCell<Echoes>> {
     let echoes = Rc::new(RefCell::new(Echoes::default()));
     let heard = Rc::clone(&echoes);
     // NOTE: the text area is the source of truth while it is edited; the console's text is
     // written only as an outside change, never as the late echo of an earlier key (#333).
-    Effect::new(move || {
+    Effect::new(move |hydrated: Option<()>| {
         let console = text.get();
         if echoes.borrow_mut().came_back(&console) {
             return;
@@ -568,10 +577,18 @@ fn follow_console(
         if let Some(area) = area_ref.get()
             && area.value() != console
         {
-            area.set_value(&console);
+            if hydrated.is_some() {
+                area.set_value(&console);
+            } else {
+                // NOTE: the text area takes keys from the first paint (#356), so what it
+                // holds as the page hydrates is the reader's and goes to the console.
+                let typed = area.value();
+                echoes.borrow_mut().typed(&typed);
+                on_input(typed);
+            }
         }
         #[cfg(not(target_arch = "wasm32"))]
-        let (_console, _area) = (console, area_ref);
+        let (_console, _area, _hydrated, _input) = (console, area_ref, hydrated, &on_input);
     });
     heard
 }
@@ -637,7 +654,10 @@ pub(crate) fn drawn(drawn: Drawn, on_input: impl Fn(String) + 'static) -> AnyVie
     let name = id.clone();
     let first = text.with_untracked(|text| server_text(text));
     let area_ref = NodeRef::<leptos::html::Textarea>::new();
-    let heard = follow_console(text, area_ref);
+    let on_input: Rc<dyn Fn(String)> = Rc::new(on_input);
+    let heard = follow_console(text, area_ref, Rc::clone(&on_input));
+    let live = RwSignal::new(false);
+    Effect::new(move || live.set(true));
     let follow = move |area: &HtmlTextAreaElement| {
         let Some(caret) = caret else {
             return;
@@ -655,7 +675,7 @@ pub(crate) fn drawn(drawn: Drawn, on_input: impl Fn(String) + 'static) -> AnyVie
     };
     view! {
         <div class="fui-editor">
-            <div class="fui-editor-stack">
+            <div class="fui-editor-stack" class:is-static=move || !live.get()>
                 <pre
                     class="fui-editor-layer"
                     aria-hidden="true"
@@ -906,7 +926,7 @@ pub fn editor_panel(panel: Panel, on_input: impl Fn(String) + 'static) -> AnyVie
     let end = end.map(|end| view! { <span class="fui-editor-status-end">{end}</span> });
     let field = drawn(
         Drawn {
-            id: id.to_owned(),
+            id: id.into_owned(),
             language: Grammar::Fixed(language),
             text,
             marks,
@@ -963,7 +983,7 @@ pub fn editor_diagnostics(
     let current = current_line(caret, marks);
     let on_line = Callback::new(move |at: Position| {
         caret.set(at);
-        place_caret(id, text, at);
+        place_caret(&id, text, at);
     });
     let rows = rows(file, words, current, Some(on_line));
     view! {
@@ -983,7 +1003,7 @@ pub fn editor_diagnostics(
         reason = "the caret moves only in the browser half; the server half has no text area"
     )
 )]
-fn place_caret(id: &'static str, text: Signal<String>, at: Position) {
+fn place_caret(id: &str, text: Signal<String>, at: Position) {
     #[cfg(target_arch = "wasm32")]
     {
         use leptos::wasm_bindgen::JsCast as _;

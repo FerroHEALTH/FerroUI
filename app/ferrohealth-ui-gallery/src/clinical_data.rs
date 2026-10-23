@@ -14,17 +14,18 @@ pub const SUBJECT_NAMESPACE: &str = "demo.hospital.mrn";
 /// reads to answer a reveal.
 pub const SUBJECT_VALUE: &str = "P-20481-537";
 
+/// The gallery's clock, which the version history's relative times are
+/// read against.
+pub const NOW: &str = "2026-10-21T09:15:00Z";
+
 /// One version of the synthetic composition: its number, when it was
-/// committed and how long before the gallery's now, its change and its
-/// contribution.
+/// committed, its change and its contribution.
 #[derive(Debug)]
 pub struct VersionRow {
     /// The version's number.
     pub number: &'static str,
     /// When it was committed, as an RFC 3339 instant.
     pub at: &'static str,
-    /// The minutes between it and the gallery's now.
-    pub minutes: u32,
     /// Its contribution's short uid.
     pub contribution: &'static str,
 }
@@ -33,20 +34,17 @@ pub struct VersionRow {
 pub const VERSIONS: &[VersionRow] = &[
     VersionRow {
         number: "3",
-        at: "2026-10-21T08:14:00Z",
-        minutes: 12,
+        at: "2026-10-21T09:03:00Z",
         contribution: "0199f1d0…4f16",
     },
     VersionRow {
         number: "2",
-        at: "2026-10-21T08:02:00Z",
-        minutes: 24,
+        at: "2026-10-21T08:51:00Z",
         contribution: "0199f1c4…9e30",
     },
     VersionRow {
         number: "1",
-        at: "2026-10-21T07:55:00Z",
-        minutes: 31,
+        at: "2026-10-21T08:44:00Z",
         contribution: "0199f1b2…8a29",
     },
 ];
@@ -55,7 +53,6 @@ pub const VERSIONS: &[VersionRow] = &[
 pub const DELETION: VersionRow = VersionRow {
     number: "4",
     at: "2026-10-21T09:12:00Z",
-    minutes: 3,
     contribution: "0199f22a…61c4",
 };
 

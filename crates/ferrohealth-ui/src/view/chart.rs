@@ -114,6 +114,11 @@ pub struct LineChart {
     pub series: Vec<Series>,
     /// The ticks of the X axis, each its value and its label.
     pub x_ticks: Vec<(f64, String)>,
+    /// The label of each X value in the figures table, each its value and
+    /// its label, such as a point's time on a time axis; a value with none
+    /// takes the label of a tick on it, then its number. The axis draws
+    /// [`LineChart::x_ticks`] alone.
+    pub x_labels: Vec<(f64, String)>,
     /// The Y range, or `None` to take it from the data.
     pub y_range: Option<(f64, f64)>,
 }
@@ -853,6 +858,8 @@ pub fn figures(chart: &LineChart, words: FiguresWords) -> impl IntoView + use<> 
     // by a binary search.
     let mut ticks: Vec<&(f64, String)> = chart.x_ticks.iter().collect();
     ticks.sort_by(|a, b| a.0.total_cmp(&b.0));
+    let mut labels: Vec<&(f64, String)> = chart.x_labels.iter().collect();
+    labels.sort_by(|a, b| a.0.total_cmp(&b.0));
     let columns: Vec<Vec<(f64, f64)>> = chart
         .series
         .iter()
@@ -871,10 +878,15 @@ pub fn figures(chart: &LineChart, words: FiguresWords) -> impl IntoView + use<> 
         .into_iter()
         .map(|at| {
             let near = |value: f64| (value - at).abs() < 1e-9;
-            let label = ticks
-                .get(ticks.partition_point(|tick| tick.0 < at - 1e-9))
-                .filter(|tick| near(tick.0))
-                .map_or_else(|| value_label(at), |tick| tick.1.clone());
+            let on = |marks: &[&(f64, String)]| {
+                marks
+                    .get(marks.partition_point(|mark| mark.0 < at - 1e-9))
+                    .filter(|mark| near(mark.0))
+                    .map(|mark| mark.1.clone())
+            };
+            let label = on(&labels)
+                .or_else(|| on(&ticks))
+                .unwrap_or_else(|| value_label(at));
             let cells = columns
                 .iter()
                 .map(|points| {
@@ -951,6 +963,7 @@ pub fn activity_chart(chart: &ActivityChart) -> impl IntoView + use<> {
             (0.0, chart.ends.0.clone()),
             (f64::from(last.max(1)), chart.ends.1.clone()),
         ],
+        x_labels: Vec::new(),
         y_range: None,
     };
     let (x, y) = scales(&line, HEIGHT);
@@ -1043,6 +1056,7 @@ mod tests {
                 },
             ],
             x_ticks: vec![(0.0, String::from("Mon")), (2.0, String::from("Wed"))],
+            x_labels: Vec::new(),
             y_range: None,
         }
     }

@@ -5,7 +5,9 @@
 //! menu with the rest.
 //!
 //! The primary is what this reader can do first. A split primary carries a
-//! menu of the variants of its one action. More holds every other action,
+//! menu of the variants of its one action. A popover form (R17 anchored)
+//! may sit beside the primary when both act on what the page is writing,
+//! such as Run and Save to the CDR on a query. More holds every other action,
 //! its destructive ones last after a separator in the danger tone, so no
 //! danger button ever sits beside the primary (family rule 7). Every action
 //! is a link, a plain form post, a submit of a form on the page or a button
@@ -13,19 +15,26 @@
 //! WebAssembly; the menus are [`crate::widget::menu`]'s. No specification
 //! governs the layout: our own design.
 
+use std::hash::{DefaultHasher, Hash as _, Hasher as _};
+
 use leptos::prelude::*;
 
 use crate::view::button::{Variant, label};
+use crate::view::popover::{PopoverForm, popover_form};
 use crate::widget::action_menu::{Act, Action, Menu, more_menu, variants_menu};
+use crate::widget::copy::{CopySource, CopyWords};
 
 /// What a title row offers.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Default)]
 pub struct ActionGroup {
     /// The one primary action, when the reader can do one here.
     pub primary: Option<Action>,
     /// The variants of the primary action, which make it a split button;
     /// read only beside a primary.
     pub variants: Option<Menu>,
+    /// A popover form beside the primary, such as Save to the CDR beside
+    /// Run, its trigger a secondary button.
+    pub popover: Option<PopoverForm>,
     /// The More menu with every other action; left out when it holds none.
     pub more: Option<Menu>,
 }
@@ -65,6 +74,15 @@ impl ActionGroup {
         }
     }
 
+    /// This group, with the popover form `form` beside its primary.
+    #[must_use]
+    pub fn popover(self, form: PopoverForm) -> Self {
+        Self {
+            popover: Some(form),
+            ..self
+        }
+    }
+
     /// This group, its primary a split button with `menu` holding the
     /// variants of its action.
     #[must_use]
@@ -78,7 +96,9 @@ impl ActionGroup {
     /// Whether the group draws nothing.
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.primary.is_none() && self.more.as_ref().is_none_or(Menu::is_empty)
+        self.primary.is_none()
+            && self.popover.is_none()
+            && self.more.as_ref().is_none_or(Menu::is_empty)
     }
 }
 
@@ -98,8 +118,23 @@ pub fn small_action_button(action: Action, variant: Variant) -> AnyView {
 }
 
 /// The button [`action_button`] and [`small_action_button`] draw, with the
-/// classes `class`.
+/// classes `class`; a copy is the copy button
+/// ([`crate::island::CopyButton`]), hidden until it hydrates.
 fn button_of(action: Action, class: &'static str) -> AnyView {
+    if let Act::Copy(text) = action.act {
+        let mut hasher = DefaultHasher::new();
+        (&action.label, &text).hash(&mut hasher);
+        let id = format!("fui-copy-{:x}", hasher.finish());
+        return view! {
+            <crate::island::CopyButton
+                id
+                label=action.label
+                source=CopySource::Text(text)
+                words=CopyWords::of_page()
+            />
+        }
+        .into_any();
+    }
     let words = action.words();
     let inside = label(action.glyph, words);
     match action.act {
@@ -143,11 +178,13 @@ fn button_of(action: Action, class: &'static str) -> AnyView {
             </button>
         }
         .into_any(),
+        Act::Copy(_) => ().into_any(),
     }
 }
 
 /// Returns the action group `group`: its primary, split when it has
-/// variants, then its More menu; nothing for a group with no action.
+/// variants, its popover form, then its More menu; nothing for a group
+/// with no action.
 #[must_use]
 pub fn action_group(group: ActionGroup) -> AnyView {
     if group.is_empty() {
@@ -156,6 +193,7 @@ pub fn action_group(group: ActionGroup) -> AnyView {
     let ActionGroup {
         primary,
         variants,
+        popover,
         more,
     } = group;
     let primary = primary.map(|primary| {
@@ -173,6 +211,7 @@ pub fn action_group(group: ActionGroup) -> AnyView {
     view! {
         <div class="fui-action-group">
             {primary}
+            {popover.map(popover_form)}
             {more.map(more_menu)}
         </div>
     }

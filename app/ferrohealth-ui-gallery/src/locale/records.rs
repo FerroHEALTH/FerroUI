@@ -86,6 +86,8 @@ messages! {
     RecordsRefusedWhy = "records-refused-why",
     /// `a console's reveal page asks the reason here and reveals with a plain form.`
     RecordsRevealPage = "records-reveal-page",
+    /// `Leave it masked`
+    RecordsRevealStay = "records-reveal-stay",
     /// `Reveal { $name }`
     RecordsRevealTitle = "records-reveal-title",
     /// `Review queue`

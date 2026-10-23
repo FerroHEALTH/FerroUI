@@ -258,16 +258,52 @@ fn action_groups() -> AnyView {
     let more = ActionGroup::more_only(Menu::new(
         "alone-more",
         tr(Msg::MoreActionsSet),
-        vec![Item::new(Action::new(
-            Some(Glyph::FILE_CODE),
-            tr(Msg::OpenTheDocument),
-            Act::Link(page_path("code")),
-        ))],
+        vec![
+            Item::new(Action::new(
+                Some(Glyph::FILE_CODE),
+                tr(Msg::OpenTheDocument),
+                Act::Link(page_path("code")),
+            )),
+            Item::new(Action::new(
+                Some(Glyph::COPY),
+                tr(Msg::CopyTheSetName),
+                Act::Copy(String::from(crate::data::SET_NAME)),
+            )),
+        ],
     ));
+    let beside = ActionGroup::primary(Action::new(
+        Some(Glyph::PLAY),
+        tr(Msg::RunQuery),
+        Act::Link(page_path("forms")),
+    ))
+    .popover(PopoverForm {
+        id: "save-query-beside".into(),
+        variant: Variant::Secondary,
+        glyph: Glyph::SAVE,
+        label: tr(Msg::SaveTheQuery).into(),
+        title: tr(Msg::SaveTheQueryToTheServer).into(),
+        body: view! {
+            <form method="get" action="#popover-form" class="fui-form">
+                {field(
+                    "beside-query-name",
+                    tr(Msg::Name),
+                    None,
+                    view! { <input id="beside-query-name" name="name" type="text" class=INPUT value="synthetic-vitals" /> },
+                )}
+                <div class="fui-dialog-actions">
+                    <button type="submit" class=Variant::Primary.class()>
+                        {label(Some(Glyph::SAVE), tr(Msg::Save))}
+                    </button>
+                </div>
+            </form>
+        }
+        .into_any(),
+    });
     card(
         tr(Msg::ActionGroups),
         definitions(vec![
             (tr(Msg::APrimaryAlone), action_group(alone)),
+            (tr(Msg::APrimaryPopover), action_group(beside)),
             (tr(Msg::ASplitPrimary), action_group(split)),
             (tr(Msg::MoreAlone), action_group(more)),
         ]),

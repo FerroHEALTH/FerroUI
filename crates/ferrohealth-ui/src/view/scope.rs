@@ -128,6 +128,23 @@ impl Operation {
 pub struct Operations([bool; 5]);
 
 impl Operations {
+    /// The operations `permitted`, for a console that parses scopes with
+    /// its own grammar and draws them with E8.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ferrohealth_ui::view::scope::{Operation, Operations};
+    ///
+    /// let read = Operations::of(&[Operation::Read, Operation::Search]);
+    /// assert!(read.permits(Operation::Search));
+    /// assert!(!read.permits(Operation::Create));
+    /// ```
+    #[must_use]
+    pub fn of(permitted: &[Operation]) -> Self {
+        permitted.iter().copied().collect()
+    }
+
     /// Whether `operation` is permitted.
     #[must_use]
     pub const fn permits(self, operation: Operation) -> bool {
@@ -163,6 +180,20 @@ impl Operations {
             }
         }
         (any && rest.is_empty()).then_some(Self(flags))
+    }
+}
+
+impl FromIterator<Operation> for Operations {
+    fn from_iter<I: IntoIterator<Item = Operation>>(permitted: I) -> Self {
+        let mut flags = [false; 5];
+        for operation in permitted {
+            if let Some(at) = Operation::ALL.iter().position(|each| *each == operation)
+                && let Some(flag) = flags.get_mut(at)
+            {
+                *flag = true;
+            }
+        }
+        Self(flags)
     }
 }
 

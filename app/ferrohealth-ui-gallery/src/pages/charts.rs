@@ -108,6 +108,7 @@ fn requests_chart(words: RequestsWords) -> AnyView {
             .zip(days)
             .map(|(day, label)| (f64::from(day), label))
             .collect(),
+        x_labels: Vec::new(),
         y_range: None,
     };
     line_chart(&chart, chart_words)
@@ -139,6 +140,7 @@ fn many_lines() -> AnyView {
         x_ticks: (0_u8..12)
             .map(|day| (f64::from(day), format!("2026-10-{:02}", day + 1)))
             .collect(),
+        x_labels: Vec::new(),
         y_range: None,
     };
     card(

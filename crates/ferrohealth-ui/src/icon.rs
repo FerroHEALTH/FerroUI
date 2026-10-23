@@ -197,6 +197,10 @@ impl Glyph {
     pub const GIT_BRANCH: Self = Self(
         r#"<path d="M15 6a9 9 0 0 0-9 9V3" /><circle cx="18" cy="6" r="3" /><circle cx="6" cy="18" r="3" />"#,
     );
+    /// Lucide `git-commit-horizontal`, a commit or a contribution.
+    pub const GIT_COMMIT: Self = Self(
+        r#"<circle cx="12" cy="12" r="3" /><line x1="3" x2="9" y1="12" y2="12" /><line x1="15" x2="21" y1="12" y2="12" />"#,
+    );
     /// Lucide `heart-pulse`.
     pub const HEART_PULSE: Self = Self(
         r#"<path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5" /><path d="M3.22 13H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27" />"#,
@@ -208,6 +212,10 @@ impl Glyph {
     /// Lucide `info`.
     pub const INFO: Self =
         Self(r#"<circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" />"#);
+    /// Lucide `key-round`, a key or an access grant.
+    pub const KEY_ROUND: Self = Self(
+        r#"<path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z" /><circle cx="16.5" cy="7.5" r=".5" fill="currentColor" />"#,
+    );
     /// Lucide `keyboard`.
     pub const KEYBOARD: Self = Self(
         r#"<path d="M10 8h.01" /><path d="M12 12h.01" /><path d="M14 8h.01" /><path d="M16 12h.01" /><path d="M18 8h.01" /><path d="M6 8h.01" /><path d="M7 16h10" /><path d="M8 12h.01" /><rect width="20" height="16" x="2" y="4" rx="2" />"#,
@@ -395,7 +403,7 @@ impl Glyph {
     pub const X: Self = Self(r#"<path d="M18 6 6 18" /><path d="m6 6 12 12" />"#);
 
     /// Every glyph, with the Lucide name of its vendored file.
-    pub const ALL: [(&str, Self); 103] = [
+    pub const ALL: [(&str, Self); 105] = [
         ("activity", Self::ACTIVITY),
         ("arrow-down", Self::ARROW_DOWN),
         ("arrow-left", Self::ARROW_LEFT),
@@ -447,9 +455,11 @@ impl Glyph {
         ("funnel", Self::FUNNEL),
         ("gauge", Self::GAUGE),
         ("git-branch", Self::GIT_BRANCH),
+        ("git-commit-horizontal", Self::GIT_COMMIT),
         ("heart-pulse", Self::HEART_PULSE),
         ("inbox", Self::INBOX),
         ("info", Self::INFO),
+        ("key-round", Self::KEY_ROUND),
         ("keyboard", Self::KEYBOARD),
         ("layers", Self::LAYERS),
         ("layout-dashboard", Self::LAYOUT_DASHBOARD),

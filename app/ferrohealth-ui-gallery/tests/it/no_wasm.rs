@@ -155,7 +155,7 @@ async fn more_opens(browser: &Browser) -> Result<(), Box<dyn Error>> {
 /// and the button that opens it in place waits for the WebAssembly.
 async fn side_panel_floor(browser: &Browser) -> Result<(), Box<dyn Error>> {
     let link = browser
-        .element(By::Css("a[href$='/overlays/access']"))
+        .element(By::Css("main a[href$='/overlays/access']"))
         .await?;
     assert!(link.is_displayed().await?, "the opener is a link");
     let button = browser
@@ -263,6 +263,15 @@ async fn forms_content(browser: &Browser) -> Result<(), Box<dyn Error>> {
     let draft = browser.element(By::Id("gallery-draft")).await?;
     let held = draft.prop("value").await?.unwrap_or_default();
     assert!(!held.is_empty(), "the editor shows its text");
+    // The editor takes keys and shows what was typed (#356).
+    draft.send_keys("# typed").await?;
+    let typed = draft.prop("value").await?.unwrap_or_default();
+    assert!(typed.contains("# typed"), "the editor takes keys: {typed}");
+    let ink = draft.css_value("color").await?;
+    assert!(
+        !ink.contains("rgba(0, 0, 0, 0)") && ink != "transparent",
+        "the editor shows its own text: {ink}"
+    );
     date_fields(browser).await?;
     masked_field(browser).await
 }
@@ -466,6 +475,13 @@ async fn terminology_content(browser: &Browser) -> Result<(), Box<dyn Error>> {
 /// menu and the side panel open, and the legend's opener waits hidden.
 async fn overlays_content(browser: &Browser) -> Result<(), Box<dyn Error>> {
     more_opens(browser).await?;
+    let copy = browser
+        .element(By::Css("#alone-more button[data-fui-copy]"))
+        .await?;
+    assert!(
+        copy.attr("hidden").await?.is_some(),
+        "the copy item, which needs its script, waits hidden"
+    );
     side_panel_floor(browser).await?;
     let opener = browser.element(By::Id("open-shortcuts")).await?;
     assert!(
@@ -779,7 +795,7 @@ async fn links_lead_on_with_the_webassembly_withheld() -> Result<(), Box<dyn Err
         // The side panel's opener leads to its content's own page.
         browser.goto(&gallery.url("/ferrofed/overlays")).await?;
         browser
-            .element(By::Css("a[href='/ferrofed/overlays/access']"))
+            .element(By::Css("main a[href='/ferrofed/overlays/access']"))
             .await?
             .click()
             .await?;
@@ -854,6 +870,29 @@ async fn answer_and_dock(browser: &Browser, gallery: &Gallery) -> Result<(), Box
     browser
         .text("p", "Saved: the settings apply at once.")
         .await?;
+    // Discard leaves the form with its required field emptied (#357).
+    browser
+        .goto(&gallery.url("/ferrofed/forms?dock=idle"))
+        .await?;
+    browser
+        .element(By::Id("long-field-1"))
+        .await?
+        .clear()
+        .await?;
+    browser
+        .element(By::Css("button[value='discard']"))
+        .await?
+        .click()
+        .await?;
+    until("Discard leaves the form", async || {
+        Ok(browser
+            .driver()
+            .current_url()
+            .await?
+            .as_str()
+            .contains("decision=discard"))
+    })
+    .await?;
     Ok(())
 }
 

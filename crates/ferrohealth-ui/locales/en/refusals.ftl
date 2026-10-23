@@ -28,4 +28,28 @@ severity-error = error
 severity-fatal = fatal
 severity-information = information
 severity-warning = warning
+time-ago-days =
+    { $count ->
+        [one] { $count } day ago
+       *[other] { $count } days ago
+    }
+time-ago-hours = { $count } h ago
+time-ago-minutes = { $count } min ago
+time-ago-months =
+    { $count ->
+        [one] { $count } month ago
+       *[other] { $count } months ago
+    }
+time-ago-seconds = { $count } s ago
+time-ago-weeks =
+    { $count ->
+        [one] { $count } week ago
+       *[other] { $count } weeks ago
+    }
+time-ago-years =
+    { $count ->
+        [one] { $count } year ago
+       *[other] { $count } years ago
+    }
+time-yesterday = yesterday
 timestamp-utc = { $date } { $time } UTC
