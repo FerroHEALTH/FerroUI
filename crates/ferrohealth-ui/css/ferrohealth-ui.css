@@ -9810,8 +9810,10 @@
       border-top: 1px solid var(--edge);
     }
 
+    /* A name keeps its words whole beside its state, which wraps instead,
+       and a note takes a line of its own. */
     .fui-topology-list .fui-tree-row {
-      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-columns: minmax(min-content, 1fr) minmax(0, max-content);
       gap: 0.125rem 0.5rem;
     }
 
@@ -9819,6 +9821,15 @@
     .fui-topology-list .fui-tree-row > :nth-child(4) {
       grid-column: 1;
       padding-inline-start: inherit;
+    }
+
+    .fui-topology-list .fui-tree-row > :nth-child(4) {
+      grid-column: 1 / -1;
+    }
+
+    .fui-topology-list .fui-tree-row > :nth-child(2) > .fui-state {
+      flex-wrap: wrap;
+      row-gap: 0;
     }
 
     .fui-topology-list .fui-tree-l3 > :nth-child(3),
@@ -14243,13 +14254,38 @@
     display: none;
   }
 
-  /* E2: the version being read is marked in its table. */
-  .fui-table tbody tr[aria-current="true"] > :is(th, td) {
+  /* E2: the version being read is marked in its table; the worklist marks
+     its focused row its own way. */
+  .fui-table tbody tr[aria-current="true"]:not(.fui-worklist *) > :is(th, td) {
     background: var(--surface-sunken);
   }
 
-  .fui-table tbody tr[aria-current="true"] > :first-child {
+  .fui-table tbody tr[aria-current="true"]:not(.fui-worklist *) > :first-child {
     box-shadow: inset 3px 0 0 var(--accent);
+  }
+
+  /* A stacked row is marked whole: the bar at the row's edge, its text
+     inset from it. */
+  @media (width < 40rem) {
+    .fui-table-stack .fui-table tbody tr[aria-current="true"]:not(.fui-worklist *) {
+      background: var(--surface-sunken);
+      box-shadow: inset 3px 0 0 var(--accent);
+    }
+
+    .fui-table-stack .fui-table tbody tr[aria-current="true"]:not(.fui-worklist *) > :is(th, td) {
+      background: none;
+      box-shadow: none;
+    }
+  }
+
+  @media (forced-colors: active) and (width < 40rem) {
+    .fui-table-stack .fui-table tbody tr[aria-current="true"]:not(.fui-worklist *) {
+      border-inline-start: 3px solid Highlight;
+    }
+
+    .fui-table-stack .fui-table tbody tr[aria-current="true"]:not(.fui-worklist *) > :first-child {
+      border-inline-start: 0;
+    }
   }
 
   /* E4 in edit: a removed item stays in place, struck through, with Undo. */
