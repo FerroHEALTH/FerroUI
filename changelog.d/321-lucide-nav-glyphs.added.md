@@ -3,4 +3,4 @@
   `Glyph::BUILDING_COMPLEX`, vendored from Lucide 1.51.0. That release names
   `building-2` a deprecated alias of `building-complex`, so FerroFED's
   Organisations entry takes `Glyph::BUILDING_COMPLEX` and `Glyph::named`
-  resolves `building-complex`. `Glyph::ALL` holds 99 glyphs.
+  resolves `building-complex`.

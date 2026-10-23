@@ -7,5 +7,4 @@
   text with `aria-pressed` in step, and released, left or blurred, it masks it
   again. The eye names its input by id, so the typed value is never an island
   prop. Without WebAssembly it is disabled, its name says the field stays
-  masked, and the field stays masked. `Inner` gains a variant, so a console
-  that matches on `Inner` exhaustively adds an arm.
+  masked, and the field stays masked.
