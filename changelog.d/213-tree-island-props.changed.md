@@ -6,4 +6,7 @@
   `TreeNode::children` is now `Children` (`None`, `Unread`, `Read`), the
   builder `expandable()` is `unread()`, `Tree::id` and `Tree::label` are
   `String`s, and `Tree` takes `kind`, `editing`, `open_field` and `words`.
-  The tree draws inside its `fui-concept-tree` box.
+  `TreeNode` gains the public fields `count`, `edits`, `inactive`, `mark`,
+  `removed`, `rename`, `tag` and `toggle_href`; a console that builds a
+  node by struct literal names them, or starts from `TreeNode::new`. The
+  tree draws inside its `fui-concept-tree` box.

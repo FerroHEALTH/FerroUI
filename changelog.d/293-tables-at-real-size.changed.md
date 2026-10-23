@@ -1,4 +1,4 @@
-- Breaking: `view::results::ResultsPane` takes `numeric`, whether the
+- `view::results::ResultsPane` takes `numeric`, whether the
   answer has a column the chart can draw. A console sets it from its result
   set. An answer with no row disables both exports and offers no chart, an
   answer with no numeric column offers no chart, and the pane says why in a

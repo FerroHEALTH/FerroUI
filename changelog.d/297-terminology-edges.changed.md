@@ -1,4 +1,4 @@
-- `widget::tree` addresses an item by its path key, the keys from the top
+- Breaking: `widget::tree` addresses an item by its path key, the keys from the top
   to it (`path_key`, read back with `path_keys`): `Tree::expanded`,
   `Tree::selected`, `TreeData::open`, `TreeData::selected` and the open
   fields a tree posts hold path keys, and an item's key need only be unique

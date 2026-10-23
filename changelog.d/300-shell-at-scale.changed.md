@@ -10,7 +10,7 @@
   script of a console's own that selects `nav.fui-sidebar` or
   `.fui-sidebar:popover-open` selects `.fui-sidebar` and
   `.fui-sidebar[open]`.
-- Breaking: `widget::nav::Nest` takes an `all` field, the words of the link
+- `widget::nav::Nest` takes an `all` field, the words of the link
   to the parent's page ("All 300 nodes") that the section draws when it
   holds more than `NEST_SHOWN` (8) children.
 - A collapsed rail entry carries its words in a drawn tooltip in place of a
