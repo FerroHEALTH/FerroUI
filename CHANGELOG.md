@@ -11,6 +11,641 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-10-23
+
+### Added
+
+- The concept tree and the concept browser (M1), the folder tree of a
+  directory (E4) and the path browser of a template (E5).
+  `widget::tree` draws the tree as `TreeKind::Concept`, `Folder` or `Path`:
+  a level read one at a time (`Children::Unread` shows the loading row
+  while the console's server reads it behind the toggle's link), a long
+  level ending in the more row (`More::of_page`), the selected concept's
+  path in the heavier weight, M2's inactive mark, a folder's glyph and
+  count, a reference's short uid, a path's RM type, and in an edit each
+  row's named icon actions (`Edit`, submit buttons of the console's form)
+  and the inline rename field. The ready island `island::TreeView` takes
+  the tree as plain data (`TreeData`) with its words (`TreeWords`), and is
+  lazy. `view::browser` lays out the panes (`Panes::Three`, `Flat`, `Two`),
+  the pane's find field, the search's matches and the path inspector
+  (`path_node`); `view::path` draws an archetype id that breaks only after
+  a dot and a path that breaks only after a slash, a dot or an opening
+  bracket. The gallery's Trees page shows each in every brand (#170).
+- The coding (M2, `view::coding`): a coded value as its display over its
+  code in the code face and, where it helps, its system, stacked or inline
+  (`Layout`), with a display that leads to the concept's page. An inactive
+  coding is muted and carries the inactive mark, the hollow ring and the
+  word Inactive (`inactive_mark`); a code never breaks inside itself, and
+  `canonical` draws a canonical that breaks only after a slash. A row's
+  name over its canonical is `table::view::title_cell` with the canonical
+  as its quiet second line (#171).
+- The FHIR version select (M3, `widget::version::version_select`): the
+  version a console reads through as one compact control in the top bar,
+  the version alone with its label and release as its tooltip and
+  accessible name, over a menu of `menuitemradio` links that checks the
+  root in view and marks the default beside each release. Below 40 rem it
+  leaves the top bar, and `VersionSelect::choices` hands the user menu the
+  same roots as its segmented group. The menu island's keys walk
+  `menuitemradio` items, and its trigger `Trigger::Version` draws the
+  control (#172).
+- The value set clause (M4, `view::clause`): an include or exclude of a
+  value set as its mark, its source as the title, the sentence of what it
+  selects, then its filter rows and its codes, each an M2 coding
+  (`clause_codes`), with `clause_part` and `clause_fields` for a
+  composer's parts and `clauses` to run them edge to edge in their
+  section. Include is a solid accent edge and Exclude a dashed warn edge,
+  each with its word, and an invariant the clause breaks is named by its
+  number inline (`ClauseIssue`) (#173).
+- The repeatable rows (F7, `widget::repeat::repeat` and the island
+  `Repeater`): a list of the same fields, each row ending in its labelled
+  Remove (or a lock that says why the row stays), one Add under the list
+  and a quiet line for an empty list. Remove and Add are submit buttons of
+  the console's form, so they post with no WebAssembly; once the page
+  hydrates, Remove takes its row out and moves the focus to the next row,
+  and Add inserts a copy of the blank row with a fresh key (`ROW`) and
+  focuses it. On a phone Remove stays on the row's first line. M4's filter
+  rows and M6's target rows are F7 rows (`Fields::Three`) (#173).
+- The root matrix (M5, `view::root_matrix`): what each FHIR root of a
+  server declares, one column per root, each column head the root, its
+  release and whether it answered as an F12 state with its word. The first
+  column stays while the rest scroll sideways inside the card under the
+  scroll cue; a cell a root does not declare says "not declared", and
+  every cell of a root that did not answer says "no answer" (#174).
+- The mapping row (M6, `view::mapping`): a concept map's mapping as a table
+  row of its source coding, the relationship as its words with an arrow,
+  the target coding and the comment (`mapping_columns`, `mapping_row`).
+  `Relationship` reads the R4 `ConceptMapEquivalence` and the R5
+  `ConceptMapRelationship` codes, each in the words its version reads, and
+  a mapping to nothing says so with its own glyph and a named dash for its
+  target. In an editor each source code is one block (`map_element`) over
+  its target rows, F7 rows that name a missing relationship under the row (#175).
+- The subject line (E1), `view::subject::subject_line`: the label Subject,
+  the subject's masked identifier with its namespace and Reveal or "No
+  external subject", and the record's Queryable and Modifiable states as F12
+  marks, a cleared one the hollow ring and its negation. It wraps between
+  its parts and never inside the identifier (#176).
+- The version history and At a time (E2), `view::versions`: the revision
+  table with the Current mark or the Deleted state beside each version, the
+  change type, the committer, a relative time and the contribution, the
+  version being read marked `aria-current`; At a time under it as a plain
+  `GET` form of the date and time field and Open with its quiet line; and
+  `older_version`, the one notice over an older version with its link to
+  the latest (#177).
+- The clinical reading of a canonical document (E3),
+  `view::reading::reading`: each RM section a heading with its archetype
+  node id as a quiet hint that breaks only after a dot, each element a label
+  and value row (two columns, one on a phone), a quantity with its unit as
+  read and its UCUM code as the tooltip, a coded value as the console's M2
+  coding, a null flavour as the hollow ring and its words, nested clusters
+  indented with their headings one level deeper, and one foot that says what
+  is folded away (#178).
+- The query builder's condition groups (E6),
+  `view::conditions::condition_groups`: a group's head reads as one phrase,
+  "Match [All | Any] of these conditions", with "Match the opposite (NOT)"
+  beside it and a dashed edge when negated; each condition an F7 row of the
+  path with its archetype path, the operator, a typed value with its unit or
+  a coded select, and Remove, which stays on the row's first line on a
+  phone. Every control is a field of the console's form, and Remove, Add a
+  condition and Add a group are submit buttons, so the builder works with
+  no WebAssembly (#181).
+- The results pane of a query (E7), `view::results::results_pane`: a B10
+  section with the row count in its heading, Table or Chart as links in the
+  URL or as a form the console answers from its session, Export CSV and
+  Export JSON, the row window in one quiet line, then the table edge to edge
+  or the line chart inset (#182).
+- The SMART scope grant (E8), `view::scope`: `Scope::parse` reads the scope
+  grammar of SMART App Launch 2.2.0 (the compartment, the resource, a subset
+  of `cruds` in order or a SMART 1 suffix, and an optional constraint), with
+  SMART on openEHR resources such as `composition-*` among them, and
+  `scope_grants` draws each scope with its raw text in mono, the compartment
+  and resource in words, the five operations ticked or struck through as
+  `<del>` that says "not permitted", the warn badge Broad access, and a
+  refused scope in the bad tone with what the grammar expected (#183).
+- The gallery's Clinical records page shows the six FerroEHR parts in every
+  brand (#183).
+- `view::lifecycle`, the revision lifecycle and its pending card (F1):
+  `lifecycle` draws Saved, Approval, Apply and Confirm as an ordered list,
+  each `Step` done, current (`aria-current="step"`), waiting, not needed or
+  failed (`StepState`) in a glyph, a colour and a hidden state word, one
+  line from 40 rem up and stacked below it; `pending_card` puts a
+  revision's words, its actions, its lifecycle and a line under them in one
+  card (`PendingCard`), a polite status region when it carries a tone (#188).
+- `view::action::small_action_button`, an `Action` as a small button, for a
+  card's header row (#188).
+- `widget::countdown` and the island `CommitCountdown`, the commit-confirm
+  countdown (F2): a ring and the time left with the deadline in words, drawn
+  by the server from the seconds left the console supplies (`Countdown`,
+  `CountdownWords::of_page`) and counted down in the browser by the page's
+  monotonic clock; the time is a `timer` that is not live, a polite region
+  says the time left at 60, 30 and 10 seconds (`ANNOUNCE_AT`) and when the
+  time is up, and reduced motion stops the ring's sweep.
+  `view::lifecycle::trial_actions` draws it with Roll back now and the
+  primary Confirm (#189).
+- `view::secret`, the write-only secret field (F3): `secret_field` draws
+  what is set now by reference (`SecretState`: set from a file, set and not
+  shown, not set, or set and unreadable) and one radio group of Keep (Leave
+  unset when not set), Set a value, Read from a file and Clear
+  (`SecretChoice`), whose chosen control shows with no script; the value is
+  a password input with `autocomplete="off"` the page never fills, and
+  `SecretField::refuse_value` refuses a value where no secrets directory is
+  set. `secret_state` draws the state alone for a read-only settings row (#190).
+- The fan-out outcome (F5), `view::fanout::fanout`: the per-node state of
+  one request that went to many. When a node failed, "Incomplete answer" comes
+  first in words with what is missing, then the verdict (Complete, Incomplete
+  or Failed) as a pill with the console's summary line, then one row per node
+  with its state as a shape, a colour and a word, its protocol term, what it
+  gave and the reason it failed. A node the request left out is drawn dashed
+  and stays listed. At a phone's width each node is one line with its reason
+  under it (#192).
+- The replica line (F6): "Answered by replica gateway-0", one quiet line
+  under the title of a reference page, through the new `replica` field of
+  `view::template::settings::SettingsPage` and
+  `view::template::about::AboutPage` (`view::replica::Replica`). No other
+  page can draw it (#193).
+- The nested sidebar section (F10): `widget::nav::Nest` and `NestItem` open
+  the parent in view and its children under one entry of the navigation,
+  such as an organisation and its nodes, each with its health dot as a shape
+  named by its word. The entry is marked `aria-current="location"`, the
+  child in view `page`. The rail leaves the section out from 48 rem up and
+  the drawer keeps it (#194).
+- The topology (F9), `view::topology::topology` with the island
+  `TopologyKeys`: a federation drawn as a hub with its callers above it and
+  its two sides, the start side mirrored, with the flow's (B9) Bézier edges,
+  end marks and cards. A problem edge carries its mark and its label, a
+  collapsed group one card whose edge carries the mark, and hovering or
+  focusing a card raises its path from the hub with the pulse, paint only.
+  The toolbar holds the Status menu, which is the legend and a `GET` form of
+  the states, and the Map and List switch; the zoom cluster names each icon
+  in a tooltip above it, with Collapse every group and a minimap. Zoom works
+  by the cluster and by `+`, `-` and `0` on the canvas, the canvas pans by
+  the pointer, "i" or Space on a card opens its quick look beside the
+  canvas, and reduced motion stops the pulse. The List twin
+  (`fui-topology-list`) draws the same graph and states as a tree with the
+  same actions, walked by the arrows, at every width and in place of the map
+  on a phone. With no WebAssembly every card, fold, quick look and view is a
+  link and the zoom says it waits for the script (#195).
+- The flow (B9) orders each lane to cross the fewest edges: barycentre
+  sweeps over the lanes and swaps of neighbouring cards, deterministic,
+  with the console's order breaking a tie, so a flow that crosses nothing
+  keeps its order. A lane past `view::flow::FOLD_PAST` (eight) cards folds
+  its quiet cards into one summary card with its counts by state, a link
+  that unfolds it with or without WebAssembly, and the lane's fold link
+  beside its title; a card in a problem state or on a problem edge is
+  never folded, and the phone's list folds as the drawing does. Problem
+  edges are drawn last, and where several labelled problem edges enter one
+  card each label sits after its edge's start. The gallery's charts page
+  shows a busy bridge of thirty callers and thirty upstreams, folded and
+  unfolded (`?open=callers,upstreams`), and its federation page a
+  federation of fifty organisations and two hundred nodes (`?large=50`) (#290).
+- `table::view::data_table_wide`: a data table whose box scrolls sideways
+  at every width, for a column set no console bounds such as a query's
+  result set; its header gives up sticking from 64rem. A table with a code
+  header (`Column::mono`) is drawn this way by `data_table` and
+  `data_table_unstacked` too, and a code header breaks after a slash, a dot
+  or an opening bracket (#293).
+- `i18n::number`: `grouped` writes a count in the page's language
+  ("312,000"), and `format_number` is the Fluent formatter the library sets
+  on its catalogs, which a console sets in the `customise` of its own
+  `static_loader!` (`bundle.set_formatter(Some(ferrohealth_ui::i18n::number::format_number))`).
+  The marks are the catalog messages `number-group` and `number-decimal`,
+  so a language brings its own (#293).
+- The diagnostics list windows a long file and says when it is empty. With
+  the new `FileFindings::all` link, a file of more than
+  `view::diagnostics::WINDOW` (100) findings draws the first 100 and one
+  quiet row, "100 of 2000 findings shown. Show all 2000", linking to the
+  console's page of them all (`fui-diags-more`); a list or a file with no
+  finding says "No errors or warnings." (`fui-diags-empty`) (#295).
+- `view::timeline::timeline_window` draws the newest `Window::limit` events
+  of a long history and a foot saying how many show of how many, with a
+  plain link to the console's page of older events (`Window::older`).
+  `view::scope::Request` reads the SMART App Launch 2.2.0 scopes that ask
+  for no resource (`openid`, `fhirUser`, `launch`, `launch/<resource>`
+  with its `?role=`, `online_access`, `offline_access`) and
+  `ScopeGrant::read` reads any raw scope into its grant.
+  `view::row_preview::RowValue::Null` draws a column with no value as
+  `NULL`, apart from an empty text, which now reads "empty text" (#296).
+- `view::coding::MoreCodes` and `more_codes`: the quiet last row of a list
+  of codes the console's server pages, "25 of 4000 codes shown. Show the
+  next 25", in a clause's codes and a coded node's value set (#297).
+- `widget::combobox::searched_combobox` and `Remote`: a combobox over a
+  console's own search, for a list too long to send to the browser whole;
+  the combobox writes the words typed and shows the options the search
+  answers (#301).
+- The date field takes a date typed in the order the page's language writes
+  one, from the catalog's new `date-order` message (`ymd`, `dmy` or `mdy`;
+  English `ymd`), through `calendar::DateOrder`, `Day::parse_in` and
+  `Moment::parse_in`, which a console uses to read the posted text (#301).
+- `view::refusal::split_issues`, `ISSUES_OPEN` and `ISSUES_DRAWN`, and
+  `widget::upload::decode` (#301).
+- `i18n::number::Grouping`: the page's digit-group mark, resolved on the
+  server and carried in an island's words, with `write` for a count the
+  island learns in the browser (#304).
+- `i18n::Word`: a library word with whether it fell back to English on a
+  page in another language. Drawn as a text node it is wrapped in
+  `<span lang="en">` when it fell back (WCAG 2.2 SC 3.1.2); written into an
+  attribute it takes the page's language; in an island's props it travels as
+  a plain string, or as `{"en": text}` when it fell back. `Word::lang` gives
+  the `lang` of an element whose whole text is the word, such as an
+  `<option>` (#313).
+
+### Changed
+
+- Breaking: `widget::menu::UserMenu::choices` is a `Vec<Choices>`, so the
+  user menu holds one group per control the top bar shows from 40 rem up,
+  such as a brand and the FHIR version. A console that passed
+  `Some(choices)` passes `vec![choices]`, and `None` becomes `Vec::new()` (#172).
+- Breaking: `widget::action_menu::Trigger` has a `Version` variant, the
+  top bar's FHIR version control; a console that matches on the trigger
+  adds an arm (#172).
+- Breaking: `Tag::locked` takes the value's owner (F4), such as
+  "Provisioned from mappings/observation.yml", and draws it as the tag's
+  tooltip and after its word in its accessible name, so the lock and the
+  dashed edge never stand alone. A console that called `.locked()` passes
+  the owner it set with `.title(...)` to `.locked(...)` instead (#191).
+- Breaking: `SettingsPage` and `AboutPage` take a `replica:
+  Option<Replica>` field; pass `None` where the product has no replicas (#193).
+- Breaking: `widget::nav::Sidebar` takes a `nest: Option<Nest>` field; pass
+  `None` for a navigation with no nested section. `view::flow::FlowState`
+  gains the public `tone` and `key` (#194).
+- Breaking: the tree keeps its state as data the server can read. Each
+  toggle is a link to `TreeNode::toggle_href` when the console gives one,
+  so a tree folds with no WebAssembly, and `Tree::open_field` posts the
+  open items as hidden fields of the form around it; a console that keeps
+  them in its address watches `Tree::expanded` with `Effect::watch`.
+  `TreeNode::children` is now `Children` (`None`, `Unread`, `Read`), the
+  builder `expandable()` is `unread()`, `Tree::id` and `Tree::label` are
+  `String`s, and `Tree` takes `kind`, `editing`, `open_field` and `words`.
+  `TreeNode` gains the public fields `count`, `edits`, `inactive`, `mark`,
+  `removed`, `rename`, `tag` and `toggle_href`; a console that builds a
+  node by struct literal names them, or starts from `TreeNode::new`. The
+  tree draws inside its `fui-concept-tree` box (#213).
+- Breaking: `view::flow::FlowLane` takes `fold: Option<LaneFold>`, how the lane folds
+  past `FOLD_PAST` cards; `None` keeps a lane that never folds. A struct
+  literal that builds a lane names the new field (#290).
+- `view::results::ResultsPane` takes `numeric`, whether the
+  answer has a column the chart can draw. A console sets it from its result
+  set. An answer with no row disables both exports and offers no chart, an
+  answer with no numeric column offers no chart, and the pane says why in a
+  quiet line (#293).
+- Every number a message takes, and every count a list card, a panel
+  section, a binder tab, a navigation entry or a count cell draws, is
+  grouped in threes in the marks of the page's language ("1-25 of 312,000
+  rows") and never breaks between its digits. A count past what a float
+  holds exactly (`Arg::from(u64)`) is written grouped as text (#293).
+- A table header wraps between its words and hyphenates a long word in the
+  page's language; a heading and a field label wrap a long word (a German
+  or Dutch compound) instead of widening the page (#293).
+- Breaking: `view::chart::tick_label` takes the axis step as well,
+  `tick_label(value, step)`, and prints the step's decimals; a console that
+  printed a figure with it calls the new `view::chart::value_label`, which
+  keeps six significant digits. `view::chart::MARKS` names the four point
+  marks a series' palette index also picks (#294).
+- `view::fanout::Verdict` has a fourth variant, `Unasked`, for a
+  fan-out with no node asked; a console that matches on the verdict adds an
+  arm. A legend swatch is an SVG of the series' mark (`svg.fui-swatch`), no
+  longer a `span` (#294).
+- Breaking: `island::CopyButton` takes `source: CopySource` in place of
+  `text: String`. `CopySource::Text` carries a short text as before;
+  `CopySource::Element` copies the text of an element the page draws, and
+  `CopySource::Lines` the code lines of a viewer. The document pane copies
+  its raw view and the code viewer its lines, so a large document reaches
+  the page once per view and never as island data (a 0.5 MB bundle made a
+  4.9 MB page). Line breaks are copied as the page holds them, a carriage
+  return as a line feed. `widget::copy::copy_from` draws the button over a
+  source; `copy_button` keeps its live text (#295).
+- Breaking: `view::diagnostics::FileFindings` takes `all`, the console's
+  page of every finding in the file, and `DiagnosticsWords` takes `more`,
+  `more_all` and `none`. A console that builds either by struct literal
+  names the new fields; `DiagnosticsWords::of_page()` fills the words (#295).
+- Breaking: `view::scope::Grant` has a `Request(Request)` variant and
+  `view::row_preview::RowValue` a `Null` variant, so a console that matches
+  either whole adds the arm. A console that builds its grants with
+  `Scope::parse` and refuses every error should move to `ScopeGrant::read`,
+  which no longer marks `openid`, `fhirUser` or `launch/patient`
+  malformed. The masked identifier's busy Reveal is `aria-disabled` where
+  it was `disabled`, so it can hold the focus. `RowEnd::Kept` draws its
+  reason as a visible line under the row and its lock is hidden from
+  assistive technology, where the reason was the disabled button's name
+  and tooltip (#296).
+- Breaking: `widget::tree` addresses an item by its path key, the keys from the top
+  to it (`path_key`, read back with `path_keys`): `Tree::expanded`,
+  `Tree::selected`, `TreeData::open`, `TreeData::selected` and the open
+  fields a tree posts hold path keys, and an item's key need only be unique
+  among its siblings. The same concept under two parents (a SNOMED CT
+  polyhierarchy) is two items, each with its own id, fold, selection and
+  place in the keyboard's walk. A top item's path key is its key; a console
+  that opens or selects a deeper item builds its path key (#297).
+- `view::browser::match_list` takes the rows as `Vec<AnyView>`, and the
+  `Match` struct is removed: the match the browser reads marks its link
+  `aria-current="true"` (`Coding::current`), and its row takes the tint
+  from that mark, where it took `aria-selected` on a plain list item,
+  which WAI-ARIA 1.2 does not allow there (#297).
+- `view::coding::Coding` has a `current` field (`Coding::current`), which
+  puts `aria-current="true"` on its link; a struct literal names it (#297).
+- `view::clause::Clause` takes `issues: Vec<ClauseIssue>` in place of
+  `issue`: two or more broken invariants draw as a list, one issue each.
+  `clause_codes` takes the more row (`Option<MoreCodes>`) after the codes,
+  and `view::browser::PathNode` has a `more` field, which also sets the
+  count in its value set's heading (#297).
+- `widget::filter::table_filter` shows its count at once and says it from
+  a status region of its own once the typing pauses (`SETTLE`, 600 ms), so
+  assistive technology hears one count for a burst of keys (#297).
+- Breaking: the confirmation dialog (`confirm_dialog`, `danger_dialog`),
+  the popover form (`popover_form`) and the side panel (`SidePanel`) are
+  native modal `<dialog>` elements with `closedby="any"`, opened by their
+  trigger's `command="show-modal" commandfor=<id>` and closed by
+  `command="close"`, in place of `popover="auto"` and `popovertarget`. The
+  page behind is inert while one shows, the focus moves in and returns to
+  the trigger, Escape and a press outside still close it, and all of it
+  works with no WebAssembly (WAI-ARIA Authoring Practices, the dialog
+  (modal) pattern; WCAG 2.2 SC 2.4.3 and SC 2.4.11). A console that closes
+  one of these from its own code calls `HTMLDialogElement.close()`, or
+  gives its confirming button `command="close" commandfor=<id>`, in place
+  of `hidePopover()`. `Act::Dialog`, the Reset to defaults button and every
+  trigger the library draws use the command; a trigger a console draws
+  itself does the same (#298).
+- Breaking: the user menu's popup holds who is signed in above its ARIA
+  menu, which is now the inner element with the id `<id>-menu` that the
+  button's `aria-controls` names; the popup keeps `<id>` for
+  `popovertarget`. `widget::menu::menu_button` no longer draws
+  `role="menu"`: its `items` carry the head and the menu, as `user_menu`
+  draws them. The button carries no `aria-expanded` until its island runs (#298).
+- Breaking: `widget::nav::Entry::href` and `widget::nav::Nest::under` are
+  `Cow<'static, str>`, so a console passes a path under a base it reads at
+  run time (`format!("{base}/files").into()`) as well as a literal
+  (`"/files".into()`). A struct literal that set them to a `&'static str`
+  adds `.into()` (#299).
+- Breaking: `view::shell::Footer`'s `version` and `about` are
+  `Cow<'static, str>`, and `view::shell::lockup` takes its `href` as
+  `impl Into<Cow<'static, str>>`, so a console passes a base path or a
+  version it learns at run time without leaking a string; a literal takes
+  `.into()`. `Footer::release` borrows the footer (#299).
+- Breaking: the phone's tab select (`widget::tabs::tab_select`, the
+  `TabSelect` island) is named by the label around it and carries no id, so
+  a page may hold several many-tab rows; a test or a console that found it
+  by `#fui-tabs-select` finds it by `.fui-tabs-select select` (#299).
+- The top bar's search answers Escape as the WAI-ARIA Authoring Practices'
+  combobox does: an open answer closes and keeps the words, a closed one
+  clears them, and the focus stays in the field either way (WCAG 2.2
+  SC 2.4.3); it left the field for the page before (#299).
+- Breaking: the navigation drawer is a native modal `<dialog>` with
+  `closedby="any"` around the `<nav>` landmark, and the top bar's Menu
+  button opens it with `command="show-modal" commandfor=<id>` in place of
+  `popover="auto"` and `popovertarget`. The page behind is inert while it
+  shows, the focus moves in and returns to the button, and Escape and a
+  press outside close it, all with no WebAssembly (WAI-ARIA Authoring
+  Practices, the dialog (modal) pattern; WCAG 2.2 SC 2.4.3 and SC 2.4.11).
+  From 48 rem up the closed dialog is the column beside the page. The id a
+  console passes as `Sidebar::id` is now the dialog's; a stylesheet or
+  script of a console's own that selects `nav.fui-sidebar` or
+  `.fui-sidebar:popover-open` selects `.fui-sidebar` and
+  `.fui-sidebar[open]` (#300).
+- `widget::nav::Nest` takes an `all` field, the words of the link
+  to the parent's page ("All 300 nodes") that the section draws when it
+  holds more than `NEST_SHOWN` (8) children (#300).
+- A collapsed rail entry carries its words in a drawn tooltip in place of a
+  `title` attribute (#300).
+- Breaking: `ComboboxWords` carries `more`, `UploadWords` carries
+  `read_one` and `read_lossy`, and `DateWords` carries `order`; a console
+  that builds one by hand fills them, and `of_page()` does so. A refusal's
+  outer `div` no longer carries `role="alert"`: its title does (#301).
+- Breaking: `EditorWords`, `SizeWords` and `IdentifierWords` carry
+  `grouping`, the page's `i18n::number::Grouping`. A console that builds
+  one by struct literal sets it with `Grouping::of_page()`; each type's
+  `of_page()` does so (#304).
+- Breaking: the library's own words are `i18n::Word` in place of `String`.
+  Every `*Words` struct holds `Word` fields; `Phrase::new` takes
+  `impl Into<Word>` and `Phrase::fill` returns a `Word`. The methods that
+  return a library word return a `Word`: `label` of `Theme`, `Density`,
+  `Motion`, `Hints` and `Step`, `Variant::name`, `FlowState::word`,
+  `Severity::word`, `Relationship::words`, the scope's `Compartment::words`,
+  `Operation::words`, `Request::words` and `ScopeError::expected`,
+  `Status::line`, `refusal_title`, `at_time_label`, `Noun::word`, `empty`
+  and `opening`, `range_label` and `range_of` of the table windows,
+  `partial_note`, `SizeWords::size` and `Refused::sentence` (#313).
+- Breaking: the fields a library word can fill are `Word`:
+  `Header::title` and `subtitle`, `Tab::label`, `TabChoice::words`,
+  `Column::label`, `PreferenceRow::label` and `description`, the words of
+  `SelectPreference::choices` and `SegmentedForm::choices`,
+  `Confirmation::title` and `message`, `Modal::title` (a `Signal<Word>`),
+  `action_menu::Choice::label` and `note`, `Listbox::value`,
+  `Trigger::More` and `Trigger::Select`, `ViewChoice::words`, the `words`
+  and `link` of `MoreCodes` and the tree's `More`, `RangePreset::words` and
+  `Grant::Refused`. `From<String>`, `From<&str>` and
+  `From<Cow<'static, str>>` make a console's own words a `Word` in the
+  page's language (#313).
+- Breaking: these take `impl Into<Word>`: `Tab::new`, `Column::text`,
+  `button::label`, `status::badge`, `kbd::shortcut_keys`,
+  `surface::definitions`, `surface::page_header`, the form's `Field::new`,
+  `help`, `help_if`, `field`, `keyed_field`, `check`, `keyed_check`,
+  `check_field` and `keyed_check_field`, and `copy_button` and `copy_from`.
+  The islands `CopyButton` (`label`), `NavDrawer` (`close`),
+  `UserMenuButton` and `MenuButton` (`cancel`), `TabSelect` (`go`) and
+  `PreferenceForm` (`save`) take a `Word`, `ChartLegend`'s `gap` is an
+  `Option<Word>`, and so are the matching parameters of `nav::drawer`,
+  `chart::legend`, the two `menu_button`s, `tab_select` and
+  `preference_form` (#313).
+
+### Removed
+
+- Breaking: `widget::tree::tree_view_collapsing` and the tree's
+  `on_expand` and `actions` callbacks. No callback crosses an island: a
+  level is read by the server behind the toggle's link, and a row's
+  actions are `TreeNode::edits` (#213).
+
+### Fixed
+
+- A line chart's figures table no longer widens the page on a phone: the
+  visually hidden box is now a block around the table, since a table ignores
+  the 1 px width that hides it (#182).
+- A focused segment's ring shows on a pressed segment in every brand, light
+  and dark. The ring was the focus colour, which is the accent every pressed
+  segment is filled with, so it measured 1:1 on the fill. A pressed segment
+  now draws a band of the accent ink inside the focus colour, at least 5.47:1
+  against the fill, and the focus colour stays on the segment's edge against
+  the surface. A focused segment that is not pressed draws its ring on its
+  edge, as a focused radio segment already did (#286).
+- The topology (F9) stays one frame tall at the size of a real federation:
+  its canvas scrolls inside a frame of at most 70vh at any zoom, where it
+  did so only while zoomed, and its minimap keeps inside 168 by 300 px,
+  where a tall federation drew it taller than the page (#290).
+- A flow's or a topology's card opens its page under the mouse: hovering a
+  card faded the edges into a layer above the cards, so the press landed
+  on the card and the release on the edges, and the click went nowhere. A
+  flow lane's fold link takes the pointer too (#290).
+- A 14-column query result no longer scrolls the whole page sideways from
+  64rem: its table scrolls inside its card (WCAG 2.2 SC 1.4.10) (#293).
+- An open pager whose page is past the end says "Page 9 is past the last
+  row." beside the Previous it offers, where it said "No rows" (#293).
+- A version history with no version says "No version has been committed."
+  in its table, on a phone too, where it drew an empty table (#293).
+- The line chart at its edges: a value axis under 0.1 prints the decimals
+  of its step (0.0002, 0.0004), never 0.0 on every label; X labels a narrow
+  chart has no room for are left out by container queries the server
+  chooses from each label's length, so dates never overlap at 320 px or at
+  1440 px; every series takes a point mark of its own beside its colour (a
+  circle, a square, a diamond or a triangle, 24 distinct pairs), in the plot
+  and in its legend swatch, so a seventh series no longer repeats the
+  first by colour alone (WCAG 2.2 SC 1.4.1); a long series is drawn with at
+  most 60 marks and its line thinned to the lowest and highest point of
+  each of 500 columns, so 5,000 points draw no 15,000 circles; and the
+  figures table finds its cells by a binary search and prints each value to
+  six significant digits (#294).
+- The score breakdown (R16) takes any number of thresholds: the first band
+  possible, the last certain, every band between probable. Its scale runs
+  from a round step under the lowest threshold or score, past 1 when a
+  score lies there, threshold labels too close for one row take more rows,
+  a field's long word wraps in its column, and a score that is not a number
+  reads "no value" with no point drawn (#294).
+- The run report (B7) draws a part with any count at least 1.5 % wide with
+  a stroke of its own colour, so 3 refusals among 2,000,000 still show (#294).
+- The fan-out outcome (F5) says "No node asked" in the neutral tone when
+  every node was left out or there is none, never a green Complete, and a
+  long node name wraps after its dots inside its row (#294).
+- Every mark keeps its meaning under forced colours (family rule 14): the
+  state shapes of the health dot and the status pill, the switch's knob and
+  its on state, the select's and the combobox's chevron, a pressed segment
+  and the theme choice of the user menu, the current page, tab and list
+  item, a current row's edge, the worklist row's focus ring, a clause's
+  edge, the divider and the timeline's rail, the chart's frame and labels,
+  and the swatches of a chart and of the run report are drawn again in
+  system colours, in one forced colours block of the stylesheet (#294).
+- The code viewer draws every finding: one on line 0 sits above the first
+  line and one past the last line under the last, where before neither was
+  drawn. Its findings are indexed by line once, so a file of 20000 lines
+  with a finding on many of them draws in time linear in both (#295).
+- A finding's long code, message, mapping or path breaks at 320 px rather
+  than widen the page (WCAG 2.2 SC 1.4.10) (#295).
+- The code editor redraws only the lines an edit changes. Each edit
+  tokenizes the text once and patches the layer's lines in place, where it
+  wrote the whole layer again; the lines after an added or removed line
+  only change their ids, and a caret move or a new check keeps the
+  highlighting and changes only the marks. A keystroke in a 10000-line
+  draft went from about 170 ms to about 75 ms in Chrome, most of which is
+  now the browser's own layout of the text area (#295).
+- The record parts hold at their edges. Below 64 rem the stacked record
+  compare offers every other record: up to five as the radio choice, whose
+  long titles now wrap inside their segments, and past five each record as
+  a native disclosure (`<details name>`), one open at a time, so no record
+  is out of reach on a phone; a `shown` past the end reads the last record.
+  A compare with no other record says "no other record to compare" instead
+  of "every field agrees". The masked identifier hands the keyboard focus
+  to the button of the face that takes the pressed one's place (Reveal to
+  its busy twin, then Hide, and Hide, a refusal or the end of the countdown
+  back to Reveal), so the focus never drops to the page (WCAG 2.2 SC
+  2.4.3), and a long revealed value breaks inside its row. A tag (R2) stays
+  on one line while it fits and wraps inside its box when it holds a
+  canonical URL or an OID, never widening the page (SC 1.4.10). The
+  timeline orders its events by the moment they name, so `10:00+02:00`
+  sorts before `09:30Z`. The scope grant shows the search constraint that
+  narrows a grant, and its raw scope breaks after a slash, a dot or a query
+  mark. The condition builder keeps a chosen value its select does not
+  list chosen, said to be not in the list, where it used to post the first
+  option, and a condition row stacks its fields in a group too narrow for
+  them side by side, where the builder widened the page at 768 px with a
+  classic scrollbar (#307). The row preview wraps a long value inside its cell where the
+  card's edge cut it off. The clinical reading indents nested clusters at
+  most four levels deep and wraps a long label or value; a reader hears a
+  heading's title and its node id as two phrases and a quantity's UCUM
+  code after its unit. A repeatable row the list keeps says why in a
+  visible line under it (#296).
+- A long code (more than 24 characters, such as a versioned uid or a UUID)
+  breaks after a colon, a dot, a hyphen, a slash or a vertical bar, and a
+  canonical breaks inside a long piece between two slashes the same way, so
+  a `urn:uuid:` or `urn:oid:` canonical and a versioned uid stay inside a
+  320 px page; an ordinary code still never breaks (#297).
+- A concept tree keeps the width of a long name beside its code and count,
+  where the name ran under them; every tree now scrolls sideways instead (#297).
+- An invariant's number in a clause issue (`vsd-3`) never breaks at its
+  hyphen, and a long match in a search's list breaks inside its row (#297).
+- Every menu, the phone's bottom sheet, the user menu and the listbox stay
+  inside the viewport at 400% zoom or with many items: past its height each
+  scrolls inside itself, and a sheet keeps its Cancel in sight at its foot
+  (WCAG 2.2 SC 1.4.10). A menu item's words, a listbox option and the user
+  menu's e-mail wrap past the popup's widest, so nothing is clipped. The
+  confirmation dialog scrolls past the viewport's height and breaks a long
+  word in its message (#298).
+- The keyboard reaches a disabled menu item, which is announced disabled and
+  takes no press (WAI-ARIA Authoring Practices, the menu pattern) (#298).
+- The user menu's button no longer says it is closed before its island
+  runs, when with no WebAssembly the menu can be open (#298).
+- The popover form in a browser without CSS anchor positioning is centred
+  in the viewport; it opened below the viewport's foot (#298).
+- Binder tabs that outrun their sheet from 40 rem scroll inside their row
+  under a fade at each edge with more tabs behind it; they widened the page
+  and, through `scroll-initial-target`, opened it scrolled sideways and
+  down to the current tab (WCAG 2.2 SC 1.4.10). The current tab is now the
+  first scroll target only of a row that is its own scroll container (#299).
+- A long page title (an archetype id) or crumb (a canonical URL) breaks
+  inside the header, the title taking a line of its own before it shrinks;
+  More wraps under a long primary action; a stat card's mark wraps inside a
+  narrow card. Each widened the page at 320 px or beside the sidebar (the
+  gallery's overview measured 1156 px in 1137 at 1152) (#299).
+- The search answer ends above the window's foot and scrolls inside
+  itself, a long name wrapping in its column; a search squeezed by a long
+  operator's name gives up the submit's word, then the `/` cap, keeping
+  room for about a dozen characters, where it kept one (#299).
+- The docked decision bar stops sticking in a window under 30 rem high
+  (under 40 rem on a phone), where it covered most of the page at 400%
+  zoom, and keeps its scroll padding from 30 rem high (WCAG 2.2 SC 2.4.11) (#299).
+- The toast region shows three toasts at most (`widget::toast::SHOWN_MAX`),
+  the oldest that is no refusal and has no action leaving first, stays above the page's
+  decision bar, and scrolls past the viewport's height, so toasts never
+  cover the decisions (WCAG 2.2 SC 2.4.11). A toast without an action stays
+  while the pointer or the focus is on the region (SC 2.2.1), a long file
+  name in a toast wraps, and with no WebAssembly a flash toast closes by its
+  Dismiss, a native disclosure (#300).
+- The nested sidebar section draws eight children at most, the page in view
+  always among them, and a link to all; a child's full label is its
+  tooltip. A parent with 300 nodes ran about 9000 px and buried the groups
+  under it (#300).
+- A long word in a sidebar entry wraps; it cut the label and scrolled the
+  sidebar sideways (SC 1.4.10) (#300).
+- A rail count past 99 shows as "99+" on its badge, which covered the glyph
+  and left the window at four digits; the full sidebar still shows the
+  number whole (#300).
+- The collapsed rail shows an entry's words beside it on keyboard focus as
+  well as on hover, until Escape (SC 1.4.13), and keeps scrolling (#300).
+- A segmented control's long label wraps inside its segment instead of
+  being clipped by the group, and a row that wraps or stacks keeps a
+  hairline between every two segments (#301).
+- The upload field shows its file input's focus ring on the chooser, takes
+  a file of any kind when it names no extension, says when it read only the
+  first of several files dropped at once, and warns when a file was not
+  UTF-8 text (#301).
+- A refusal with thousands of issues shows the 20 gravest, folds the rest up
+  to 200 under a native summary and counts any past that, and only its
+  title is the live region (#301).
+- Clearing the enhanced combobox's words clears its value, as the native
+  select's empty choice does, and its list draws at most 100 options and
+  says when more match (#301).
+- The picker field's select has a visible label, and arrowing through a
+  closed select that changes at each key no longer moves the focus to the
+  input when it reaches Another (#301).
+- The copy button says the browser refused on a page served over plain
+  HTTP, where the clipboard is undefined, instead of showing nothing (#301).
+- The commit-confirm countdown counts a system sleep the monotonic clock
+  missed, by taking the wall clock's elapsed time when it has run further (#301).
+- A refusal's own words that fall back to English on a page in another
+  language are marked `lang="en"` (#301).
+- The code editor's line count and cursor place, the upload field's file
+  sizes and the masked identifier's countdown group their digits in the
+  page's language in the browser, as the server writes a number:
+  `EditorWords`, `SizeWords` and `IdentifierWords` carry the page's
+  `i18n::number::Grouping`, which their island writes each count with (#304).
+- Every library word that falls back to English on a page in another
+  language is marked `lang="en"` where it is drawn, on the server and in
+  the islands, and a word the page's catalog holds is drawn as before.
+  A word joined into a longer sentence or into a chart's drawn text takes
+  the page's language (#313).
+- On a phone the topology's List twin keeps a long organisation name whole
+  beside its state, which wraps instead of running over the name, and a
+  node's note takes a line of its own. A stacked version history marks the
+  version being read on its whole row, its bar at the row's edge and clear
+  of the text, in forced colours too. The version history's marking no
+  longer reaches the worklist's focused row, which drew sunken patches over
+  its tint and a second bar beside its checkbox (#317).
+
 ## [0.3.1] - 2026-10-22
 
 ### Added
@@ -1481,7 +2116,8 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.2...HEAD
+[0.3.2]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/FerroHEALTH/FerroUI/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/FerroHEALTH/FerroUI/compare/v0.2.1...v0.2.2
