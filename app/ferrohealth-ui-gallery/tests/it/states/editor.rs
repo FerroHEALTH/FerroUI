@@ -3,14 +3,16 @@
 
 //! The code editor beside its diagnostics, with its draft at rest and with
 //! a diagnostic followed; the empty editor of a new file; and the
-//! diagnostics list by file: each at 1440 and 390 px.
+//! diagnostics list by file: each at 1440 and 390 px. Then the code editor
+//! with no WebAssembly, its static text over the gutter.
 
 use std::error::Error;
 
 use ferrohealth_ui::style::Brand;
+use serde_json::json;
 use thirtyfour::prelude::*;
 
-use super::{HEIGHT, WIDTH, press, shot_of};
+use super::{HEIGHT, WIDTH, press, shot_of, shot_of_unhydrated};
 use crate::browser::{Browser, until};
 use crate::journeys::window;
 use crate::stack::Gallery;
@@ -24,6 +26,7 @@ pub(super) const STATES: &[&str] = &[
     "code-editor-draft-390",
     "code-editor-empty-390",
     "diagnostics-by-file-390",
+    "code-editor-no-wasm",
 ];
 
 /// Opens the forms page afresh and waits for the code editor to hydrate.
@@ -105,5 +108,49 @@ pub(super) async fn editor(
     window(browser, 390, HEIGHT).await?;
     forms(browser, gallery, brand).await?;
     at_rest(browser, brand, theme, "-390").await?;
-    window(browser, WIDTH, HEIGHT).await
+    window(browser, WIDTH, HEIGHT).await?;
+    no_wasm(browser, gallery, brand, theme).await
+}
+
+/// The code editor with its WebAssembly withheld: the text area editable
+/// from the first paint, its own text drawn over the layer's gutter.
+async fn no_wasm(
+    browser: &Browser,
+    gallery: &Gallery,
+    brand: Brand,
+    theme: &str,
+) -> Result<(), Box<dyn Error>> {
+    let cdp = browser.driver().cdp();
+    cdp.send_raw("Network.enable", json!({})).await?;
+    cdp.send_raw("Network.setBlockedURLs", json!({ "urls": ["*/pkg/*"] }))
+        .await?;
+    browser
+        .goto(&gallery.url(&format!("/{}/forms", brand.key())))
+        .await?;
+    let shot = async {
+        let split = browser
+            .element(By::Css(
+                ".fui-editor-split:has(.fui-editor-stack.is-static)",
+            ))
+            .await?;
+        shot_of_unhydrated(browser, brand, theme, "code-editor-no-wasm", &split).await
+    }
+    .await;
+    cdp.send_raw("Network.setBlockedURLs", json!({ "urls": [] }))
+        .await?;
+    shot?;
+    // The island loader logs the withheld bundle once the page is left; no
+    // other error may come with it.
+    browser.goto("about:blank").await?;
+    let others: Vec<String> = browser
+        .console_errors()
+        .await?
+        .into_iter()
+        .filter(|entry| !entry.contains("/pkg/"))
+        .collect();
+    if others.is_empty() {
+        Ok(())
+    } else {
+        Err(format!("the editor with no WebAssembly logged: {others:?}").into())
+    }
 }

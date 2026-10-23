@@ -21,6 +21,7 @@ pub(super) const STATES: &[&str] = &[
     "menu-keyboard",
     "split-open",
     "row-menu-open",
+    "copy-menu-open",
     "listbox-open",
     "action-group-390",
     "menu-sheet-390",
@@ -58,9 +59,9 @@ async fn closed_menu(browser: &Browser, id: &str) -> Result<(), Box<dyn Error>> 
 }
 
 /// The title row's action group, More open by the pointer and by the
-/// keyboard, the split button's variants, a row menu and the select
-/// button's listbox, then the action group, More's bottom sheet and the
-/// listbox's at 390 px.
+/// keyboard, the split button's variants, a row menu, the menu with a copy
+/// item and the select button's listbox, then the action group, More's
+/// bottom sheet and the listbox's at 390 px.
 pub(super) async fn menu_states(
     browser: &Browser,
     gallery: &Gallery,
@@ -89,6 +90,8 @@ pub(super) async fn menu_states(
     closed_menu(browser, "save-variants").await?;
     opened_menu(browser, brand, theme, "row-menu-open", "row-menu-0").await?;
     closed_menu(browser, "row-menu-0").await?;
+    opened_menu(browser, brand, theme, "copy-menu-open", "alone-more").await?;
+    closed_menu(browser, "alone-more").await?;
     opened_menu(browser, brand, theme, "listbox-open", "version-list").await?;
     closed_menu(browser, "version-list").await?;
     window(browser, 390, 844).await?;

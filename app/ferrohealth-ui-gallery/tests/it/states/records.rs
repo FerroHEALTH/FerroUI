@@ -3,8 +3,8 @@
 
 //! The patient-record components: the work-list's focused row on the
 //! first, the last and a row the keys scrolled into view, the masked
-//! identifiers revealed and refused, the stacked compare on its second
-//! record, and a timeline event opened.
+//! identifiers revealed and refused, the reveal banner with its link, the
+//! stacked compare on its second record, and a timeline event opened.
 
 use std::error::Error;
 
@@ -21,6 +21,7 @@ pub(super) const STATES: &[&str] = &[
     "worklist-focus-scrolled",
     "worklist-focus-last",
     "identifier-revealed",
+    "reveal-banner",
     "compare-stacked-second",
     "timeline-open",
 ];
@@ -41,8 +42,9 @@ async fn focused(browser: &Browser) -> Result<WebElement, Box<dyn Error>> {
     Ok(browser.driver().active_element().await?)
 }
 
-/// The work-list walked by the keys, the identifiers revealed, the stacked
-/// compare's second record and an opened timeline event.
+/// The work-list walked by the keys, the identifiers revealed, the reveal
+/// banner with its link, the stacked compare's second record and an opened
+/// timeline event.
 pub(super) async fn records(
     browser: &Browser,
     gallery: &Gallery,
@@ -115,6 +117,13 @@ pub(super) async fn records(
     .await?;
     let table = browser.element(By::Id("identifiers")).await?;
     shot_of(browser, brand, theme, "identifier-revealed", &table).await?;
+    browser
+        .goto(&gallery.url(&format!("/{}/forms?reveal=bsn", brand.key())))
+        .await?;
+    let panel = browser
+        .element(By::Css(".fui-panel:has(.fui-banner):has(#identifiers)"))
+        .await?;
+    shot_of(browser, brand, theme, "reveal-banner", &panel).await?;
     browser
         .goto(&gallery.url(&format!("/{}/layouts", brand.key())))
         .await?;
