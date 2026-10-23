@@ -291,7 +291,7 @@ fn the_phone_tab_select_replaces_the_row_only_once_it_works() {
     // NOTE: leptos-ui.md §15.8: with no WebAssembly the row of links is the floor.
     assert!(
         STYLESHEET.contains(
-            "    .fui-tabbed-many:has(.fui-tabs-select > select:enabled) > .fui-tabs {\n      display: none;"
+            "    .fui-tabbed-many:has(.fui-tabs-select select:enabled) > .fui-tabs {\n      display: none;"
         ),
         "the row would hide behind a select that cannot work yet"
     );

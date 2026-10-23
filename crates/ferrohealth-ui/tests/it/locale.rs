@@ -179,8 +179,8 @@ fn the_footer_draws_its_version_as_data_in_every_locale() {
     use ferrohealth_ui::view::shell::{Footer, footer};
     let text = Footer {
         product: "FerroUI Gallery".into(),
-        version: "0.1.8",
-        about: "/about",
+        version: "0.1.8".into(),
+        about: "/about".into(),
     };
     for locale in [Locale::english(), throwaway()] {
         let page = render(Some(locale), || footer(text.clone()).into_any());

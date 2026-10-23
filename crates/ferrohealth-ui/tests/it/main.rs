@@ -16,6 +16,7 @@
     reason = "test assertions"
 )]
 
+mod chrome;
 mod clinical;
 mod config;
 mod console;

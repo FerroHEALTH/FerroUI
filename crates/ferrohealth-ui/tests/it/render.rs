@@ -643,7 +643,7 @@ fn the_surfaces_render_and_none_writes_a_style_attribute() {
             {link_button(String::from("/new"), Variant::Primary, Some(Glyph::PLUS), "New")}
             {action_button(Action::new(Some(Glyph::REFRESH_CW), "Reload", Act::Dialog(String::from("delete"))), Variant::Secondary)}
             {confirm_dialog(Confirmation { id: "delete", title: "Delete it?".into(), message: "It goes for good.".into() }, ())}
-            {footer(Footer { product: "FerroUI Gallery".into(), version: "0.1.0", about: "/about" })}
+            {footer(Footer { product: "FerroUI Gallery".into(), version: "0.1.0".into(), about: "/about".into() })}
         }
         .into_any()
     });
@@ -1275,12 +1275,14 @@ fn past_five_binder_tabs_a_phone_select_waits_disabled_for_the_webassembly() {
         "{page}"
     );
     assert!(
-        has(
-            &page,
-            "select",
-            &[("id", "fui-tabs-select"), ("disabled", "")]
-        ),
+        has(&page, "select", &[("disabled", "")]),
         "no-WebAssembly floor: the row of links serves until the select works: {page}"
+    );
+    assert!(
+        page.contains(
+            r#"<label class="fui-tabs-select-field"><span class="fui-sr-only">Sections</span><select"#
+        ),
+        "the label wraps the select, so its name needs no id: {page}"
     );
     assert!(
         has(
@@ -1311,6 +1313,30 @@ fn past_five_binder_tabs_a_phone_select_waits_disabled_for_the_webassembly() {
         tags(&page, "a").len(),
         "every tab is still a link: {page}"
     );
+}
+
+#[test]
+fn two_phone_tab_selects_on_one_page_repeat_no_id() {
+    // NOTE: HTML Living Standard, the id attribute: an id is unique in its tree.
+    let page = page_html(|| {
+        let row = |label: &str| {
+            let tabs = (1..=7)
+                .map(|index| Tab::new(format!("t{index}"), format!("/{label}/t{index}"), "Tab"))
+                .collect();
+            binder(label, tabs, "t1", ().into_any())
+        };
+        view! { {row("Sections")} {row("Views")} }.into_any()
+    });
+    assert_eq!(2, tags(&page, "select").len(), "{page}");
+    let mut ids: Vec<&str> = page
+        .split(" id=\"")
+        .skip(1)
+        .filter_map(|rest| rest.split('"').next())
+        .collect();
+    let all = ids.len();
+    ids.sort_unstable();
+    ids.dedup();
+    assert_eq!(all, ids.len(), "an id repeats: {page}");
 }
 
 #[test]

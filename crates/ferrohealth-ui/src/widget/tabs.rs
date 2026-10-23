@@ -133,7 +133,8 @@ pub fn tab_list(label: String, prefix: String, tabs: Vec<String>, panels: AnyVie
 ///
 /// Choosing an option changes nothing else (WCAG 2.2 SC 3.2.2); once the
 /// page has hydrated, pressing the button leads to the route chosen. Until
-/// then the select is disabled and the row of links serves. A console draws
+/// then the select is disabled and the row of links serves. The label
+/// wraps the select, so it carries no id and a page may hold several. A console draws
 /// it through [`crate::view::tabs::binder`], as the island
 /// [`crate::island::TabSelect`].
 #[must_use]
@@ -165,17 +166,16 @@ pub fn tab_select(
     };
     view! {
         <form class="fui-tabs-select" method="get" on:submit=on_submit>
-            <label class="fui-sr-only" for="fui-tabs-select">
-                {label}
+            <label class="fui-tabs-select-field">
+                <span class="fui-sr-only">{label}</span>
+                <select
+                    class=crate::view::form::SELECT
+                    disabled=move || !hydrated.get()
+                    node_ref=picker
+                >
+                    {options}
+                </select>
             </label>
-            <select
-                id="fui-tabs-select"
-                class=crate::view::form::SELECT
-                disabled=move || !hydrated.get()
-                node_ref=picker
-            >
-                {options}
-            </select>
             <button type="submit" class=crate::view::button::Variant::Secondary.class()>
                 {go_words}
             </button>

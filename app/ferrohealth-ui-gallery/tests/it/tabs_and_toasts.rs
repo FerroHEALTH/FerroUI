@@ -73,7 +73,7 @@ async fn a_phone_shows_many_tabs_as_a_select_whose_go_button_leads_to_the_tab_ch
             "a wide screen shows Keyboard"
         );
         window(browser, 390, 900).await?;
-        let select = browser.element(By::Id("fui-tabs-select")).await?;
+        let select = browser.element(By::Css(".fui-tabs-select select")).await?;
         until("the select takes the row's place", async || {
             Ok(select.is_displayed().await? && select.attr("disabled").await?.is_none())
         })
@@ -117,6 +117,63 @@ async fn a_phone_shows_many_tabs_as_a_select_whose_go_button_leads_to_the_tab_ch
         .await?;
         window(browser, 1440, 900).await?;
         browser.console_clean("the tab select").await
+    })
+    .await
+}
+
+/// WCAG 2.2 SC 1.4.10: the overview, whose binder rows outrun their sheet
+/// beside the sidebar, opens at its top and no wider than the window at
+/// every width; a row that outruns its sheet scrolls inside itself, its
+/// current tab in view within the row.
+#[tokio::test(flavor = "multi_thread")]
+async fn the_overview_opens_at_its_top_and_its_tab_rows_scroll_inside_themselves()
+-> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        for width in [1440, 1280, 1152, 1024, 768, 390] {
+            window(browser, width, 900).await?;
+            browser.goto(&gallery.url("/ferrofed")).await?;
+            browser.settled().await?;
+            let measured = read(
+                browser,
+                "(() => { const root = document.documentElement; \
+                   const rows = [...document.querySelectorAll('.fui-tabbed > nav.fui-tabs')]; \
+                   const outrun = rows.filter((row) => row.scrollWidth > row.clientWidth + 1); \
+                   const shown = outrun.every((row) => { \
+                     const tab = row.querySelector('[aria-current=\"page\"]'); \
+                     if (!tab) return true; \
+                     const a = row.getBoundingClientRect(), b = tab.getBoundingClientRect(); \
+                     return b.left >= a.left - 0.5 && b.right <= a.right + 0.5; }); \
+                   return [scrollX, scrollY, root.scrollWidth, root.clientWidth, outrun.length, shown]; })()",
+            )
+            .await?;
+            let [x, y, scroll, client, outrun, shown] = measured
+                .as_array()
+                .map(Vec::as_slice)
+                .ok_or("no measure")?
+            else {
+                return Err(format!("an odd measure: {measured}").into());
+            };
+            assert_eq!(
+                (x.as_f64(), y.as_f64()),
+                (Some(0.0), Some(0.0)),
+                "at {width} px the page scrolls itself to a tab on load"
+            );
+            assert!(
+                scroll.as_f64() <= client.as_f64(),
+                "at {width} px the page is {scroll} wide in {client}"
+            );
+            assert_eq!(
+                Some(true),
+                shown.as_bool(),
+                "at {width} px a row that scrolls hides its current tab ({outrun} rows scroll)"
+            );
+        }
+        window(browser, 1440, 900).await?;
+        browser.console_clean("the overview's tab rows").await
     })
     .await
 }

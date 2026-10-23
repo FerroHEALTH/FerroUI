@@ -359,8 +359,8 @@ pub fn App() -> impl IntoView {
 pub fn footer() -> Footer {
     Footer {
         product: product().into(),
-        version: VERSION,
-        about: "/",
+        version: VERSION.into(),
+        about: "/".into(),
     }
 }
 
