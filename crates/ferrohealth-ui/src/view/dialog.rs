@@ -112,16 +112,23 @@ pub struct Explanation {
 /// Authoring Practices, the dialog (modal) pattern, initial focus).
 #[must_use]
 pub fn info_dialog(explanation: Explanation, body: impl IntoView) -> impl IntoView {
+    explain(explanation, body, true)
+}
+
+/// Returns the informational dialog explaining `explanation` with `body`,
+/// 48 rem wide when `wide` and at the dialog's own width otherwise, such
+/// as a flow's short edge rule ([`crate::view::flow::rule_dialog`]).
+pub(crate) fn explain(explanation: Explanation, body: impl IntoView, wide: bool) -> impl IntoView {
     let Explanation { id, title } = explanation;
     let title_id = format!("{id}-title");
     let labelled_by = title_id.clone();
+    let class = if wide {
+        "fui-dialog fui-dialog-wide"
+    } else {
+        "fui-dialog"
+    };
     view! {
-        <dialog
-            id=id.clone()
-            closedby="any"
-            aria-labelledby=labelled_by
-            class="fui-dialog fui-dialog-wide"
-        >
+        <dialog id=id.clone() closedby="any" aria-labelledby=labelled_by class=class>
             <h2 id=title_id class="fui-dialog-title">
                 {icon(Glyph::INFO, "18")}
                 {title}

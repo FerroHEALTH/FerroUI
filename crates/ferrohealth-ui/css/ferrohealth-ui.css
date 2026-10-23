@@ -10540,6 +10540,15 @@
     width: min(26rem, calc(100vw - 2rem));
   }
 
+  /* The edge rule: one state a line, its line sample before its words. */
+  .fui-topology-rule {
+    display: grid;
+    gap: 0.375rem;
+    margin: 0.75rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
   .fui-topology-rule > li {
     display: flex;
     align-items: baseline;
@@ -10966,6 +10975,26 @@
 
   .fui-settings-panel > .fui-setting-rows {
     margin: 0;
+  }
+
+  /* A button in running prose that opens a dialog, drawn as the link
+     beside it would be: the accent, underlined, in the words' own font. */
+  .fui-link-button {
+    display: inline;
+    margin: 0;
+    border: 0;
+    padding: 0;
+    background: none;
+    color: var(--accent);
+    font: inherit;
+    text-align: inherit;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+  }
+
+  .fui-link-button:hover {
+    color: var(--accent-hover);
   }
 
   .fui-settings-panel > :is(.fui-error-summary, .fui-revision) {

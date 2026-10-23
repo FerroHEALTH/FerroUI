@@ -433,3 +433,130 @@ async fn a_list_inside_a_sub_card_adds_and_removes_its_own_rows_alone() -> Resul
     })
     .await
 }
+
+/// The id of the element that holds the focus.
+async fn focused_id(browser: &Browser) -> Result<String, Box<dyn Error>> {
+    script(browser, "return document.activeElement.id;", Vec::new()).await
+}
+
+/// Opens the member endpoints of the FerroFED forms page with its islands
+/// running, and returns the endpoints' Add.
+async fn endpoints(browser: &Browser, gallery: &Gallery) -> Result<WebElement, Box<dyn Error>> {
+    browser.goto(&gallery.url("/ferrofed/forms")).await?;
+    let add = browser
+        .element(By::Css("#member-endpoints button[name='add-endpoint']"))
+        .await?;
+    // The page's islands hydrate from one entry, so the eye working means
+    // the lists work too.
+    masked(browser).await?;
+    script::<serde_json::Value>(
+        browser,
+        "arguments[0].scrollIntoView({block: 'center'});",
+        vec![add.to_json()?],
+    )
+    .await?;
+    Ok(add)
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn adding_a_sub_card_focuses_its_first_field() -> Result<(), Box<dyn Error>> {
+    // F7: Add focuses the new row's first field; a sub-card's Remove sits before its fields.
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        let add = endpoints(browser, &gallery).await?;
+        let at = browser.driver().current_url().await?;
+        add.click().await?;
+        until("an endpoint is added", async || {
+            Ok(rows_of(browser, "member-endpoints").await? == 3)
+        })
+        .await?;
+        assert_eq!(
+            "ep-new-1-id",
+            focused_id(browser).await?,
+            "the new card's first field"
+        );
+        assert_eq!(at, browser.driver().current_url().await?, "nothing posted");
+        browser.console_clean("a sub-card added").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn removing_a_sub_card_focuses_the_next_cards_first_field() -> Result<(), Box<dyn Error>> {
+    // F7: Remove moves the focus to the next row's first field, never to its Remove.
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        endpoints(browser, &gallery).await?;
+        let remove = browser
+            .element(By::Css(
+                "#member-endpoints button[name='remove-endpoint'][value='e1']",
+            ))
+            .await?;
+        script::<serde_json::Value>(
+            browser,
+            "arguments[0].scrollIntoView({block: 'center'});",
+            vec![remove.to_json()?],
+        )
+        .await?;
+        remove.click().await?;
+        until("the endpoint is removed", async || {
+            Ok(rows_of(browser, "member-endpoints").await? == 1)
+        })
+        .await?;
+        assert_eq!(
+            "ep-e2-id",
+            focused_id(browser).await?,
+            "the next card's first field"
+        );
+        browser.console_clean("a sub-card removed").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_list_in_an_added_sub_card_adds_its_own_rows_in_place() -> Result<(), Box<dyn Error>> {
+    // F7: a press inside a sub-card's list adds only its rows, in a card Add inserted too.
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        let add = endpoints(browser, &gallery).await?;
+        let at = browser.driver().current_url().await?;
+        add.click().await?;
+        until("an endpoint is added", async || {
+            Ok(rows_of(browser, "member-endpoints").await? == 3)
+        })
+        .await?;
+        let inner = browser
+            .element(By::Css("#ep-new-1-profiles button[data-repeat='add']"))
+            .await?;
+        inner.click().await?;
+        until("a profile row is added in the new card", async || {
+            Ok(rows_of(browser, "ep-new-1-profiles").await? == 1)
+        })
+        .await?;
+        assert_eq!(3, rows_of(browser, "member-endpoints").await?, "no endpoint added");
+        let name: String = script(
+            browser,
+            "return document.querySelector('#ep-new-1-profiles [data-repeat=\"rows\"] input').name;",
+            Vec::new(),
+        )
+        .await?;
+        assert_eq!("endpoint[new-1][profile][new-1]", name, "both keys are fresh");
+        assert_eq!(
+            "ep-new-1-profile-new-1",
+            focused_id(browser).await?,
+            "the new profile's field"
+        );
+        assert_eq!(at, browser.driver().current_url().await?, "nothing posted");
+        browser.console_clean("a nested list in an added card").await
+    })
+    .await
+}

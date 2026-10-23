@@ -24,7 +24,7 @@ use ferrohealth_ui::view::template::list::{
     ActiveFilters, FilterChip, HeadingCount, ListCard, ListPage, list_empty, list_page,
 };
 use ferrohealth_ui::view::template::settings::{
-    Managed, Setting, SettingsPage, Source, revision_line, settings_page,
+    How, Managed, Setting, SettingsPage, Source, revision_line, settings_page,
 };
 use ferrohealth_ui::widget::action_menu::{Act, Action};
 use leptos::prelude::*;
@@ -371,7 +371,7 @@ fn a_file_only_configuration_says_where_it_is_set_and_has_no_badge_or_marker() {
             actions: ActionGroup::none(),
             source: Source::File {
                 file: String::from("ferrobridge.toml"),
-                how: String::from("/configuration/how"),
+                how: How::Page(String::from("/configuration/how")),
             },
             tabs: Some(row()),
             settings: vec![setting("telemetry.format", true)],
@@ -397,6 +397,46 @@ fn a_file_only_configuration_says_where_it_is_set_and_has_no_badge_or_marker() {
 }
 
 #[test]
+fn a_file_line_opens_the_informational_dialog_with_no_script() {
+    // NOTE: HTML Living Standard, the button element's command attribute: show-modal opens a dialog.
+    let page = html(|| {
+        settings_page(SettingsPage {
+            header: header("Configuration"),
+            actions: ActionGroup::none(),
+            source: Source::File {
+                file: String::from("ferrobridge.toml"),
+                how: How::Dialog("how-configuration".into()),
+            },
+            tabs: None,
+            settings: vec![setting("telemetry.format", false)],
+            replica: None,
+        })
+    });
+    assert!(
+        has(
+            &page,
+            "button",
+            &[
+                ("type", "button"),
+                ("class", "fui-link-button"),
+                ("command", "show-modal"),
+                ("commandfor", "how-configuration"),
+                ("aria-haspopup", "dialog"),
+            ]
+        ),
+        "{page}"
+    );
+    assert!(
+        page.contains(r#"class="fui-link-button">How configuration works</button></p>"#),
+        "the button ends the line with the words the link would say: {page}"
+    );
+    assert!(
+        !page.contains(">How configuration works</a>"),
+        "no link in the file line: {page}"
+    );
+}
+
+#[test]
 fn a_setting_names_its_key_with_a_labelled_copy_button() {
     let page = html(|| {
         settings_page(SettingsPage {
@@ -404,7 +444,7 @@ fn a_setting_names_its_key_with_a_labelled_copy_button() {
             actions: ActionGroup::none(),
             source: Source::File {
                 file: String::from("ferrobridge.toml"),
-                how: String::from("#"),
+                how: How::Page(String::from("#")),
             },
             tabs: None,
             settings: vec![setting("telemetry.<format>", false)],

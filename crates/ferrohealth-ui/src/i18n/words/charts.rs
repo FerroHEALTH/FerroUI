@@ -39,6 +39,10 @@ texts! {
     /// The accessible name of a flow's hub: `$title` its name, `$note` its
     /// line.
     FlowHub = "flow-hub",
+    /// The button that opens a flow's edge rule.
+    FlowRuleButton = "flow-rule-button",
+    /// The title of a flow's edge rule dialog.
+    FlowRuleTitle = "flow-rule-title",
     /// A flow's degraded state.
     FlowDegraded = "flow-state-degraded",
     /// A flow's state that no probe has read.
@@ -51,6 +55,16 @@ texts! {
     FlowUp = "flow-state-up",
     /// The description of a flow with no problem edge.
     FlowSteady = "flow-steady",
+    /// The line of a degraded edge.
+    FlowStyleDegraded = "flow-style-degraded",
+    /// The line of an edge no probe has read.
+    FlowStyleNotChecked = "flow-style-not-checked",
+    /// The line of an edge that is switched off.
+    FlowStyleOff = "flow-style-off",
+    /// The line of an unreachable edge.
+    FlowStyleUnreachable = "flow-style-unreachable",
+    /// The line of an edge that answers.
+    FlowStyleUp = "flow-style-up",
     /// The fold link of a folded lane: `$title` the lane's title.
     FlowUnfold = "flow-unfold",
     /// One contribution in a score's name: `$title` its words, `$value` its

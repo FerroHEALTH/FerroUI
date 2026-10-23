@@ -34,8 +34,8 @@ use crate::icon::{Glyph, icon};
 use crate::table::filter::{FilterChoice, FilterMenu, MenuForm, filter_menu};
 use crate::view::button::Variant;
 use crate::view::flow::{
-    CardDrawing, FlowState, LabelAt, Place, card_drawing, curve, edge_line, ends, path_drawing,
-    units,
+    CardDrawing, FlowState, LabelAt, Place, card_drawing, curve, edge_line, ends, line_sample,
+    path_drawing, units,
 };
 use crate::widget::topology::TopologyWords;
 
@@ -819,16 +819,6 @@ fn cluster(collapse_all: Option<ClusterLink>, minimap: Option<ClusterLink>) -> A
             {collapse}
             {minimap}
         </div>
-    }
-    .into_any()
-}
-
-/// A short sample of an edge's line in `state`, for the legend.
-fn line_sample(state: FlowState) -> AnyView {
-    view! {
-        <svg class="fui-line-sample" width="26" height="10" aria-hidden="true">
-            <path class=state.edge() d="M1 5 H25"></path>
-        </svg>
     }
     .into_any()
 }

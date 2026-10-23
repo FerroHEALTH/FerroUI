@@ -15,6 +15,8 @@
 //! draft badge and the panel's intro says it. The product names its own
 //! configuration key; the library names none.
 
+use std::borrow::Cow;
+
 use leptos::prelude::*;
 
 use crate::i18n::{Text, tr};
@@ -49,11 +51,22 @@ pub enum Source {
     File {
         /// The file, such as `ferrobridge.toml`.
         file: String,
-        /// The page that says how configuration works.
-        how: String,
+        /// Where "How configuration works" leads.
+        how: How,
     },
     /// The product's own configuration store.
     Managed(Box<Managed>),
+}
+
+/// Where the words "How configuration works" of a file line lead.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum How {
+    /// A link to the page that says it, such as the book's.
+    Page(String),
+    /// A button that opens the informational dialog with this id
+    /// ([`crate::view::dialog::info_dialog`]) by the `show-modal` command,
+    /// drawn as the link would be, so it opens with no script.
+    Dialog(Cow<'static, str>),
 }
 
 /// What a managed configuration's page adds.
@@ -136,16 +149,32 @@ pub fn settings_page(page: SettingsPage) -> AnyView {
 }
 
 /// Returns the one quiet line of a file-only configuration: "Set in `file`
-/// · read at start · How configuration works", the last a link to `how`.
+/// · read at start · How configuration works", the last leading where
+/// `how` says: a link to a page, or a button that opens a dialog.
 #[must_use]
-pub fn file_line(file: String, how: String) -> AnyView {
+pub fn file_line(file: String, how: How) -> AnyView {
     let set_in = tr(Text::ConfigSetIn).map(|words| format!("{words} "));
     let read = tr(Text::ConfigReadAtStart).map(|words| format!(" · {words} · "));
+    let how = match how {
+        How::Page(href) => view! { <a href=href>{tr(Text::ConfigHow)}</a> }.into_any(),
+        How::Dialog(id) => view! {
+            <button
+                type="button"
+                class="fui-link-button"
+                command="show-modal"
+                commandfor=id
+                aria-haspopup="dialog"
+            >
+                {tr(Text::ConfigHow)}
+            </button>
+        }
+        .into_any(),
+    };
     view! {
         {set_in}
         <code>{file}</code>
         {read}
-        <a href=how>{tr(Text::ConfigHow)}</a>
+        {how}
     }
     .into_any()
 }

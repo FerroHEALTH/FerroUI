@@ -17,7 +17,7 @@ use ferrohealth_ui::table::view::{Body, Column, DataTable, Role, Sorting, data_t
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::button::{Variant, label, link_button};
-use ferrohealth_ui::view::dialog::{Confirmation, danger_dialog};
+use ferrohealth_ui::view::dialog::{Confirmation, Explanation, danger_dialog, info_dialog};
 use ferrohealth_ui::view::error_page::{Detail, ErrorPage, Status, Way, error_page};
 use ferrohealth_ui::view::shell::centred;
 use ferrohealth_ui::view::status::{badge, pill};
@@ -31,7 +31,7 @@ use ferrohealth_ui::view::template::list::{
     ActiveFilters, FilterChip, HeadingCount, ListCard, ListPage, list_empty, list_page,
 };
 use ferrohealth_ui::view::template::settings::{
-    Managed, Setting, SettingsPage, Source, revision_line, settings_page,
+    How, Managed, Setting, SettingsPage, Source, revision_line, settings_page,
 };
 use ferrohealth_ui::widget::action_menu::{Act, Action, Item, Menu};
 use leptos::prelude::*;
@@ -498,19 +498,35 @@ fn settings_header() -> Header {
     }
 }
 
-/// T3 read from a file: one quiet line, read-only, no badge.
+/// T3 read from a file: one quiet line, read-only, no badge, whose How
+/// configuration works opens the informational dialog.
 fn settings_file() -> AnyView {
-    settings_page(SettingsPage {
+    let page = settings_page(SettingsPage {
         header: settings_header(),
         actions: ActionGroup::none(),
         source: Source::File {
             file: String::from(CONFIG_FILE),
-            how: at("settings"),
+            how: How::Dialog("how-configuration".into()),
         },
         tabs: Some(settings_tabs("settings", false)),
         settings: settings(),
         replica: None,
-    })
+    });
+    let how = info_dialog(
+        Explanation {
+            id: "how-configuration".into(),
+            title: tr(Msg::HowConfigurationWorks).into(),
+        },
+        view! {
+            <p>{tr(Msg::HowConfigReads)}</p>
+            <p class="fui-small fui-muted">{tr(Msg::HowConfigChange)}</p>
+        },
+    );
+    view! {
+        {page}
+        {how}
+    }
+    .into_any()
 }
 
 /// T3 managed: the mode badge, the revision line, the intro and Edit.

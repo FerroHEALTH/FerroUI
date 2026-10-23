@@ -94,6 +94,16 @@ messages! {
     FlowNoAnswer = "flow-no-answer",
     /// `no answer`
     FlowNoAnswerLabel = "flow-no-answer-label",
+    /// `it answers slowly or with an error`
+    FlowRuleDegraded = "flow-rule-degraded",
+    /// `Colour and line both say the state, and only a degraded or unreachable edge carries a label. A card opens its page.`
+    FlowRuleNote = "flow-rule-note",
+    /// `the face is not configured to run`
+    FlowRuleOff = "flow-rule-off",
+    /// `it does not answer`
+    FlowRuleUnreachable = "flow-rule-unreachable",
+    /// `it answers`
+    FlowRuleUp = "flow-rule-up",
     /// `SMART App Launch`
     FlowSmart = "flow-smart",
     /// `Terminology server`

@@ -1514,9 +1514,13 @@ fn profile_row(endpoint: &str, key: &str, url: &str) -> RepeatRow {
     }
 }
 
+/// The key token of a profile's blank row, its own beside the endpoints'
+/// [`ROW`], so a copied endpoint's profiles add in place.
+const PROFILE: &str = "__profile__";
+
 /// The profiles of the endpoint row `endpoint`, named `name`, with the blank
-/// row Add copies when `blank`.
-fn profiles(endpoint: &str, name: &str, urls: &[&str], blank: bool) -> AnyView {
+/// row Add copies.
+fn profiles(endpoint: &str, name: &str, urls: &[&str]) -> AnyView {
     let rows = urls
         .iter()
         .zip(1_u32..)
@@ -1528,7 +1532,8 @@ fn profiles(endpoint: &str, name: &str, urls: &[&str], blank: bool) -> AnyView {
         fields: Fields::One,
         head: vec![tr(Msg::EpProfile)],
         rows,
-        blank: blank.then(|| profile_row(endpoint, ROW, "")),
+        token: PROFILE,
+        blank: Some(profile_row(endpoint, PROFILE, "")),
         add: Some(RepeatAdd {
             label: tr(Msg::EpAddProfile),
             name: String::from("add-profile"),
@@ -1551,7 +1556,7 @@ fn endpoint_row(key: &str, name: &str, base: &str, urls: &[&str]) -> RepeatRow {
             {Field::new(base_id.clone(), tr(Msg::EpBase))
                 .view(view! { <input id=base_id name=format!("endpoint[{key}][base]") class=INPUT spellcheck="false" value=base.to_owned() /> })}
         </div>
-        {profiles(key, name, urls, key != ROW)}
+        {profiles(key, name, urls)}
     }
     .into_any();
     RepeatRow {
@@ -1581,6 +1586,7 @@ fn endpoints() -> AnyView {
         fields: Fields::Card,
         head: Vec::new(),
         rows,
+        token: ROW,
         blank: Some(endpoint_row(ROW, "", "", &[])),
         add: Some(RepeatAdd {
             label: tr(Msg::EpAdd),

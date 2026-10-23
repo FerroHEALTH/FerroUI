@@ -728,6 +728,7 @@ fn shaped(id: &str, fields: Fields, rows: Vec<RepeatRow>) -> AnyView {
         fields,
         head: Vec::new(),
         rows,
+        token: ROW,
         blank: None,
         add: None,
         empty: String::from("No rows yet."),
@@ -843,6 +844,7 @@ fn filters(rows: &[&str]) -> String {
             fields: Fields::Three,
             head: Vec::new(),
             rows: rows.iter().map(|key| row(key)).collect(),
+            token: ROW,
             blank: Some(row(ROW)),
             add: Some(RepeatAdd {
                 label: String::from("Add filter"),
@@ -931,6 +933,48 @@ fn a_repeatable_row_ends_in_its_remove_which_posts_without_webassembly() {
 }
 
 #[test]
+fn a_blank_row_names_the_key_token_the_island_replaces() {
+    // A nested list names a token of its own, so the list around it rekeys only its own token.
+    let shown = page_html(|| {
+        repeat(Repeat {
+            id: String::from("profiles"),
+            label: String::from("Profiles"),
+            fields: Fields::One,
+            head: Vec::new(),
+            rows: Vec::new(),
+            token: "__profile__",
+            blank: Some(RepeatRow {
+                key: String::from("__profile__"),
+                heading: None,
+                fields: view! { <input id="p-__profile__" name="e[__row__][p][__profile__]" /> }
+                    .into_any(),
+                end: RowEnd::Remove {
+                    label: String::from("Remove the profile"),
+                    name: String::from("remove"),
+                    value: String::from("__profile__"),
+                },
+                after: None,
+            }),
+            add: None,
+            empty: String::from("No profiles yet."),
+            form: None,
+        })
+    });
+    assert!(
+        has(
+            &shown,
+            "template",
+            &[("data-repeat", "blank"), ("data-token", "__profile__")]
+        ),
+        "{shown}"
+    );
+    assert!(
+        filters(&[]).contains(&format!("data-token=\"{ROW}\"")),
+        "a top-level list names ROW"
+    );
+}
+
+#[test]
 fn an_empty_list_says_so_and_a_kept_row_says_why() {
     let empty = filters(&[]);
     assert!(
@@ -960,6 +1004,7 @@ fn an_empty_list_says_so_and_a_kept_row_says_why() {
                 },
                 after: None,
             }],
+            token: ROW,
             blank: None,
             add: None,
             empty: String::from("No properties yet."),

@@ -16,6 +16,7 @@
 //! only (family rule 3) and stills under reduced motion. No specification
 //! governs the drawing: our own design.
 
+use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet};
 
 use leptos::prelude::*;
@@ -23,6 +24,8 @@ use leptos::prelude::*;
 use crate::i18n::{Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::tone::Tone;
+use crate::view::button::{Variant, label};
+use crate::view::dialog::{Explanation, explain};
 
 /// The state of a card or an edge, drawn as a shape, a colour and a word.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -84,6 +87,19 @@ impl FlowState {
         }
     }
 
+    /// How an edge in this state is drawn, such as "dashed, marked !", in
+    /// the page's locale.
+    #[must_use]
+    pub fn line(self) -> Word {
+        tr(match self {
+            Self::Up => Text::FlowStyleUp,
+            Self::Degraded => Text::FlowStyleDegraded,
+            Self::Unreachable => Text::FlowStyleUnreachable,
+            Self::NotChecked => Text::FlowStyleNotChecked,
+            Self::Off => Text::FlowStyleOff,
+        })
+    }
+
     /// The classes of an edge in this state.
     pub(crate) const fn edge(self) -> &'static str {
         match self {
@@ -94,6 +110,101 @@ impl FlowState {
             Self::Off => "fui-edge fui-edge-muted",
         }
     }
+}
+
+/// A short sample of an edge's line in `state`, for a legend or a rule.
+pub(crate) fn line_sample(state: FlowState) -> AnyView {
+    view! {
+        <svg class="fui-line-sample" width="26" height="10" aria-hidden="true">
+            <path class=state.edge() d="M1 5 H25"></path>
+        </svg>
+    }
+    .into_any()
+}
+
+/// One state of an edge rule and what it means where the console draws
+/// it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EdgeRule {
+    /// The state.
+    pub state: FlowState,
+    /// What it means, such as "it answers slowly or with an error".
+    pub meaning: String,
+}
+
+/// Returns the edge rule `rules`: one line per state, its line sample, its
+/// word, how its line is drawn and what it means, such as "Degraded ·
+/// dashed, marked !: it answers slowly or with an error".
+///
+/// The line sample is hidden from a reader, who reads the words; the same
+/// rule explains the flow (B9) and the topology (F9).
+#[must_use]
+pub fn edge_rule(rules: Vec<EdgeRule>) -> AnyView {
+    let items = rules
+        .into_iter()
+        .map(|EdgeRule { state, meaning }| {
+            let rest = state.line().map(|line| format!(" · {line}: {meaning}"));
+            view! {
+                <li>
+                    {line_sample(state)}
+                    <span>
+                        <strong>{state.word()}</strong>
+                        {rest}
+                    </span>
+                </li>
+            }
+        })
+        .collect_view();
+    view! { <ul class="fui-topology-rule">{items}</ul> }.into_any()
+}
+
+/// What a flow's "How the flow is drawn" dialog explains.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FlowRule {
+    /// The dialog's id, which [`rule_button`] opens.
+    pub id: Cow<'static, str>,
+    /// The rule, one state a line.
+    pub rules: Vec<EdgeRule>,
+    /// The closing paragraph, such as what a card shows and opens.
+    pub note: String,
+}
+
+/// Returns "How the flow is drawn": the short informational dialog with
+/// the edge rule and its closing paragraph, and Close as its only action.
+#[must_use]
+pub fn rule_dialog(rule: FlowRule) -> AnyView {
+    let FlowRule { id, rules, note } = rule;
+    explain(
+        Explanation {
+            id,
+            title: tr(Text::FlowRuleTitle),
+        },
+        view! {
+            {edge_rule(rules)}
+            <p class="fui-small fui-muted">{note}</p>
+        },
+        false,
+    )
+    .into_any()
+}
+
+/// Returns "How it is drawn", the small ghost button of a flow's panel
+/// head that opens the dialog `dialog` ([`rule_dialog`]) with the
+/// `show-modal` command, so it opens with no script.
+#[must_use]
+pub fn rule_button(dialog: Cow<'static, str>) -> AnyView {
+    view! {
+        <button
+            type="button"
+            class=Variant::Ghost.small()
+            command="show-modal"
+            commandfor=dialog
+            aria-haspopup="dialog"
+        >
+            {label(Some(Glyph::INFO), tr(Text::FlowRuleButton))}
+        </button>
+    }
+    .into_any()
 }
 
 /// One card of a flow.

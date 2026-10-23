@@ -13,7 +13,7 @@ use ferrohealth_ui::view::fanout::{Answer, Fanout, FanoutNode, Verdict, fanout};
 use ferrohealth_ui::view::flow::FlowState;
 use ferrohealth_ui::view::replica::Replica;
 use ferrohealth_ui::view::surface::Header;
-use ferrohealth_ui::view::template::settings::{SettingsPage, Source, settings_page};
+use ferrohealth_ui::view::template::settings::{How, SettingsPage, Source, settings_page};
 use ferrohealth_ui::view::topology::{
     ClusterLink, QuickLook, RowAction, StatusCount, StatusMenu, Topology, TopologyCallers,
     TopologyCard, TopologyGroup, TopologySide, TopologyView, topology,
@@ -133,7 +133,7 @@ fn a_reference_page_draws_the_replica_line_under_its_header() {
             actions: ActionGroup::none(),
             source: Source::File {
                 file: String::from("ferrofed.toml"),
-                how: String::from("/how"),
+                how: How::Page(String::from("/how")),
             },
             tabs: None,
             settings: Vec::new(),

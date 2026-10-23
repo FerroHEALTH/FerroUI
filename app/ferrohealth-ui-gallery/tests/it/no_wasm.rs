@@ -368,6 +368,32 @@ async fn preferences_post_and_reset(
     Ok(())
 }
 
+/// Checks that the file line's How configuration works opens its
+/// informational dialog with no script, and that Close closes it.
+async fn file_line_opens_its_dialog(browser: &Browser) -> Result<(), Box<dyn Error>> {
+    let how = browser
+        .element(By::Css(
+            ".fui-settings-panel-intro button.fui-link-button[command='show-modal']",
+        ))
+        .await?;
+    how.scroll_into_view().await?;
+    how.click().await?;
+    let dialog = browser.element(By::Id("how-configuration")).await?;
+    until("the file line opens the dialog", async || {
+        Ok(dialog.is_displayed().await?)
+    })
+    .await?;
+    dialog
+        .find(By::Css("button[command='close']"))
+        .await?
+        .click()
+        .await?;
+    until("Close closes it", async || {
+        Ok(!dialog.is_displayed().await?)
+    })
+    .await
+}
+
 /// Checks what the page template at `page` must show with no WebAssembly.
 async fn templates_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error>> {
     match page {
@@ -394,6 +420,7 @@ async fn templates_content(browser: &Browser, page: &str) -> Result<(), Box<dyn 
         "/templates/settings" => {
             key_hint_floor(browser).await?;
             browser.text("p", "Set in").await?;
+            file_line_opens_its_dialog(browser).await?;
         }
         "/templates/settings-managed" => {
             browser.element(By::Css(".fui-revision-compact")).await?;

@@ -29,7 +29,9 @@ use ferrohealth_ui::view::surface::{
 };
 use ferrohealth_ui::view::tag::{Tag, tag};
 use ferrohealth_ui::view::template::detail::{DetailPage, detail_page};
-use ferrohealth_ui::view::template::settings::{Setting, file_line, setting_row, settings_panel};
+use ferrohealth_ui::view::template::settings::{
+    How, Setting, file_line, setting_row, settings_panel,
+};
 use ferrohealth_ui::widget::action_menu::{Act, Action};
 use ferrohealth_ui::widget::countdown::Countdown;
 use leptos::prelude::*;
@@ -315,7 +317,10 @@ fn read_only(root: &str) -> AnyView {
     card(
         tr(Msg::CfReadOnly),
         settings_panel(
-            file_line(String::from(CONFIG_FILE), at(root, "configuration")),
+            file_line(
+                String::from(CONFIG_FILE),
+                How::Page(at(root, "configuration")),
+            ),
             None,
             rows,
         ),

@@ -390,6 +390,7 @@ fn composed_include() -> AnyView {
         fields: Fields::Three,
         head: Vec::new(),
         rows: vec![filter_row("f1", CHEST)],
+        token: ROW,
         blank: Some(filter_row(ROW, "")),
         add: Some(RepeatAdd {
             label: tr(Msg::TmAddFilter),
@@ -716,6 +717,7 @@ fn element(source: &str, target: Target, missing: bool) -> AnyView {
         fields: Fields::Three,
         head: Vec::new(),
         rows: vec![target_row(source, "t1", target, missing)],
+        token: ROW,
         blank: Some(target_row(source, ROW, ("", "", ""), false)),
         add: Some(RepeatAdd {
             label: tr(Msg::TmAddTarget),
