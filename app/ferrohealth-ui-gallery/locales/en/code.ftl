@@ -6,8 +6,10 @@
 
 answered-synthetic-replica-gallery-1 = Answered by the synthetic replica gallery-1.
 aql = AQL
-bounded-scrollable-highlighted-never-page = Bounded, scrollable and highlighted, never at the page's full height.
 code-documents = Code and documents
+code-subtitle-end = , saved by the console.
+code-subtitle-lead = Context of
+code-subtitle-on = on
 composition-xml = A composition, XML
 diagnostic-links-line = A diagnostic links to its line:{" "}
 digest-of-bytes = SHA-256 of the bytes the gallery serves

@@ -144,6 +144,24 @@ fn languages() -> AnyView {
     .into_any()
 }
 
+/// The page's subtitle with inline markup: the resource type in bold and
+/// the template id as a code link to its page.
+fn subtitle(root: &str) -> AnyView {
+    view! {
+        {tr(Msg::CodeSubtitleLead)}
+        " "
+        <strong>{tr(Msg::Observation)}</strong>
+        " "
+        {tr(Msg::CodeSubtitleOn)}
+        " "
+        <a href=format!("{root}/templates/list")>
+            <code>{crate::data::TEMPLATES[0]}</code>
+        </a>
+        {tr(Msg::CodeSubtitleEnd)}
+    }
+    .into_any()
+}
+
 /// The code page.
 #[component]
 pub fn CodePage() -> impl IntoView {
@@ -154,7 +172,8 @@ pub fn CodePage() -> impl IntoView {
     let header = page_heading(
         Header {
             title: String::from("gallery.context.v1").into(),
-            subtitle: Some(tr(Msg::BoundedScrollableHighlightedNeverPage).into()),
+            subtitle: None,
+            subtitle_view: Some(subtitle(&root)),
             crumbs: vec![
                 Crumb::new(tr(Msg::Gallery), root.clone()),
                 Crumb::new(tr(Msg::CodeDocuments), here.clone()),

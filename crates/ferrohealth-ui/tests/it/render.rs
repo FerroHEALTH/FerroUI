@@ -157,6 +157,55 @@ fn a_refusal_with_no_answer_shows_its_summary_alone_and_says_no_answer_to_assist
     );
 }
 
+#[test]
+fn a_page_header_carries_a_subtitle_with_inline_markup_in_the_subtitle_style() {
+    let shown = html(|| {
+        page_heading(
+            Header {
+                title: Word::from("vital-signs.context.yml"),
+                subtitle: Some(Word::from("A text that the view replaces.")),
+                subtitle_view: Some(
+                    view! {
+                        "Context of " <strong>"Observation"</strong> " on "
+                        <a href="/templates/synthetic.vital_signs.v1">
+                            <code>"synthetic.vital_signs.v1"</code>
+                        </a> ", saved by the console."
+                    }
+                    .into_any(),
+                ),
+                ..Header::default()
+            },
+            ActionGroup::none(),
+        )
+        .into_any()
+    });
+    assert!(
+        shown.contains(
+            r#"<p class="fui-page-subtitle">Context of <strong>Observation</strong> on <a href="/templates/synthetic.vital_signs.v1"><code>synthetic.vital_signs.v1</code></a>, saved by the console.</p>"#
+        ),
+        "{shown}"
+    );
+    assert!(
+        !shown.contains("A text that the view replaces."),
+        "the view takes the text's place: {shown}"
+    );
+    let plain = html(|| {
+        page_heading(
+            Header {
+                title: Word::from("Files"),
+                subtitle: Some(Word::from("Every mapping file the bridge serves.")),
+                ..Header::default()
+            },
+            ActionGroup::none(),
+        )
+        .into_any()
+    });
+    assert!(
+        plain.contains(r#"<p class="fui-page-subtitle">Every mapping file the bridge serves.</p>"#),
+        "the text form stays: {plain}"
+    );
+}
+
 /// A code viewer's text: a long line, a current line and two findings.
 fn code(text: &str) -> Code {
     Code {

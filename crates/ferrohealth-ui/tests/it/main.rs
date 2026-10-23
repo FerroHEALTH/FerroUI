@@ -38,6 +38,7 @@ mod records;
 mod render;
 mod search;
 mod shell;
+mod state;
 mod stylesheet;
 mod table;
 mod templates;

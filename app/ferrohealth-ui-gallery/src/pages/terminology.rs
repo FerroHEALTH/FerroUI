@@ -789,6 +789,7 @@ pub fn TerminologyPage() -> impl IntoView {
         Header {
             title: tr(Msg::Terminology).into(),
             subtitle: Some(tr(Msg::TmSubtitle).into()),
+            subtitle_view: None,
             crumbs: vec![Crumb::new(tr(Msg::Gallery), root)],
             mono: false,
             badge: None,

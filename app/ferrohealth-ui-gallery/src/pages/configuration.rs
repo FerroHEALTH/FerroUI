@@ -422,6 +422,7 @@ pub fn ProvisionedPage() -> impl IntoView {
         header: Header {
             title: String::from(MAPPING_FILES[0].0).into(),
             subtitle: Some(tr(Msg::CfProvisionedSubtitle).into()),
+            subtitle_view: None,
             crumbs: vec![
                 Crumb::new(tr(Msg::Gallery), root.clone()),
                 Crumb::new(tr(Msg::Configuration), at(&root, "configuration")),

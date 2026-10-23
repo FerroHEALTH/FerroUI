@@ -17,6 +17,7 @@ use ferrohealth_ui::view::layout::divided_list;
 use ferrohealth_ui::view::notice::{Announce, notice};
 use ferrohealth_ui::view::refusal::{Issue, Refusal, Severity, fault, refusal};
 use ferrohealth_ui::view::segmented::{SegmentedForm, segmented_form, segmented_links};
+use ferrohealth_ui::view::state::{Mark, state};
 use ferrohealth_ui::view::status::{badge, pill, status};
 use ferrohealth_ui::view::surface::{
     Stat, card, card_action, chip, cluster, definitions, disclosure, facts_row, grid, or_none,
@@ -189,7 +190,8 @@ fn buttons() -> AnyView {
     .into_any()
 }
 
-/// The status marks: pills, badges, chips, tags and status indicators.
+/// The status marks: pills, badges, chips, tags, status indicators and
+/// the F12 state marks.
 fn marks_card() -> AnyView {
     let pills = Tone::ALL
         .into_iter()
@@ -215,6 +217,13 @@ fn marks_card() -> AnyView {
         {status(Tone::Warn, Glyph::TRIANGLE_ALERT, &tr(Msg::Degraded), Some(tr(Msg::N13LanesDown)))}
         {status(Tone::Bad, Glyph::SERVER_CRASH, &tr(Msg::Down), None)}
     };
+    let states = view! {
+        {state(Mark::Ok, tr(Msg::MarkReachable), None)}
+        {state(Mark::Warn, tr(Msg::Degraded), Some(tr(Msg::MarkLatency)))}
+        {state(Mark::Bad, tr(Msg::MarkUnreachable), None)}
+        {state(Mark::Neutral, tr(Msg::MarkNotChecked), None)}
+        {state(Mark::Off, tr(Msg::MarkExcluded), None)}
+    };
     card(
         tr(Msg::Status),
         view! {
@@ -223,6 +232,7 @@ fn marks_card() -> AnyView {
             {cluster(chips)}
             {cluster(tags)}
             {cluster(statuses)}
+            {cluster(states)}
         },
     )
     .into_any()

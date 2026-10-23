@@ -600,6 +600,7 @@ pub fn OperationsPage() -> impl IntoView {
         Header {
             title: tr(Msg::Operations).into(),
             subtitle: Some(tr(Msg::OpSubtitle).into()),
+            subtitle_view: None,
             crumbs: vec![Crumb::new(tr(Msg::Gallery), root.clone())],
             mono: false,
             badge: None,

@@ -822,6 +822,7 @@ pub fn FederationPart() -> impl IntoView {
                     })
                     .into(),
                 ),
+                subtitle_view: None,
                 crumbs: vec![Crumb::new(tr(Msg::Federation), home(brand))],
                 mono: !organisation,
                 badge: None,

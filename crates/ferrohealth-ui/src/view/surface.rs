@@ -44,6 +44,11 @@ pub struct Header {
     pub title: Word,
     /// One line under the title, when there is one.
     pub subtitle: Option<Word>,
+    /// One line under the title with inline markup, such as a bold word
+    /// and a code link (`<strong>`, `<code>`, `<a>`), drawn in place of
+    /// `subtitle` when there is one. It is phrasing content: no block
+    /// inside it (HTML Living Standard, the `p` element).
+    pub subtitle_view: Option<AnyView>,
     /// The page's ancestors, the root first; none for a page with no trail.
     pub crumbs: Vec<Crumb>,
     /// Whether the title is drawn in the code face, for an identifier.
@@ -132,11 +137,18 @@ fn trail_of(crumbs: Vec<Crumb>, trail: Trail, title: &str) -> AnyView {
     }
 }
 
+/// The subtitle line of a header: `view` when there is one, else `text`.
+fn subtitle_line(view: Option<AnyView>, text: Option<Word>) -> Option<AnyView> {
+    let line = view.or_else(|| text.map(IntoRender::into_render))?;
+    Some(view! { <p class="fui-page-subtitle">{line}</p> }.into_any())
+}
+
 /// The header [`page_heading`] and [`editor_heading`] draw.
 fn heading(header: Header, trail: Trail, actions: AnyView) -> impl IntoView {
     let Header {
         title,
         subtitle,
+        subtitle_view,
         crumbs,
         mono,
         badge,
@@ -158,7 +170,7 @@ fn heading(header: Header, trail: Trail, actions: AnyView) -> impl IntoView {
                 {title_line}
                 <div class="fui-actions">{actions}</div>
             </div>
-            {subtitle.map(|line| view! { <p class="fui-page-subtitle">{line}</p> })}
+            {subtitle_line(subtitle_view, subtitle)}
         </header>
     }
 }

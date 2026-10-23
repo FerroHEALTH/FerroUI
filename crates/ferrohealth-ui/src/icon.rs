@@ -54,6 +54,10 @@ impl Glyph {
     pub const BOOK_X: Self = Self(
         r#"<path d="m14.5 7.5-5 5" /><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20" /><path d="m9.5 7.5 5 5" />"#,
     );
+    /// Lucide `building-complex`.
+    pub const BUILDING_COMPLEX: Self = Self(
+        r#"<path d="M10 12h4" /><path d="M10 8h4" /><path d="M14 21v-3a2 2 0 0 0-4 0v3" /><path d="M6 10H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2" /><path d="M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16" />"#,
+    );
     /// Lucide `calendar`.
     pub const CALENDAR: Self = Self(
         r#"<path d="M8 2v3" /><path d="M16 2v3" /><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18" />"#,
@@ -151,6 +155,10 @@ impl Glyph {
     pub const FILES: Self = Self(
         r#"<path d="M15 2h-4a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8" /><path d="M16.706 2.706A2.4 2.4 0 0 0 15 2v5a1 1 0 0 0 1 1h5a2.4 2.4 0 0 0-.706-1.706z" /><path d="M5 7a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h8a2 2 0 0 0 1.732-1" />"#,
     );
+    /// Lucide `flame`.
+    pub const FLAME: Self = Self(
+        r#"<path d="M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0 5 5 0 0 1 1-3 1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4" />"#,
+    );
     /// Lucide `flask-conical`.
     pub const FLASK_CONICAL: Self = Self(
         r#"<path d="M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2" /><path d="M6.453 15h11.094" /><path d="M8.5 2h7" />"#,
@@ -228,6 +236,10 @@ impl Glyph {
     /// Lucide `menu`.
     pub const MENU: Self =
         Self(r#"<path d="M4 5h16" /><path d="M4 12h16" /><path d="M4 19h16" />"#);
+    /// Lucide `message-square`.
+    pub const MESSAGE_SQUARE: Self = Self(
+        r#"<path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z" />"#,
+    );
     /// Lucide `minus`.
     pub const MINUS: Self = Self(r#"<path d="M5 12h14" />"#);
     /// Lucide `monitor`.
@@ -260,6 +272,10 @@ impl Glyph {
     /// Lucide `play`.
     pub const PLAY: Self = Self(
         r#"<path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z" />"#,
+    );
+    /// Lucide `plug`.
+    pub const PLUG: Self = Self(
+        r#"<path d="M12 22v-5" /><path d="M15 8V2" /><path d="M17 8a1 1 0 0 1 1 1v4a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1z" /><path d="M9 8V2" />"#,
     );
     /// Lucide `plus`.
     pub const PLUS: Self = Self(r#"<path d="M5 12h14" /><path d="M12 5v14" />"#);
@@ -330,6 +346,10 @@ impl Glyph {
     pub const SUN: Self = Self(
         r#"<circle cx="12" cy="12" r="4" /><path d="M12 2v2" /><path d="M12 20v2" /><path d="m4.93 4.93 1.41 1.41" /><path d="m17.66 17.66 1.41 1.41" /><path d="M2 12h2" /><path d="M20 12h2" /><path d="m6.34 17.66-1.41 1.41" /><path d="m19.07 4.93-1.41 1.41" />"#,
     );
+    /// Lucide `table-2`.
+    pub const TABLE_2: Self = Self(
+        r#"<path d="M3 9h18" /><path d="M9 3v18" /><rect x="3" y="3" width="18" height="18" rx="2" />"#,
+    );
     /// Lucide `tags`.
     pub const TAGS: Self = Self(
         r#"<path d="M13.172 2a2 2 0 0 1 1.414.586l6.71 6.71a2.4 2.4 0 0 1 0 3.408l-4.592 4.592a2.4 2.4 0 0 1-3.408 0l-6.71-6.71A2 2 0 0 1 6 9.172V3a1 1 0 0 1 1-1z" /><path d="M2 7v6.172a2 2 0 0 0 .586 1.414l6.71 6.71a2.4 2.4 0 0 0 3.191.193" /><circle cx="10.5" cy="6.5" r=".5" fill="currentColor" />"#,
@@ -361,7 +381,7 @@ impl Glyph {
     pub const X: Self = Self(r#"<path d="M18 6 6 18" /><path d="m6 6 12 12" />"#);
 
     /// Every glyph, with the Lucide name of its vendored file.
-    pub const ALL: [(&str, Self); 94] = [
+    pub const ALL: [(&str, Self); 99] = [
         ("activity", Self::ACTIVITY),
         ("arrow-down", Self::ARROW_DOWN),
         ("arrow-left", Self::ARROW_LEFT),
@@ -372,6 +392,7 @@ impl Glyph {
         ("bell", Self::BELL),
         ("book-a", Self::BOOK_A),
         ("book-x", Self::BOOK_X),
+        ("building-complex", Self::BUILDING_COMPLEX),
         ("calendar", Self::CALENDAR),
         ("chart-line", Self::CHART_LINE),
         ("check", Self::CHECK),
@@ -401,6 +422,7 @@ impl Glyph {
         ("file-plus", Self::FILE_PLUS),
         ("file-text", Self::FILE_TEXT),
         ("files", Self::FILES),
+        ("flame", Self::FLAME),
         ("flask-conical", Self::FLASK_CONICAL),
         ("folder-open", Self::FOLDER_OPEN),
         ("folder-plus", Self::FOLDER_PLUS),
@@ -421,6 +443,7 @@ impl Glyph {
         ("log-in", Self::LOG_IN),
         ("log-out", Self::LOG_OUT),
         ("menu", Self::MENU),
+        ("message-square", Self::MESSAGE_SQUARE),
         ("minus", Self::MINUS),
         ("monitor", Self::MONITOR),
         ("moon", Self::MOON),
@@ -430,6 +453,7 @@ impl Glyph {
         ("panel-right", Self::PANEL_RIGHT),
         ("pencil", Self::PENCIL),
         ("play", Self::PLAY),
+        ("plug", Self::PLUG),
         ("plus", Self::PLUS),
         ("radio-tower", Self::RADIO_TOWER),
         ("refresh-cw", Self::REFRESH_CW),
@@ -448,6 +472,7 @@ impl Glyph {
         ("sliders-horizontal", Self::SLIDERS_HORIZONTAL),
         ("square-terminal", Self::SQUARE_TERMINAL),
         ("sun", Self::SUN),
+        ("table-2", Self::TABLE_2),
         ("tags", Self::TAGS),
         ("trash", Self::TRASH),
         ("triangle-alert", Self::TRIANGLE_ALERT),

@@ -611,6 +611,7 @@ pub fn TreesPage() -> impl IntoView {
         Header {
             title: tr(Msg::Trees).into(),
             subtitle: Some(tr(Msg::TreesSubtitle).into()),
+            subtitle_view: None,
             crumbs: vec![Crumb::new(tr(Msg::Gallery), root)],
             mono: false,
             badge: None,

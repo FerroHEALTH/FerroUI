@@ -2318,3 +2318,64 @@ async fn a_button_beside_a_field_with_help_stays_on_the_controls_line() -> Resul
     })
     .await
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_user_menus_theme_segments_keep_their_words_on_one_line() -> Result<(), Box<dyn Error>>
+{
+    // WCAG 2.2 SC 1.4.12: a segment's word never breaks; the menu grows to the row instead.
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/")).await?;
+        for (width, height) in [(1440, 900), (390, 844)] {
+            window(browser, width, height).await?;
+            for theme in ["light", "dark", "system"] {
+                browser.driver().delete_all_cookies().await?;
+                for (name, value) in [("gallery-theme", theme), ("gallery-language", "qps")] {
+                    let mut cookie = Cookie::new(name, value);
+                    cookie.set_path("/");
+                    browser.driver().add_cookie(cookie).await?;
+                }
+                browser.goto(&gallery.url("/ferrobridge")).await?;
+                browser
+                    .element(By::Css("button[popovertarget='user-menu']"))
+                    .await?
+                    .click()
+                    .await?;
+                let menu = browser.element(By::Id("user-menu")).await?;
+                until("the menu opens", async || Ok(menu.is_displayed().await?)).await?;
+                let lines: Vec<u32> = serde_json::from_value(
+                    browser
+                        .driver()
+                        .execute(
+                            r"return [...document.querySelectorAll('#user-menu .fui-menu-theme .fui-segment')].map(segment => {
+                                const walk = document.createTreeWalker(segment, NodeFilter.SHOW_TEXT);
+                                const tops = new Set();
+                                while (walk.nextNode()) {
+                                    const range = document.createRange();
+                                    range.selectNodeContents(walk.currentNode);
+                                    for (const rect of range.getClientRects()) {
+                                        if (rect.width > 0) tops.add(Math.round(rect.top));
+                                    }
+                                }
+                                return tops.size;
+                            });",
+                            vec![],
+                        )
+                        .await?
+                        .json()
+                        .clone(),
+                )?;
+                assert_eq!(
+                    vec![1, 1, 1],
+                    lines,
+                    "each theme segment holds one line at {width} px with {theme} chosen"
+                );
+            }
+        }
+        browser.console_clean("the theme segments").await
+    })
+    .await
+}

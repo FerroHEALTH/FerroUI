@@ -116,6 +116,16 @@ messages! {
     Locale = "locale",
     /// `Mapping files`
     MappingFiles = "mapping-files",
+    /// `Excluded`
+    MarkExcluded = "mark-excluded",
+    /// `2,940 ms`
+    MarkLatency = "mark-latency",
+    /// `Not checked`
+    MarkNotChecked = "mark-not-checked",
+    /// `Reachable`
+    MarkReachable = "mark-reachable",
+    /// `Unreachable`
+    MarkUnreachable = "mark-unreachable",
     /// `Members`
     Members = "members",
     /// `Minimal`

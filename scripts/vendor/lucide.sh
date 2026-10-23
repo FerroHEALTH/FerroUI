@@ -24,18 +24,18 @@ dir="$root/crates/ferrohealth-ui/vendor/lucide"
 
 ICONS=(
   activity arrow-down arrow-left arrow-right arrow-up arrow-up-down ban bell
-  book-a book-x calendar chart-line check chevron-down chevron-left chevron-right
+  book-a book-x building-complex calendar chart-line check chevron-down chevron-left chevron-right
   chevron-up
   chevrons-left chevrons-right circle-alert circle-check circle-user
   circle-x clipboard-copy clock code compass copy database download ellipsis equal-not eye eye-off
-  file-clock file-code file-plus file-text files flask-conical folder
+  file-clock file-code file-plus file-text files flame flask-conical folder
   folder-open folder-plus folder-search folder-x funnel gauge heart-pulse
   inbox info keyboard layers layout-dashboard link list-checks lock log-in
-  log-out menu minus monitor moon network panel-left-close panel-left-open
-  panel-right pencil play plus
+  log-out menu message-square minus monitor moon network panel-left-close panel-left-open
+  panel-right pencil play plug plus
   radio-tower refresh-cw rotate-ccw rotate-ccw-clock route save search search-code search-x
   server server-crash settings shield-check shield-off sliders-horizontal
-  square-terminal sun tags trash triangle-alert undo upload user-plus users x
+  square-terminal sun table-2 tags trash triangle-alert undo upload user-plus users x
 )
 
 die() {
