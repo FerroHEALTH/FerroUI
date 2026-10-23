@@ -749,7 +749,11 @@ fn a_one_field_row_keeps_its_field_and_its_remove_on_one_line() {
         )
     });
     assert!(
-        has(&shown, "div", &[("class", "fui-repeater-row fui-repeater-one")]),
+        has(
+            &shown,
+            "div",
+            &[("class", "fui-repeater-row fui-repeater-one")]
+        ),
         "{shown}"
     );
     assert!(
