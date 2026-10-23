@@ -28,6 +28,7 @@ use ferrohealth_ui::view::surface::{
     SectionHead, add_row, card, definitions, or_none, page_header, panel_section,
     panel_sections_card, section_intro, split,
 };
+use ferrohealth_ui::view::template::list::HeadingCount;
 use ferrohealth_ui::widget::picker::{Picker, picker_field};
 use ferrohealth_ui::widget::tree::{
     Children, Tree, TreeKind, TreeNode, TreeWords, path_key, tree_view,
@@ -670,7 +671,7 @@ fn sections_panel() -> AnyView {
     let table = panel_section(
         Some(SectionHead {
             title: tr(Msg::StagedChanges),
-            count: Some(2),
+            count: Some(HeadingCount::All(2)),
             actions: None,
         }),
         change_table(tr(Msg::StagedConfigurationAgainstRunningOne), &staged),
@@ -687,7 +688,7 @@ fn sections_panel() -> AnyView {
     let list = panel_section(
         Some(SectionHead {
             title: tr(Msg::SpacingSteps),
-            count: Some(4),
+            count: Some(HeadingCount::All(4)),
             actions: None,
         }),
         view! {

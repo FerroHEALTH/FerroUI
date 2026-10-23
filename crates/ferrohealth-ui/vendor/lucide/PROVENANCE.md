@@ -9,9 +9,11 @@
 - **Release:** `1.51.0` (published 2026-10-03).
 - **Fetched:** 2026-10-18, by `scripts/vendor/lucide.sh`; `equal-not`, `eye-off` and
   `minus` on 2026-10-22, and `building-complex`, `flame`, `message-square`,
-  `plug` and `table-2` on 2026-10-23, from the same release. The release
-  names `building-2` a deprecated alias of `building-complex`, so the file
-  is vendored under its current name.
+  `plug` and `table-2` on 2026-10-23, and `corner-down-right`,
+  `git-branch`, `list-filter` and `list-tree` later that day, from the same
+  release. The release names `building-2` a deprecated alias of
+  `building-complex` and `trash-2` one of `trash`, so each file is vendored
+  under its current name.
 - **Licence:** ISC License, Copyright (c) 2026 Lucide Icons and Contributors,
   in `LICENSE` beside this file. The outlines are redistributed unchanged.
 - **Use:** `crates/ferrohealth-ui/src/icon.rs` carries each outline's inner

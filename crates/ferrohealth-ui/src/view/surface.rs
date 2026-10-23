@@ -16,6 +16,7 @@ use crate::i18n::{Message, Text, Word, tr};
 
 use crate::icon::{Glyph, icon};
 use crate::view::action::{ActionGroup, action_group};
+use crate::view::template::list::{HeadingCount, counted};
 
 /// One ancestor of a page in its breadcrumb trail.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -369,8 +370,8 @@ pub struct SectionHead {
     /// The section's title, a level-three heading in the page outline.
     pub title: String,
     /// The count after the title, muted after a middle dot, when the
-    /// section holds a list.
-    pub count: Option<u64>,
+    /// section holds a list: every item, or the items shown of a larger set.
+    pub count: Option<HeadingCount>,
     /// The section's actions at the row's end.
     pub actions: Option<AnyView>,
 }
@@ -417,7 +418,7 @@ pub fn panel_section(head: Option<SectionHead>, body: impl IntoView + 'static) -
              actions,
          }| {
             let title = match count {
-                Some(count) => crate::view::template::list::counted(title, count),
+                Some(count) => counted(title, count),
                 None => title.into_any(),
             };
             let actions = actions.map(|actions| view! { <div class="fui-actions">{actions}</div> });

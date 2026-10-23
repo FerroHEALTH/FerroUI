@@ -17,7 +17,10 @@
 //! [`crate::highlight::escape`] (the HTML Living Standard's escapable raw
 //! text, so `</textarea>` in the text stays text), and a form around the
 //! editor posts it before any WebAssembly loads; once the page hydrates the
-//! text area takes the live text through `prop:value`. The layer is escaped
+//! text area is the source of the live text. The console's text comes back
+//! into it only as an outside change: a text the editor handed to the
+//! console coming back is an echo and never written, so a key typed before
+//! the echo of an earlier one arrives is never overwritten. The layer is escaped
 //! as [`crate::highlight::html`] escapes it, so the server draws it too. The
 //! text area is read-only until the page hydrates, so no keystroke is lost.
 //! After an edit the text is tokenized once, in time linear in its length,
@@ -36,7 +39,9 @@
 //! editor's one tab stop. No specification governs the editor: our own
 //! design.
 
-use std::collections::BTreeMap;
+use std::cell::RefCell;
+use std::collections::{BTreeMap, VecDeque};
+use std::hash::{DefaultHasher, Hash as _, Hasher as _};
 use std::rc::Rc;
 
 use leptos::prelude::*;
@@ -499,6 +504,78 @@ pub(crate) struct Drawn {
     pub(crate) current: Signal<Option<u32>>,
 }
 
+/// How many texts the editor remembers handing to the console before the
+/// console hands any back.
+const ECHOES: usize = 64;
+
+/// The texts the editor handed to the console that have not come back yet,
+/// each kept as its hash, so a console that never hands one back holds the
+/// editor to [`ECHOES`] numbers.
+#[derive(Debug, Default)]
+struct Echoes {
+    /// The hashes of the texts handed over, oldest first.
+    pending: VecDeque<u64>,
+}
+
+impl Echoes {
+    /// The hash of `text`.
+    fn hash(text: &str) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        text.hash(&mut hasher);
+        hasher.finish()
+    }
+
+    /// Records that the editor handed `text` to the console.
+    fn typed(&mut self, text: &str) {
+        if self.pending.len() >= ECHOES {
+            self.pending.pop_front();
+        }
+        self.pending.push_back(Self::hash(text));
+    }
+
+    /// Whether the console's `text` is one the editor handed it, coming
+    /// back; it forgets that text and every one handed before it. Any other
+    /// text is an outside change, and it forgets them all.
+    fn came_back(&mut self, text: &str) -> bool {
+        let hash = Self::hash(text);
+        if let Some(at) = self.pending.iter().position(|held| *held == hash) {
+            self.pending.drain(..=at);
+            true
+        } else {
+            self.pending.clear();
+            false
+        }
+    }
+}
+
+/// Writes the console's `text` into the text area `area_ref` when it is an
+/// outside change, and returns the record of the texts handed to the
+/// console, which the text area's input fills.
+fn follow_console(
+    text: Signal<String>,
+    area_ref: NodeRef<leptos::html::Textarea>,
+) -> Rc<RefCell<Echoes>> {
+    let echoes = Rc::new(RefCell::new(Echoes::default()));
+    let heard = Rc::clone(&echoes);
+    // NOTE: the text area is the source of truth while it is edited; the console's text is
+    // written only as an outside change, never as the late echo of an earlier key (#333).
+    Effect::new(move || {
+        let console = text.get();
+        if echoes.borrow_mut().came_back(&console) {
+            return;
+        }
+        #[cfg(target_arch = "wasm32")]
+        if let Some(area) = area_ref.get()
+            && area.value() != console
+        {
+            area.set_value(&console);
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        let (_console, _area) = (console, area_ref);
+    });
+    heard
+}
+
 /// The text area's content as the server writes it for `text`: escaped,
 /// with one more line break before a text that opens with one.
 fn server_text(text: &str) -> String {
@@ -559,6 +636,8 @@ pub(crate) fn drawn(drawn: Drawn, on_input: impl Fn(String) + 'static) -> AnyVie
     });
     let name = id.clone();
     let first = text.with_untracked(|text| server_text(text));
+    let area_ref = NodeRef::<leptos::html::Textarea>::new();
+    let heard = follow_console(text, area_ref);
     let follow = move |area: &HtmlTextAreaElement| {
         let Some(caret) = caret else {
             return;
@@ -596,9 +675,11 @@ pub(crate) fn drawn(drawn: Drawn, on_input: impl Fn(String) + 'static) -> AnyVie
                     placeholder=placeholder
                     readonly=move || !editable.get()
                     inner_html=first
-                    prop:value=move || text.get()
+                    node_ref=area_ref
                     on:input:target=move |event| {
-                        on_input(event.target().value());
+                        let typed = event.target().value();
+                        heard.borrow_mut().typed(&typed);
+                        on_input(typed);
                         follow(&event.target());
                     }
                     on:keyup:target=move |event| follow(&event.target())
@@ -941,12 +1022,53 @@ pub fn editor_split(editor: AnyView, side: AnyView) -> AnyView {
 #[cfg(test)]
 mod tests {
     use super::{
-        Layer, LayerLine, LineMark, MarkKind, Patch, caret_at, layer_class, layer_lines, line_id,
-        mark_class, mark_index, offset_of, patch, push_layer, server_text,
+        ECHOES, Echoes, Layer, LayerLine, LineMark, MarkKind, Patch, caret_at, layer_class,
+        layer_lines, line_id, mark_class, mark_index, offset_of, patch, push_layer, server_text,
     };
     use crate::highlight::{Language, Lines, html};
     use crate::view::diagnostics::Position;
     use std::rc::Rc;
+
+    #[test]
+    fn a_late_echo_of_an_earlier_key_is_never_written() {
+        let mut echoes = Echoes::default();
+        echoes.typed("S");
+        echoes.typed("SE");
+        echoes.typed("SEL");
+        assert!(echoes.came_back("S"), "the first key's echo is an echo");
+        assert!(
+            echoes.came_back("SEL"),
+            "so is the newest one's, past the middle one"
+        );
+        assert!(
+            echoes.pending.is_empty(),
+            "every text handed over came back"
+        );
+    }
+
+    #[test]
+    fn a_text_the_editor_never_handed_over_is_an_outside_change() {
+        let mut echoes = Echoes::default();
+        echoes.typed("SELECT");
+        assert!(
+            !echoes.came_back("SELECT 1"),
+            "a console's own text is written"
+        );
+        assert!(
+            !echoes.came_back("SELECT"),
+            "and the texts before it are forgotten"
+        );
+    }
+
+    #[test]
+    fn a_console_that_never_answers_holds_a_bounded_list() {
+        let mut echoes = Echoes::default();
+        for at in 0..ECHOES * 2 {
+            echoes.typed(&at.to_string());
+        }
+        assert_eq!(ECHOES, echoes.pending.len());
+        assert!(!echoes.came_back("0"), "the oldest text is forgotten");
+    }
 
     #[test]
     fn an_error_outranks_a_warning_on_its_line() {

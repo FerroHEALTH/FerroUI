@@ -8,6 +8,8 @@
 //! a dense options row with its verdict and request, the OMOP row preview
 //! with an unresolved concept, and an HL7 v2 message raw and parsed.
 
+use std::collections::VecDeque;
+
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::island::CopyButton;
@@ -22,6 +24,7 @@ use ferrohealth_ui::view::row_preview::{RowField, RowTable, RowValue, row_previe
 use ferrohealth_ui::view::surface::{
     Crumb, Header, SectionHead, page_heading, panel_body, panel_section, stack, titled_panel,
 };
+use ferrohealth_ui::view::template::list::HeadingCount;
 use ferrohealth_ui::view::transform::{
     Answer, AnswerState, Density, Request, Run, RunState, TransformPane, field_checks, request,
     run_button, transform_options, transform_pair,
@@ -82,6 +85,7 @@ pub(crate) fn pair_input(key: &str, label: String) -> AnyView {
         _ => ("pair-waiting-input", String::from(FLAT)),
     };
     let text = RwSignal::new(text);
+    let answers = StoredValue::new(VecDeque::new());
     let ready = RwSignal::new(false);
     Effect::new(move |_| ready.set(true));
     let editor = code_editor(
@@ -92,7 +96,7 @@ pub(crate) fn pair_input(key: &str, label: String) -> AnyView {
             marks: Signal::stored(Vec::new()),
             editable: ready.into(),
         },
-        move |typed| text.set(typed),
+        move |typed| store(answers, typed, text),
     );
     view! {
         <label for=id class="fui-sr-only">
@@ -101,6 +105,35 @@ pub(crate) fn pair_input(key: &str, label: String) -> AnyView {
         {editor}
     }
     .into_any()
+}
+
+/// How long the pair's store takes to answer each edit, one at a time.
+const ANSWER: std::time::Duration = std::time::Duration::from_millis(250);
+
+/// Hands `typed` to the pair's store, a console's store that answers each
+/// edit late and in order: the editor keeps every key typed meanwhile.
+fn store(answers: StoredValue<VecDeque<String>>, typed: String, text: RwSignal<String>) {
+    let idle = answers.with_value(VecDeque::is_empty);
+    answers.update_value(|queue| queue.push_back(typed));
+    if idle {
+        answer(answers, text);
+    }
+}
+
+/// Answers the oldest edit the store holds after [`ANSWER`], then the next.
+fn answer(answers: StoredValue<VecDeque<String>>, text: RwSignal<String>) {
+    set_timeout(
+        move || {
+            let Some(next) = answers.try_update_value(VecDeque::pop_front).flatten() else {
+                return;
+            };
+            text.set(next);
+            if !answers.with_value(VecDeque::is_empty) {
+                answer(answers, text);
+            }
+        },
+        ANSWER,
+    );
 }
 
 /// The input pane holding the editor of the pair `key`.
@@ -556,7 +589,7 @@ fn message() -> AnyView {
     let read = panel_section(
         Some(SectionHead {
             title: tr(Msg::OpMessageRead),
-            count: Some(count),
+            count: Some(HeadingCount::All(count)),
             actions: None,
         }),
         hl7v2_segments(tr(Msg::OpMessageReadList), segments),

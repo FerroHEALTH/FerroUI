@@ -64,6 +64,28 @@ pub struct ActiveFilters {
     pub shown: Option<u64>,
 }
 
+/// How many items a heading counts after its title: every item, or the
+/// items shown of a larger set.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HeadingCount {
+    /// Every item, drawn as "· 15".
+    All(u64),
+    /// The first items of a larger set, drawn as "· 6 of 15", such as a
+    /// dashboard card that shows the start of a listing.
+    Shown {
+        /// How many items the heading's list shows.
+        shown: u64,
+        /// How many items the whole set holds.
+        total: u64,
+    },
+}
+
+impl From<u64> for HeadingCount {
+    fn from(all: u64) -> Self {
+        Self::All(all)
+    }
+}
+
 /// The card that holds a list.
 #[derive(Debug)]
 pub struct ListCard {
@@ -71,7 +93,7 @@ pub struct ListCard {
     pub title: String,
     /// How many items the header row counts after the title, when the list
     /// states it.
-    pub count: Option<u64>,
+    pub count: Option<HeadingCount>,
     /// The words of an order of several keys, stated beside the count ("Sorted
     /// by grade, then score, then the longest wait"): one arrow on one column
     /// cannot say it, and the leading column still carries the arrow
@@ -232,10 +254,22 @@ pub fn list_card(card: ListCard) -> AnyView {
 }
 
 /// Returns `title` with its `count` after a middle dot, muted, for a list
-/// card's header row or a binder tab.
+/// card's header row, a panel section's heading or a binder tab.
+///
+/// The count reads "· 15", or "· 6 of 15" for the items shown of a larger
+/// set, each number with the locale's marks.
 #[must_use]
-pub fn counted(title: String, count: u64) -> AnyView {
-    let count = format!("· {}", grouped(count));
+pub fn counted(title: String, count: HeadingCount) -> AnyView {
+    let count = match count {
+        HeadingCount::All(all) => format!("· {}", grouped(all)).into_any(),
+        HeadingCount::Shown { shown, total } => {
+            let words = tr_with(
+                Text::CountShownOf,
+                &[("shown", shown.into()), ("total", total.into())],
+            );
+            view! { "· " {words} }.into_any()
+        }
+    };
     view! {
         {title}
         " "

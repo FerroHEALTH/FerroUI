@@ -23,7 +23,7 @@ use ferrohealth_ui::view::compare::{
 use ferrohealth_ui::view::kbd::{Shortcut, shortcut_hint};
 use ferrohealth_ui::view::status::{badge, banner};
 use ferrohealth_ui::view::surface::{card, titled_panel};
-use ferrohealth_ui::view::template::list::{ListCard, list_card};
+use ferrohealth_ui::view::template::list::{HeadingCount, ListCard, list_card};
 use ferrohealth_ui::view::timeline::{Event, timeline};
 use ferrohealth_ui::widget::action_menu::{self, Act, Action, Item, Menu};
 use ferrohealth_ui::widget::identifier::{
@@ -318,7 +318,7 @@ pub fn worklist_section() -> AnyView {
             .into_any();
     list_card(ListCard {
         title: tr(Msg::RecordsReviewQueue),
-        count: Some(total),
+        count: Some(HeadingCount::All(total)),
         order: Some(order.clone()),
         tabs: None,
         actions: None,

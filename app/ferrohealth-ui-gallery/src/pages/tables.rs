@@ -32,7 +32,7 @@ use ferrohealth_ui::view::change::{Change, change_table};
 use ferrohealth_ui::view::empty::empty_quiet;
 use ferrohealth_ui::view::status::badge;
 use ferrohealth_ui::view::surface::{card, page_header, stack, titled_panel};
-use ferrohealth_ui::view::template::list::{ListCard, list_card};
+use ferrohealth_ui::view::template::list::{HeadingCount, ListCard, list_card};
 use ferrohealth_ui::view::time::timestamp;
 use ferrohealth_ui::widget::action_menu::{self, Act, Action, Item, Menu};
 use ferrohealth_ui::widget::filter::keeps;
@@ -213,7 +213,7 @@ fn url_table() -> AnyView {
             {find}
             {list_card(ListCard {
                 title: tr(Msg::PagedUrl),
-                count: Some(u64::from(total)),
+                count: Some(HeadingCount::All(u64::from(total))),
                 order: None,
                 tabs: None,
                 actions: None,
@@ -263,7 +263,7 @@ fn session_table() -> AnyView {
     );
     list_card(ListCard {
         title: tr(Msg::PagedPage),
-        count: Some(u64::from(crate::data::ROWS)),
+        count: Some(HeadingCount::All(u64::from(crate::data::ROWS))),
         order: None,
         tabs: None,
         actions: None,
@@ -362,7 +362,7 @@ fn review_list() -> AnyView {
     .into_any();
     list_card(ListCard {
         title: tr(Msg::ReviewFiles),
-        count: Some(u64::from(total)),
+        count: Some(HeadingCount::All(u64::from(total))),
         order: Some(order.clone()),
         tabs: None,
         actions: None,

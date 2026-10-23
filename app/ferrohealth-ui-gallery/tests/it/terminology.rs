@@ -339,3 +339,40 @@ async fn at_320_px_a_long_code_and_a_urn_canonical_break_inside_the_page()
     })
     .await
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn at_1440_px_the_root_matrix_header_sits_above_its_first_row() -> Result<(), Box<dyn Error>>
+{
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        window(browser, 1440, 900).await?;
+        browser.goto(&gallery.url(PAGE)).await?;
+        browser.element(By::Css(".fui-root-matrix")).await?;
+        let [table, top, head, first]: [f64; 4] = browser
+            .driver()
+            .execute(
+                "const matrix = document.querySelector('.fui-root-matrix');
+                 matrix.scrollIntoView();
+                 const table = matrix.querySelector('table').getBoundingClientRect();
+                 const head = matrix.querySelector('thead th').getBoundingClientRect();
+                 const first = matrix.querySelector('tbody tr').getBoundingClientRect();
+                 return [table.top, head.top, head.bottom, first.top];",
+                Vec::new(),
+            )
+            .await?
+            .convert()?;
+        assert!(
+            (top - table).abs() <= 1.0,
+            "the header keeps to the top of its table ({top} at {table})"
+        );
+        assert!(
+            head <= first + 0.5,
+            "the header ends at {head}, over the first row at {first}"
+        );
+        browser.console_clean("the root matrix at 1440 px").await
+    })
+    .await
+}

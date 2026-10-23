@@ -21,7 +21,7 @@ use ferrohealth_ui::view::template::about::{
 };
 use ferrohealth_ui::view::template::detail::{DetailPage, Stepper, detail_page, stepper};
 use ferrohealth_ui::view::template::list::{
-    ActiveFilters, FilterChip, ListCard, ListPage, list_empty, list_page,
+    ActiveFilters, FilterChip, HeadingCount, ListCard, ListPage, list_empty, list_page,
 };
 use ferrohealth_ui::view::template::settings::{
     Managed, Setting, SettingsPage, Source, revision_line, settings_page,
@@ -72,7 +72,7 @@ fn list(total: Option<u64>, filters: ActiveFilters, tabs: bool) -> String {
             filters,
             card: ListCard {
                 title: String::from("Locations"),
-                count: total,
+                count: total.map(HeadingCount::All),
                 order: None,
                 tabs: tabs.then(row),
                 actions: None,

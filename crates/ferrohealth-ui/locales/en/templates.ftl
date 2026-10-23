@@ -15,6 +15,7 @@ about-versions = Versions
 config-how = How configuration works
 config-read-at-start = read at start
 config-set-in = Set in
+count-shown-of = { $shown } of { $total }
 download = Download
 filter-clear = Clear filters
 filter-remove = Remove the filter { $filter }

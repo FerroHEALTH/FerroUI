@@ -2417,6 +2417,14 @@
       overflow-wrap: anywhere;
     }
 
+    /* A pill, a badge or a state in a card wraps its words inside the value
+       column, so a long state never carries the card past a phone's edge
+       (WCAG 2.2 SC 1.4.10). */
+    .fui-table-stack .fui-table tbody :is(.fui-pill, .fui-badge, .fui-state) {
+      max-width: 100%;
+      white-space: normal;
+    }
+
     /* A cell whose value is a timestamp keeps the label's column while the
        value fits beside it, and moves the whole value under the label when
        it does not, since a timestamp never breaks (WCAG 2.2 SC 1.4.10), whether
@@ -6222,13 +6230,11 @@
     position: relative;
   }
 
-  .fui-row-link::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-  }
-
-  .fui-row-link:focus-visible {
+  /* A row link hands its focus ring to its row only where the row draws
+     one: a table row (R9) or a match (M1). Anywhere else, M2's link inline
+     in a concept's facts among them, it is a plain link with its own ring
+     that covers nothing (WCAG 2.2 SC 2.4.7). */
+  :is(.fui-table, .fui-match-list) .fui-row-link:focus-visible {
     outline: none;
   }
 
@@ -10577,7 +10583,10 @@
     gap: 0.5rem 0.75rem;
   }
 
-  .fui-topology-bar .fui-button.is-filtered {
+  /* A filter menu that keeps only some of its choices says so in the
+     accent, wherever it sits (T1's toolbar, F9's bar). */
+  .fui-topology-bar .fui-button.is-filtered,
+  .fui-anchor > summary.fui-button.is-filtered {
     border-color: var(--accent);
     color: var(--accent);
   }
@@ -12317,6 +12326,10 @@
     background: var(--surface-sunken);
   }
 
+  .fui-pipeline-list a:focus-visible {
+    outline-offset: -2px;
+  }
+
   .fui-pipeline-name {
     font-weight: 600;
   }
@@ -12699,6 +12712,13 @@
     inset: 0;
   }
 
+  /* The keyboard sees the match it is on: the row takes the ring its link
+     gives up, as a table row does (WCAG 2.2 SC 2.4.7). */
+  .fui-match-list > li:has(a.fui-row-link:focus-visible) {
+    outline: 2px solid var(--focus);
+    outline-offset: -2px;
+  }
+
   /* The concept read: its display as a heading, its code and version. */
   .fui-concept-title {
     margin: 0 0 0.25rem;
@@ -13079,8 +13099,10 @@
   }
 
   /* The matrix scrolls sideways in its own box at every width, so its
-     header keeps to the top of that box, never under the top bar. */
-  .fui-root-matrix thead th {
+     header keeps to the top of that box, never under the top bar: it
+     outranks the wide table's sticky header, which sits a bar's height down
+     and would cover the first rows inside this box. */
+  .fui-root-matrix .fui-table-scroll .fui-table thead th {
     top: 0;
   }
 

@@ -32,6 +32,7 @@ use ferrohealth_ui::view::surface::{
     Crumb, Header, SectionHead, add_row, card, definitions, page_heading, panel_section,
     panel_sections_card, section_intro, stack,
 };
+use ferrohealth_ui::view::template::list::HeadingCount;
 use ferrohealth_ui::widget::repeat::{Fields, ROW, Repeat, RepeatAdd, RepeatRow, RowEnd, repeat};
 use ferrohealth_ui::widget::version::{VersionRoot, VersionSelect};
 use leptos::prelude::*;
@@ -207,7 +208,7 @@ fn clauses_read() -> AnyView {
     let section = panel_section(
         Some(SectionHead {
             title: tr(Msg::TmSelects),
-            count: Some(3),
+            count: Some(HeadingCount::All(3)),
             actions: None,
         }),
         clauses(view! { {include} {exclude} {listed} }),
@@ -481,7 +482,7 @@ fn composer() -> AnyView {
     let section = panel_section(
         Some(SectionHead {
             title: tr(Msg::TmComposer),
-            count: Some(2),
+            count: Some(HeadingCount::All(2)),
             actions: None,
         }),
         view! {
@@ -593,7 +594,9 @@ fn mappings() -> AnyView {
     let section = panel_section(
         Some(SectionHead {
             title: tr(Msg::TmMappings),
-            count: Some(u64::try_from(MAPPINGS.len()).unwrap_or(u64::MAX)),
+            count: Some(HeadingCount::All(
+                u64::try_from(MAPPINGS.len()).unwrap_or(u64::MAX),
+            )),
             actions: None,
         }),
         table,

@@ -15,7 +15,9 @@ use ferrohealth_ui::island::SidePanel;
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::action::{ActionGroup, action_group};
 use ferrohealth_ui::view::button::{Variant, label};
-use ferrohealth_ui::view::dialog::{Confirmation, confirm_dialog, danger_dialog};
+use ferrohealth_ui::view::dialog::{
+    Confirmation, Explanation, confirm_dialog, danger_dialog, info_dialog,
+};
 use ferrohealth_ui::view::form::{INPUT, field};
 use ferrohealth_ui::view::kbd::{Shortcut, ShortcutGroup, kbd, shortcut_hint};
 use ferrohealth_ui::view::layout::divided_list;
@@ -55,6 +57,17 @@ fn confirmations() -> AnyView {
         view! { <crate::islands::ConfirmAndToast dialog="delete-file".to_owned() danger=true words=confirm_words() /> },
     )
     .into_any();
+    let how = info_dialog(
+        Explanation {
+            id: "how-reloading".into(),
+            title: tr(Msg::HowReloadingWorks).into(),
+        },
+        view! {
+            <p>{tr(Msg::ReloadingCompiles)}</p>
+            <p class="fui-small fui-muted">{tr(Msg::ReloadingKeeps)}</p>
+        },
+    )
+    .into_any();
     card(
         tr(Msg::ConfirmationDialogs),
         view! {
@@ -63,6 +76,17 @@ fn confirmations() -> AnyView {
             </p>
             {plain}
             {danger}
+            <button
+                type="button"
+                class=Variant::Ghost.class()
+                command="show-modal"
+                commandfor="how-reloading"
+                aria-haspopup="dialog"
+            >
+                {icon(Glyph::INFO, "16")}
+                {tr(Msg::HowReloadingWorks)}
+            </button>
+            {how}
             {member_removals()}
         },
     )

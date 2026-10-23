@@ -10,6 +10,7 @@ use std::error::Error;
 use thirtyfour::prelude::*;
 
 use crate::browser::{Browser, until, with_browser};
+use crate::journeys::window;
 use crate::journeys_enabled;
 use crate::stack::Gallery;
 
@@ -233,6 +234,51 @@ async fn the_matches_and_the_value_set_of_a_path_node_are_m2_codings() -> Result
             "no code beside a display of the gallery's own"
         );
         browser.console_clean("the trees page's codings").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_focused_match_shows_its_ring_and_a_parent_link_covers_nothing()
+-> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        window(browser, 1440, 900).await?;
+        browser.goto(&gallery.url("/ferroterm/trees")).await?;
+        browser.element(By::Css(".fui-match-list > li")).await?;
+        // NOTE: WCAG 2.2 SC 2.4.7; the match row draws the ring its link gives up.
+        let ring: String = browser
+            .driver()
+            .execute(
+                "const link = document.querySelector('.fui-match-list > li a.fui-row-link');
+                 link.focus({ focusVisible: true });
+                 const row = link.closest('li');
+                 const style = getComputedStyle(row);
+                 return link.matches(':focus-visible') ? style.outlineStyle + ' ' + style.outlineWidth : 'unfocused';",
+                Vec::new(),
+            )
+            .await?
+            .convert()?;
+        assert_eq!("solid 2px", ring, "the focused match's row draws the ring");
+        let hit: String = browser
+            .driver()
+            .execute(
+                "const title = document.querySelector('.fui-concept-title');
+                 const box = title.getBoundingClientRect();
+                 const hit = document.elementFromPoint(box.left + 4, box.top + box.height / 2);
+                 return hit.closest('a') ? 'link' : hit.className;",
+                Vec::new(),
+            )
+            .await?
+            .convert()?;
+        assert_eq!(
+            "fui-concept-title", hit,
+            "the Parent link does not cover the concept pane"
+        );
+        browser.console_clean("the concept browser's links").await
     })
     .await
 }

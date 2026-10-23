@@ -77,6 +77,7 @@ standing = Standing
 state-degraded = Degraded
 state-excluded = Excluded
 state-reachable = Reachable
+states-show = Show states
 template-example = Example content: the template's parts, not a product's.
 the-book = The FerroBRIDGE book
 timeout-desc = How long one call may take, 200 to 10,000 ms.

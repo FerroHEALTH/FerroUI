@@ -7,7 +7,10 @@
 //! the URL posts it, and every text they are given is escaped.
 
 use ferrohealth_ui::i18n::Message;
-use ferrohealth_ui::table::filter::{Find, find_form};
+use ferrohealth_ui::icon::Glyph;
+use ferrohealth_ui::table::filter::{
+    FilterChoice, FilterMenu, Find, MenuForm, filter_menu, find_form,
+};
 use ferrohealth_ui::table::model::{
     Direction, Noun, OpenWindow, Paging, Sort, StateSource, Window,
 };
@@ -16,7 +19,7 @@ use ferrohealth_ui::table::view::{
     Body, Column, DataTable, EXCLUDED, Role, RowCheck, Sorting, cell, check_cell, count_cell,
     data_table, data_table_unstacked, data_table_wide, group_row, menu_cell, title_cell,
 };
-use ferrohealth_ui::view::template::list::{ListCard, list_card};
+use ferrohealth_ui::view::template::list::{HeadingCount, ListCard, list_card};
 use leptos::prelude::*;
 
 use crate::markup::{has, tags};
@@ -605,7 +608,7 @@ fn the_list_card_states_an_order_of_several_keys_beside_its_count() {
         html(|| {
             list_card(ListCard {
                 title: String::from("Candidates"),
-                count: Some(38),
+                count: Some(HeadingCount::All(38)),
                 order: order.map(str::to_owned),
                 tabs: None,
                 actions: None,
@@ -1000,4 +1003,113 @@ fn a_range_past_a_thousand_groups_its_digits() {
             .into_render()
     });
     assert_eq!("Page 1,200 is past the last row.", past);
+}
+
+/// The filter menu of a listing's sources, two of them, `form` around it.
+fn sources(form: MenuForm<'_>) -> String {
+    html(|| {
+        filter_menu(FilterMenu {
+            id: "cs-source",
+            name: "source",
+            glyph: Glyph::LIST_FILTER,
+            label: "Source".into(),
+            title: String::from("Show sources"),
+            choices: vec![
+                FilterChoice::new("loinc", "LOINC", 1_200, true),
+                FilterChoice::new("local", "Local <codes>", 3, false),
+            ],
+            note: None,
+            form,
+        })
+    })
+}
+
+#[test]
+fn a_filter_menu_keeps_several_choices_in_a_get_form_of_its_own() {
+    let fields = [
+        (String::from("q"), String::from("blood")),
+        (String::from("source"), String::from("loinc")),
+        (String::from("page"), String::from("3")),
+    ];
+    let menu = sources(MenuForm::Own {
+        action: Some("/code-systems"),
+        fields: &fields,
+    });
+    assert!(
+        menu.starts_with(r#"<details class="fui-anchor">"#),
+        "{menu}"
+    );
+    assert!(
+        has(
+            &menu,
+            "form",
+            &[
+                ("method", "get"),
+                ("action", "/code-systems"),
+                ("aria-label", "Show sources")
+            ]
+        ),
+        "{menu}"
+    );
+    assert!(
+        has(
+            &menu,
+            "input",
+            &[("type", "hidden"), ("name", "q"), ("value", "blood")]
+        ),
+        "{menu}"
+    );
+    assert!(
+        !has(&menu, "input", &[("type", "hidden"), ("name", "page")]),
+        "a new filter starts from the first page: {menu}"
+    );
+    assert!(
+        !has(&menu, "input", &[("type", "hidden"), ("name", "source")]),
+        "the menu sends its own choices: {menu}"
+    );
+    assert!(
+        has(
+            &menu,
+            "input",
+            &[
+                ("type", "checkbox"),
+                ("id", "cs-source-loinc"),
+                ("name", "source"),
+                ("value", "loinc"),
+                ("checked", "")
+            ]
+        ),
+        "{menu}"
+    );
+    assert!(has(&menu, "label", &[("for", "cs-source-local")]), "{menu}");
+    assert!(menu.contains("Local &lt;codes&gt;"), "{menu}");
+    assert!(
+        menu.contains(r#"<span class="fui-menu-count">1,200</span>"#),
+        "{menu}"
+    );
+    assert!(
+        menu.contains("Source · 1 of 2"),
+        "the button says what it keeps: {menu}"
+    );
+    assert!(menu.contains("is-filtered"), "{menu}");
+    assert!(has(&menu, "button", &[("type", "submit")]), "{menu}");
+    assert!(!menu.contains("style="), "{menu}");
+}
+
+#[test]
+fn a_filter_menu_in_the_find_form_draws_no_form_of_its_own() {
+    let menu = sources(MenuForm::Enclosing);
+    assert!(
+        tags(&menu, "form").is_empty(),
+        "never a form in a form: {menu}"
+    );
+    assert!(
+        has(
+            &menu,
+            "div",
+            &[("role", "group"), ("aria-label", "Show sources")]
+        ),
+        "{menu}"
+    );
+    assert!(has(&menu, "button", &[("type", "submit")]), "{menu}");
 }

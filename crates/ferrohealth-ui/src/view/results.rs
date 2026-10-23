@@ -193,7 +193,7 @@ pub fn results_pane(pane: ResultsPane) -> AnyView {
     panel_section(
         Some(SectionHead {
             title,
-            count: Some(count),
+            count: Some(count.into()),
             actions: Some(actions),
         }),
         view! {

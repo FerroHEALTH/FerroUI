@@ -35,6 +35,7 @@ use ferrohealth_ui::view::surface::{
     Crumb, Header, Mode, SectionHead, card, editor_heading, grid, grid_start, page_header,
     panel_section, panel_sections_card, stack, well,
 };
+use ferrohealth_ui::view::template::list::HeadingCount;
 use ferrohealth_ui::widget::combobox::{ComboOption, ComboboxWords, KeyedCombobox, keyed_combobox};
 use ferrohealth_ui::widget::date::{
     DateField, DateRange, DateWords, QuickChoice, RangeEnd, RangePreset,
@@ -949,7 +950,7 @@ pub(crate) fn mapping_editor_body(
         panel_section(
             Some(SectionHead {
                 title,
-                count: Some(2),
+                count: Some(HeadingCount::All(2)),
                 actions: None,
             }),
             list,
@@ -1084,7 +1085,7 @@ fn diagnostics_of_files() -> AnyView {
         panel_section(
             Some(SectionHead {
                 title: tr(Msg::Diagnostics),
-                count: Some(5),
+                count: Some(HeadingCount::All(5)),
                 actions: None,
             }),
             diagnostics_by_file(&title, &files),
@@ -1131,7 +1132,7 @@ fn diagnostics_real_size() -> AnyView {
         panel_section(
             Some(SectionHead {
                 title: title.clone(),
-                count: Some(1),
+                count: Some(HeadingCount::All(1)),
                 actions: None,
             }),
             diagnostics_by_file(&title, &files),

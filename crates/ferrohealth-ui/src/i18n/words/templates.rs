@@ -27,6 +27,9 @@ texts! {
     ConfigReadAtStart = "config-read-at-start",
     /// The file-mode line's words before the file.
     ConfigSetIn = "config-set-in",
+    /// A heading's count of the items shown of a larger set, after its
+    /// middle dot.
+    CountShownOf = "count-shown-of",
     /// The button that downloads a document.
     Download = "download",
     /// The link that removes every filter.
