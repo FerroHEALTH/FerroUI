@@ -337,6 +337,10 @@ impl Glyph {
     pub const SAVE: Self = Self(
         r#"<path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" /><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7" /><path d="M7 3v4a1 1 0 0 0 1 1h7" />"#,
     );
+    /// Lucide `scroll-text`.
+    pub const SCROLL_TEXT: Self = Self(
+        r#"<path d="M15 12h-5" /><path d="M15 8h-5" /><path d="M19 17V5a2 2 0 0 0-2-2H4" /><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3" />"#,
+    );
     /// Lucide `search-code`.
     pub const SEARCH_CODE: Self = Self(
         r#"<path d="m13 13.5 2-2.5-2-2.5" /><path d="m21 21-4.3-4.3" /><path d="M9 8.5 7 11l2 2.5" /><circle cx="11" cy="11" r="8" />"#,
@@ -423,7 +427,7 @@ impl Glyph {
     pub const X: Self = Self(r#"<path d="M18 6 6 18" /><path d="m6 6 12 12" />"#);
 
     /// Every glyph, with the Lucide name of its vendored file.
-    pub const ALL: [(&str, Self); 110] = [
+    pub const ALL: [(&str, Self); 111] = [
         ("activity", Self::ACTIVITY),
         ("arrow-down", Self::ARROW_DOWN),
         ("arrow-left", Self::ARROW_LEFT),
@@ -512,6 +516,7 @@ impl Glyph {
         ("rotate-ccw", Self::ROTATE_CCW),
         ("route", Self::ROUTE),
         ("save", Self::SAVE),
+        ("scroll-text", Self::SCROLL_TEXT),
         ("search-code", Self::SEARCH_CODE),
         ("search-x", Self::SEARCH_X),
         ("search", Self::SEARCH),
