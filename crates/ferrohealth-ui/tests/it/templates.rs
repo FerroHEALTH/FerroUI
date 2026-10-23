@@ -484,8 +484,8 @@ fn a_managed_configuration_shows_its_badge_revision_intro_and_marker() {
 fn the_about_page_writes_the_console_version_in_the_footer_form() {
     let release = Footer {
         product: "Example Console".into(),
-        version: "0.1.0",
-        about: "/about",
+        version: "0.1.0".into(),
+        about: "/about".into(),
     };
     let page = html(|| {
         about_page(AboutPage {

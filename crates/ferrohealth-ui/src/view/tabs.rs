@@ -155,9 +155,7 @@ pub struct TabRow {
 /// `current` marked as the page, joined to `panel`.
 ///
 /// The template decides the tabs: a page with one or two sections has
-/// none, and a tab this object cannot have is left out, never disabled. A
-/// page holds one row of more than [`MANY`] tabs, since the phone's select
-/// takes a fixed id.
+/// none, and a tab this object cannot have is left out, never disabled.
 #[must_use]
 pub fn binder(label: impl Into<String>, tabs: Vec<Tab>, current: &str, panel: AnyView) -> AnyView {
     joined(

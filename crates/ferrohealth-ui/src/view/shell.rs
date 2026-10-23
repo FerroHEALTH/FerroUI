@@ -31,17 +31,18 @@ pub struct Footer {
     /// The product, such as "FerroBRIDGE Console", a word of which the
     /// console may look up at run time.
     pub product: Cow<'static, str>,
-    /// Its version.
-    pub version: &'static str,
-    /// The About page every footer links to.
-    pub about: &'static str,
+    /// Its version, which the console may read at run time.
+    pub version: Cow<'static, str>,
+    /// The About page every footer links to, under the console's base path,
+    /// which may be known only at run time.
+    pub about: Cow<'static, str>,
 }
 
 impl Footer {
     /// The product and its version in the one form the footer and the
     /// About page both write, such as "FerroBRIDGE Console 0.0.12".
     #[must_use]
-    pub fn release(self) -> String {
+    pub fn release(&self) -> String {
         // NOTE: no specification governs this: our own design; the product's
         // name and its version are data, drawn as they stand in every locale.
         format!("{} {}", self.product, self.version)
@@ -99,17 +100,17 @@ pub fn brand_mark(light: &str, dark: &str) -> impl IntoView + use<> {
     }
 }
 
-/// Returns the lockup that leads to `href`: the decorative `mark` beside the
-/// product's `name` and its accented `word`, such as "FerroBRIDGE" and
-/// "Console".
+/// Returns the lockup that leads to `href`, a route under the console's
+/// base path: the decorative `mark` beside the product's `name` and its
+/// accented `word`, such as "FerroBRIDGE" and "Console".
 #[must_use]
 pub fn lockup(
-    href: &'static str,
+    href: impl Into<Cow<'static, str>>,
     mark: impl IntoView,
     name: impl Into<String>,
     word: impl Into<String>,
 ) -> impl IntoView {
-    let (name, word) = (name.into(), word.into());
+    let (href, name, word) = (href.into(), name.into(), word.into());
     view! {
         <a href=href class="fui-lockup">
             {mark}
@@ -201,8 +202,8 @@ pub fn topbar(bar: TopBar) -> AnyView {
 /// version ([`Footer::release`]), its maker and the About page.
 #[must_use]
 pub fn footer(footer: Footer) -> impl IntoView {
-    let about = footer.about;
     let line = format!("{} · {MAKER} · ", footer.release());
+    let about = footer.about;
     view! {
         <footer class="fui-footer">
             <p>

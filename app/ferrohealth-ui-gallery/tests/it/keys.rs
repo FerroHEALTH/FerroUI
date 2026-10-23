@@ -70,8 +70,8 @@ async fn display(browser: &Browser, css: &str) -> Result<String, Box<dyn Error>>
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn the_slash_focuses_the_search_and_escape_clears_and_leaves_it() -> Result<(), Box<dyn Error>>
-{
+async fn the_slash_focuses_the_search_and_escape_clears_it_keeping_the_focus()
+-> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
         return Ok(());
     }
@@ -104,10 +104,11 @@ async fn the_slash_focuses_the_search_and_escape_clears_and_leaves_it() -> Resul
             search.prop("value").await?,
             "Escape clears"
         );
-        assert_ne!(
+        // WCAG 2.2 SC 2.4.3: the focus never drops to the page.
+        assert_eq!(
             "gallery-search",
             focused(browser).await?,
-            "Escape leaves the field"
+            "Escape keeps the focus in the field"
         );
         // A slash typed into a field is the field's text.
         let field = browser.element(By::Id("long-field-1")).await?;
@@ -176,6 +177,43 @@ async fn enter_on_the_answer_follows_its_first_hit_and_a_new_query_submits()
             .at(&gallery.url("/ferroterm/tables?q=synthetic-007"))
             .await?;
         browser.console_clean("the answer").await
+    })
+    .await
+}
+
+/// WAI-ARIA Authoring Practices 1.2, the combobox pattern: Escape dismisses
+/// the popup when it is visible, and clears the field only when it is not.
+#[tokio::test(flavor = "multi_thread")]
+async fn escape_closes_the_answer_keeping_the_words_and_the_focus() -> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        window(browser, 1440, 900).await?;
+        browser
+            .goto(&gallery.url("/ferrofed/forms?search=hits"))
+            .await?;
+        let answer = browser.element(By::Id("gallery-search-results")).await?;
+        slash_reaches_the_search(browser).await?;
+        let search = browser.element(By::Id("gallery-search")).await?;
+        let words = search.prop("value").await?;
+        assert!(words.as_deref().is_some_and(|words| !words.is_empty()));
+        press(browser, Key::Escape).await?;
+        until("Escape closes the answer", async || {
+            Ok(!answer.is_displayed().await?)
+        })
+        .await?;
+        assert_eq!(words, search.prop("value").await?, "the words stay");
+        assert_eq!("gallery-search", focused(browser).await?);
+        press(browser, Key::Escape).await?;
+        assert_eq!(
+            Some(String::new()),
+            search.prop("value").await?,
+            "a second Escape clears"
+        );
+        assert_eq!("gallery-search", focused(browser).await?);
+        browser.console_clean("Escape on the answer").await
     })
     .await
 }

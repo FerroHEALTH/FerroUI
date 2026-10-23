@@ -16,11 +16,13 @@
 //!
 //! The control is the island [`crate::island::Search`], which owns its keys
 //! ([`crate::widget::search`]): `/` from anywhere outside an editable element
-//! focuses the field, Escape clears and leaves it, Enter on an open answer
-//! follows its first hit, and a submit turns the glyph into the spinner while
-//! the next page loads. The `/` cap is hidden while the field holds text or
-//! has the focus, while the control is disabled, and below 40 rem (family
-//! rule 6); the shortcut is announced through `aria-keyshortcuts`.
+//! focuses the field, Escape closes the answer and then clears the words
+//! with the focus kept in the field, Enter on an open answer follows its
+//! first hit, and a submit turns the glyph into the spinner while the next
+//! page loads. The `/` cap is hidden while the field holds text or has the
+//! focus, while the control is disabled, below 40 rem and while the control
+//! is too narrow for it (family rule 6); the shortcut is announced through
+//! `aria-keyshortcuts`.
 //!
 //! The answer is drawn by the server, under the control, when the console
 //! has one for the query (the search result row, one overlay surface): the

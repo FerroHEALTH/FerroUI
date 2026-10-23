@@ -493,7 +493,7 @@ async fn overview_floor(browser: &Browser) -> Result<(), Box<dyn Error>> {
     );
     // NOTE: leptos-ui.md §15.8: the phone's tab select waits disabled, and
     // every binder tab is a link to its own route.
-    let select = browser.element(By::Id("fui-tabs-select")).await?;
+    let select = browser.element(By::Css(".fui-tabs-select select")).await?;
     assert!(
         select.attr("disabled").await?.is_some(),
         "the tab select cannot work yet"

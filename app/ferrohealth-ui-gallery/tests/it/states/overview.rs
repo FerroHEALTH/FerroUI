@@ -98,7 +98,7 @@ pub(super) async fn overview(
     shot_of(browser, brand, theme, "focus-keyboard-tabs", &tabs).await?;
     away(browser).await?;
     window(browser, 390, HEIGHT).await?;
-    let select = browser.element(By::Id("fui-tabs-select")).await?;
+    let select = browser.element(By::Css(".fui-tabs-select select")).await?;
     until("the tab select takes the row's place", async || {
         Ok(select.is_displayed().await?)
     })

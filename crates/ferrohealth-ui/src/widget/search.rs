@@ -7,19 +7,45 @@
 //! The search owns its own shortcut (#144): its key (`/` by default) from
 //! anywhere outside an element that takes text focuses the field with the
 //! caret after its text, unless a listener of the page took the key first;
-//! Escape in the field clears it, closes the answer and leaves the field;
-//! typing a new query closes the answer; Enter on an open answer follows the
-//! answer's first hit, and otherwise submits the form. A submit turns the
-//! glyph into the spinner while the next page loads. With no WebAssembly the form submits as it is
-//! ([`crate::view::search`]). No specification governs the keys: our own
-//! design; the shortcut is announced through `aria-keyshortcuts` (WAI-ARIA
-//! 1.2).
+//! Escape in the field closes an open answer and keeps the words, and on a
+//! closed answer clears the words, the focus staying in the field each time
+//! (WAI-ARIA Authoring Practices 1.2, the combobox pattern's Escape; WCAG 2.2
+//! SC 2.4.3); typing a new query closes the answer; Enter on an open answer
+//! follows the answer's first hit, and otherwise submits the form. A submit
+//! turns the glyph into the spinner while the next page loads. With no
+//! WebAssembly the form submits as it is ([`crate::view::search`]). No
+//! specification governs the other keys: our own design; the shortcut is
+//! announced through `aria-keyshortcuts` (WAI-ARIA 1.2).
 
 use leptos::either::Either;
 use leptos::prelude::*;
 
 use crate::icon::{Glyph, icon};
 use crate::view::search::SearchBox;
+
+/// What Escape in the search field does.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Escape {
+    /// Closes the open answer and keeps the words.
+    Close,
+    /// Clears the words of a field whose answer is closed.
+    Clear,
+    /// Leaves the key to the page: the field is empty and nothing is open.
+    Pass,
+}
+
+/// What Escape does in a field whose answer is `open` and whose words are
+/// `empty` or not; the focus stays in the field in every case.
+#[must_use]
+pub fn escaped(open: bool, empty: bool) -> Escape {
+    if open {
+        Escape::Close
+    } else if empty {
+        Escape::Pass
+    } else {
+        Escape::Clear
+    }
+}
 
 /// Whether the key `key` of an event is the shortcut `shortcut`.
 #[must_use]
@@ -59,11 +85,7 @@ pub fn search_control(
     let selected = StoredValue::new(selected);
     Effect::new(move |_| listen(field, shortcut, busy));
     let on_key = move |event: leptos::ev::KeyboardEvent| match event.key().as_str() {
-        "Escape" => {
-            event.prevent_default();
-            closed.set(true);
-            clear(field);
-        }
+        "Escape" => escape(&event, field, closed),
         "Enter" if !closed.get_untracked() => {
             let unchanged =
                 answered.with_value(|answered| field_value(field).as_deref() == Some(answered));
@@ -138,6 +160,27 @@ pub fn search_control(
     }
 }
 
+/// Answers Escape in `field`: closes the answer `closed` names when it is
+/// open, and otherwise clears the words, the focus staying in the field.
+fn escape(
+    event: &leptos::ev::KeyboardEvent,
+    field: NodeRef<leptos::html::Input>,
+    closed: RwSignal<bool>,
+) {
+    let empty = field_value(field).is_none_or(|words| words.is_empty());
+    match escaped(!closed.get_untracked(), empty) {
+        Escape::Close => {
+            event.prevent_default();
+            closed.set(true);
+        }
+        Escape::Clear => {
+            event.prevent_default();
+            clear(field);
+        }
+        Escape::Pass => {}
+    }
+}
+
 /// Listens on the window for the key `shortcut`, which focuses `field`, and
 /// for the page coming back from the history, which ends `busy`.
 fn listen(field: NodeRef<leptos::html::Input>, shortcut: Option<char>, busy: RwSignal<bool>) {
@@ -193,16 +236,12 @@ fn field_value(field: NodeRef<leptos::html::Input>) -> Option<String> {
     }
 }
 
-/// Clears `field` and moves the focus out of it.
+/// Clears `field`, which keeps the focus.
 fn clear(field: NodeRef<leptos::html::Input>) {
     #[cfg(target_arch = "wasm32")]
     {
-        let Some(input) = field.get_untracked() else {
-            return;
-        };
-        input.set_value("");
-        if input.blur().is_err() {
-            leptos::logging::warn!("the browser refused to leave the search field");
+        if let Some(input) = field.get_untracked() {
+            input.set_value("");
         }
     }
     #[cfg(not(target_arch = "wasm32"))]
@@ -229,7 +268,15 @@ fn follow(id: &str) {
 
 #[cfg(test)]
 mod tests {
-    use super::is_shortcut;
+    use super::{Escape, escaped, is_shortcut};
+
+    #[test]
+    fn escape_closes_the_answer_before_it_clears_the_words() {
+        assert_eq!(Escape::Close, escaped(true, false), "the words stay");
+        assert_eq!(Escape::Close, escaped(true, true));
+        assert_eq!(Escape::Clear, escaped(false, false));
+        assert_eq!(Escape::Pass, escaped(false, true), "nothing to undo");
+    }
 
     #[test]
     fn only_the_key_itself_is_the_shortcut() {
