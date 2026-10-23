@@ -23,7 +23,7 @@ use ferrohealth_ui::view::fanout::{Answer, Fanout, FanoutNode, fanout};
 use ferrohealth_ui::view::flow::FlowState;
 use ferrohealth_ui::view::replica::Replica;
 use ferrohealth_ui::view::surface::{Crumb, Header, card, page_header, page_heading, stack};
-use ferrohealth_ui::view::template::settings::{Setting, SettingsPage, Source, settings_page};
+use ferrohealth_ui::view::template::settings::{How, Setting, SettingsPage, Source, settings_page};
 use ferrohealth_ui::view::topology::{
     ClusterLink, QuickLook, RowAction, StatusCount, StatusMenu, Topology, TopologyCallers,
     TopologyCard, TopologyGroup, TopologySide, TopologyView, topology,
@@ -768,7 +768,7 @@ fn self_description(brand: Brand) -> AnyView {
         actions: ActionGroup::none(),
         source: Source::File {
             file: String::from("ferrofed.toml"),
-            how: home(brand),
+            how: How::Page(home(brand)),
         },
         tabs: None,
         settings: vec![

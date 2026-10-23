@@ -10968,6 +10968,26 @@
     margin: 0;
   }
 
+  /* A button in running prose that opens a dialog, drawn as the link
+     beside it would be: the accent, underlined, in the words' own font. */
+  .fui-link-button {
+    display: inline;
+    margin: 0;
+    border: 0;
+    padding: 0;
+    background: none;
+    color: var(--accent);
+    font: inherit;
+    text-align: inherit;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+  }
+
+  .fui-link-button:hover {
+    color: var(--accent-hover);
+  }
+
   .fui-settings-panel > :is(.fui-error-summary, .fui-revision) {
     margin: 0.75rem var(--space-loose) 0;
   }

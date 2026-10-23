@@ -64,6 +64,12 @@ messages! {
     ForbiddenTitle = "forbidden-title",
     /// `General`
     General = "general",
+    /// `Change the file, review it, and restart the console.`
+    HowConfigChange = "how-config-change",
+    /// `The console reads these settings from its file once, when it starts.`
+    HowConfigReads = "how-config-reads",
+    /// `How configuration works`
+    HowConfigurationWorks = "how-configuration-works",
     /// `How settings work`
     HowSettingsWork = "how-settings-work",
     /// `Business Source License 1.1`
