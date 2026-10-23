@@ -18,11 +18,9 @@
 //! console's: a submit button of a form that posts, or a button whose
 //! listener acts and closes the dialog.
 
-use std::borrow::Cow;
-
 use leptos::prelude::*;
 
-use crate::i18n::{Text, tr};
+use crate::i18n::{Text, Word, tr};
 use crate::icon::{Glyph, icon};
 use crate::view::button::Variant;
 
@@ -32,9 +30,9 @@ pub struct Confirmation {
     /// The dialog's id, which its trigger opens.
     pub id: &'static str,
     /// The question, such as "Delete the stored query?".
-    pub title: Cow<'static, str>,
+    pub title: Word,
     /// The sentence that says what confirming does.
-    pub message: Cow<'static, str>,
+    pub message: Word,
 }
 
 /// Returns the dialog asking `confirmation`, with Cancel and `confirm`.

@@ -21,7 +21,7 @@
 
 use leptos::prelude::*;
 
-use crate::i18n::{Text, tr};
+use crate::i18n::{Text, Word, tr};
 use crate::icon::{Glyph, icon};
 use crate::theme::Theme;
 
@@ -127,7 +127,7 @@ fn list_id(id: &str) -> String {
 fn link_item(
     href: String,
     glyph: Glyph,
-    words: String,
+    words: Word,
     key: Option<&'static str>,
     class: &'static str,
 ) -> impl IntoView + use<> {
@@ -302,7 +302,7 @@ pub fn menu_button(
     id: String,
     label: String,
     name: Option<String>,
-    cancel: String,
+    cancel: Word,
     items: AnyView,
 ) -> AnyView {
     let open = RwSignal::new(None::<bool>);

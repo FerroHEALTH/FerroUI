@@ -598,8 +598,8 @@ pub fn OperationsPage() -> impl IntoView {
         crate::app::route_brand().map_or_else(String::new, |brand| format!("/{}", brand.key()));
     let header = page_heading(
         Header {
-            title: tr(Msg::Operations),
-            subtitle: Some(tr(Msg::OpSubtitle)),
+            title: tr(Msg::Operations).into(),
+            subtitle: Some(tr(Msg::OpSubtitle).into()),
             crumbs: vec![Crumb::new(tr(Msg::Gallery), root.clone())],
             mono: false,
             badge: None,

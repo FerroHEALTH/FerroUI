@@ -382,8 +382,8 @@ pub fn ConfigurationPage() -> impl IntoView {
         crate::app::route_brand().map_or_else(String::new, |brand| format!("/{}", brand.key()));
     let header = page_heading(
         Header {
-            title: tr(Msg::Configuration),
-            subtitle: Some(tr(Msg::CfSubtitle)),
+            title: tr(Msg::Configuration).into(),
+            subtitle: Some(tr(Msg::CfSubtitle).into()),
             crumbs: vec![Crumb::new(tr(Msg::Gallery), root.clone())],
             ..Header::default()
         },
@@ -420,8 +420,8 @@ pub fn ProvisionedPage() -> impl IntoView {
         crate::app::route_brand().map_or_else(String::new, |brand| format!("/{}", brand.key()));
     let page = detail_page(DetailPage {
         header: Header {
-            title: String::from(MAPPING_FILES[0].0),
-            subtitle: Some(tr(Msg::CfProvisionedSubtitle)),
+            title: String::from(MAPPING_FILES[0].0).into(),
+            subtitle: Some(tr(Msg::CfProvisionedSubtitle).into()),
             crumbs: vec![
                 Crumb::new(tr(Msg::Gallery), root.clone()),
                 Crumb::new(tr(Msg::Configuration), at(&root, "configuration")),

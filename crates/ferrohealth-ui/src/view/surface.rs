@@ -12,7 +12,7 @@ use std::borrow::Cow;
 
 use leptos::prelude::*;
 
-use crate::i18n::{Message, Text, tr};
+use crate::i18n::{Message, Text, Word, tr};
 
 use crate::icon::{Glyph, icon};
 use crate::view::action::{ActionGroup, action_group};
@@ -41,9 +41,9 @@ impl Crumb {
 #[derive(Debug, Default)]
 pub struct Header {
     /// The page's title, also the trail's last, current, crumb.
-    pub title: String,
+    pub title: Word,
     /// One line under the title, when there is one.
-    pub subtitle: Option<String>,
+    pub subtitle: Option<Word>,
     /// The page's ancestors, the root first; none for a page with no trail.
     pub crumbs: Vec<Crumb>,
     /// Whether the title is drawn in the code face, for an identifier.
@@ -141,7 +141,7 @@ fn heading(header: Header, trail: Trail, actions: AnyView) -> impl IntoView {
         mono,
         badge,
     } = header;
-    let trail = (!crumbs.is_empty()).then(|| trail_of(crumbs, trail, &title));
+    let trail = (!crumbs.is_empty()).then(|| trail_of(crumbs, trail, title.text()));
     // Two arms, so a title in the body face writes no `class` attribute.
     let h1 = if mono {
         view! { <h1 class="fui-page-title-mono">{title}</h1> }.into_any()
@@ -167,14 +167,14 @@ fn heading(header: Header, trail: Trail, actions: AnyView) -> impl IntoView {
 /// when there is one, and the action group `actions` at the far end.
 #[must_use]
 pub fn page_header(
-    title: impl Into<String>,
+    title: impl Into<Word>,
     subtitle: Option<String>,
     actions: ActionGroup,
 ) -> impl IntoView {
     page_heading(
         Header {
             title: title.into(),
-            subtitle,
+            subtitle: subtitle.map(Word::from),
             ..Header::default()
         },
         actions,
@@ -249,7 +249,7 @@ pub fn editor_heading(
     let title = editor_title(message, mode);
     heading(
         Header {
-            title,
+            title: Word::new(title),
             mono: false,
             ..header
         },
@@ -515,11 +515,11 @@ pub fn stat_card_marked(stat: Stat, mark: impl IntoView + 'static) -> impl IntoV
 /// Returns a compact definition grid: each label beside its value from
 /// 40 rem up, one above the other below it.
 #[must_use]
-pub fn definitions(rows: Vec<(impl Into<String>, AnyView)>) -> impl IntoView {
+pub fn definitions(rows: Vec<(impl Into<Word>, AnyView)>) -> impl IntoView {
     let rows = rows
         .into_iter()
         .map(|(label, value)| {
-            let label = label.into();
+            let label: Word = label.into();
             view! {
                 <dt>{label}</dt>
                 <dd>{value}</dd>

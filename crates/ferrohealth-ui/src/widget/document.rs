@@ -17,6 +17,8 @@
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
+use crate::i18n::Word;
+
 /// One view of a document.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DocumentView {
@@ -53,7 +55,7 @@ pub struct ViewChoice {
     /// The view it shows.
     pub view: DocumentView,
     /// Its words.
-    pub words: String,
+    pub words: Word,
 }
 
 /// Returns the view switch named `label` of the pane `id`, one link per

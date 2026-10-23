@@ -15,7 +15,7 @@
 use leptos::prelude::*;
 
 use crate::highlight::Language;
-use crate::i18n::{Text, tr};
+use crate::i18n::{Text, Word, tr};
 use crate::icon::{Glyph, icon};
 use crate::island::CopyButton;
 use crate::view::action::ActionGroup;
@@ -142,7 +142,11 @@ pub fn about_page(page: AboutPage) -> AnyView {
     let heading = page_heading(header, ActionGroup::none()).into_any();
     let replica = replica.map(replica_line);
     let mut rows = vec![(tr(Text::AboutConsole), release.into_any())];
-    rows.extend(versions);
+    rows.extend(
+        versions
+            .into_iter()
+            .map(|(label, value)| (Word::from(label), value)),
+    );
     let versions = card(tr(Text::AboutVersions), definitions(rows)).into_any();
     let Manufacturer {
         licence,

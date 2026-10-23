@@ -151,7 +151,7 @@ fn step(step: Step) -> AnyView {
             </span>
             <span class="fui-lifecycle-text">
                 <strong>
-                    <span class="fui-sr-only">{format!("{} ", tr(state.word()))}</span>
+                    <span class="fui-sr-only">{tr(state.word()).map(|words| format!("{words} "))}</span>
                     {title}
                 </strong>
                 <span>{line}</span>

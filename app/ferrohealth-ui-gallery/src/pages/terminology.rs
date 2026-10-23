@@ -617,7 +617,7 @@ fn relationship_options() -> Vec<(String, String)> {
     ] {
         if let Some(relationship) = Relationship::from_r4(code) {
             let words = relationship.words();
-            let mut letters = words.chars();
+            let mut letters = words.text().chars();
             let capital = letters
                 .next()
                 .map(|first| first.to_uppercase().chain(letters).collect::<String>())
@@ -787,8 +787,8 @@ pub fn TerminologyPage() -> impl IntoView {
         crate::app::route_brand().map_or_else(String::new, |brand| format!("/{}", brand.key()));
     let header = page_heading(
         Header {
-            title: tr(Msg::Terminology),
-            subtitle: Some(tr(Msg::TmSubtitle)),
+            title: tr(Msg::Terminology).into(),
+            subtitle: Some(tr(Msg::TmSubtitle).into()),
             crumbs: vec![Crumb::new(tr(Msg::Gallery), root)],
             mono: false,
             badge: None,

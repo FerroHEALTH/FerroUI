@@ -101,8 +101,7 @@ fn table(table: RowTable) -> AnyView {
     let count = u32::try_from(rows.len()).unwrap_or(u32::MAX);
     let mut note = tr_with(Text::RowsCount, &[("count", count.into())]);
     if let Some(detail) = detail {
-        note.push_str(" · ");
-        note.push_str(&detail);
+        note = note.map(|note| format!("{note} · {detail}"));
     }
     let rows = rows.into_iter().map(row).collect_view();
     view! {

@@ -155,7 +155,7 @@ fn value_view(value: Value) -> AnyView {
             ucum,
         } => {
             let tooltip = tr_with(Text::ReadingUcum, &[("code", Arg::from(ucum))]);
-            let said = format!(", {tooltip}");
+            let said = tooltip.clone().map(|tooltip| format!(", {tooltip}"));
             view! {
                 <span class="fui-reading-value">{magnitude}</span>
                 " "

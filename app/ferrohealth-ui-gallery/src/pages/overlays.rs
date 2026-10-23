@@ -9,6 +9,7 @@
 //! and the drawer is the navigation on a narrow screen.
 
 use crate::locale::{Msg, Words, tr, tr_with};
+use ferrohealth_ui::i18n::Word;
 use ferrohealth_ui::icon::{Glyph, icon};
 use ferrohealth_ui::island::SidePanel;
 use ferrohealth_ui::tone::Tone;
@@ -229,17 +230,18 @@ fn menus() -> AnyView {
         value: tr_with(
             Msg::VersionLatestOf,
             &[("version", "1.1.0".into()), ("count", 2.into())],
-        ),
+        )
+        .into(),
         choices: vec![
             Choice {
-                label: String::from("1.1.0"),
-                note: Some(tr(Msg::Latest)),
+                label: String::from("1.1.0").into(),
+                note: Some(tr(Msg::Latest).into()),
                 lang: None,
                 selected: true,
                 pick: Pick::Link(format!("{here}?version=1.1.0")),
             },
             Choice {
-                label: String::from("1.0.0"),
+                label: String::from("1.0.0").into(),
                 note: None,
                 lang: None,
                 selected: false,
@@ -331,7 +333,7 @@ pub(crate) fn modal_dialogs(words: Words, modal: ModalWords) -> AnyView {
                     let row = pending
                         .get()
                         .map_or_else(|| words.get(Msg::TheFile), str::to_owned);
-                    words.fill(Msg::DeleteRow, &[("row", &row)])
+                    Word::from(words.fill(Msg::DeleteRow, &[("row", &row)]))
                 })
             }),
             danger: true,
@@ -384,7 +386,7 @@ fn rename_modal(renaming: RwSignal<bool>, words: &Words, modal: ModalWords) -> A
     modal_dialog(
         Modal {
             id: "rename-file",
-            title: Signal::stored(words.get(Msg::RenameFile)),
+            title: Signal::stored(Word::from(words.get(Msg::RenameFile))),
             danger: false,
             width: Width::Wide,
             body: field(

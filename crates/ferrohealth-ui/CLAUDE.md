@@ -76,7 +76,10 @@ Every widget takes the words it draws as props: a `*Words` struct whose
 `of_page()` resolves them on the server, with an `i18n::Phrase` for a
 sentence around a value the browser learns (a file's name, a page number).
 No island looks a word up, so the browser bundle carries no Fluent loader
-and no catalog.
+and no catalog. Each word is an `i18n::Word`, which carries whether it fell
+back to English and draws itself inside `<span lang="en">` when it did
+(WCAG 2.2 SC 3.1.2), and a widget whose island writes a count carries the
+page's `i18n::number::Grouping` among its words.
 
 ## The bundle budget
 

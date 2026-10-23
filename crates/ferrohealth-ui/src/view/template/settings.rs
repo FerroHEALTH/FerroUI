@@ -139,8 +139,8 @@ pub fn settings_page(page: SettingsPage) -> AnyView {
 /// · read at start · How configuration works", the last a link to `how`.
 #[must_use]
 pub fn file_line(file: String, how: String) -> AnyView {
-    let set_in = format!("{} ", tr(Text::ConfigSetIn));
-    let read = format!(" · {} · ", tr(Text::ConfigReadAtStart));
+    let set_in = tr(Text::ConfigSetIn).map(|words| format!("{words} "));
+    let read = tr(Text::ConfigReadAtStart).map(|words| format!(" · {words} · "));
     view! {
         {set_in}
         <code>{file}</code>

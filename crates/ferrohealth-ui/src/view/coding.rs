@@ -19,7 +19,7 @@
 
 use leptos::prelude::*;
 
-use crate::i18n::{Text, tr, tr_with};
+use crate::i18n::{Text, Word, tr, tr_with};
 use crate::view::path::{broken, segments};
 
 /// The length in characters above which a code, or a piece of a canonical
@@ -191,9 +191,9 @@ pub struct MoreCodes {
     /// How many codes the list holds in all.
     pub total: u32,
     /// The sentence that counts the codes shown.
-    pub words: String,
+    pub words: Word,
     /// The link's words.
-    pub link: String,
+    pub link: Word,
     /// The page with the next codes read.
     pub href: String,
 }

@@ -7,6 +7,7 @@
 //! escaped.
 
 use ferrohealth_ui::highlight::Language;
+use ferrohealth_ui::i18n::Word;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::action::ActionGroup;
@@ -40,8 +41,8 @@ fn html(view: impl FnOnce() -> AnyView) -> String {
 /// A header titled `title` with a one-sentence intro.
 fn header(title: &str) -> Header {
     Header {
-        title: title.to_owned(),
-        subtitle: Some(String::from("Example content: the template's parts.")),
+        title: Word::from(title),
+        subtitle: Some(Word::from("Example content: the template's parts.")),
         ..Header::default()
     }
 }
@@ -239,7 +240,7 @@ fn the_trail_turns_into_a_back_link_and_the_badge_sits_beside_the_title() {
     let page = html(|| {
         page_heading(
             Header {
-                title: String::from("Locatie <Noord>"),
+                title: Word::from("Locatie <Noord>"),
                 crumbs: vec![Crumb::new("Locations", "/things")],
                 badge: Some(pill(Tone::Ok, "Reachable").into_any()),
                 ..Header::default()

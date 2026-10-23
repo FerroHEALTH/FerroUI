@@ -12,6 +12,8 @@
 
 use leptos::prelude::*;
 
+use crate::i18n::Word;
+
 /// The classes of a text input.
 pub const INPUT: &str = "fui-input";
 
@@ -186,10 +188,10 @@ pub const ERROR: &str = "fui-help fui-error";
 #[must_use]
 pub struct Field {
     id: String,
-    label: Oco<'static, str>,
+    label: Word,
     label_hidden: bool,
     holds_id: bool,
-    help: Option<Oco<'static, str>>,
+    help: Option<Word>,
     after: Option<AnyView>,
     leading: Option<Inner>,
     trailing: Option<Inner>,
@@ -197,7 +199,7 @@ pub struct Field {
 
 impl Field {
     /// The field of the control `id`, labelled `label`, with no help.
-    pub fn new(id: impl Into<String>, label: impl Into<Oco<'static, str>>) -> Self {
+    pub fn new(id: impl Into<String>, label: impl Into<Word>) -> Self {
         Self {
             id: id.into(),
             label: label.into(),
@@ -211,13 +213,13 @@ impl Field {
     }
 
     /// Adds the help line `help` under the control, its id [`help_id`].
-    pub fn help(mut self, help: impl Into<Oco<'static, str>>) -> Self {
+    pub fn help(mut self, help: impl Into<Word>) -> Self {
         self.help = Some(help.into());
         self
     }
 
     /// Adds the help line `help` when there is one.
-    pub fn help_if(mut self, help: Option<impl Into<Oco<'static, str>>>) -> Self {
+    pub fn help_if(mut self, help: Option<impl Into<Word>>) -> Self {
         self.help = help.map(Into::into);
         self
     }
@@ -309,7 +311,7 @@ impl Field {
 #[must_use]
 pub fn field(
     id: &'static str,
-    label: impl Into<Oco<'static, str>>,
+    label: impl Into<Word>,
     help: Option<String>,
     control: impl IntoView + 'static,
 ) -> impl IntoView {
@@ -322,7 +324,7 @@ pub fn field(
 #[must_use]
 pub fn keyed_field(
     id: String,
-    label: impl Into<Oco<'static, str>>,
+    label: impl Into<Word>,
     help: Option<String>,
     control: impl IntoView + 'static,
 ) -> impl IntoView {
@@ -382,23 +384,15 @@ pub fn field_flow(body: impl IntoView + 'static) -> impl IntoView {
 /// Returns the checkbox `checkbox`, whose id is `id`, beside its label
 /// `label` on one row, the box clear of the words.
 #[must_use]
-pub fn check(
-    id: &'static str,
-    label: impl Into<Oco<'static, str>>,
-    checkbox: impl IntoView,
-) -> impl IntoView {
+pub fn check(id: &'static str, label: impl Into<Word>, checkbox: impl IntoView) -> impl IntoView {
     keyed_check(id.to_owned(), label, checkbox)
 }
 
 /// Returns [`check`] for a checkbox whose id is made at run time, such as
 /// one per row of a list.
 #[must_use]
-pub fn keyed_check(
-    id: String,
-    label: impl Into<Oco<'static, str>>,
-    checkbox: impl IntoView,
-) -> impl IntoView {
-    let label = label.into();
+pub fn keyed_check(id: String, label: impl Into<Word>, checkbox: impl IntoView) -> impl IntoView {
+    let label: Word = label.into();
     view! {
         <div class="fui-check">
             {checkbox} <label for=id>{label}</label>
@@ -414,8 +408,8 @@ pub fn keyed_check(
 #[must_use]
 pub fn check_field(
     id: &'static str,
-    label: impl Into<Oco<'static, str>>,
-    help: impl Into<Oco<'static, str>>,
+    label: impl Into<Word>,
+    help: impl Into<Word>,
     checkbox: impl IntoView + 'static,
 ) -> AnyView {
     keyed_check_field(id.to_owned(), label, help, checkbox)
@@ -426,11 +420,11 @@ pub fn check_field(
 #[must_use]
 pub fn keyed_check_field(
     id: String,
-    label: impl Into<Oco<'static, str>>,
-    help: impl Into<Oco<'static, str>>,
+    label: impl Into<Word>,
+    help: impl Into<Word>,
     checkbox: impl IntoView + 'static,
 ) -> AnyView {
-    let (label, help) = (label.into(), help.into());
+    let (label, help): (Word, Word) = (label.into(), help.into());
     let checkbox = checkbox.into_any();
     let help_id = help_id(&id);
     view! {

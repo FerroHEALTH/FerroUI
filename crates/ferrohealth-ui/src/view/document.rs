@@ -115,7 +115,8 @@ pub fn document_pane(document: Document) -> AnyView {
             label: tr_with(
                 Text::DocumentHighlightedRegion,
                 &[("document", label.clone().into())],
-            ),
+            )
+            .into(),
             language,
             text: text.clone(),
             ids: Some(format!("{id}-L")),
@@ -147,7 +148,7 @@ pub fn document_pane(document: Document) -> AnyView {
         })}
     }
     .into_any();
-    let switch_label = tr(Text::DocumentView);
+    let switch_label = String::from(tr(Text::DocumentView));
     let pane_id = id.clone();
     let copy_id = format!("{id}-copy");
     view! {

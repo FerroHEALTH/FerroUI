@@ -11,7 +11,7 @@
 
 use leptos::prelude::*;
 
-use crate::i18n::{Text, tr, tr_with, tr_word};
+use crate::i18n::{Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::tone::Tone;
 
@@ -32,14 +32,14 @@ pub enum Severity {
 impl Severity {
     /// The word a reader sees, in the page's locale.
     #[must_use]
-    pub fn word(self) -> String {
+    pub fn word(self) -> Word {
         tr(self.text())
     }
 
     /// The word as a view, marked English on a page in another language
     /// when no catalog of the page's language holds it.
     fn drawn(self) -> AnyView {
-        tr_word(self.text(), &[])
+        tr_with(self.text(), &[]).into_render()
     }
 
     /// The word's message.
@@ -183,7 +183,7 @@ pub fn issue_list(issues: &[Issue]) -> impl IntoView + use<> {
     let (open, folded, counted) = split_issues(&shown);
     let items = issue_items(open);
     let more = (!folded.is_empty()).then(|| {
-        let summary = tr_word(Text::IssuesMore, &[("count", folded.len().into())]);
+        let summary = tr_with(Text::IssuesMore, &[("count", folded.len().into())]);
         let items = issue_items(folded);
         view! {
             <details class="fui-issues-more">
@@ -194,13 +194,13 @@ pub fn issue_list(issues: &[Issue]) -> impl IntoView + use<> {
     });
     let not_drawn = (counted > 0).then(|| {
         view! {
-            <p class="fui-muted">{tr_word(Text::IssuesNotDrawn, &[("count", counted.into())])}</p>
+            <p class="fui-muted">{tr_with(Text::IssuesNotDrawn, &[("count", counted.into())])}</p>
         }
     });
     let left = (left_out > 0).then(|| {
         view! {
             <p class="fui-muted">
-                {tr_word(Text::IssuesLeftOut, &[("count", left_out.into())])}
+                {tr_with(Text::IssuesLeftOut, &[("count", left_out.into())])}
             </p>
         }
     });
@@ -220,13 +220,13 @@ fn issue_items(issues: &[&Issue]) -> impl IntoView + use<> {
             let text = match &issue.text {
                 Some(text) => text.clone().into_any(),
                 None => view! {
-                    <span class="fui-muted">{tr_word(Text::IssueBlank, &[])}</span>
+                    <span class="fui-muted">{tr_with(Text::IssueBlank, &[])}</span>
                 }
                 .into_any(),
             };
             let place = (!issue.place.is_empty()).then(|| {
                 view! {
-                    " " {tr_word(Text::IssuePlace, &[])} " "
+                    " " {tr_with(Text::IssuePlace, &[])} " "
                     <code>{issue.place.clone()}</code>
                 }
             });
@@ -253,7 +253,7 @@ fn issue_items(issues: &[&Issue]) -> impl IntoView + use<> {
 /// The title of `refusal`: its status, or "No answer" when none came,
 /// before its summary.
 #[must_use]
-pub fn refusal_title(refusal: &Refusal) -> String {
+pub fn refusal_title(refusal: &Refusal) -> Word {
     match refusal.status {
         Some(status) => tr_with(
             Text::RefusalStatus,

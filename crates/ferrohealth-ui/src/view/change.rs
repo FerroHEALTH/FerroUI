@@ -49,7 +49,7 @@ fn side(value: Option<&String>, sign: &'static str, removed: bool) -> AnyView {
                     {sign}
                 </span>
                 <span class="fui-sr-only">
-                    {format!("{} ", tr(if removed { Text::ChangeRemoved } else { Text::ChangeAdded }))}
+                    {tr(if removed { Text::ChangeRemoved } else { Text::ChangeAdded }).map(|words| format!("{words} "))}
                 </span>
                 <code>{value.clone()}</code>
             </span>

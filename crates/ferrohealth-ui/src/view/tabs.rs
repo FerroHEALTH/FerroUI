@@ -22,7 +22,7 @@ use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::i18n::number::grouped;
-use crate::i18n::{Arg, Text, tr, tr_with};
+use crate::i18n::{Arg, Text, Word, tr, tr_with};
 
 /// The most tabs a phone shows as a row; a longer row is a select there.
 pub const MANY: usize = 5;
@@ -46,7 +46,7 @@ pub struct Tab {
     /// The route the tab leads to.
     pub href: String,
     /// What the tab says.
-    pub label: String,
+    pub label: Word,
     /// What the section holds, when the template asks for a count.
     pub count: Option<TabCount>,
     /// Whether the section holds a draft.
@@ -57,7 +57,7 @@ impl Tab {
     /// The tab `key` leading to `href`, saying `label`, with no count and
     /// no draft.
     #[must_use]
-    pub fn new(key: impl Into<String>, href: impl Into<String>, label: impl Into<String>) -> Self {
+    pub fn new(key: impl Into<String>, href: impl Into<String>, label: impl Into<Word>) -> Self {
         Self {
             key: key.into(),
             href: href.into(),
@@ -95,11 +95,11 @@ pub struct TabChoice {
     /// The route it leads to.
     pub href: String,
     /// What it says, a draft named in it.
-    pub words: String,
+    pub words: Word,
 }
 
 /// Returns the tab `tab`, marked as the page when its key is `current`.
-fn tab_link(tab: Tab, current: &str, draft: &str) -> AnyView {
+fn tab_link(tab: Tab, current: &str, draft: &Word) -> AnyView {
     let here = (tab.key == current).then_some("page");
     let count = tab.count.map(|count| {
         view! {
@@ -111,7 +111,7 @@ fn tab_link(tab: Tab, current: &str, draft: &str) -> AnyView {
     });
     let badge = tab
         .draft
-        .then(|| view! { <span class="fui-tab-draft">{draft.to_owned()}</span> });
+        .then(|| view! { <span class="fui-tab-draft">{draft.clone()}</span> });
     view! {
         <a href=tab.href class="fui-tab" aria-current=here data-tab=tab.key>
             {tab.label}
@@ -132,7 +132,7 @@ fn choices(tabs: &[Tab]) -> Vec<TabChoice> {
             words: if tab.draft {
                 tr_with(
                     Text::TabDraftChoice,
-                    &[("tab", Arg::from(tab.label.as_str()))],
+                    &[("tab", Arg::from(tab.label.text()))],
                 )
             } else {
                 tab.label.clone()
@@ -186,7 +186,7 @@ pub(crate) fn joined(row: TabRow, panel: AnyView, class: Option<&'static str>) -
             .map(|tab| tab.href.clone())
             .unwrap_or_default();
         let go = tr(Text::TabGo);
-        view! { <crate::island::TabSelect label=label.clone() go choices=choices(&tabs) chosen /> }
+        view! { <crate::island::TabSelect label=label.clone() go=go choices=choices(&tabs) chosen /> }
     });
     let draft = tr(Text::TabDraft);
     let links = tabs

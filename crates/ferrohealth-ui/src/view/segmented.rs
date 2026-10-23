@@ -16,6 +16,7 @@ use std::borrow::Cow;
 
 use leptos::prelude::*;
 
+use crate::i18n::Word;
 use crate::icon::{Glyph, icon};
 
 /// Returns the choices `choices` (each its href and its words) as joined
@@ -101,7 +102,7 @@ pub struct SegmentedForm {
     /// A glyph and a word shown before the segments, such as "FHIR".
     pub prefix: Option<(Glyph, Cow<'static, str>)>,
     /// The choices, value and words.
-    pub choices: Vec<(String, String)>,
+    pub choices: Vec<(String, Word)>,
     /// The value in force.
     pub current: String,
     /// The console's route the form posts to.

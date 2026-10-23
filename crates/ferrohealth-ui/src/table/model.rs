@@ -7,7 +7,7 @@
 
 use leptos_router::params::ParamsMap;
 
-use crate::i18n::{Message, Text, tr, tr_with};
+use crate::i18n::{Message, Text, Word, tr, tr_with};
 
 /// The rows a page shows when the request names no size.
 pub const DEFAULT_SIZE: u32 = 25;
@@ -72,28 +72,28 @@ impl Noun {
 
     /// The word for `count` rows in the page's locale.
     #[must_use]
-    pub fn word(self, count: u32) -> String {
+    pub fn word(self, count: u32) -> Word {
         let args = [("count", count.into())];
         match self.message {
-            Some(message) => message.text_with(&args),
+            Some(message) => message.text_with(&args).into(),
             None => tr_with(Text::Rows, &args),
         }
     }
 
     /// The sentence for a listing with no row: "No value sets".
     #[must_use]
-    pub fn empty(self) -> String {
+    pub fn empty(self) -> Word {
         match self.message {
-            Some(message) => message.attribute("empty", &[("count", 0.into())]),
+            Some(message) => message.attribute("empty", &[("count", 0.into())]).into(),
             None => tr(Text::RangeEmpty),
         }
     }
 
     /// The word for several rows as a sentence opens with it: "Value sets".
     #[must_use]
-    pub fn opening(self) -> String {
+    pub fn opening(self) -> Word {
         match self.message {
-            Some(message) => message.attribute("opening", &[("count", 2.into())]),
+            Some(message) => message.attribute("opening", &[("count", 2.into())]).into(),
             None => tr(Text::RowsOpening),
         }
     }
@@ -298,7 +298,7 @@ impl Window {
 
     /// The range label: "1-25 of 312", or "No rows" for an empty listing.
     #[must_use]
-    pub fn range_label(self) -> String {
+    pub fn range_label(self) -> Word {
         if self.total == 0 {
             return tr(Text::RangeEmpty);
         }
@@ -315,7 +315,7 @@ impl Window {
     /// The range label naming the rows by `noun`: "1-25 of 312 value
     /// sets", "1-1 of 1 value set", or "No value sets".
     #[must_use]
-    pub fn range_of(self, noun: Noun) -> String {
+    pub fn range_of(self, noun: Noun) -> Word {
         if self.total == 0 {
             return noun.empty();
         }
@@ -347,7 +347,7 @@ impl Window {
 /// sent: `held` rows in hand, `stated` counted (a FHIR search's
 /// `Bundle.total`). `None` when the two agree or nothing was stated.
 #[must_use]
-pub fn partial_note(held: u32, stated: Option<u32>, noun: Noun) -> Option<String> {
+pub fn partial_note(held: u32, stated: Option<u32>, noun: Noun) -> Option<Word> {
     let stated = stated.filter(|stated| *stated != held)?;
     Some(tr_with(
         Text::PartialNote,
@@ -416,7 +416,7 @@ impl OpenWindow {
     /// sets" when the first page came back empty, or "Page 9 is past the
     /// last value set." when a later one did, beside the Previous it offers.
     #[must_use]
-    pub fn range_of(self, noun: Noun) -> String {
+    pub fn range_of(self, noun: Noun) -> Word {
         if self.held == 0 && self.page > 1 {
             return tr_with(
                 Text::OpenRangePast,
@@ -632,7 +632,7 @@ mod tests {
             Some(String::from(
                 "The server counted 340 value sets, and this listing holds 312."
             )),
-            partial_note(312, Some(340), sets)
+            partial_note(312, Some(340), sets).map(String::from)
         );
     }
 

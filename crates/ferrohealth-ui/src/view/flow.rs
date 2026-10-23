@@ -20,7 +20,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use leptos::prelude::*;
 
-use crate::i18n::{Text, tr, tr_with};
+use crate::i18n::{Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::tone::Tone;
 
@@ -44,7 +44,7 @@ pub enum FlowState {
 impl FlowState {
     /// The state's word in the page's locale.
     #[must_use]
-    pub fn word(self) -> String {
+    pub fn word(self) -> Word {
         tr(match self {
             Self::Up => Text::FlowUp,
             Self::Degraded => Text::FlowDegraded,
@@ -239,10 +239,10 @@ impl Folded<'_> {
         self.counts
             .iter()
             .map(|(state, count)| {
-                tr_with(
+                String::from(tr_with(
                     Text::FlowFoldCount,
                     &[("status", state.word().into()), ("count", (*count).into())],
-                )
+                ))
             })
             .collect()
     }
@@ -282,6 +282,7 @@ fn joined(first: &str, next: &str) -> String {
         Text::FlowFoldJoin,
         &[("first", first.into()), ("last", next.into())],
     )
+    .into()
 }
 
 /// The most characters of a flow card's name and of its line.
@@ -969,7 +970,7 @@ pub(crate) fn dot(state: FlowState, x: f64, y: f64) -> AnyView {
 
 /// The accessible name of `card`.
 fn card_name(card: &FlowCard) -> String {
-    if card.hub {
+    String::from(if card.hub {
         tr_with(
             Text::FlowHub,
             &[
@@ -986,7 +987,7 @@ fn card_name(card: &FlowCard) -> String {
                 ("status", card.state.word().into()),
             ],
         )
-    }
+    })
 }
 
 /// One card as a drawing draws it.
@@ -1195,7 +1196,7 @@ fn fold_view(folded: &Folded<'_>, place: Place) -> AnyView {
         kind: "fui-tnode-group",
         place,
         glyph: Glyph::ELLIPSIS,
-        name: tr_with(Text::FlowFoldName, &[("count", folded.count().into())]),
+        name: tr_with(Text::FlowFoldName, &[("count", folded.count().into())]).into(),
         line: first,
         state: folded.state(),
         href: folded.href.to_owned(),
@@ -1220,6 +1221,7 @@ fn fold_name(folded: &Folded<'_>) -> String {
             ("note", folded.line().into()),
         ],
     )
+    .into()
 }
 
 /// The words of a lane's fold link: unfold while `folded`, else fold.
@@ -1229,7 +1231,7 @@ fn toggle_words(folded: bool, title: &str) -> String {
     } else {
         Text::FlowFold
     };
-    tr_with(text, &[("title", title.into())])
+    tr_with(text, &[("title", title.into())]).into()
 }
 
 /// The fold link beside the title of the lane at `x`.
@@ -1281,10 +1283,11 @@ fn problems(flow: &Flow) -> String {
                 }
                 None => tr_with(Text::FlowEdge, &args),
             }
+            .into()
         })
         .collect();
     if sentences.is_empty() {
-        tr(Text::FlowSteady)
+        tr(Text::FlowSteady).into()
     } else {
         format!("{}.", sentences.join(". "))
     }
@@ -1292,7 +1295,7 @@ fn problems(flow: &Flow) -> String {
 
 /// One row of the phone's list: a link with its state as a dot and a
 /// word, its name and its line.
-fn list_row(href: String, state: FlowState, name: String, line: String) -> AnyView {
+fn list_row(href: String, state: FlowState, name: Word, line: String) -> AnyView {
     let class = format!("fui-dot {}", state.tone().class());
     let muted = state == FlowState::Off;
     let word = state.word();
@@ -1323,7 +1326,7 @@ fn list(plan: &Plan<'_>, label: &str) -> AnyView {
                     Shown::Card(card) => list_row(
                         card.href.clone(),
                         card.state,
-                        card.name.clone(),
+                        Word::new(card.name.clone()),
                         card.line.clone(),
                     ),
                     Shown::Fold(folded) => list_row(

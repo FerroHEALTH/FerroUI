@@ -25,7 +25,8 @@ use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::highlight::Language;
-use crate::i18n::{Phrase, Text, tr, tr_with};
+use crate::i18n::number::Grouping;
+use crate::i18n::{Phrase, Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::widget::editor::{Drawn, Grammar, drawn};
 
@@ -56,13 +57,15 @@ pub struct Upload {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SizeWords {
     /// One byte, whole.
-    pub one_byte: String,
+    pub one_byte: Word,
     /// A count of bytes other than one, around the open `count`.
     pub bytes: Phrase,
     /// A count of kibibytes, around the open `count`.
     pub kib: Phrase,
     /// A count of mebibytes, around the open `count`.
     pub mib: Phrase,
+    /// The mark the count is grouped by.
+    pub grouping: Grouping,
 }
 
 impl SizeWords {
@@ -75,12 +78,14 @@ impl SizeWords {
             bytes: open(Text::SizeBytes),
             kib: open(Text::SizeKib),
             mib: open(Text::SizeMib),
+            grouping: Grouping::of_page(),
         }
     }
 
-    /// `bytes` in the largest unit that keeps it above one.
+    /// `bytes` in the largest unit that keeps it above one, its count's
+    /// digits grouped as the page's language groups them.
     #[must_use]
-    pub fn size(&self, bytes: u64) -> String {
+    pub fn size(&self, bytes: u64) -> Word {
         const KIB: u64 = 1024;
         const MIB: u64 = 1024 * 1024;
         let (unit, count) = if bytes >= MIB {
@@ -92,7 +97,7 @@ impl SizeWords {
         } else {
             (&self.bytes, bytes)
         };
-        unit.fill(&[("count", &count.to_string())])
+        unit.fill(&[("count", &self.grouping.write(count))])
     }
 }
 
@@ -101,13 +106,13 @@ impl SizeWords {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UploadWords {
     /// The drop zone's words.
-    pub drop_invite: String,
+    pub drop_invite: Word,
     /// The drop zone's words while a file is over it.
-    pub drop_over: String,
+    pub drop_over: Word,
     /// The kinds of file and the limit the field takes.
-    pub rule: String,
+    pub rule: Word,
     /// The line while the console sends.
-    pub busy: String,
+    pub busy: Word,
     /// The line once a file is read, around the open `file`.
     pub read: Phrase,
     /// The line once the first of several files dropped at once is read,
@@ -192,12 +197,12 @@ pub enum Refused {
 impl Refused {
     /// The sentence the field shows for the refusal, in `words`.
     #[must_use]
-    pub fn sentence(&self, words: &UploadWords) -> String {
+    pub fn sentence(&self, words: &UploadWords) -> Word {
         match self {
             Self::Kind { name } => words.refused_kind.fill(&[("file", name)]),
             Self::Size { name, bytes } => words
                 .refused_size
-                .fill(&[("file", name), ("size", &words.sizes.size(*bytes))]),
+                .fill(&[("file", name), ("size", words.sizes.size(*bytes).text())]),
         }
     }
 }
@@ -295,7 +300,7 @@ enum Picked {
     /// The file was read into the text.
     Read(Read),
     /// The file was refused, with the sentence that says why.
-    Refused(String),
+    Refused(Word),
 }
 
 /// Returns the upload field `upload`, its text in `source`; `busy` reads
@@ -457,7 +462,7 @@ fn drop_zone(
             >
                 <span class="fui-drop-glyph">{icon(Glyph::UPLOAD, "20")}</span>
                 <p class="fui-drop-words">
-                    {move || if over.get() { release.clone() } else { invite.clone() }}
+                    {move || if over.get() { release.clone() } else { invite.clone() }.into_render()}
                 </p>
                 <label for=input_for class="fui-button fui-button-secondary fui-button-small">
                     {icon(Glyph::FOLDER_OPEN, "14")}

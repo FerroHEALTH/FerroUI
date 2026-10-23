@@ -125,7 +125,8 @@ pub fn CopyButton(
     /// The button's id.
     id: String,
     /// Its words, in the page's locale, such as "Copy".
-    label: String,
+    #[prop(into)]
+    label: crate::i18n::Word,
     /// What it copies, which the page already shows.
     source: crate::widget::copy::CopySource,
     /// The words it draws itself, in the page's locale
@@ -208,7 +209,8 @@ pub fn TabSelect(
     /// The tabs' name, in the page's locale.
     label: String,
     /// The submit button's words, in the page's locale.
-    go: String,
+    #[prop(into)]
+    go: crate::i18n::Word,
     /// Each tab's route and words, in the page's locale.
     choices: Vec<TabChoice>,
     /// The route of the current tab.
@@ -228,7 +230,8 @@ pub fn NavDrawer(
     /// The navigation's name, in the page's locale.
     label: String,
     /// The close button's words, in the page's locale.
-    close: String,
+    #[prop(into)]
+    close: crate::i18n::Word,
     /// Whether the navigation is folded to its rail of glyphs.
     rail: bool,
     /// The groups of entries, drawn on the server.
@@ -252,7 +255,8 @@ pub fn UserMenuButton(
     /// The name its button shows, or `None` for its icon alone.
     name: Option<String>,
     /// The sheet's Cancel, in the page's locale.
-    cancel: String,
+    #[prop(into)]
+    cancel: crate::i18n::Word,
     /// The head and the menu, drawn on the server.
     children: Children,
 ) -> impl IntoView {
@@ -276,7 +280,8 @@ pub fn MenuButton(
     /// What the trigger is and the words it shows.
     trigger: Trigger,
     /// The sheet's Cancel, in the page's locale.
-    cancel: String,
+    #[prop(into)]
+    cancel: crate::i18n::Word,
     /// The items or options, drawn on the server.
     children: Children,
 ) -> impl IntoView {
@@ -368,7 +373,7 @@ pub fn ChartLegend(
     entries: Vec<crate::widget::chart::LegendEntry>,
     /// What a break in a line means, in the page's locale, when the chart
     /// has one.
-    gap: Option<String>,
+    gap: Option<crate::i18n::Word>,
 ) -> impl IntoView {
     crate::widget::chart::legend(plot, label, entries, gap)
 }
@@ -460,7 +465,8 @@ pub fn PreferenceForm(
     /// The page to return to.
     back: String,
     /// The Save button's words, in the page's locale.
-    save: String,
+    #[prop(into)]
+    save: crate::i18n::Word,
     /// Whether this preference was just saved.
     saved: bool,
     /// The control, drawn on the server.

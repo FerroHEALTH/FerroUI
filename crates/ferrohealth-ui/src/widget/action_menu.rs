@@ -28,7 +28,7 @@
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::i18n::{Arg, Text, tr, tr_with};
+use crate::i18n::{Arg, Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
 
 /// The `name` every menu's `<details>` shares, so one opens at a time.
@@ -203,9 +203,9 @@ pub enum Pick {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Choice {
     /// Its words.
-    pub label: String,
+    pub label: Word,
     /// A muted second line, such as "Latest".
-    pub note: Option<String>,
+    pub note: Option<Word>,
     /// The language its words are in, when it is not the page's, such as a
     /// language named in its own (WCAG 2.2 SC 3.1.2).
     pub lang: Option<String>,
@@ -225,7 +225,7 @@ pub struct Listbox {
     pub label: String,
     /// The words the trigger shows, such as "English" or "1.1.0 (latest of
     /// 2)".
-    pub value: String,
+    pub value: Word,
     /// The choices, in order.
     pub choices: Vec<Choice>,
 }
@@ -236,7 +236,7 @@ pub enum Trigger {
     /// The title row's More button, saying `words` beside a chevron.
     More {
         /// Its words, such as "More".
-        words: String,
+        words: Word,
     },
     /// A table row's ⋯ icon button.
     Row,
@@ -245,7 +245,7 @@ pub enum Trigger {
     /// A select button showing `value`, opening a listbox.
     Select {
         /// The words of the choice in force.
-        value: String,
+        value: Word,
     },
     /// The top bar's version select showing `value`, opening a menu of
     /// `menuitemradio` choices ([`crate::widget::version`]); its name is
@@ -462,7 +462,7 @@ pub fn variants_menu(action: &str, menu: Menu) -> AnyView {
         Text::MenuVariants,
         &[("action", Arg::from(action.to_owned()))],
     );
-    placed(menu, Trigger::Variants, name)
+    placed(menu, Trigger::Variants, name.into())
 }
 
 /// Returns the select button `listbox` and its listbox (R29).
@@ -486,6 +486,7 @@ pub fn listbox(listbox: Listbox) -> AnyView {
         ],
     );
     let cancel = tr(Text::Cancel);
+    let name = String::from(name);
     view! {
         <crate::island::MenuButton id label name trigger=Trigger::Select { value } cancel>
             {options(choices)}
@@ -537,7 +538,7 @@ pub fn menu_button(
     label: String,
     name: String,
     trigger: Trigger,
-    cancel: String,
+    cancel: Word,
     entries: AnyView,
 ) -> AnyView {
     let details = NodeRef::<leptos::html::Details>::new();

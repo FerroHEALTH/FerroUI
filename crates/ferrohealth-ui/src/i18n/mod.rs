@@ -292,13 +292,13 @@ impl Locale {
     // so the lookup is not repeated in each view that draws a word.
     #[inline(never)]
     fn library(&self, id: &str, args: &[(&'static str, Arg)]) -> String {
-        self.library_word(id, args).0
+        self.library_word(id, args).text
     }
 
     /// The library's message `id` in this locale, with `args` filled in,
     /// and whether it is English drawn on a page in another language
     /// because no catalog of the page's language holds it.
-    fn library_word(&self, id: &str, args: &[(&'static str, Arg)]) -> (String, bool) {
+    fn library_word(&self, id: &str, args: &[(&'static str, Arg)]) -> Word {
         let args = fluent_args(args);
         // NOTE: no specification governs this: our own design; a message a catalog
         // lacks, or cannot format, is looked for in the next one, ending in English.
@@ -312,14 +312,17 @@ impl Locale {
                 })
             });
         if let Some(own) = own {
-            return (own, false);
+            return Word::new(own);
         }
         let fell_back = self.language.language != english().language;
         let text = CATALOG
             .lookup_single_language(&english(), id, Some(&args))
             .ok()
             .unwrap_or_else(|| missing(id));
-        (text, fell_back)
+        Word {
+            text,
+            english: fell_back,
+        }
     }
 }
 
@@ -430,16 +433,16 @@ const SHUT: char = '\u{E001}';
 /// use ferrohealth_ui::i18n::Phrase;
 ///
 /// let read = Phrase::new(format!("{} read.", Phrase::open_mark("file")));
-/// assert_eq!("notes.txt read.", read.fill(&[("file", "notes.txt")]));
+/// assert_eq!("notes.txt read.", read.fill(&[("file", "notes.txt")]).text());
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
-pub struct Phrase(String);
+pub struct Phrase(Word);
 
 impl Phrase {
     /// The phrase `resolved`, a message looked up with [`Phrase::open`] for
-    /// each placeable left to the browser.
+    /// each placeable left to the browser, keeping its language mark.
     #[must_use]
-    pub fn new(resolved: impl Into<String>) -> Self {
+    pub fn new(resolved: impl Into<Word>) -> Self {
         Self(resolved.into())
     }
 
@@ -455,11 +458,14 @@ impl Phrase {
         format!("{OPEN}{name}{SHUT}")
     }
 
-    /// The words with each open placeable named in `values` filled in.
+    /// The words with each open placeable named in `values` filled in, as
+    /// a word that keeps the phrase's language mark.
     #[must_use]
-    pub fn fill(&self, values: &[(&str, &str)]) -> String {
-        values.iter().fold(self.0.clone(), |words, (name, value)| {
-            words.replace(&Self::open_mark(name), value)
+    pub fn fill(&self, values: &[(&str, &str)]) -> Word {
+        self.0.clone().map(|words| {
+            values.iter().fold(words, |words, (name, value)| {
+                words.replace(&Self::open_mark(name), value)
+            })
         })
     }
 }
@@ -477,35 +483,225 @@ impl Text {
     }
 }
 
+/// A library word in the page's locale, and whether it is English drawn on
+/// a page in another language because no catalog of the page's language
+/// holds it.
+///
+/// Drawn as a text node, a word that fell back is wrapped in
+/// `<span lang="en">` so a screen reader speaks it as English (WCAG 2.2 SC
+/// 3.1.2). An island takes its words as `Word`s resolved on the server, so
+/// it draws the same mark. A word written into an attribute (an accessible
+/// name, a title, a placeholder) carries the language of the page: an
+/// attribute value has no language of its own in HTML. A word joined into
+/// a longer sentence, or into a chart's drawn text, takes the sentence's
+/// language.
+#[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+#[serde(from = "WordWire", into = "WordWire")]
+pub struct Word {
+    text: String,
+    english: bool,
+}
+
+/// A word as an island's props carry it: a word in the page's language as
+/// a plain string, so a page in English carries what it always did, and a
+/// word that fell back as `{"en": text}`.
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(untagged)]
+enum WordWire {
+    /// A word in the page's language.
+    Page(String),
+    /// English on a page in another language.
+    English {
+        /// The word's text.
+        en: String,
+    },
+}
+
+impl From<WordWire> for Word {
+    fn from(wire: WordWire) -> Self {
+        match wire {
+            WordWire::Page(text) => Self::new(text),
+            WordWire::English { en } => Self::english(en),
+        }
+    }
+}
+
+impl From<Word> for WordWire {
+    fn from(word: Word) -> Self {
+        if word.english {
+            Self::English { en: word.text }
+        } else {
+            Self::Page(word.text)
+        }
+    }
+}
+
+impl Word {
+    /// The word `text`, in the page's language.
+    #[must_use]
+    pub fn new(text: impl Into<String>) -> Self {
+        Self {
+            text: text.into(),
+            english: false,
+        }
+    }
+
+    /// The word `text`, English drawn on a page in another language.
+    #[must_use]
+    pub fn english(text: impl Into<String>) -> Self {
+        Self {
+            text: text.into(),
+            english: true,
+        }
+    }
+
+    /// The word's text.
+    #[must_use]
+    pub fn text(&self) -> &str {
+        &self.text
+    }
+
+    /// Whether the word holds no text.
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
+        self.text.is_empty()
+    }
+
+    /// Whether the word is English on a page in another language.
+    #[must_use]
+    pub const fn fell_back(&self) -> bool {
+        self.english
+    }
+
+    /// The `lang` an element whose whole text is this word carries: `en`
+    /// when it fell back, for an element that holds text alone, such as an
+    /// `<option>`.
+    #[must_use]
+    pub const fn lang(&self) -> Option<&'static str> {
+        if self.english { Some("en") } else { None }
+    }
+
+    /// The word with its text changed by `change`, keeping its language
+    /// mark, such as a word with a colon after it.
+    #[must_use]
+    pub fn map(self, change: impl FnOnce(String) -> String) -> Self {
+        Self {
+            text: change(self.text),
+            english: self.english,
+        }
+    }
+}
+
+impl From<String> for Word {
+    fn from(text: String) -> Self {
+        Self::new(text)
+    }
+}
+
+impl From<&str> for Word {
+    fn from(text: &str) -> Self {
+        Self::new(text)
+    }
+}
+
+impl From<&String> for Word {
+    fn from(text: &String) -> Self {
+        Self::new(text.as_str())
+    }
+}
+
+impl From<Cow<'static, str>> for Word {
+    fn from(text: Cow<'static, str>) -> Self {
+        Self::new(text)
+    }
+}
+
+impl From<&Self> for Word {
+    fn from(word: &Self) -> Self {
+        word.clone()
+    }
+}
+
+impl From<Word> for String {
+    fn from(word: Word) -> Self {
+        word.text
+    }
+}
+
+impl PartialEq<str> for Word {
+    fn eq(&self, other: &str) -> bool {
+        self.text == other
+    }
+}
+
+impl PartialEq<&str> for Word {
+    fn eq(&self, other: &&str) -> bool {
+        self.text == *other
+    }
+}
+
+impl PartialEq<Word> for &str {
+    fn eq(&self, other: &Word) -> bool {
+        *self == other.text
+    }
+}
+
+impl PartialEq<Word> for str {
+    fn eq(&self, other: &Word) -> bool {
+        self == other.text
+    }
+}
+
+impl PartialEq<Word> for String {
+    fn eq(&self, other: &Word) -> bool {
+        *self == other.text
+    }
+}
+
+// NOTE: the HTML standard, "The lang and xml:lang attributes": an attribute takes the
+// language of its element, so a word written into one carries the page's language.
+impl IntoAttributeValue for Word {
+    type Output = String;
+
+    fn into_attribute_value(self) -> String {
+        self.text
+    }
+}
+
+impl From<Word> for Arg {
+    fn from(word: Word) -> Self {
+        Self::Text(word.text)
+    }
+}
+
+impl IntoRender for Word {
+    type Output = AnyView;
+
+    fn into_render(self) -> AnyView {
+        if self.english {
+            view! { <span lang="en">{self.text}</span> }.into_any()
+        } else {
+            self.text.into_any()
+        }
+    }
+}
+
 /// The library's message `text` in the page's locale.
 #[inline(never)]
-pub(crate) fn tr(text: Text) -> String {
-    locale().library(text.id(), &[])
+pub(crate) fn tr(text: Text) -> Word {
+    locale().library_word(text.id(), &[])
 }
 
 /// The library's message `text` in the page's locale, with `args` filled in.
 #[inline(never)]
-pub(crate) fn tr_with(text: Text, args: &[(&'static str, Arg)]) -> String {
-    locale().library(text.id(), args)
+pub(crate) fn tr_with(text: Text, args: &[(&'static str, Arg)]) -> Word {
+    locale().library_word(text.id(), args)
 }
 
 impl Locale {
     /// The library's message `text` in this locale.
     pub(crate) fn text(&self, text: Text) -> String {
         self.library(text.id(), &[])
-    }
-}
-
-/// The library's message `text` in the page's locale with `args` filled in,
-/// drawn as text, inside `<span lang="en">` when it is English on a page in
-/// another language because no catalog of the page's language holds it
-/// (WCAG 2.2 SC 3.1.2).
-pub(crate) fn tr_word(text: Text, args: &[(&'static str, Arg)]) -> AnyView {
-    let (words, fell_back) = locale().library_word(text.id(), args);
-    if fell_back {
-        view! { <span lang="en">{words}</span> }.into_any()
-    } else {
-        words.into_any()
     }
 }
 

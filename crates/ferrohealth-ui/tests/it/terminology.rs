@@ -617,8 +617,13 @@ fn every_relationship_is_a_word_with_its_arrow() {
     ] {
         let words = Owner::new().with(|| each.words());
         assert!(
-            !words.is_empty() && words.chars().all(|c| !c.is_ascii_uppercase() || c == 'I'),
-            "{each:?} reads as words: {words}"
+            !words.is_empty()
+                && words
+                    .text()
+                    .chars()
+                    .all(|c| !c.is_ascii_uppercase() || c == 'I'),
+            "{each:?} reads as words: {}",
+            words.text()
         );
     }
 }

@@ -35,7 +35,8 @@
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::i18n::{Phrase, Text, tr, tr_with};
+use crate::i18n::number::Grouping;
+use crate::i18n::{Phrase, Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::view::button::Variant;
 use crate::view::tag::Tag;
@@ -221,13 +222,13 @@ pub fn ticked(reveal: Reveal) -> Reveal {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct IdentifierWords {
     /// The Reveal button.
-    pub reveal: String,
+    pub reveal: Word,
     /// The busy Reveal button.
-    pub revealing: String,
+    pub revealing: Word,
     /// The Hide button.
-    pub hide: String,
+    pub hide: Word,
     /// The Copy button.
-    pub copy: String,
+    pub copy: Word,
     /// The copy button's own words.
     pub copied: CopyWords,
     /// The hidden words a mask is heard as, around the open `value`.
@@ -239,13 +240,15 @@ pub struct IdentifierWords {
     /// The live region once revealed, around the open `count`.
     pub revealed_said: Phrase,
     /// The live region at [`ANNOUNCE_AT`] seconds.
-    pub left_said: String,
+    pub left_said: Word,
     /// The live region once hidden again.
-    pub hidden_said: String,
+    pub hidden_said: Word,
     /// The note once hidden again.
-    pub expired: String,
+    pub expired: Word,
     /// The refusal line, around the open `why`.
     pub refused: Phrase,
+    /// The mark the countdown's seconds are grouped by.
+    pub grouping: Grouping,
 }
 
 impl IdentifierWords {
@@ -281,6 +284,7 @@ impl IdentifierWords {
                 Text::IdentifierRefused,
                 &[("why", Phrase::open("why"))],
             )),
+            grouping: Grouping::of_page(),
         }
     }
 }
@@ -307,7 +311,7 @@ pub struct Identifier {
 }
 
 /// Returns the hidden words that name a mask and the mask itself.
-fn mask(masked: &Masked, words: &str) -> AnyView {
+fn mask(masked: &Masked, words: &Word) -> AnyView {
     // NOTE: WAI-ARIA 1.2, `generic`: naming is prohibited on a span, so the mask is
     // hidden and its words are visually hidden text beside it.
     view! {
@@ -318,14 +322,14 @@ fn mask(masked: &Masked, words: &str) -> AnyView {
                 </span>
                 {masked.tail.clone()}
             </span>
-            <span class="fui-sr-only">{words.to_owned()}</span>
+            <span class="fui-sr-only">{words.clone()}</span>
         </span>
     }
     .into_any()
 }
 
 /// Returns the words a mask is heard as.
-fn masked_words(masked: &Masked) -> String {
+fn masked_words(masked: &Masked) -> Word {
     tr_with(
         Text::IdentifierMasked,
         &[("value", masked.tail.clone().into())],
@@ -418,17 +422,17 @@ pub fn identifier(identifier: Identifier, on_reveal: Callback<()>) -> AnyView {
         hidden_said,
         expired,
         refused,
+        grouping,
     } = words;
+    let grouping = StoredValue::new(grouping);
     let shown = move || matches!(state.get(), Reveal::Shown(_));
-    let said = Memo::new(move |_| match state.get() {
-        Reveal::Shown(revealed) if revealed.seconds <= ANNOUNCE_AT => left_said.clone(),
-        Reveal::Shown(revealed) => {
-            let seconds = total.get_value().max(revealed.seconds).to_string();
-            revealed_said.fill(&[("count", &seconds)])
-        }
-        Reveal::Expired => hidden_said.clone(),
-        Reveal::Masked | Reveal::Busy | Reveal::Refused(_) => String::new(),
-    });
+    let said = said(
+        state,
+        total,
+        grouping,
+        [left_said, hidden_said],
+        revealed_said,
+    );
     let refusal = move || match state.get() {
         Reveal::Refused(why) => Some(refused.fill(&[("why", &why)])),
         _ => None,
@@ -441,6 +445,7 @@ pub fn identifier(identifier: Identifier, on_reveal: Callback<()>) -> AnyView {
         copy_id: format!("{id}-copy"),
         copy,
         copied,
+        grouping,
     };
     view! {
         <span
@@ -473,7 +478,7 @@ pub fn identifier(identifier: Identifier, on_reveal: Callback<()>) -> AnyView {
                 {revealed_face(state, total, shown_words, focus.hide)}
             </span>
             <span class="fui-sr-only" role="status">
-                {move || said.get()}
+                {move || said.get().into_render()}
             </span>
             {move || {
                 refusal()
@@ -491,6 +496,28 @@ pub fn identifier(identifier: Identifier, on_reveal: Callback<()>) -> AnyView {
     .into_any()
 }
 
+/// What the live region says in `state`: `left` at [`ANNOUNCE_AT`]
+/// seconds and `hidden` once hidden again, and `revealed` around the seconds
+/// shown, grouped by `grouping`.
+fn said(
+    state: RwSignal<Reveal>,
+    total: StoredValue<u32>,
+    grouping: StoredValue<Grouping>,
+    [left, hidden]: [Word; 2],
+    revealed: Phrase,
+) -> Memo<Word> {
+    Memo::new(move |_| match state.get() {
+        Reveal::Shown(shown) if shown.seconds <= ANNOUNCE_AT => left.clone(),
+        Reveal::Shown(shown) => {
+            let seconds = total.get_value().max(shown.seconds);
+            let seconds = grouping.with_value(|grouping| grouping.write(u64::from(seconds)));
+            revealed.fill(&[("count", &seconds)])
+        }
+        Reveal::Expired => hidden.clone(),
+        Reveal::Masked | Reveal::Busy | Reveal::Refused(_) => Word::default(),
+    })
+}
+
 /// Returns the Reveal button and its busy twin, which share one place, shown
 /// once the page has hydrated.
 ///
@@ -500,8 +527,8 @@ pub fn identifier(identifier: Identifier, on_reveal: Callback<()>) -> AnyView {
 fn reveal_press(
     state: RwSignal<Reveal>,
     on_reveal: Callback<()>,
-    reveal: String,
-    revealing: String,
+    reveal: Word,
+    revealing: Word,
     hydrated: RwSignal<bool>,
     focus: Focus,
 ) -> AnyView {
@@ -544,17 +571,19 @@ fn reveal_press(
 /// The words of the revealed face.
 struct ShownWords {
     /// The hidden words before the value.
-    revealed: String,
+    revealed: Word,
     /// The visible countdown, around the open `count`.
     countdown: Phrase,
     /// The Hide button.
-    hide: String,
+    hide: Word,
     /// The copy button's id.
     copy_id: String,
     /// The Copy button.
-    copy: String,
+    copy: Word,
     /// The copy button's own words.
     copied: CopyWords,
+    /// The mark the countdown's seconds are grouped by.
+    grouping: StoredValue<Grouping>,
 }
 
 /// Returns the revealed face of the slot: the value with its countdown,
@@ -572,6 +601,7 @@ fn revealed_face(
         copy_id,
         copy,
         copied,
+        grouping,
     } = words;
     let shown = move || matches!(state.get(), Reveal::Shown(_));
     let value = move || match state.get() {
@@ -603,7 +633,10 @@ fn revealed_face(
                             stroke-dashoffset=move || ring_offset(left(), total.get_value())
                         ></circle>
                     </svg>
-                    {move || countdown.fill(&[("count", &left().to_string())])}
+                    {move || {
+                        let count = grouping.with_value(|grouping| grouping.write(u64::from(left())));
+                        countdown.fill(&[("count", &count)]).into_render()
+                    }}
                 </span>
             </span>
             <span class="fui-identifier-tools">

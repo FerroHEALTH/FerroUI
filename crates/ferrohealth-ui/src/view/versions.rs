@@ -18,7 +18,7 @@
 
 use leptos::prelude::*;
 
-use crate::i18n::{Arg, Text, tr, tr_with};
+use crate::i18n::{Arg, Text, Word, tr, tr_with};
 use crate::table::view::{Body, Column, DataTable, Role, cell, data_table, title_cell};
 use crate::tone::Tone;
 use crate::view::button::Variant;
@@ -89,7 +89,7 @@ pub struct VersionHistory {
 /// The label of the At a time field, for the [`AtTime::field`] a console
 /// builds.
 #[must_use]
-pub fn at_time_label() -> String {
+pub fn at_time_label() -> Word {
     tr(Text::VersionsAtTime)
 }
 

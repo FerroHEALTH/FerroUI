@@ -36,7 +36,7 @@
 
 use leptos::prelude::*;
 
-use crate::i18n::{Text, tr, tr_with};
+use crate::i18n::{Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::tone::Tone;
 
@@ -64,7 +64,7 @@ impl Compartment {
 
     /// The compartment in words, in the page's locale.
     #[must_use]
-    pub fn words(self) -> String {
+    pub fn words(self) -> Word {
         tr(match self {
             Self::Patient => Text::ScopePatient,
             Self::User => Text::ScopeUser,
@@ -112,7 +112,7 @@ impl Operation {
 
     /// The operation in words, in the page's locale.
     #[must_use]
-    pub fn words(self) -> String {
+    pub fn words(self) -> Word {
         tr(match self {
             Self::Create => Text::ScopeCreate,
             Self::Read => Text::ScopeRead,
@@ -181,7 +181,7 @@ pub enum ScopeError {
 impl ScopeError {
     /// What the grammar expected, in the page's locale.
     #[must_use]
-    pub fn expected(self) -> String {
+    pub fn expected(self) -> Word {
         tr(match self {
             Self::Compartment => Text::ScopeExpectedCompartment,
             Self::Resource => Text::ScopeExpectedResource,
@@ -327,7 +327,7 @@ impl Request {
 
     /// What the scope asks for, in the page's locale.
     #[must_use]
-    pub fn words(&self) -> String {
+    pub fn words(&self) -> Word {
         match self {
             Self::OpenId => tr(Text::ScopeOpenid),
             Self::FhirUser => tr(Text::ScopeFhirUser),
@@ -372,7 +372,7 @@ pub enum Grant {
     /// A scope the console refuses: why, in one sentence, such as what the
     /// grammar expected ([`ScopeError::expected`]) or what the server
     /// takes instead.
-    Refused(String),
+    Refused(Word),
 }
 
 /// One scope as the grant list shows it.
@@ -454,7 +454,7 @@ fn operation(operation: Operation, permitted: bool) -> AnyView {
         view! {
             <del class="fui-scope-op">
                 {words}
-                <span class="fui-sr-only">{format!(", {}", tr(Text::ScopeNotPermitted))}</span>
+                <span class="fui-sr-only">{tr(Text::ScopeNotPermitted).map(|words| format!(", {words}"))}</span>
             </del>
         }
         .into_any()
@@ -474,7 +474,10 @@ fn grant_view(grant: ScopeGrant) -> AnyView {
                 .into_iter()
                 .map(|each| operation(each, scope.operations.permits(each)))
                 .collect_view();
-            let reads = format!("{} · {resource}", scope.compartment.words());
+            let reads = scope
+                .compartment
+                .words()
+                .map(|words| format!("{words} · {resource}"));
             let constraint = scope.constraint.map(|constraint| {
                 view! {
                     <span class="fui-scope-constraint">

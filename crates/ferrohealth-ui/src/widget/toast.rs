@@ -31,7 +31,7 @@
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::i18n::{Text, tr};
+use crate::i18n::{Text, Word, tr};
 use crate::icon::{Glyph, icon};
 use crate::tone::Tone;
 use crate::view::button::Variant;
@@ -142,9 +142,9 @@ impl From<Flash> for Toast {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RegionWords {
     /// The region's name.
-    pub region: String,
+    pub region: Word,
     /// The Dismiss button's name.
-    pub dismiss: String,
+    pub dismiss: Word,
 }
 
 impl RegionWords {
@@ -370,7 +370,7 @@ pub fn toast_region(words: RegionWords, flash: Vec<Flash>) -> impl IntoView {
 /// `close`, shown once the page has `hydrated`.
 fn toast_view(
     shown: Shown,
-    dismiss: String,
+    dismiss: Word,
     close: impl Fn(u32) + Clone + Send + Sync + 'static,
     hydrated: RwSignal<bool>,
 ) -> AnyView {

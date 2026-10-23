@@ -16,7 +16,7 @@
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::i18n::{Text, tr};
+use crate::i18n::{Text, Word, tr};
 use crate::view::form::{SWITCH, help_id};
 
 /// The help switch's words, resolved on the server in the page's locale, so
@@ -24,7 +24,7 @@ use crate::view::form::{SWITCH, help_id};
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HelpWords {
     /// The switch's label, such as "Explain these parameters".
-    pub label: String,
+    pub label: Word,
 }
 
 impl HelpWords {

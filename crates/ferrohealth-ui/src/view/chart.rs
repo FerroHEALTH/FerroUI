@@ -25,7 +25,7 @@
 use leptos::prelude::*;
 
 use crate::highlight::escape;
-use crate::i18n::{Phrase, Text, tr, tr_with};
+use crate::i18n::{Phrase, Text, Word, tr, tr_with};
 
 /// The number of colours a series can take: the role tones below, so a
 /// colour means what it means elsewhere and follows the brand's accent.
@@ -805,9 +805,9 @@ pub(crate) fn line_svg_grouped(chart: &LineChart, shown: &[bool]) -> String {
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct FiguresWords {
     /// A cell with no value.
-    pub no_value: String,
+    pub no_value: Word,
     /// The head of the X column.
-    pub x: String,
+    pub x: Word,
     /// The caption, around the open `chart`, the chart's name.
     pub caption: Phrase,
 }
@@ -881,7 +881,7 @@ pub fn figures(chart: &LineChart, words: FiguresWords) -> impl IntoView + use<> 
                     let value = points
                         .get(points.partition_point(|point| point.0 < at - 1e-9))
                         .filter(|point| near(point.0))
-                        .map_or_else(|| no_value.clone(), |point| value_label(point.1));
+                        .map_or_else(|| no_value.clone(), |point| value_label(point.1).into());
                     view! { <td>{value}</td> }
                 })
                 .collect_view();

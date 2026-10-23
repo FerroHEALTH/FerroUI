@@ -43,7 +43,7 @@ use std::collections::BTreeSet;
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::i18n::{Phrase, Text, tr, tr_with};
+use crate::i18n::{Phrase, Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
 
 /// The children of an item.
@@ -70,9 +70,9 @@ pub enum Children {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct More {
     /// The sentence that counts the children shown.
-    pub words: String,
+    pub words: Word,
     /// The link's words.
-    pub link: String,
+    pub link: Word,
     /// The page with the next children read.
     pub href: String,
 }
@@ -362,11 +362,11 @@ pub struct TreeWords {
     /// The name of a toggle that closes an item, around its `label`.
     pub collapse: Phrase,
     /// An inactive concept's mark.
-    pub inactive: String,
+    pub inactive: Word,
     /// The loading row of a level being read.
-    pub reading: String,
+    pub reading: Word,
     /// What a removed item says to assistive technology.
-    pub removed: String,
+    pub removed: Word,
     /// The name of the rename field, around the item's `label`.
     pub rename_field: Phrase,
     /// The name of [`Edit::AddFolder`], around the item's `label`.
@@ -405,7 +405,7 @@ impl TreeWords {
     }
 
     /// The name of the action `edit` on the item `node`.
-    fn edit(&self, edit: Edit, node: &TreeNode) -> String {
+    fn edit(&self, edit: Edit, node: &TreeNode) -> Word {
         let phrase = match edit {
             Edit::AddFolder => &self.add_folder,
             Edit::AddReference => &self.add_reference,
@@ -829,7 +829,7 @@ fn toggle(
                 } else {
                     &words.expand
                 };
-                phrase.fill(&[("label", &label)])
+                String::from(phrase.fill(&[("label", &label)]))
             })
         }
     };

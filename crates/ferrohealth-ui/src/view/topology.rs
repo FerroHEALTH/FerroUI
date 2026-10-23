@@ -29,7 +29,7 @@
 
 use leptos::prelude::*;
 
-use crate::i18n::{Arg, Text, tr, tr_with};
+use crate::i18n::{Arg, Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::view::button::Variant;
 use crate::view::flow::{
@@ -524,7 +524,7 @@ fn edge(edge: Edge<'_>, on_path: bool) -> AnyView {
 
 /// The accessible name of `card`, the hub's without a state.
 fn card_name(card: &TopologyCard, hub: bool) -> String {
-    if hub {
+    String::from(if hub {
         tr_with(
             Text::FlowHub,
             &[
@@ -541,7 +541,7 @@ fn card_name(card: &TopologyCard, hub: bool) -> String {
                 ("status", card.state.word().into()),
             ],
         )
-    }
+    })
 }
 
 /// The controls at a card's end: its quick look, and a group's collapse.
@@ -666,7 +666,7 @@ fn problems(topology: &Topology) -> String {
             }
             None => Text::FlowEdge,
         };
-        sentences.push(tr_with(text, &args));
+        sentences.push(String::from(tr_with(text, &args)));
     };
     for side in [&topology.start, &topology.end].into_iter().flatten() {
         for group in &side.groups {
@@ -679,11 +679,11 @@ fn problems(topology: &Topology) -> String {
         }
     }
     let lead = if sentences.is_empty() {
-        tr(Text::FlowSteady)
+        tr(Text::FlowSteady).into()
     } else {
         format!("{}.", sentences.join(". "))
     };
-    format!("{lead} {}", tr(Text::TopologyMapList))
+    format!("{lead} {}", tr(Text::TopologyMapList).text())
 }
 
 /// The minimap of `layout`: a rectangle per card in its tone, and the
@@ -736,9 +736,9 @@ fn minimap(layout: &Layout<'_>) -> AnyView {
 
 /// One icon button of the zoom cluster with its tooltip above it, waiting
 /// for the page's script while `waits`.
-fn cluster_button(glyph: Glyph, words: String, zoom: &'static str, wait: &str) -> AnyView {
+fn cluster_button(glyph: Glyph, words: Word, zoom: &'static str, wait: &Word) -> AnyView {
     let tip = words.clone();
-    let why = wait.to_owned();
+    let why = wait.clone();
     view! {
         <span class="fui-anchor">
             <button
@@ -760,7 +760,7 @@ fn cluster_button(glyph: Glyph, words: String, zoom: &'static str, wait: &str) -
 }
 
 /// One link of the zoom cluster that the server answers, pressed while on.
-fn cluster_link(glyph: Glyph, words: String, link: ClusterLink) -> AnyView {
+fn cluster_link(glyph: Glyph, words: Word, link: ClusterLink) -> AnyView {
     let tip = words.clone();
     view! {
         <span class="fui-anchor">

@@ -140,7 +140,7 @@ pub fn tab_list(label: String, prefix: String, tabs: Vec<String>, panels: AnyVie
 #[must_use]
 pub fn tab_select(
     label: String,
-    go_words: String,
+    go_words: crate::i18n::Word,
     choices: Vec<crate::view::tabs::TabChoice>,
     chosen: &str,
 ) -> AnyView {
@@ -151,9 +151,10 @@ pub fn tab_select(
         .into_iter()
         .map(|choice| {
             let selected = choice.href == chosen;
+            let lang = choice.words.lang();
             view! {
-                <option value=choice.href selected=selected>
-                    {choice.words}
+                <option value=choice.href selected=selected lang=lang>
+                    {String::from(choice.words)}
                 </option>
             }
         })

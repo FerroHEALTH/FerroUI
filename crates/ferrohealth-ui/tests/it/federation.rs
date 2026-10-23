@@ -6,6 +6,7 @@
 //! (F9). Each state is a shape, a colour and a word (family rule 12), every
 //! action is a link or a form, and nothing writes a style attribute.
 
+use ferrohealth_ui::i18n::Word;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::fanout::{Answer, Fanout, FanoutNode, Verdict, fanout};
@@ -126,7 +127,7 @@ fn a_reference_page_draws_the_replica_line_under_its_header() {
     let page = html(|| {
         settings_page(SettingsPage {
             header: Header {
-                title: String::from("Self-description"),
+                title: Word::from("Self-description"),
                 ..Header::default()
             },
             actions: ActionGroup::none(),

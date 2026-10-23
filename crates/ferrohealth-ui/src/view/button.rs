@@ -11,7 +11,7 @@
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::i18n::{Text, tr};
+use crate::i18n::{Text, Word, tr};
 use crate::icon::{Glyph, icon};
 
 /// What a button is for, which sets how much it stands out.
@@ -69,7 +69,7 @@ impl Variant {
 
     /// The variant's name in the page's locale, as the gallery labels it.
     #[must_use]
-    pub fn name(self) -> String {
+    pub fn name(self) -> Word {
         tr(match self {
             Self::Primary => Text::VariantPrimary,
             Self::Secondary => Text::VariantSecondary,
@@ -83,8 +83,8 @@ impl Variant {
 /// Returns the inside of a button: the icon `glyph`, when there is one,
 /// beside the word `label`.
 #[must_use]
-pub fn label<L: Into<Oco<'static, str>>>(glyph: Option<Glyph>, label: L) -> impl IntoView + use<L> {
-    let label = label.into();
+pub fn label<L: Into<Word>>(glyph: Option<Glyph>, label: L) -> impl IntoView + use<L> {
+    let label: Word = label.into();
     view! {
         {glyph.map(|glyph| icon(glyph, "16"))}
         {label}

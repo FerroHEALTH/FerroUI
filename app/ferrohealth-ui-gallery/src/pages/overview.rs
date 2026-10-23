@@ -120,7 +120,7 @@ fn stats() -> AnyView {
             label: tr(Msg::Members).into(),
             href: brand_page("tables"),
         },
-        badge(Tone::Bad, &tr(Msg::N1Failing)),
+        badge(Tone::Bad, tr(Msg::N1Failing)),
     );
     let pending = stat_card_marked(
         Stat {
@@ -475,7 +475,7 @@ pub(crate) fn format_segments(words: &Words, others: AnyView) -> AnyView {
             {others}
         })}
         <p class="fui-muted">
-            {move || Phrase::new(shown.clone()).fill(&[("format", &format.get().to_uppercase())])}
+            {move || String::from(Phrase::new(shown.clone()).fill(&[("format", &format.get().to_uppercase())]))}
         </p>
     }
     .into_any()
@@ -498,7 +498,7 @@ fn segments() -> AnyView {
         prefix: Some((Glyph::LAYERS, tr(Msg::Fhir).into())),
         choices: [tr(Msg::R4), tr(Msg::R4b), tr(Msg::R5), tr(Msg::R6)]
             .into_iter()
-            .map(|version| (version.to_lowercase(), version))
+            .map(|version| (version.to_lowercase(), version.into()))
             .collect(),
         current: String::from("r4"),
         action: String::from("#segments"),

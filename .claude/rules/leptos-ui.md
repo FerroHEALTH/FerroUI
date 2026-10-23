@@ -94,7 +94,11 @@ parts:
 Every widget takes the words it draws as props (§15.4): a `*Words` struct
 whose `of_page()` resolves them on the server, and an `i18n::Phrase` for a
 sentence around a value the browser learns, so a console's browser entry
-builds no locale and its bundle carries no catalog.
+builds no locale and its bundle carries no catalog. A word is an
+`i18n::Word`, drawn inside `<span lang="en">` when it fell back to English
+on a page in another language (WCAG 2.2 SC 3.1.2); a word in an attribute
+takes the page's language. A count an island learns is written with the
+page's `i18n::number::Grouping`, carried in its words.
 
 ## 2. Render-mode agnostic
 
@@ -387,7 +391,8 @@ the lookup order: our own design; the message syntax is Project Fluent's.
   (`view::preferences::language_select`).
 - **A console hands a component its words made at run time.** Every
   label, title, legend, placeholder and noun a component takes accepts a
-  `String` from the console's catalog. Words a component must look up as
+  `String` from the console's catalog (a `Word` field takes one with
+  `.into()`). Words a component must look up as
   it draws are an `i18n::Message` of the console's catalog: a listing's
   noun selects its form by `$count` (CLDR plural categories, so the library
   holds no plural rule) and carries `.empty` and `.opening` as whole

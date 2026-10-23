@@ -6,7 +6,7 @@
 //! behind its confirmation.
 
 use ferrohealth_ui::calendar::Weekday;
-use ferrohealth_ui::i18n::Locale;
+use ferrohealth_ui::i18n::{Locale, Word};
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::theme::{Density, Hints, Language, Motion, Preferences, Theme, WeekStart};
 use ferrohealth_ui::view::preferences::{
@@ -296,16 +296,16 @@ fn a_console_s_own_rows_follow_the_library_s_in_their_tab() {
         let reveal = select_preference(SelectPreference {
             name: String::from("reveal"),
             choices: vec![
-                (String::from("10"), String::from("10 seconds")),
-                (String::from("15"), String::from("15 seconds")),
+                (String::from("10"), Word::from("10 seconds")),
+                (String::from("15"), Word::from("15 seconds")),
             ],
             current: String::from("15"),
             post,
             saved: false,
         });
         let own = preference_row(PreferenceRow {
-            label: String::from("Revealed identifiers stay for <b>"),
-            description: String::from("The server caps every reveal."),
+            label: Word::from("Revealed identifiers stay for <b>"),
+            description: Word::from("The server caps every reveal."),
             control_id: Some(String::from("reveal")),
             control: reveal,
             saved: false,
@@ -383,7 +383,7 @@ fn a_select_preference_alone_posts_its_name_and_value() {
     let shown = page_html(|| {
         select_preference(SelectPreference {
             name: String::from("hide"),
-            choices: vec![(String::from("on"), String::from("On"))],
+            choices: vec![(String::from("on"), Word::from("On"))],
             current: String::from("on"),
             post: Post {
                 action: String::from("/preference"),

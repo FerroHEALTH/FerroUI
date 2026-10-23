@@ -18,7 +18,7 @@
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::i18n::{Text, tr};
+use crate::i18n::{Text, Word, tr};
 use crate::view::chart::{
     FiguresWords, LineChart, figures, has_gaps, line_svg_grouped, mark_path, series_look,
 };
@@ -28,9 +28,9 @@ use crate::view::chart::{
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ChartWords {
     /// The legend's note on a gap in a line.
-    pub no_value: String,
+    pub no_value: Word,
     /// The legend's name.
-    pub series: String,
+    pub series: Word,
     /// The figures table's words.
     pub figures: FiguresWords,
 }
@@ -103,7 +103,7 @@ pub fn line_chart(chart: &LineChart, words: ChartWords) -> AnyView {
     view! {
         <figure class="fui-chart">
             <div class="fui-chart-plot" id=plot inner_html=drawn></div>
-            <crate::island::ChartLegend plot=target label entries gap />
+            <crate::island::ChartLegend plot=target label=String::from(label) entries gap />
             {table}
         </figure>
     }
@@ -183,7 +183,7 @@ pub fn legend(
     plot: String,
     label: String,
     entries: Vec<LegendEntry>,
-    gap: Option<String>,
+    gap: Option<Word>,
 ) -> AnyView {
     let count = entries.len();
     let shown = RwSignal::new(vec![true; count]);

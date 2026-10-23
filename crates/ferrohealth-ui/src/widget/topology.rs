@@ -389,10 +389,20 @@ mod browser {
         });
         let percent = format!("{:.0}", shown * 100.0);
         if let Some(readout) = root.query_selector("[data-zoom-readout]").ok().flatten() {
-            readout.set_text_content(Some(&words.readout.fill(&[("value", &percent)])));
-            if readout
-                .set_attribute("aria-label", &words.level.fill(&[("value", &percent)]))
-                .is_err()
+            let said = words.readout.fill(&[("value", &percent)]);
+            readout.set_text_content(Some(said.text()));
+            let lang = if said.fell_back() {
+                readout.set_attribute("lang", "en")
+            } else {
+                readout.remove_attribute("lang")
+            };
+            if lang.is_err()
+                || readout
+                    .set_attribute(
+                        "aria-label",
+                        words.level.fill(&[("value", &percent)]).text(),
+                    )
+                    .is_err()
             {
                 leptos::logging::warn!("the topology could not name its zoom");
             }
