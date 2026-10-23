@@ -8,13 +8,14 @@
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::theme::Theme;
 use ferrohealth_ui::tone::Tone;
+use ferrohealth_ui::view::flow::FlowState;
 use ferrohealth_ui::view::shell::{TopBar, lockup, lockup_plain, mark, topbar};
 use ferrohealth_ui::view::sign_in::{
     Basic, NOTICE_ID, Notice, Provider, Retry, SignIn, State, sign_in,
 };
 use ferrohealth_ui::view::status::{Reach, StatusPill, badge, banner, pill, status, status_pill};
 use ferrohealth_ui::widget::menu::{Choice, Choices, ThemeChoice, UserMenu, user_menu};
-use ferrohealth_ui::widget::nav::{Count, Entry, Group, Rail, Sidebar, sidebar};
+use ferrohealth_ui::widget::nav::{Count, Entry, Group, Nest, NestItem, Rail, Sidebar, sidebar};
 use leptos::prelude::*;
 
 use crate::markup::{has, tags};
@@ -163,7 +164,7 @@ fn navigation(rail: Option<Rail>) -> String {
                 title: "Pages".into(),
                 entries: vec![
                     Entry {
-                        href: "/files",
+                        href: "/files".into(),
                         label: "Files".into(),
                         glyph: Glyph::DATABASE,
                         exact: false,
@@ -173,7 +174,7 @@ fn navigation(rail: Option<Rail>) -> String {
                         }),
                     },
                     Entry {
-                        href: "/routes",
+                        href: "/routes".into(),
                         label: "Routes".into(),
                         glyph: Glyph::ROUTE,
                         exact: false,
@@ -182,7 +183,7 @@ fn navigation(rail: Option<Rail>) -> String {
                         }),
                     },
                     Entry {
-                        href: "/about",
+                        href: "/about".into(),
                         label: "About".into(),
                         glyph: Glyph::INFO,
                         exact: true,
@@ -288,7 +289,7 @@ fn a_count_past_99_shows_whole_and_short_for_the_rail() {
                 id: "nav-pages",
                 title: "Pages".into(),
                 entries: vec![Entry {
-                    href: "/files",
+                    href: "/files".into(),
                     label: "Files".into(),
                     glyph: Glyph::DATABASE,
                     exact: false,
@@ -311,6 +312,51 @@ fn a_count_past_99_shows_whole_and_short_for_the_rail() {
         has(&page, "span", &[("class", "fui-nav-count is-long")]),
         "{page}"
     );
+}
+
+#[test]
+fn an_entry_and_its_nested_section_take_a_base_path_learnt_at_run_time() {
+    // Shell edge audit, row 29: a console mounted under a base path it reads from its configuration.
+    let base = String::from("/console");
+    let files = format!("{base}/files");
+    let page = page_html(|| {
+        sidebar(Sidebar {
+            id: "sidebar",
+            label: String::from("Pages"),
+            groups: vec![Group {
+                id: "nav-pages",
+                title: "Pages".into(),
+                entries: vec![Entry {
+                    href: files.clone().into(),
+                    label: "Files".into(),
+                    glyph: Glyph::DATABASE,
+                    exact: false,
+                    count: None,
+                }],
+            }],
+            current: format!("{files}/synthetic-007"),
+            rail: None,
+            nest: Some(Nest {
+                under: files.clone().into(),
+                label: String::from("Synthetic set and its files"),
+                parent: NestItem {
+                    label: String::from("Synthetic set"),
+                    href: format!("{files}/set"),
+                    state: FlowState::Up,
+                    state_words: String::from("Reachable"),
+                    mono: false,
+                },
+                count_words: String::from("0 files"),
+                children: Vec::new(),
+                all: String::from("All files"),
+            }),
+        })
+    });
+    assert!(
+        page.contains(r#"<a href="/console/files" aria-current="location" class="fui-nav-entry">"#),
+        "the entry leads under the base and opens its nested section: {page}"
+    );
+    assert!(page.contains("fui-nav-tree"), "{page}");
 }
 
 #[test]
