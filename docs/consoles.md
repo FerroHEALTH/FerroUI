@@ -58,6 +58,19 @@ with the console's code, such as an editor and the check that runs as you
 type (`.claude/rules/leptos-ui.md` §1). It still draws with the library's
 widgets and classes.
 
+## How a console builds
+
+Build the site with `cargo leptos build --split` and turn on the library's
+`split` feature (`ferrohealth-ui = { version = "=0.3.3", features =
+["split"] }`): the date pickers and the tree then load from chunks of their
+own, out of the WebAssembly every page loads. A console that builds
+without `--split` leaves the feature off, and those islands hydrate from
+its one WebAssembly. Never turn the feature on without `--split`, and never
+write a lazy island of your own without it: the glue then imports
+`__wasm_split_placeholder__`, which no browser resolves, and no island on
+any page hydrates. A build can check its glue for that import, as the
+gallery's `scripts/release/gallery-site.sh` does.
+
 ## Which document governs what
 
 | Question | Document |

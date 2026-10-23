@@ -54,10 +54,14 @@ diffing, the form submitter, file inputs and the base path.
 - `island`: the ready islands, each a thin `#[island]` over its widget
   function. The module is the list of them; no other file names them all,
   so two pull requests that each add an island touch different lines
-  (`.claude/rules/parallel-prs.md`). `DatePicker` and
-  `DateRangePicker` are `#[island(lazy)]`, measured on #262 (72105 bytes of
-  brotli-compressed WebAssembly out of every page that draws no date
-  picker; `leptos-ui.md` §12, §15.8). The module's `#![expect]` lines cover what
+  (`.claude/rules/parallel-prs.md`). `DatePicker`,
+  `DateRangePicker` and `TreeView` are `#[island(lazy)]` behind the crate's
+  `split` feature, measured on #262 (72105 bytes of brotli-compressed
+  WebAssembly out of every page that draws no date picker; `leptos-ui.md`
+  §12, §15.8). A lazy island needs `cargo leptos build --split`: without the
+  split pass the glue imports `__wasm_split_placeholder__` and no island
+  hydrates (#331), so the feature is off by default and the gallery, which
+  splits, turns it on. The module's `#![expect]` lines cover what
   the island macro writes (a forgotten view state, an undocumented props
   struct, a dropped `#[must_use]`).
 - `widget`: the interactive components as functions a page calls inside

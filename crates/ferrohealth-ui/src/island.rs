@@ -430,9 +430,10 @@ pub fn Repeater(
 /// The date field `field` with its picker (R23, R25): a popover under the
 /// field from 40 rem, a bottom sheet below it. The server draws it closed,
 /// and the typed text posts with its form whether or not the WebAssembly
-/// runs. It is lazy: under `cargo leptos --split` its code loads from its
-/// own chunks.
-#[island(lazy)]
+/// runs. With the `split` feature it is lazy, its code loading from its own
+/// chunks under `cargo leptos build --split`.
+#[cfg_attr(feature = "split", island(lazy))]
+#[cfg_attr(not(feature = "split"), island)]
 pub fn DatePicker(
     /// The field, its bounds, its quick choices and its words
     /// ([`crate::widget::date::DateWords::of_page`]).
@@ -443,9 +444,10 @@ pub fn DatePicker(
 
 /// The date range `range` of a history filter with its picker (R22,
 /// R25): its From and To fields until the WebAssembly runs, then one button
-/// naming the range. It is lazy: under `cargo leptos --split` its code
-/// loads from its own chunks.
-#[island(lazy)]
+/// naming the range. With the `split` feature it is lazy, its code loading
+/// from its own chunks under `cargo leptos build --split`.
+#[cfg_attr(feature = "split", island(lazy))]
+#[cfg_attr(not(feature = "split"), island)]
 pub fn DateRangePicker(
     /// The range, its ends, its presets and its words.
     range: crate::widget::date::DateRange,
@@ -455,9 +457,11 @@ pub fn DateRangePicker(
 
 /// The tree `tree` (M1, E4, E5): its items fold in place and the keyboard
 /// walks them; an unread level and every fold with no WebAssembly follow
-/// the toggle's link, which the console's server answers. It is lazy: under
-/// `cargo leptos --split` its code loads from its own chunks.
-#[island(lazy)]
+/// the toggle's link, which the console's server answers. With the `split`
+/// feature it is lazy, its code loading from its own chunks under
+/// `cargo leptos build --split`.
+#[cfg_attr(feature = "split", island(lazy))]
+#[cfg_attr(not(feature = "split"), island)]
 pub fn TreeView(
     /// The tree, its items and its open and selected items as the server
     /// drew them.
@@ -489,4 +493,25 @@ pub fn PreferenceForm(
     children: Children,
 ) -> impl IntoView {
     crate::widget::preference::preference_form(action, back, save, saved, children().into_any())
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn a_library_island_is_lazy_only_with_the_split_feature() {
+        // NOTE: #331: without `cargo leptos build --split` a lazy island's glue imports an unresolvable module.
+        let source = include_str!("island.rs");
+        let attributes: Vec<&str> = source
+            .lines()
+            .map(str::trim)
+            .filter(|line| line.starts_with("#[") && line.contains("island(lazy)"))
+            .collect();
+        assert!(!attributes.is_empty(), "the library has lazy islands");
+        for attribute in attributes {
+            assert_eq!(
+                r#"#[cfg_attr(feature = "split", island(lazy))]"#, attribute,
+                "a lazy island waits for the split feature"
+            );
+        }
+    }
 }

@@ -22,6 +22,14 @@ include = ["src/**", "css/**", "themes/**", "locales/**", "vendor/**", "tests/**
 # No render-mode feature: the library compiles under `csr`, `ssr` and
 # `hydrate` alike, whichever the console's own leptos dependency turns on
 # (features unify per build), and defines no server function.
+[features]
+# The date pickers and the tree become lazy islands, whose code loads from
+# chunks of its own. Only a console built with `cargo leptos build --split`
+# turns it on: without the split pass the glue imports
+# `__wasm_split_placeholder__`, which no browser resolves, and no island
+# hydrates.
+split = []
+
 [dependencies]
 # `islands`: the island macro's props derive names `leptos::serde`, which the
 # feature re-exports; it changes nothing else in a hydrated or client page.

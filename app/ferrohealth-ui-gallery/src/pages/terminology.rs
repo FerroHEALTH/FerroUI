@@ -301,6 +301,7 @@ fn filter_row(key: &str, value: &str) -> RepeatRow {
     .into_any();
     RepeatRow {
         key: key.to_owned(),
+        heading: None,
         fields,
         end: RowEnd::Remove {
             label: tr(Msg::TmRemoveFilter),
@@ -687,6 +688,7 @@ fn target_row(source: &str, key: &str, target: Target, missing: bool) -> RepeatR
     });
     RepeatRow {
         key: key.to_owned(),
+        heading: None,
         fields,
         end: RowEnd::Remove {
             label: tr_with(Msg::TmRemoveTarget, &[("value", source.to_owned().into())]),

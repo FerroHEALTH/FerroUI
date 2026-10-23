@@ -10,7 +10,11 @@
 //! list keeps ends in a disabled lock, hidden from a reader, and says why
 //! in a visible line under it, never in a tooltip alone (F13's rule for a
 //! disabled item). M4's
-//! filter rows and M6's target rows are F7 rows ([`Fields::Three`]).
+//! filter rows and M6's target rows are F7 rows ([`Fields::Three`]). A
+//! row of one field ([`Fields::One`]) keeps the field and its Remove on
+//! one line, and a row of many fields is a sub-card ([`Fields::Card`]): its
+//! heading with Remove beside it, then its fields, a list of its own among
+//! them when it has one.
 //!
 //! Remove and Add are submit buttons of the console's form, so with no
 //! WebAssembly a press posts the form with the button's `name` and `value`
@@ -36,27 +40,36 @@ pub const ROW: &str = "__row__";
 /// How a row's fields share its width.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Fields {
+    /// One field across the row, such as a profile's URL or one value of a
+    /// list setting.
+    One,
     /// Two fields, the second the wider, such as a name and its value.
     #[default]
     Two,
     /// Three fields, such as a filter's property, operator and value, or a
     /// mapping's target, relationship and comment.
     Three,
+    /// A sub-card: the row's heading ([`RepeatRow::heading`]) with Remove
+    /// beside it, then its fields as a form lays them out, such as an
+    /// endpoint with its id, its base URL, a switch and a list of its own.
+    Card,
 }
 
 impl Fields {
     /// The classes of a row.
     const fn row(self) -> &'static str {
         match self {
+            Self::One => "fui-repeater-row fui-repeater-one",
             Self::Two => "fui-repeater-row",
             Self::Three => "fui-clause-filter",
+            Self::Card => "fui-repeater-card",
         }
     }
 
     /// The classes of the list of rows.
     const fn rows(self) -> &'static str {
         match self {
-            Self::Two => "fui-repeat-rows fui-repeater",
+            Self::One | Self::Two | Self::Card => "fui-repeat-rows fui-repeater",
             Self::Three => "fui-repeat-rows",
         }
     }
@@ -88,6 +101,9 @@ pub enum RowEnd {
 pub struct RepeatRow {
     /// The row's key, stable for the row and unique in the list.
     pub key: String,
+    /// The heading of a [`Fields::Card`] row, such as "Query API endpoint
+    /// node-c-pub", which names its group; the other layouts draw none.
+    pub heading: Option<String>,
     /// The row's fields, from [`crate::view::form::Field`] with ids made
     /// from the key.
     pub fields: AnyView,
@@ -117,9 +133,9 @@ pub struct Repeat {
     pub label: String,
     /// How each row's fields share its width.
     pub fields: Fields,
-    /// The headings over the fields of [`Fields::Two`] rows whose labels
-    /// are hidden, one per field; empty for rows whose fields show their
-    /// labels.
+    /// The headings over the fields of [`Fields::One`] or [`Fields::Two`]
+    /// rows whose labels are hidden, one per field; empty for rows whose
+    /// fields show their labels.
     pub head: Vec<String>,
     /// The rows, in order.
     pub rows: Vec<RepeatRow>,
@@ -167,10 +183,11 @@ fn row_end(end: RowEnd, form: Option<String>) -> AnyView {
     }
 }
 
-/// Returns the row `row`, laid out as `fields`.
-fn row(row: RepeatRow, fields: Fields, form: Option<String>) -> AnyView {
+/// Returns the row `row` of the list `list`, laid out as `fields`.
+fn row(list: &str, row: RepeatRow, fields: Fields, form: Option<String>) -> AnyView {
     let RepeatRow {
         key,
+        heading,
         fields: inside,
         end,
         after,
@@ -182,9 +199,25 @@ fn row(row: RepeatRow, fields: Fields, form: Option<String>) -> AnyView {
         RowEnd::Remove { .. } => None,
     };
     let end = row_end(end, form);
+    let body = if fields == Fields::Card {
+        let heading_id = format!("{list}-{key}-heading");
+        let labelled_by = heading_id.clone();
+        view! {
+            <div class=fields.row() role="group" aria-labelledby=labelled_by>
+                <div class="fui-repeater-card-head">
+                    <h3 id=heading_id>{heading}</h3>
+                    {end}
+                </div>
+                {inside}
+            </div>
+        }
+        .into_any()
+    } else {
+        view! { <div class=fields.row()>{inside} {end}</div> }.into_any()
+    };
     view! {
         <div class="fui-repeat-item" data-row=key>
-            <div class=fields.row()>{inside} {end}</div>
+            {body}
             {kept}
             {after}
         </div>
@@ -209,23 +242,23 @@ pub fn repeat(repeat: Repeat) -> AnyView {
         form,
     } = repeat;
     let none = rows.is_empty();
-    let head = (fields == Fields::Two && !head.is_empty()).then(|| {
+    let head = (matches!(fields, Fields::One | Fields::Two) && !head.is_empty()).then(|| {
         let labels = head
             .into_iter()
             .map(|words| view! { <span class="fui-label">{words}</span> })
             .collect_view();
         view! {
-            <div class="fui-repeater-head" aria-hidden="true">
+            <div class="fui-repeater-head" class:is-one=fields == Fields::One aria-hidden="true">
                 {labels}
             </div>
         }
     });
     let drawn = rows
         .into_iter()
-        .map(|each| row(each, fields, form.clone()))
+        .map(|each| row(&id, each, fields, form.clone()))
         .collect_view();
     let blank = blank.map(|each| {
-        let inside = row(each, fields, form.clone());
+        let inside = row(&id, each, fields, form.clone());
         view! { <template data-repeat="blank">{inside}</template> }
     });
     let add = add.map(|RepeatAdd { label, name, value }| {
@@ -319,6 +352,15 @@ mod browser {
             else {
                 return;
             };
+            // A list nested in a sub-card takes its own presses.
+            let own = button
+                .closest(".fui-repeat")
+                .ok()
+                .flatten()
+                .is_some_and(|list| list == root);
+            if !own {
+                return;
+            }
             match button.get_attribute("data-repeat").as_deref() {
                 Some("remove") => {
                     event.prevent_default();

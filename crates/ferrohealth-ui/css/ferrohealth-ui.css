@@ -8931,6 +8931,11 @@
     margin-block-end: 0.125rem;
   }
 
+  /* A row of one field: the field takes the row, Remove its end. */
+  .fui-repeater-row.fui-repeater-one {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
   .fui-repeater-row .fui-field {
     min-width: 0;
   }
@@ -8939,6 +8944,10 @@
     display: grid;
     grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) 2.25rem;
     gap: 0.5rem;
+  }
+
+  .fui-repeater-head.is-one {
+    grid-template-columns: minmax(0, 1fr) 2.25rem;
   }
 
   .fui-repeater-head > .fui-label {

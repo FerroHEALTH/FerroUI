@@ -76,6 +76,14 @@ messages! {
     ReloadSet = "reload-set",
     /// `Reload the set?`
     ReloadTheSet = "reload-the-set",
+    /// The Remove of the member `$member`.
+    RemoveMember = "remove-member",
+    /// The sentence of the confirmation that removes the member `$member`.
+    RemoveMemberBody = "remove-member-body",
+    /// The question of the confirmation that removes the member `$member`.
+    RemoveMemberTitle = "remove-member-title",
+    /// `Members, each with its own confirmation`
+    RemoveMembers = "remove-members",
     /// `Rename`
     Rename = "rename",
     /// `Rename the file`

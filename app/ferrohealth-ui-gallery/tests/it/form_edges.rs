@@ -358,3 +358,78 @@ async fn a_choice_legend_is_drawn_as_a_field_label() -> Result<(), Box<dyn Error
     })
     .await
 }
+
+/// How many rows the list `id` holds, its nested lists' rows left out.
+async fn rows_of(browser: &Browser, id: &str) -> Result<u32, Box<dyn Error>> {
+    script(
+        browser,
+        "const id = arguments[0];
+         const rows = [...document.querySelectorAll(`#${id} [data-repeat='rows']`)]
+           .find(each => each.closest('.fui-repeat').id === id);
+         return rows.querySelectorAll(':scope > .fui-repeat-item').length;",
+        vec![serde_json::Value::from(id)],
+    )
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_list_inside_a_sub_card_adds_and_removes_its_own_rows_alone() -> Result<(), Box<dyn Error>>
+{
+    // A press inside a nested list is that list's: the sub-card list around it keeps its rows.
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/ferrofed/forms")).await?;
+        let add = browser
+            .element(By::Css("#ep-e2-profiles button[data-repeat='add']"))
+            .await?;
+        // The page's islands hydrate from one entry, so the eye working
+        // means the lists work too.
+        masked(browser).await?;
+        assert_eq!(2, rows_of(browser, "member-endpoints").await?);
+        assert_eq!(2, rows_of(browser, "ep-e2-profiles").await?);
+        script::<serde_json::Value>(
+            browser,
+            "arguments[0].scrollIntoView({block: 'center'});",
+            vec![add.to_json()?],
+        )
+        .await?;
+        add.click().await?;
+        until("a profile row is added", async || {
+            Ok(rows_of(browser, "ep-e2-profiles").await? == 3)
+        })
+        .await?;
+        assert_eq!(
+            2,
+            rows_of(browser, "member-endpoints").await?,
+            "adding a profile adds no endpoint"
+        );
+        browser
+            .element(By::Css(
+                "#ep-e2-profiles [data-row='p1'] button[data-repeat='remove']",
+            ))
+            .await?
+            .click()
+            .await?;
+        until("the profile row is removed", async || {
+            Ok(rows_of(browser, "ep-e2-profiles").await? == 2)
+        })
+        .await?;
+        assert_eq!(
+            2,
+            rows_of(browser, "member-endpoints").await?,
+            "removing a profile removes no endpoint"
+        );
+        let focused: String = script(
+            browser,
+            "return document.activeElement.closest('.fui-repeat').id;",
+            Vec::new(),
+        )
+        .await?;
+        assert_eq!("ep-e2-profiles", focused, "the focus stays in the profiles");
+        browser.console_clean("a nested list").await
+    })
+    .await
+}

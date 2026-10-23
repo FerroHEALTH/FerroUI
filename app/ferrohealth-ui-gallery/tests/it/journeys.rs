@@ -176,6 +176,11 @@ async fn the_dialog_confirms_and_a_toast_says_so() -> Result<(), Box<dyn Error>>
     with_browser(async |browser| {
         browser.goto(&gallery.url("/ferroehr/overlays")).await?;
         hydrated_toasts(browser).await?;
+        // The toasts' button scrolled the page; the title row's More sits at its top.
+        browser
+            .driver()
+            .execute("window.scrollTo(0, 0);", Vec::new())
+            .await?;
         // The delete is More's last item, never a button beside the primary.
         crate::menus::hydrated_trigger(browser, "overlays-more")
             .await?
@@ -2376,6 +2381,43 @@ async fn the_user_menus_theme_segments_keep_their_words_on_one_line() -> Result<
             }
         }
         browser.console_clean("the theme segments").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn each_rows_remove_opens_its_own_confirmation() -> Result<(), Box<dyn Error>> {
+    // HTML Living Standard, the `command` attribute: a trigger opens the dialog its id names.
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/ferrofed/overlays")).await?;
+        let second = browser
+            .element(By::Css(
+                "#member-removals button[commandfor='remove-node-c']",
+            ))
+            .await?;
+        browser
+            .driver()
+            .execute(
+                "arguments[0].scrollIntoView({block: 'center'});",
+                vec![second.to_json()?],
+            )
+            .await?;
+        second.click().await?;
+        let opened = browser.element(By::Id("remove-node-c")).await?;
+        until("the second row's dialog opens", async || {
+            Ok(opened.attr("open").await?.is_some())
+        })
+        .await?;
+        let first = browser.element(By::Id("remove-node-b")).await?;
+        assert!(
+            first.attr("open").await?.is_none(),
+            "the first row's dialog stays closed"
+        );
+        browser.console_clean("a row's own confirmation").await
     })
     .await
 }

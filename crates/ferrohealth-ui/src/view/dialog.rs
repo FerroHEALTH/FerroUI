@@ -18,6 +18,8 @@
 //! console's: a submit button of a form that posts, or a button whose
 //! listener acts and closes the dialog.
 
+use std::borrow::Cow;
+
 use leptos::prelude::*;
 
 use crate::i18n::{Text, Word, tr};
@@ -27,8 +29,9 @@ use crate::view::button::Variant;
 /// What a confirmation dialog asks.
 #[derive(Debug, Clone)]
 pub struct Confirmation {
-    /// The dialog's id, which its trigger opens.
-    pub id: &'static str,
+    /// The dialog's id, which its trigger opens: a static id or one made
+    /// at run time, such as one per table row.
+    pub id: Cow<'static, str>,
     /// The question, such as "Delete the stored query?".
     pub title: Word,
     /// The sentence that says what confirming does.
@@ -55,7 +58,8 @@ pub fn danger_dialog(confirmation: Confirmation, confirm: impl IntoView) -> impl
 /// Returns the dialog asking `confirmation`, in the danger form when
 /// `danger`, with Cancel and `confirm`.
 fn frame(confirmation: Confirmation, danger: bool, confirm: impl IntoView) -> impl IntoView {
-    let title_id = format!("{}-title", confirmation.id);
+    let Confirmation { id, title, message } = confirmation;
+    let title_id = format!("{id}-title");
     let labelled_by = title_id.clone();
     let class = if danger {
         "fui-dialog fui-dialog-danger"
@@ -63,18 +67,18 @@ fn frame(confirmation: Confirmation, danger: bool, confirm: impl IntoView) -> im
         "fui-dialog"
     };
     view! {
-        <dialog id=confirmation.id closedby="any" aria-labelledby=labelled_by class=class>
+        <dialog id=id.clone() closedby="any" aria-labelledby=labelled_by class=class>
             <h2 id=title_id class="fui-dialog-title">
                 {danger.then(|| icon(Glyph::TRIANGLE_ALERT, "18"))}
-                {confirmation.title}
+                {title}
             </h2>
-            <p>{confirmation.message}</p>
+            <p>{message}</p>
             <div class="fui-dialog-actions">
                 <button
                     type="button"
                     class=Variant::Secondary.class()
                     command="close"
-                    commandfor=confirmation.id
+                    commandfor=id.clone()
                 >
                     {icon(Glyph::X, "16")}
                     {tr(Text::Cancel)}

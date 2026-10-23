@@ -705,12 +705,126 @@ fn a_mapping_row_reads_source_relationship_target_and_comment() {
     assert_eq!(3, bare.len(), "no comment column");
 }
 
+/// A row `key`, headed `heading` when given, around `inside`.
+fn shaped_row(key: &str, heading: Option<&str>, inside: AnyView) -> RepeatRow {
+    RepeatRow {
+        key: key.to_owned(),
+        heading: heading.map(str::to_owned),
+        fields: inside,
+        end: RowEnd::Remove {
+            label: format!("Remove {key}"),
+            name: String::from("remove"),
+            value: key.to_owned(),
+        },
+        after: None,
+    }
+}
+
+/// A list `id` of `fields` rows, with no blank row and no Add.
+fn shaped(id: &str, fields: Fields, rows: Vec<RepeatRow>) -> AnyView {
+    repeat(Repeat {
+        id: id.to_owned(),
+        label: String::from("Rows"),
+        fields,
+        head: Vec::new(),
+        rows,
+        blank: None,
+        add: None,
+        empty: String::from("No rows yet."),
+        form: None,
+    })
+}
+
+#[test]
+fn a_one_field_row_keeps_its_field_and_its_remove_on_one_line() {
+    let shown = page_html(|| {
+        shaped(
+            "profiles",
+            Fields::One,
+            vec![shaped_row(
+                "p1",
+                None,
+                view! { <input id="p1" name="p[p1]" /> }.into_any(),
+            )],
+        )
+    });
+    assert!(
+        has(&shown, "div", &[("class", "fui-repeater-row fui-repeater-one")]),
+        "{shown}"
+    );
+    assert!(
+        STYLESHEET.contains(
+            "  .fui-repeater-row.fui-repeater-one {\n    grid-template-columns: minmax(0, 1fr) auto;"
+        ),
+        "one field takes the row, Remove its end"
+    );
+}
+
+#[test]
+fn a_sub_card_row_is_a_group_named_by_its_heading_with_remove_beside_it() {
+    // WAI-ARIA 1.2 `group`, `aria-labelledby`: the heading names the row's fields.
+    let shown = page_html(|| {
+        let nested = shaped(
+            "ep-e1-profiles",
+            Fields::One,
+            vec![shaped_row(
+                "p1",
+                None,
+                view! { <input id="pr" /> }.into_any(),
+            )],
+        );
+        shaped(
+            "endpoints",
+            Fields::Card,
+            vec![shaped_row(
+                "e1",
+                Some("Query API endpoint node-c-pub"),
+                view! { <input id="e1-id" /> {nested} }.into_any(),
+            )],
+        )
+    });
+    assert!(
+        has(
+            &shown,
+            "div",
+            &[
+                ("class", "fui-repeater-card"),
+                ("role", "group"),
+                ("aria-labelledby", "endpoints-e1-heading")
+            ]
+        ),
+        "{shown}"
+    );
+    let head = shown
+        .split(r#"<div class="fui-repeater-card-head">"#)
+        .nth(1)
+        .and_then(|rest| rest.split("</div>").next())
+        .unwrap_or_default();
+    assert!(
+        head.contains(r#"<h3 id="endpoints-e1-heading">Query API endpoint node-c-pub</h3>"#),
+        "{shown}"
+    );
+    assert!(
+        head.contains(r#"aria-label="Remove e1""#),
+        "Remove sits beside the heading: {shown}"
+    );
+    assert!(
+        has(
+            &shown,
+            "div",
+            &[("id", "ep-e1-profiles"), ("role", "group")]
+        ),
+        "the sub-card holds a list of its own: {shown}"
+    );
+}
+
 /// A list of `rows` filter rows with a blank row and Add.
 fn filters(rows: &[&str]) -> String {
     let rows: Vec<String> = rows.iter().map(|row| (*row).to_owned()).collect();
     page_html(move || {
         let row = |key: &str| RepeatRow {
             key: key.to_owned(),
+            heading: None,
             fields: view! { <input id=format!("f-{key}") name=format!("f[{key}]") /> }.into_any(),
             end: RowEnd::Remove {
                 label: format!("Remove the filter {key}"),
@@ -835,6 +949,7 @@ fn an_empty_list_says_so_and_a_kept_row_says_why() {
             head: vec![String::from("Code"), String::from("Type")],
             rows: vec![RepeatRow {
                 key: String::from("inactive"),
+                heading: None,
                 fields: view! { <input id="p-1" /> }.into_any(),
                 end: RowEnd::Kept {
                     reason: String::from("The editor keeps this property"),

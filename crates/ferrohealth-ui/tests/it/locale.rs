@@ -101,7 +101,7 @@ fn a_page_that_provides_no_locale_draws_english() {
     let dialog = || {
         confirm_dialog(
             Confirmation {
-                id: "drop",
+                id: "drop".into(),
                 title: "Drop the query?".into(),
                 message: "The stored query is removed.".into(),
             },

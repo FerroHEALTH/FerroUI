@@ -112,6 +112,30 @@ messages! {
     EhrIdOptional = "ehr-id-optional",
     /// `ehr_id (UUID), blank lets the server mint one`
     EhrIdUuidBlankLets = "ehr-id-uuid-blank-lets",
+    /// `Add endpoint`
+    EpAdd = "ep-add",
+    /// `Add profile`
+    EpAddProfile = "ep-add-profile",
+    /// `Base URL`
+    EpBase = "ep-base",
+    /// `Query API endpoint { $name }`
+    EpHeading = "ep-heading",
+    /// `Endpoint id`
+    EpId = "ep-id",
+    /// `No endpoints yet.`
+    EpNone = "ep-none",
+    /// `Profile URL`
+    EpProfile = "ep-profile",
+    /// `Profiles of { $name }`
+    EpProfiles = "ep-profiles",
+    /// `No profiles yet.`
+    EpProfilesNone = "ep-profiles-none",
+    /// `Remove the endpoint { $name }`
+    EpRemove = "ep-remove",
+    /// `Remove the profile { $value }`
+    EpRemoveProfile = "ep-remove-profile",
+    /// `Endpoints of a member`
+    EpTitle = "ep-title",
     /// `Exclude`
     Exclude = "exclude",
     /// `external subject id`
