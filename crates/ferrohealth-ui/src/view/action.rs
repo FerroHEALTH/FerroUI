@@ -165,6 +165,12 @@ fn button_of(action: Action, class: &'static str) -> AnyView {
             </button>
         }
         .into_any(),
+        Act::SubmitTo { action, form } => view! {
+            <button type="submit" form=form formaction=action class=class>
+                {inside}
+            </button>
+        }
+        .into_any(),
         Act::Dialog(target) => view! {
             <button
                 type="button"

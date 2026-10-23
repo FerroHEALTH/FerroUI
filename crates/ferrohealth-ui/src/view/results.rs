@@ -5,7 +5,7 @@
 //!
 //! Every screen that runs a query shows its answer in one B10 section: the
 //! row count in the heading; Table or Chart as a segmented control, and
-//! Export CSV and Export JSON, as its actions; the row window in one quiet
+//! Export, a menu of the formats (F13), as its actions; the row window in one quiet
 //! line ("Rows 1 to 3 of 3, inside the query's own LIMIT 50"); then the
 //! table edge to edge, or the base line chart with one series per numeric
 //! column over the time column, inset. The switch keeps its state where
@@ -15,12 +15,15 @@
 //! WebAssembly either way. A console whose run is a form post and that
 //! keeps no answer between requests lets the switch and the exports ride
 //! its own form instead ([`Switch::Form`], [`Export::Submit`]): each is a
-//! submit of that form, which posts the query again. The chart is
+//! submit of that form, which posts the query again, Export's items by
+//! `formaction` ([`Act::SubmitTo`]), so no form of the pane's own sits
+//! inside the console's. The chart is
 //! [`crate::widget::chart::line_chart`], which carries its accessible name
 //! and its figures table. No specification governs the pane: our own
 //! design.
 
 use std::borrow::Cow;
+use std::hash::{DefaultHasher, Hash as _, Hasher as _};
 
 use leptos::prelude::*;
 
@@ -29,6 +32,7 @@ use crate::icon::Glyph;
 use crate::view::button::{Variant, label};
 use crate::view::segmented::{SegmentedForm, segmented_form, segmented_links};
 use crate::view::surface::{SectionHead, panel_section};
+use crate::widget::action_menu::{Act, Action, Item, Menu, labelled_menu};
 
 /// The name the switch's form posts the chosen view as, `table` or
 /// `chart`, beside `back`.
@@ -83,8 +87,8 @@ pub enum Switch {
     },
 }
 
-/// How an export of the answer is had.
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// How an export of the answer is had: an item of the pane's Export menu.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Export {
     /// A link to the answer in this format at this address.
     Link(String),
@@ -115,9 +119,9 @@ pub struct ResultsPane {
     pub shown: Shown,
     /// Where the switch keeps its state.
     pub switch: Switch,
-    /// The answer as CSV.
+    /// The answer as CSV, the first item of Export.
     pub csv: Export,
-    /// The answer as JSON.
+    /// The answer as JSON, the second item of Export.
     pub json: Export,
     /// The row window in one sentence, such as "Rows 1 to 3 of 3, inside
     /// the query's own LIMIT 50."
@@ -185,39 +189,46 @@ fn switch_view(switch: Switch, shown: Shown) -> AnyView {
     }
 }
 
-/// Returns the export `export` saying `words`, or the same control
+/// Returns the menu item exporting by `export`, saying `words` after
+/// `glyph`.
+fn export_item(export: Export, glyph: Glyph, words: Word) -> Item {
+    let act = match export {
+        Export::Link(href) => Act::Link(href),
+        Export::Submit { action, form } => Act::SubmitTo { action, form },
+    };
+    Item::new(Action {
+        glyph: Some(glyph),
+        label: words.into(),
+        act,
+    })
+}
+
+/// Returns Export with its menu of the formats `csv` and `json`, or Export
 /// disabled, saying "(unavailable)" to assistive technology, when there is
 /// nothing to export.
-fn export(export: Export, words: Word, available: bool) -> AnyView {
-    if available {
-        let inside = label(Some(Glyph::DOWNLOAD), words);
-        return match export {
-            Export::Link(href) => view! {
-                <a href=href class=Variant::Secondary.small()>
-                    {inside}
-                </a>
-            }
-            .into_any(),
-            Export::Submit { action, form } => view! {
-                <button
-                    type="submit"
-                    form=form
-                    formaction=action
-                    class=Variant::Secondary.small()
-                >
-                    {inside}
-                </button>
-            }
-            .into_any(),
-        };
+fn exports(csv: Export, json: Export, available: bool) -> AnyView {
+    let words = tr(Text::ResultsExport);
+    if !available {
+        return view! {
+            <span class=Variant::Secondary.small() aria-disabled="true">
+                {label(Some(Glyph::DOWNLOAD), words)}
+                <span class="fui-sr-only">" " {tr(Text::StepUnavailable)}</span>
+            </span>
+        }
+        .into_any();
     }
-    view! {
-        <span class=Variant::Secondary.small() aria-disabled="true">
-            {label(Some(Glyph::DOWNLOAD), words)}
-            <span class="fui-sr-only">" " {tr(Text::StepUnavailable)}</span>
-        </span>
-    }
-    .into_any()
+    let mut hasher = DefaultHasher::new();
+    (&csv, &json).hash(&mut hasher);
+    let id = format!("results-export-{:x}", hasher.finish());
+    let menu = Menu::new(
+        id,
+        String::from(words.clone()),
+        vec![
+            export_item(csv, Glyph::TABLE_2, tr(Text::ResultsExportCsv)),
+            export_item(json, Glyph::FILE_CODE, tr(Text::ResultsExportJson)),
+        ],
+    );
+    labelled_menu(Glyph::DOWNLOAD, words, menu)
 }
 
 /// Returns the results pane `pane`, a part of a tab panel
@@ -249,8 +260,7 @@ pub fn results_pane(pane: ResultsPane) -> AnyView {
     };
     let actions = view! {
         {chartable.then(|| switch_view(switch, shown))}
-        {export(csv, tr(Text::ResultsExportCsv), rows)}
-        {export(json, tr(Text::ResultsExportJson), rows)}
+        {exports(csv, json, rows)}
     }
     .into_any();
     let body = match shown {

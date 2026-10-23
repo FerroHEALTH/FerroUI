@@ -6,7 +6,8 @@
 //!
 //! Both are a `<details>` whose `<summary>` is the trigger, so the browser
 //! opens and closes them with no script, and every item is a link, a submit
-//! button of a plain form, or a button that opens a confirmation dialog:
+//! button of a plain form or of the console's own form (by `formaction`
+//! where it posts elsewhere), or a button that opens a confirmation dialog:
 //! each works before the page hydrates. The `<details>` of every menu on a
 //! page share one `name`, so opening one closes the others (HTML Living
 //! Standard, the `details` element). The island [`crate::island::MenuButton`]
@@ -55,6 +56,17 @@ pub enum Act {
     },
     /// Submits the form with this id, such as an editor's own form.
     Submit(String),
+    /// Submits the console's own form to another address by `formaction`,
+    /// such as an export of the query that form runs, so no form of the
+    /// item's own sits inside the console's (HTML Living Standard, the
+    /// `form` element's content model).
+    SubmitTo {
+        /// Where the form is submitted, in place of its own `action`.
+        action: String,
+        /// The id of the console's form, when the item sits outside it;
+        /// `None` inside it.
+        form: Option<String>,
+    },
     /// Opens the confirmation dialog with this id as a modal
     /// ([`crate::view::dialog`]); its words end in an ellipsis.
     Dialog(String),
@@ -94,7 +106,11 @@ impl Action {
     pub fn words(&self) -> String {
         match self.act {
             Act::Dialog(_) => format!("{}{ELLIPSIS}", self.label),
-            Act::Link(_) | Act::Post { .. } | Act::Submit(_) | Act::Copy(_) => self.label.clone(),
+            Act::Link(_)
+            | Act::Post { .. }
+            | Act::Submit(_)
+            | Act::SubmitTo { .. }
+            | Act::Copy(_) => self.label.clone(),
         }
     }
 }
@@ -248,6 +264,14 @@ pub enum Trigger {
     Row,
     /// A split button's chevron, opening the variants of its action.
     Variants,
+    /// A small secondary button saying `words` after `glyph`, such as the
+    /// results pane's Export (E7).
+    Labelled {
+        /// Its icon, such as the download glyph.
+        glyph: Glyph,
+        /// Its words, such as "Export".
+        words: Word,
+    },
     /// A select button showing `value`, opening a listbox.
     Select {
         /// The words of the choice in force.
@@ -327,6 +351,12 @@ fn item(item: Item, danger: bool) -> AnyView {
         .into_any(),
         Act::Submit(form) => view! {
             <button type="submit" form=form role="menuitem" class=class>
+                {inside}
+            </button>
+        }
+        .into_any(),
+        Act::SubmitTo { action, form } => view! {
+            <button type="submit" form=form formaction=action role="menuitem" class=class>
                 {inside}
             </button>
         }
@@ -488,6 +518,18 @@ pub fn variants_menu(action: &str, menu: Menu) -> AnyView {
     placed(menu, Trigger::Variants, name.into())
 }
 
+/// Returns a small secondary button saying `words` after `glyph` and its
+/// menu, such as the results pane's Export with its formats (E7); nothing
+/// for a menu with no item.
+///
+/// The button is named by the menu's label, which holds its words (WCAG
+/// 2.2 SC 2.5.3), such as "Export".
+#[must_use]
+pub fn labelled_menu(glyph: Glyph, words: Word, menu: Menu) -> AnyView {
+    let name = menu.label.clone();
+    placed(menu, Trigger::Labelled { glyph, words }, name)
+}
+
 /// Returns the select button `listbox` and its listbox (R29).
 ///
 /// The button shows the choice in force and is named by the label and that
@@ -549,13 +591,52 @@ pub fn typed(letter: &str, current: Option<usize>, words: &[String]) -> Option<u
     })
 }
 
+/// The classes of the trigger of a menu, which is no listbox.
+const fn menu_trigger_class(trigger: &Trigger) -> &'static str {
+    match trigger {
+        Trigger::Row => "fui-icon-button",
+        Trigger::Variants => "fui-button fui-button-secondary fui-split-toggle",
+        Trigger::Labelled { .. } => "fui-button fui-button-secondary fui-button-small",
+        Trigger::More { .. } | Trigger::Select { .. } => "fui-button fui-button-secondary fui-more",
+        Trigger::Version { .. } => "fui-version-select",
+    }
+}
+
+/// Returns what `trigger` shows: its words, its value or its icon.
+fn face(trigger: Trigger) -> AnyView {
+    match trigger {
+        Trigger::More { words } => view! {
+            {words}
+            {icon(Glyph::CHEVRON_DOWN, "16")}
+        }
+        .into_any(),
+        Trigger::Row => icon(Glyph::ELLIPSIS, "16").into_any(),
+        Trigger::Variants => icon(Glyph::CHEVRON_DOWN, "16").into_any(),
+        Trigger::Labelled { glyph, words } => view! {
+            {icon(glyph, "16")}
+            {words}
+        }
+        .into_any(),
+        Trigger::Select { value } => view! {
+            <span>{value}</span>
+            {icon(Glyph::CHEVRON_DOWN, "16")}
+        }
+        .into_any(),
+        Trigger::Version { value } => view! {
+            {value}
+            {icon(Glyph::CHEVRON_DOWN, "14")}
+        }
+        .into_any(),
+    }
+}
+
 /// Returns the menu or listbox `id` behind `trigger`, around `entries`.
 ///
 /// `label` names its list and titles the phone's sheet, `name` names its
 /// trigger, `entries` are the items or options the server drew, the
 /// sheet's Cancel says `cancel`, and a copy item says what came of it in
 /// `copy`. A console draws it through [`more_menu`], [`row_menu`],
-/// [`variants_menu`] or [`listbox`].
+/// [`variants_menu`], [`labelled_menu`] or [`listbox`].
 #[must_use]
 pub fn menu_button(
     id: String,
@@ -583,46 +664,20 @@ pub fn menu_button(
             "listbox",
         )
     } else {
-        let trigger_class = match trigger {
-            Trigger::Row => "fui-icon-button",
-            Trigger::Variants => "fui-button fui-button-secondary fui-split-toggle",
-            Trigger::More { .. } | Trigger::Select { .. } => {
-                "fui-button fui-button-secondary fui-more"
-            }
-            Trigger::Version { .. } => "fui-version-select",
-        };
         (
             if version {
                 "fui-anchor fui-version-anchor"
             } else {
                 "fui-anchor"
             },
-            trigger_class,
+            menu_trigger_class(&trigger),
             "fui-menu fui-menu-compact fui-menu-anchored fui-menu-sheet",
             "menu",
             "menu",
         )
     };
     let title = matches!(trigger, Trigger::Row | Trigger::Version { .. }).then(|| name.clone());
-    let face = match trigger {
-        Trigger::More { words } => view! {
-            {words}
-            {icon(Glyph::CHEVRON_DOWN, "16")}
-        }
-        .into_any(),
-        Trigger::Row => icon(Glyph::ELLIPSIS, "16").into_any(),
-        Trigger::Variants => icon(Glyph::CHEVRON_DOWN, "16").into_any(),
-        Trigger::Select { value } => view! {
-            <span>{value}</span>
-            {icon(Glyph::CHEVRON_DOWN, "16")}
-        }
-        .into_any(),
-        Trigger::Version { value } => view! {
-            {value}
-            {icon(Glyph::CHEVRON_DOWN, "14")}
-        }
-        .into_any(),
-    };
+    let face = face(trigger);
     view! {
         <details
             class=anchor

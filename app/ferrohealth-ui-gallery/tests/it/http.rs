@@ -264,3 +264,48 @@ async fn a_tab_your_preferences_lacks_answers_404() -> Result<(), Box<dyn Error>
     );
     Ok(())
 }
+
+#[tokio::test]
+async fn a_removal_returns_naming_the_member_and_refuses_one_with_no_reason()
+-> Result<(), Box<dyn Error>> {
+    let (parts, _) = send(form(
+        "/remove-member",
+        "member=node-b&back=%2Fferrofed%2Foverlays&reason=Replaced+by+node-b2",
+    )?)
+    .await?;
+    assert_eq!(StatusCode::SEE_OTHER, parts.status);
+    assert_eq!(
+        "/ferrofed/overlays?removed=node-b",
+        parts.headers[header::LOCATION]
+    );
+    let (parts, _) = send(form(
+        "/remove-member",
+        "member=node-b&back=%2Fferrofed%2Foverlays&reason=+",
+    )?)
+    .await?;
+    assert_eq!(StatusCode::BAD_REQUEST, parts.status, "a blank reason");
+    let (parts, _) = send(form(
+        "/remove-member",
+        "member=node-z&back=%2F&reason=Gone",
+    )?)
+    .await?;
+    assert_eq!(StatusCode::BAD_REQUEST, parts.status, "a member not listed");
+    let (parts, body) = get("/ferrofed/overlays?removed=node-b").await?;
+    assert_eq!(StatusCode::OK, parts.status);
+    assert!(
+        !body.contains(r#"id="remove-node-b""#) && body.contains(r#"id="remove-node-c""#),
+        "the list leaves the removed row out"
+    );
+    assert!(body.contains("node-b was removed"), "and says so");
+    Ok(())
+}
+
+#[tokio::test]
+async fn an_export_riding_the_query_form_receives_the_query() -> Result<(), Box<dyn Error>> {
+    let (parts, body) = get("/export/csv?query=SELECT+1&shown=table").await?;
+    assert_eq!(StatusCode::OK, parts.status);
+    assert_eq!("csv\nSELECT 1", body);
+    let (parts, _) = get("/export/xml?query=SELECT+1").await?;
+    assert_eq!(StatusCode::NOT_FOUND, parts.status);
+    Ok(())
+}

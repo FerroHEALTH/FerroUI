@@ -18,6 +18,13 @@
 //! console's: a submit button of a form that posts, or a button whose
 //! listener acts and closes the dialog.
 //!
+//! A confirmation that needs the reader's words, such as the required
+//! Reason a removal keeps with the revision, is [`danger_form_dialog`]: the
+//! console's fields sit between the sentence and the actions, and the
+//! whole dialog is the one form its confirm posts, so the fields post with
+//! it and the browser holds a required field before the post. A row
+//! menu's destructive item opens it by its id, one dialog per row.
+//!
 //! The informational dialog ([`info_dialog`]) is the same frame for a page
 //! of explanation, such as "How configuration works": the info glyph beside
 //! its title, a few paragraphs, and Close as its only action, which takes
@@ -43,10 +50,20 @@ pub struct Confirmation {
     pub message: Word,
 }
 
+/// The form a confirmation with fields posts.
+#[derive(Debug)]
+pub struct ConfirmForm {
+    /// Where the form posts.
+    pub action: String,
+    /// The console's fields, drawn between the sentence and the actions,
+    /// such as a required Reason and the hidden inputs that name the row.
+    pub fields: AnyView,
+}
+
 /// Returns the dialog asking `confirmation`, with Cancel and `confirm`.
 #[must_use]
 pub fn confirm_dialog(confirmation: Confirmation, confirm: impl IntoView) -> impl IntoView {
-    frame(confirmation, false, confirm)
+    frame(confirmation, false, None, confirm)
 }
 
 /// Returns the dialog asking `confirmation` about an action that cannot be
@@ -57,12 +74,56 @@ pub fn confirm_dialog(confirmation: Confirmation, confirm: impl IntoView) -> imp
 /// step is unmistakable.
 #[must_use]
 pub fn danger_dialog(confirmation: Confirmation, confirm: impl IntoView) -> impl IntoView {
-    frame(confirmation, true, confirm)
+    frame(confirmation, true, None, confirm)
+}
+
+/// Returns the dialog asking `confirmation` about an action that cannot be
+/// undone and needs the reader's words, such as a removal with a required
+/// Reason.
+///
+/// It is [`danger_dialog`] with `form`'s fields between its sentence and
+/// its actions, inside one `POST` form to `form.action`, so `confirm`, a
+/// submit button, posts the fields with it. Its trigger, such as a row
+/// menu's Remove… ([`crate::widget::action_menu::Act::Dialog`]), opens it
+/// with no script, and the focus moves to its first field.
+///
+/// # Examples
+///
+/// ```
+/// use ferrohealth_ui::view::dialog::{Confirmation, ConfirmForm, danger_form_dialog};
+/// use leptos::prelude::*;
+///
+/// let question = Confirmation {
+///     id: format!("remove-{}", "node-b").into(),
+///     title: "Remove node-b?".into(),
+///     message: "Its endpoints go with it.".into(),
+/// };
+/// let reason = view! { <textarea name="reason" required></textarea> };
+/// let form = ConfirmForm {
+///     action: String::from("/members/node-b/remove"),
+///     fields: reason.into_any(),
+/// };
+/// let remove = view! { <button type="submit">"Remove"</button> };
+/// let _dialog = danger_form_dialog(question, form, remove);
+/// ```
+#[must_use]
+pub fn danger_form_dialog(
+    confirmation: Confirmation,
+    form: ConfirmForm,
+    confirm: impl IntoView,
+) -> impl IntoView {
+    frame(confirmation, true, Some(form), confirm)
 }
 
 /// Returns the dialog asking `confirmation`, in the danger form when
-/// `danger`, with Cancel and `confirm`.
-fn frame(confirmation: Confirmation, danger: bool, confirm: impl IntoView) -> impl IntoView {
+/// `danger`, with `form`'s fields inside the form it posts when it has
+/// one, then Cancel and `confirm`.
+fn frame(
+    confirmation: Confirmation,
+    danger: bool,
+    form: Option<ConfirmForm>,
+    confirm: impl IntoView,
+) -> impl IntoView {
     let Confirmation { id, title, message } = confirmation;
     let title_id = format!("{id}-title");
     let labelled_by = title_id.clone();
@@ -71,25 +132,39 @@ fn frame(confirmation: Confirmation, danger: bool, confirm: impl IntoView) -> im
     } else {
         "fui-dialog"
     };
+    let (action, fields) = form.map_or((None, None), |form| (Some(form.action), Some(form.fields)));
+    let parts = view! {
+        <h2 id=title_id class="fui-dialog-title">
+            {danger.then(|| icon(Glyph::TRIANGLE_ALERT, "18"))}
+            {title}
+        </h2>
+        <p>{message}</p>
+        {fields}
+        <div class="fui-dialog-actions">
+            <button
+                type="button"
+                class=Variant::Secondary.class()
+                command="close"
+                commandfor=id.clone()
+            >
+                {icon(Glyph::X, "16")}
+                {tr(Text::Cancel)}
+            </button>
+            {confirm}
+        </div>
+    };
+    let inside = match action {
+        Some(action) => view! {
+            <form method="post" action=action class="fui-dialog-form">
+                {parts}
+            </form>
+        }
+        .into_any(),
+        None => parts.into_any(),
+    };
     view! {
         <dialog id=id.clone() closedby="any" aria-labelledby=labelled_by class=class>
-            <h2 id=title_id class="fui-dialog-title">
-                {danger.then(|| icon(Glyph::TRIANGLE_ALERT, "18"))}
-                {title}
-            </h2>
-            <p>{message}</p>
-            <div class="fui-dialog-actions">
-                <button
-                    type="button"
-                    class=Variant::Secondary.class()
-                    command="close"
-                    commandfor=id.clone()
-                >
-                    {icon(Glyph::X, "16")}
-                    {tr(Text::Cancel)}
-                </button>
-                {confirm}
-            </div>
+            {inside}
         </dialog>
     }
 }

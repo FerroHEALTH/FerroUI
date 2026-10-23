@@ -17,6 +17,7 @@ use crate::stack::Gallery;
 pub(super) const STATES: &[&str] = &[
     "dialog-open",
     "dialog-danger",
+    "dialog-reason",
     "dialog-info",
     "modal-open",
     "modal-wide",
@@ -130,6 +131,11 @@ pub(super) async fn overlays(
             "delete-file",
         ),
         (
+            "dialog-reason",
+            "//button[@role = 'menuitem' and @commandfor = 'remove-node-b']",
+            "remove-node-b",
+        ),
+        (
             "dialog-info",
             "//button[@commandfor = 'how-reloading']",
             "how-reloading",
@@ -162,6 +168,14 @@ pub(super) async fn overlays(
             press(
                 browser,
                 &crate::menus::hydrated_trigger(browser, "overlays-more").await?,
+            )
+            .await?;
+        }
+        if state == "dialog-reason" {
+            // Remove… is the row menu's item, so the row menu opens first.
+            press(
+                browser,
+                &crate::menus::hydrated_trigger(browser, "member-menu-node-b").await?,
             )
             .await?;
         }

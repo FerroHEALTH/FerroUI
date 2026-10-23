@@ -282,7 +282,8 @@ pub fn UserMenuButton(
 /// The menu or listbox `id` behind `trigger`, around the items the server
 /// drew as its children. A console draws it through
 /// [`crate::widget::action_menu::more_menu`], [`crate::widget::action_menu::row_menu`],
-/// [`crate::widget::action_menu::variants_menu`] or
+/// [`crate::widget::action_menu::variants_menu`],
+/// [`crate::widget::action_menu::labelled_menu`] or
 /// [`crate::widget::action_menu::listbox`].
 #[island]
 pub fn MenuButton(

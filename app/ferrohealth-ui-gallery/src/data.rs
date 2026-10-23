@@ -591,5 +591,8 @@ pub const TEMPLATE: (&str, &str) = ("synthetic-vital-signs", "v1.0.2");
 /// The path of a new mapping file the forms page's docked bar names.
 pub const NEW_PATH: &str = "fhirconnect/synthetic-night.context.yml";
 
+/// The synthetic members the overlays page's row menus remove.
+pub const MEMBERS: [&str; 2] = ["node-b", "node-c"];
+
 /// The synthetic set whose name the overlays page's More alone menu copies.
 pub const SET_NAME: &str = "synthetic-terminology-set";

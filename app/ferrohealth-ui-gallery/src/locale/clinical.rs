@@ -64,6 +64,10 @@ messages! {
     ClResultsEmpty = "cl-results-empty",
     /// `No rows, inside the query's own LIMIT 50.`
     ClResultsEmptyWindow = "cl-results-empty-window",
+    /// `An answer riding the query's own form`
+    ClResultsForm = "cl-results-form",
+    /// `Query`
+    ClResultsQuery = "cl-results-query",
     /// `An answer as a table`
     ClResultsTable = "cl-results-table",
     /// `Results`

@@ -2489,18 +2489,24 @@ async fn each_rows_remove_opens_its_own_confirmation() -> Result<(), Box<dyn Err
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
         browser.goto(&gallery.url("/ferrofed/overlays")).await?;
+        let menu = crate::menus::hydrated_trigger(browser, "member-menu-node-c").await?;
+        browser
+            .driver()
+            .execute(
+                "arguments[0].scrollIntoView({block: 'center'});",
+                vec![menu.to_json()?],
+            )
+            .await?;
+        menu.click().await?;
         let second = browser
             .element(By::Css(
                 "#member-removals button[commandfor='remove-node-c']",
             ))
             .await?;
-        browser
-            .driver()
-            .execute(
-                "arguments[0].scrollIntoView({block: 'center'});",
-                vec![second.to_json()?],
-            )
-            .await?;
+        until("the row menu opens", async || {
+            Ok(second.is_displayed().await?)
+        })
+        .await?;
         second.click().await?;
         let opened = browser.element(By::Id("remove-node-c")).await?;
         until("the second row's dialog opens", async || {

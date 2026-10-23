@@ -26,8 +26,9 @@
 //! `template-<template>`, `aql-<query>`, openEHR ITS-REST, SMART on
 //! openEHR, § 8.1 Resource scopes) both parse; the permissions follow the
 //! last dot, since a template id holds dots. [`Request::parse`] reads the
-//! scopes of the same chapter that ask for no resource: `openid` and
-//! `fhirUser` (§ Scopes for requesting identity data), `launch` and
+//! scopes of the same chapter that ask for no resource: `openid`,
+//! `profile` and `fhirUser` (§ Scopes for requesting identity data;
+//! `profile` is OpenID Connect Core 1.0, § 5.4), `launch` and
 //! `launch/<resource>` with its optional `?role=` (§ Scopes for requesting
 //! context data), and `online_access` and `offline_access` (§ Scopes for
 //! requesting a refresh token). [`ScopeGrant::read`] reads a raw scope
@@ -301,6 +302,9 @@ impl Scope {
 pub enum Request {
     /// `openid`: who the user is, by OpenID Connect.
     OpenId,
+    /// `profile`: the user's default profile claims, such as their name
+    /// and picture (OpenID Connect Core 1.0, § 5.4).
+    Profile,
     /// `fhirUser`: the user as a FHIR resource.
     FhirUser,
     /// `launch`: the context of the EHR that launched the app.
@@ -338,6 +342,7 @@ impl Request {
     pub fn parse(raw: &str) -> Option<Self> {
         match raw {
             "openid" => return Some(Self::OpenId),
+            "profile" => return Some(Self::Profile),
             "fhirUser" => return Some(Self::FhirUser),
             "launch" => return Some(Self::Launch),
             "online_access" => return Some(Self::OnlineAccess),
@@ -361,6 +366,7 @@ impl Request {
     pub fn words(&self) -> Word {
         match self {
             Self::OpenId => tr(Text::ScopeOpenid),
+            Self::Profile => tr(Text::ScopeProfile),
             Self::FhirUser => tr(Text::ScopeFhirUser),
             Self::Launch => tr(Text::ScopeLaunch),
             Self::LaunchContext {
