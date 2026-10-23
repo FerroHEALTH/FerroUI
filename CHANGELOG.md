@@ -11,6 +11,150 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-10-23
+
+### Added
+
+- Five Lucide glyphs for the FerroBRIDGE and FerroFED navigation:
+  `Glyph::FLAME`, `Glyph::MESSAGE_SQUARE`, `Glyph::TABLE_2`, `Glyph::PLUG` and
+  `Glyph::BUILDING_COMPLEX`, vendored from Lucide 1.51.0. That release names
+  `building-2` a deprecated alias of `building-complex`, so FerroFED's
+  Organisations entry takes `Glyph::BUILDING_COMPLEX` and `Glyph::named`
+  resolves `building-complex` (#321).
+- `view::state::state(mark, word, detail)` draws the F12 state mark a table
+  cell, a fact or a title badge shows: the shape of `view::state::Mark` (`Ok`
+  a filled circle, `Warn` a diamond, `Bad` a cross, `Neutral` a hollow ring,
+  `Off` the hollow ring with the word muted), the word, and an optional quiet
+  detail. `Mark` converts from `view::flow::FlowState`. The subject line, the
+  version history and the topology's list draw their states through it, and
+  the topology's list now hides the shape from assistive technology, since
+  the word beside it names the state (#322).
+- R10 takes a masked input with a hold-to-show eye: `view::form::masked_input`
+  draws the input `type="password"` with no autocomplete, capitals or spelling
+  check, and `view::form::Inner::HoldToShow` puts the eye inside its edge
+  (`island::HoldToShow` over `widget::masked::hold_to_show`, words in
+  `widget::masked::HoldWords`, named by the console with `HoldWords::named`).
+  Held by the pointer, by touch or by Space or Enter, the eye shows the typed
+  text with `aria-pressed` in step, and released, left or blurred, it masks it
+  again. The eye names its input by id, so the typed value is never an island
+  prop. Without WebAssembly it is disabled, its name says the field stays
+  masked, and the field stays masked (#323).
+- `view::surface::Header::subtitle_view` gives a page header a subtitle with
+  inline markup, such as a bold word and a code link to another page, in the
+  `fui-page-subtitle` style, drawn in place of the text `subtitle` when set.
+  The text form works as before (#326).
+- F7 repeatable rows take two more layouts: `widget::repeat::Fields::One`, a
+  row of one field with its Remove, and `Fields::Card`, a sub-card whose
+  heading (the new `RepeatRow::heading`) names its group with Remove beside
+  it, then its fields, a list of its own among them when it has one. A press
+  inside a nested list adds or removes only that list's rows (#330).
+- Four Lucide glyphs for the FerroTERM design: `Glyph::CORNER_DOWN_RIGHT`,
+  `Glyph::GIT_BRANCH`, `Glyph::LIST_FILTER` and `Glyph::LIST_TREE`, vendored
+  from Lucide 1.51.0. That release names `trash-2` a deprecated alias of
+  `trash`, whose outline `Glyph::TRASH` already draws, so the design's
+  `trash-2` is `Glyph::TRASH`. `Glyph::ALL` holds 103 glyphs (#336).
+- `table::filter::filter_menu`, T1's filter menu: a `<details>` whose summary
+  is the button, a checkbox per `FilterChoice` with the number of rows it
+  keeps and an optional mark, and Show, sent in a `GET` form of its own
+  (`MenuForm::Own`, carrying the listing's other fields) or in the find
+  field's form (`MenuForm::Enclosing`), so a listing filters by several
+  choices at once with no WebAssembly. While some choice is off the button
+  says "Source · 2 of 5" in the accent. F9's Status menu draws through it (#338).
+- `view::dialog::info_dialog` with `Explanation`: the informational dialog,
+  a page of explanation such as "How configuration works", with the info
+  glyph beside its title, the console's paragraphs, and Close as its only
+  action, which takes the focus. Its trigger opens it with the `show-modal`
+  command, so it works with no WebAssembly (#339).
+- The release notes of each release state the month its five years of
+  security fixes end (Regulation (EU) 2024/2847 Art 13(19)). The accepted
+  `paste` advisory (RUSTSEC-2024-0436) is published as an OpenVEX statement,
+  `security/vex/rust-advisories.openvex.json`, for a scanner to read with
+  `trivy --vex`. `SECURITY.md` names the `info@cadasto.com` reporting route
+  and the advisory each fixed vulnerability is published as (#343).
+
+### Changed
+
+- Breaking: `view::form::Inner` gains the `HoldToShow` variant, so a console
+  that matches on `Inner` exhaustively adds an arm. A console that
+  translates the library's catalog adds `hold-show` and
+  `hold-show-needs-script`, the eye's name with WebAssembly and without (#323).
+- Breaking: a refusal with no status shows its summary alone as its title, as
+  the design draws it; "No answer:" moves into the title's visually hidden
+  lead, so assistive technology still says no answer came.
+  `view::refusal::refusal_title` returns the summary alone for such a refusal,
+  the new `view::refusal::refusal_lead` returns the hidden lead, and the
+  catalog's `refusal-no-answer` is the lead alone and takes no `$summary`. A
+  console that draws the title itself draws `refusal_lead` before it, and a
+  translated catalog drops `$summary` from `refusal-no-answer` (#324).
+- Breaking: `view::surface::Header` gains the public field `subtitle_view`,
+  so a console that writes a `Header` literal without `..Header::default()`
+  adds `subtitle_view: None` (#326).
+- `view::popover::PopoverForm::id` and `view::dialog::Confirmation::id` take a
+  `Cow<'static, str>`, so each table row's popover form or confirmation can
+  carry an id of its own, such as `remove-node-c`. Breaking: a static id
+  becomes `"save-query".into()` (#329).
+- Breaking: `widget::repeat::RepeatRow` gains the public field `heading`, so
+  a `RepeatRow` literal adds `heading: None`, and `widget::repeat::Fields`
+  gains the `One` and `Card` variants, so a console that matches on
+  `Fields` exhaustively adds two arms (#330).
+- Breaking: `DatePicker`, `DateRangePicker` and `TreeView` are lazy islands
+  only with the new `split` feature. A console that builds with
+  `cargo leptos build --split` turns on `features = ["split"]` for
+  `ferrohealth-ui` to keep their code in chunks of its own; a console that
+  builds without `--split` changes nothing and now hydrates them (#331).
+- Breaking: `Glyph::ALL` is a `[(&str, Glyph); 103]`, up from 94 in 0.3.2
+  with the nine glyphs this release vendors, so a console that names the
+  array's length writes 103, or reads it as a slice (#336).
+- Breaking: the topology's Status menu takes its words from the filter menu:
+  the catalog messages `topology-show` and `topology-status-some` are gone,
+  and `filter-menu-show` and `filter-menu-some`
+  (`{ $label } · { $shown } of { $total }`) take their place. A console that
+  translates the library's catalog renames the two messages (#338).
+- A list card's and a panel section's count can say the items shown of a
+  larger set: `ListCard::count` and `SectionHead::count` take an
+  `Option<view::template::list::HeadingCount>`, drawn as "· 15"
+  (`HeadingCount::All`) or "· 6 of 15" (`HeadingCount::Shown`), each number
+  with the locale's marks, and `template::list::counted` takes a
+  `HeadingCount`. Breaking: `count: Some(15)` becomes
+  `count: Some(HeadingCount::All(15))` (or `Some(15.into())` from a `u64`),
+  and a console that translates the library's catalog adds `count-shown-of`
+  (#340).
+
+### Fixed
+
+- A `view::segmented::choice_group` legend draws as a field label (the body
+  size, weight 500, no rule under it), so the choice lines up with the fields
+  beside it; the group heading rule of `fui-fieldset` no longer outranks it (#327).
+- The user menu's theme segments keep their words on one line whichever theme
+  is chosen, at 1440 px and on the 390 px sheet; the menu grows to the row's
+  width instead of breaking "System" (#328).
+- The library's lazy islands (`DatePicker`, `DateRangePicker`, `TreeView`) are
+  lazy only with the new `split` feature, so a console built without
+  `cargo leptos build --split` no longer gets a glue that imports
+  `__wasm_split_placeholder__` and hydrates no island. `docs/consoles.md` says
+  how a console builds, and the gallery's site build fails on a glue that
+  imports the placeholder (#331).
+- The code editor (B2), the YAML editor and the upload field keep every key
+  typed while the console's text comes back late: the text area is the
+  source of the live text, a text the editor handed to `on_input` coming
+  back is an echo and never written, and only an outside change that differs
+  from the field is written into it. Before, a key typed before the echo of
+  an earlier one was overwritten and the caret jumped to the end (#333).
+- In a stacked table (B10 below 40 rem) a pill, a badge or a state wraps its
+  words inside the value column, so a long state such as "saved, not
+  applied" never carries the card past a 320 px page (WCAG 2.2 SC 1.4.10) (#334).
+- A focused match in M1's match list draws the focus ring on its row (WCAG
+  2.2 SC 2.4.7), and a row link (`fui-row-link`, such as `Coding::href`)
+  covers its row and gives up its own ring only in a table or a match list.
+  Elsewhere it is a plain link with its own ring: a concept's Parent drawn
+  with `Coding::href` in `Layout::Inline` no longer covers the pane and takes
+  every click over it, and the phone list of B9's flow and a diagnostics
+  file head keep a visible ring (#335).
+- M5's root matrix keeps its header row at the top of its own scroll box
+  from 64 rem up, above its first row. The wide table's sticky header, a top
+  bar's height down, outranked it and drew the header over the first rows
+  with an empty band above (#337).
+
 ## [0.3.2] - 2026-10-23
 
 ### Added
@@ -2116,7 +2260,8 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.2...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.3...HEAD
+[0.3.3]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/FerroHEALTH/FerroUI/compare/v0.2.2...v0.3.0
