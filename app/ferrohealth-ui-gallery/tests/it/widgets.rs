@@ -929,3 +929,48 @@ async fn the_document_views_switch_in_place_once_the_island_hydrates() -> Result
     })
     .await
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_flow_rule_opens_from_its_button_and_gives_the_focus_back() -> Result<(), Box<dyn Error>>
+{
+    // NOTE: WAI-ARIA Authoring Practices, the dialog (modal) pattern: Close takes the focus, Escape returns it.
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/ferrobridge/charts")).await?;
+        let trigger = browser
+            .element(By::Css(
+                "button[command='show-modal'][commandfor='flow-rule']",
+            ))
+            .await?;
+        trigger.scroll_into_view().await?;
+        trigger.click().await?;
+        let dialog = browser.element(By::Id("flow-rule")).await?;
+        until("the rule opens", async || Ok(dialog.is_displayed().await?)).await?;
+        assert_eq!(
+            4,
+            dialog
+                .find_all(By::Css(".fui-topology-rule > li"))
+                .await?
+                .len(),
+            "one line per state"
+        );
+        let active = browser.driver().active_element().await?;
+        assert_eq!(Some(String::from("close")), active.attr("command").await?);
+        active.send_keys(Key::Escape).await?;
+        until("Escape closes it", async || {
+            Ok(!dialog.is_displayed().await?)
+        })
+        .await?;
+        let back = browser.driver().active_element().await?;
+        assert_eq!(
+            Some(String::from("flow-rule")),
+            back.attr("commandfor").await?,
+            "the focus returns to the button"
+        );
+        browser.console_clean("the flow rule").await
+    })
+    .await
+}

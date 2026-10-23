@@ -10,11 +10,13 @@
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::flow::{
-    FOLD_PAST, Flow, FlowCard, FlowEdge, FlowLane, FlowState, LaneFold, flow,
+    EdgeRule, FOLD_PAST, Flow, FlowCard, FlowEdge, FlowLane, FlowRule, FlowState, LaneFold,
+    edge_rule, flow, rule_button, rule_dialog,
 };
 use ferrohealth_ui::view::funnel::{Bar, Funnel, FunnelPart, bar_list, funnel};
 use ferrohealth_ui::view::score::{Contribution, Score, Threshold, score_bar, score_breakdown};
 
+use crate::markup::has;
 use crate::render::html;
 
 fn part(label: &str, count: u64, tone: Tone) -> FunnelPart {
@@ -165,6 +167,94 @@ fn a_flow_draws_each_state_as_a_line_style_and_marks_and_labels_only_its_problem
         "an edge that is up carries no label: {shown}"
     );
     assert!(!shown.contains("style="), "{shown}");
+}
+
+#[test]
+fn the_edge_rule_draws_each_state_as_its_line_its_word_its_style_and_its_meaning() {
+    // NOTE: WCAG 2.2 SC 1.4.1: the line sample is hidden; the word and the style say the state.
+    let shown = html(|| {
+        edge_rule(vec![
+            EdgeRule {
+                state: FlowState::Up,
+                meaning: String::from("it answers"),
+            },
+            EdgeRule {
+                state: FlowState::Degraded,
+                meaning: String::from("it answers slowly"),
+            },
+        ])
+    });
+    assert!(
+        has(
+            &shown,
+            "svg",
+            &[("class", "fui-line-sample"), ("aria-hidden", "true")]
+        ),
+        "{shown}"
+    );
+    assert!(
+        shown.contains(r#"class="fui-edge fui-edge-ok"></path></svg><span><strong>Up</strong>"#),
+        "the sample before its words: {shown}"
+    );
+    assert!(
+        shown.contains("<strong>Up</strong> · solid: it answers</span>"),
+        "{shown}"
+    );
+    assert!(
+        shown.contains("<strong>Degraded</strong> · dashed, marked !: it answers slowly</span>"),
+        "{shown}"
+    );
+}
+
+#[test]
+fn the_flow_rule_is_a_short_informational_dialog_its_button_opens_with_no_script() {
+    // NOTE: HTML Living Standard, the button element's command attribute: show-modal opens a dialog.
+    let dialog = html(|| {
+        rule_dialog(FlowRule {
+            id: "flow-rule".into(),
+            rules: vec![EdgeRule {
+                state: FlowState::Off,
+                meaning: String::from("not configured"),
+            }],
+            note: String::from("A card opens its page."),
+        })
+    });
+    assert!(
+        has(
+            &dialog,
+            "dialog",
+            &[
+                ("id", "flow-rule"),
+                ("class", "fui-dialog"),
+                ("aria-labelledby", "flow-rule-title")
+            ]
+        ),
+        "a short dialog, not the wide one: {dialog}"
+    );
+    assert!(dialog.contains("How the flow is drawn</h2>"), "{dialog}");
+    assert!(
+        dialog.contains("<strong>Off</strong> · thin, faded: not configured"),
+        "{dialog}"
+    );
+    assert!(
+        dialog.contains(r#"<p class="fui-small fui-muted">A card opens its page.</p>"#),
+        "{dialog}"
+    );
+    let button = html(|| rule_button("flow-rule".into()));
+    assert!(
+        has(
+            &button,
+            "button",
+            &[
+                ("type", "button"),
+                ("command", "show-modal"),
+                ("commandfor", "flow-rule"),
+                ("aria-haspopup", "dialog"),
+            ]
+        ),
+        "{button}"
+    );
+    assert!(button.contains("How it is drawn</button>"), "{button}");
 }
 
 #[test]

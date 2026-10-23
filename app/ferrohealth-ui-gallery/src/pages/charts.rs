@@ -19,7 +19,10 @@ use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::chart::{
     ACCENT, ActivityChart, BAD, LineChart, NEUTRAL, Series, activity_chart,
 };
-use ferrohealth_ui::view::flow::{Flow, FlowCard, FlowEdge, FlowLane, FlowState, LaneFold, flow};
+use ferrohealth_ui::view::flow::{
+    EdgeRule, Flow, FlowCard, FlowEdge, FlowLane, FlowRule, FlowState, LaneFold, flow, rule_button,
+    rule_dialog,
+};
 use ferrohealth_ui::view::funnel::{Bar, Funnel, FunnelPart, bar_list, funnel};
 use ferrohealth_ui::view::score::{Contribution, Score, Threshold, score_bar, score_breakdown};
 use ferrohealth_ui::view::surface::{card, definitions, page_header, stack, titled_panel};
@@ -426,7 +429,28 @@ fn bridge_flow(problems: bool) -> AnyView {
         edges,
         foot: tr(foot),
     });
-    titled_panel(tr(title), (), drawn).into_any()
+    if problems {
+        return titled_panel(tr(title), (), drawn).into_any();
+    }
+    let rule = |state, meaning| EdgeRule {
+        state,
+        meaning: tr(meaning),
+    };
+    let help = rule_dialog(FlowRule {
+        id: "flow-rule".into(),
+        rules: vec![
+            rule(FlowState::Up, Msg::FlowRuleUp),
+            rule(FlowState::Degraded, Msg::FlowRuleDegraded),
+            rule(FlowState::Unreachable, Msg::FlowRuleUnreachable),
+            rule(FlowState::Off, Msg::FlowRuleOff),
+        ],
+        note: tr(Msg::FlowRuleNote),
+    });
+    view! {
+        {titled_panel(tr(title), rule_button("flow-rule".into()), drawn)}
+        {help}
+    }
+    .into_any()
 }
 
 /// A card of the busy bridge, named by its kind and its number.
