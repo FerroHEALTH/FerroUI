@@ -473,7 +473,11 @@ async fn adding_a_sub_card_focuses_its_first_field() -> Result<(), Box<dyn Error
             Ok(rows_of(browser, "member-endpoints").await? == 3)
         })
         .await?;
-        assert_eq!("ep-new-1-id", focused_id(browser).await?, "the new card's first field");
+        assert_eq!(
+            "ep-new-1-id",
+            focused_id(browser).await?,
+            "the new card's first field"
+        );
         assert_eq!(at, browser.driver().current_url().await?, "nothing posted");
         browser.console_clean("a sub-card added").await
     })
@@ -490,7 +494,9 @@ async fn removing_a_sub_card_focuses_the_next_cards_first_field() -> Result<(), 
     with_browser(async |browser| {
         endpoints(browser, &gallery).await?;
         let remove = browser
-            .element(By::Css("#member-endpoints button[name='remove-endpoint'][value='e1']"))
+            .element(By::Css(
+                "#member-endpoints button[name='remove-endpoint'][value='e1']",
+            ))
             .await?;
         script::<serde_json::Value>(
             browser,
@@ -503,7 +509,11 @@ async fn removing_a_sub_card_focuses_the_next_cards_first_field() -> Result<(), 
             Ok(rows_of(browser, "member-endpoints").await? == 1)
         })
         .await?;
-        assert_eq!("ep-e2-id", focused_id(browser).await?, "the next card's first field");
+        assert_eq!(
+            "ep-e2-id",
+            focused_id(browser).await?,
+            "the next card's first field"
+        );
         browser.console_clean("a sub-card removed").await
     })
     .await

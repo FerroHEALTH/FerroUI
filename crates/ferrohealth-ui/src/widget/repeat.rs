@@ -573,9 +573,7 @@ mod browser {
         let token = blank
             .get_attribute("data-token")
             .unwrap_or_else(|| String::from(super::ROW));
-        let key = super::fresh_key(|key| {
-            !own(root, &format!("[data-row='{key}']")).is_empty()
-        });
+        let key = super::fresh_key(|key| !own(root, &format!("[data-row='{key}']")).is_empty());
         let Some(copy) = blank
             .dyn_ref::<web_sys::HtmlTemplateElement>()
             .and_then(|template| template.content().clone_node_with_deep(true).ok())

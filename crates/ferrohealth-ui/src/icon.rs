@@ -31,6 +31,10 @@ impl Glyph {
     pub const ARROW_DOWN: Self = Self(r#"<path d="M12 5v14" /><path d="m19 12-7 7-7-7" />"#);
     /// Lucide `arrow-left`.
     pub const ARROW_LEFT: Self = Self(r#"<path d="m12 19-7-7 7-7" /><path d="M19 12H5" />"#);
+    /// Lucide `arrow-left-right`.
+    pub const ARROW_LEFT_RIGHT: Self = Self(
+        r#"<path d="M8 3 4 7l4 4" /><path d="M4 7h16" /><path d="m16 21 4-4-4-4" /><path d="M20 17H4" />"#,
+    );
     /// Lucide `arrow-right`.
     pub const ARROW_RIGHT: Self = Self(r#"<path d="M5 12h14" /><path d="m12 5 7 7-7 7" />"#);
     /// Lucide `arrow-up-down`.
@@ -49,6 +53,10 @@ impl Glyph {
     /// Lucide `book-a`.
     pub const BOOK_A: Self = Self(
         r#"<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20" /><path d="m8 13 4-7 4 7" /><path d="M9.1 11h5.7" />"#,
+    );
+    /// Lucide `book-open`.
+    pub const BOOK_OPEN: Self = Self(
+        r#"<path d="M12 5v16" /><path d="M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z" />"#,
     );
     /// Lucide `book-x`.
     pub const BOOK_X: Self = Self(
@@ -201,6 +209,10 @@ impl Glyph {
     pub const GIT_COMMIT: Self = Self(
         r#"<circle cx="12" cy="12" r="3" /><line x1="3" x2="9" y1="12" y2="12" /><line x1="15" x2="21" y1="12" y2="12" />"#,
     );
+    /// Lucide `git-compare`, two revisions compared.
+    pub const GIT_COMPARE: Self = Self(
+        r#"<circle cx="18" cy="18" r="3" /><circle cx="6" cy="6" r="3" /><path d="M13 6h3a2 2 0 0 1 2 2v7" /><path d="M11 18H8a2 2 0 0 1-2-2V9" />"#,
+    );
     /// Lucide `heart-pulse`.
     pub const HEART_PULSE: Self = Self(
         r#"<path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5" /><path d="M3.22 13H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27" />"#,
@@ -336,6 +348,10 @@ impl Glyph {
     /// Lucide `search`.
     pub const SEARCH: Self =
         Self(r#"<path d="m21 21-4.34-4.34" /><circle cx="11" cy="11" r="8" />"#);
+    /// Lucide `send`.
+    pub const SEND: Self = Self(
+        r#"<path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z" /><path d="m21.854 2.147-10.94 10.939" />"#,
+    );
     /// Lucide `server-crash`.
     pub const SERVER_CRASH: Self = Self(
         r#"<path d="M6 10H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2" /><path d="M6 14H4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2h-2" /><path d="M6 6h.01" /><path d="M6 18h.01" /><path d="m13 6-4 6h6l-4 6" />"#,
@@ -395,6 +411,10 @@ impl Glyph {
     pub const USER_PLUS: Self = Self(
         r#"<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" x2="19" y1="8" y2="14" /><line x1="22" x2="16" y1="11" y2="11" />"#,
     );
+    /// Lucide `user-round-search`.
+    pub const USER_ROUND_SEARCH: Self = Self(
+        r#"<circle cx="10" cy="8" r="5" /><path d="M2 21a8 8 0 0 1 10.434-7.62" /><circle cx="18" cy="18" r="3" /><path d="m22 22-1.9-1.9" />"#,
+    );
     /// Lucide `users`.
     pub const USERS: Self = Self(
         r#"<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><path d="M16 3.128a4 4 0 0 1 0 7.744" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><circle cx="9" cy="7" r="4" />"#,
@@ -403,16 +423,18 @@ impl Glyph {
     pub const X: Self = Self(r#"<path d="M18 6 6 18" /><path d="m6 6 12 12" />"#);
 
     /// Every glyph, with the Lucide name of its vendored file.
-    pub const ALL: [(&str, Self); 105] = [
+    pub const ALL: [(&str, Self); 110] = [
         ("activity", Self::ACTIVITY),
         ("arrow-down", Self::ARROW_DOWN),
         ("arrow-left", Self::ARROW_LEFT),
+        ("arrow-left-right", Self::ARROW_LEFT_RIGHT),
         ("arrow-right", Self::ARROW_RIGHT),
         ("arrow-up-down", Self::ARROW_UP_DOWN),
         ("arrow-up", Self::ARROW_UP),
         ("ban", Self::BAN),
         ("bell", Self::BELL),
         ("book-a", Self::BOOK_A),
+        ("book-open", Self::BOOK_OPEN),
         ("book-x", Self::BOOK_X),
         ("building-complex", Self::BUILDING_COMPLEX),
         ("calendar", Self::CALENDAR),
@@ -456,6 +478,7 @@ impl Glyph {
         ("gauge", Self::GAUGE),
         ("git-branch", Self::GIT_BRANCH),
         ("git-commit-horizontal", Self::GIT_COMMIT),
+        ("git-compare", Self::GIT_COMPARE),
         ("heart-pulse", Self::HEART_PULSE),
         ("inbox", Self::INBOX),
         ("info", Self::INFO),
@@ -492,6 +515,7 @@ impl Glyph {
         ("search-code", Self::SEARCH_CODE),
         ("search-x", Self::SEARCH_X),
         ("search", Self::SEARCH),
+        ("send", Self::SEND),
         ("server-crash", Self::SERVER_CRASH),
         ("server", Self::SERVER),
         ("settings", Self::SETTINGS),
@@ -507,6 +531,7 @@ impl Glyph {
         ("undo", Self::UNDO),
         ("upload", Self::UPLOAD),
         ("user-plus", Self::USER_PLUS),
+        ("user-round-search", Self::USER_ROUND_SEARCH),
         ("users", Self::USERS),
         ("x", Self::X),
     ];
