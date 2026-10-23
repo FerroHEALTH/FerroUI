@@ -12,7 +12,8 @@
   `plug` and `table-2` on 2026-10-23, and `corner-down-right`,
   `git-branch`, `list-filter` and `list-tree` later that day, and
   `arrow-left-right`, `book-open`, `git-compare`, `send` and
-  `user-round-search` on 2026-10-23 too, from the same release. The
+  `user-round-search` on 2026-10-23 too, and `scroll-text` that day as
+  well, from the same release. The
   release names `building-2` a deprecated alias of `building-complex`,
   `trash-2` one of `trash` and `history` one of `rotate-ccw-clock`, so
   each file is vendored under its current name.
