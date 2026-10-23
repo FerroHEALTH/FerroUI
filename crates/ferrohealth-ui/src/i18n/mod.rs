@@ -40,6 +40,7 @@ use fluent_templates::{LanguageIdentifier, Loader, StaticLoader};
 use leptos::prelude::*;
 
 mod negotiate;
+pub mod number;
 mod words;
 
 fluent_templates::static_loader! {
@@ -48,7 +49,10 @@ fluent_templates::static_loader! {
         fallback_language: "en",
         // NOTE: Fluent's guide, "Bidirectionality": the isolation marks around a
         // placeable are for mixed-direction text; the English catalog draws none.
-        customise: |bundle| bundle.set_use_isolating(false),
+        customise: |bundle| {
+            bundle.set_use_isolating(false);
+            bundle.set_formatter(Some(number::format_number));
+        },
     };
 }
 
@@ -71,7 +75,8 @@ fn english() -> LanguageIdentifier {
 pub enum Arg {
     /// Text, written as it stands.
     Text(String),
-    /// A number, written without grouping and selectable by plural rule.
+    /// A number, written in the marks of the page's language (its digits
+    /// grouped in threes) and selectable by plural rule.
     Number(f64),
 }
 
@@ -101,15 +106,15 @@ impl From<i32> for Arg {
 
 impl From<usize> for Arg {
     fn from(number: usize) -> Self {
-        // NOTE: no specification governs this: our own design; a count past u32 is
-        // written as text, which a plural selector reads as its default form.
-        u32::try_from(number).map_or_else(|_| Self::Text(number.to_string()), Self::from)
+        u64::try_from(number).map_or_else(|_| Self::Text(number.to_string()), Self::from)
     }
 }
 
 impl From<u64> for Arg {
     fn from(number: u64) -> Self {
-        u32::try_from(number).map_or_else(|_| Self::Text(number.to_string()), Self::from)
+        // NOTE: no specification governs this: our own design; a count past what a float
+        // holds exactly is written grouped as text, which a plural reads as its default.
+        number::exact(number).map_or_else(|| Self::Text(number::grouped(number)), Self::Number)
     }
 }
 

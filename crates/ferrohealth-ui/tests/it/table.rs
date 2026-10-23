@@ -14,7 +14,7 @@ use ferrohealth_ui::table::model::{
 use ferrohealth_ui::table::pager::{Listing, PostTo, link_pager, post_open_pager, post_pager};
 use ferrohealth_ui::table::view::{
     Body, Column, DataTable, EXCLUDED, Role, RowCheck, Sorting, cell, check_cell, count_cell,
-    data_table, data_table_unstacked, group_row, menu_cell, title_cell,
+    data_table, data_table_unstacked, data_table_wide, group_row, menu_cell, title_cell,
 };
 use ferrohealth_ui::view::template::list::{ListCard, list_card};
 use leptos::prelude::*;
@@ -927,4 +927,77 @@ fn an_unstacked_table_keeps_its_sort_form() {
         .into_any()
     });
     assert!(table.contains("fui-sort-form"), "{table}");
+}
+
+#[test]
+fn a_table_no_console_bounds_keeps_its_scroll_box_at_every_width() {
+    let columns = [Column::text("name", "Name"), Column::text("kind", "Kind")];
+    let rows = || view! { <tr><td>"a"</td><td data-label="Kind">"model"</td></tr> }.into_any();
+    let wide = html(|| {
+        data_table_wide(DataTable {
+            caption: "Result",
+            columns: &columns,
+            sorting: Sorting::default(),
+            body: Body::Rows(rows()),
+        })
+        .into_any()
+    });
+    assert!(
+        wide.contains(r#"class="fui-table-scroll fui-table-stack fui-table-wide""#),
+        "WCAG 2.2 SC 1.4.10: the table scrolls in its box, never the page: {wide}"
+    );
+    let plain = html(|| {
+        data_table(DataTable {
+            caption: "Files",
+            columns: &columns,
+            sorting: Sorting::default(),
+            body: Body::Rows(rows()),
+        })
+        .into_any()
+    });
+    assert!(!plain.contains("fui-table-wide"), "{plain}");
+}
+
+#[test]
+fn a_query_column_makes_a_wide_table_and_its_header_breaks_like_a_path() {
+    let columns = [Column::owned(
+        "systolic",
+        "/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude",
+    )
+    .mono()];
+    let table = html(|| {
+        data_table(DataTable {
+            caption: "Result",
+            columns: &columns,
+            sorting: Sorting::default(),
+            body: Body::Rows(view! { <tr><td>"120"</td></tr> }.into_any()),
+        })
+        .into_any()
+    });
+    assert!(table.contains("fui-table-wide"), "{table}");
+    assert!(
+        table.contains(r#"<span class="fui-path"><span>/</span><wbr><span>data[</span><wbr>"#),
+        "the header offers a break after each slash and bracket: {table}"
+    );
+}
+
+#[test]
+fn a_count_cell_groups_its_digits_and_keeps_them_on_one_line() {
+    let column = Column::text("rows", "Rows").numeric();
+    let cell = html(|| count_cell(&column, 4_000_000_000, Noun::ROWS));
+    assert!(cell.contains("<span>4,000,000,000</span>"), "{cell}");
+    assert!(has(&cell, "td", &[("class", "fui-num")]), "{cell}");
+}
+
+#[test]
+fn a_range_past_a_thousand_groups_its_digits() {
+    let window = Window::over(312_000, Paging::read(Some("2"), Some("25")));
+    let label = html(|| window.range_of(Noun::ROWS).into_any());
+    assert_eq!("26-50 of 312,000 rows", label);
+    let past = html(|| {
+        OpenWindow::of(Paging::read(Some("1200"), Some("25")), 0)
+            .range_of(Noun::ROWS)
+            .into_any()
+    });
+    assert_eq!("Page 1,200 is past the last row.", past);
 }

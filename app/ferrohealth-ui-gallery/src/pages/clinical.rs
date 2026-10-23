@@ -584,13 +584,14 @@ fn answer_chart() -> AnyView {
 }
 
 /// One answer as a table, its switch in the URL, and as a chart, its switch
-/// a form the console answers from its session.
+/// a form the console answers from its session, then an answer with no row.
 fn results(brand: &str) -> AnyView {
     let count = u64::try_from(ROWS.len()).unwrap_or(u64::MAX);
     let page = format!("/{brand}/clinical");
     let table = results_pane(ResultsPane {
         title: tr(Msg::ClResultsTitle),
         count,
+        numeric: true,
         shown: Shown::Table,
         switch: Switch::Url {
             table: format!("{page}#results"),
@@ -604,6 +605,7 @@ fn results(brand: &str) -> AnyView {
     let chart = results_pane(ResultsPane {
         title: tr(Msg::ClResultsTitle),
         count,
+        numeric: true,
         shown: Shown::Chart,
         switch: Switch::Session {
             action: page.clone(),
@@ -614,9 +616,24 @@ fn results(brand: &str) -> AnyView {
         window: tr(Msg::ClResultsWindow),
         body: answer_chart(),
     });
+    let empty = results_pane(ResultsPane {
+        title: tr(Msg::ClResultsTitle),
+        count: 0,
+        numeric: true,
+        shown: Shown::Table,
+        switch: Switch::Url {
+            table: format!("{page}#results-empty"),
+            chart: format!("{page}#results-empty"),
+        },
+        csv: format!("{page}#results-empty"),
+        json: format!("{page}#results-empty"),
+        window: tr(Msg::ClResultsEmptyWindow),
+        body: ().into_any(),
+    });
     view! {
         <div id="results">{panel_sections_card(tr(Msg::ClResultsTable), table)}</div>
         <div id="results-chart">{panel_sections_card(tr(Msg::ClResultsChart), chart)}</div>
+        <div id="results-empty">{panel_sections_card(tr(Msg::ClResultsEmpty), empty)}</div>
     }
     .into_any()
 }

@@ -76,8 +76,13 @@ pub enum Switch {
 pub struct ResultsPane {
     /// The section's title, such as "Results".
     pub title: String,
-    /// How many rows the answer holds, after the title.
+    /// How many rows the answer holds, after the title. With none, the
+    /// chart and the exports are unavailable and the pane says why.
     pub count: u64,
+    /// Whether the answer has a numeric column the chart can draw. With
+    /// none, the switch is left out, the table is shown and the pane says
+    /// why there is no chart.
+    pub numeric: bool,
     /// How the answer is shown.
     pub shown: Shown,
     /// Where the switch keeps its state.
@@ -91,7 +96,8 @@ pub struct ResultsPane {
     pub window: String,
     /// The answer as [`ResultsPane::shown`] says: a
     /// [`crate::table::view::data_table`] or a
-    /// [`crate::widget::chart::line_chart`].
+    /// [`crate::widget::chart::line_chart`]; always the table when there
+    /// is nothing to chart (no row, or no numeric column).
     pub body: AnyView,
 }
 
@@ -126,13 +132,39 @@ fn switch_view(switch: Switch, shown: Shown) -> AnyView {
     }
 }
 
+/// Returns an export link `words` to `href`, or the same control disabled,
+/// saying "(unavailable)" to assistive technology, when there is nothing to
+/// export.
+fn export(href: String, words: String, available: bool) -> AnyView {
+    if available {
+        return view! {
+            <a href=href class=Variant::Secondary.small()>
+                {label(Some(Glyph::DOWNLOAD), words)}
+            </a>
+        }
+        .into_any();
+    }
+    view! {
+        <span class=Variant::Secondary.small() aria-disabled="true">
+            {label(Some(Glyph::DOWNLOAD), words)}
+            <span class="fui-sr-only">" " {tr(Text::StepUnavailable)}</span>
+        </span>
+    }
+    .into_any()
+}
+
 /// Returns the results pane `pane`, a part of a tab panel
 /// ([`crate::view::surface::panel_sections`]).
+///
+/// An answer with no row offers no chart and its exports disabled, and one
+/// with no numeric column offers no chart; the pane says why in a quiet
+/// line, never only in a disabled control (`design/COMPONENTS.md`, R4).
 #[must_use]
 pub fn results_pane(pane: ResultsPane) -> AnyView {
     let ResultsPane {
         title,
         count,
+        numeric,
         shown,
         switch,
         csv,
@@ -140,14 +172,18 @@ pub fn results_pane(pane: ResultsPane) -> AnyView {
         window,
         body,
     } = pane;
+    let rows = count > 0;
+    let chartable = rows && numeric;
+    let shown = if chartable { shown } else { Shown::Table };
+    let why = match (rows, numeric) {
+        (false, _) => Some(tr(Text::ResultsNoRows)),
+        (true, false) => Some(tr(Text::ResultsNoChart)),
+        (true, true) => None,
+    };
     let actions = view! {
-        {switch_view(switch, shown)}
-        <a href=csv class=Variant::Secondary.small()>
-            {label(Some(Glyph::DOWNLOAD), tr(Text::ResultsExportCsv))}
-        </a>
-        <a href=json class=Variant::Secondary.small()>
-            {label(Some(Glyph::DOWNLOAD), tr(Text::ResultsExportJson))}
-        </a>
+        {chartable.then(|| switch_view(switch, shown))}
+        {export(csv, tr(Text::ResultsExportCsv), rows)}
+        {export(json, tr(Text::ResultsExportJson), rows)}
     }
     .into_any();
     let body = match shown {
@@ -162,6 +198,7 @@ pub fn results_pane(pane: ResultsPane) -> AnyView {
         }),
         view! {
             <p class="fui-results-window">{window}</p>
+            {why.map(|why| view! { <p class="fui-results-window">{why}</p> })}
             {body}
         },
     )

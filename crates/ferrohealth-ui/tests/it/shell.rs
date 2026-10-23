@@ -14,6 +14,7 @@ use ferrohealth_ui::view::sign_in::{
     Basic, NOTICE_ID, Notice, Provider, Retry, SignIn, State, sign_in,
 };
 use ferrohealth_ui::view::status::{Reach, StatusPill, badge, banner, pill, status, status_pill};
+use ferrohealth_ui::view::tabs::{Tab, binder};
 use ferrohealth_ui::widget::menu::{Choice, Choices, ThemeChoice, UserMenu, user_menu};
 use ferrohealth_ui::widget::nav::{Count, Entry, Group, Nest, NestItem, Rail, Sidebar, sidebar};
 use leptos::prelude::*;
@@ -305,7 +306,7 @@ fn a_count_past_99_shows_whole_and_short_for_the_rail() {
         })
     });
     assert!(
-        page.contains(r#"<span aria-hidden="true" class="fui-nav-count-whole">123456</span><span aria-hidden="true" class="fui-nav-count-short">99+</span><span class="fui-sr-only">123456 errors in the running load</span>"#),
+        page.contains(r#"<span aria-hidden="true" class="fui-nav-count-whole">123,456</span><span aria-hidden="true" class="fui-nav-count-short">99+</span><span class="fui-sr-only">123456 errors in the running load</span>"#),
         "{page}"
     );
     assert!(
@@ -937,4 +938,47 @@ fn a_card_with_no_method_says_so() {
     });
     assert!(card.contains("No sign-in method is available"), "{card}");
     assert!(!card.contains("<h1"), "{card}");
+}
+
+#[test]
+fn a_navigation_or_tab_count_groups_its_digits() {
+    let page = page_html(|| {
+        sidebar(Sidebar {
+            id: "sidebar",
+            label: String::from("Pages"),
+            groups: vec![Group {
+                id: "nav-pages",
+                title: "Pages".into(),
+                entries: vec![Entry {
+                    href: "/findings".into(),
+                    label: "Findings".into(),
+                    glyph: Glyph::DATABASE,
+                    exact: false,
+                    count: Some(Count::Known {
+                        count: 312_000,
+                        words: String::from("312,000 findings"),
+                    }),
+                }],
+            }],
+            current: String::from("/files"),
+            rail: None,
+            nest: None,
+        })
+    });
+    assert!(
+        page.contains(r#"<span aria-hidden="true" class="fui-nav-count-whole">312,000</span>"#),
+        "{page}"
+    );
+    let tabs = html(|| {
+        binder(
+            "Sections",
+            vec![Tab::new("nodes", "/nodes", "Nodes").count(12_345, "12,345 nodes")],
+            "nodes",
+            ().into_any(),
+        )
+    });
+    assert!(
+        tabs.contains(r#"<span aria-hidden="true">12,345</span>"#),
+        "{tabs}"
+    );
 }

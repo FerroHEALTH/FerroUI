@@ -21,3 +21,5 @@ rows =
     }
 cancel = Qancel
 date-order = dmy
+number-decimal = ,
+number-group = .

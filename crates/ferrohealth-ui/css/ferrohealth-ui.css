@@ -256,12 +256,18 @@
     line-height: var(--leading-body);
   }
 
+  /* A heading wraps a long word, a German or Dutch compound, hyphenated in
+     the page's language where the browser knows its words and broken where
+     the word alone cannot fit its line, so it never widens the page (WCAG
+     2.2 SC 1.4.10) and never splits a word that fits. */
   h1,
   h2,
   h3,
   h4 {
     margin: 0;
     font-weight: 600;
+    hyphens: auto;
+    overflow-wrap: break-word;
   }
 
   h1 {
@@ -551,6 +557,15 @@
     font-size: var(--text-micro);
     line-height: var(--leading-micro);
     font-weight: 600;
+  }
+
+  /* A number is one word: it never breaks between its digits or its
+     group marks, a stacked phone card included. */
+  .fui-num,
+  .fui-num > span,
+  :is(.fui-list-count, .fui-tab-count, .fui-nav-count, .fui-nav-badge) {
+    overflow-wrap: normal;
+    white-space: nowrap;
   }
 
   .fui-num {
@@ -2097,24 +2112,27 @@
   /* From 64rem up a table fits its card beside the sidebar, so the box stops
      being a scroll container and the header sticks to the viewport below the
      sticky top bar, inside the scroll padding (SC 2.4.11). An overflow box
-     would hold the header to itself, so sticky is given up below 64rem. */
+     would hold the header to itself, so sticky is given up below 64rem, and
+     at every width by a table no console bounds (`fui-table-wide`, a query's
+     result set), which scrolls inside its card and never widens the page
+     (SC 1.4.10). */
   @media (width >= 64rem) {
-    .fui-table-scroll {
+    .fui-table-scroll:not(.fui-table-wide) {
       overflow: visible;
     }
 
     /* With no scroll box, an identifier that cannot fit its column wraps
        inside it, so the table never runs past its card. */
-    .fui-table code {
+    .fui-table-scroll:not(.fui-table-wide) .fui-table code {
       white-space: normal;
       overflow-wrap: anywhere;
     }
 
-    .fui-table tbody :is(td, th) {
+    .fui-table-scroll:not(.fui-table-wide) .fui-table :is(thead, tbody) :is(td, th) {
       overflow-wrap: break-word;
     }
 
-    .fui-table thead th {
+    .fui-table-scroll:not(.fui-table-wide) .fui-table thead th {
       position: sticky;
       top: var(--bar);
       z-index: 1;
@@ -2141,6 +2159,17 @@
      content and would otherwise never cut it. */
   .fui-table .fui-truncate {
     max-width: 28rem;
+  }
+
+  /* Beside the sidebar below 80rem a bounded table has no scroll box and
+     little room, so a cut line gives its column no width of its own: the
+     column takes the width of its other content and the line ends in its
+     ellipsis there (WCAG 2.2 SC 1.4.10). */
+  @media (64rem <= width < 80rem) {
+    .fui-table-scroll:not(.fui-table-wide) .fui-table .fui-truncate {
+      width: 0;
+      min-width: 100%;
+    }
   }
 
   /* A timestamp is one value on one line wherever it sits, a stacked card
@@ -2211,14 +2240,17 @@
 
   /* The header in the small step and sentence case, read as a word and
      narrower than upper case in a table that may scroll sideways
-     (WCAG 2.2 SC 1.4.10). */
+     (WCAG 2.2 SC 1.4.10). It wraps between its words, a long word
+     hyphenated in the page's language, so a header never sets the width of
+     its column alone; a code header breaks after a slash, a dot or an
+     opening bracket (`view::path`). */
   .fui-table thead th {
     background: var(--surface-sunken);
     color: var(--muted);
     font-size: var(--text-small);
     line-height: var(--leading-small);
     font-weight: 600;
-    white-space: nowrap;
+    hyphens: auto;
   }
 
   .fui-table thead th.fui-th-mono {
@@ -2707,12 +2739,15 @@
     justify-self: start;
   }
 
-  /* The one label style of every field. */
+  /* The one label style of every field; a long word wraps as a heading's
+     does. */
   .fui-label {
     color: var(--ink);
     font-size: var(--text-body);
     font-weight: 500;
     line-height: var(--leading-body);
+    hyphens: auto;
+    overflow-wrap: break-word;
   }
 
   /* Fields in one row share its width, each growing from 10rem, and the
@@ -11776,10 +11811,15 @@
     overflow: hidden;
   }
 
+  /* The table name is a code: it never hyphenates or breaks inside the word,
+     and the row count wraps under it on a narrow card instead. */
   .fui-rowgraph-name {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
-    gap: var(--space-default);
+    gap: 0 var(--space-default);
+    hyphens: manual;
+    overflow-wrap: normal;
     margin: 0;
     padding: 0.5rem 0.75rem;
     border-bottom: 1px solid var(--edge);
@@ -12838,9 +12878,11 @@
     background: repeating-linear-gradient(to bottom, var(--warn) 0 6px, transparent 6px 10px);
   }
 
+  /* The head wraps: on a narrow card the actions move under the title
+     instead of squeezing it narrower than one of its words. */
   .fui-clause-head {
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--space-default);
     margin-bottom: 0.5rem;

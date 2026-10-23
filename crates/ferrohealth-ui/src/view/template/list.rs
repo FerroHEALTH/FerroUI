@@ -16,6 +16,7 @@
 
 use leptos::prelude::*;
 
+use crate::i18n::number::grouped;
 use crate::i18n::{Text, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::view::action::ActionGroup;
@@ -234,9 +235,7 @@ pub fn list_card(card: ListCard) -> AnyView {
 /// card's header row or a binder tab.
 #[must_use]
 pub fn counted(title: String, count: u64) -> AnyView {
-    // NOTE: no specification governs this: our own design; the count is a number,
-    // drawn the same in every locale.
-    let count = format!("· {count}");
+    let count = format!("· {}", grouped(count));
     view! {
         {title}
         " "

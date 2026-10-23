@@ -712,3 +712,74 @@ fn the_navigation_wraps_a_long_word_and_the_rail_shows_its_tooltip_on_focus() {
         "the open drawer is a modal dialog the full height of the screen"
     );
 }
+
+/// The declarations of the first rule of `STYLESHEET` whose selector text
+/// ends with `selector`.
+fn declarations(selector: &str) -> &'static str {
+    let at = STYLESHEET
+        .find(&format!("{selector} {{\n"))
+        .unwrap_or_else(|| panic!("no rule for {selector}"));
+    let body = &STYLESHEET[at..];
+    &body[..body.find('}').expect("a closed rule")]
+}
+
+#[test]
+fn a_long_word_wraps_in_a_heading_a_label_and_a_table_header() {
+    // WCAG 2.2 SC 1.4.10: a German or Dutch compound never widens the page.
+    for selector in ["  h4", "  .fui-label", "  .fui-table thead th"] {
+        let rule = declarations(selector);
+        assert!(rule.contains("hyphens: auto;"), "{selector}: {rule}");
+        assert!(!rule.contains("white-space: nowrap;"), "{selector}: {rule}");
+    }
+    // break-word breaks only a word that cannot fit its line alone; anywhere
+    // would also split words that fit, inside a flex or grid row.
+    for selector in ["  h4", "  .fui-label"] {
+        let rule = declarations(selector);
+        assert!(
+            rule.contains("overflow-wrap: break-word;"),
+            "{selector}: {rule}"
+        );
+        assert!(
+            !rule.contains("overflow-wrap: anywhere;"),
+            "{selector}: {rule}"
+        );
+    }
+}
+
+#[test]
+fn a_number_never_breaks_between_its_digits() {
+    let rule =
+        declarations("  :is(.fui-list-count, .fui-tab-count, .fui-nav-count, .fui-nav-badge)");
+    assert!(rule.contains("white-space: nowrap;"), "{rule}");
+    assert!(STYLESHEET.contains("  .fui-num,\n  .fui-num > span,\n"));
+}
+
+#[test]
+fn only_a_table_a_console_bounds_gives_up_its_scroll_box_from_64rem() {
+    // WCAG 2.2 SC 1.4.10: a query's result set scrolls in its card at every
+    // width; only a bounded table drops the box so its header can stick.
+    let wide = STYLESHEET
+        .find("  @media (width >= 64rem) {\n    .fui-table-scroll:not(.fui-table-wide) {\n      overflow: visible;")
+        .expect("the bounded table's rule");
+    let media = &STYLESHEET[wide..];
+    let media = &media[..media.find("\n  }\n").expect("the media block's end")];
+    assert!(
+        !media.contains("\n    .fui-table-scroll {"),
+        "every table drops its box: {media}"
+    );
+    assert!(
+        media.contains(
+            ".fui-table-scroll:not(.fui-table-wide) .fui-table thead th {\n      position: sticky;"
+        ),
+        "{media}"
+    );
+}
+
+#[test]
+fn a_cut_line_gives_a_bounded_tables_column_no_width_beside_the_sidebar() {
+    // WCAG 2.2 SC 1.4.10: below 80rem a canonical under a name no longer
+    // holds its column at 28rem and pushes the table past its card.
+    assert!(STYLESHEET.contains(
+        "  @media (64rem <= width < 80rem) {\n    .fui-table-scroll:not(.fui-table-wide) .fui-table .fui-truncate {\n      width: 0;\n      min-width: 100%;"
+    ));
+}

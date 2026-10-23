@@ -422,7 +422,7 @@ fn a_clause_of_thousands_of_codes_ends_in_the_more_row() {
         )
     });
     assert!(has(&codes, "li", &[("class", "fui-code-more")]), "{codes}");
-    assert!(codes.contains("1 of 4000 codes shown."), "{codes}");
+    assert!(codes.contains("1 of 4,000 codes shown."), "{codes}");
     assert!(
         has(&codes, "a", &[("href", "/value-set?codes=1")]),
         "{codes}"

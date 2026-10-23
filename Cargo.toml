@@ -31,6 +31,10 @@ serde = { version = "1.0.229", features = ["derive"] }
 # (the `walkdir` reader of its macro), no runtime file reader. Verified
 # against crates.io on 2026-10-19.
 fluent-templates = { version = "0.15.1", default-features = false, features = ["macros", "walkdir"] }
+# The language a Fluent bundle formats a number in, which the library's
+# number formatter reads (`ferrohealth_ui::i18n::format_number`). In the lock
+# already under fluent-templates. Verified against crates.io on 2026-10-22.
+intl-memoizer = "0.5.3"
 # The gallery app alone: its server half and its browser half. The
 # wasm-bindgen CLI of the gallery build equals the wasm-bindgen crate version
 # (scripts/release/gallery-tools.sh); the library itself never pins it, and

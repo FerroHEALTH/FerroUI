@@ -29,6 +29,7 @@ use leptos::prelude::*;
 
 use crate::icon::{Glyph, icon};
 use crate::table::model::{Noun, ORDER_KEY, PAGE_KEY, SORT_KEY, Sort, StateSource};
+use crate::view::path::path;
 
 /// Where a column's cells sit in the compact phone row of a list card
 /// ([`crate::view::template::list::list_card`]).
@@ -339,10 +340,17 @@ fn header(column: &Column, sorting: &Sorting<'_>) -> AnyView {
         .attr("class", class)
         .into_any();
     }
+    // NOTE: no specification governs this: our own design; a code header breaks only
+    // where a path does, so it never sets its column's width alone.
+    let words = if column.mono {
+        path(&label)
+    } else {
+        label.into_any()
+    };
     if !column.sortable {
         return view! {
             <th scope="col" title=title>
-                {label}
+                {words}
             </th>
         }
         .attr("class", class)
@@ -363,7 +371,7 @@ fn header(column: &Column, sorting: &Sorting<'_>) -> AnyView {
                 {carried}
                 <input type="hidden" name=ORDER_KEY value=next.direction.key() />
                 <button type="submit" class="fui-sort" name=SORT_KEY value=next.column>
-                    {label}
+                    {words}
                     {icon(glyph, "12")}
                 </button>
             </form>
@@ -382,7 +390,22 @@ fn header(column: &Column, sorting: &Sorting<'_>) -> AnyView {
 /// that draws its own cells writes it on every cell but the row's name.
 #[must_use]
 pub fn data_table(table: DataTable<'_>) -> impl IntoView + use<> {
-    drawn(table, true)
+    drawn(table, true, false)
+}
+
+/// Returns the data table `table` in a box that scrolls sideways at every
+/// width, its rows stacked below 40rem.
+///
+/// It is the table of a column set no console bounds, such as a query's
+/// result set, which can be wider than any card.
+/// Its header gives up sticking to the viewport from 64rem, which a scroll
+/// box would hold to itself: the table scrolls inside its card and never
+/// widens the page (WCAG 2.2 SC 1.4.10). A table with a code header
+/// ([`Column::mono`], a query's alias or path) is drawn this way by
+/// [`data_table`] and [`data_table_unstacked`] too.
+#[must_use]
+pub fn data_table_wide(table: DataTable<'_>) -> impl IntoView + use<> {
+    drawn(table, true, true)
 }
 
 /// Returns the data table `table` as a grid at every width: the opt-out for
@@ -390,11 +413,21 @@ pub fn data_table(table: DataTable<'_>) -> impl IntoView + use<> {
 /// scrolls sideways inside its box if a value outgrows it.
 #[must_use]
 pub fn data_table_unstacked(table: DataTable<'_>) -> impl IntoView + use<> {
-    drawn(table, false)
+    drawn(table, false, false)
 }
 
-/// The table [`data_table`] and [`data_table_unstacked`] draw.
-fn drawn(table: DataTable<'_>, stacked: bool) -> impl IntoView + use<> {
+/// The table [`data_table`], [`data_table_wide`] and
+/// [`data_table_unstacked`] draw.
+fn drawn(table: DataTable<'_>, stacked: bool, wide: bool) -> impl IntoView + use<> {
+    let wide = wide || table.columns.iter().any(|column| column.mono);
+    let mut classes = vec!["fui-table-scroll"];
+    if stacked {
+        classes.push("fui-table-stack");
+    }
+    if wide {
+        classes.push("fui-table-wide");
+    }
+    let class = classes.join(" ");
     let headers = table
         .columns
         .iter()
@@ -431,7 +464,7 @@ fn drawn(table: DataTable<'_>, stacked: bool) -> impl IntoView + use<> {
     let caption = label.clone();
     view! {
         <div
-            class=if stacked { "fui-table-scroll fui-table-stack" } else { "fui-table-scroll" }
+            class=class
             role="region"
             aria-label=label
             tabindex="0"
@@ -535,7 +568,7 @@ pub fn count_cell(column: &Column, count: u32, noun: Noun) -> AnyView {
             data-unit=noun.word(count)
             class=NUM
         >
-            <span>{count.to_string()}</span>
+            <span>{crate::i18n::number::grouped(u64::from(count))}</span>
         </td>
     }
     .into_any()

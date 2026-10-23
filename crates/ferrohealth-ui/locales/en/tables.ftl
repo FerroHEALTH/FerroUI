@@ -12,6 +12,7 @@ change-not-set = not set
 change-removed = removed
 change-setting = Setting
 open-range-of = { $nouns } { $first } to { $last }
+open-range-past = Page { $page } is past the last { $noun }.
 page-of = Page { $page } of { $pages }
 partial-note = The server counted { $stated } { $noun }, and this listing holds { $held }.
 range = { $first }-{ $last } of { $total }

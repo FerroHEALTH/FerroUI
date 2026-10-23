@@ -114,7 +114,7 @@ fn a_refusal_of_thousands_of_issues_shows_the_gravest_and_folds_and_counts_the_r
     );
     assert!(shown.contains("180 more issues"), "{shown}");
     assert!(
-        shown.contains("4801 more issues are not shown here."),
+        shown.contains("4,801 more issues are not shown here."),
         "{shown}"
     );
 }

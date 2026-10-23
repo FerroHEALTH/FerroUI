@@ -5,12 +5,14 @@
 //! the page provides, a throwaway catalog changes them with no code change,
 //! and a message a catalog lacks falls back to English.
 
+use ferrohealth_ui::i18n::number::grouped;
 use ferrohealth_ui::i18n::{Locale, locale, provide_locale};
 use ferrohealth_ui::table::model::{Paging, Window};
 use ferrohealth_ui::table::pager::link_pager;
 use ferrohealth_ui::theme::Language;
 use ferrohealth_ui::view::dialog::{Confirmation, confirm_dialog};
 use ferrohealth_ui::view::preferences::{Post, language_select};
+use ferrohealth_ui::view::template::list::counted;
 use leptos::prelude::*;
 
 use crate::markup::has;
@@ -19,7 +21,10 @@ fluent_templates::static_loader! {
     static THROWAWAY = {
         locales: "./tests/it/locales",
         fallback_language: "qaa",
-        customise: |bundle| bundle.set_use_isolating(false),
+        customise: |bundle| {
+            bundle.set_use_isolating(false);
+            bundle.set_formatter(Some(ferrohealth_ui::i18n::number::format_number));
+        },
     };
 }
 
@@ -194,4 +199,38 @@ fn the_footer_draws_its_version_as_data_in_every_locale() {
             "the version never goes through a catalog: {page}"
         );
     }
+}
+
+/// A pager over 312,000 rows on page 6,000.
+fn large_pager() -> AnyView {
+    link_pager(
+        "Pages",
+        Window::over(312_000, Paging::read(Some("6000"), Some("50"))),
+        &|paging: Paging| format!("/files?page={}", paging.page),
+    )
+}
+
+#[test]
+fn a_number_a_message_takes_is_grouped_in_the_marks_of_the_page_language() {
+    let english = render(Some(Locale::english()), large_pager);
+    assert!(
+        english.contains("299,951-300,000 of 312,000 rows"),
+        "{english}"
+    );
+    assert!(english.contains("Page 6,000 of 6,240"), "{english}");
+    let throwaway = render(Some(throwaway()), large_pager);
+    assert!(
+        throwaway.contains("299.951-300.000 qof 312.000 qows"),
+        "a catalog brings its own marks with no code change: {throwaway}"
+    );
+}
+
+#[test]
+fn a_count_drawn_outside_a_message_is_grouped_in_the_page_language() {
+    let count = || counted(String::from("Rows"), 4_000_000_000).into_any();
+    let english = render(Some(Locale::english()), count);
+    assert!(english.contains("· 4,000,000,000"), "{english}");
+    let throwaway = render(Some(throwaway()), count);
+    assert!(throwaway.contains("· 4.000.000.000"), "{throwaway}");
+    assert_eq!("312,000", render(None, || grouped(312_000).into_any()));
 }

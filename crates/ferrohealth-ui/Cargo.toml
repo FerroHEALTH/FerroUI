@@ -29,6 +29,7 @@ leptos = { workspace = true, features = ["islands"] }
 leptos_router.workspace = true
 serde.workspace = true
 fluent-templates.workspace = true
+intl-memoizer.workspace = true
 
 # The widgets' browser code, compiled for the browser alone. Each asks for
 # the lowest release leptos 0.8.22 resolves with (web-sys 0.3.85 pins
