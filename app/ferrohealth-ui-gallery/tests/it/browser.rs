@@ -329,6 +329,14 @@ impl Browser {
         .into())
     }
 
+    /// Waits until the page's islands have hydrated: the gallery's browser
+    /// entry marks the root element `data-hydrated` once `hydrate_islands`
+    /// has run, so a capture never shows a part an island has yet to draw.
+    pub(crate) async fn hydrated(&self) -> Result<(), Box<dyn Error>> {
+        self.element(By::Css("html[data-hydrated]")).await?;
+        Ok(())
+    }
+
     /// Waits until the page's layout holds still: its fonts loaded
     /// (CSS Font Loading, `document.fonts.ready`) and its height the same
     /// in two reads one frame apart, so a capture never measures a page
