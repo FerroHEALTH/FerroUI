@@ -23,7 +23,7 @@ use crate::table::view::{Body, Column, DataTable, Role, cell, data_table, title_
 use crate::tone::Tone;
 use crate::view::button::Variant;
 use crate::view::notice::{Announce, notice};
-use crate::view::subject::state_mark;
+use crate::view::state::{Mark, state};
 
 /// Where a version stands in its object's history.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -104,7 +104,7 @@ pub fn version_cell(number: &str, standing: Standing) -> AnyView {
                 .into_any(),
         ),
         Standing::Older => None,
-        Standing::Deleted => Some(state_mark(false, tr(Text::VersionsDeleted))),
+        Standing::Deleted => Some(state(Mark::Off, tr(Text::VersionsDeleted), None)),
     };
     view! { <span class="fui-version-cell">{name}{mark}</span> }.into_any()
 }

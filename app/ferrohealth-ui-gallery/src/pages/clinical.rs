@@ -671,6 +671,7 @@ pub fn ClinicalPage() -> impl IntoView {
         Header {
             title: tr(Msg::ClinicalRecords).into(),
             subtitle: Some(tr(Msg::ClSubtitle).into()),
+            subtitle_view: None,
             crumbs: vec![Crumb::new(tr(Msg::Gallery), root)],
             mono: false,
             badge: None,

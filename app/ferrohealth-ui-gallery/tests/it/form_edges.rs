@@ -332,3 +332,29 @@ async fn the_masked_identifier_shows_while_space_or_enter_is_held_on_the_eye()
     })
     .await
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_choice_legend_is_drawn_as_a_field_label() -> Result<(), Box<dyn Error>> {
+    // A choice's legend names one field, so it takes the field label's style, not a group heading's.
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/ferrobridge/forms")).await?;
+        browser.element(By::Css("fieldset.fui-choice > legend")).await?;
+        let styles: Vec<String> = script(
+            browser,
+            "const legend = getComputedStyle(document.querySelector('fieldset.fui-choice > legend'));
+             const label = getComputedStyle(document.querySelector('.fui-field > label.fui-label'));
+             return [legend.fontSize, label.fontSize, legend.fontWeight, label.fontWeight, legend.borderBottomStyle];",
+            Vec::new(),
+        )
+        .await?;
+        assert_eq!(styles[0], styles[1], "the legend's size is the label's: {styles:?}");
+        assert_eq!(styles[2], styles[3], "the legend's weight is the label's: {styles:?}");
+        assert_eq!("none", styles[4], "no rule under the legend: {styles:?}");
+        browser.console_clean("the choice legend").await
+    })
+    .await
+}

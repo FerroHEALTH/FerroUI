@@ -16,7 +16,7 @@
 use leptos::prelude::*;
 
 use crate::i18n::{Text, Word, tr};
-use crate::tone::Tone;
+use crate::view::state::{Mark, state};
 
 /// Whose record it is.
 #[derive(Debug)]
@@ -42,20 +42,10 @@ pub struct SubjectLine {
     pub modifiable: bool,
 }
 
-/// Returns an F12 state: a filled dot in the ok tone beside `word` when
-/// `on`, the hollow ring in the muted colour beside it when not, so the
-/// state is a shape, a colour and a word together (family rule 12).
-pub(crate) fn state_mark(on: bool, word: Word) -> AnyView {
-    let tone = if on { Tone::Ok } else { Tone::Neutral };
-    let mark = format!("fui-state {}", tone.class());
-    let dot = format!("fui-dot {}", tone.class());
-    view! {
-        <span class=mark class:is-muted=!on>
-            <span class=dot class:is-muted=!on aria-hidden="true"></span>
-            {word}
-        </span>
-    }
-    .into_any()
+/// Returns the F12 state of a capability: the ok mark beside `word` when
+/// `on`, the mark of a cleared state when not.
+fn on_off(on: bool, word: Word) -> AnyView {
+    state(if on { Mark::Ok } else { Mark::Off }, word, None)
 }
 
 /// Returns the subject line `line`.
@@ -90,7 +80,7 @@ pub fn subject_line(line: SubjectLine) -> AnyView {
             view! { <span class="fui-subject-none">{tr(Text::SubjectNone)}</span> }.into_any()
         }
     };
-    let queryable = state_mark(
+    let queryable = on_off(
         queryable,
         tr(if queryable {
             Text::SubjectQueryable
@@ -98,7 +88,7 @@ pub fn subject_line(line: SubjectLine) -> AnyView {
             Text::SubjectNotQueryable
         }),
     );
-    let modifiable = state_mark(
+    let modifiable = on_off(
         modifiable,
         tr(if modifiable {
             Text::SubjectModifiable

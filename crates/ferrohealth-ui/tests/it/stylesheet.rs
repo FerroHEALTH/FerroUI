@@ -783,3 +783,38 @@ fn a_cut_line_gives_a_bounded_tables_column_no_width_beside_the_sidebar() {
         "  @media (64rem <= width < 80rem) {\n    .fui-table-scroll:not(.fui-table-wide) .fui-table .fui-truncate {\n      width: 0;\n      min-width: 100%;"
     ));
 }
+
+#[test]
+fn a_choice_legend_is_a_field_label_and_outranks_the_group_heading() {
+    // CSS Selectors 4, specificity: equal weight, so the later rule wins.
+    let label = rule("  .fui-fieldset.fui-choice > legend");
+    for property in [
+        "border-bottom: 0;",
+        "font-size: var(--text-body);",
+        "font-weight: 500;",
+    ] {
+        assert!(label.contains(property), "missing {property}: {label}");
+    }
+    let heading = STYLESHEET
+        .find("  .fui-fieldset > legend:not(.fui-sr-only) {")
+        .expect("the group heading rule");
+    let choice = STYLESHEET
+        .find("  .fui-fieldset.fui-choice > legend {")
+        .expect("the choice label rule");
+    assert!(
+        heading < choice,
+        "the label rule comes after the heading rule"
+    );
+}
+
+#[test]
+fn a_menu_segment_keeps_its_word_on_one_line() {
+    let segment = rule("  .fui-menu .fui-segmented > .fui-segment");
+    for property in [
+        "min-width: max-content;",
+        "white-space: nowrap;",
+        "overflow-wrap: normal;",
+    ] {
+        assert!(segment.contains(property), "missing {property}: {segment}");
+    }
+}

@@ -3062,8 +3062,10 @@
     border-bottom-color: var(--edge-strong);
   }
 
-  /* A choice's legend is a field's label, not a group's heading. */
-  .fui-choice > legend {
+  /* A choice's legend is a field's label, not a group's heading: the
+     fieldset's class in the selector matches the heading rule's weight, and
+     this rule comes after it, so the label wins wherever the group sits. */
+  .fui-fieldset.fui-choice > legend {
     margin-block-end: var(--space-tight);
     border-bottom: 0;
     padding: 0;
@@ -6201,10 +6203,15 @@
     margin: 0.125rem 0 0.25rem;
   }
 
+  /* Each segment keeps its word on one line, whichever is chosen, and the
+     menu grows to the row's width rather than breaking a word. */
   .fui-menu .fui-segmented > .fui-segment {
     flex: 1 1 0;
     justify-content: center;
+    min-width: max-content;
     padding-inline: 0.5rem;
+    white-space: nowrap;
+    overflow-wrap: normal;
   }
 
   /* ---- R9. The work-list rows: the row opens, one row menu, a phone card ---- */

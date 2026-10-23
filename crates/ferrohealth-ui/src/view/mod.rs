@@ -67,6 +67,7 @@ pub mod secret;
 pub mod segmented;
 pub mod shell;
 pub mod sign_in;
+pub mod state;
 pub mod status;
 pub mod subject;
 pub mod surface;

@@ -844,16 +844,16 @@ fn state_dot(state: FlowState) -> AnyView {
     view! { <span class=class role="img" aria-label=word title=tip></span> }.into_any()
 }
 
-/// A state as its shape and its word (F12), with a quiet detail after it.
+/// A state as its shape and its word (F12), with a quiet detail after it;
+/// a state switched off draws no shape, as its muted row says.
 fn state_word(state: FlowState, detail: Option<String>) -> AnyView {
     let word = state.word();
-    let detail = detail.map(|detail| view! { <span class="fui-status-detail">{detail}</span> });
     if state == FlowState::Off {
+        let detail = detail.map(|detail| view! { <span class="fui-status-detail">{detail}</span> });
         return view! { <span class="fui-state fui-tone-neutral is-muted">{word} {detail}</span> }
             .into_any();
     }
-    let class = format!("fui-state {}", state.tone().class());
-    view! { <span class=class>{state_dot(state)} {word} {detail}</span> }.into_any()
+    crate::view::state::state(state.into(), word, detail)
 }
 
 /// The Status menu: a `<details>` whose summary is the button, holding the

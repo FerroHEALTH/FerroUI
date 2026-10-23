@@ -10,10 +10,14 @@ messages! {
     AnsweredSyntheticReplicaGallery1 = "answered-synthetic-replica-gallery-1",
     /// `AQL`
     Aql = "aql",
-    /// `Bounded, scrollable and highlighted, never at the page's full height.`
-    BoundedScrollableHighlightedNeverPage = "bounded-scrollable-highlighted-never-page",
     /// `Code and documents`
     CodeDocuments = "code-documents",
+    /// `, saved by the console.`
+    CodeSubtitleEnd = "code-subtitle-end",
+    /// `Context of`
+    CodeSubtitleLead = "code-subtitle-lead",
+    /// `on`
+    CodeSubtitleOn = "code-subtitle-on",
     /// `A composition, XML`
     CompositionXml = "composition-xml",
     /// `A diagnostic links to its line:`
