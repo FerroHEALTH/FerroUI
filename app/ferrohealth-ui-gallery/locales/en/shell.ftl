@@ -4,6 +4,7 @@
 # The English words of the gallery's shell and those more than one page draws:
 # one message per `Msg` of `src/locale/shell.rs`, in the order of their ids.
 
+actions = Actions
 actions-for = Actions for { $name }
 another-canonical = Another canonical
 back-gallery = Back to the gallery

@@ -4,7 +4,6 @@
 # The English words of the tables page: one message per `Msg` of
 # `src/locale/tables.rs`, in the order of their ids.
 
-actions = Actions
 apply = Apply
 changed = Changed
 committed = Committed

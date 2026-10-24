@@ -166,7 +166,12 @@ fn activity() -> AnyView {
             label: tr(Msg::CommitsPerDay),
             summary: tr(Msg::N48SyntheticCommitsOver30),
             points,
-            ends: (tr(Msg::Sep19), tr(Msg::Oct18)),
+            ticks: vec![
+                (0, tr(Msg::Sep19)),
+                (9, tr(Msg::Sep28)),
+                (19, tr(Msg::Oct8)),
+                (29, tr(Msg::Oct18)),
+            ],
         }),
     )
     .into_any()
