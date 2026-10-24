@@ -15099,11 +15099,18 @@
     color: color-mix(in srgb, var(--warn) 80%, var(--ink));
   }
 
-  /* A link in a notice and a tool in an editor's bar keep their words on
-     one line. */
-  :is(.fui-notice, .fui-alert) a,
+  /* A tool in an editor's bar keeps its words on one line. */
   .fui-editor-bar .fui-button {
     white-space: nowrap;
+  }
+
+  /* A link in a notice keeps its words on one line while they fit, moving
+     whole to the next line, and wraps only when it alone is wider than the
+     notice (WCAG 2.2 SC 1.4.10). */
+  :is(.fui-notice, .fui-alert) a {
+    display: inline-block;
+    max-width: 100%;
+    overflow-wrap: break-word;
   }
 
   .fui-editor-bar > .fui-actions {

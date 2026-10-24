@@ -841,6 +841,13 @@ fn a_long_word_wraps_in_a_banner_a_notice_a_settings_description_and_its_source(
         notice.contains("min-width: 0;") && notice.contains("overflow-wrap: break-word;"),
         "a notice's body wraps as the banner's text does: {notice}"
     );
+    let link = rule("  :is(.fui-notice, .fui-alert) a");
+    assert!(
+        link.contains("display: inline-block;")
+            && link.contains("max-width: 100%;")
+            && !link.contains("nowrap"),
+        "a notice's link moves whole to the next line and wraps only when wider: {link}"
+    );
     let description = rule("  .fui-setting-desc");
     assert!(
         description.contains("overflow-wrap: break-word;"),
