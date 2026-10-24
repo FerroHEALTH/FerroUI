@@ -182,12 +182,13 @@ GROUPS = [
         ("22.5", "self-description-endpoints", "Self-description: Endpoints", "/self-description/endpoints", "The six openEHR Query API endpoints OPTIONS lists, with their status; node-e-pub suspended as a muted row."),
     ]),
     ("config", "Configuration: deployment settings", [
-        ("23", "configuration", "Configuration: Federation behaviour", "/configuration/federation", "Revisions managed: the badge, How configuration works and More in the title row, the revision line, then binder tabs (six settings tabs, History, Import and export), each its own route. Every Federation behaviour row takes the next start."),
+        ("23", "configuration", "Configuration: Federation behaviour", "/configuration/federation", "Revisions managed: the badge, How configuration works and More in the title row, the revision line, then binder tabs (seven settings tabs, History, Import and export), each its own route. Every Federation behaviour row takes the next start."),
         ("23.11", "configuration-fanout", "Configuration: Fan-out and paging", "/configuration/fanout", "Fan-out and paging: five rows, every one at the next start."),
         ("23.12", "configuration-consent", "Configuration: Consent", "/configuration/consent", "Disclosure and the emergency rule, their one home; a change takes a second operator's approval."),
         ("23.13", "configuration-stored", "Configuration: Stored queries", "/configuration/stored", "The store and its secret by reference; the queries are on Stored queries."),
         ("23.14", "configuration-access", "Configuration: Access log", "/configuration/access", "Retention, emergency purposes and the category map."),
         ("23.15", "configuration-fhir", "Configuration: FHIR face", "/configuration/fhir", "Base, document URL lifetime and the received categories, at the next start."),
+        ("23.17", "configuration-auth", "Configuration: Authentication", "/configuration/authentication", "Who may call: the audience, the operator scope, each token issuer and each trusted issuer, a national contact point with its claim names, correlation header and added countries, its introspection secret named by its file. The core: read-only, no Edit."),
         ("23.16", "configuration-key-hint", "Configuration: a row hovered", "/configuration/federation", "Hover or focus on a row shows its key beside the label, with Copy; the resting captures show none."),
         ("23.1", "configuration-mode-dialog", "How configuration works (managed)", "/configuration", "The core always in ferrofed.toml beside everything else as revisions, file-first or console-first per section, what is never configuration, and how to turn revisions off."),
         ("23.2", "configuration-actions", "Configuration, More open", "/configuration", "How configuration works and More (Export, Import…), open; a bottom sheet on a phone."),
@@ -228,6 +229,7 @@ GROUPS = [
         ("26", "configuration-file-mode", "Configuration with revisions off", "/configuration", "config.ui = \"off\": the Revisions off badge, one quiet line that names the file, the settings read-only, every Federation behaviour row at the next start, no History."),
         ("26.1", "configuration-file-mode-dialog", "How configuration works (off)", "/configuration", "The same two columns from the file's side, and how to manage revisions."),
         ("26.2", "configuration-file-mode-history", "Revisions off: Consent", "/configuration/history", "Another section read from the file, read again at each reload; no History tab."),
+        ("26.3", "configuration-file-mode-auth", "Revisions off: Authentication", "/configuration/authentication", "Who may call, read from the file as in the managed state: the same rows, read-only."),
     ]),
     ("prefs", "Your preferences", [
         ("27", "preferences", "Your preferences: Appearance", "/preferences/appearance", "Binder tabs Appearance, Language and region and Keyboard, one panel. System theme and comfortable density are the defaults."),
