@@ -11,6 +11,39 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.3.6] - 2026-10-24
+
+### Changed
+
+- Breaking: `view::chart::ActivityChart` takes its axis labels as
+  `ticks: Vec<(u32, String)>`, `(day index, words)`, in place of `ends`,
+  so a console labels the days the FerroEHR mockups label (22 Sep, 1 Oct,
+  11 Oct and 21 Oct). A console that set `ends: (first, last)` writes
+  `ticks: vec![(0, first), (last_day, last)]` for the same drawing (#387).
+
+### Fixed
+
+- The FerroEHR New contribution mockup draws an Apply submit beside each
+  staged change's What changes, as a console has to with no WebAssembly,
+  since choosing a kind redraws the fields under it. The select and Apply
+  share one row inside the field, `view::layout::field_row(FieldRow::WithActions, ..)`,
+  with the help line under both. COMPONENTS.md
+  § Interaction states the rule: a select whose choice changes the page
+  carries a visible submit beside it and never posts on its change alone
+  (WCAG 2.2 SC 3.2.2 On Input), as the phone tab select's Go does. A
+  console that draws Apply already needs no change, and can move it into
+  that row to match the design (#386).
+- A dialog drawn inside a table's actions cell wraps its sentence: every
+  dialog (`fui-dialog`) sets `white-space: normal` and `text-align: start`,
+  so it no longer inherits the cell's `nowrap` and end alignment, which cut
+  its sentence off at 390 px. The gallery's member removals sit in a table,
+  each confirmation beside its row menu in the actions cell. A console
+  changes nothing (#388).
+- A row menu drawn in a table's actions cell (`fui-table-actions`) sits on
+  the row's first line, its trigger centred on the line as a button there
+  is, so the row keeps its height and the name beside it no longer reads
+  above the ⋯. A console changes nothing (#391).
+
 ## [0.3.5] - 2026-10-23
 
 ### Added
@@ -2480,7 +2513,8 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.5...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.6...HEAD
+[0.3.6]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.5...v0.3.6
 [0.3.5]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.4...v0.3.5
 [0.3.4]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.3...v0.3.4
 [0.3.3]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.2...v0.3.3
