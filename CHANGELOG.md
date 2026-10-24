@@ -11,6 +11,62 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.3.7] - 2026-10-24
+
+### Added
+
+- T3: a setting row says where its value came from when that is not the
+  page's own source, small and muted after the value with its glyph:
+  `view::template::settings::ValueSource::Environment`, "From the
+  environment", for an environment variable, which wins over the file and
+  a revision; `ValueSource::Default`, "Default", when nothing sets it; and
+  `ValueSource::File`, "From the file", for a section the file sets in a
+  managed configuration. The page's own source is unmarked: the file in
+  file mode, the running revision when managed. The gallery's file-mode
+  settings page shows an environment and a default value (#396).
+- The FerroFED configuration design has an Authentication tab after FHIR
+  face, in the managed and the off states, which a console draws with
+  `view::template::settings::settings_panel` and `setting_row`: who may
+  call, read-only with no Edit in both states, since only `ferrofed.toml`
+  sets it. It holds the audience, the operator scope, each token issuer
+  with its key set file, and each trusted issuer with its introspection
+  secret named by its file and, for a national contact point, its claim
+  names, its correlation header and its added countries (#398).
+
+### Changed
+
+- Breaking: `view::template::settings::Setting` gains the public field
+  `source: Option<ValueSource>`, so a console sets `source: None` on each
+  setting, or the source its running configuration names, in place of its
+  own marker. The library's catalog adds `setting-source-default`,
+  "Default", `setting-source-environment`, "From the environment", and
+  `setting-source-file`, "From the file", so a console that translates the
+  library's catalog adds the three (#396).
+- Breaking: E5's node inspector draws Build a query on this path only
+  where the node has a query: `view::browser::PathNode::query` is an
+  `Option<String>`, and a node with `None`, such as one of a demographic
+  template (a PERSON's or a ROLE's), where no query can be built, draws no
+  button. A console wraps its link in `Some(..)` to keep today's drawing,
+  and passes `None` for a template no query can be built on (#399).
+- `SECURITY.md` states the fix-time targets every product of the Ferro family
+  commits to, counted from the confirmed assessment: a fixed release within
+  7 days for a Critical vulnerability, 30 days for High, 90 days for Medium
+  and with the next release for Low, beside the acknowledgement within about
+  5 business days and the initial assessment within about 10, both best
+  effort as before (#403).
+
+### Fixed
+
+- A banner's text, a notice's body and a setting row's description wrap a
+  word longer than their box (a URL, an identifier, a long compound in a
+  translation), so nothing runs past the screen at 320 px. Before, the
+  rest of the line ran past the right edge on a phone. The gallery's
+  overview shows a banner holding a long URL (#397).
+- A link in a notice keeps its words on one line while they fit, moving
+  whole to the next line, and wraps only when it alone is wider than the
+  notice. Before, its `white-space: nowrap` ran a long link past the
+  screen's edge at 320 px (#397).
+
 ## [0.3.6] - 2026-10-24
 
 ### Changed
@@ -2513,7 +2569,8 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.6...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.7...HEAD
+[0.3.7]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.6...v0.3.7
 [0.3.6]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.5...v0.3.6
 [0.3.5]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.4...v0.3.5
 [0.3.4]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.3...v0.3.4
