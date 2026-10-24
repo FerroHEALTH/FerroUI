@@ -61,7 +61,7 @@ widgets and classes.
 ## How a console builds
 
 Build the site with `cargo leptos build --split` and turn on the library's
-`split` feature (`ferrohealth-ui = { version = "=0.3.6", features =
+`split` feature (`ferrohealth-ui = { version = "=0.3.7", features =
 ["split"] }`): the date pickers and the tree then load from chunks of their
 own, out of the WebAssembly every page loads. A console that builds
 without `--split` leaves the feature off, and those islands hydrate from
@@ -107,7 +107,7 @@ for a console: a console never builds from it or syncs from it.
 ## Which version to read
 
 Read FerroUI's documents at the git tag that matches your `ferrohealth-ui`
-pin: with `=0.2.0`, read the tag `v0.2.0`; with `=0.3.6`, read `v0.3.6`.
+pin: with `=0.2.0`, read the tag `v0.2.0`; with `=0.3.7`, read `v0.3.7`.
 Read `main` only when you are moving your console to the next release. The
 rules on `main` describe components your pinned version may not have.
 
