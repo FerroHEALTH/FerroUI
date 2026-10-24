@@ -80,9 +80,20 @@ machine-readable through the GitHub REST API
 
 ## Response times
 
-FerroUI is solo-maintained, so these are best effort: an acknowledgement
-within about 5 business days, and an initial assessment within about 10. A
-confirmed vulnerability is fixed in a new patch version.
+FerroUI is solo-maintained, so these are best effort rather than a
+contractual service-level agreement. They are the times every product of the
+Ferro family states: an acknowledgement within about 5 business days, and
+an initial assessment (is it valid, how severe) within about 10 business days
+of the report. A confirmed vulnerability is fixed in a new patch version,
+published within the target for its severity, counted from the confirmed
+assessment:
+
+| Severity | Fixed release published within |
+|---|---|
+| Critical | 7 days |
+| High | 30 days |
+| Medium | 90 days |
+| Low | the next release |
 
 ## Scope
 
