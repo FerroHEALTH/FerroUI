@@ -33,10 +33,14 @@ REST = ('<ul class="fui-bullets fui-small"><li>Organisations, their nodes and en
 TABS = [("federation", "Federation behaviour", "configuration.html"), ("fanout", "Fan-out and paging", "configuration-fanout.html"),
         ("consent", "Consent", "configuration-consent.html"), ("stored", "Stored queries", "configuration-stored.html"),
         ("access", "Access log", "configuration-access.html"), ("fhir", "FHIR face", "configuration-fhir.html"),
+        ("auth", "Authentication", "configuration-auth.html"),
         ("history", "History", "configuration-history.html"), ("io", "Import and export", "configuration-import.html")]
 OFF_TABS = [("federation", "Federation behaviour", "configuration-file-mode.html"), ("fanout", "Fan-out and paging", "r-config-off-fanout.html"),
             ("consent", "Consent", "configuration-file-mode-history.html"), ("stored", "Stored queries", "r-config-off-stored.html"),
-            ("access", "Access log", "r-config-off-access.html"), ("fhir", "FHIR face", "r-config-off-fhir.html")]
+            ("access", "Access log", "r-config-off-access.html"), ("fhir", "FHIR face", "r-config-off-fhir.html"),
+            ("auth", "Authentication", "configuration-file-mode-auth.html")]
+# The tabs of the core, which only ferrofed.toml sets: read-only in both states, with no Edit.
+READ_ONLY = ("auth",)
 
 
 # ---- the mode dialog ----
@@ -172,6 +176,21 @@ def tab_sections(edit=False, off=False, hint_=False, pending=None, invalid=True)
     fh = (srow("Base", "Where the exchange-format face is served, beside the openEHR API.", "<code>/fhir</code>", "fhir.base", restart=True)
           + srow("Document URL lifetime", "How long a listed document's URL stays valid: at least 1 s.", "300 s", "fhir.document_url_lifetime_secs", restart=True)
           + srow("Received categories", "The documents the face accepts.", '<span class="fui-tag">Patient summaries</span> <span class="fui-tag">Laboratory reports</span>', "fhir.receive", restart=True))
+    au = (srow("Audience", "The audiences a caller's token must name for this gateway.", "<code>https://gateway.demo-regio.example.org</code>", "auth.audience")
+          + srow("Operator scope", "The scope a token needs for the operator surface and the admin actions.", "<code>__ferrofed.operator</code>", "auth.product_scope")
+          + srow("Token issuer", "An issuer whose access tokens the gateway verifies.", '<code class="fui-break">https://idp.demo-regio.example.org/realms/ferrofed</code>', "auth.issuer[].issuer")
+          + srow("Key set file", "The file this issuer's signing keys are read from, when they are not fetched.", '<code class="fui-break">/etc/ferrofed/keys/demo-regio.jwks</code>', "auth.issuer[].jwks_file")
+          + srow("Trusted issuer", "An issuer whose callers the gateway admits, with the policy below it.", '<code class="fui-break">https://ncp.demo-land.example.org/realms/ncp</code>', "trust.issuer[].issuer")
+          + srow("Introspection secret", "The secret the gateway authenticates to this issuer's introspection endpoint with, named by the file it is read from.",
+                 f'<span class="fui-secret-now">{icon("lock", "12")}Set · <code class="fui-break">/run/secrets/ferrofed/ncp-introspection</code></span>', "trust.issuer[].client_secret")
+          + srow("Family name claim", "The claim carrying the professional's family name. Set, it declares the issuer a national contact point.", "<code>family_name</code>", "trust.issuer[].national_contact_point.family_name")
+          + srow("Given name claim", "The claim carrying the professional's given name.", "<code>given_name</code>", "trust.issuer[].national_contact_point.given_name")
+          + srow("Country code claim", "The claim carrying the country that issued the professional's identification data.", "<code>issuing_country</code>", "trust.issuer[].national_contact_point.country_code")
+          + srow("Professional's issuing authority claim", "The claim carrying the authority that issued the professional's identifier.", "<code>professional_authority</code>", "trust.issuer[].national_contact_point.professional_issuing_authority")
+          + srow("Provider's issuing authority claim", "The claim carrying the authority that issued the provider's identifier.", "<code>provider_authority</code>", "trust.issuer[].national_contact_point.provider_issuing_authority")
+          + srow("Provider address claim", "The claim carrying the healthcare provider's address.", "<code>provider_address</code>", "trust.issuer[].national_contact_point.provider_address")
+          + srow("Correlation header", "The request header the contact point's connector sends its correlation identifier in, recorded with the access.", "<code>X-Correlation-Id</code>", "trust.issuer[].national_contact_point.correlation_header")
+          + srow("Added countries", "The countries beside the 27 Member States a relayed country code may name.", '<span class="fui-tag">IS</span> <span class="fui-tag">NO</span>', "trust.issuer[].national_contact_point.additional_countries"))
     if off:
         con = con.replace("</span></div></div>", f'</span><span class="fui-effect fui-effect-restart">{icon("refresh-cw", "12")}Next reload</span></div></div>')
     return {
@@ -181,6 +200,7 @@ def tab_sections(edit=False, off=False, hint_=False, pending=None, invalid=True)
         "stored": ('The store the stored queries are kept in; the queries themselves are on <a href="stored-queries.html">Stored queries</a>. ' + RESTART_ALL, sto),
         "access": ("How each access record is classified and kept. " + (LIVE if not off else "Read again at each reload."), acc),
         "fhir": ("The face that serves and receives the European exchange format. " + RESTART_ALL, fh),
+        "auth": ("Who may call: the issuers the gateway trusts, a national contact point among them. Only ferrofed.toml sets these, so this tab is read-only.", au),
     }
 
 
@@ -193,7 +213,7 @@ def config_page(tab, mode="managed", top="", overlay=None, toast_html="", menu_o
         inner = body
     else:
         intro, rows = tab_sections(edit=edit, off=off, hint_=hint_, pending=pending, invalid=invalid)[tab]
-        act = "" if off else link_button("secondary", "Edit", "config-settings-edit.html" if tab == "federation" else routes.href("config", tab, "edit"), "pencil", small=True, keys="e")
+        act = "" if off or tab in READ_ONLY else link_button("secondary", "Edit", "config-settings-edit.html" if tab == "federation" else routes.href("config", tab, "edit"), "pencil", small=True, keys="e")
         inner = tpl.settings_panel(rows, intro, act)
     tabs_html = tpl.settings_tabs("Configuration sections", OFF_TABS if off else TABS, tab, inner, drafts=drafts, many=True)
     content = config_heading(mode, menu_open, running) + f'<div class="fui-stack">{status}{top}{tabs_html}</div>'
@@ -219,6 +239,7 @@ page_configuration_consent = _tab_page("consent")
 page_configuration_stored = _tab_page("stored")
 page_configuration_access = _tab_page("access")
 page_configuration_fhir = _tab_page("fhir")
+page_configuration_auth = _tab_page("auth")
 
 
 def page_configuration_mode_dialog():
@@ -796,6 +817,10 @@ def page_configuration_file_mode_dialog():
 
 def page_configuration_file_mode_history():
     return config_page("consent", mode="off")
+
+
+def page_configuration_file_mode_auth():
+    return config_page("auth", mode="off")
 
 
 # ---- route-only pages ----

@@ -80,9 +80,14 @@ PROBE = r"""
     if (!own || !(el.innerText || '').trim()) continue;
     const cs = getComputedStyle(el);
     if (cs.visibility === 'hidden' || cs.display === 'none' || intended(el)) continue;
-    const range = document.createRange();
-    range.selectNodeContents(el);
-    for (const r of range.getClientRects()) if (r.width > 2 && r.height > 2) leaves.push([el, r]);
+    // Only the element's own words: a descendant's text is measured as its
+    // own leaf, inside whatever clips it (a key hint that scrolls).
+    for (const node of el.childNodes) {
+      if (node.nodeType !== 3 || !node.textContent.trim()) continue;
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      for (const r of range.getClientRects()) if (r.width > 2 && r.height > 2) leaves.push([el, r]);
+    }
   }
   for (let i = 0; i < leaves.length; i++) for (let j = i + 1; j < leaves.length; j++) {
     const [a, ra] = leaves[i], [b, rb] = leaves[j];

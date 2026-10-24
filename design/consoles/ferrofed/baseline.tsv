@@ -42,11 +42,13 @@ selects	config-trial	390	no-id-or-name	select#tabs-sel
 selects	configuration	390	no-id-or-name	select#tabs-sel	
 selects	configuration-access	390	no-id-or-name	select#tabs-sel	
 selects	configuration-actions	390	no-id-or-name	select#tabs-sel	
+selects	configuration-auth	390	no-id-or-name	select#tabs-sel	
 selects	configuration-consent	390	no-id-or-name	select#tabs-sel	
 selects	configuration-export-done	390	no-id-or-name	select#tabs-sel	
 selects	configuration-fanout	390	no-id-or-name	select#tabs-sel	
 selects	configuration-fhir	390	no-id-or-name	select#tabs-sel	
 selects	configuration-file-mode	390	no-id-or-name	select#tabs-sel	
+selects	configuration-file-mode-auth	390	no-id-or-name	select#tabs-sel	
 selects	configuration-file-mode-dialog	390	no-id-or-name	select#tabs-sel	
 selects	configuration-file-mode-history	390	no-id-or-name	select#tabs-sel	
 selects	configuration-history	390	no-id-or-name	select#tabs-sel	
