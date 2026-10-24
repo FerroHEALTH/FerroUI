@@ -27,6 +27,7 @@ pub(super) const STATES: &[&str] = &[
     "toasts",
     "popover-form",
     "popover-form-390",
+    "dialog-reason-390",
     "side-panel-390",
     "drawer-open",
 ];
@@ -199,6 +200,21 @@ async fn phone_overlays(
         "popover-form-390",
         By::XPath("//button[@commandfor = 'save-query']"),
         By::Id("save-query"),
+    )
+    .await?;
+    // The confirmation sits in its row's actions cell, opened from the row menu.
+    press(
+        browser,
+        &crate::menus::hydrated_trigger(browser, "member-menu-node-b").await?,
+    )
+    .await?;
+    overlay(
+        browser,
+        brand,
+        theme,
+        "dialog-reason-390",
+        By::XPath("//button[@role = 'menuitem' and @commandfor = 'remove-node-b']"),
+        By::Id("remove-node-b"),
     )
     .await?;
     overlay(

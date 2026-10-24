@@ -495,6 +495,39 @@ async fn a_confirmation_in_a_rows_actions_cell_wraps_its_sentence_on_a_phone()
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn a_row_menu_in_an_actions_cell_sits_on_the_rows_first_line() -> Result<(), Box<dyn Error>> {
+    // NOTE: design/COMPONENTS.md, The table; an action in the actions cell sits on the row's
+    // first line, a row menu as a button does.
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/ferrofed/overlays")).await?;
+        browser
+            .element(By::Css("#member-removals td.fui-table-actions summary"))
+            .await?;
+        let offset: f64 = browser
+            .driver()
+            .execute(
+                "const row = document.querySelector('#member-removals tbody tr');
+                const name = row.querySelector('th code').getBoundingClientRect();
+                const menu = row.querySelector('td.fui-table-actions summary').getBoundingClientRect();
+                return (menu.top + menu.height / 2) - (name.top + name.height / 2);",
+                vec![],
+            )
+            .await?
+            .convert()?;
+        assert!(
+            offset.abs() <= 1.5,
+            "the row menu's centre meets the centre of the row's first line: {offset} px apart"
+        );
+        browser.console_clean("a row menu in an actions cell").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn the_results_export_menu_submits_the_query_form_to_its_format() -> Result<(), Box<dyn Error>>
 {
     // HTML Living Standard, the `formaction` attribute: the item submits the form it sits in
