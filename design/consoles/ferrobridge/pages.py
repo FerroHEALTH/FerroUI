@@ -130,7 +130,7 @@ GROUPS = [
         ('18.7', 'connection-cdm-settings', "Connection: the CDM database's settings", '/connections/cdm/settings', '[cdm] in T3 rows, the connection URL by reference.'),
     ]),
     ('config', 'Configuration', [
-        ('19', 'configuration', 'Configuration: Logging', '/configuration', 'T3 with one quiet line: where ferrobridge.toml is, a copy button, when it was read and How configuration works; tabs Logging, Mappings, Server and access. Every tab is a read-only view of ferrobridge.toml.'),
+        ('19', 'configuration', 'Configuration: Logging', '/configuration', 'T3 with one quiet line: where ferrobridge.toml is, a copy button, when it was read and How configuration works; tabs Logging, Mappings, Server and access. Every tab is a read-only view of ferrobridge.toml; a value the file does not set says it came from the environment or is the default.'),
         ('19.1', 'configuration-file-mode-dialog', 'How configuration works (file mode)', '/configuration', 'Where each section is shown, that you change the file and restart, and that mapping files are content.'),
         ('19.2', 'configuration-mappings', 'Configuration: Mappings', '/configuration/mappings', 'The mapping directories; the files themselves are on the Mapping set.'),
         ('19.3', 'configuration-core', 'Configuration: Core', '/configuration/core', 'The listener, the request limits, the issuers, who may call, the operator API and the usage report.'),

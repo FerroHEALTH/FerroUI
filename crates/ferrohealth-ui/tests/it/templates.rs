@@ -24,7 +24,8 @@ use ferrohealth_ui::view::template::list::{
     ActiveFilters, FilterChip, HeadingCount, ListCard, ListPage, list_empty, list_page,
 };
 use ferrohealth_ui::view::template::settings::{
-    How, Managed, Setting, SettingsPage, Source, revision_line, settings_page,
+    How, Managed, Setting, SettingsPage, Source, ValueSource, revision_line, setting_row,
+    settings_page,
 };
 use ferrohealth_ui::widget::action_menu::{Act, Action};
 use leptos::prelude::*;
@@ -357,7 +358,103 @@ fn setting(key: &str, next_start: bool) -> Setting {
         value: view! { <code>"json"</code> }.into_any(),
         keys: vec![key.to_owned()],
         next_start,
+        source: None,
     }
+}
+
+/// A file-only settings page of `settings`.
+fn file_page(settings: Vec<Setting>) -> String {
+    html(|| {
+        settings_page(SettingsPage {
+            header: header("Configuration"),
+            actions: ActionGroup::none(),
+            source: Source::File {
+                file: String::from("ferrobridge.toml"),
+                how: How::Page(String::from("#")),
+            },
+            tabs: None,
+            settings,
+            replica: None,
+        })
+    })
+}
+
+#[test]
+fn a_value_from_the_environment_says_so_after_the_value() {
+    let page = file_page(vec![Setting {
+        source: Some(ValueSource::Environment),
+        ..setting("telemetry.format", false)
+    }]);
+    let value = page
+        .find(r#"<span class="fui-setting-value"><code>json</code></span>"#)
+        .unwrap_or_else(|| panic!("the value: {page}"));
+    let source = page
+        .find(r#"<span class="fui-setting-source">"#)
+        .unwrap_or_else(|| panic!("the source marker: {page}"));
+    assert!(source > value, "the marker follows the value: {page}");
+    let marker = &page[source..];
+    let marker = &marker[..marker.find("</span>").unwrap_or(marker.len())];
+    assert!(
+        marker.contains(r#"aria-hidden="true""#) && marker.ends_with("From the environment"),
+        "the glyph is hidden and the words name the source: {marker}"
+    );
+}
+
+#[test]
+fn a_default_value_says_so_after_the_value() {
+    let page = file_page(vec![Setting {
+        source: Some(ValueSource::Default),
+        ..setting("telemetry.format", false)
+    }]);
+    assert!(
+        page.contains("Default</span></div>"),
+        "the marker ends the value's column: {page}"
+    );
+    assert!(!page.contains("From the environment"), "{page}");
+}
+
+#[test]
+fn a_value_from_the_file_carries_no_source_marker() {
+    let page = file_page(vec![setting("telemetry.format", false)]);
+    assert!(
+        !page.contains("fui-setting-source"),
+        "the file is the unmarked case: {page}"
+    );
+}
+
+#[test]
+fn a_managed_value_from_the_file_says_so() {
+    let row = html(|| {
+        setting_row(
+            Setting {
+                source: Some(ValueSource::File),
+                ..setting("limits.mode", false)
+            },
+            true,
+        )
+    });
+    assert!(
+        row.contains("From the file</span></div>"),
+        "a file-first section's value in a managed configuration: {row}"
+    );
+}
+
+#[test]
+fn a_managed_setting_shows_next_start_before_its_source() {
+    let row = html(|| {
+        setting_row(
+            Setting {
+                source: Some(ValueSource::Environment),
+                ..setting("limits.mode", true)
+            },
+            true,
+        )
+    });
+    let next = row.find("Next start").unwrap_or_else(|| panic!("{row}"));
+    let source = row
+        .find("From the environment")
+        .unwrap_or_else(|| panic!("{row}"));
+    assert!(next < source, "{row}");
 }
 
 #[test]

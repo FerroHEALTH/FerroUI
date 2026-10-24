@@ -20,11 +20,24 @@ def on(v=True):
     return badge("ok", "On") if v else badge("neutral", "Off")
 
 
-def srow(label, desc, value, key, hint=False, keys=None):
-    """`keys`: a row that shows two or more keys names each of them."""
+SOURCES = {"environment": ("square-terminal", "From the environment"), "default": ("rotate-ccw", "Default")}
+
+
+def source(src):
+    """Where a value the file does not set came from (FerroUI
+    view::template::settings::ValueSource): the environment or the default."""
+    if not src:
+        return ""
+    glyph, word = SOURCES[src]
+    return f'<span class="fui-setting-source">{icon(glyph, "12")}{word}</span>'
+
+
+def srow(label, desc, value, key, hint=False, keys=None, src=None):
+    """`keys`: a row that shows two or more keys names each of them; `src`:
+    "environment" or "default" for a value the file does not set."""
     hints = "".join(key_hint(k, hint) for k in (keys or (key,)))
     return (f'<div class="fui-setting-row{" mk-hover" if hint else ""}"><div class="fui-setting-text"><span class="fui-setting-label">{label}{hints}</span>'
-            f'<p class="fui-setting-desc">{desc}</p></div><div class="fui-setting-control"><span class="fui-setting-value">{value}</span></div></div>')
+            f'<p class="fui-setting-desc">{desc}</p></div><div class="fui-setting-control"><span class="fui-setting-value">{value}</span>{source(src)}</div></div>')
 
 
 def secret_now(ref, state="set"):

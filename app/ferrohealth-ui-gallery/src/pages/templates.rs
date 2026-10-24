@@ -31,7 +31,7 @@ use ferrohealth_ui::view::template::list::{
     ActiveFilters, FilterChip, HeadingCount, ListCard, ListPage, list_empty, list_page,
 };
 use ferrohealth_ui::view::template::settings::{
-    How, Managed, Setting, SettingsPage, Source, revision_line, settings_page,
+    How, Managed, Setting, SettingsPage, Source, ValueSource, revision_line, settings_page,
 };
 use ferrohealth_ui::widget::action_menu::{Act, Action, Item, Menu};
 use leptos::prelude::*;
@@ -422,15 +422,22 @@ fn delete_location() -> AnyView {
     .into_any()
 }
 
-/// The settings both T3 pages show, `managed` marking Mode at the next
-/// start.
-fn settings() -> Vec<Setting> {
-    let row = |label: Msg, description: Msg, value: String, key: &str, next_start: bool| Setting {
+/// The settings both T3 pages show, Mode at the next start; read from a
+/// file (`file`), Timeout comes from the environment and Best effort is the
+/// default.
+fn settings(file: bool) -> Vec<Setting> {
+    let row = |label: Msg,
+               description: Msg,
+               value: String,
+               key: &str,
+               next_start: bool,
+               source: Option<ValueSource>| Setting {
         label: tr(label),
         description: tr(description),
         value: value.into_any(),
         keys: vec![key.to_owned()],
         next_start,
+        source: source.filter(|_| file),
     };
     vec![
         row(
@@ -439,6 +446,7 @@ fn settings() -> Vec<Setting> {
             tr(Msg::TimeoutValue),
             "limits.timeout_ms",
             false,
+            Some(ValueSource::Environment),
         ),
         row(
             Msg::Retries,
@@ -446,6 +454,7 @@ fn settings() -> Vec<Setting> {
             String::from("2"),
             "limits.retries",
             false,
+            None,
         ),
         row(
             Msg::ModeSetting,
@@ -453,6 +462,7 @@ fn settings() -> Vec<Setting> {
             tr(Msg::Nearest),
             "limits.mode",
             true,
+            None,
         ),
         row(
             Msg::BestEffort,
@@ -460,6 +470,7 @@ fn settings() -> Vec<Setting> {
             tr(Msg::Offered),
             "limits.best_effort",
             false,
+            Some(ValueSource::Default),
         ),
     ]
 }
@@ -509,7 +520,7 @@ fn settings_file() -> AnyView {
             how: How::Dialog("how-configuration".into()),
         },
         tabs: Some(settings_tabs("settings", false)),
-        settings: settings(),
+        settings: settings(true),
         replica: None,
     });
     let how = info_dialog(
@@ -556,7 +567,7 @@ fn settings_managed() -> AnyView {
             ),
         })),
         tabs: Some(settings_tabs("settings-managed", true)),
-        settings: settings(),
+        settings: settings(false),
         replica: None,
     })
 }

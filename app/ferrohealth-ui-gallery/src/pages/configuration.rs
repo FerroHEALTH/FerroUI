@@ -309,6 +309,7 @@ fn read_only(root: &str) -> AnyView {
                 value: secret_state(&state),
                 keys: vec![String::from(key)],
                 next_start: false,
+                source: None,
             },
             false,
         )

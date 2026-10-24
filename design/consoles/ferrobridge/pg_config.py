@@ -20,7 +20,7 @@ def mode_dialog():
         f'<h2 id="mode-title" class="fui-dialog-title">{icon("info", "18")} How configuration works</h2>'
         '<p>The bridge reads its whole configuration from <code>ferrobridge.toml</code> once, at start, with <code>FERROBRIDGE__</code> overrides and <code>_file</code> secrets.</p>'
         '<div class="fui-modal-body"><div class="fui-ownership">'
-        '<div><h3>' + icon("file-text", "16") + ' Where you see it</h3><p class="fui-small fui-muted">Read-only, each value with its TOML key on hover.</p>' + SECTIONS + '</div>'
+        '<div><h3>' + icon("file-text", "16") + ' Where you see it</h3><p class="fui-small fui-muted">Read-only, each value with its TOML key on hover, and where it came from when the file does not set it: the environment, which wins over the file, or the default.</p>' + SECTIONS + '</div>'
         '<div><h3>' + icon("refresh-cw", "16") + ' How you change it</h3><p class="fui-small fui-muted">Change the file, review it in version control, and restart the bridge. '
         'A value the bridge refuses stops the start and names the key, never the value.</p></div></div>'
         '<p class="fui-small fui-muted mk-mode-other">Mapping files are content: you edit them on the Mapping set and save each with a reason.</p></div>'
@@ -42,17 +42,17 @@ TABS = [("logging", "Logging", "configuration.html"), ("mappings", "Mappings", "
 
 
 def sections(hint=False):
-    lg = (srow("Format", "auto, json or pretty; auto is pretty on a terminal and JSON otherwise.", "json", "telemetry.format", hint=hint)
+    lg = (srow("Format", "auto, json or pretty; auto is pretty on a terminal and JSON otherwise.", "json", "telemetry.format", hint=hint, src="environment")
           + srow("Filter", "Which events reach the log, as a RUST_LOG directive.", "<code>info,hyper=warn</code> and 2 more", "telemetry.filter")
-          + srow("Logged query parameters", "The parameters whose values may reach the request log.", '<span class="mk-dash">none</span>', "telemetry.logged_query_parameters"))
+          + srow("Logged query parameters", "The parameters whose values may reach the request log.", '<span class="mk-dash">none</span>', "telemetry.logged_query_parameters", src="default"))
     mp = (srow("Mapping directory", "Where the FHIRconnect files are read from.", "<code>/etc/ferrobridge/mappings</code>", "mappings.directory")
           + srow("Templates", "The operational templates the operations compile against.", "<code>/etc/ferrobridge/templates</code>", "mappings.templates")
           + srow("OMOCL directory", "Where the ETL reads its OMOCL files from.", "<code>/etc/ferrobridge/omocl</code>", "mappings.omocl"))
     issuers = ('<ul class="mk-plain-list"><li><code>https://idp.demo-regio.example.org/realms/bridge</code></li>'
                '<li><code>https://idp.demo-region-backup.example.org/realms/bridge</code></li></ul>')
-    core = (srow("Listener", "The socket address the bridge binds.", "<code>0.0.0.0:8080</code>", "server.listen")
+    core = (srow("Listener", "The socket address the bridge binds.", "<code>0.0.0.0:8080</code>", "server.listen", src="environment")
             + srow("Request limits", "How long one request may take, and the largest body read.", "30 s · 1 MiB", "server.request_timeout_ms",
-                   keys=("server.request_timeout_ms", "server.body_limit_bytes"))
+                   keys=("server.request_timeout_ms", "server.body_limit_bytes"), src="default")
             + srow("Issuers", "Who signs the tokens the bridge accepts.", issuers, "auth.issuer")
             + srow("Audience", "The audience every token must name.", "<code>https://bridge.demo-regio.example.org/fhir</code>", "auth.audience")
             + srow("Operator scope", "The scope the operator API and this console need.", "<code>__ferrobridge.operator</code>", "auth.product_scope")

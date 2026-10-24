@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The journeys of the forms and controls at their edges: a long segment
-//! label, the upload's focus, the combobox cleared, the picker under the
-//! arrow keys and the copy button on a page with no clipboard.
+//! label, a long word in a banner, a notice and a setting's description, the
+//! upload's focus, the combobox cleared, the picker under the arrow keys
+//! and the copy button on a page with no clipboard.
 
 use std::error::Error;
 
@@ -54,6 +55,48 @@ async fn a_long_segment_label_wraps_inside_its_group() -> Result<(), Box<dyn Err
         .await?;
         assert!(clipped.is_empty(), "segments past their group: {clipped:?}");
         browser.console_clean("the segmented controls").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_long_word_wraps_inside_a_banner_a_notice_and_a_settings_description()
+-> Result<(), Box<dyn Error>> {
+    // WCAG 2.2 SC 1.4.10: at 320 px a URL and the pseudo-locale's longest run stay on the screen.
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/")).await?;
+        let mut cookie = Cookie::new("gallery-language", "qps");
+        cookie.set_path("/");
+        browser.driver().add_cookie(cookie).await?;
+        for (width, path) in [320, 390].into_iter().flat_map(|width| {
+            ["/ferrobridge", "/ferrobridge/templates/settings"].map(|path| (width, path))
+        }) {
+            browser.driver().set_window_rect(0, 0, width, 900).await?;
+            browser.goto(&gallery.url(path)).await?;
+            browser.element(By::Css(r#"html[lang="qps"]"#)).await?;
+            let past: Vec<String> = script(
+                browser,
+                "const edge = document.documentElement.clientWidth;
+                 return [...document.querySelectorAll('.fui-banner > p, .fui-notice > div, .fui-setting-desc')]
+                   .filter(text => text.getClientRects().length > 0)
+                   .filter(text => text.getBoundingClientRect().right > edge + 0.5
+                     || text.scrollWidth > text.clientWidth + 1)
+                   .map(text => text.className || text.parentElement.className);",
+                Vec::new(),
+            )
+            .await?;
+            assert!(
+                past.is_empty(),
+                "text past the screen at {width} px on {path}: {past:?}"
+            );
+        }
+        browser
+            .console_clean("the banners, notices and setting descriptions")
+            .await
     })
     .await
 }

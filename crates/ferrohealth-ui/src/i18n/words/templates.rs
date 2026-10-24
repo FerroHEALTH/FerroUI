@@ -46,6 +46,13 @@ texts! {
     KeyCopyTitle = "key-copy-title",
     /// A setting that takes effect at the next start.
     NextStart = "next-start",
+    /// A setting's value nothing sets: the product's default.
+    SettingSourceDefault = "setting-source-default",
+    /// A setting's value from an environment variable, which wins over the
+    /// file and a revision.
+    SettingSourceEnvironment = "setting-source-environment",
+    /// A managed setting's value from the configuration file.
+    SettingSourceFile = "setting-source-file",
     /// The step to the next item of a queue, named with the item.
     StepperNext = "stepper-next",
     /// The step to the previous item of a queue, named with the item.

@@ -827,3 +827,30 @@ fn a_confirmation_with_fields_keeps_the_dialogs_rhythm_inside_its_form() {
         "the question, the sentence, the fields and the actions keep their spacing inside the form"
     );
 }
+
+#[test]
+fn a_long_word_wraps_in_a_banner_a_notice_a_settings_description_and_its_source() {
+    // WCAG 2.2 SC 1.4.10: a URL or a long compound never runs past the screen at 320 px.
+    let banner = rule("  .fui-banner > p");
+    assert!(
+        banner.contains("min-width: 0;") && banner.contains("overflow-wrap: break-word;"),
+        "the banner's text shrinks below its longest word and wraps it: {banner}"
+    );
+    let notice = rule("  .fui-notice > div");
+    assert!(
+        notice.contains("min-width: 0;") && notice.contains("overflow-wrap: break-word;"),
+        "a notice's body wraps as the banner's text does: {notice}"
+    );
+    let description = rule("  .fui-setting-desc");
+    assert!(
+        description.contains("overflow-wrap: break-word;"),
+        "{description}"
+    );
+    let source = rule("  .fui-setting-source");
+    assert!(
+        source.contains("min-width: 0;")
+            && source.contains("overflow-wrap: anywhere;")
+            && !source.contains("nowrap"),
+        "{source}"
+    );
+}
