@@ -584,7 +584,7 @@ fn the_browser_lays_out_its_panes_and_the_inspector_reads_a_coded_node() {
                     flat_path: Some(String::from("vital_signs/blood_pressure/position")),
                     codes: vec!["Standing".into_any(), "Sitting".into_any()],
                     more: None,
-                    query: String::from("/query?path=position"),
+                    query: Some(String::from("/query?path=position")),
                 }),
             ],
         )
@@ -610,6 +610,38 @@ fn the_browser_lays_out_its_panes_and_the_inspector_reads_a_coded_node() {
 }
 
 #[test]
+fn a_path_node_with_no_query_draws_no_build_a_query() {
+    let node = html(|| {
+        browser(
+            Panes::Two,
+            Heading::Three,
+            vec![path_node(PathNode {
+                name: String::from("Name"),
+                path: String::from(
+                    "/identities[openEHR-DEMOGRAPHIC-PARTY_IDENTITY.person_name.v1]",
+                ),
+                rm_type: String::from("PARTY_IDENTITY"),
+                occurrences: String::from("1..*"),
+                units: None,
+                flat_path: None,
+                codes: Vec::new(),
+                more: None,
+                query: None,
+            })],
+        )
+    });
+    assert!(
+        !node.contains("Build a query on this path"),
+        "a demographic template's node offers no query: {node}"
+    );
+    assert!(
+        !node.contains("fui-button"),
+        "the head holds no action at all: {node}"
+    );
+    assert!(node.contains("PARTY_IDENTITY"), "the facts stay: {node}");
+}
+
+#[test]
 fn a_large_value_set_on_a_path_node_ends_in_the_more_row_and_counts_its_total() {
     let node = html(|| {
         browser(
@@ -624,7 +656,7 @@ fn a_large_value_set_on_a_path_node_ends_in_the_more_row_and_counts_its_total() 
                 flat_path: None,
                 codes: vec!["Cough".into_any(), "Fever".into_any()],
                 more: Some(MoreCodes::of_page(2, 4000, 25, "/node?codes=2")),
-                query: String::from("/query"),
+                query: Some(String::from("/query")),
             })],
         )
     });

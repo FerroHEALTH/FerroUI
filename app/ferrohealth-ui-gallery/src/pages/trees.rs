@@ -578,7 +578,7 @@ fn path_browser() -> AnyView {
         flat_path: Some(String::from(POSITION_FLAT)),
         codes,
         more: None,
-        query: String::from("#trees-paths"),
+        query: Some(String::from("#trees-paths")),
     });
     let template = panel_section(
         None,
