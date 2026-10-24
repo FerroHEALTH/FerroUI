@@ -2531,6 +2531,14 @@
     vertical-align: top;
   }
 
+  /* A row menu in the actions cell (its island draws no box) sits on the
+     same first line, its 2 rem trigger centred on the line. */
+  .fui-table-actions > :where(leptos-island, leptos-children) > .fui-anchor,
+  .fui-table-actions > .fui-anchor {
+    margin-block: calc((var(--leading-body) - 2rem) / 2);
+    vertical-align: top;
+  }
+
   .fui-table-actions > form > :is(.fui-button, button, a):not(.fui-button-small) {
     margin-block: calc((var(--leading-body) - var(--control)) / 2);
   }
