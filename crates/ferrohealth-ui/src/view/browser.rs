@@ -226,12 +226,15 @@ pub struct PathNode {
     /// The more row after the codes, when the console's server pages a
     /// large value set; the heading then counts its total.
     pub more: Option<MoreCodes>,
-    /// The query builder on this path.
-    pub query: String,
+    /// Where Build a query on this path leads, the query builder on this
+    /// path; `None` where no query can be built on the template (a
+    /// demographic template, such as a PERSON's), which draws no button.
+    pub query: Option<String>,
 }
 
 /// Returns the inspector pane of the node `node`: its facts, a coded
-/// node's value set, and Build a query on this path in its head.
+/// node's value set, and Build a query on this path in its head where the
+/// node has a query.
 #[must_use]
 pub fn path_node(node: PathNode) -> BrowserPane {
     let PathNode {
@@ -283,10 +286,13 @@ pub fn path_node(node: PathNode) -> BrowserPane {
         }
         .into_any()
     };
-    let action = view! {
-        <a href=query class=Variant::Secondary.small()>
-            {label(Some(Glyph::SQUARE_TERMINAL), tr(Text::PathNodeQuery))}
-        </a>
-    };
-    BrowserPane::new(name, body).actions(action)
+    let pane = BrowserPane::new(name, body);
+    match query {
+        Some(query) => pane.actions(view! {
+            <a href=query class=Variant::Secondary.small()>
+                {label(Some(Glyph::SQUARE_TERMINAL), tr(Text::PathNodeQuery))}
+            </a>
+        }),
+        None => pane,
+    }
 }
