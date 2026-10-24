@@ -3509,6 +3509,10 @@
     max-height: calc(100dvh - 2rem);
     overflow: auto;
     overflow-wrap: anywhere;
+    /* A dialog drawn in a table's actions cell inherits neither its nowrap
+       nor its end alignment. */
+    white-space: normal;
+    text-align: start;
     margin: auto;
     border: 1px solid var(--edge);
     border-radius: var(--radius-card);

@@ -12,6 +12,7 @@ use crate::locale::{Msg, Words, tr, tr_with};
 use ferrohealth_ui::i18n::{Arg, Word};
 use ferrohealth_ui::icon::{Glyph, icon};
 use ferrohealth_ui::island::SidePanel;
+use ferrohealth_ui::table::view::{ACTIONS, Body, Column, DataTable, Sorting, data_table};
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::action::{ActionGroup, action_group};
 use ferrohealth_ui::view::button::{Variant, label};
@@ -95,8 +96,9 @@ fn confirmations() -> AnyView {
     .into_any()
 }
 
-/// A list whose every row's menu ends in Remove…, which opens a danger
-/// confirmation of its own, each dialog's id made from its row. The
+/// A table whose every row's menu ends in Remove…, which opens a danger
+/// confirmation of its own beside it in the row's actions cell, each
+/// dialog's id made from its row. The
 /// confirmation asks for a required Reason inside the form it posts to
 /// [`crate::app::REMOVE_ROUTE`], which returns naming the member removed,
 /// and the list leaves that row out.
@@ -117,16 +119,26 @@ fn member_removals() -> AnyView {
                 </p>
             }
         });
+    let columns = [
+        Column::text("member", tr(Msg::Member)),
+        Column::text("actions", tr(Msg::Actions)),
+    ];
     view! {
-        <p class="fui-muted">{tr(Msg::RemoveMembers)}</p>
-        <ul class="fui-bullets" id="member-removals">{rows}</ul>
+        <div id="member-removals">
+            {data_table(DataTable {
+                caption: &tr(Msg::RemoveMembers),
+                columns: &columns,
+                sorting: Sorting::default(),
+                body: Body::Rows(rows.into_any()),
+            })}
+        </div>
         {said}
     }
     .into_any()
 }
 
-/// The row of `member`: its name, its menu with Remove… last, and the
-/// confirmation that asks why, returning to `back`.
+/// The row of `member`: its name, and in its actions cell its menu with
+/// Remove… last and the confirmation that asks why, returning to `back`.
 fn member_row(member: &'static str, back: &str) -> AnyView {
     let id = format!("remove-{member}");
     let reason = format!("{id}-reason");
@@ -172,10 +184,13 @@ fn member_row(member: &'static str, back: &str) -> AnyView {
         },
     );
     view! {
-        <li>
-            {split(view! { <code>{member}</code> }, row_menu(menu))}
-            {dialog}
-        </li>
+        <tr>
+            <th scope="row"><code>{member}</code></th>
+            <td data-label=tr(Msg::Actions) class=ACTIONS>
+                {row_menu(menu)}
+                {dialog}
+            </td>
+        </tr>
     }
     .into_any()
 }

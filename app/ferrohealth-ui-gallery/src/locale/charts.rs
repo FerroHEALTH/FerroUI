@@ -134,6 +134,8 @@ messages! {
     N48SyntheticCommitsOver30 = "n-48-synthetic-commits-over-30",
     /// `Oct 18`
     Oct18 = "oct-18",
+    /// `Oct 8`
+    Oct8 = "oct-8",
     /// `Reads`
     Reads = "reads",
     /// `Refusals`
@@ -204,6 +206,8 @@ messages! {
     ScoreSex = "score-sex",
     /// `Sep 19`
     Sep19 = "sep-19",
+    /// `Sep 28`
+    Sep28 = "sep-28",
     /// `Sun`
     Sun = "sun",
     /// `Three synthetic series over a week: reads rise to 48 on Friday, writes stay near 12,...`

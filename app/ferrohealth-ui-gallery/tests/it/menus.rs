@@ -442,6 +442,59 @@ async fn a_row_menus_remove_asks_why_and_removes_the_row_by_keyboard() -> Result
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn a_confirmation_in_a_rows_actions_cell_wraps_its_sentence_on_a_phone()
+-> Result<(), Box<dyn Error>> {
+    // WCAG 2.2 SC 1.4.10 Reflow: at 390 px the dialog's sentence wraps inside it, whatever the
+    // actions cell around it sets for its own buttons.
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        window(browser, 390, 844).await?;
+        browser.goto(&gallery.url("/ferrofed/overlays")).await?;
+        let dialog = browser
+            .element(By::Css("#member-removals td.fui-table-actions dialog#remove-node-b"))
+            .await?;
+        browser
+            .driver()
+            .execute(
+                "document.getElementById('remove-node-b').showModal();",
+                vec![],
+            )
+            .await?;
+        until("the confirmation opens", async || {
+            Ok(dialog.attr("open").await?.is_some())
+        })
+        .await?;
+        let laid: Vec<String> = browser
+            .driver()
+            .execute(
+                "const dialog = document.getElementById('remove-node-b');
+                const edge = dialog.getBoundingClientRect().right;
+                const style = getComputedStyle(dialog);
+                const out = [style.whiteSpace, style.textAlign];
+                for (const node of dialog.querySelectorAll('h2, p')) {
+                    if (node.getBoundingClientRect().right > edge + 0.5 || node.scrollWidth > node.clientWidth) {
+                        out.push(node.textContent.trim());
+                    }
+                }
+                return out;",
+                vec![],
+            )
+            .await?
+            .convert()?;
+        assert_eq!(
+            vec![String::from("normal"), String::from("start")],
+            laid,
+            "the dialog resets the cell's nowrap and end alignment, and no line runs past its edge"
+        );
+        browser.console_clean("a confirmation in an actions cell").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn the_results_export_menu_submits_the_query_form_to_its_format() -> Result<(), Box<dyn Error>>
 {
     // HTML Living Standard, the `formaction` attribute: the item submits the form it sits in

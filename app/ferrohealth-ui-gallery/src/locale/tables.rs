@@ -6,8 +6,6 @@
 use super::Msg;
 
 messages! {
-    /// `Actions`
-    Actions = "actions",
     /// `Apply`
     Apply = "apply",
     /// `Changed`

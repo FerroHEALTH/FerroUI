@@ -936,16 +936,16 @@ pub struct ActivityChart {
     pub summary: String,
     /// The counts, `(day index, count)`.
     pub points: Vec<(u32, u32)>,
-    /// The label of the first and of the last day.
-    pub ends: (String, String),
+    /// The days the axis names, `(day index, words)`, such as the first
+    /// day, every tenth and the last.
+    pub ticks: Vec<(u32, String)>,
 }
 
 /// Returns the activity chart `chart`: one line in the accent over a fixed
-/// height, the first and last day labelled.
+/// height, the days its ticks name labelled.
 #[must_use]
 pub fn activity_chart(chart: &ActivityChart) -> impl IntoView + use<> {
     const HEIGHT: f64 = 132.0;
-    let last = chart.points.iter().map(|point| point.0).max().unwrap_or(1);
     let line = LineChart {
         id: chart.name,
         label: chart.label.clone(),
@@ -959,10 +959,11 @@ pub fn activity_chart(chart: &ActivityChart) -> impl IntoView + use<> {
                 .collect(),
             palette: 0,
         }],
-        x_ticks: vec![
-            (0.0, chart.ends.0.clone()),
-            (f64::from(last.max(1)), chart.ends.1.clone()),
-        ],
+        x_ticks: chart
+            .ticks
+            .iter()
+            .map(|(day, words)| (f64::from(*day), words.clone()))
+            .collect(),
         x_labels: Vec::new(),
         y_range: None,
     };
@@ -1123,7 +1124,7 @@ mod tests {
             label: String::from("Contributions per day"),
             summary: String::from("5 contributions over 1 day."),
             points: vec![(0, 5)],
-            ends: (String::from("2026-10-18"), String::from("2026-10-18")),
+            ticks: vec![(0, String::from("2026-10-18"))],
         };
         let owner = leptos::prelude::Owner::new();
         let html = owner.with(|| {

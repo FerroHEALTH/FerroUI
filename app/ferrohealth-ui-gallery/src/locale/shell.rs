@@ -6,6 +6,8 @@
 use super::Msg;
 
 messages! {
+    /// `Actions`
+    Actions = "actions",
     /// `Actions for $name`
     ActionsFor = "actions-for",
     /// `Another canonical`

@@ -14,7 +14,7 @@ use ferrohealth_ui::island::{
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::action::{ActionGroup, action_button, action_group};
 use ferrohealth_ui::view::button::{Variant, link_button};
-use ferrohealth_ui::view::chart::{LineChart, Series};
+use ferrohealth_ui::view::chart::{ActivityChart, LineChart, Series, activity_chart};
 use ferrohealth_ui::view::code::{
     Code, CodeHead, Digest, Gravity, LineDiagnostic, code_card, code_section, code_viewer,
 };
@@ -794,6 +794,36 @@ fn every_series_is_drawn_once_and_shown_in_the_plot_the_legend_names() {
     assert!(
         page.contains("<table"),
         "the figures table reads alone: {page}"
+    );
+}
+
+#[test]
+fn an_activity_chart_labels_every_day_its_ticks_name() {
+    let chart = ActivityChart {
+        name: "writes",
+        label: String::from("Contributions per day"),
+        summary: String::from("40 contributions over 30 days."),
+        points: (0_u32..30).map(|day| (day, day % 4)).collect(),
+        ticks: vec![
+            (0, String::from("22 Sep")),
+            (9, String::from("1 Oct")),
+            (19, String::from("11 Oct")),
+            (29, String::from("21 Oct")),
+        ],
+    };
+    let page = html(|| activity_chart(&chart).into_any());
+    let labels: Vec<&str> = page
+        .split("<text class=\"fui-chart-label")
+        .skip(1)
+        .filter_map(|text| {
+            text.split_once('>')
+                .and_then(|(_, rest)| rest.split("</text>").next())
+        })
+        .collect();
+    assert_eq!(
+        vec!["22 Sep", "1 Oct", "11 Oct", "21 Oct"],
+        labels,
+        "the axis names the four days the console gives, as the FerroEHR mockups draw them: {page}"
     );
 }
 
