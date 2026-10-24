@@ -568,7 +568,7 @@ def staged_section(n, title, kind, change, body, removable=True):
     """One staged change as a B10 section: its heading, Remove, What changes with its Apply."""
     acts = icon_button("x", f"Remove change {n}") if removable else ""
     kinds = select(f"k{n}", [("cc", "A new composition"), ("ca", "An amended composition"), ("sm", "The EHR status")], kind)
-    ctl = f'<div class="fui-cluster">{kinds}{button("secondary", "Apply", small=True, type_="submit")}</div>'
+    ctl = f'<div class="fui-field-row fui-field-row-actions">{kinds}{button("secondary", "Apply", type_="submit")}</div>'
     grid = (f'<div class="fui-form-grid">{field(f"k{n}", "What changes", ctl, help_=f"Recorded as the audit change type {CHANGE_WORD[change]}.", cls="fui-span-2")}</div>')
     return section(f"{n}. {title}", grid + body, actions=acts)
 
