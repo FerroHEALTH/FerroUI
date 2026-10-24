@@ -18,7 +18,7 @@ use ferrohealth_ui::view::notice::{Announce, notice};
 use ferrohealth_ui::view::refusal::{Issue, Refusal, Severity, fault, refusal};
 use ferrohealth_ui::view::segmented::{SegmentedForm, segmented_form, segmented_links};
 use ferrohealth_ui::view::state::{Mark, state};
-use ferrohealth_ui::view::status::{badge, pill, status};
+use ferrohealth_ui::view::status::{badge, banner, pill, status};
 use ferrohealth_ui::view::surface::{
     Stat, card, card_action, chip, cluster, definitions, disclosure, facts_row, grid, or_none,
     page_header, stack, stat_card, stat_card_marked, stat_grid, titled_panel, well,
@@ -258,6 +258,24 @@ fn notices_card() -> AnyView {
                 tr(Msg::SaveRefusedIssues),
             )}
         }),
+    )
+    .into_any()
+}
+
+/// A banner whose sentence holds a URL longer than a phone is wide, which
+/// wraps inside the banner.
+fn banners_card() -> AnyView {
+    let body = tr_with(
+        Msg::BannerSandboxBody,
+        &[(
+            "value",
+            "https://sandbox.demo-regio.example.org/fhir/r4/metadata?_format=application/fhir+json"
+                .into(),
+        )],
+    );
+    card(
+        tr(Msg::Banners),
+        banner(Tone::Info, Glyph::INFO, tr(Msg::BannerSandbox), &body, None),
     )
     .into_any()
 }
@@ -657,6 +675,7 @@ pub fn OverviewPage() -> impl IntoView {
     let marks = stack(view! {
         {marks_card()}
         {notices_card()}
+        {banners_card()}
     })
     .into_any();
     let leading = stack(view! {

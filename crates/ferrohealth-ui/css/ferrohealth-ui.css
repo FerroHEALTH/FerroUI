@@ -1583,6 +1583,19 @@
     line-height: var(--leading-small);
   }
 
+  /* The glyph keeps its size beside text that wraps. */
+  .fui-banner > .fui-icon {
+    flex-shrink: 0;
+  }
+
+  /* The text wraps a word longer than the banner (a URL, an identifier, a
+     long compound in a translation), so nothing runs past the screen
+     (WCAG 2.2 SC 1.4.10). */
+  .fui-banner > p {
+    min-width: 0;
+    overflow-wrap: break-word;
+  }
+
   /* The link a banner ends with keeps the banner's tone, underlined. */
   .fui-banner a {
     color: inherit;
@@ -3728,6 +3741,13 @@
 
   .fui-notice > .fui-icon {
     margin-block-start: 0.125rem;
+  }
+
+  /* The body wraps a word longer than the notice, as a banner's text does
+     (WCAG 2.2 SC 1.4.10). */
+  .fui-notice > div {
+    min-width: 0;
+    overflow-wrap: break-word;
   }
 
   .fui-notice a {
@@ -7253,11 +7273,15 @@
     font-weight: 500;
   }
 
+  /* A word longer than the label column (a key, a URL, a long compound in
+     a translation) wraps inside it, never past the panel (WCAG 2.2 SC
+     1.4.10). */
   .fui-setting-desc {
     margin-block-start: 0.125rem;
     color: var(--muted);
     font-size: var(--text-small);
     line-height: var(--leading-small);
+    overflow-wrap: break-word;
   }
 
   .fui-setting-control {
@@ -8025,6 +8049,24 @@
 
   .fui-effect-restart {
     color: var(--warn);
+  }
+
+  /* Where a value came from when the file does not set it: the environment
+     or the product's default, quiet beside the value. */
+  .fui-setting-source {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-width: 0;
+    color: var(--muted);
+    font-size: var(--text-micro);
+    line-height: var(--leading-micro);
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+
+  .fui-setting-source > .fui-icon {
+    flex-shrink: 0;
   }
 
   /* An editable value in place: the control where the value was, its

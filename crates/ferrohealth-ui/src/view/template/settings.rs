@@ -19,7 +19,7 @@ use std::borrow::Cow;
 
 use leptos::prelude::*;
 
-use crate::i18n::{Text, tr};
+use crate::i18n::{Text, Word, tr};
 use crate::icon::{Glyph, icon};
 use crate::view::action::ActionGroup;
 use crate::view::replica::{Replica, replica_line};
@@ -42,6 +42,51 @@ pub struct Setting {
     /// Whether a change takes effect at the next start, in a managed
     /// configuration.
     pub next_start: bool,
+    /// Where the value came from when it is not where the page says the
+    /// settings come from, drawn beside the value ([`ValueSource`]).
+    pub source: Option<ValueSource>,
+}
+
+/// Where a setting's value came from, when it is not where the page says
+/// the settings come from.
+///
+/// The unmarked case (`Setting::source` is `None`) is the page's own
+/// source: the file of a file-only configuration ([`Source::File`]), the
+/// running revision of a managed one. A marker tells an operator that
+/// changing that source leaves the value alone.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum ValueSource {
+    /// An environment variable, which wins over the file and a revision:
+    /// "From the environment".
+    Environment,
+    /// Nothing sets it: the product's own default, "Default".
+    Default,
+    /// The configuration file, in a managed configuration whose section
+    /// the file sets: "From the file".
+    File,
+}
+
+impl ValueSource {
+    /// The glyph drawn beside the source's words.
+    #[must_use]
+    pub const fn glyph(self) -> Glyph {
+        match self {
+            Self::Environment => Glyph::SQUARE_TERMINAL,
+            Self::Default => Glyph::ROTATE_CCW,
+            Self::File => Glyph::FILE_TEXT,
+        }
+    }
+
+    /// The library's words for the source, in the page's language.
+    #[must_use]
+    pub fn words(self) -> Word {
+        tr(match self {
+            Self::Environment => Text::SettingSourceEnvironment,
+            Self::Default => Text::SettingSourceDefault,
+            Self::File => Text::SettingSourceFile,
+        })
+    }
 }
 
 /// Where a page's settings come from (family rule 13).
@@ -199,7 +244,8 @@ pub fn settings_panel(intro: AnyView, actions: Option<AnyView>, rows: Vec<AnyVie
 ///
 /// The label carries its key hints and the line under it; the value sits
 /// from 40 % of the panel, with the Next start marker after it where a
-/// managed setting takes effect at the next start.
+/// managed setting takes effect at the next start, and the value's source
+/// after that where it is not the page's own ([`ValueSource`]).
 ///
 /// A file-only configuration (`managed` false) draws no Next start marker:
 /// every value there is read at start.
@@ -211,6 +257,7 @@ pub fn setting_row(setting: Setting, managed: bool) -> AnyView {
         value,
         keys,
         next_start,
+        source,
     } = setting;
     let hints = keys
         .into_iter()
@@ -226,6 +273,13 @@ pub fn setting_row(setting: Setting, managed: bool) -> AnyView {
             </span>
         }
     });
+    let source = source.map(|source| {
+        view! {
+            <span class="fui-setting-source">
+                {icon(source.glyph(), "12")} {source.words()}
+            </span>
+        }
+    });
     view! {
         <div class="fui-setting-row">
             <div class="fui-setting-text">
@@ -235,6 +289,7 @@ pub fn setting_row(setting: Setting, managed: bool) -> AnyView {
             <div class="fui-setting-control">
                 <span class="fui-setting-value">{value}</span>
                 {next}
+                {source}
             </div>
         </div>
     }

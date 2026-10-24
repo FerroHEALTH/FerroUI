@@ -18,6 +18,12 @@ messages! {
     AskingBridge = "asking-bridge",
     /// `Back to the files`
     BackFiles = "back-files",
+    /// A banner's title in the overview's specimen.
+    BannerSandbox = "banner-sandbox",
+    /// A banner's sentence around a URL longer than a phone is wide.
+    BannerSandboxBody = "banner-sandbox-body",
+    /// `Banners`
+    Banners = "banners",
     /// `Past five tabs, a phone shows the sections as a select once the page has loaded its script.`
     BinderManyTabsSelect = "binder-many-tabs-select",
     /// `The tab you are on opens into this panel, so the two read as one sheet.`

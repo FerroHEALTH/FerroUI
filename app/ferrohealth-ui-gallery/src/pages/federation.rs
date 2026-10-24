@@ -757,6 +757,7 @@ fn self_description(brand: Brand) -> AnyView {
         value: view! { <code>{value.to_owned()}</code> }.into_any(),
         keys: vec![key.to_owned()],
         next_start: false,
+        source: None,
     };
     settings_page(SettingsPage {
         header: Header {
