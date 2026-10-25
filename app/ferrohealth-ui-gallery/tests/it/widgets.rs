@@ -699,12 +699,17 @@ async fn the_open_pager_steps_with_no_total() -> Result<(), Box<dyn Error>> {
         browser.goto(&gallery.url("/ferroehr/tables")).await?;
         let posted = "nav[aria-label='Pages of the EHRs, in the page']";
         let linked = "nav[aria-label='Pages of the EHRs, as links']";
+        // The router draws the pager again as a step lands, so a status read mid-draw is
+        // stale and reads as nothing yet; the step's wait reads it again.
         let range = async |pager: &str| -> Result<String, Box<dyn Error>> {
-            Ok(browser
-                .element(By::Css(format!("{pager} [role='status']")))
-                .await?
-                .text()
-                .await?)
+            let statuses = browser
+                .driver()
+                .find_all(By::Css(format!("{pager} [role='status']")))
+                .await?;
+            Ok(match statuses.first() {
+                Some(status) => status.text().await.unwrap_or_default(),
+                None => String::new(),
+            })
         };
         // Each step, a post of the session pager or a link of the URL pager, is drawn
         // in the page by the router.

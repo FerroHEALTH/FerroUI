@@ -497,8 +497,24 @@ impl Browser {
     }
 }
 
+/// Whether `error` is the browser saying an element it was asked about has
+/// left the page: the router drew that part of the page again.
+fn stale(error: &(dyn Error + 'static)) -> bool {
+    error
+        .downcast_ref::<WebDriverError>()
+        .is_some_and(|error| {
+            matches!(
+                error.as_inner(),
+                thirtyfour::error::WebDriverErrorInner::StaleElementReference(_)
+            )
+        })
+}
+
 /// Polls `check` every [`POLL`] until it holds, and fails naming `what` when
 /// [`WAIT`] runs out first.
+///
+/// A check that read an element the router has since drawn again holds not
+/// yet, and runs again at the next poll; any other error fails at once.
 pub(crate) async fn until<F>(what: &str, mut check: F) -> Result<(), Box<dyn Error>>
 where
     F: AsyncFnMut() -> Result<bool, Box<dyn Error>>,
@@ -507,8 +523,11 @@ where
     let mut interval = tokio::time::interval(POLL);
     loop {
         interval.tick().await;
-        if check().await? {
-            return Ok(());
+        match check().await {
+            Ok(true) => return Ok(()),
+            Ok(false) => {}
+            Err(error) if stale(error.as_ref()) => {}
+            Err(error) => return Err(error),
         }
         polls = polls.saturating_add(1);
         if POLL.saturating_mul(polls) >= WAIT {
