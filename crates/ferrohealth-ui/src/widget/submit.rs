@@ -296,9 +296,7 @@ mod browser {
                                     posts.update(|count| *count = count.wrapping_add(1));
                                 });
                             } else if window().location().assign(&response.url()).is_err() {
-                                leptos::logging::warn!(
-                                    "the browser refused to follow the redirect"
-                                );
+                                leptos::logging::warn!("the browser refused the redirect");
                             }
                         }
                         // NOTE: no specification governs this: our own design; an answer that
@@ -309,9 +307,7 @@ mod browser {
                             }
                         }
                         Err(error) => {
-                            leptos::logging::warn!(
-                                "the form could not be posted in the page: {error:?}"
-                            );
+                            leptos::logging::warn!("the page could not post: {error:?}");
                             native(&form, by.as_ref());
                         }
                     }
