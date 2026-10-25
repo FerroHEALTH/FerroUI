@@ -201,6 +201,44 @@ async fn escape(browser: &Browser) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+/// The capture's own rule: the text caret, which blinks, is not drawn, so
+/// two captures of a state hold the same pixels (FerroUI #434). It goes in
+/// through the DevTools protocol, which the page's Content-Security-Policy
+/// leaves alone; the scrollbars are hidden by `Emulation.setScrollbarsHidden`.
+/// No specification governs this: our own design.
+const STEADY: &str = "*, *::before, *::after { caret-color: transparent !important; }";
+
+/// Adds [`STEADY`] to the page in view, hides its scrollbars, whose thumb a
+/// capture catches wherever the last scroll left it, and waits for the page
+/// to settle.
+async fn steady(browser: &Browser) -> Result<(), Box<dyn Error>> {
+    let cdp = browser.driver().cdp();
+    cdp.send_raw("Emulation.setScrollbarsHidden", json!({ "hidden": true }))
+        .await?;
+    cdp.send_raw("DOM.enable", json!({})).await?;
+    cdp.send_raw("CSS.enable", json!({})).await?;
+    let tree = cdp.send_raw("Page.getFrameTree", json!({})).await?;
+    let frame = tree
+        .pointer("/frameTree/frame/id")
+        .and_then(serde_json::Value::as_str)
+        .ok_or("the page has no frame")?
+        .to_owned();
+    let sheet = cdp
+        .send_raw("CSS.createStyleSheet", json!({ "frameId": frame }))
+        .await?;
+    let id = sheet
+        .get("styleSheetId")
+        .and_then(serde_json::Value::as_str)
+        .ok_or("the capture's style sheet has no id")?
+        .to_owned();
+    cdp.send_raw(
+        "CSS.setStyleSheetText",
+        json!({ "styleSheetId": id, "text": STEADY }),
+    )
+    .await?;
+    browser.settled().await
+}
+
 /// Writes the screenshot of `element` as `state`, once the page's islands
 /// have hydrated.
 async fn shot_of(
@@ -230,7 +268,7 @@ async fn shot_of_unhydrated(
             vec![element.to_json()?],
         )
         .await?;
-    browser.settled().await?;
+    steady(browser).await?;
     let png = element.screenshot_as_png().await?;
     write(brand, state, theme, &png)
 }
@@ -243,7 +281,7 @@ async fn shot_of_view(
     state: &str,
 ) -> Result<(), Box<dyn Error>> {
     browser.hydrated().await?;
-    browser.settled().await?;
+    steady(browser).await?;
     let png = browser.driver().screenshot_as_png().await?;
     write(brand, state, theme, &png)
 }
