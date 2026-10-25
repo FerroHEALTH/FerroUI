@@ -160,7 +160,9 @@ fn binder_tabs_carry_the_title_and_the_card_is_their_panel() {
         "no header row under tabs: {page}"
     );
     assert!(
-        page.contains(r#"<div class="fui-tabbed"><nav aria-label="Sections" class="fui-tabs">"#),
+        page.contains(
+            r#"<div class="fui-tabbed"><nav aria-label="Sections" data-ferroui-tab-keys="" class="fui-tabs">"#
+        ),
         "{page}"
     );
     assert!(
@@ -282,7 +284,7 @@ fn a_detail_page_puts_its_one_section_under_binder_tabs() {
         })
     });
     assert!(
-        page.contains(r#"<div class="fui-stack"><div class="fui-tabbed"><nav aria-label="Sections" class="fui-tabs"><a href="/all" aria-current="page" data-tab="all" class="fui-tab">tabs</a></nav><div class="fui-tab-panel"><p>Overview</p>"#),
+        page.contains(r#"<div class="fui-stack"><div class="fui-tabbed"><nav aria-label="Sections" data-ferroui-tab-keys="" class="fui-tabs"><a href="/all" aria-current="page" data-tab="all" class="fui-tab">tabs</a></nav><!--<() />--><div class="fui-tab-panel"><p>Overview</p>"#),
         "{page}"
     );
     let plain = html(|| {

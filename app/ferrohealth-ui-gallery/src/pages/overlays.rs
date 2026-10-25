@@ -32,7 +32,7 @@ use ferrohealth_ui::widget::action_menu::{
     Act, Action, Choice, Item, Listbox, Menu, Pick, listbox, row_menu,
 };
 use ferrohealth_ui::widget::dialog::{Modal, ModalWords, Width, modal_dialog};
-use ferrohealth_ui::widget::shortcuts::{LegendWords, shortcut_legend};
+use ferrohealth_ui::widget::shortcuts::LegendWords;
 use ferrohealth_ui::widget::side_panel::{Opener, SidePanelWords};
 use ferrohealth_ui::widget::toast::{Toast, ToastAction, ToastLink, raise};
 use leptos::prelude::*;
@@ -811,56 +811,32 @@ fn shortcuts() -> AnyView {
 }
 
 /// The legend of `groups` in the words `words`, and the button `opener`
-/// that opens it: the gallery's own listener opens it on `?` outside a
-/// field, never in the phone layout, as a console's does. The button shows
-/// once the page has hydrated and from 40 rem up.
+/// that opens it: the library's legend opens on `?` outside a field and
+/// from a control marked to open it, the button among them, never in the
+/// phone layout. The button shows once the page has hydrated and from 40
+/// rem up.
 pub(crate) fn shortcut_legend_with(
     groups: Vec<ShortcutGroup>,
     words: LegendWords,
     opener: String,
 ) -> AnyView {
-    let open = RwSignal::new(false);
     let hydrated = RwSignal::new(false);
     Effect::new(move |_| hydrated.set(true));
-    Effect::new(move |_| listen_for_legend(open));
     view! {
         <button
             type="button"
             id="open-shortcuts"
             class="fui-button fui-button-secondary fui-wide-only"
             aria-keyshortcuts="?"
+            data-ferroui-shortcuts=""
             hidden=move || !hydrated.get()
-            on:click=move |_| open.set(true)
         >
             {opener}
             {kbd("?")}
         </button>
-        {shortcut_legend(groups, words, open.into(), Callback::new(move |()| open.set(false)))}
+        <ferrohealth_ui::island::ShortcutLegend groups words />
     }
     .into_any()
-}
-
-/// Opens the legend `open` on `?` pressed outside a field, unless the page
-/// is in its phone layout or another listener took the key.
-fn listen_for_legend(open: RwSignal<bool>) {
-    #[cfg(target_arch = "wasm32")]
-    {
-        let keys = window_event_listener(leptos::ev::keydown, move |event| {
-            if event.default_prevented()
-                || event.key() != "?"
-                || ferrohealth_ui::widget::shortcuts::chorded(&event)
-                || ferrohealth_ui::widget::shortcuts::typing(&event)
-                || ferrohealth_ui::widget::shortcuts::phone_layout()
-            {
-                return;
-            }
-            event.prevent_default();
-            open.set(true);
-        });
-        on_cleanup(move || keys.remove());
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    let _: RwSignal<bool> = open;
 }
 
 /// The access page: the side panel's content as a page of its own, where

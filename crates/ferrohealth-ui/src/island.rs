@@ -47,6 +47,26 @@ pub fn PageAnnouncer() -> impl IntoView {
     crate::widget::announce::page_announcer()
 }
 
+/// The keyboard shortcut legend, opened by `?` outside a field and by the
+/// user menu's Keyboard shortcuts ([`crate::widget::shortcuts`]). A console
+/// draws it once on a page that has shortcuts.
+#[component]
+pub fn ShortcutLegend(
+    /// The page's shortcuts, their words in the page's locale.
+    groups: Vec<crate::view::kbd::ShortcutGroup>,
+    /// The legend's own words, in the page's locale.
+    words: crate::widget::shortcuts::LegendWords,
+) -> impl IntoView {
+    crate::widget::shortcuts::legend_on_key(groups, words)
+}
+
+/// Follows the binder's link tabs on the digit keys
+/// ([`crate::widget::shortcuts::tab_keys`]); the binder draws it.
+#[component]
+pub fn TabKeys() -> impl IntoView {
+    crate::widget::shortcuts::tab_keys()
+}
+
 /// Takes the page's form submits through the router, so a form loads no
 /// new document ([`crate::widget::submit`]). A console draws it once,
 /// inside its `<Router>`.

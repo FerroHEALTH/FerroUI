@@ -146,8 +146,11 @@ fn link_item(
     key: Option<&'static str>,
     class: &'static str,
 ) -> impl IntoView + use<> {
+    // NOTE: no specification governs this: our own design; the item with the `?` key opens
+    // the page's shortcut legend where the page has one, and is followed where it has not.
+    let opens = key.filter(|key| *key == "?").map(|_| "");
     view! {
-        <a role="menuitem" href=href class=class>
+        <a role="menuitem" href=href class=class data-ferroui-shortcuts=opens>
             {icon(glyph, "16")}
             <span class="fui-menu-item-text">
                 <span class="fui-menu-item-label">{words}</span>
