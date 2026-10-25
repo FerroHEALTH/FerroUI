@@ -228,22 +228,12 @@ fn locale_requested() -> String {
     locale_of(&cookies_requested()).tag()
 }
 
-/// Marks the root element `data-hydrated` once the page has hydrated.
-fn mark_hydrated() {
-    #[cfg(target_arch = "wasm32")]
-    if let Some(root) = document().document_element()
-        && let Err(error) = root.set_attribute("data-hydrated", "")
-    {
-        leptos::logging::warn!("the browser refused the hydrated mark: {error:?}");
-    }
-}
-
 /// The root component: the routes, the toast region and the title.
 ///
 /// The server draws it and the browser hydrates it whole; each page is a
 /// lazy route ([`crate::routes`]), and the browser marks the root element
-/// `data-hydrated` once the page has hydrated, which the screenshot capture
-/// waits for.
+/// once the page has hydrated ([`ferrohealth_ui::widget::hydration`]), which
+/// the journeys and the screenshot capture wait for.
 #[component]
 pub fn App() -> impl IntoView {
     provide_meta_context();
@@ -252,7 +242,7 @@ pub fn App() -> impl IntoView {
     let cookies = RwSignal::new((*SharedValue::new_str(crate::cookies::server_cookies)).clone());
     provide_context(crate::cookies::Cookies(cookies));
     ferrohealth_ui::widget::prefetch::routes(crate::routes::ROUTES);
-    Effect::new(move |_| mark_hydrated());
+    ferrohealth_ui::widget::hydration::mark();
     let tag = SharedValue::new_str(locale_requested);
     provide_locale(gallery_locale(&tag));
     view! {

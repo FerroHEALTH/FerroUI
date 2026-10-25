@@ -329,11 +329,16 @@ impl Browser {
         .into())
     }
 
-    /// Waits until the page's islands have hydrated: the gallery's browser
-    /// entry marks the root element `data-hydrated` once `hydrate_islands`
-    /// has run, so a capture never shows a part an island has yet to draw.
+    /// Waits until the page has hydrated: the root element carries the
+    /// library's mark (`ferrohealth_ui::widget::hydration::HYDRATED`), so a
+    /// capture never shows a part the browser has yet to draw and a script
+    /// never changes the page before the hydration walk ends.
     pub(crate) async fn hydrated(&self) -> Result<(), Box<dyn Error>> {
-        self.element(By::Css("html[data-hydrated]")).await?;
+        self.element(By::Css(format!(
+            "html[{}]",
+            ferrohealth_ui::widget::hydration::HYDRATED
+        )))
+        .await?;
         Ok(())
     }
 

@@ -106,6 +106,15 @@ the browser, so a link or a form never reloads the document (FerroUI #410;
 8. **The locale both halves.** Provide the same `i18n::Locale` at your root
    on the server and in the browser (a `SharedValue` of its tag); the
    browser carries the library's catalog.
+9. **Nothing changes the page before it hydrates.** Call
+   `widget::hydration::mark()` once from your root component and
+   `widget::hydration::explain()` first in your browser entry. The root
+   element carries `data-ferroui-hydrated` once the page has hydrated; no
+   code, script or test of yours adds, removes or rewrites a node the server
+   drew before then, or the hydration walk stops on a node it did not expect
+   with an internal error. In a debug build, `explain` says so beside such a
+   panic. Code that must touch the DOM runs in an `Effect`, which runs after
+   hydration; a test waits for the mark.
 
 ## The top bar's search
 

@@ -56,3 +56,4 @@ allow ^(GET|POST)$                      # an HTTP method
 allow ^theme=\{\}&back=                 # a form body the theme toggle posts
 allow ^fhirUser$                      # a SMART App Launch scope token the scope parser matches; a reader sees the catalog's words
 allow ^main h1$                          # the CSS selector of the page heading the announcer focuses, which the browser code reads
+allow ^FerroUI: this panic came before the page hydrated   # a debug build's note to a developer in the browser console, never a reader's text
