@@ -161,7 +161,8 @@ pub fn paging_of(cookies: &str, listing: &str) -> Paging {
 
 /// The paging of the session listing `listing` the request keeps.
 ///
-/// Both halves read it from the cookies the page knows ([`Cookies`]).
+/// Both halves read it from the cookies the page knows
+/// ([`crate::cookies::Cookies`]).
 #[must_use]
 pub fn session_paging(listing: &'static str) -> Paging {
     paging_of(&cookies_requested(), listing)
