@@ -15144,6 +15144,12 @@
     }
   }
 
+  /* A repeatable list's blank row: a disabled fieldset that hydrates with the
+     page, never shows and never posts; Add copies its rows. */
+  .fui-repeat-blank[hidden] {
+    display: none;
+  }
+
   /* ---- The search answer (FerroUI #144, the search result row) ---- */
 
   /* The typeahead panel: one overlay surface anchored under the joined

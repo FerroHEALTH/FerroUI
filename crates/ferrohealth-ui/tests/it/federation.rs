@@ -538,10 +538,6 @@ fn the_zoom_cluster_waits_for_the_script_and_its_server_links_work_without_it() 
         page.contains(r#"aria-keyshortcuts="+ - 0 i Space""#),
         "{page}"
     );
-    assert!(
-        page.contains("<leptos-island"),
-        "the island adds the zoom: {page}"
-    );
 }
 
 #[test]

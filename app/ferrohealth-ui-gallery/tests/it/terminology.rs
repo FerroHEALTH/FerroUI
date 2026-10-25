@@ -199,7 +199,9 @@ async fn a_repeatable_row_adds_and_removes_in_place_and_moves_the_focus_on()
         .await?;
         assert_eq!(
             2,
-            list.find_all(By::Css(".fui-repeat-item")).await?.len(),
+            list.find_all(By::Css("[data-repeat='rows'] > .fui-repeat-item"))
+                .await?
+                .len(),
             "the first row and the new one"
         );
         let label = list
@@ -230,7 +232,9 @@ async fn a_repeatable_row_adds_and_removes_in_place_and_moves_the_focus_on()
         .await?;
         assert_eq!(
             0,
-            list.find_all(By::Css(".fui-repeat-item")).await?.len(),
+            list.find_all(By::Css("[data-repeat='rows'] > .fui-repeat-item"))
+                .await?
+                .len(),
             "no row is left"
         );
         let empty = list.find(By::Css("[data-repeat='empty']")).await?;

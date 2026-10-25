@@ -22,15 +22,18 @@ this page before you write or review UI code there.
 
 The library decides these, and a console takes them as they are:
 
-- **The components:** every view function, island and widget the design
-  names, with its markup, roles and keyboard paths. The ready islands are
+- **The components:** every view function, ready component and widget the
+  design names, with its markup, roles and keyboard paths. The ready
+  components are
   listed in [`crates/ferrohealth-ui/CLAUDE.md`](../crates/ferrohealth-ui/CLAUDE.md).
 - **The stylesheet and the tokens:** `ferrohealth_ui::style::STYLESHEET`
   with every `fui-` class and the family rules as CSS, the role layer, the
   type and space steps, and one theme file per brand.
-- **The interaction contract and islands mode:** native elements first,
-  behaviour in Rust compiled to WebAssembly in islands, every page working
-  without the WebAssembly, and no hand-written JavaScript.
+- **The interaction contract and the mode:** native elements first,
+  behaviour in Rust compiled to WebAssembly, the whole page hydrated and
+  split by route so no interaction reloads the document, every page
+  working without the WebAssembly as the fallback, and no hand-written
+  JavaScript.
 - **The words machinery and the library's words:** the Fluent catalogs a
   component draws from, the `*Words` structs each widget takes as props,
   `i18n::Locale` and its negotiation, and the stray-literal check.
@@ -38,7 +41,7 @@ The library decides these, and a console takes them as they are:
   pairing in every brand, light and dark, the focus ring, the Authoring
   Practices patterns, and reflow at 320 px.
 - **The bundle rules:** which dependencies may reach the browser, what an
-  island may take as props, and the gallery's own budget.
+  route's code loads, and the gallery's own budget.
 
 ## What the console owns
 
@@ -53,23 +56,41 @@ Your console decides these, in its own repository:
 - its browser journeys and screenshots;
 - the words of its own pages, in its own Fluent catalog.
 
-A console may write an island of its own where a library widget shares state
+A console may write a component of its own where a library widget shares state
 with the console's code, such as an editor and the check that runs as you
 type (`.claude/rules/leptos-ui.md` §1). It still draws with the library's
 widgets and classes.
 
 ## How a console builds
 
-Build the site with `cargo leptos build --split` and turn on the library's
-`split` feature (`ferrohealth-ui = { version = "=0.4.0", features =
-["split"] }`): the date pickers and the tree then load from chunks of their
-own, out of the WebAssembly every page loads. A console that builds
-without `--split` leaves the feature off, and those islands hydrate from
-its one WebAssembly. Never turn the feature on without `--split`, and never
-write a lazy island of your own without it: the glue then imports
-`__wasm_split_placeholder__`, which no browser resolves, and no island on
-any page hydrates. A build can check its glue for that import, as the
-gallery's `scripts/release/gallery-site.sh` does.
+A console hydrates the whole page and draws every page after the first in
+the browser, so a link or a form never reloads the document (FerroUI #410;
+`.claude/rules/leptos-ui.md` §15):
+
+1. **No `islands` feature.** Turn on `hydrate` in the browser half and
+   `ssr` in the server half, chosen by target, and never the `leptos`
+   feature `islands`.
+2. **Every page a lazy route.** Draw each page as a `leptos_router`
+   `LazyRoute` (`#[lazy_route]`), hydrate with
+   `leptos::mount::hydrate_lazy(App)`, write `<HydrationScripts options/>`,
+   and build with `cargo leptos build --split`. A build with lazy code and
+   no `--split` imports `__wasm_split_placeholder__`, which no browser
+   resolves, and nothing hydrates; check your glue for it, as the gallery's
+   `scripts/release/gallery-site.sh` does.
+3. **Prefetch.** Call `widget::prefetch::routes` once from your root
+   component with every route's path and its `LazyRoute::preload`, marking
+   your main navigation's routes `idle`.
+4. **State the server read reaches the browser.** No component reads a
+   cookie, the session or the request on the server alone: carry it with a
+   `SharedValue` or a resource while the page hydrates, and read it again
+   with a server function after a navigation (the gallery's
+   `app/ferrohealth-ui-gallery/src/cookies.rs`).
+5. **Actions are server functions.** A mutation is a server function behind
+   `<ActionForm>`, which runs in the page and posts with no WebAssembly as
+   the fallback; a link is a plain `<a>`, which the router follows.
+6. **The locale both halves.** Provide the same `i18n::Locale` at your root
+   on the server and in the browser (a `SharedValue` of its tag); the
+   browser carries the library's catalog.
 
 ## The top bar's search
 
@@ -139,13 +160,13 @@ A hit's `mark` is `{ "Glyph": "<lucide name>" }` or `{ "Dot": "Ok" }`
 
 | Question | Document |
 |---|---|
-| The interaction contract, islands mode, the ready islands, the bundle measurements | [`crates/ferrohealth-ui/CLAUDE.md`](../crates/ferrohealth-ui/CLAUDE.md) |
+| The interaction contract, the mode, the ready components, the bundle measurements | [`crates/ferrohealth-ui/CLAUDE.md`](../crates/ferrohealth-ui/CLAUDE.md) |
 | The component rules every console follows | [`.claude/rules/leptos-ui.md`](../.claude/rules/leptos-ui.md) |
 | The design library, the order of a change and the 13 family rules | [`.claude/rules/console-design.md`](../.claude/rules/console-design.md) |
 | How the design is rendered and checked | [`design/README.md`](../design/README.md) |
 | Every component, by its ID (B2, R28, F9 and so on), and the templates T1 to T3 | [`design/COMPONENTS.md`](../design/COMPONENTS.md) |
 | Your console's pages as designed | [`design/consoles/<console>/`](../design/consoles/) |
-| Integration: the stylesheet, a theme, islands, locales, Your preferences | [`crates/ferrohealth-ui/README.md`](../crates/ferrohealth-ui/README.md) |
+| Integration: the stylesheet, a theme, hydration and routes, locales, Your preferences | [`crates/ferrohealth-ui/README.md`](../crates/ferrohealth-ui/README.md) |
 
 The sections of `.claude/rules/leptos-ui.md` a console reads most:
 
@@ -160,8 +181,8 @@ The sections of `.claude/rules/leptos-ui.md` a console reads most:
 - §13 Strings and locales.
 - §14 Leptos the book's way, with §14.5 and §14.6 written for a console's
   side.
-- §15 Islands: when something is an island, its props, its children,
-  context, navigation, server functions from islands, and the
+- §15 Hydration and navigation: routes and their code, navigation in the
+  page, state both halves read alike, words, server functions, and the
   no-WebAssembly floor.
 
 The FerroUI repository's `design/` is the only design source. A design

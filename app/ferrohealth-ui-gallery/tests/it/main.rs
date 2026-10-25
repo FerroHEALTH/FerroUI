@@ -33,6 +33,7 @@ mod http;
 mod journeys;
 mod keys;
 mod menus;
+mod navigation;
 mod no_wasm;
 mod operations;
 mod painted;

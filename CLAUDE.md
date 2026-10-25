@@ -16,18 +16,20 @@ never publish under it.
 
 ## What the library is
 
-- **Islands, in three parts.** A console renders in Leptos islands mode
-  (decided on #196, with the measurements in `crates/ferrohealth-ui/CLAUDE.md`):
-  the server draws every page whole and the browser hydrates only its
-  islands. `view` holds static view functions (plain functions, no reactive
-  props, no `#[component]`) drawn on the server alone, and through
-  `to_html()` into a string a read-only screen draws with `inner_html`.
-  `island` holds the ready islands (toast region, navigation drawer,
-  keyboard tabs), whose props, words included, are plain data the server
-  resolved. `widget` holds the interactive components as functions a page
-  calls inside an island, whose browser code runs only in handlers and
-  effects behind `#[cfg(target_arch = "wasm32")]`. Every page works with no
-  WebAssembly: a link or a form is behind every important action.
+- **The whole page hydrated, in three parts** (FerroUI #410, which
+  replaced the islands mode of #196). The server draws every page whole,
+  the browser hydrates it, and the console's `leptos_router` draws the next
+  page in the browser, so no link or form reloads the document; each page
+  is a lazy route whose code loads from chunks of its own, prefetched on a
+  link's hover or focus (`widget::prefetch`). `view` holds view functions
+  (plain functions, no reactive props, no `#[component]`), drawn on the
+  server and again in the browser. `island` holds the ready components
+  (toast region, navigation drawer, keyboard tabs, the search box), whose
+  words are props. `widget` holds the interactive components as functions
+  a page calls, whose browser code runs only in handlers and effects behind
+  `#[cfg(target_arch = "wasm32")]`. A page whose WebAssembly has not loaded
+  still works: a link or a form is behind every important action, as the
+  fallback.
 - **One table model** (`table`): page and size read defensively and clamped,
   the row window, the range label, sorting, filtering and paging by links
   and forms that work with no script, and the state source
@@ -53,16 +55,18 @@ never publish under it.
 ## How we use Leptos
 
 The library and the consoles use Leptos 0.8 the way the Leptos book teaches
-it, in islands mode (#196): a page is server HTML, and only an island ships
-code to the browser. Where the book lags behind 0.8, the Leptos 0.8 source
-the workspace pins decides.
+it, the whole page hydrated and split by route (#410): the server draws the
+first page, the browser hydrates it and draws every page after it, and no
+interaction reloads the document. Where the book lags behind 0.8, the
+Leptos 0.8 source the workspace pins decides.
 
 - **A console starts at `docs/consoles.md`:** what the library owns, what
   the console owns, and which document here governs each part.
 - **The rules are `.claude/rules/leptos-ui.md`.** §14 states each Leptos rule
-  with its book chapter and 0.8 source, and §15 is the islands rules: when a
-  part is an island, its props, its children, context, locale and toasts,
-  what reaches the page, forms, and the no-WebAssembly floor.
+  with its book chapter and 0.8 source, and §15 is the hydration rules:
+  routes and their chunks, navigation in the page, state both halves read
+  alike, forms and actions, locale and toasts, and the no-WebAssembly
+  fallback.
 - **`scripts/checks/leptos-rules.sh` enforces the mechanical part in CI**
   (rules L1 to L10, the `leptos-rules` job). Its allow file lists each
   exception with the issue that removes it.
@@ -76,8 +80,9 @@ the workspace pins decides.
 - `crates/ferrohealth-ui`: the library. `src/` (`view`, `widget`, `table`,
   `highlight`, `icon`, `tone`, `theme`, `style`), `css/`, `themes/`,
   `vendor/lucide/`, `tests/it/` (contrast, stylesheet rules, rendering).
-- `app/ferrohealth-ui-gallery`: the gallery, server rendered with its
-  islands hydrated, its halves chosen by target (never by Cargo feature),
+- `app/ferrohealth-ui-gallery`: the gallery, server rendered and hydrated
+  whole, each page a lazy route, its halves chosen by target (never by
+  Cargo feature),
   with its browser journeys (the no-WebAssembly journey among them) and
   screenshots under `tests/it/` (`FERROUI_JOURNEYS=1`,
   `FERROUI_SCREENSHOTS=1`), its states one file per area under
@@ -112,8 +117,9 @@ the workspace pins decides.
   every console is re-rendered and checked, then the Rust follows.
 - **Every component follows the interaction contract** (`design/COMPONENTS.md`
   § Interaction, `crates/ferrohealth-ui/CLAUDE.md`): native elements first,
-  behaviour in Rust compiled to WebAssembly in islands, every page working
-  without the WebAssembly, no hand-written JavaScript.
+  behaviour in Rust compiled to WebAssembly, interactions in the page with
+  no document reload, a plain link or post as the fallback while the
+  WebAssembly has not loaded, no hand-written JavaScript.
 - **The component rules are `.claude/rules/leptos-ui.md`.** Each product's
   own `leptos-ui.md` keeps only what is particular to it and points here.
 - **The authorities are the specifications**: WCAG 2.2, WAI-ARIA 1.2 and the

@@ -96,7 +96,7 @@ async fn masked_states(
     let input = browser.element(By::Id("edge-identifier")).await?;
     input.send_keys("123456782").await?;
     let eye = browser
-        .element(By::Css("#edge-identifier + leptos-island > button"))
+        .element(By::Css("#edge-identifier + button"))
         .await?;
     until("the eye works", async || {
         eye.is_enabled().await.map_err(Into::into)

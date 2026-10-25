@@ -76,6 +76,7 @@ pub fn router(options: LeptosOptions) -> axum::Router {
             &format!("{}/{{brand}}", crate::search::SUGGEST_ROUTE),
             get(suggest),
         )
+        .route("/api/{*name}", post(leptos_axum::handle_server_fns))
         .leptos_routes_with_context(&options, routes, provide_request_nonce, {
             let options = options.clone();
             move || crate::app::document(options.clone())

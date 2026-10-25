@@ -19,40 +19,32 @@ screens. The [console guide](https://github.com/FerroHEALTH/FerroUI/blob/main/do
 says what the library owns, what a console owns, and which document governs
 each part.
 
-## Islands
+## Hydration and routes
 
-The crate has no features of its own. It turns on the `leptos` feature
-`islands` and compiles under `csr`, `ssr` and `hydrate`, whichever your own
-`leptos` dependency turns on. A console renders in Leptos islands mode: the
-server draws every page whole, and the browser hydrates only its islands.
-Set the `islands` feature, write `<HydrationScripts options islands=true/>`
-in your shell, and hydrate from your browser entry, which names this crate
-so its islands are linked into your WebAssembly:
+The crate has no features of its own and compiles under `csr`, `ssr` and
+`hydrate`, whichever your own `leptos` dependency turns on. A console
+hydrates the whole page and draws every page after the first in the
+browser, so no link or form reloads the document: write
+`<HydrationScripts options/>` in your shell, draw each page as a
+`leptos_router` `LazyRoute`, build your site with `cargo leptos build
+--split`, and hydrate from your browser entry:
 
 ```text
-extern crate ferrohealth_ui;
-
 #[wasm_bindgen]
 pub fn hydrate() {
-    leptos::mount::hydrate_islands();
+    leptos::mount::hydrate_lazy(App);
 }
 ```
 
-Every island takes the words it draws as props your server resolves (each
-widget's `*Words::of_page()`), so the browser builds no locale and carries
-no catalog.
+Name your routes and their loaders once with `widget::prefetch::routes`,
+from your root component, and a route's code loads when a link to it is
+hovered or focused, the main navigation's once the first page is idle.
+Never turn on the `leptos` feature `islands`. Every widget takes the words
+it draws as props (each widget's `*Words::of_page()`), resolved in the
+page's locale, which your root component provides the same in both halves.
 
-`DatePicker`, `DateRangePicker` and `TreeView` become lazy islands
-(`#[island(lazy)]`) with the crate's `split` feature: build your site with
-`cargo leptos build --split` and their code loads from chunks of its own
-on a page that draws them, out of the WebAssembly every page loads. Turn
-the feature on only with `--split`: without the split pass the glue
-imports `__wasm_split_placeholder__`, which no browser resolves, and no
-island hydrates. Without the feature they hydrate from your one
-WebAssembly as every other island does.
-
-Every page works with no WebAssembly: the HTML is complete, and every
-important action is a link or a form.
+Every page still works with no WebAssembly, as the fallback: the HTML is
+complete, and every important action is a link or a form.
 
 ## The stylesheet and a theme
 
@@ -93,16 +85,17 @@ which your server writes from its own cookie or setting (`theme::Theme`).
   form post), `dialog` (a popover confirmation), `shell` (skip link,
   top bar, footer, centred page) and `sign_in` (the R19 card in every
   state, with the provider's action and an optional basic form).
-- `island`: the ready islands, such as `ToastRegion`, `NavDrawer` and
-  `KeyboardTabs` (the module lists them all), each taking its words as props. Every
-  widget takes the words it draws as a `*Words` struct its `of_page()`
-  resolves on the server, so no island carries a catalog.
-- `widget`: the interactive components as functions you call inside an
-  island: `nav` (the sidebar, plain links with the page marked, its counts
-  and its rail, inside its drawer island), `menu` (the user menu), `tabs`
-  (the panels for `KeyboardTabs`), `toast` (`raise` a title, a line and an action from any island),
-  `editor` (the highlighted overlay editor with line marks), `filter` (an
-  in-place filter over rows that are already island data) and the rest.
+- `island`: the ready components, such as `ToastRegion`, `NavDrawer`,
+  `KeyboardTabs` and `Search` (the module lists them all), each taking its
+  words as props. Every widget takes the words it draws as a `*Words`
+  struct its `of_page()` resolves in the page's locale.
+- `widget`: the interactive components as functions you call in a page:
+  `nav` (the sidebar, plain links with the page marked, its counts and its
+  rail, inside its drawer), `menu` (the user menu), `tabs` (the panels for
+  `KeyboardTabs`), `toast` (`raise` a title, a line and an action from any
+  component), `prefetch` (a route's code before the visit), `editor` (the
+  highlighted overlay editor with line marks), `filter` (an in-place filter
+  over rows the page already holds) and the rest.
 - `table`: the paging and sorting model (`Paging`, `Window`, `Sort`,
   `StateSource`), the data table with its cells and list card (`view`), the
   link and `POST` pagers (`pager`) and the find field (`filter`), each a
@@ -133,8 +126,8 @@ user menu's Sign out, an empty listing's range) comes from a Fluent catalog
 under `locales/`, one directory per language. English is the one catalog
 that ships, and every lookup falls back to it; a language joins as one
 catalog directory, with no code change. Choose the locale once per render, at the
-root of the page tree on the server, and write it as `<html lang>`; an
-island takes the words it draws as props the server resolved:
+root of the page tree, the same on the server and in the browser, and write
+it as `<html lang>`; a widget takes the words it draws as props:
 
 ```rust
 use ferrohealth_ui::i18n::{Locale, locale, provide_locale};

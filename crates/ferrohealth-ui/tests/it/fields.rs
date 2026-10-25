@@ -265,30 +265,12 @@ fn the_eye_is_disabled_and_says_the_field_stays_masked_until_the_webassembly_run
 }
 
 #[test]
-fn the_typed_value_is_no_prop_of_the_eyes_island() {
-    // leptos-ui.md §15.2: an island's props are page content, so the eye names its input by id.
+fn the_masked_field_writes_no_props_into_the_page() {
+    // NOTE: leptos-ui.md §5: the page hydrates whole, so a component's props never cross
+    // to the browser as data in the page, and no typed value travels outside its input.
     let page = masked_field();
-    let islands = tags(&page, "leptos-island");
-    assert_eq!(1, islands.len(), "the eye alone is the island: {page}");
-    let props = islands[0].get("data-props").cloned().unwrap_or_default();
-    let props = props.replace("&quot;", "\"");
-    let read: serde_json::Value = serde_json::from_str(&props).expect("the props are JSON");
-    let names: Vec<&str> = read
-        .as_object()
-        .expect("the props are an object")
-        .keys()
-        .map(String::as_str)
-        .collect();
-    assert_eq!(vec!["input", "words"], names, "{props}");
-    assert_eq!(Some("identifier"), read["input"].as_str());
-    assert!(
-        !page
-            .split("<leptos-island")
-            .nth(1)
-            .unwrap_or_default()
-            .contains("<input"),
-        "the input stays outside the island: {page}"
-    );
+    assert!(!page.contains("data-props"), "{page}");
+    assert!(!page.contains("<leptos-island"), "{page}");
 }
 
 #[test]

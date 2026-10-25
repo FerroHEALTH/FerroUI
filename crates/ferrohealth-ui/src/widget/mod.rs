@@ -44,6 +44,7 @@ pub mod nav;
 pub mod pick_or_type;
 pub mod picker;
 pub mod preference;
+pub mod prefetch;
 pub mod repeat;
 pub mod search;
 pub mod segmented;

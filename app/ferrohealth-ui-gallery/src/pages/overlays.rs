@@ -414,7 +414,7 @@ fn menus() -> AnyView {
     });
     let language = language_select(
         "language-list",
-        &crate::app::preferences_of(&crate::app::cookies_requested()).language,
+        &crate::app::preferences_of(&crate::cookies::cookies_requested()).language,
         &crate::locale::choices(),
         &ferrohealth_ui::i18n::Locale::english(),
         &Post {
