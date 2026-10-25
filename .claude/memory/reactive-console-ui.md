@@ -16,7 +16,9 @@ design target.
 **Why:** FerroUI #196 (PR #223, 2026-10-22) moved the consoles to islands
 mode on bundle size and time-to-interactive alone and made every action a
 plain form post, so each click became a full page load, which the owner
-found slow and unacceptable. FerroUI #410 restores client navigation.
+found slow and unacceptable. FerroUI #410 restores client navigation: PR
+#416 (merged 2026-10-25) replaced the islands mode with whole-page hydration
+and a lazy route per page group, so no link or form reloads the document.
 
 **How to apply:** user experience outranks bundle bytes. Judge a UI change
 by the interaction it gives, measure navigations as well as first load, and

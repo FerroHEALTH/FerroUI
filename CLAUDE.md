@@ -4,7 +4,7 @@
 # CLAUDE.md
 
 **FerroUI** is the shared UI component library of the FerroHEALTH consoles:
-FerroBRIDGE, FerroFED, FerroEHR and FerroTERM. It is one Cargo workspace with
+FerroBRIDGE, FerroEHR, FerroFED, FerroPIX and FerroTERM. It is one Cargo workspace with
 the library crate `ferrohealth-ui` (Rust path `ferrohealth_ui`, published to
 crates.io) and the gallery app `ferrohealth-ui-gallery` (`publish = false`),
 which shows every component in every product theme, light and dark, and is
