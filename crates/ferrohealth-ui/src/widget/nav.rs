@@ -257,7 +257,7 @@ fn foot(id: &'static str, rail: Rail) -> impl IntoView + use<> {
         ("rail", Glyph::PANEL_LEFT_CLOSE, tr(Text::SidebarCollapse))
     };
     view! {
-        <form method="post" action=rail.action class="fui-sidebar-foot fui-wide-only">
+        <form method="post" action=rail.action class="fui-sidebar-foot fui-wide-only" data-ferroui-navigates="">
             <input type="hidden" name="back" value=rail.back />
             <button
                 type="submit"

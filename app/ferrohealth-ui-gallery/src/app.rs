@@ -13,7 +13,7 @@
 
 use ferrohealth_ui::i18n::{Arg, Locale, provide_locale};
 use ferrohealth_ui::icon::Glyph;
-use ferrohealth_ui::island::{PageAnnouncer, ToastRegion};
+use ferrohealth_ui::island::{FormNavigator, PageAnnouncer, ToastRegion};
 use ferrohealth_ui::style::Brand;
 use ferrohealth_ui::table::model::Paging;
 use ferrohealth_ui::theme::{Preferences, Theme, cookie};
@@ -238,10 +238,6 @@ fn mark_hydrated() {
     }
 }
 
-/// The theme in force, shared with the pages.
-#[derive(Debug, Clone, Copy)]
-pub struct InForce(pub Theme);
-
 /// The root component: the routes, the toast region and the title.
 ///
 /// The server draws it and the browser hydrates it whole; each page is a
@@ -257,16 +253,13 @@ pub fn App() -> impl IntoView {
     provide_context(crate::cookies::Cookies(cookies));
     ferrohealth_ui::widget::prefetch::routes(crate::routes::ROUTES);
     Effect::new(move |_| mark_hydrated());
-    // NOTE: the Leptos book, `ssr/22_life_cycle`: a value the server decides reaches
-    // the hydrating page serialized, so both halves draw the same page.
-    let theme = *SharedValue::new_str(theme_requested);
-    provide_context(InForce(theme));
     let tag = SharedValue::new_str(locale_requested);
     provide_locale(gallery_locale(&tag));
     view! {
         <Title formatter=crate::pages::title_format(product()) text=String::new() />
         <Router>
             <crate::cookies::FollowCookies />
+            <FormNavigator />
             <Routes fallback=|| view! { <NotFound /> }>
                 <Route path=path!("/") view=Index />
                 <Route path=path!("/sign-in/:brand/:variant") view={Lazy::<LAside>::new()} />
@@ -757,7 +750,7 @@ fn brand_shell(brand: Brand, back: String, search: Searched<'_>, fhir: Option<&s
         }),
         nest: crate::pages::federation::nest(brand, &back, federation_entry(brand)),
     });
-    let theme = use_context::<InForce>().map_or(Theme::System, |in_force| in_force.0);
+    let theme = theme_requested();
     // A name as long as a FHIR user reference gets, so the top bar shows how
     // it gives way; the synthetic operator the gallery is signed in as.
     let operator = String::from("Practitioner/synthetic-terminologist-on-call");

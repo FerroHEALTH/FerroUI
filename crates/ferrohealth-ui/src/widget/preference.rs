@@ -41,6 +41,7 @@ pub fn preference_form(
         <form
             method="post"
             action=action
+            data-ferroui-navigates=""
             class="fui-preference-form"
             node_ref=form
             on:change=changed

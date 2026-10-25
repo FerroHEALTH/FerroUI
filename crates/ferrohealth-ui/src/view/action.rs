@@ -144,6 +144,12 @@ fn button_of(action: Action, class: &'static str) -> AnyView {
             </a>
         }
         .into_any(),
+        Act::Download(href) => view! {
+            <a href=href rel="external" download="" class=class>
+                {inside}
+            </a>
+        }
+        .into_any(),
         Act::Post { action, fields } => {
             let fields = fields
                 .into_iter()
@@ -166,7 +172,7 @@ fn button_of(action: Action, class: &'static str) -> AnyView {
         }
         .into_any(),
         Act::SubmitTo { action, form } => view! {
-            <button type="submit" form=form formaction=action class=class>
+            <button type="submit" form=form formaction=action data-ferroui-reloads="" class=class>
                 {inside}
             </button>
         }

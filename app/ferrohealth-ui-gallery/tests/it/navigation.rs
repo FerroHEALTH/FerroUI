@@ -169,3 +169,59 @@ async fn hovering_a_link_loads_its_routes_code_before_the_click() -> Result<(), 
     })
     .await
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_get_form_and_a_post_that_redirects_keep_the_document() -> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        window(browser, 1440, 900).await?;
+        browser.goto(&gallery.url("/ferropix/forms")).await?;
+        browser.hydrated().await?;
+        let document = browser.loader().await?;
+        browser
+            .driver()
+            .execute("window.fuiKept = true;", vec![])
+            .await?;
+        // A GET form: the search's submit draws the find page in the page.
+        let search = browser.element(By::Id("gallery-search")).await?;
+        search.send_keys("synthetic-00").await?;
+        search.send_keys(Key::Enter).await?;
+        browser
+            .at(&gallery.url("/ferropix/find?q=synthetic-00"))
+            .await?;
+        until("the router draws the find page", async || {
+            Ok(heading(browser).await? == "Find")
+        })
+        .await?;
+        assert!(
+            marked(browser).await?,
+            "the GET form loaded no new document"
+        );
+        // A POST whose route redirects: the user menu's theme.
+        browser
+            .element(By::Css("button[popovertarget='user-menu']"))
+            .await?
+            .click()
+            .await?;
+        browser
+            .element(By::Css("#user-menu button[name='theme'][value='dark']"))
+            .await?
+            .click()
+            .await?;
+        until("the theme the post kept takes effect", async || {
+            Ok(!browser
+                .driver()
+                .find_all(By::Css("html[data-theme='dark']"))
+                .await?
+                .is_empty())
+        })
+        .await?;
+        assert!(marked(browser).await?, "the post loaded no new document");
+        assert_eq!(document, browser.loader().await?);
+        browser.console_clean("forms in the page").await
+    })
+    .await
+}

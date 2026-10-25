@@ -440,6 +440,29 @@ impl Browser {
         .await
     }
 
+    /// Clicks `control`, a link or a form the router takes in the page, and
+    /// waits until `done` holds; the document stays the same (FerroUI #410),
+    /// which it checks.
+    pub(crate) async fn click_in_page<F>(
+        &self,
+        control: &WebElement,
+        what: &str,
+        done: F,
+    ) -> Result<(), Box<dyn Error>>
+    where
+        F: AsyncFnMut() -> Result<bool, Box<dyn Error>>,
+    {
+        self.hydrated().await?;
+        let old = self.loader().await?;
+        control.click().await?;
+        until(what, done).await?;
+        if self.loader().await? == old {
+            Ok(())
+        } else {
+            Err(format!("{what} loaded a new document; the router keeps the page").into())
+        }
+    }
+
     /// Whether the editor around the text area `area` has hydrated: its
     /// stack drops `is-static` once its island runs. The text area takes
     /// keys from the first paint, so its `readonly` tells nothing (#356).

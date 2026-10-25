@@ -51,6 +51,7 @@ pub mod search;
 pub mod segmented;
 pub mod shortcuts;
 pub mod side_panel;
+pub mod submit;
 pub mod tabs;
 pub mod toast;
 pub mod topology;

@@ -261,8 +261,12 @@ async fn the_pickers_select_follows_a_value_set_after_a_manual_choice() -> Resul
 /// The busy bridge on the charts page, which `browser` shows at a
 /// desktop's width: its folded callers lane holds a summary card, a link
 /// that unfolds the lane, after which the lane shows every caller and its
-/// fold link. It needs no WebAssembly.
-pub(crate) async fn busy_flow_unfolds(browser: &Browser) -> Result<(), Box<dyn Error>> {
+/// fold link. It needs no WebAssembly: with it, the router unfolds the lane
+/// in the page (`in_page`), and without it the browser loads the page.
+pub(crate) async fn busy_flow_unfolds(
+    browser: &Browser,
+    in_page: bool,
+) -> Result<(), Box<dyn Error>> {
     let quiet = "#busy-flow .fui-pipeline-cards a.fui-tnode-link[href='#caller-01']";
     assert!(
         browser.driver().find_all(By::Css(quiet)).await?.is_empty(),
@@ -285,8 +289,16 @@ pub(crate) async fn busy_flow_unfolds(browser: &Browser) -> Result<(), Box<dyn E
             vec![summary.to_json()?],
         )
         .await?;
-    browser.click_and_load(&summary).await?;
-    browser.element(By::Css(quiet)).await?;
+    if in_page {
+        browser
+            .click_in_page(&summary, "the summary card unfolds the lane", async || {
+                Ok(!browser.driver().find_all(By::Css(quiet)).await?.is_empty())
+            })
+            .await?;
+    } else {
+        browser.click_and_load(&summary).await?;
+        browser.element(By::Css(quiet)).await?;
+    }
     browser
         .element(By::Css(
             "#busy-flow a[aria-label='Fold the quiet cards of Callers']",
@@ -304,7 +316,7 @@ async fn a_folded_flow_lane_unfolds_by_its_summary_card() -> Result<(), Box<dyn 
     with_browser(async |browser| {
         crate::journeys::window(browser, 1440, 900).await?;
         browser.goto(&gallery.url("/ferrobridge/charts")).await?;
-        busy_flow_unfolds(browser).await?;
+        busy_flow_unfolds(browser, true).await?;
         browser.console_clean("the busy bridge unfolding").await
     })
     .await
@@ -501,12 +513,20 @@ async fn the_search_box_submits_and_the_preferences_density_posts_on_change()
         browser.goto(&gallery.url("/ferroterm/preferences")).await?;
         preferences_hydrated(browser).await?;
         let compact = density_card(browser, "compact").await?;
-        browser.click_and_load(&compact).await?;
+        let saved = gallery.url("/ferroterm/preferences?saved=density");
         browser
-            .at(&gallery.url("/ferroterm/preferences?saved=density"))
-            .await?;
-        browser
-            .element(By::Css(r#"html[data-density="compact"]"#))
+            .click_in_page(
+                &compact,
+                "the density the post kept takes effect",
+                async || {
+                    Ok(browser.driver().current_url().await?.as_str() == saved
+                        && !browser
+                            .driver()
+                            .find_all(By::Css(r#"html[data-density="compact"]"#))
+                            .await?
+                            .is_empty())
+                },
+            )
             .await?;
         browser
             .element(By::Css(".fui-setting-saved[role='status']"))
@@ -519,9 +539,14 @@ async fn the_search_box_submits_and_the_preferences_density_posts_on_change()
         })
         .await?;
         let comfortable = density_card(browser, "comfortable").await?;
-        browser.click_and_load(&comfortable).await?;
         browser
-            .element(By::Css(r#"html[data-density="comfortable"]"#))
+            .click_in_page(&comfortable, "the density goes back", async || {
+                Ok(!browser
+                    .driver()
+                    .find_all(By::Css(r#"html[data-density="comfortable"]"#))
+                    .await?
+                    .is_empty())
+            })
             .await?;
         browser.console_clean("the search and the density").await
     })
@@ -674,12 +699,6 @@ async fn the_open_pager_steps_with_no_total() -> Result<(), Box<dyn Error>> {
         browser.goto(&gallery.url("/ferroehr/tables")).await?;
         let posted = "nav[aria-label='Pages of the EHRs, in the page']";
         let linked = "nav[aria-label='Pages of the EHRs, as links']";
-        let step = async |pager: &str, key: &str| -> Result<(), Box<dyn Error>> {
-            let control = browser
-                .element(By::Css(format!("{pager} [data-page='{key}']")))
-                .await?;
-            browser.click_and_load(&control).await
-        };
         let range = async |pager: &str| -> Result<String, Box<dyn Error>> {
             Ok(browser
                 .element(By::Css(format!("{pager} [role='status']")))
@@ -687,36 +706,21 @@ async fn the_open_pager_steps_with_no_total() -> Result<(), Box<dyn Error>> {
                 .text()
                 .await?)
         };
-        step(posted, "next").await?;
-        assert_eq!(
-            "EHRs 26 to 50",
-            range(posted).await?,
-            "Next posts the page after"
-        );
-        step(posted, "prev").await?;
-        assert_eq!(
-            "EHRs 1 to 25",
-            range(posted).await?,
-            "Previous posts the page before"
-        );
-        // The linked pager is links, which the router follows in the page: no new
-        // document, and the range changes in place.
-        browser.hydrated().await?;
-        let before = browser.loader().await?;
-        browser
-            .element(By::Css(format!("{linked} [data-page='next']")))
-            .await?
-            .click()
-            .await?;
-        until("the linked Next leads on", async || {
-            Ok(range(linked).await? == "EHRs 26 to 50")
-        })
-        .await?;
-        assert_eq!(
-            before,
-            browser.loader().await?,
-            "a link loads no new document"
-        );
+        // Each step, a post of the session pager or a link of the URL pager, is drawn
+        // in the page by the router.
+        let step = async |pager: &str, key: &str, shown: &str| -> Result<(), Box<dyn Error>> {
+            let control = browser
+                .element(By::Css(format!("{pager} [data-page='{key}']")))
+                .await?;
+            browser
+                .click_in_page(&control, &format!("{key} shows {shown}"), async || {
+                    Ok(range(pager).await? == shown)
+                })
+                .await
+        };
+        step(posted, "next", "EHRs 26 to 50").await?;
+        step(posted, "prev", "EHRs 1 to 25").await?;
+        step(linked, "next", "EHRs 26 to 50").await?;
         browser.console_clean("the open pager").await
     })
     .await

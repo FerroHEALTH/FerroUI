@@ -140,7 +140,7 @@ pub fn segmented_form(form: SegmentedForm) -> AnyView {
         })
         .collect_view();
     view! {
-        <form method="post" action=action>
+        <form method="post" action=action data-ferroui-navigates="">
             <input type="hidden" name="back" value=back />
             <div role="group" aria-label=label class="fui-segmented">
                 {prefix}

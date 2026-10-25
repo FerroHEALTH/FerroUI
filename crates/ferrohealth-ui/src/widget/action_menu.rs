@@ -46,6 +46,10 @@ const ELLIPSIS: &str = "\u{2026}";
 pub enum Act {
     /// Follows the link to this address.
     Link(String),
+    /// Downloads what this address answers, such as an export: a link the
+    /// browser follows as a new document (`rel="external"`), never a page
+    /// the router draws.
+    Download(String),
     /// Posts a plain form to `action` with each of `fields` as a hidden
     /// input, named and valued.
     Post {
@@ -107,6 +111,7 @@ impl Action {
         match self.act {
             Act::Dialog(_) => format!("{}{ELLIPSIS}", self.label),
             Act::Link(_)
+            | Act::Download(_)
             | Act::Post { .. }
             | Act::Submit(_)
             | Act::SubmitTo { .. }
@@ -340,6 +345,12 @@ fn item(item: Item, danger: bool) -> AnyView {
             </a>
         }
         .into_any(),
+        Act::Download(href) => view! {
+            <a role="menuitem" href=href rel="external" download="" class=class>
+                {inside}
+            </a>
+        }
+        .into_any(),
         Act::Post { action, fields } => view! {
             <form method="post" action=action class="fui-menu-form">
                 {hidden_fields(fields)}
@@ -356,7 +367,14 @@ fn item(item: Item, danger: bool) -> AnyView {
         }
         .into_any(),
         Act::SubmitTo { action, form } => view! {
-            <button type="submit" form=form formaction=action role="menuitem" class=class>
+            <button
+                type="submit"
+                form=form
+                formaction=action
+                data-ferroui-reloads=""
+                role="menuitem"
+                class=class
+            >
                 {inside}
             </button>
         }

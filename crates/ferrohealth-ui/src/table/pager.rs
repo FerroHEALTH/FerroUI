@@ -403,11 +403,11 @@ impl PostTo<'_> {
         let action = self.action.to_owned();
         let posts = method(StateSource::Session);
         view! {
-            <form id=self.steps() class="fui-pager-form" method=posts action=action.clone()>
+            <form id=self.steps() class="fui-pager-form" method=posts action=action.clone() data-ferroui-navigates="">
                 {carried()}
                 <input type="hidden" name=SIZE_KEY value=size.to_string() />
             </form>
-            <form id=self.sizes() class="fui-pager-form" method=posts action=action>
+            <form id=self.sizes() class="fui-pager-form" method=posts action=action data-ferroui-navigates="">
                 {carried()}
                 <input type="hidden" name=PAGE_KEY value="1" />
             </form>

@@ -73,8 +73,9 @@ fn request_cookies() -> String {
         .unwrap_or_default()
 }
 
-/// Asks the server for the cookies again after each navigation, so a
-/// preference a post just kept reaches the page drawn in the browser.
+/// Asks the server for the cookies again after each navigation and each
+/// post drawn in the page, so a preference a post just kept reaches the
+/// page drawn in the browser.
 #[component]
 #[expect(
     clippy::must_use_candidate,
@@ -84,12 +85,19 @@ pub(crate) fn FollowCookies() -> impl IntoView {
     let location = use_location();
     let cookies = use_context::<Cookies>();
     Effect::watch(
-        move || (location.pathname.get(), location.search.get()),
+        move || {
+            (
+                location.pathname.get(),
+                location.search.get(),
+                ferrohealth_ui::widget::submit::posts().get(),
+            )
+        },
         move |_, _, _| {
             if let Some(Cookies(cookies)) = cookies {
                 leptos::task::spawn_local(async move {
                     match requested_cookies().await {
                         Ok(now) => {
+                            follow_root(&now);
                             // NOTE: no specification governs this: our own design; the same
                             // cookies redraw nothing, so a page keeps the focus it took.
                             if cookies.get_untracked() != now {
@@ -103,4 +111,45 @@ pub(crate) fn FollowCookies() -> impl IntoView {
         },
         false,
     );
+}
+
+/// Sets the root element's theme, density, motion, hints and language from
+/// the cookies `now`, as the server writes them on a document it draws, so a
+/// preference a post just kept takes effect in the page.
+fn follow_root(now: &str) {
+    #[cfg(target_arch = "wasm32")]
+    {
+        let Some(root) = document().document_element() else {
+            return;
+        };
+        let preferences = crate::app::preferences_of(now);
+        let attributes = [
+            ("data-theme", preferences.theme.key().to_owned()),
+            ("data-density", preferences.density.key().to_owned()),
+            ("data-motion", preferences.motion.key().to_owned()),
+            ("data-hints", preferences.hints.key().to_owned()),
+            ("lang", crate::app::locale_of(now).tag()),
+        ];
+        // NOTE: no specification governs this: our own design; the words of a page are
+        // drawn in its locale, so a new language loads the page as a document.
+        let language = crate::app::locale_of(now).tag();
+        if root
+            .get_attribute("lang")
+            .is_some_and(|lang| lang != language)
+        {
+            if window().location().reload().is_err() {
+                leptos::logging::warn!("the browser refused to load the page in its language");
+            }
+            return;
+        }
+        for (name, value) in attributes {
+            if root.get_attribute(name).as_deref() != Some(value.as_str())
+                && root.set_attribute(name, &value).is_err()
+            {
+                leptos::logging::warn!("the browser refused the root's {name}");
+            }
+        }
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    let _: &str = now;
 }

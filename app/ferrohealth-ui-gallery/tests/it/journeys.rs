@@ -570,8 +570,16 @@ async fn session_pager_posts(browser: &Browser, gallery: &Gallery) -> Result<(),
         "//nav[@aria-label = 'Pages of the mapping files, in the page']//button[contains(., 'Last')]",
     );
     let last = browser.element(last).await?;
-    browser.click_and_load(&last).await?;
-    browser.text("p", "126-137 of 137").await?;
+    browser
+        .click_in_page(&last, "the session pager draws the last page", async || {
+            Ok(browser
+                .driver()
+                .find_all(By::XPath("//p[contains(., '126-137 of 137')]"))
+                .await?
+                .len()
+                == 1)
+        })
+        .await?;
     let session_rows = By::XPath("(//table)[2]/tbody/tr");
     assert_eq!(12, browser.driver().find_all(session_rows).await?.len());
     assert_eq!(
@@ -628,9 +636,14 @@ async fn the_user_menu_posts_the_theme_and_the_choice_is_kept() -> Result<(), Bo
             ))
             .await?;
         until("the menu opens", async || Ok(dark.is_displayed().await?)).await?;
-        browser.click_and_load(&dark).await?;
         browser
-            .element(By::Css(r#"html[data-theme="dark"]"#))
+            .click_in_page(&dark, "the theme the post kept takes effect", async || {
+                Ok(!browser
+                    .driver()
+                    .find_all(By::Css(r#"html[data-theme="dark"]"#))
+                    .await?
+                    .is_empty())
+            })
             .await?;
         browser.at(&gallery.url("/ferrofed")).await?;
         browser

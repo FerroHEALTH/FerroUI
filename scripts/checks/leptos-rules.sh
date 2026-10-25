@@ -9,9 +9,10 @@
 # It reads the hand-written .rs files of the library and the gallery, skips
 # comment lines, and reports each line that breaks a rule:
 #
-#   L1  the library's view or widget tier imports leptos_router: an island
-#       has no router in the browser, and the view tier draws plain links
-#       (§15.6);
+#   L1  the library's view tier imports leptos_router: a view draws plain
+#       links and forms, which the router follows in the page; only a widget
+#       that navigates, such as the form navigator, reaches the router
+#       (§15.2);
 #   L2  an inline event-handler attribute (`oninput="..."`) or a `<script`
 #       element: the strict CSP runs scripts by nonce alone (§0, §14.4);
 #   L3  the library defines a server function or loads data (`#[server]`,
@@ -97,7 +98,7 @@ scan() {
 }
 
 run_checks() {
-  scan L1 'leptos_router' "$library/view" "$library/widget"
+  scan L1 'leptos_router' "$library/view"
   scan L2 '\bon[a-z]+="|<script' "$library" "$gallery"
   scan L3 '#\[server|\bResource::|\bLocalResource\b|\bOnceResource\b|\bServerAction\b|\bAction::new' "$library"
   scan L4 '\.get\(\)\.(is_empty|len|iter|contains|first|last)\(' "$library" "$gallery"
@@ -156,9 +157,11 @@ self_test() {
     "$work/crates/ferrohealth-ui/src/view" "$work/app/ferrohealth-ui-gallery/src"
   cp "${BASH_SOURCE[0]}" "$work/scripts/checks/leptos-rules.sh"
   printf '[package]\nname = "ferrohealth-ui"\n' >"$work/crates/ferrohealth-ui/Cargo.toml"
-  cat >"$work/crates/ferrohealth-ui/src/widget/bad.rs" <<'RS'
+  cat >"$work/crates/ferrohealth-ui/src/view/bad.rs" <<'RS'
 use leptos_router::components::A;
 // use leptos_router in a comment is fine
+RS
+  cat >"$work/crates/ferrohealth-ui/src/widget/bad.rs" <<'RS'
 fn a() { let n = rows.get().len(); }
 fn b() { let s = Signal::derive(|| 1); }
 fn c() { if cfg!(target_arch = "wasm32") {} }
@@ -185,7 +188,7 @@ RS
     echo "self-test: a clean file was reported" >&2
     return 1
   fi
-  printf 'L1 crates/ferrohealth-ui/src/widget/bad.rs leptos_router::components   # self-test\n' \
+  printf 'L1 crates/ferrohealth-ui/src/view/bad.rs leptos_router::components   # self-test\n' \
     >"$work/scripts/checks/leptos-rules.allow"
   out="$(bash "$work/scripts/checks/leptos-rules.sh" 2>&1)" || true
   if printf '%s\n' "$out" | grep -q '^  L1 '; then
