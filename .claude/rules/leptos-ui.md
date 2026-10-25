@@ -742,6 +742,14 @@ The library and the consoles hydrate the whole page and split it by route
   `island::PageAnnouncer` once at its root. [test: the gallery's navigation
   journey]
 
+- **Nothing changes the page before it hydrates**: the hydration walk
+  stops with an internal error on a node the server did not draw (the
+  Leptos book, "Hydration Bugs"). Code that touches the DOM runs in an
+  `Effect`, a test or script waits for the root element's
+  `data-ferroui-hydrated` (`widget::hydration::mark`), and a debug build's
+  `widget::hydration::explain` names the cause beside such a panic.
+  [review; the gallery's journeys wait for the mark]
+
 ### 15.3 State both halves read alike
 
 - **No component reads state on the server alone.** The theme, the

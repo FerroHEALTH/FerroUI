@@ -36,5 +36,6 @@ pub mod trees_data;
 #[wasm_bindgen::prelude::wasm_bindgen]
 pub fn hydrate() {
     console_error_panic_hook::set_once();
+    ferrohealth_ui::widget::hydration::explain();
     leptos::mount::hydrate_lazy(app::App);
 }

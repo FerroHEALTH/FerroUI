@@ -38,6 +38,7 @@ pub mod document;
 pub mod editor;
 pub mod filter;
 pub mod focus;
+pub mod hydration;
 pub mod identifier;
 pub mod masked;
 pub mod menu;
