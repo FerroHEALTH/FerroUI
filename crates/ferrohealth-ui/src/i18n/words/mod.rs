@@ -91,8 +91,9 @@ mod tests {
         "accent", "action", "chart", "code", "column", "count", "date", "day", "days", "document",
         "earliest", "errors", "file", "filter", "first", "from", "held", "key", "kinds", "label",
         "language", "last", "latest", "limit", "line", "mapping", "month", "note", "noun", "nouns",
-        "page", "pages", "range", "shown", "size", "stated", "status", "summary", "tab", "time",
-        "title", "to", "total", "value", "warnings", "weekday", "what", "why", "words", "year",
+        "page", "pages", "query", "range", "shown", "size", "stated", "status", "summary", "tab",
+        "time", "title", "to", "total", "value", "warnings", "weekday", "what", "why", "words",
+        "year",
     ];
 
     /// The ids of the messages the catalog file at `path` defines.

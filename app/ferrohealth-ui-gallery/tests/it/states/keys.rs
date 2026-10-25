@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The states of the keys: the top bar's search under the pointer, filled,
-//! busy, disabled, with its answer and with none, at 1440 and 390 px; the
+//! busy, disabled, with its answer, an active hit, none and an error, at
+//! 1440 and 390 px; the
 //! docked decision bar in each state, and on a phone; the shortcut legend
 //! open over the page and the hint at a listing's foot.
 
@@ -23,7 +24,9 @@ pub(super) const STATES: &[&str] = &[
     "search-busy",
     "search-disabled",
     "search-answer",
+    "search-active",
     "search-none",
+    "search-error",
     "search-390",
     "search-answer-390",
     "dock-idle",
@@ -90,21 +93,37 @@ async fn search(
         "search-disabled",
     )
     .await?;
-    for (asked, state) in [("hits", "search-answer"), ("none", "search-none")] {
-        browser
-            .goto(&gallery.url(&format!("/{}/forms?search={asked}", brand.key())))
-            .await?;
-        browser.element(By::Id("gallery-search-results")).await?;
+    let forms = gallery.url(&format!("/{}/forms", brand.key()));
+    browser.goto(&forms).await?;
+    crate::keys::typed(browser, "synthetic").await?;
+    shot_of_view(browser, brand, theme, "search-answer").await?;
+    for _ in 0..6 {
+        press_down(browser).await?;
+    }
+    shot_of_view(browser, brand, theme, "search-active").await?;
+    for (words, state) in [("zz-unknown", "search-none"), ("zz-fail", "search-error")] {
+        browser.goto(&forms).await?;
+        crate::keys::typed(browser, words).await?;
         shot_of_view(browser, brand, theme, state).await?;
     }
+    browser.console_errors().await?;
     window(browser, 390, HEIGHT).await?;
     top_bar(browser, gallery, brand, theme, "", "search-390").await?;
-    browser
-        .goto(&gallery.url(&format!("/{}/forms?search=hits", brand.key())))
-        .await?;
-    browser.element(By::Id("gallery-search-results")).await?;
+    browser.goto(&forms).await?;
+    crate::keys::typed(browser, "synthetic").await?;
     shot_of_view(browser, brand, theme, "search-answer-390").await?;
     window(browser, WIDTH, HEIGHT).await
+}
+
+/// Presses the down arrow on the search field.
+async fn press_down(browser: &Browser) -> Result<(), Box<dyn Error>> {
+    browser
+        .driver()
+        .action_chain()
+        .send_keys(Key::Down)
+        .perform()
+        .await?;
+    Ok(())
 }
 
 /// The docked bar of `brand`'s forms page in the state `dock` names,

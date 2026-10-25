@@ -38,6 +38,7 @@ GROUPS = [
         ('09.2', 'topbar-no-result', 'Topbar search: nothing found', 'the top bar', 'An id the CDR does not hold, and the find page.'),
         ('09.3', 'topbar-subject', 'Topbar search: a subject id', 'the top bar', 'What you type is masked as you type it, and the EHR it finds shows the subject masked too.'),
         ('09.4', 'find', 'Find', '/find?q=…', 'What was typed, read as an EHR id from its shape, and where it can go.'),
+        ('09.5', 'find-results', 'Find, matches', '/find?q=…', 'Every match in the page under the heading, one list card per kind: what a search shows with no WebAssembly, and where See all results leads.'),
     ]),
     ('ehrs', 'EHRs', [
         ('10', 'ehrs', 'EHRs', '/ehrs', 'T1: the newest EHRs from AQL, the find field (EHR id or subject id), the subject masked, the pager without a total.'),

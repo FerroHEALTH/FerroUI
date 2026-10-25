@@ -6,6 +6,7 @@ pages, About, the focus sheet, the menu and action-group sheets and the
 shortcut legend."""
 import tpl
 from common import (
+    search_panel, find_results,
     MENU_SEP, action_group, badge, button, card, centred, copy_button, definitions, disclosure, e, icon, icon_button,
     input_, link_button, menu, menu_item, notice, page_heading, refusal, search_control, select, shell, shortcut_legend,
     stat_card, table, tabbed, tabs, td, th, toast, toasts, when,
@@ -112,31 +113,22 @@ def page_dashboard_namespace_failed():
 
 def results_list(kind):
     if kind == "none":
-        body = (
-            f'<div class="fui-search-results-empty">{icon("search-x", "16")}<div><strong>Nothing in the CDR has this id</strong>'
-            '<span>The search reads EHR ids and subject ids, composition uids, template and stored query ids or names, and party ids.</span></div></div>'
-            f'<a href="find.html" class="fui-search-results-more">Other ways to read this id{icon("arrow-right", "14")}</a>'
+        return search_panel(
+            "0199ffff-0000-7000-8000-000000000000",
+            empty=("Nothing in the CDR has this id",
+                   "The search reads EHR ids and subject ids, composition uids, template and stored query ids or names, and party ids."),
+            more="Other ways to read this id",
         )
-        return f'<div id="find-results" class="fui-search-results" role="region" aria-label="Search answer">{body}</div>'
     groups = [
-        ("Templates", [("Vital signs encounter.v1", "ADL 1.4 · 1,284 compositions", "template.html", True, "file-code")]),
-        ("Stored queries", [("recent_vitals", "Unqualified · version 1.0.0", "stored-query.html", False, "scroll-text")]),
-        ("Compositions", [("Vital signs", "today 07:50 · EHR 0199c2a4…1a01", "composition.html", False, "file-text")]),
+        ("Templates", [(icon("file-code", "16"), "Vital signs encounter.v1", "ADL 1.4 · 1,284 compositions", "")]),
+        ("Stored queries", [(icon("scroll-text", "16"), "recent_vitals", "Unqualified · version 1.0.0", "")]),
+        ("Compositions", [(icon("file-text", "16"), "Vital signs", "today 07:50 · EHR 0199c2a4…1a01", "")]),
     ]
-    body = '<p class="fui-search-results-head">3 matches for “vital”</p>'
-    for g, items in groups:
-        body += f'<p class="fui-search-results-group">{g}</p><ul role="listbox" aria-label="{g}">' + "".join(
-            f'<li role="option"{" aria-selected=\"true\"" if sel else ""}><a href="{href}">{icon(gl, "14")}<span class="fui-search-results-name">{e(n)}</span>'
-            f'<span class="fui-small fui-muted">{e(line)}</span></a></li>' for n, line, href, sel, gl in items) + "</ul>"
-    return f'<div id="find-results" class="fui-search-results" role="region" aria-label="Search answer">{body}</div>'
+    return search_panel("vital", groups)
 
 
 def subject_results():
-    body = ('<p class="fui-search-results-head">1 EHR for that subject id</p><p class="fui-search-results-group">EHRs</p><ul role="listbox" aria-label="EHRs">'
-            f'<li role="option" aria-selected="true"><a href="ehr.html">{icon("database", "14")}<span class="fui-search-results-name">EHR 0199c2a4…1a01</span>'
-            f'<span class="fui-small fui-muted">Subject {masked("537", static=True)} · 8 compositions</span></a></li></ul>'
-            f'<a href="ehrs-found.html" class="fui-search-results-more">Show it in EHRs{icon("arrow-right", "14")}</a>')
-    return f'<div id="find-results" class="fui-search-results" role="region" aria-label="Search answer">{body}</div>'
+    return search_panel("", [("EHRs", [(icon("database", "16"), "EHR 0199c2a4…1a01", "Subject ••••537 · 8 compositions", "")])])
 
 
 def page_topbar_subject():
@@ -155,6 +147,18 @@ def page_topbar_results():
 
 def page_topbar_no_result():
     return topbar_state_page("focus-filled", "0199ffff-0000-7000-8000-000000000000", results_list("none"))
+
+
+def page_find_results():
+    groups = [
+        ("Templates", [(icon("file-code", "16"), "Vital signs encounter.v1", "ADL 1.4 · 1,284 compositions", "", "template.html"),
+                       (icon("file-code", "16"), "Vital signs observation.v2", "ADL 1.4 · 312 compositions", "", "template.html")]),
+        ("Stored queries", [(icon("scroll-text", "16"), "recent_vitals", "Unqualified · version 1.0.0", "", "stored-query.html")]),
+        ("Compositions", [(icon("file-text", "16"), "Vital signs", "today 07:50 · EHR 0199c2a4…1a01", "", "composition.html")]),
+    ]
+    head = page_heading("Find", subtitle="What the CDR holds under “vital”.")
+    content = head + find_results("vital", groups)
+    return shell("Find", "", content, search_value="vital")
 
 
 def page_find():

@@ -2,14 +2,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The top bar's search as the server draws it (#144): one joined `GET`
-//! form, its states, the `/` key cap and its shortcut, and the answer under
-//! it, grouped by kind with its first hit selected.
+//! form, its states, the `/` key cap and its shortcut, the typeahead panel
+//! it holds closed until the page hydrates, the answer's JSON wire, and the
+//! find page's results in the page, grouped by kind.
 
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::style::STYLESHEET;
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::search::{
-    Hit, HitGroup, Mark, SearchAnswer, SearchBox, Way, search_answer, search_box,
+    Hit, HitGroup, Mark, SearchAnswer, SearchBox, Way, find_results, search_box,
 };
 use leptos::prelude::*;
 
@@ -37,9 +38,9 @@ fn search(change: impl FnOnce(&mut SearchBox)) -> SearchBox {
     search
 }
 
-/// The HTML of `search` with `answer` under it.
-fn drawn(search: SearchBox, answer: Option<SearchAnswer>) -> String {
-    page_html(move || search_box(search, answer))
+/// The HTML of `search`.
+fn drawn(search: SearchBox) -> String {
+    page_html(move || search_box(search))
 }
 
 /// A hit named `name` that leads to `href`.
@@ -55,7 +56,7 @@ fn hit(name: &str, href: &str) -> Hit {
 
 #[test]
 fn the_search_is_one_get_form_a_landmark_with_a_hidden_label_and_a_named_submit() {
-    let html = drawn(search(|_| {}), None);
+    let html = drawn(search(|_| {}));
     assert!(
         has(
             &html,
@@ -105,7 +106,7 @@ fn the_search_is_one_get_form_a_landmark_with_a_hidden_label_and_a_named_submit(
 
 #[test]
 fn the_slash_cap_is_hidden_from_a_reader_and_drawn_only_with_a_shortcut() {
-    let html = drawn(search(|_| {}), None);
+    let html = drawn(search(|_| {}));
     assert!(
         has(
             &html,
@@ -117,7 +118,7 @@ fn the_slash_cap_is_hidden_from_a_reader_and_drawn_only_with_a_shortcut() {
         ),
         "{html}"
     );
-    let none = drawn(search(|search| search.shortcut = None), None);
+    let none = drawn(search(|search| search.shortcut = None));
     assert!(tags(&none, "kbd").is_empty(), "no shortcut, no cap: {none}");
     assert!(
         tags(&none, "input")
@@ -129,7 +130,7 @@ fn the_slash_cap_is_hidden_from_a_reader_and_drawn_only_with_a_shortcut() {
 
 #[test]
 fn the_busy_search_draws_the_spinner_in_the_glyphs_place_and_the_submit_waits() {
-    let html = drawn(search(|search| search.busy = true), None);
+    let html = drawn(search(|search| search.busy = true));
     assert!(has(&html, "form", &[("aria-busy", "true")]), "{html}");
     assert!(
         has(
@@ -145,7 +146,7 @@ fn the_busy_search_draws_the_spinner_in_the_glyphs_place_and_the_submit_waits() 
             .any(|button| button.contains_key("disabled")),
         "{html}"
     );
-    let idle = drawn(search(|_| {}), None);
+    let idle = drawn(search(|_| {}));
     assert!(!idle.contains("fui-spinner-ring"), "{idle}");
     assert!(!idle.contains("aria-busy"), "{idle}");
 }
@@ -153,10 +154,9 @@ fn the_busy_search_draws_the_spinner_in_the_glyphs_place_and_the_submit_waits() 
 #[test]
 fn the_disabled_search_shows_its_reason_as_text_and_drops_its_key_cap() {
     let reason = "Search waits while the index is rebuilding";
-    let html = drawn(
-        search(|search| search.disabled = Some(String::from(reason))),
-        None,
-    );
+    let html = drawn(search(|search| {
+        search.disabled = Some(String::from(reason));
+    }));
     let input = tags(&html, "input").remove(0);
     assert!(input.contains_key("disabled"), "{html}");
     assert_eq!(Some(reason), input.get("placeholder").map(String::as_str));
@@ -180,39 +180,60 @@ fn the_disabled_search_shows_its_reason_as_text_and_drops_its_key_cap() {
     );
 }
 
-#[test]
-fn the_answer_groups_its_hits_by_kind_and_selects_the_first() {
-    let answer = SearchAnswer {
-        head: Some(String::from("3 answers")),
+/// An answer to "alp" of seven files and a template.
+fn answer() -> SearchAnswer {
+    SearchAnswer {
+        query: String::from("alp"),
+        head: Some(String::from("8 answers")),
         groups: vec![
             HitGroup {
                 kind: String::from("Files"),
-                hits: vec![hit("alpha.yml", "/a"), hit("beta.yml", "/b")],
+                hits: (1..=7)
+                    .map(|index| hit(&format!("alpha-{index}.yml"), &format!("/f/{index}")))
+                    .collect(),
             },
             HitGroup {
                 kind: String::from("Templates"),
                 hits: vec![Hit {
                     mark: Some(Mark::Glyph(Glyph::FILE_TEXT)),
                     tag: Some(String::from("v1.0.2")),
-                    ..hit("vitals", "/t")
+                    ..hit("Alpine vitals", "/t")
                 }],
             },
         ],
-        none: None,
-        more: Some(Way {
-            href: String::from("/find?q=a"),
-            words: String::from("All results"),
-        }),
-    };
-    let html = drawn(search(|_| {}), Some(answer));
+        ..SearchAnswer::default()
+    }
+}
+
+#[test]
+fn a_search_with_an_answer_route_holds_its_panel_closed_and_claims_no_combobox_before_it_hydrates()
+{
+    let html = drawn(search(|search| {
+        search.suggest = Some(String::from("/find/suggest"));
+    }));
+    assert!(
+        has(
+            &html,
+            "div",
+            &[("id", "find-panel"), ("class", "fui-search-results")]
+        ),
+        "{html}"
+    );
+    let panel = tags(&html, "div")
+        .into_iter()
+        .find(|div| div.get("id").map(String::as_str) == Some("find-panel"))
+        .unwrap_or_default();
+    assert!(
+        panel.contains_key("hidden"),
+        "closed until typed into: {html}"
+    );
     assert!(
         has(
             &html,
             "div",
             &[
+                ("role", "listbox"),
                 ("id", "find-results"),
-                ("class", "fui-search-results"),
-                ("role", "region"),
                 ("aria-label", "Search answer")
             ]
         ),
@@ -221,54 +242,120 @@ fn the_answer_groups_its_hits_by_kind_and_selects_the_first() {
     assert!(
         has(
             &html,
-            "a",
-            &[
-                ("id", "find-hit-1"),
-                ("href", "/a"),
-                ("aria-current", "true")
-            ]
+            "span",
+            &[("role", "status"), ("class", "fui-sr-only")]
         ),
-        "{html}"
+        "the count is announced from outside the panel: {html}"
     );
-    let current: Vec<_> = tags(&html, "a")
-        .into_iter()
-        .filter(|link| link.contains_key("aria-current"))
-        .collect();
-    assert_eq!(1, current.len(), "one hit is selected: {html}");
+    // WAI-ARIA 1.2: with no WebAssembly the field never expands, so it is no combobox.
+    let input = tags(&html, "input").remove(0);
+    assert!(!input.contains_key("role"), "{html}");
+    assert!(!input.contains_key("aria-expanded"), "{html}");
+    let plain = drawn(search(|_| {}));
     assert!(
-        has(&html, "a", &[("id", "find-hit-3"), ("href", "/t")]),
-        "{html}"
+        !plain.contains("fui-search-results"),
+        "no route, no panel: {plain}"
+    );
+    assert!(!plain.contains("listbox"), "{plain}");
+}
+
+#[test]
+fn the_answer_crosses_the_wire_as_json_and_reads_back() -> Result<(), Box<dyn std::error::Error>> {
+    let mut answer = answer();
+    answer.groups.truncate(1);
+    answer.groups[0].hits.truncate(1);
+    answer.groups[0].hits[0].mark = Some(Mark::Dot(Tone::Ok));
+    answer.unfinished = Some(String::from("Templates did not answer"));
+    let json = serde_json::to_value(&answer)?;
+    assert_eq!(
+        serde_json::json!({
+            "query": "alp",
+            "head": "8 answers",
+            "groups": [{
+                "kind": "Files",
+                "hits": [{
+                    "href": "/f/1",
+                    "name": "alpha-1.yml",
+                    "line": "model · 40 lines",
+                    "mark": { "Dot": "Ok" },
+                    "tag": null
+                }]
+            }],
+            "none": null,
+            "unfinished": "Templates did not answer",
+            "more": null
+        }),
+        json,
+        "the wire docs/consoles.md documents"
+    );
+    assert_eq!(answer, serde_json::from_value(json)?);
+    let sparse: SearchAnswer = serde_json::from_str(r#"{"query":"x"}"#)?;
+    assert_eq!(
+        String::from("x"),
+        sparse.query,
+        "every other field may be left out"
+    );
+    let glyph: Mark = serde_json::from_str(r#"{"Glyph":"file-text"}"#)?;
+    assert_eq!(
+        Mark::Glyph(Glyph::FILE_TEXT),
+        glyph,
+        "a glyph goes by its Lucide name"
+    );
+    Ok(())
+}
+
+#[test]
+fn the_find_page_draws_every_hit_of_each_kind_in_a_list_card_of_its_own() {
+    let html = page_html(move || find_results(answer()));
+    assert!(html.contains(r#"<div class="fui-find-results">"#), "{html}");
+    assert!(
+        has(&html, "section", &[("aria-label", "Files")]),
+        "a card per kind: {html}"
     );
     assert!(
-        has(
-            &html,
-            "p",
-            &[("id", "find-kind-2"), ("class", "fui-search-results-group")]
-        ),
+        has(&html, "section", &[("aria-label", "Templates")]),
         "{html}"
     );
-    assert!(
-        has(&html, "ul", &[("aria-labelledby", "find-kind-2")]),
-        "{html}"
-    );
+    for index in 1..=7 {
+        assert!(
+            has(
+                &html,
+                "a",
+                &[("class", "fui-hit"), ("href", &format!("/f/{index}"))]
+            ),
+            "the find page cuts no kind short: {index} in {html}"
+        );
+    }
+    assert!(html.contains("· 7"), "the kind counts its hits: {html}");
     assert!(
         html.contains(r#"<span class="fui-tag">v1.0.2</span>"#),
         "{html}"
     );
+    assert!(html.contains("8 answers"), "{html}");
     assert!(
-        has(
-            &html,
-            "a",
-            &[("href", "/find?q=a"), ("class", "fui-search-results-more")]
-        ),
-        "{html}"
+        !html.contains("fui-search-results"),
+        "never the overlay: {html}"
     );
-    assert!(html.contains("3 answers"), "{html}");
+    assert!(!html.contains("style="), "{html}");
 }
 
 #[test]
-fn an_answer_of_one_kind_names_its_list_and_draws_no_heading() {
+fn a_hit_emphasises_the_words_searched_for() {
+    let html = page_html(move || find_results(answer()));
+    assert!(
+        html.contains(r#"<mark class="fui-search-match">alp</mark>ha-1.yml"#),
+        "{html}"
+    );
+    assert!(
+        html.contains(r#"<mark class="fui-search-match">Alp</mark>ine vitals"#),
+        "without regard to case: {html}"
+    );
+}
+
+#[test]
+fn a_hit_on_the_find_page_draws_its_mark() {
     let answer = SearchAnswer {
+        query: String::from("a"),
         groups: vec![HitGroup {
             kind: String::from("Files"),
             hits: vec![Hit {
@@ -278,9 +365,7 @@ fn an_answer_of_one_kind_names_its_list_and_draws_no_heading() {
         }],
         ..SearchAnswer::default()
     };
-    let html = page_html(move || search_answer("find", answer));
-    assert!(has(&html, "ul", &[("aria-label", "Files")]), "{html}");
-    assert!(!html.contains("fui-search-results-group"), "{html}");
+    let html = page_html(move || find_results(answer));
     assert!(
         has(
             &html,
@@ -292,28 +377,56 @@ fn an_answer_of_one_kind_names_its_list_and_draws_no_heading() {
 }
 
 #[test]
-fn an_answer_that_found_nothing_says_so_and_selects_nothing() {
+fn a_find_page_that_found_nothing_says_so_in_the_page() {
     let answer = SearchAnswer {
-        none: Some((
-            String::from("No file found for <zz>"),
-            String::from("Check the spelling."),
-        )),
+        query: String::from("zz"),
         more: Some(Way {
             href: String::from("/files"),
             words: String::from("Browse every file"),
         }),
         ..SearchAnswer::default()
     };
-    let html = drawn(search(|_| {}), Some(answer));
+    let html = page_html(move || find_results(answer));
+    assert!(html.contains("fui-find-empty"), "{html}");
+    assert!(html.contains("No matches for “zz”"), "{html}");
     assert!(
-        html.contains(r#"<div class="fui-search-results-empty">"#),
+        has(
+            &html,
+            "a",
+            &[("href", "/files"), ("class", "fui-find-more")]
+        ),
         "{html}"
     );
+    let said = SearchAnswer {
+        query: String::from("zz"),
+        none: Some((
+            String::from("No file found for <zz>"),
+            String::from("Check the spelling."),
+        )),
+        ..SearchAnswer::default()
+    };
+    let html = page_html(move || find_results(said));
     assert!(
         html.contains("No file found for &lt;zz&gt;"),
         "escaped: {html}"
     );
-    assert!(!html.contains("aria-current"), "{html}");
+    assert!(html.contains("Check the spelling."), "{html}");
+}
+
+#[test]
+fn an_answer_that_may_not_be_whole_says_so_over_its_hits() {
+    let mut answer = answer();
+    answer.unfinished = Some(String::from("Templates did not answer"));
+    let html = page_html(move || find_results(answer));
+    assert!(
+        has(
+            &html,
+            "div",
+            &[("role", "status"), ("class", "fui-notice fui-tone-warn")]
+        ),
+        "{html}"
+    );
+    assert!(html.contains("Templates did not answer"), "{html}");
 }
 
 #[test]
@@ -328,34 +441,40 @@ fn a_hit_escapes_its_name_and_line() {
         }],
         ..SearchAnswer::default()
     };
-    let html = page_html(move || search_answer("find", answer));
+    let html = page_html(move || find_results(answer));
     assert!(!html.contains("<script>"), "{html}");
     assert!(html.contains("&lt;script&gt;x&lt;/script&gt;"), "{html}");
     assert!(html.contains("a &amp; b"), "{html}");
 }
 
 #[test]
-fn the_answer_is_one_overlay_surface_and_a_hits_line_keeps_its_row() {
-    let surface = "  .fui-search-results {\n    position: absolute;\n    inset: calc(100% + 0.375rem) 0 auto 0;\n    z-index: 35;\n    border: 1px solid var(--edge-strong);";
+fn the_panel_is_an_overlay_anchored_under_the_field_and_a_hits_line_keeps_its_row() {
+    let surface = "  .fui-search-results {\n    position: absolute;\n    top: calc(100% + 0.375rem);\n    inset-inline: -1px;\n    z-index: 35;\n    border: 1px solid var(--edge-strong);";
     assert!(
         STYLESHEET.contains(surface),
-        "the answer is no overlay surface"
+        "the panel is no overlay surface under the field"
     );
     assert!(
-        STYLESHEET.contains("  .fui-search-results li > a > .fui-small {\n    grid-row: 2;"),
+        STYLESHEET.contains("      width: max(calc(100% + 2px), min(40rem, 100vw - 2rem));"),
+        "the panel is not at least the field's width and at most 40rem"
+    );
+    assert!(
+        STYLESHEET.contains("  .fui-search {\n    position: relative;\n  }"),
+        "the panel is not anchored to the search box"
+    );
+    assert!(
+        STYLESHEET.contains("  .fui-hit > .fui-hit-line {\n    grid-row: 2;"),
         "a hit's line shares a row"
     );
     assert!(
-        STYLESHEET.contains(
-            "  .fui-search-results li > a > :is(.fui-identifier, .fui-tag) {\n    grid-row: 1 / 3;"
-        ),
+        STYLESHEET.contains("  .fui-hit > :is(.fui-identifier, .fui-tag) {\n    grid-row: 1 / 3;"),
         "a tag can clip the hit's line"
     );
 }
 
 #[test]
 fn a_search_that_can_carry_clinical_content_posts_its_query() {
-    let html = drawn(search(|search| search.post = true), None);
+    let html = drawn(search(|search| search.post = true));
     assert!(
         has(&html, "form", &[("role", "search"), ("method", "post")]),
         "{html}"

@@ -27,6 +27,8 @@ allow ^\{id\}-L                         # an editor line's id
 allow ^(tbody|thead|tr\[data-key|a\[href\]) # the CSS selectors of the work-list's rows and controls, which the browser code reads
 allow ^\\u\{2013\}$                     # the en dash an absent compare value draws, hidden from a reader beside its word
 allow ^fui-mark-(error|warning) is-current$   # the classes of a marked line the cursor is on
+allow ^fui-search-results is-(end|narrow)$   # the classes of a search panel opened from the field's end edge or as wide as the field
+allow ^(Accept|Content-Type)$          # the HTTP header names the search's typeahead sends
 allow ^input:checked, select,           # the CSS selector of a preference's chosen control, which the browser code focuses
 allow ^(\.fui-tnode-info a|\.fui-topology-list \[role|a, button$|:scope > svg$)   # the CSS selectors of the topology's quick look, List links and controls, which the browser code reads
 allow ^month \{month\} of \{year\} has \{\} days$   # a refused date's diagnostic for a console's log; a reader sees the catalog's words

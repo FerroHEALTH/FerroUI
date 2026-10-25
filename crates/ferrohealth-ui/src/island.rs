@@ -406,21 +406,17 @@ pub fn ChartLegend(
     crate::widget::chart::legend(plot, label, entries, gap)
 }
 
-/// The top bar's search box `search`, its answer under it, the server's
-/// children, open when `open`, Enter following the hit `selected`. A
-/// console draws it through [`crate::view::search::search_box`].
+/// The top bar's search box `search`, which opens its typeahead panel
+/// under the field, drawn in `words`. A console draws it through
+/// [`crate::view::search::search_box`].
 #[island]
 pub fn Search(
     /// What the search box holds, its words in the page's locale.
     search: crate::view::search::SearchBox,
-    /// The id of the hit Enter follows, the answer's first.
-    selected: Option<String>,
-    /// Whether the answer is open.
-    open: bool,
-    /// The answer, drawn on the server.
-    children: Children,
+    /// The words the panel draws, in the page's locale.
+    words: crate::view::search::SearchWords,
 ) -> impl IntoView {
-    crate::widget::search::search_control(search, selected, open, children().into_any())
+    crate::widget::search::search_control(search, words)
 }
 
 /// The repeatable rows `id`, named `label` (F7), around the rows, the

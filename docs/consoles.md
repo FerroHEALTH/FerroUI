@@ -71,6 +71,70 @@ write a lazy island of your own without it: the glue then imports
 any page hydrates. A build can check its glue for that import, as the
 gallery's `scripts/release/gallery-site.sh` does.
 
+## The top bar's search
+
+The search box (`view::search::search_box`) is a form that submits to your
+find page, and once the page has hydrated it is a typeahead: the panel
+anchored under the field asks your answer route as the words are typed.
+Your console provides three parts, and the library draws everything else.
+
+1. **The answer:** one function that turns the words into a
+   `view::search::SearchAnswer`: the words answered (`query`), the hits
+   grouped by kind (`groups`, every hit, which the panel cuts to five of a
+   kind), an `unfinished` sentence when one of your sources did not answer,
+   and the optional `head`, `none` and `more`.
+2. **The answer route:** name it in `SearchBox::suggest`. It answers the
+   panel with that answer as JSON.
+3. **The find page:** the form's `action`. It reads the same words and
+   draws `view::search::find_results(answer)` under its page heading, every
+   hit of each kind in a list card of its own, in the page. It is what a
+   search shows with no WebAssembly, and where "See all results" leads.
+
+The wire of the answer route:
+
+| | |
+|---|---|
+| Request, `SearchBox::post` off | `GET {suggest}?{name}={words}`, the words form-encoded, `Accept: application/json` |
+| Request, `SearchBox::post` on | `POST {suggest}`, `Content-Type: application/x-www-form-urlencoded`, body `{name}={words}`, so a search that can carry clinical content keeps its words out of the URL |
+| Credentials | Same origin: the page's own cookies go with it |
+| Answer | `200` with `application/json`, the `SearchAnswer` serialized by serde, as `serde_json` writes it |
+| Any other status | The panel shows "The search did not answer (status)" as a row |
+| A body that is no `SearchAnswer` | The panel shows that it could not read the answer |
+
+The panel asks from `SearchBox::suggest_from` characters (two by default),
+once the words rest for 200 ms, and drops an answer to words that have since
+changed. Your Content-Security-Policy keeps `connect-src 'self'`, which
+`default-src 'self'` gives. Check the session on the route as on any other,
+and log the words no more than your find page does. The answer travels as
+JSON:
+
+```json
+{
+  "query": "vital",
+  "head": null,
+  "groups": [
+    {
+      "kind": "Templates",
+      "hits": [
+        {
+          "href": "/templates/vital_signs.v1",
+          "name": "vital_signs.v1",
+          "line": "Vital signs encounter",
+          "mark": { "Glyph": "file-code" },
+          "tag": null
+        }
+      ]
+    }
+  ],
+  "none": null,
+  "unfinished": null,
+  "more": null
+}
+```
+
+A hit's `mark` is `{ "Glyph": "<lucide name>" }` or `{ "Dot": "Ok" }`
+(a `tone::Tone`); every field but `query` may be left out.
+
 ## Which document governs what
 
 | Question | Document |

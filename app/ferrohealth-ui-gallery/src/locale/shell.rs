@@ -152,14 +152,10 @@ messages! {
     Save = "save",
     /// `Search`
     Search = "search",
-    /// `All results in Tables`
-    SearchAllResults = "search-all-results",
     /// `Browse every file`
     SearchBrowse = "search-browse",
     /// `{ $kind } · { $lines } lines`
     SearchFileLine = "search-file-line",
-    /// `Names that start with “{ $query }”`
-    SearchFoundHead = "search-found-head",
     /// `Search waits while the index is rebuilding`
     SearchIndexRebuilding = "search-index-rebuilding",
     /// `Mapping files`

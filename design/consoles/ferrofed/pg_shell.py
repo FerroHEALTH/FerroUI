@@ -4,6 +4,7 @@
 search, the sidebar, the user menu, toasts, the status pages, About, the
 focus sheet and the shortcut legend."""
 from common import (
+    search_panel, find_results,
     MENU_SEP, OPERATOR, badge, button, card, definitions, disclosure, e, health_dot, hint, icon, icon_button,
     input_, link_button, menu, menu_item, notice, page_heading, pill, quiet_line, refusal, search_control, select,
     shell, shortcut_legend, stat_card, state, table, tabbed, tabs, td, th, titled_panel, toast, toasts, when,
@@ -170,39 +171,23 @@ def page_dashboard_dev():
 
 # ---- the top-bar search ----
 
-def mark_q(text, q):
-    i = text.lower().find(q.lower())
-    if i < 0:
-        return e(text)
-    return e(text[:i]) + f"<mark>{e(text[i:i + len(q)])}</mark>" + e(text[i + len(q):])
-
-
 def search_results_list(kind):
     if kind == "system":
-        body = ('<p class="fui-search-results-head">1 match for “legacy-zvs”</p><p class="fui-search-results-group">Routes</p><ul role="listbox" aria-label="Routes">'
-                f'<li role="option" aria-selected="true"><a href="node-routes.html">{icon("route", "14")}<span class="fui-search-results-name">{mark_q("legacy-zvs.example.org", "legacy-zvs")}</span>'
-                '<span class="fui-small fui-muted">A creating system: follow-ups of its records go to node-a, through node-a-pub (a route registered in the registry)</span></a></li></ul>')
-        return f'<div id="find-results" class="fui-search-results" role="region" aria-label="Search answer">{body}</div>'
+        return search_panel("legacy-zvs", [("Routes", [(icon("route", "16"), "legacy-zvs.example.org",
+                            "A creating system: follow-ups of its records go to node-a, through node-a-pub (a route registered in the registry)", "")])])
     if kind == "none":
-        body = (f'<div class="fui-search-results-empty">{icon("search-x", "16")}<div><strong>Nothing found for “node-x”.</strong>'
-                f'<span>The search never takes a patient identifier. <a href="query.html">Open the query console</a></span></div></div>')
-        return f'<div id="find-results" class="fui-search-results" role="region" aria-label="Search answer">{body}</div>'
+        return search_panel("node-x", empty=("Nothing found for “node-x”.",
+                            'The search never takes a patient identifier. <a href="query.html">Open the query console</a>'))
     q = "b"
     zvs, nb, nl = data.org("zvs"), data.node("node-b"), data.node("node-a-lab")
     groups = [
-        ("Organisations", [(zvs["name"], f"2 nodes · {word(data.org_tone(zvs))}", data.org_tone(zvs), routes.org_href("zvs"), True)]),
-        ("Nodes", [("node-b", f"Testkliniek Oost · {word(nb['tone'])}", nb["tone"], routes.node_href("node-b"), False),
-                   ("node-a-lab", f"Ziekenhuis Voorbeeldstad · {word(nl['tone'])}", nl["tone"], routes.node_href("node-a-lab"), False)]),
-        ("Stored queries", [("lab_results_recent", "2 versions", None, routes.sq_href("lab_results_recent"), False),
-                            ("problem_list", "3 versions", None, routes.sq_href("problem_list"), False)]),
+        ("Organisations", [(health_dot(data.org_tone(zvs)), zvs["name"], f"2 nodes · {word(data.org_tone(zvs))}", "")]),
+        ("Nodes", [(health_dot(nb["tone"]), "node-b", f"Testkliniek Oost · {word(nb['tone'])}", ""),
+                   (health_dot(nl["tone"]), "node-a-lab", f"Ziekenhuis Voorbeeldstad · {word(nl['tone'])}", "")]),
+        ("Stored queries", [(icon("database", "16"), "lab_results_recent", "2 versions", ""),
+                            (icon("database", "16"), "problem_list", "3 versions", "")]),
     ]
-    n = sum(len(i) for _, i in groups)
-    body = f'<p class="fui-search-results-head">{n} matches for “{q}”</p>'
-    for g, items in groups:
-        body += f'<p class="fui-search-results-group">{g}</p><ul role="listbox" aria-label="{g}">' + "".join(
-            f'<li role="option"{" aria-selected=\"true\"" if sel else ""}><a href="{href}">{health_dot(t) if t else icon("database", "14")}<span class="fui-search-results-name">{mark_q(nm, q)}</span>'
-            f'<span class="fui-small fui-muted">{e(line)}</span></a></li>' for nm, line, t, href, sel in items) + "</ul>"
-    return f'<div id="find-results" class="fui-search-results" role="region" aria-label="Search answer">{body}</div>'
+    return search_panel(q, groups)
 
 
 def topbar_state_page(state_=None, value="", results=None):

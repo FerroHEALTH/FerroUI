@@ -62,6 +62,7 @@ web-sys = { version = "0.3.85", default-features = false, features = [
   "FileList",
   "FocusEvent",
   "FocusOptions",
+  "Headers",
   "HtmlDetailsElement",
   "HtmlDialogElement",
   "HtmlElement",
@@ -79,6 +80,13 @@ web-sys = { version = "0.3.85", default-features = false, features = [
   "Node",
   "NodeList",
   "Performance",
+  "Request",
+  "RequestCredentials",
+  "RequestInit",
+  "Response",
+  "ScrollIntoViewOptions",
+  "ScrollLogicalPosition",
+  "UrlSearchParams",
   "Window",
 ] }
 

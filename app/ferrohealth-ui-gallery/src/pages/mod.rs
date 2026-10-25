@@ -14,6 +14,7 @@ pub mod code;
 pub mod configuration;
 pub mod dock;
 pub mod federation;
+pub mod find;
 pub mod forms;
 pub mod layouts;
 pub mod operations;

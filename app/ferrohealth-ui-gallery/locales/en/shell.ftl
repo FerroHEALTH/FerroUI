@@ -77,14 +77,12 @@ provider-sign = Provider sign-in
 remove = Remove
 save = Save
 search = Search
-search-all-results = All results in Tables
 search-browse = Browse every file
 search-file-line =
     { $kind } · { $lines } { $lines ->
         [one] line
        *[other] lines
     }
-search-found-head = Names that start with “{ $query }”
 search-index-rebuilding = Search waits while the index is rebuilding
 search-kind-files = Mapping files
 search-kind-templates = Templates

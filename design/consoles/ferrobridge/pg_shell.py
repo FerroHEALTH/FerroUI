@@ -4,6 +4,7 @@
 search, the sidebar, the user menu, toasts, the status pages, About, the
 focus sheet, the menu and action-group sheets and the shortcut legend."""
 from common import (
+    search_panel, find_results,
     MENU_SEP, badge, button, card, centred, copy_button, definitions, disclosure, e, empty_state, health_dot, icon, icon_button,
     input_, link_button, menu, menu_item, notice, page_heading, pill, refusal, search_control, select, shell, shortcut_legend,
     stat_card, table, tabbed, tabs, td, th, titled_panel, toast, toasts, when,
@@ -142,20 +143,14 @@ def page_dashboard_dev():
 
 def search_results_list(kind):
     if kind == "none":
-        body = quiet(f'Nothing found for “Immunization”. {SEARCH_SCOPE} <a href="mappings-files.html">Every mapping file</a>')
-        return f'<div id="find-results" class="fui-search-results" role="region" aria-label="Search answer">{body}</div>'
+        return search_panel("Immunization", empty=("Nothing found for “Immunization”.", e(SEARCH_SCOPE)), more="Every mapping file")
     groups = [
-        ("Contexts", [("synthetic_body_weight.context", "Observation · synthetic.vital_signs.v1 · 2 warnings", "warn", "file-program.html", True),
-                      ("synthetic_vital_signs.context", "Observation · synthetic.vital_signs.v1", "ok", "file-provisioned.html", False)]),
-        ("Mapping files", [("fhirconnect/models/body_weight.model.yml", "model · console · 1 warning", None, "file-model.html", False)]),
-        ("Templates", [("synthetic.vital_signs.v1", "template directory · 2 contexts", None, "template.html", False)]),
+        ("Contexts", [(health_dot("warn", "compiles with warnings"), "synthetic_body_weight.context", "Observation · synthetic.vital_signs.v1 · 2 warnings", ""),
+                      (health_dot("ok", "compiles"), "synthetic_vital_signs.context", "Observation · synthetic.vital_signs.v1", "")]),
+        ("Mapping files", [(icon("file-code", "16"), "fhirconnect/models/body_weight.model.yml", "model · console · 1 warning", "")]),
+        ("Templates", [(icon("file-code", "16"), "synthetic.vital_signs.v1", "template directory · 2 contexts", "")]),
     ]
-    body = '<p class="fui-search-results-head">4 matches for “weight”</p>'
-    for g, items in groups:
-        body += f'<p class="fui-search-results-group">{g}</p><ul role="listbox" aria-label="{g}">' + "".join(
-            f'<li role="option"{" aria-selected=\"true\"" if sel else ""}><a href="{href}">{health_dot(t, "compiles with warnings") if t == "warn" else (health_dot("ok", "compiles") if t else icon("file-code", "14"))}<span class="fui-search-results-name">{e(n)}</span>'
-            f'<span class="fui-small fui-muted">{e(line)}</span></a></li>' for n, line, t, href, sel in items) + "</ul>"
-    return f'<div id="find-results" class="fui-search-results" role="region" aria-label="Search answer">{body}</div>'
+    return search_panel("weight", groups)
 
 
 def topbar_state_page(state_=None, value="", results=None):

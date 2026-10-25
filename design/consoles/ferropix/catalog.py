@@ -6,6 +6,7 @@ import math
 
 import tpl
 from common import (
+    search_panel, find_results,
     MENU_SEP, THRESHOLDS, action_group, badge, busy_button, button, card, centred, check, chip, choice_group, compare,
     copy_button, definitions, disclosure, dock, dock_field, e, empty_quiet, empty_state, facts_row, field,
     icon, icon_button, identifier, input_, kbd, link_button, lockup, menu, menu_item, notice, page_heading,
@@ -722,23 +723,15 @@ def page_unreachable():
 
 def search_results_list(kind):
     if kind == "none":
-        body = (
-            f'<div class="fui-search-results-empty">{icon("search-x", "16")}<div><strong>No patient found for “Mohr 1985”</strong>'
-            '<span>Check the spelling or the year, or search by demographics for near spellings.</span></div></div>'
-            f'<a href="search-demographics.html" class="fui-search-results-more">Search by demographics{icon("arrow-right", "14")}</a>'
-        )
-    else:
-        people = ["mohr", "alissa"]
-        items = ""
-        for i, k in enumerate(people):
-            p = PERSONS[k]
-            d, t = p["identifiers"][0][:2]
-            items += (f'<li role="option"{" aria-selected=\"true\"" if i == 0 else ""}><a href="{person_href(k)}">'
-                      f'<span class="fui-search-results-main"><span class="fui-search-results-name">{e(p["name"])}</span><br />'
-                      f'<span class="fui-small fui-muted">Born {p["born"]}, {p["gender"]}</span></span>{identifier(d, t, static=True)}</a></li>')
-        body = (f'<p class="fui-search-results-head">2 patients · name and birth year</p><ul role="listbox" aria-label="Patients found">{items}</ul>'
-                f'<a href="search.html" class="fui-search-results-more">All results in Search{icon("arrow-right", "14")}</a>')
-    return f'<div id="find-results" class="fui-search-results" role="region" aria-label="Search answer">{body}</div>'
+        return search_panel("Mohr 1985", empty=("No patient found for “Mohr 1985”",
+                            "Check the spelling or the year, or search by demographics for near spellings."),
+                            more="Search by demographics")
+    hits = []
+    for k in ["mohr", "alissa"]:
+        p = PERSONS[k]
+        d, t = p["identifiers"][0][:2]
+        hits.append(("", p["name"], f"Born {p['born']}, {p['gender']}", identifier(d, t, static=True)))
+    return search_panel("", [("Patients", hits)], head="2 patients · name and birth year")
 
 
 def topbar_state_page(state=None, value="", results=None):

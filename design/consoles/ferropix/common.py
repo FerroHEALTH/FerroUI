@@ -891,7 +891,9 @@ def search_control(value="", state=None, word="Find", placeholder="Identifier, n
     glyph = (
         '<span class="fui-spinner-ring" aria-hidden="true"></span>' if state == "busy" else icon("search", "16")
     )
-    expanded = ' aria-expanded="true" aria-controls="find-results"' if results else ""
+    expanded = (' role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="find-results"'
+                + (' aria-activedescendant="find-hit-1"' if 'id="find-hit-1" class="fui-hit" aria-selected="true"' in results else "")
+                if results else "")
     res = results or ""
     return (
         f'<form role="search" method="post" action="#" class="{cls}"{busy}>'
@@ -1045,3 +1047,72 @@ DOT_WORD = {"ok": "ok", "warn": "attention", "bad": "failing", "neutral": "not k
 def health_dot(tone, label=None):
     word = DOT_WORD.get(tone, tone)
     return f'<span class="fui-dot fui-tone-{tone if tone != "muted" else "neutral"}{" is-muted" if tone == "muted" else ""}" role="img" aria-label="{e(label or word)}" title="{e(label or word)}"></span>'
+
+
+def marked(text, query):
+    """`text` escaped, with every match of `query` (any case) in the panel's
+    and the find page's mark."""
+    if not query:
+        return e(text)
+    out, low, q, at = "", text.lower(), query.lower(), 0
+    while True:
+        i = low.find(q, at)
+        if i < 0:
+            return out + e(text[at:])
+        out += e(text[at:i]) + f'<mark class="fui-search-match">{e(text[i:i + len(q)])}</mark>'
+        at = i + len(q)
+
+
+def search_panel(query, groups=(), head=None, empty=None, more=None, active=1, status=None):
+    """The top bar's typeahead panel as FerroUI draws it: a combobox's listbox
+    popup anchored under the field. `groups` is (kind, hits), each hit
+    (lead_html, name, line, tag_html); at most five of a kind show. `empty`
+    is (sentence, line_html), `more` (words) a way past, `status` (tone,
+    words) a waiting or error row, `active` the option the keys are on."""
+    rows = f'<p class="fui-search-results-head">{e(head)}</p>' if head else ""
+    if status:
+        tone, words = status
+        lead = '<span class="fui-spinner-ring" aria-hidden="true"></span>' if tone == "busy" else icon("circle-alert", "16")
+        cls = "" if tone == "busy" else f" fui-tone-{tone}"
+        rows += f'<p class="fui-search-results-status{cls}">{lead}{e(words)}</p>'
+    if empty:
+        sentence, line = empty
+        rows += (f'<div class="fui-search-results-empty">{icon("search-x", "16")}<div><strong>{e(sentence)}</strong>'
+                 f'<span>{line}</span></div></div>')
+    options, at = "", 0
+    for k, (kind, hits) in enumerate(groups, 1):
+        items = ""
+        for lead, name, line, tag in hits[:5]:
+            at += 1
+            sel = "true" if at == active else "false"
+            items += (f'<div role="option" id="find-hit-{at}" class="fui-hit" aria-selected="{sel}">{lead}'
+                      f'<span class="fui-hit-name">{marked(name, query)}</span>'
+                      f'<span class="fui-small fui-muted fui-hit-line">{marked(line, query)}</span>{tag}</div>')
+        options += (f'<div role="group" aria-labelledby="find-kind-{k}"><div role="presentation" id="find-kind-{k}" '
+                    f'class="fui-search-results-group">{e(kind)}</div>{items}</div>')
+    if groups:
+        options += (f'<div role="option" id="find-all" class="fui-search-results-more" aria-selected="false">'
+                    f'<span>See all results for “{e(query)}”</span>{icon("arrow-right", "14")}</div>')
+    if more:
+        options += (f'<div role="option" id="find-more" class="fui-search-results-more" aria-selected="false">'
+                    f'<span>{e(more)}</span>{icon("arrow-right", "14")}</div>')
+    return (f'<div id="find-panel" class="fui-search-results">{rows}'
+            f'<div role="listbox" id="find-results" aria-label="Search answer" class="fui-search-results-list">{options}</div></div>')
+
+
+def find_results(query, groups, head=None):
+    """The find page's results in the page, as FerroUI's find_results draws
+    them: one list card per kind with every hit a link. `groups` is (kind,
+    hits), each hit (lead_html, name, line, tag_html, href)."""
+    cards = ""
+    for kind, hits in groups:
+        items = "".join(
+            f'<li><a class="fui-hit" href="{href}">{lead}<span class="fui-hit-name">{marked(name, query)}</span>'
+            f'<span class="fui-small fui-muted fui-hit-line">{marked(line, query)}</span>{tag}</a></li>'
+            for lead, name, line, tag, href in hits)
+        cards += (f'<section class="fui-card fui-panel fui-worklist fui-list-card" aria-label="{e(kind)}">'
+                  f'<div class="fui-panel-head fui-list-head"><h2 class="fui-card-title"><span>{e(kind)} '
+                  f'<span class="fui-list-count">· {len(hits)}</span></span></h2><div class="fui-actions"></div></div>'
+                  f'<ul class="fui-find-list">{items}</ul></section>')
+    lead = f'<p class="fui-find-head fui-muted">{e(head)}</p>' if head else ""
+    return f'<div class="fui-find-results">{lead}{cards}</div>'

@@ -132,8 +132,32 @@ async fn the_slash_focuses_the_search_and_escape_clears_it_keeping_the_focus()
     .await
 }
 
+/// Types `words` into the search once its island has hydrated, and waits
+/// until the panel under it holds an answer.
+pub(crate) async fn typed(browser: &Browser, words: &str) -> Result<WebElement, Box<dyn Error>> {
+    let search = browser
+        .element(By::Css("#gallery-search[role='combobox']"))
+        .await?;
+    search.click().await?;
+    press(browser, words).await?;
+    let panel = browser.element(By::Id("gallery-search-panel")).await?;
+    until("the panel holds the answer", async || {
+        let shown = panel.is_displayed().await?;
+        let waiting = !browser
+            .driver()
+            .find_all(By::Css("#gallery-search-panel .fui-spinner-ring"))
+            .await?
+            .is_empty();
+        Ok(shown && !waiting)
+    })
+    .await?;
+    Ok(panel)
+}
+
+/// WAI-ARIA Authoring Practices 1.2, the combobox pattern: with no option
+/// active Enter submits the form, and on an active option it follows it.
 #[tokio::test(flavor = "multi_thread")]
-async fn enter_on_the_answer_follows_its_first_hit_and_a_new_query_submits()
+async fn enter_submits_to_the_find_page_and_on_an_active_hit_follows_it()
 -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
         return Ok(());
@@ -141,42 +165,26 @@ async fn enter_on_the_answer_follows_its_first_hit_and_a_new_query_submits()
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
         window(browser, 1440, 900).await?;
+        browser.goto(&gallery.url("/ferroterm/forms")).await?;
+        let panel = typed(browser, "synthetic-00").await?;
+        assert!(panel.is_displayed().await?, "the panel opens as you type");
+        press(browser, Key::Enter).await?;
         browser
-            .goto(&gallery.url("/ferroterm/forms?search=hits"))
+            .at(&gallery.url("/ferroterm/find?q=synthetic-00"))
             .await?;
-        let answer = browser.element(By::Id("gallery-search-results")).await?;
-        assert!(
-            answer.is_displayed().await?,
-            "the answer opens under the search"
-        );
-        let first = browser.element(By::Id("gallery-search-hit-1")).await?;
+        browser.goto(&gallery.url("/ferroterm/forms")).await?;
+        typed(browser, "synthetic-00").await?;
+        press(browser, Key::Down).await?;
+        let search = browser.element(By::Id("gallery-search")).await?;
         assert_eq!(
-            Some(String::from("true")),
-            first.attr("aria-current").await?
+            Some(String::from("gallery-search-hit-1")),
+            search.attr("aria-activedescendant").await?
         );
-        slash_reaches_the_search(browser).await?;
         press(browser, Key::Enter).await?;
         browser
             .at(&gallery.url("/ferroterm/tables?q=synthetic-001.model.yml"))
             .await?;
-        browser
-            .goto(&gallery.url("/ferroterm/forms?search=hits"))
-            .await?;
-        slash_reaches_the_search(browser).await?;
-        press(browser, "7").await?;
-        until("a new query closes the answer", async || {
-            Ok(!browser
-                .element(By::Id("gallery-search-results"))
-                .await?
-                .is_displayed()
-                .await?)
-        })
-        .await?;
-        press(browser, Key::Enter).await?;
-        browser
-            .at(&gallery.url("/ferroterm/tables?q=synthetic-007"))
-            .await?;
-        browser.console_clean("the answer").await
+        browser.console_clean("Enter on the panel").await
     })
     .await
 }
@@ -191,14 +199,11 @@ async fn escape_closes_the_answer_keeping_the_words_and_the_focus() -> Result<()
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
         window(browser, 1440, 900).await?;
-        browser
-            .goto(&gallery.url("/ferrofed/forms?search=hits"))
-            .await?;
-        let answer = browser.element(By::Id("gallery-search-results")).await?;
-        slash_reaches_the_search(browser).await?;
+        browser.goto(&gallery.url("/ferrofed/forms")).await?;
+        let answer = typed(browser, "synthetic-00").await?;
         let search = browser.element(By::Id("gallery-search")).await?;
         let words = search.prop("value").await?;
-        assert!(words.as_deref().is_some_and(|words| !words.is_empty()));
+        assert_eq!(Some(String::from("synthetic-00")), words);
         press(browser, Key::Escape).await?;
         until("Escape closes the answer", async || {
             Ok(!answer.is_displayed().await?)
@@ -206,6 +211,10 @@ async fn escape_closes_the_answer_keeping_the_words_and_the_focus() -> Result<()
         .await?;
         assert_eq!(words, search.prop("value").await?, "the words stay");
         assert_eq!("gallery-search", focused(browser).await?);
+        assert_eq!(
+            Some(String::from("false")),
+            search.attr("aria-expanded").await?
+        );
         press(browser, Key::Escape).await?;
         assert_eq!(
             Some(String::new()),
