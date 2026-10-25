@@ -500,14 +500,12 @@ impl Browser {
 /// Whether `error` is the browser saying an element it was asked about has
 /// left the page: the router drew that part of the page again.
 fn stale(error: &(dyn Error + 'static)) -> bool {
-    error
-        .downcast_ref::<WebDriverError>()
-        .is_some_and(|error| {
-            matches!(
-                error.as_inner(),
-                thirtyfour::error::WebDriverErrorInner::StaleElementReference(_)
-            )
-        })
+    error.downcast_ref::<WebDriverError>().is_some_and(|error| {
+        matches!(
+            error.as_inner(),
+            thirtyfour::error::WebDriverErrorInner::StaleElementReference(_)
+        )
+    })
 }
 
 /// Polls `check` every [`POLL`] until it holds, and fails naming `what` when
