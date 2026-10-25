@@ -1,32 +1,21 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The library's islands: the widgets that own their state and need nothing
-//! from a console's code, each ready to place in a page Leptos renders in
-//! islands mode.
+//! The library's ready components: the widgets that own their state and
+//! need nothing from a console's code, each ready to place in a page.
 //!
-//! Each island is a `#[island]` function of this module, and this module is
+//! Each one is a `#[component]` function of this module, and this module is
 //! the only list of them, so two changes that each add one touch different
-//! lines.
+//! lines. The module keeps the name it had while the consoles rendered in
+//! islands mode (FerroUI #410 moved them to whole-page hydration).
 //!
-//! An island is the only part of a page the browser hydrates (the Leptos
-//! book, "Guide: Islands"). Its props cross to the browser as JSON in the
-//! page, so they are plain data, and the words it draws are among them,
-//! resolved on the server in the page's locale. Each island here is
-//! a thin wrapper over its widget function in [`crate::widget`], so a
-//! console that needs the widget beside state of its own calls that function
-//! inside an island of its own instead.
+//! Each component here is a thin wrapper over its widget function in
+//! [`crate::widget`], so a console that needs the widget beside state of
+//! its own calls that function in a component of its own instead. Its words
+//! are props, resolved in the page's locale.
 #![expect(
     clippy::must_use_candidate,
-    reason = "the #[island] macro drops a #[must_use] from the function it writes"
-)]
-#![expect(
-    missing_docs,
-    reason = "the #[island] macro writes an undocumented struct of each island's props as they cross to the browser"
-)]
-#![expect(
-    clippy::mem_forget,
-    reason = "the island macro of leptos_macro 0.8 keeps each hydrated island alive by forgetting its view state, in the browser entry it writes"
+    reason = "the #[component] macro drops a #[must_use] from the function it writes"
 )]
 
 use leptos::prelude::*;
@@ -39,7 +28,7 @@ use crate::widget::toast::{Flash, RegionWords};
 /// The toast region, which draws `flash` as the page arrives and every
 /// toast [`crate::widget::toast::raise`] shows after. A console draws it
 /// once, in its shell.
-#[island]
+#[component]
 pub fn ToastRegion(
     /// The words it draws, in the page's locale
     /// ([`RegionWords::of_page`]).
@@ -53,7 +42,7 @@ pub fn ToastRegion(
 /// The keyboard tabs `prefix`, named `label`, one tab per word in `tabs`,
 /// over the panels [`crate::widget::tabs::tab_panels`] drew as its
 /// children.
-#[island]
+#[component]
 pub fn KeyboardTabs(
     /// The tab list's name, in the page's locale.
     label: String,
@@ -71,10 +60,10 @@ pub fn KeyboardTabs(
 /// choice in `views`, over the views the server drew as its children; the
 /// view `opening` shows first. A console draws it through
 /// [`crate::view::document::document_pane`].
-#[island]
+#[component]
 #[expect(
     clippy::needless_pass_by_value,
-    reason = "an island takes its props by value, as they arrive from the page"
+    reason = "a ready component takes its props by value"
 )]
 pub fn DocumentViews(
     /// The pane's id, which each view's id starts with.
@@ -93,7 +82,7 @@ pub fn DocumentViews(
 
 /// The key hint of a setting, copying its `key` when pressed (R15). The
 /// settings template draws it on each setting's label line.
-#[island]
+#[component]
 pub fn KeyHint(
     /// The configuration key it names and copies.
     key: String,
@@ -108,7 +97,7 @@ pub fn KeyHint(
 /// live region at its set points. The server draws the time left, so with
 /// no WebAssembly the page shows it as it was drawn. A console draws it
 /// through [`crate::view::lifecycle::trial_actions`].
-#[island]
+#[component]
 pub fn CommitCountdown(
     /// The countdown, its time left and its words
     /// ([`crate::widget::countdown::Countdown::new`]).
@@ -120,7 +109,7 @@ pub fn CommitCountdown(
 /// The copy button `id` saying `label`, putting what `source` names on the
 /// clipboard when pressed ([`crate::widget::copy`]). The server draws it
 /// hidden, so with no WebAssembly the text stays on the page to select.
-#[island]
+#[component]
 pub fn CopyButton(
     /// The button's id.
     id: String,
@@ -141,7 +130,7 @@ pub fn CopyButton(
 /// input by its id alone, so the typed value is never a prop; until the
 /// page's WebAssembly runs it is disabled and says the field stays masked.
 /// A console draws it through [`crate::view::form::Inner::HoldToShow`].
-#[island]
+#[component]
 pub fn HoldToShow(
     /// The id of the masked input it shows.
     input: String,
@@ -156,7 +145,7 @@ pub fn HoldToShow(
 /// its children, and its `opener`: a link to the content's own route until
 /// the page hydrates, then the button that opens the panel
 /// ([`crate::widget::side_panel`]).
-#[island]
+#[component]
 pub fn SidePanel(
     /// The panel's id.
     id: String,
@@ -182,7 +171,7 @@ pub fn SidePanel(
 /// The work-list around the data table the server drew as its children,
 /// its rows from [`crate::widget::worklist::row`]: the keys move the
 /// focused row and Enter follows its row link ([`crate::widget::worklist`]).
-#[island]
+#[component]
 pub fn WorkList(
     /// The data table and the rows, drawn on the server.
     children: Children,
@@ -200,7 +189,7 @@ pub fn WorkList(
 /// the keys, panning by the pointer, the quick look on "i" or Space and the
 /// arrows along the List ([`crate::widget::topology`]). A console draws it
 /// through [`crate::view::topology::topology`].
-#[island]
+#[component]
 pub fn TopologyKeys(
     /// The topology's classes, its view among them.
     class: String,
@@ -216,10 +205,10 @@ pub fn TopologyKeys(
 /// leads to `chosen`, with the submit button saying `go`. A console draws it through
 /// [`crate::view::tabs::binder`], which places it past
 /// [`crate::view::tabs::MANY`] tabs.
-#[island]
+#[component]
 #[expect(
     clippy::needless_pass_by_value,
-    reason = "an island takes its props by value, as they arrive from the page"
+    reason = "a ready component takes its props by value"
 )]
 pub fn TabSelect(
     /// The tabs' name, in the page's locale.
@@ -239,7 +228,7 @@ pub fn TabSelect(
 /// entries the server drew as its children, its close button saying
 /// `close`, folded to its glyphs while `rail`. A console draws it through
 /// [`crate::widget::nav::sidebar`].
-#[island]
+#[component]
 pub fn NavDrawer(
     /// The drawer's id, which the drawer button opens.
     id: String,
@@ -260,7 +249,7 @@ pub fn NavDrawer(
 /// around the head and the ARIA menu the server drew as its children, its
 /// sheet's Cancel saying `cancel`. A console draws it through
 /// [`crate::widget::menu::user_menu`].
-#[island]
+#[component]
 pub fn UserMenuButton(
     /// The popup's id, which its button opens; its ARIA menu's is this and
     /// `-menu`.
@@ -285,7 +274,7 @@ pub fn UserMenuButton(
 /// [`crate::widget::action_menu::variants_menu`],
 /// [`crate::widget::action_menu::labelled_menu`] or
 /// [`crate::widget::action_menu::listbox`].
-#[island]
+#[component]
 pub fn MenuButton(
     /// The menu's id, which its trigger controls.
     id: String,
@@ -319,7 +308,7 @@ pub fn MenuButton(
 /// The combobox `id`, posting its value as `name`: a native select until
 /// the page hydrates, then the filtering listbox
 /// ([`crate::widget::combobox`]).
-#[island]
+#[component]
 pub fn Combobox(
     /// The control's id.
     id: String,
@@ -354,7 +343,7 @@ pub fn Combobox(
 
 /// The picker field `id`: a choice from what the server holds or a typed
 /// value, posted as `name` ([`crate::widget::picker`]).
-#[island]
+#[component]
 pub fn PickerField(
     /// The text input's id; the select's is this with `-choice`.
     id: String,
@@ -391,7 +380,7 @@ pub fn PickerField(
 /// The legend of a line chart's plot `plot`: a static key until the page
 /// hydrates, then a toggle per series. A console draws it through
 /// [`crate::widget::chart::line_chart`].
-#[island]
+#[component]
 pub fn ChartLegend(
     /// The id of the plot the series are drawn in.
     plot: String,
@@ -409,7 +398,7 @@ pub fn ChartLegend(
 /// The top bar's search box `search`, which opens its typeahead panel
 /// under the field, drawn in `words`. A console draws it through
 /// [`crate::view::search::search_box`].
-#[island]
+#[component]
 pub fn Search(
     /// What the search box holds, its words in the page's locale.
     search: crate::view::search::SearchBox,
@@ -423,7 +412,7 @@ pub fn Search(
 /// blank row and Add the server drew as its children: Remove and Add post
 /// the console's form until the page hydrates, then work in place. A
 /// console draws it through [`crate::widget::repeat::repeat`].
-#[island]
+#[component]
 pub fn Repeater(
     /// The list's id.
     id: String,
@@ -440,8 +429,7 @@ pub fn Repeater(
 /// and the typed text posts with its form whether or not the WebAssembly
 /// runs. With the `split` feature it is lazy, its code loading from its own
 /// chunks under `cargo leptos build --split`.
-#[cfg_attr(feature = "split", island(lazy))]
-#[cfg_attr(not(feature = "split"), island)]
+#[component]
 pub fn DatePicker(
     /// The field, its bounds, its quick choices and its words
     /// ([`crate::widget::date::DateWords::of_page`]).
@@ -454,8 +442,7 @@ pub fn DatePicker(
 /// R25): its From and To fields until the WebAssembly runs, then one button
 /// naming the range. With the `split` feature it is lazy, its code loading
 /// from its own chunks under `cargo leptos build --split`.
-#[cfg_attr(feature = "split", island(lazy))]
-#[cfg_attr(not(feature = "split"), island)]
+#[component]
 pub fn DateRangePicker(
     /// The range, its ends, its presets and its words.
     range: crate::widget::date::DateRange,
@@ -468,8 +455,7 @@ pub fn DateRangePicker(
 /// the toggle's link, which the console's server answers. With the `split`
 /// feature it is lazy, its code loading from its own chunks under
 /// `cargo leptos build --split`.
-#[cfg_attr(feature = "split", island(lazy))]
-#[cfg_attr(not(feature = "split"), island)]
+#[component]
 pub fn TreeView(
     /// The tree, its items and its open and selected items as the server
     /// drew them.
@@ -486,7 +472,7 @@ pub fn TreeView(
 /// back on the control of the row just `saved`. A console draws it through
 /// [`crate::view::preferences::select_preference`] and the page
 /// [`crate::view::preferences::preferences_page`].
-#[island]
+#[component]
 pub fn PreferenceForm(
     /// The console's route that keeps the preference in its cookie.
     action: String,
@@ -506,20 +492,15 @@ pub fn PreferenceForm(
 #[cfg(test)]
 mod tests {
     #[test]
-    fn a_library_island_is_lazy_only_with_the_split_feature() {
-        // NOTE: #331: without `cargo leptos build --split` a lazy island's glue imports an unresolvable module.
+    fn no_library_component_is_an_island() {
+        // NOTE: tachys 0.2 `src/html/islands.rs`: a client render builds no island children,
+        // so an island would draw nothing after a client navigation.
         let source = include_str!("island.rs");
-        let attributes: Vec<&str> = source
+        let islands = source
             .lines()
             .map(str::trim)
-            .filter(|line| line.starts_with("#[") && line.contains("island(lazy)"))
-            .collect();
-        assert!(!attributes.is_empty(), "the library has lazy islands");
-        for attribute in attributes {
-            assert_eq!(
-                r#"#[cfg_attr(feature = "split", island(lazy))]"#, attribute,
-                "a lazy island waits for the split feature"
-            );
-        }
+            .filter(|line| line.starts_with("#[") && line.contains("island"))
+            .count();
+        assert_eq!(0, islands, "every ready component is a #[component]");
     }
 }

@@ -283,7 +283,7 @@ async fn masked_field(browser: &Browser) -> Result<(), Box<dyn Error>> {
     input.send_keys("123456782").await?;
     assert_eq!(Some(String::from("password")), input.attr("type").await?);
     let eye = browser
-        .element(By::Css("#edge-identifier + leptos-island > button"))
+        .element(By::Css("#edge-identifier + button"))
         .await?;
     assert!(!eye.is_enabled().await?, "the eye is disabled");
     assert!(

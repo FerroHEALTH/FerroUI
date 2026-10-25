@@ -289,12 +289,6 @@ fn the_time_left_is_a_timer_and_a_polite_region_says_the_set_points() {
         ) && status_text(&drawn).trim().is_empty(),
         "the polite region starts silent and says only the set points: {drawn}"
     );
-    assert!(
-        drawn.contains(
-            "&quot;said&quot;:[&quot;60 seconds left&quot;,&quot;30 seconds left&quot;,&quot;10 seconds left&quot;]"
-        ),
-        "the set points' words reach the island as props: {drawn}"
-    );
     let ended = trial(0);
     assert!(ended.contains("<strong>0:00</strong>"), "{ended}");
     assert!(ended.contains("ended at 10:14:42"), "{ended}");

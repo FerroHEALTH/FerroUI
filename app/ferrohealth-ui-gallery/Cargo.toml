@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: BUSL-1.1
 [package]
 name = "ferrohealth-ui-gallery"
-description = "The gallery of the FerroHEALTH UI components: every component in every product theme, light and dark, rendered on the server with its interactive components hydrated as islands"
+description = "The gallery of the FerroHEALTH UI components: every component in every product theme, light and dark, rendered on the server and hydrated whole, each page a lazy route"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -24,15 +24,15 @@ name = "ferrohealth-ui-gallery"
 path = "src/main.rs"
 
 [dependencies]
-# The gallery builds with `cargo leptos build --split`, so the library's
-# lazy islands load from their own chunks (scripts/release/gallery-site.sh).
-ferrohealth-ui = { path = "../../crates/ferrohealth-ui", features = ["split"] }
+# The gallery builds with `cargo leptos build --split`, so each page, a lazy
+# route, loads its code from chunks of its own (scripts/release/gallery-site.sh).
+ferrohealth-ui = { path = "../../crates/ferrohealth-ui" }
 # The pseudo-locale's catalog, a Fluent loader over the library's English.
 fluent-templates.workspace = true
-leptos = { workspace = true, features = ["islands"] }
+leptos = { workspace = true }
 leptos_meta.workspace = true
 leptos_router.workspace = true
-# An island's props cross to the browser as JSON, derived through serde.
+# The state the server read crosses to the browser as JSON, through serde.
 serde.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
@@ -41,7 +41,7 @@ wasm-bindgen.workspace = true
 wasm-bindgen-futures.workspace = true
 console_error_panic_hook.workspace = true
 # The concept tree keeps its open items in the address, a confirm closes its
-# dialog, and the entry marks the root element once the islands hydrate.
+# dialog, and the app marks the root element once the page hydrates.
 web-sys = { workspace = true, features = ["Document", "Element", "History", "HtmlElement", "Window"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

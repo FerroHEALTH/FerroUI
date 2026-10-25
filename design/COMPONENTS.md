@@ -63,16 +63,16 @@ These hold on every page of every console. A page that breaks one is a defect.
 
 ## Interaction
 
-Every component follows one interaction contract, so the consoles behave alike and every page keeps working when its WebAssembly has not loaded (FerroUI#196):
+Every component follows one interaction contract, so the consoles behave alike and no interaction reloads the page (FerroUI#196, the mode rewritten by the owner's ruling on FerroUI#410):
 
 1. **Native elements first:** `<dialog>`, the `popover` attribute, `<details>`, plain links, and GET and POST forms.
-2. **Behaviour in Rust compiled to WebAssembly:** menus and sheets (F13), keyboard tabs (R3), the date picker (R25), toasts with actions (R17), the reveal countdown (R13), live polling, topology pan and zoom (F9), work-list focus (R9), and the YAML and AQL editor (B2).
-3. **Every page works without the WebAssembly:** complete server-rendered HTML, and a link or a form behind every important action. A select whose choice changes the page (the phone tab select, a staged change's What changes) carries a visible submit beside it, Go or Apply (a field's select and its Apply share one row, `fui-field-row-actions`), and never posts on its change alone (WCAG 2.2 SC 3.2.2 On Input).
-4. **No hand-written JavaScript and no npm:** only the `wasm-bindgen` glue and the island loader Leptos writes. The strict CSP stays.
+2. **Behaviour in Rust compiled to WebAssembly:** menus and sheets (F13), keyboard tabs (R3), the date picker (R25), toasts with actions (R17), the reveal countdown (R13), live polling, topology pan and zoom (F9), work-list focus (R9), the search panel, and the YAML and AQL editor (B2).
+3. **Interactions stay in the page.** A link is followed in the page by the console's router, and a form submits through it, so the shell, the theme and every component's state survive; the next page's code is loaded before the click when a link is hovered or focused. A plain link or post that loads a new document is the fallback while the WebAssembly has not loaded, never the normal path, so every important action still has one: complete server-rendered HTML, and a link or a form behind it. A select whose choice changes the page (the phone tab select, a staged change's What changes) carries a visible submit beside it, Go or Apply (a field's select and its Apply share one row, `fui-field-row-actions`), and never posts on its change alone (WCAG 2.2 SC 3.2.2 On Input).
+4. **No hand-written JavaScript and no npm:** only the `wasm-bindgen` glue and the loader Leptos writes. The strict CSP stays.
 
-The consoles render in **Leptos islands mode** (the Leptos book, "Guide: Islands"): the server draws every page whole, and the browser hydrates only the interactive parts, each a small island of its own. Navigation is plain links and forms, with no client router. An island's props, its words among them, are resolved on the server and are page content, so no island carries clinical data the page does not already show. Toasts come from one region island in the shell; with no WebAssembly the server draws the outcome of a form post in it.
+The consoles hydrate the whole page (the Leptos book, "Hydration"), and each page is a lazy route whose code loads from chunks of its own ("Code Splitting"). The state a page draws from (the theme, the session's preferences, a listing's position) reaches the browser as the server read it, through hydration or a server function, so both halves draw the same page. Toasts come from one region in the shell; with no WebAssembly the server draws the outcome of a form post in it.
 
-Hydrating the whole page was measured against islands on the gallery and rejected: 685903 bytes of brotli-compressed WebAssembly against 427449, and on a slowed phone profile 315 ms against 277 ms to interactive on the forms page. The gallery's budget is 491520 bytes, since every island takes its words as props and the browser carries no catalog; each console keeps its own (FerroBRIDGE: 458752). The islands router is revisited when Leptos ships it stable.
+Islands mode was measured and kept while bundle size led the choice; the owner ruled on FerroUI#410 that a reload on every click is not acceptable and that the experience outranks the bundle. With every page a lazy route, the gallery's entry WebAssembly is 465338 bytes brotli-compressed, the islands entry's size, under its 491520-byte budget; each console keeps its own (FerroBRIDGE: 458752).
 
 ## Page templates
 

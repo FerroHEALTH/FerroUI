@@ -43,51 +43,54 @@ the Authoring Practices (`spec-adherence.md`).
 ## 1. The interaction contract and the three parts
 
 Every component follows one interaction contract (owner, 2026-10-22,
-#196), so the consoles behave alike and every page keeps working when its
-WebAssembly has not loaded:
+#196; the mode rewritten by the owner's ruling on #410, 2026-10-25), so the
+consoles behave alike and no interaction reloads the page:
 
 1. **Native elements first:** `<dialog>`, the `popover` attribute,
    `<details>`, plain links, and GET and POST forms.
-2. **Behaviour in Rust compiled to WebAssembly**, in islands (§15): menus
-   and sheets, keyboard tabs, the date picker, toasts with actions, the
-   reveal countdown, live polling, topology pan and zoom, work-list focus,
-   and the YAML and AQL editor.
-3. **Every page works without the WebAssembly:** complete server-rendered
-   HTML, and a link or a form behind every important action. The gallery's
-   no-WebAssembly journey (`tests/it/no_wasm.rs`) loads every page with the
-   bundle refused and holds its content, links, forms and popovers to it.
+2. **Behaviour in Rust compiled to WebAssembly** (§15): menus and sheets,
+   keyboard tabs, the date picker, toasts with actions, the reveal
+   countdown, live polling, topology pan and zoom, work-list focus, the
+   search panel, and the YAML and AQL editor.
+3. **Interactions stay in the page, with no document reload:** the
+   console's router follows a link and submits a form in the page (§15.2).
+   A plain link or post that loads a new document is the fallback while the
+   WebAssembly has not loaded, never the normal path, so complete
+   server-rendered HTML and a link or a form stay behind every important
+   action. The gallery's no-WebAssembly journey (`tests/it/no_wasm.rs`)
+   loads every page with the bundle refused and holds its content, links,
+   forms and popovers to it.
 4. **No hand-written JavaScript and no npm:** only the `wasm-bindgen` glue
-   and the island loader Leptos writes, no JavaScript library, and the
-   editor is a light Rust editor. The strict CSP and the budget (§12) stay.
+   and the loader Leptos writes, no JavaScript library, and the editor is a
+   light Rust editor. The strict CSP and the budget (§12) stay.
 
-**The mode is Leptos islands** (book `islands`; decided on #196). Hydrating
-the whole page was measured and rejected (§12): it ships every page's code,
-and the data its server components read a second time as hydration state,
-where islands ship only the interactive parts and only their props reach
-the browser. A console sets the `leptos` feature `islands`, calls
-`leptos::mount::hydrate_islands()` from its browser entry, and writes
-`<HydrationScripts options islands=true/>` in its shell. The islands router
-is revisited when Leptos ships it stable (§15.6). The library has three
-parts:
+**The mode is the whole page hydrated, split by route** (book
+`ssr/22_life_cycle`, `deployment/binary_size` "Code Splitting"; decided on
+#410). Islands mode (#196) was set aside by the owner's ruling that a reload
+on every click is not acceptable; the Leptos 0.8.22 islands router never
+diffs an island's children or props and has no fallback for a failed
+navigation (`crates/ferrohealth-ui/CLAUDE.md`). A console turns on
+`hydrate` in its browser half, calls `leptos::mount::hydrate_lazy(App)`
+from its browser entry, writes `<HydrationScripts options/>` in its shell,
+draws its pages in a few `LazyRoute`s and builds with `cargo leptos build
+--split` (§15.1). The library has three parts:
 
-- **`view`: static view functions.** Plain functions returning a typed view,
-  never a `#[component]` (a component writes a props type and a builder the
-  bundle carries for each) and never taking a reactive prop. They are drawn
-  on the server alone, and through `to_html()` into a string a read-only
-  screen draws with `inner_html`. What they need to behave they get from the
-  browser: a `popover` opens and closes with no script, a `<details>` folds,
-  a form posts.
-- **`island`: the library's islands**, each a small `#[island]` over its
+- **`view`: view functions.** Plain functions returning a typed view, never
+  a `#[component]` (a component writes a props type and a builder the
+  bundle carries for each) and never taking a reactive prop. The server
+  draws them, and the browser draws them again as the page hydrates or the
+  router draws the next page. What they need to behave they get from the
+  browser: a `popover` opens and closes with no script, a `<details>`
+  folds, a form posts.
+- **`island`: the ready components**, each a small `#[component]` over its
   widget function that owns its state and takes its words as props: the
-  toast region, the navigation drawer, the keyboard tabs. Never an island
-  around a whole page section. The module's `#![expect]` lines cover what
-  the island macro writes (a forgotten view state, an undocumented props
-  struct, a dropped `#[must_use]`).
-- **`widget`: the interactive components as functions** a page calls inside
-  an island: one of the library's own, or a console's own island where the
-  widget shares state with the console's code (an editor and the check that
-  runs as you type, a filter and the list it filters). Browser-only calls
-  run inside an event handler or an `Effect`, behind
+  toast region, the navigation drawer, the keyboard tabs, the search box.
+  The module keeps its name from islands mode.
+- **`widget`: the interactive components as functions** a page calls: one
+  of the library's own, or a console's own component where the widget
+  shares state with the console's code (an editor and the check that runs
+  as you type, a filter and the list it filters). Browser-only calls run
+  inside an event handler or an `Effect`, behind
   `#[cfg(target_arch = "wasm32")]`, so the first paint is the server's and
   hydration matches it.
 - **A console's screens are erased sections** (`.into_any()`): a monolithic
@@ -95,20 +98,20 @@ parts:
   `shell` and `centred` take and return `AnyView` for that reason.
 
 Every widget takes the words it draws as props (§15.4): a `*Words` struct
-whose `of_page()` resolves them on the server, and an `i18n::Phrase` for a
-sentence around a value the browser learns, so a console's browser entry
-builds no locale and its bundle carries no catalog. A word is an
+whose `of_page()` resolves them in the page's locale, and an `i18n::Phrase`
+for a sentence around a value the browser learns. A word is an
 `i18n::Word`, drawn inside `<span lang="en">` when it fell back to English
 on a page in another language (WCAG 2.2 SC 3.1.2); a word in an attribute
-takes the page's language. A count an island learns is written with the
+takes the page's language. A count a widget learns is written with the
 page's `i18n::number::Grouping`, carried in its words.
 
 ## 2. Render-mode agnostic
 
 The library compiles under `csr`, `ssr` and `hydrate` alike, with
-`leptos = { default-features = false, features = ["islands"] }` (the
-feature re-exports serde for the island macro and changes nothing else);
-the console's own Leptos dependency turns the mode on and features unify. A console chooses its
+`leptos = { default-features = false }`; the console's own Leptos
+dependency turns the mode on and features unify. A console never turns on
+`islands`: a client render builds no island children (tachys 0.2
+`src/html/islands.rs`), so a page the router draws would lose them. A console chooses its
 halves by compilation target, never by a Cargo `ssr`/`hydrate` feature pair,
 so a workspace `--all-features` build never enables both. The browser half
 asks for the lowest `web-sys` and `wasm-bindgen-futures` the library's
@@ -160,7 +163,7 @@ lock picks its wasm-bindgen and the CLI that must equal it
 `table::model` is the arithmetic, `table::view` the data table, its cells and
 the list card, `table::pager` the link pager and the `POST` pager, and
 `table::filter` the find field: every sort, filter and step is a link or a
-form, so a listing works with no WebAssembly and no row is an island prop. Page and size are read
+form, so a listing works with no WebAssembly too. Page and size are read
 defensively (`?page=` 1-based, `?size=` with choices 25, 50, 100, clamped to
 200), the range label names the rows on the page ("1-25 of 312", a short
 last page "301-312 of 312"), a step that cannot be taken stays visible as a
@@ -302,11 +305,11 @@ dependency or a heavy generic is justified against the bytes it adds. The
 gallery, which carries every component, is held to a budget in CI:
 `scripts/checks/gallery-bundle.sh` fails when its brotli-compressed entry
 WebAssembly is over the number below, which the script reads from this
-table. The entry is what every page loads before any island hydrates; a
-lazy island's code (`#[island(lazy)]`, §15.8) is cut out of it by
-`cargo leptos build --split` and loads from its own chunks on a page that
-draws it. The script prints what each lazy island adds and all the chunks
-together beside the entry, so a chunk that grows is seen.
+table. The entry is what every page loads before its route's code; the
+pages load in five lazy routes (§14.11), cut out of the entry by `cargo
+leptos build --split` and loaded from their own chunks, ahead of the visit by
+`widget::prefetch`. The script prints all the chunks together beside the
+entry, so a chunk that grows is seen.
 
 | Measure | Budget |
 |---|---|
@@ -329,6 +332,15 @@ layouts page the concept tree's 41313, and every other page none. The combobox, 
 field stay in the entry: lazy, they cut 43 KB from every page and added
 46 KB to the forms page, in chunks that compress worse alone. The budget
 stayed where it was.
+With the whole page hydrated (#410) every page is a lazy route: the entry is
+465338 bytes, what the islands entry measured with the search panel
+(465420), and each page's code, 1846251 bytes of chunks for all of them,
+loads with its route, ahead of the visit by `widget::prefetch`. Hydrated
+whole with no split the gallery was 1557224 bytes. One lazy route a page
+made 811 chunks, a page needing 300 to 444, and Chrome refused the fetches
+past its limit (`net::ERR_INSUFFICIENT_RESOURCES`), so the 21 pages load in
+five groups: 32 chunks, 16 a group, the entry 474860 bytes and the chunks
+1456880. The budget stayed where it was.
 The gallery's measures in bytes, the first three rows the spike of #196
 (the same gallery both ways):
 
@@ -342,6 +354,10 @@ The gallery's measures in bytes, the first three rows the spike of #196
 | v0.3.1 islands, one piece (b742acc) | 2071614 | 809209 | 588808 | 28335 / 7123 |
 | Words as props again (#262) | 1934809 | 744438 | 538968 | 28337 / 7090 |
 | Entry with eight lazy islands (#262) | 1259810 | 486607 | 363730 | 29138 / 7285 |
+| Islands with the search panel (v0.4.0) | 1604276 | 629196 | 465420 | 34813 / 8434 |
+| Whole page, no split (#410 spike) | 5795592 | 2211988 | 1557224 | 34461 / 8189 |
+| Whole page, every page a lazy route (#410) | 1495980 | 599923 | 465338 | 36651 / 8352 |
+| Whole page, five groups of pages (#410) | 1528309 | 613370 | 474860 | 36800 / 8555 |
 
 Time to interactive on the forms page, Chrome for Testing with the CPU
 slowed 4x (the mid-tier phone rate) and the bundle served locally, the
@@ -380,9 +396,9 @@ the lookup order: our own design; the message syntax is Project Fluent's.
   (`Locale::negotiate` reads `Accept-Language`), hands it to
   `i18n::provide_locale` at the root of its page tree on the server, and
   writes `Locale::tag` as `<html lang>` (WCAG 2.2 SC 3.1.1). A page that
-  provides none draws English. Under islands that root context never
-  reaches the browser, and a `SharedValue` at the root serializes nothing:
-  an island gets its words as props (§15.4).
+  provides none draws English. The browser draws the page too, so the
+  console provides the same locale in its browser half: a `SharedValue` of
+  the tag at the root carries the server's choice (§15.4).
 - **A component reads its words while the page tree is in reach.** A view
   function calls the crate's lookup as it builds its view; a widget reads
   every word it may draw at setup and moves the strings into its handlers
@@ -451,8 +467,8 @@ difference is named.
   is `Option<Callback<T>>`, never an optional generic, which does not
   compile (book `view/03_components`). [compiler]
 - **A generic used by no prop is `#[prop(marker)] PhantomData<T>`**, which
-  leaves the builder and the docs and is skipped when an island serializes
-  its props (book `view/03_components`, "`marker` Props"). [review]
+  leaves the builder and the docs (book `view/03_components`, "`marker`
+  Props"). [review]
 - **Every component and every prop has a doc comment**: the macro writes them
   onto the props builder (book `view/03_components`, "Documenting
   Components"). [compiler: `missing_docs`]
@@ -466,8 +482,7 @@ difference is named.
   state; context is found by type at run time, so a bare `bool` or
   `String` context collides (book `view/08_parent_child`). `<Provider>`
   provides without shadowing a same-type context of the caller (leptos
-  `src/provider.rs`). Under islands a callback never crosses an island
-  boundary (§15.2). [review]
+  `src/provider.rs`). [review]
 - **Children:** `Children` once, `ChildrenFn` when rendered more than once,
   `ChildrenFragment` to wrap each child, `#[slot]` for typed children, and
   `StoredValue` to project `ChildrenFn` through nested components (book
@@ -583,9 +598,9 @@ gallery.
   Security"). [review]
 - **No `usize` or `isize` in a server function's arguments or result, or in
   any serialized type** (book `server/25_server_functions`, "Quirks").
-  [review; check L8 for island props]
-- **A mutation is a `ServerAction`, and the default form is `<ActionForm>`
-  in a server component** (§15.7): it posts with no WebAssembly, returns
+  [review; check L8]
+- **A mutation is a `ServerAction`, and the default form is `<ActionForm>`**
+  (§15.6): it runs in the page, and it posts with no WebAssembly, returns
   through the form redirect, and shows an error from `__err` (book
   `progressive_enhancement/action_form`; server_fn 0.8.13 `src/lib.rs`,
   `form-redirects`). Its fields are named after the function's arguments,
@@ -603,10 +618,11 @@ gallery.
 - **One `<Router>` and `<Routes fallback>` on the server**, a real 404 that
   sets its status through `ResponseOptions`, and nested routes as layout with
   `<Outlet/>` (book `router/16_routes`, `router/17_nested_routing`). The
-  router also supplies the `__err` of a no-script form (§15.7). [review]
-- **Navigation is `<a>` and `<form>`.** A click handler that navigates is an
-  accessibility defect (book `router/19_a`). The current page is
-  `aria-current="page"` the server writes. [review]
+  router also supplies the `__err` of a no-script form (§15.6). [review]
+- **Navigation is `<a>` and `<form>`, which the router follows in the
+  page.** A click handler that navigates is an accessibility defect (book
+  `router/19_a`). The current page is `aria-current="page"`, drawn from the
+  router's location so it moves with a navigation in the page. [review]
 - **Typed params and queries** with `#[derive(Params)]` and
   `use_params::<T>()`, handling `Err` and `None` as user input (book
   `router/18_params_and_queries`). [review]
@@ -657,12 +673,17 @@ gallery.
   a generic with a large body used with several types (keep one concrete
   inner function), `serde` where `serde-lite` serves (book
   `deployment/binary_size`). [review]
-- **Code that one screen needs is split, measured first**: `cargo leptos
-  build --split` with `#[lazy]`, `#[lazy_route]` or `#[island(lazy)]` (book
-  `deployment/binary_size`, "Code Splitting"; leptos_macro `src/lib.rs`).
-  A build with lazy code and no `--split` is broken, never merely unsplit:
+- **The pages load in a few lazy routes**: `#[lazy_route]` on a `LazyRoute`
+  for each group of pages read together, each drawing the page its path
+  names, and `cargo leptos build --split` (book `deployment/binary_size`,
+  "Code Splitting"; leptos_router_macro `src/lib.rs`). Every split point
+  multiplies the chunks the code shared between routes falls into: a lazy
+  route a page made the gallery 811 chunks, more than Chrome fetches at
+  once, and five groups make 32. Hydrated with
+  `hydrate_lazy`, never `hydrate_body`, which panics on a lazy route. A
+  build with lazy code and no `--split` is broken, never merely unsplit:
   its glue imports `__wasm_split_placeholder__`, no browser resolves it,
-  and no island hydrates (#331). [review; the glue check of
+  and nothing hydrates (#331). [review; the glue check of
   `scripts/release/gallery-site.sh`]
 
 ### 14.12 Testing
@@ -674,153 +695,97 @@ gallery.
   thirtyfour (book `testing`, end-to-end; the book's Playwright is
   JavaScript, §0). [test: the gallery journeys]
 
-## 15. Islands: the rules a component obeys
+## 15. Hydration and navigation: the rules a component obeys
 
-The library and the consoles use Leptos islands (owner decision on #196,
-2026-10-22): a page is server HTML, and only an island ships code to the
-browser. The authority is the book's islands chapter (book `islands`) with
-the 0.8 source: leptos_macro `src/lib.rs` (the `#[island]` docs and their
-"Present Limitations") and `src/component.rs` (the code the macro writes),
-leptos `src/hydration/island_script.js` and `islands_routing.js`, tachys
-`src/html/islands.rs`, leptos_server `src/resource.rs` and `src/shared.rs`,
-and the `islands` and `islands_router` examples at `v0.8.22`. #196 owns the
-interaction contract and the budget; this section is the component's side.
+The library and the consoles hydrate the whole page and split it by route
+(owner ruling on #410, 2026-10-25, which replaced the islands mode of
+#196). The authority is the book (`ssr/22_life_cycle`,
+`ssr/24_hydration_bugs`, `router/`, `progressive_enhancement/`,
+`deployment/binary_size`) with the 0.8 source it pins.
 
-### 15.1 When something is an island
+### 15.1 Routes and their code
 
-- **A server view is the default.** A part is an island only when it needs
-  browser code that HTML, CSS and native elements (`<dialog>`, `popover`,
-  `<details>`, links and forms) cannot give (#196 layers 1 and 2). Every
-  `#[component]` that no island uses runs on the server only, and the bundle
-  grows with interactivity, never with pages (book `islands`, "Using Islands
-  Effectively"). [review]
-- **An island is as small as its behaviour**: the interactive control is the
-  island, and everything static around and inside it is server children
-  (book `islands`, "Passing Server Children to Islands"). [review]
-- **Each island is a WebAssembly export of the crate that defines it**, so
-  a console's browser build links `ferrohealth-ui` (book `islands`, the
-  workspace note; leptos issue 2083); the island script logs "Could not find
-  WASM function for the island" when one is missing. [review]
+- **The pages load in a few `LazyRoute`s**, one for each group of pages
+  read together, whose view draws the page its path names, and the browser
+  entry calls `hydrate_lazy` (leptos `src/mount.rs`). Code every page
+  needs, the shell and the widgets it draws, stays in the entry; a group's
+  own code loads from its chunks. One lazy route a page splits the code
+  into more chunks than a browser fetches at once (§14.11). [review; the
+  budget of §12; the gallery's journeys]
+- **A route's code loads before the visit**: the console names its routes
+  and their `LazyRoute::preload` once with `widget::prefetch::routes`, so a
+  link's hover or focus loads its route, and the main navigation's routes
+  load once the first page is idle, one after another. [review;
+  `widget::prefetch` tests]
 
-### 15.2 Props
+### 15.2 Navigation in the page
 
-- **Every prop other than `children` is `Serialize + DeserializeOwned` and
-  round-trips through JSON.** The macro writes the props as JSON into
-  `data-props` and decodes them with `.expect(...)` in the browser, so a prop
-  that does not round-trip panics at hydration (leptos_macro
-  `src/component.rs`). [compiler for the traits; review for the round trip]
-- **No callback, closure or `Box<dyn Fn>` prop**; a change reaches the server
-  through a form or a server function, and another island through context
-  (§15.4). [compiler]
-- **No `usize` or `isize`**: fixed-width integers (book
-  `server/25_server_functions`, "Quirks"). [check L8]
-- **`#[prop(marker)]` fields are skipped** in the JSON (book
-  `view/03_components`). [review]
-- **`RwSignal<T>` and `Signal<T>` props seed from plain values**
-  (`#[prop(into)]`; reactive_graph `src/serde.rs`; the `#[island]` doc's own
-  example). [compiler]
-- **Props are page content.** Every prop is in the HTML source: pass ids and
-  words, never clinical data the page does not already show, and never a
-  record where an id serves. [review]
+- **The router follows every link and form in the page**: `leptos_router`
+  takes a same-origin `<a>` click, and a form submits through
+  `leptos_router::components::Form` or `<ActionForm>`, so the document,
+  the shell and every component's state survive (book `router/19_a`,
+  `router/20_form`). A link to a server route that answers with no page
+  (the sign-in, a download) carries `rel="external"` (§4). [review; the
+  gallery's journeys assert a link keeps its document]
+- **A navigation that fails falls back to a full load**: a server function
+  or a form the router cannot complete loads the address as a document, so
+  the server draws the page or its error, never a blank or stale page.
+  [review]
+- **The new page is announced and takes the focus** (WCAG 2.2 SC 2.4.3,
+  SC 4.1.3): after a navigation in the page the focus moves to the page's
+  heading and a polite region says its title. [review]
 
-### 15.3 Children passed from the server
+### 15.3 State both halves read alike
 
-- **Server children are opaque to the island**: they render on the server in
-  one `<leptos-children>` element, the island does not hydrate them and
-  cannot iterate them (leptos_macro `src/lib.rs`, limitation 1). [review]
-- **A child the island may show is rendered and hidden**, with `hidden` or a
-  class, never placed under `<Show>` or `if`: its server HTML is all the
-  browser ever gets (limitation 2). [review]
-- **A nested island is built inside the parent's children**, so on the server
-  the parent has provided its context first (book `islands`, the `tabs`
-  closure). [review]
-- **The stylesheet lays out `leptos-island` and `leptos-children` as
-  `display: contents`**, so the wrappers add no box. [test: the stylesheet
-  rules (#196)]
+- **No component reads state on the server alone.** The theme, the
+  preferences, a listing's position in its cookie and the session reach
+  the browser as the server read them: a `SharedValue` or a resource read
+  while the page hydrates, and a server function after a navigation in the
+  page (book `ssr/22_life_cycle`; leptos_server `src/shared.rs`). The
+  gallery's `cookies` module is the shape. [review; a hydration panic fails
+  every journey through the console check]
+- **No non-determinism in a render** (§4, §14.8): an id, a time or a count
+  that differs between the halves breaks hydration. [review]
+- **The document head and the root element are drawn once**: an attribute
+  of `<html>` the server set from a cookie (`data-theme`, `lang`) is set
+  again in the browser when the state that names it changes. [review]
 
-### 15.4 Context between islands, locale and toasts
+### 15.4 Props and words
 
-- **An island reads only context an enclosing island provided, or its
-  props.** Each island runs under a fresh owner; only an island inside
-  another's children inherits its owner (leptos
-  `src/hydration/island_script.js`, `$$on_hydrate`). Sibling islands share
-  nothing, and root context never reaches an island: reading it renders one
-  thing on the server and another in the browser. [review]
-- **Words are props.** The server-side wrapper resolves every word the island
-  draws through the catalog and passes them as `String` props, so the island
-  carries no Fluent loader and no catalog. Only an island that formats at
-  run time (a plural over a live count) takes the locale tag as a prop.
-  `SharedValue` and root `provide_locale` reach no island (leptos_server
-  `src/shared.rs`, serialized only while hydrating; §13). [review]
-- **Toasts go through one `toast_region` island in the shell**, fed by a
-  WebAssembly-only `thread_local` queue in the crate that any island pushes
-  onto. The queue never exists on the server, where one static would be
-  shared by every request. With no WebAssembly the server renders the flash
-  toasts of a post-redirect-get into the region from a prop. [review]
+- **Props are page data the browser draws itself**: nothing serializes them
+  into the page, so a component may take any type; a value a server read is
+  carried as §15.3 says. [review]
+- **Words are props**, resolved in the page's locale by `*Words::of_page()`
+  in both halves, so a console provides the same locale on the server and
+  in the browser (a `SharedValue` of its tag), and the browser carries the
+  library's catalog. [review; the locale tests]
+- **No `usize` or `isize`** in a server function or any serialized type
+  (§14.6). [check L8 while it remains]
 
-### 15.5 What reaches the page
+### 15.5 Context and toasts
 
-- **An island's own HTML, its `data-props` JSON and its children's HTML.**
-  A `Resource` or `SharedValue` serializes only while the shared context is
-  hydrating; `<HydrationScripts islands=true>` turns that off for the page,
-  and only island bodies turn it on (leptos_server `src/resource.rs`,
-  `src/shared.rs`; leptos `src/hydration/mod.rs`). Data read in server
-  components therefore reaches the page as HTML alone, never as hydration
-  state (book `islands`, "Reduced data serialization costs"). [review]
-- **Load data in server components** with `Resource` and `<Suspense>`, so it
-  is never serialized; a resource inside an island is, and needs a reason.
+- **Context reaches every component under the root**, the router's
+  included. [review]
+- **Toasts go through one `toast_region` in the shell**, fed by a
+  browser-only queue in the crate that any component pushes onto
+  (`widget::toast::raise`). With no WebAssembly the server renders the
+  flash toasts of a post-redirect-get into the region. [review]
+
+### 15.6 Server functions and actions
+
+- **The library defines no server function** (§0): a library form view
+  takes the console's `ActionForm` as children, or renders fields named
+  after the function's arguments (`arg[field]`). [check L3]
+- **A console's action is a server function behind `<ActionForm>`**: it
+  runs in the page with `pending()` and `value()`, and its plain post is
+  the fallback that works with no WebAssembly through server_fn's
+  `form-redirects` (server_fn 0.8.13 `src/lib.rs`; leptos `src/form.rs`).
   [review]
 
-### 15.6 Navigation
+### 15.7 The no-WebAssembly fallback
 
-- **Plain links and forms; no client router and no islands router.** In
-  0.8.22 the islands router is experimental: it never re-diffs an island's
-  children, drops a form submitter's `name=value`, loses file inputs, and
-  has no base path (leptos `src/hydration/islands_routing.js`). [review]
-- **The library's view and widget tiers draw plain `<a>`**, the current page
-  marked by the server; `leptos_router` stays in the server's `<Router>`,
-  which also supplies the `__err` of a no-script form (leptos_router
-  `src/location/mod.rs`). [check L1]
-
-### 15.7 Server functions and ActionForm from islands
-
-- **The default form is `<ActionForm>` in a server component**: a plain
-  `POST` to the function's URL that ships no WebAssembly; server_fn's
-  `form-redirects` (on in leptos) answers it with a redirect to the
-  `Referer`, an error encoded as `__err`, which `ServerAction::new()` reads
-  back so the page draws `action.value()` with no script (server_fn 0.8.13
-  `src/lib.rs`; leptos_server `src/action.rs`; the `islands_router`
-  example's `Home`). [review]
-- **An island gets an `<ActionForm>` only when it needs `pending()` or
-  `value()` live, or client validation**; it then carries the server_fn
-  client and `serde_qs`. With no router, an island's `ActionForm` sets its
-  own redirect hook (leptos `src/form.rs`); a server function called outside
-  a form needs `set_redirect_hook` (book `islands`). [review]
-- **The library defines no server function** (§0): a library form view takes
-  the console's `ActionForm` as children, or renders fields named after the
-  function's arguments (`arg[field]`). [check L3]
-
-### 15.8 The no-WebAssembly floor
-
-- **Every island has a fallback that works with the WebAssembly withheld**:
-  its server HTML shows the content, and a link or a form does the important
-  action (#196 layer 3). A control that can only work with script is absent
-  or disabled before hydration, and says why. [test: the gallery's
-  no-WebAssembly journey (#196); review]
-- **Lazy islands are measured before they land**: `#[island(lazy)]` with
-  `cargo leptos build --split` loads an island's code from its own chunks once a
-  page that draws it hydrates (leptos_macro `src/component.rs`, the
-  `_loader` it writes). An island is lazy when building the gallery without
-  it cuts more from the entry than its chunks add to the pages that draw
-  it, as §12 records: the date pickers, the mapping editors, the masked
-  identifiers and the concept tree are. The topology (F9, #195) was
-  measured and stays in the entry: lazy, it cut 19305 bytes from the entry
-  and added 27181 in chunks to the page that draws it. A lazy island needs
-  `--split`: without the split pass the glue imports
-  `__wasm_split_placeholder__`, which no browser resolves, and no island on
-  the page hydrates (#331). So the library's lazy islands are lazy only
-  with its `split` feature, which a console turns on when it builds with
-  `cargo leptos build --split`, and a console that does not split gets them
-  as ordinary islands. [review; the chunk table of
-  `scripts/checks/gallery-bundle.sh`; the `split` test of `src/island.rs`;
-  the glue check of `scripts/release/gallery-site.sh`]
+- **Every page still works with the WebAssembly withheld**: its server
+  HTML shows the content, and a link or a form does the important action
+  as a full load. It is the fallback, never the design target. A control
+  that can only work with script is absent or disabled before hydration,
+  and says why. [test: the gallery's no-WebAssembly journey]

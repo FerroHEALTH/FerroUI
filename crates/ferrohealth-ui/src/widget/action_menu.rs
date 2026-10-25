@@ -685,8 +685,10 @@ pub fn menu_button(
             node_ref=details
             on:toggle=move |_| {
                 let open = browser::toggled(details, list, listbox);
-                if ready.get_untracked().is_some() {
-                    ready.set(Some(open));
+                // NOTE: no specification governs this: our own design; a toggle or a focus
+                // change can arrive after a navigation disposed the menu, so each read tries.
+                if ready.try_get_untracked().flatten().is_some() {
+                    let _: Option<Option<bool>> = ready.try_set(Some(open));
                 }
             }
             on:keydown=move |event| browser::key(details, list, &event)
@@ -848,7 +850,7 @@ mod browser {
     pub(super) fn prepare(details: Details, list: List) -> bool {
         #[cfg(target_arch = "wasm32")]
         {
-            if let Some(list) = list.get_untracked() {
+            if let Some(list) = list.try_get_untracked().flatten() {
                 for item in dom::walked(&list) {
                     if item.has_attribute("data-fui-copy") {
                         item.set_hidden(false);
@@ -857,7 +859,8 @@ mod browser {
                 }
             }
             details
-                .get_untracked()
+                .try_get_untracked()
+                .flatten()
                 .is_some_and(|details| details.open())
         }
         #[cfg(not(target_arch = "wasm32"))]
@@ -872,8 +875,10 @@ mod browser {
     pub(super) fn toggled(details: Details, list: List, listbox: bool) -> bool {
         #[cfg(target_arch = "wasm32")]
         {
-            let (Some(details), Some(list)) = (details.get_untracked(), list.get_untracked())
-            else {
+            let (Some(details), Some(list)) = (
+                details.try_get_untracked().flatten(),
+                list.try_get_untracked().flatten(),
+            ) else {
                 return false;
             };
             if !details.open() {
@@ -905,7 +910,7 @@ mod browser {
     pub(super) fn close(details: Details) {
         #[cfg(target_arch = "wasm32")]
         {
-            let Some(details) = details.get_untracked() else {
+            let Some(details) = details.try_get_untracked().flatten() else {
                 return;
             };
             details.set_open(false);
@@ -921,8 +926,10 @@ mod browser {
     pub(super) fn key(details: Details, list: List, event: &leptos::ev::KeyboardEvent) {
         #[cfg(target_arch = "wasm32")]
         {
-            let (Some(element), Some(items_of)) = (details.get_untracked(), list.get_untracked())
-            else {
+            let (Some(element), Some(items_of)) = (
+                details.try_get_untracked().flatten(),
+                list.try_get_untracked().flatten(),
+            ) else {
                 return;
             };
             let key = event.key();
@@ -984,7 +991,7 @@ mod browser {
     pub(super) fn left(details: Details, event: &leptos::ev::FocusEvent) {
         #[cfg(target_arch = "wasm32")]
         {
-            let Some(element) = details.get_untracked() else {
+            let Some(element) = details.try_get_untracked().flatten() else {
                 return;
             };
             let inside = event

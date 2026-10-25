@@ -861,7 +861,6 @@ fn filters(rows: &[&str]) -> String {
 fn a_repeatable_row_ends_in_its_remove_which_posts_without_webassembly() {
     // NOTE: leptos-ui.md §15.8: Remove and Add are submit buttons, so they post with no script.
     let shown = filters(&["a", "b"]);
-    assert!(shown.contains("<leptos-island"), "an island: {shown}");
     assert!(
         has(
             &shown,
@@ -923,8 +922,12 @@ fn a_repeatable_row_ends_in_its_remove_which_posts_without_webassembly() {
         "the quiet line waits hidden: {shown}"
     );
     assert!(
-        has(&shown, "template", &[("data-repeat", "blank")]),
-        "{shown}"
+        has(
+            &shown,
+            "fieldset",
+            &[("data-repeat", "blank"), ("hidden", ""), ("disabled", "")]
+        ),
+        "HTML Living Standard, the fieldset element: the blank row waits hidden and posts nothing: {shown}"
     );
     assert!(
         shown.contains(&format!("data-row=\"{ROW}\"")),
@@ -963,7 +966,7 @@ fn a_blank_row_names_the_key_token_the_island_replaces() {
     assert!(
         has(
             &shown,
-            "template",
+            "fieldset",
             &[("data-repeat", "blank"), ("data-token", "__profile__")]
         ),
         "{shown}"
@@ -1045,7 +1048,10 @@ fn an_empty_list_says_so_and_a_kept_row_says_why() {
         has(&kept, "div", &[("class", "fui-repeat-rows fui-repeater")]),
         "{kept}"
     );
-    assert!(!kept.contains("<template"), "no blank row: {kept}");
+    assert!(
+        !kept.contains("data-repeat=\"blank\""),
+        "no blank row: {kept}"
+    );
 }
 
 #[test]

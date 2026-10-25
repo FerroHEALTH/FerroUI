@@ -269,8 +269,14 @@ pub fn repeat(repeat: Repeat) -> AnyView {
         .map(|each| row(&id, each, fields, form.clone()))
         .collect_view();
     let blank = blank.map(|each| {
+        // NOTE: HTML Living Standard, the fieldset element: a disabled fieldset's controls
+        // post nothing, so the hidden blank row hydrates with the page and never submits.
         let inside = row(&id, each, fields, form.clone());
-        view! { <template data-repeat="blank" data-token=token>{inside}</template> }
+        view! {
+            <fieldset class="fui-repeat-blank" data-repeat="blank" data-token=token hidden disabled>
+                {inside}
+            </fieldset>
+        }
     });
     let add = add.map(|RepeatAdd { label, name, value }| {
         view! {
@@ -517,7 +523,7 @@ mod browser {
     }
 
     /// Replaces `token` with `key` in every attribute of every element of
-    /// `copy`, the content of its nested templates included: its key, its
+    /// `copy`, the blank rows of its nested lists included: its key, its
     /// ids, its names and the labels that name them.
     #[cfg(target_arch = "wasm32")]
     fn rekey(copy: &web_sys::DocumentFragment, token: &str, key: &str) {
@@ -536,9 +542,6 @@ mod browser {
                         attribute.set_value(&value.replace(token, key));
                     }
                 }
-            }
-            if let Some(template) = element.dyn_ref::<web_sys::HtmlTemplateElement>() {
-                rekey(&template.content(), token, key);
             }
         }
     }
@@ -565,7 +568,7 @@ mod browser {
     #[cfg(target_arch = "wasm32")]
     fn add(root: &web_sys::Element) -> bool {
         let (Some(blank), Some(rows)) = (
-            own_first(root, "template[data-repeat='blank']"),
+            own_first(root, "fieldset[data-repeat='blank']"),
             own_first(root, "[data-repeat='rows']"),
         ) else {
             return false;
@@ -574,13 +577,19 @@ mod browser {
             .get_attribute("data-token")
             .unwrap_or_else(|| String::from(super::ROW));
         let key = super::fresh_key(|key| !own(root, &format!("[data-row='{key}']")).is_empty());
-        let Some(copy) = blank
-            .dyn_ref::<web_sys::HtmlTemplateElement>()
-            .and_then(|template| template.content().clone_node_with_deep(true).ok())
-            .and_then(|node| node.dyn_into::<web_sys::DocumentFragment>().ok())
+        let copy = leptos::prelude::document().create_document_fragment();
+        let Some(cloned) = blank
+            .clone_node_with_deep(true)
+            .ok()
+            .and_then(|node| node.dyn_into::<web_sys::Element>().ok())
         else {
             return false;
         };
+        while let Some(child) = cloned.first_child() {
+            if copy.append_child(&child).is_err() {
+                return false;
+            }
+        }
         rekey(&copy, &token, &key);
         mark_copied(&copy);
         if rows.append_child(&copy).is_err() {

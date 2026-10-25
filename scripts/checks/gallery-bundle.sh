@@ -9,10 +9,10 @@
 # refuses one whose digests differ from the stamp that build leaves in
 # target/gallery-site.sha256 on success, so a failed or a debug build never
 # measures a stale bundle as within the budget. The budget holds the entry
-# WebAssembly, which every page loads before any island hydrates. It prints
+# WebAssembly, which every page loads before its route's code. It prints
 # the entry and its JavaScript glue raw, gzip-compressed (gzip -9) and
-# brotli-compressed (brotli -q 11), then what each lazy island's chunks add
-# on a page that draws it (the files the split manifest names for it,
+# brotli-compressed (brotli -q 11), then what each lazy route's chunks add
+# on its page (the files the split manifest names for it,
 # brotli-compressed) and all the chunks together, as Markdown tables, and
 # appends them to $GITHUB_STEP_SUMMARY when that is set. The budget is read
 # from the budget table of the Leptos rule file, beside its reasoning, so the
@@ -89,10 +89,10 @@ manifest="$pkg/__wasm_split_manifest.json"
 wasm_br="$(br "$wasm")"
 percent=$((wasm_br * 100 / budget))
 
-# What a lazy island adds: the brotli bytes of every chunk its manifest entry
-# names, the chunks it shares with another island counted for each.
+# What a lazy route adds: the brotli bytes of every chunk its manifest entry
+# names, the chunks it shares with another route counted for each.
 lazy_rows=""
-while IFS=$'\t' read -r island files; do
+while IFS=$'\t' read -r split files; do
   bytes=0
   for chunk in $files; do
     if [ ! -s "$pkg/$chunk.wasm" ]; then
@@ -101,7 +101,7 @@ while IFS=$'\t' read -r island files; do
     fi
     bytes=$((bytes + $(br "$pkg/$chunk.wasm")))
   done
-  lazy_rows+="| \`${island%_loader_*}\` | $(wc -w <<< "$files" | tr -d '[:space:]') | $bytes |"$'\n'
+  lazy_rows+="| \`${split%_view_*}\` | $(wc -w <<< "$files" | tr -d '[:space:]') | $bytes |"$'\n'
 done < <(jq -r 'to_entries | sort_by(.key)[] | "\(.key)\t\(.value | join(" "))"' "$manifest")
 chunks=0
 for chunk in "$pkg"/chunk_*.wasm "$pkg"/split_*.wasm; do
@@ -121,7 +121,7 @@ table="$(
     echo "| \`$(basename "$loader")\` | $(raw "$loader") | $(gz "$loader") | $(br "$loader") |"
   fi
   echo
-  echo "| Lazy island | Chunks | brotli -q 11 |"
+  echo "| Lazy route | Chunks | brotli -q 11 |"
   echo "|---|---:|---:|"
   printf '%s' "$lazy_rows"
   echo "| every chunk, each once | | $chunks |"
@@ -135,7 +135,7 @@ if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
 fi
 
 if [ "$wasm_br" -gt "$budget" ]; then
-  echo "::error file=.claude/rules/leptos-ui.md::The brotli-compressed entry WebAssembly is $wasm_br bytes, over the $budget-byte budget of .claude/rules/leptos-ui.md §12. Shrink the bundle, make a large island lazy, or raise the budget there with the reason." >&2
+  echo "::error file=.claude/rules/leptos-ui.md::The brotli-compressed entry WebAssembly is $wasm_br bytes, over the $budget-byte budget of .claude/rules/leptos-ui.md §12. Shrink the bundle, move code a page alone needs into its route, or raise the budget there with the reason." >&2
   exit 1
 fi
 echo "gallery-bundle: $wasm_br of $budget bytes, within the budget"

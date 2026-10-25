@@ -21,7 +21,8 @@ use ferrohealth_ui::view::preferences::{
 use leptos::prelude::*;
 use leptos_router::hooks::{use_params_map, use_query_map};
 
-use crate::app::{PREFERENCE_ROUTE, RESET_ROUTE, cookies_requested, own_of, preferences_of};
+use crate::app::{PREFERENCE_ROUTE, RESET_ROUTE, own_of, preferences_of};
+use crate::cookies::cookies_requested;
 use crate::locale::{Msg, tr, tr_with};
 
 /// The name of the brand's accent, which its theme cards name.

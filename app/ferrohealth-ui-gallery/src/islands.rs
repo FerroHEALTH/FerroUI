@@ -1,27 +1,16 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The gallery's islands: each interactive widget a page shows, with the
-//! state it shares, as the one part of the page the browser hydrates.
+//! The gallery's interactive components: each widget a page shows with
+//! the state it shares with the page's own code.
 //!
-//! The pages draw everything else on the server alone. Each island is a
-//! thin wrapper over the builder its page defines, so the page reads as
-//! one piece and the island only marks what the browser hydrates (the
-//! Leptos book, "Guide: Islands"). The mapping editors, the masked
-//! identifiers and the concept tree are lazy: the site builds with
-//! `cargo leptos --split`, so their code loads from chunks of its own on
-//! the page that draws them, measured on #262 (`leptos-ui.md` §12).
-#![expect(
-    clippy::mem_forget,
-    reason = "the island macro of leptos_macro 0.8 keeps each hydrated island alive by forgetting its view state, in the browser entry it writes"
-)]
+//! Each one is a thin wrapper over the builder its page defines, so the
+//! page reads as one piece. The module keeps the name it had while the
+//! gallery rendered in islands mode (FerroUI #410); each page's code now
+//! loads with its lazy route ([`crate::routes`]).
 #![expect(
     clippy::must_use_candidate,
-    reason = "the #[island] macro drops a #[must_use] from the function it writes"
-)]
-#![expect(
-    missing_docs,
-    reason = "the #[island] macro writes an undocumented struct of each island's props as they cross to the browser"
+    reason = "the #[component] macro drops a #[must_use] from the function it writes"
 )]
 
 use ferrohealth_ui::view::help::HelpWords;
@@ -34,7 +23,7 @@ use leptos::prelude::*;
 use crate::locale::Words;
 
 /// The confirm button of a confirmation dialog, which raises a toast.
-#[island]
+#[component]
 #[expect(
     clippy::needless_pass_by_value,
     reason = "an island takes its props by value, as they arrive from the page"
@@ -51,7 +40,7 @@ pub fn ConfirmAndToast(
 }
 
 /// The overlays page's modal dialogs and the rows that open them.
-#[island]
+#[component]
 pub fn ModalDialogs(
     /// Their words, in the page's locale.
     words: Words,
@@ -62,7 +51,7 @@ pub fn ModalDialogs(
 }
 
 /// The overlays page's buttons that raise a toast in each tone.
-#[island]
+#[component]
 #[expect(
     clippy::needless_pass_by_value,
     reason = "an island takes its props by value, as they arrive from the page"
@@ -78,7 +67,7 @@ pub fn ToastButtons(
 
 /// The overview's segmented control bound to state, in a cluster with the
 /// controls the server drew as its children.
-#[island]
+#[component]
 #[expect(
     clippy::needless_pass_by_value,
     reason = "an island takes its props by value, as they arrive from the page"
@@ -94,7 +83,7 @@ pub fn FormatSegments(
 
 /// The layouts page's concept tree, which keeps its open items in the
 /// address.
-#[island(lazy)]
+#[component]
 pub fn ConceptTree(
     /// The key of the brand whose page it is on.
     brand: String,
@@ -112,7 +101,7 @@ pub fn ConceptTree(
 
 /// The layouts page's runner form: its help switch and the fields it
 /// explains.
-#[island]
+#[component]
 #[expect(
     clippy::needless_pass_by_value,
     reason = "an island takes its props by value, as they arrive from the page"
@@ -129,7 +118,7 @@ pub fn RunnerForm(
 }
 
 /// The forms page's masked identifiers, each row's reveal its own.
-#[island(lazy)]
+#[component]
 #[expect(
     clippy::needless_pass_by_value,
     reason = "an island takes its props by value, as they arrive from the page"
@@ -148,7 +137,7 @@ pub fn MaskedIdentifiers(
 }
 
 /// The clinical records page's subject identifier, its Reveal its own.
-#[island(lazy)]
+#[component]
 #[expect(
     clippy::needless_pass_by_value,
     reason = "an island takes its props by value, as they arrive from the page"
@@ -163,7 +152,7 @@ pub fn SubjectIdentifier(
 }
 
 /// The forms page's pick-or-type fields.
-#[island]
+#[component]
 #[expect(
     clippy::needless_pass_by_value,
     reason = "an island takes its props by value, as they arrive from the page"
@@ -178,7 +167,7 @@ pub fn PickOrTyped(
 }
 
 /// The forms page's upload field.
-#[island]
+#[component]
 #[expect(
     clippy::needless_pass_by_value,
     reason = "an island takes its props by value, as they arrive from the page"
@@ -193,7 +182,7 @@ pub fn UploadField(
 }
 
 /// The forms page's highlighted editor and the size it reports.
-#[island(lazy)]
+#[component]
 pub fn DraftEditor(
     /// Its words, in the page's locale.
     words: Words,
@@ -203,7 +192,7 @@ pub fn DraftEditor(
 
 /// The forms page's code editor beside its diagnostics, in step with its
 /// cursor.
-#[island(lazy)]
+#[component]
 #[expect(
     clippy::needless_pass_by_value,
     reason = "an island takes its props by value, as they arrive from the page"
@@ -220,7 +209,7 @@ pub fn MappingEditor(
 }
 
 /// The forms page's code editor of a new, empty file.
-#[island(lazy)]
+#[component]
 #[expect(
     clippy::needless_pass_by_value,
     reason = "an island takes its props by value, as they arrive from the page"
@@ -235,7 +224,7 @@ pub fn NewMappingEditor(
 }
 
 /// The forms page's editor inside a reloading transition.
-#[island(lazy)]
+#[component]
 pub fn ReloadingEditor(
     /// Its words, in the page's locale.
     words: Words,
@@ -244,7 +233,7 @@ pub fn ReloadingEditor(
 }
 
 /// The input editor of one of the operations page's transform pairs.
-#[island]
+#[component]
 #[expect(
     clippy::needless_pass_by_value,
     reason = "an island takes its props by value, as they arrive from the page"
@@ -259,7 +248,7 @@ pub fn PairInput(
 }
 
 /// The forms page's filter and the list it filters.
-#[island]
+#[component]
 #[expect(
     clippy::needless_pass_by_value,
     reason = "an island takes its props by value, as they arrive from the page"
@@ -273,7 +262,7 @@ pub fn FileFilter(
 
 /// The overlays page's keyboard shortcut legend and the button and key
 /// that open it.
-#[island]
+#[component]
 pub fn ShortcutLegend(
     /// The page's shortcuts, their words in the page's locale.
     groups: Vec<ferrohealth_ui::view::kbd::ShortcutGroup>,

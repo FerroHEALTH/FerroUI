@@ -29,10 +29,12 @@ use leptos::prelude::*;
 use leptos_meta::{Stylesheet, Title, provide_meta_context};
 use leptos_router::components::{Outlet, ParentRoute, Route, Router, Routes};
 use leptos_router::hooks::{use_location, use_params_map, use_query_map};
-use leptos_router::path;
+use leptos_router::{Lazy, path};
 
+use crate::cookies::cookies_requested;
 use crate::locale::gallery_locale;
 use crate::locale::{Msg, tr, tr_with};
+use crate::routes::{LAside, LCore, LFederation, LRecords, LVisual};
 
 /// The gallery's name, as its footer and titles name it, in the page's
 /// locale.
@@ -160,21 +162,11 @@ pub fn paging_of(cookies: &str, listing: &str) -> Paging {
 
 /// The paging of the session listing `listing` the request keeps.
 ///
-/// The tables page is server HTML with no island around its listings, so
-/// only the server draws it and reads the cookie.
+/// Both halves read it from the cookies the page knows
+/// ([`crate::cookies::Cookies`]).
 #[must_use]
 pub fn session_paging(listing: &'static str) -> Paging {
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        paging_of(&request_cookies(), listing)
-    }
-    // NOTE: no specification governs this: our own design; the browser never draws
-    // a server-only page, so its half names the first page.
-    #[cfg(target_arch = "wasm32")]
-    {
-        let _: &str = listing;
-        Paging::default()
-    }
+    paging_of(&cookies_requested(), listing)
 }
 
 /// The whole HTML document the server renders around [`App`], in the theme
@@ -198,19 +190,13 @@ pub fn document(options: LeptosOptions) -> impl IntoView {
     let lang = locale_of(&cookies).tag();
     view! {
         <!DOCTYPE html>
-        <html
-            lang=lang
-            data-theme=theme
-            data-density=density
-            data-motion=motion
-            data-hints=hints
-        >
+        <html lang=lang data-theme=theme data-density=density data-motion=motion data-hints=hints>
             <head>
                 <meta charset="utf-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
                 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
                 <link rel="stylesheet" href=STYLESHEET />
-                <HydrationScripts options islands=true />
+                <HydrationScripts options />
                 <leptos_meta::MetaTags />
             </head>
             <body>
@@ -223,16 +209,7 @@ pub fn document(options: LeptosOptions) -> impl IntoView {
 /// The theme the request names, which the server decided and the browser
 /// reads serialized, so both halves draw the same switch.
 fn theme_requested() -> Theme {
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        theme_of(&request_cookies())
-    }
-    // NOTE: the browser reads the value the server decided; this runs only if
-    // that value is missing, and then marks the theme that follows the system.
-    #[cfg(target_arch = "wasm32")]
-    {
-        Theme::default()
-    }
+    theme_of(&cookies_requested())
 }
 
 /// Whether the `Cookie` header value `cookies` asks for the sidebar's rail.
@@ -243,54 +220,22 @@ pub fn rail_of(cookies: &str) -> bool {
 
 /// Whether the request asks for the sidebar's rail, decided as the theme is.
 fn rail_requested() -> bool {
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        rail_of(&request_cookies())
-    }
-    #[cfg(target_arch = "wasm32")]
-    {
-        false
-    }
-}
-
-/// The `Cookie` header of the request the server draws; empty in the
-/// browser, which never draws a server-only page.
-#[must_use]
-pub fn cookies_requested() -> String {
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        request_cookies()
-    }
-    #[cfg(target_arch = "wasm32")]
-    {
-        String::new()
-    }
+    rail_of(&cookies_requested())
 }
 
 /// The tag of the locale the request names, decided as the theme is.
 fn locale_requested() -> String {
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        locale_of(&request_cookies()).tag()
-    }
-    #[cfg(target_arch = "wasm32")]
-    {
-        Locale::english().tag()
-    }
+    locale_of(&cookies_requested()).tag()
 }
 
-/// The request's `Cookie` header, empty for none.
-#[cfg(not(target_arch = "wasm32"))]
-fn request_cookies() -> String {
-    use_context::<http::request::Parts>()
-        .and_then(|parts| {
-            parts
-                .headers
-                .get(http::header::COOKIE)
-                .and_then(|value| value.to_str().ok())
-                .map(str::to_owned)
-        })
-        .unwrap_or_default()
+/// Marks the root element `data-hydrated` once the page has hydrated.
+fn mark_hydrated() {
+    #[cfg(target_arch = "wasm32")]
+    if let Some(root) = document().document_element()
+        && let Err(error) = root.set_attribute("data-hydrated", "")
+    {
+        leptos::logging::warn!("the browser refused the hydrated mark: {error:?}");
+    }
 }
 
 /// The theme in force, shared with the pages.
@@ -299,11 +244,19 @@ pub struct InForce(pub Theme);
 
 /// The root component: the routes, the toast region and the title.
 ///
-/// It runs on the server alone: the gallery renders in islands mode, so
-/// the browser hydrates the islands of a page and nothing else.
+/// The server draws it and the browser hydrates it whole; each page is a
+/// lazy route ([`crate::routes`]), and the browser marks the root element
+/// `data-hydrated` once the page has hydrated, which the screenshot capture
+/// waits for.
 #[component]
 pub fn App() -> impl IntoView {
     provide_meta_context();
+    // NOTE: the Leptos book, `ssr/22_life_cycle`: the cookies the server read reach the
+    // hydrating page serialized, so both halves draw the same page.
+    let cookies = RwSignal::new((*SharedValue::new_str(crate::cookies::server_cookies)).clone());
+    provide_context(crate::cookies::Cookies(cookies));
+    ferrohealth_ui::widget::prefetch::routes(crate::routes::ROUTES);
+    Effect::new(move |_| mark_hydrated());
     // NOTE: the Leptos book, `ssr/22_life_cycle`: a value the server decides reaches
     // the hydrating page serialized, so both halves draw the same page.
     let theme = *SharedValue::new_str(theme_requested);
@@ -313,49 +266,32 @@ pub fn App() -> impl IntoView {
     view! {
         <Title formatter=crate::pages::title_format(product()) text=String::new() />
         <Router>
+            <crate::cookies::FollowCookies />
             <Routes fallback=|| view! { <NotFound /> }>
                 <Route path=path!("/") view=Index />
-                <Route path=path!("/sign-in/:brand/:variant") view=crate::pages::sign_in::SignInPage />
-                <Route path=path!("/fault/:brand") view=crate::pages::templates::FaultPage />
+                <Route path=path!("/sign-in/:brand/:variant") view={Lazy::<LAside>::new()} />
+                <Route path=path!("/fault/:brand") view={Lazy::<LAside>::new()} />
                 <ParentRoute path=path!("/:brand") view=BrandShell>
-                    <Route path=path!("") view=crate::pages::overview::OverviewPage />
-                    <Route path=path!("forms") view=crate::pages::forms::FormsPage />
-                    <Route path=path!("tables") view=crate::pages::tables::TablesPage />
-                    <Route path=path!("code") view=crate::pages::code::CodePage />
-                    <Route
-                        path=path!("configuration")
-                        view=crate::pages::configuration::ConfigurationPage
-                    />
-                    <Route
-                        path=path!("configuration/provisioned")
-                        view=crate::pages::configuration::ProvisionedPage
-                    />
-                    <Route path=path!("overlays") view=crate::pages::overlays::OverlaysPage />
-                    <Route path=path!("overlays/access") view=crate::pages::overlays::AccessPage />
-                    <Route path=path!("charts") view=crate::pages::charts::ChartsPage />
-                    <Route path=path!("layouts") view=crate::pages::layouts::LayoutsPage />
-                    <Route path=path!("operations") view=crate::pages::operations::OperationsPage />
-                    <Route path=path!("clinical") view=crate::pages::clinical::ClinicalPage />
-                    <Route
-                        path=path!("terminology")
-                        view=crate::pages::terminology::TerminologyPage
-                    />
-                    <Route path=path!("federation") view=crate::pages::federation::FederationPage />
-                    <Route path=path!("find") view=crate::pages::find::FindPage />
-                    <Route
-                        path=path!("federation/:part")
-                        view=crate::pages::federation::FederationPart
-                    />
-                    <Route path=path!("preferences") view=crate::pages::preferences::PreferencesPage />
-                    <Route
-                        path=path!("preferences/:section")
-                        view=crate::pages::preferences::PreferencesPage
-                    />
-                    <Route
-                        path=path!("templates/:variant")
-                        view=crate::pages::templates::TemplatePage
-                    />
-                    <Route path=path!("trees") view=crate::pages::trees::TreesPage />
+                    <Route path=path!("") view={Lazy::<LCore>::new()} />
+                    <Route path=path!("forms") view={Lazy::<LCore>::new()} />
+                    <Route path=path!("tables") view={Lazy::<LCore>::new()} />
+                    <Route path=path!("code") view={Lazy::<LCore>::new()} />
+                    <Route path=path!("configuration") view={Lazy::<LCore>::new()} />
+                    <Route path=path!("configuration/provisioned") view={Lazy::<LCore>::new()} />
+                    <Route path=path!("overlays") view={Lazy::<LFederation>::new()} />
+                    <Route path=path!("overlays/access") view={Lazy::<LFederation>::new()} />
+                    <Route path=path!("charts") view={Lazy::<LVisual>::new()} />
+                    <Route path=path!("layouts") view={Lazy::<LVisual>::new()} />
+                    <Route path=path!("operations") view={Lazy::<LRecords>::new()} />
+                    <Route path=path!("clinical") view={Lazy::<LRecords>::new()} />
+                    <Route path=path!("terminology") view={Lazy::<LRecords>::new()} />
+                    <Route path=path!("federation") view={Lazy::<LFederation>::new()} />
+                    <Route path=path!("find") view={Lazy::<LCore>::new()} />
+                    <Route path=path!("federation/:part") view={Lazy::<LFederation>::new()} />
+                    <Route path=path!("preferences") view={Lazy::<LCore>::new()} />
+                    <Route path=path!("preferences/:section") view={Lazy::<LCore>::new()} />
+                    <Route path=path!("templates/:variant") view={Lazy::<LAside>::new()} />
+                    <Route path=path!("trees") view={Lazy::<LVisual>::new()} />
                 </ParentRoute>
             </Routes>
         </Router>
@@ -915,9 +851,7 @@ fn Index() -> impl IntoView {
             <div class="fui-sign-in-lockup">
                 {lockup("/", mark(Glyph::LAYERS), tr(Msg::FerrohealthUi), tr(Msg::Gallery))}
             </div>
-            <p class="fui-muted">
-                {tr(Msg::EveryComponentLibraryEveryProduct)}
-            </p>
+            <p class="fui-muted">{tr(Msg::EveryComponentLibraryEveryProduct)}</p>
             <div class="fui-stack">{brands}</div>
         </div>
     }

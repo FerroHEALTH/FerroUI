@@ -259,7 +259,7 @@ async fn the_copy_button_says_refused_where_the_page_has_no_clipboard() -> Resul
 async fn masked(browser: &Browser) -> Result<(WebElement, WebElement), Box<dyn Error>> {
     let input = browser.element(By::Id("edge-identifier")).await?;
     let eye = browser
-        .element(By::Css("#edge-identifier + leptos-island > button"))
+        .element(By::Css("#edge-identifier + button"))
         .await?;
     until("the eye works", async || {
         eye.is_enabled().await.map_err(Into::into)
