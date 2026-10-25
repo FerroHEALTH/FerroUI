@@ -4,7 +4,7 @@
 # CLAUDE.md
 
 **FerroUI** is the shared UI component library of the FerroHEALTH consoles:
-FerroBRIDGE, FerroFED, FerroEHR and FerroTERM. It is one Cargo workspace with
+FerroBRIDGE, FerroEHR, FerroFED, FerroPIX and FerroTERM. It is one Cargo workspace with
 the library crate `ferrohealth-ui` (Rust path `ferrohealth_ui`, published to
 crates.io) and the gallery app `ferrohealth-ui-gallery` (`publish = false`),
 which shows every component in every product theme, light and dark, and is
@@ -27,7 +27,10 @@ never publish under it.
   resolved. `widget` holds the interactive components as functions a page
   calls inside an island, whose browser code runs only in handlers and
   effects behind `#[cfg(target_arch = "wasm32")]`. Every page works with no
-  WebAssembly: a link or a form is behind every important action.
+  WebAssembly: a link or a form is behind every important action. That page
+  is the fallback: every console is reactive, so with WebAssembly a link, a
+  form or an action never reloads the whole document (owner, 2026-10-25;
+  the islands router of #410; `.claude/memory/reactive-console-ui.md`).
 - **One table model** (`table`): page and size read defensively and clamped,
   the row window, the range label, sorting, filtering and paging by links
   and forms that work with no script, and the state source
