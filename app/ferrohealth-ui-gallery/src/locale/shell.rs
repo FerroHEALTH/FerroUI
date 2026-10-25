@@ -154,6 +154,8 @@ messages! {
     Search = "search",
     /// `Browse every file`
     SearchBrowse = "search-browse",
+    /// `Search patients for “{ $query }”`
+    SearchPatientsFor = "search-patients-for",
     /// `{ $kind } · { $lines } lines`
     SearchFileLine = "search-file-line",
     /// `Search waits while the index is rebuilding`

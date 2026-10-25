@@ -85,6 +85,16 @@ pub struct SearchBox {
     pub suggest: Option<String>,
     /// How many characters a query holds before the typeahead asks.
     pub suggest_from: u8,
+    /// The words of the panel's option that submits the search to the find
+    /// page, around the open `query`, such as "Search patients for
+    /// “{query}”" where the submit runs another search than the panel's;
+    /// `None` keeps "See all results for “{query}”".
+    pub all: Option<Phrase>,
+    /// The address the page loads when the answer route answers
+    /// `401 Unauthorized`: the session is over, so the console's own
+    /// signed-out page takes over, as any other request of the page would
+    /// (RFC 9110 §15.5.2). `None` shows the panel's error row.
+    pub signed_out: Option<String>,
 }
 
 impl Default for SearchBox {
@@ -103,6 +113,8 @@ impl Default for SearchBox {
             post: false,
             suggest: None,
             suggest_from: 2,
+            all: None,
+            signed_out: None,
         }
     }
 }
@@ -252,7 +264,10 @@ pub fn hit_id(id: &str, place: u32) -> String {
 /// page hydrates.
 #[must_use]
 pub fn search_box(search: SearchBox) -> AnyView {
-    let words = SearchWords::of_page();
+    let mut words = SearchWords::of_page();
+    if let Some(all) = search.all.clone() {
+        words.all = all;
+    }
     view! { <crate::island::Search search words /> }.into_any()
 }
 

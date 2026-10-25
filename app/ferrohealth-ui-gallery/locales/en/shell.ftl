@@ -78,6 +78,7 @@ remove = Remove
 save = Save
 search = Search
 search-browse = Browse every file
+search-patients-for = Search patients for “{ $query }”
 search-file-line =
     { $kind } · { $lines } { $lines ->
         [one] line
