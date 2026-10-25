@@ -134,6 +134,9 @@ Your console provides three parts, and the library draws everything else.
    draws `view::search::find_results(answer)` under its page heading, every
    hit of each kind in a list card of its own, in the page. It is what a
    search shows with no WebAssembly, and where "See all results" leads.
+   When the submit runs another search than the panel's, such as a
+   patient search the panel never runs because each one is audited, name
+   that option in `SearchBox::all` ("Search patients for “{query}”").
 
 The wire of the answer route:
 
@@ -143,6 +146,7 @@ The wire of the answer route:
 | Request, `SearchBox::post` on | `POST {suggest}`, `Content-Type: application/x-www-form-urlencoded`, body `{name}={words}`, so a search that can carry clinical content keeps its words out of the URL |
 | Credentials | Same origin: the page's own cookies go with it |
 | Answer | `200` with `application/json`, the `SearchAnswer` serialized by serde, as `serde_json` writes it |
+| `401` with `SearchBox::signed_out` set | The page loads that address, your signed-out page, as any other request of the page would on a session that is over |
 | Any other status | The panel shows "The search did not answer (status)" as a row |
 | A body that is no `SearchAnswer` | The panel shows that it could not read the answer |
 

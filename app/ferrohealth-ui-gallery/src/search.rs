@@ -11,6 +11,7 @@
 //! gallery's answer route ([`SUGGEST_ROUTE`]), which finds the mapping files
 //! and the template whose names hold the words.
 
+use ferrohealth_ui::i18n::Phrase;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::style::Brand;
 use ferrohealth_ui::view::search::{Hit, HitGroup, Mark, SearchAnswer, SearchBox, Way, search_box};
@@ -33,6 +34,10 @@ pub const SLOW: &str = "zz-slow";
 /// Words the answer route refuses, so a journey sees the panel's error row.
 pub const FAILING: &str = "zz-fail";
 
+/// Words the answer route answers `401` to, as for a session that is over,
+/// so a journey sees the page load the brand's expired sign-in.
+pub const SIGNED_OUT: &str = "zz-signed-out";
+
 /// The path of `brand`'s find page.
 #[must_use]
 pub fn find_path(brand: Brand) -> String {
@@ -50,6 +55,13 @@ pub fn gallery_search(brand: Brand, state: Option<&str>, typed: Option<&str>) ->
         action: find_path(brand),
         value: typed.map(str::to_owned).unwrap_or_default(),
         suggest: Some(format!("{SUGGEST_ROUTE}/{}", brand.key())),
+        signed_out: Some(format!("/sign-in/{}/expired", brand.key())),
+        all: (brand == Brand::Pix).then(|| {
+            Phrase::new(tr_with(
+                Msg::SearchPatientsFor,
+                &[("query", Phrase::open("query"))],
+            ))
+        }),
         ..SearchBox::default()
     };
     match state {

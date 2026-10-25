@@ -365,3 +365,50 @@ async fn the_panel_says_while_it_waits_when_nothing_matched_and_when_the_console
     })
     .await
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_session_that_is_over_loads_the_signed_out_page() -> Result<(), Box<dyn Error>> {
+    // RFC 9110 §15.5.2: the answer route's 401 hands the page to the console's sign-in.
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        window(browser, 1440, 900).await?;
+        browser.goto(&gallery.url("/ferrobridge/forms")).await?;
+        let search = browser
+            .element(By::Css("#gallery-search[role='combobox']"))
+            .await?;
+        search.click().await?;
+        press(browser, "zz-signed-out").await?;
+        browser
+            .at(&gallery.url("/sign-in/ferrobridge/expired"))
+            .await?;
+        let errors = browser.console_errors().await?;
+        assert!(
+            errors.iter().all(|error| error.contains("401")),
+            "only the refused answer is logged: {errors:?}"
+        );
+        Ok(())
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_console_names_the_option_that_submits_its_search() -> Result<(), Box<dyn Error>> {
+    // FerroPIX #214: the submit runs the person search, which the panel never runs.
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        window(browser, 1440, 900).await?;
+        browser.goto(&gallery.url("/ferropix/forms")).await?;
+        typed(browser, "synthetic").await?;
+        browser
+            .text("span", "Search patients for “synthetic”")
+            .await?;
+        browser.console_clean("the named submit option").await
+    })
+    .await
+}

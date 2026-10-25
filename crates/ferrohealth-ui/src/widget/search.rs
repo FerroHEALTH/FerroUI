@@ -189,6 +189,8 @@ struct Ask {
     post: bool,
     /// How many characters a query holds before it is asked.
     from: u8,
+    /// The address the page loads on a `401` answer, if any.
+    signed_out: Option<String>,
 }
 
 /// The typeahead's state, shared by the field's handlers.
@@ -257,6 +259,8 @@ pub fn search_control(search: SearchBox, words: SearchWords) -> impl IntoView {
         post,
         suggest,
         suggest_from,
+        all: _,
+        signed_out,
     } = search;
     let field = NodeRef::<leptos::html::Input>::new();
     let form = NodeRef::<leptos::html::Form>::new();
@@ -275,6 +279,7 @@ pub fn search_control(search: SearchBox, words: SearchWords) -> impl IntoView {
             name: name.clone(),
             post,
             from: suggest_from,
+            signed_out,
         })),
     };
     on_cleanup(move || {
@@ -780,6 +785,12 @@ fn send(state: Typeahead, ask: Ask, words: String) {
     wasm_bindgen_futures::spawn_local(async move {
         let answered = fetch(&ask, words.trim()).await;
         if state.asked.try_get_value() != Some(mine) {
+            return;
+        }
+        if let (Err(Failure::Status(401)), Some(to)) = (&answered, ask.signed_out.as_deref()) {
+            if window().location().assign(to).is_err() {
+                leptos::logging::warn!("the browser refused the signed-out page");
+            }
             return;
         }
         state.phase.try_set(match answered {

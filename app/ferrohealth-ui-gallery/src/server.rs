@@ -349,13 +349,16 @@ struct Asked {
 /// Answers the top bar's typeahead for `brand` with the search answer as
 /// JSON, as a console's answer route does: slowly for
 /// [`crate::search::SLOW`], so the panel's waiting row shows, and with
-/// `503` for [`crate::search::FAILING`], so its error row shows.
+/// `503` for [`crate::search::FAILING`], so its error row shows, and with
+/// `401` for [`crate::search::SIGNED_OUT`], so the page loads the brand's
+/// signed-out sign-in.
 async fn suggest(Path(brand): Path<String>, Query(asked): Query<Asked>) -> Response {
     let Some(brand) = Brand::parse(&brand) else {
         return StatusCode::NOT_FOUND.into_response();
     };
     match asked.q.trim() {
         crate::search::FAILING => StatusCode::SERVICE_UNAVAILABLE.into_response(),
+        crate::search::SIGNED_OUT => StatusCode::UNAUTHORIZED.into_response(),
         crate::search::SLOW => {
             tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
             axum::Json(crate::search::answer(brand, &asked.q)).into_response()
