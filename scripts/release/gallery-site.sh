@@ -13,7 +13,7 @@
 #
 # The bundle is target/site: pkg/ferrohealth-ui-gallery.wasm and its
 # JavaScript glue, the entry every page loads, and beside them the chunks of
-# the lazy islands (`#[island(lazy)]`), which `--split` cuts out of the entry
+# the lazy routes (`#[lazy_route]`), which `--split` cuts out of the entry
 # with the loader __wasm_split.*.js and its manifest (leptos-ui.md §12). The
 # gallery has no stylesheet of its own: its server serves the library's
 # stylesheet and the brand themes from the library's constants, as a console
@@ -94,8 +94,8 @@ for file in pkg/ferrohealth-ui-gallery.wasm pkg/ferrohealth-ui-gallery.js \
   fi
 done
 [ "$missing" -eq 0 ] || exit 1
-# A build that kept lazy islands but missed the split pass leaves the glue
-# importing a module no browser resolves, and no island hydrates (#331).
+# A build that kept lazy routes but missed the split pass leaves the glue
+# importing a module no browser resolves, and nothing hydrates (#331).
 if grep -q "__wasm_split_placeholder__" "$root/target/site/pkg/ferrohealth-ui-gallery.js"; then
   echo "gallery-site: the glue imports __wasm_split_placeholder__: the split pass did not run" >&2
   exit 1

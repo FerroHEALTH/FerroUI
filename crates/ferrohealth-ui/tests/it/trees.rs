@@ -454,7 +454,7 @@ fn the_path_tree_tags_each_row_with_its_rm_type() {
 }
 
 #[test]
-fn the_tree_island_draws_its_props_on_the_server() {
+fn the_tree_view_draws_its_props_on_the_server() {
     let page = page_html(|| {
         view! {
             <TreeView
@@ -473,7 +473,6 @@ fn the_tree_island_draws_its_props_on_the_server() {
         }
         .into_any()
     });
-    assert!(page.contains("<leptos-island"), "{page}");
     assert!(
         has(&page, "ul", &[("id", "isle"), ("role", "tree")]),
         "{page}"

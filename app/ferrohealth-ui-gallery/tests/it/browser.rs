@@ -401,7 +401,7 @@ impl Browser {
     /// The id of the loader of the document the browser shows, which each
     /// new document has its own of (Chrome DevTools Protocol,
     /// `Page.getFrameTree`, `Frame.loaderId`).
-    async fn loader(&self) -> Result<String, Box<dyn Error>> {
+    pub(crate) async fn loader(&self) -> Result<String, Box<dyn Error>> {
         let tree = self
             .driver
             .cdp()

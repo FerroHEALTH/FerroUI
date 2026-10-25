@@ -7,7 +7,6 @@
 
 use ferrohealth_ui::i18n::number::grouped;
 use ferrohealth_ui::i18n::{Locale, locale, provide_locale};
-use ferrohealth_ui::island::CopyButton;
 use ferrohealth_ui::table::model::{Paging, Window};
 use ferrohealth_ui::table::pager::link_pager;
 use ferrohealth_ui::theme::Language;
@@ -18,7 +17,7 @@ use ferrohealth_ui::view::kbd::{Shortcut, shortcut_hint};
 use ferrohealth_ui::view::preferences::{Post, language_select};
 use ferrohealth_ui::view::refusal::{Refusal, refusal};
 use ferrohealth_ui::view::template::list::{HeadingCount, counted};
-use ferrohealth_ui::widget::copy::{CopySource, CopyWords};
+use ferrohealth_ui::widget::copy::CopyWords;
 use ferrohealth_ui::widget::editor::{Editor, EditorWords, Opened, Panel, editor_panel};
 use ferrohealth_ui::widget::identifier::{
     Domain, Identifier, IdentifierWords, Masked, Reveal, Revealed, identifier,
@@ -344,16 +343,9 @@ fn a_library_word_that_falls_back_to_english_is_marked_english() {
             does: String::from("Next row"),
         }])
     };
-    let copy = || {
-        view! {
-            <CopyButton
-                id=String::from("copy")
-                label=ferrohealth_ui::i18n::Word::from("Copy")
-                source=CopySource::Text(String::from("GET /Patient"))
-                words=CopyWords::of_page()
-            />
-        }
-        .into_any()
+    let copied = || {
+        let words = CopyWords::of_page();
+        view! { <p>{words.said_copied}</p> }.into_any()
     };
     let post = Post {
         action: String::from("/preference"),
@@ -381,7 +373,7 @@ fn a_library_word_that_falls_back_to_english_is_marked_english() {
     let families: [(&str, &dyn Fn() -> AnyView, &str); 8] = [
         ("tables", &pager, "(unavailable)"),
         ("keys", &shortcuts, "or"),
-        ("islands", &copy, "Copied to the clipboard."),
+        ("copy", &copied, "Copied to the clipboard."),
         ("preferences", &language, "Follow the browser"),
         ("refusals", &refused, "422"),
         ("editor", &|| editor_of(3), "3 lines"),

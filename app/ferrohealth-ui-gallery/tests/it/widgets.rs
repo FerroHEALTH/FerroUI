@@ -699,11 +699,23 @@ async fn the_open_pager_steps_with_no_total() -> Result<(), Box<dyn Error>> {
             range(posted).await?,
             "Previous posts the page before"
         );
-        step(linked, "next").await?;
+        // The linked pager is links, which the router follows in the page: no new
+        // document, and the range changes in place.
+        browser.hydrated().await?;
+        let before = browser.loader().await?;
+        browser
+            .element(By::Css(format!("{linked} [data-page='next']")))
+            .await?
+            .click()
+            .await?;
+        until("the linked Next leads on", async || {
+            Ok(range(linked).await? == "EHRs 26 to 50")
+        })
+        .await?;
         assert_eq!(
-            "EHRs 26 to 50",
-            range(linked).await?,
-            "the linked Next leads on"
+            before,
+            browser.loader().await?,
+            "a link loads no new document"
         );
         browser.console_clean("the open pager").await
     })

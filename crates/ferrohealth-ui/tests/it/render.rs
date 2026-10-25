@@ -638,14 +638,6 @@ fn a_document_pane_draws_every_view_on_the_server_each_reached_by_a_link() {
         "{raw}"
     );
     assert!(has(&raw, "div", &[("data-shown", "raw")]), "{raw}");
-    assert!(
-        raw.contains("<leptos-island"),
-        "the switch is an island: {raw}"
-    );
-    assert!(
-        raw.contains("<leptos-children"),
-        "the views are its server children: {raw}"
-    );
     assert!(raw.contains("&lt;/pre&gt;"), "{raw}");
     assert!(!raw.contains("</pre>\""), "{raw}");
     assert!(
@@ -730,10 +722,6 @@ fn the_figures_table_names_each_point_by_its_own_label() {
 #[test]
 fn the_legend_is_a_static_key_before_the_page_hydrates() {
     let page = html(|| line_chart(&trend("Readings"), ChartWords::of_page()));
-    assert!(
-        page.contains("<leptos-island"),
-        "the legend is an island: {page}"
-    );
     let keys = tags(&page, "span")
         .into_iter()
         .filter(|span| span.get("class").map(String::as_str) == Some("fui-legend-key"))
@@ -778,10 +766,6 @@ fn every_series_is_drawn_once_and_shown_in_the_plot_the_legend_names() {
             &[("id", "trend-plot"), ("class", "fui-chart-plot")]
         ),
         "{page}"
-    );
-    assert!(
-        page.contains("trend-plot") && page.contains("data-props"),
-        "the island is told the plot it shows and hides series in: {page}"
     );
     assert!(
         has(
@@ -2066,10 +2050,6 @@ fn a_copy_item_waits_hidden_and_its_menu_carries_the_copy_words() {
         .find(|button| button.contains_key("data-fui-copy"))
         .expect("the copy item");
     assert!(item.contains_key("hidden"), "{page}");
-    assert!(
-        page.contains("Copied to the clipboard."),
-        "the island carries what it says once copied: {page}"
-    );
     let plain = page_html(|| more_menu(file_menu()));
     assert!(
         !plain.contains("Copied to the clipboard."),
@@ -2081,10 +2061,6 @@ fn a_copy_item_waits_hidden_and_its_menu_carries_the_copy_words() {
             Variant::Secondary,
         )
     });
-    assert!(
-        button.contains("<leptos-island"),
-        "the copy button: {button}"
-    );
     assert!(button.contains("Copy the id"), "{button}");
 }
 
@@ -2230,7 +2206,7 @@ fn the_select_button_shows_its_choice_and_each_option_works_with_no_webassembly(
 }
 
 #[test]
-fn the_combobox_and_picker_islands_draw_their_native_floor_on_the_server() {
+fn the_combobox_and_picker_draw_their_native_floor_on_the_server() {
     let combo = html(|| {
         view! {
             <Combobox
@@ -2246,7 +2222,6 @@ fn the_combobox_and_picker_islands_draw_their_native_floor_on_the_server() {
         }
         .into_any()
     });
-    assert!(combo.contains("<leptos-island"), "{combo}");
     assert!(
         has(
             &combo,
@@ -2276,7 +2251,6 @@ fn the_combobox_and_picker_islands_draw_their_native_floor_on_the_server() {
         }
         .into_any()
     });
-    assert!(picker.contains("<leptos-island"), "{picker}");
     assert!(
         has(
             &picker,
@@ -2305,7 +2279,7 @@ fn copy_words() -> CopyWords {
 }
 
 #[test]
-fn the_copy_island_waits_hidden_and_leaves_its_text_to_the_page() {
+fn the_copy_button_waits_hidden_and_leaves_its_text_to_the_page() {
     let copy = html(|| {
         view! {
             <CopyButton
@@ -2317,7 +2291,6 @@ fn the_copy_island_waits_hidden_and_leaves_its_text_to_the_page() {
         }
         .into_any()
     });
-    assert!(copy.contains("<leptos-island"), "{copy}");
     assert!(
         has(
             &copy,
@@ -2347,7 +2320,7 @@ fn the_copy_island_waits_hidden_and_leaves_its_text_to_the_page() {
 }
 
 #[test]
-fn the_side_panel_island_opens_from_a_link_to_its_route_until_it_hydrates() {
+fn the_side_panel_opens_from_a_link_to_its_route_until_it_hydrates() {
     let panel = page_html(|| {
         view! {
             <SidePanel
@@ -2366,7 +2339,6 @@ fn the_side_panel_island_opens_from_a_link_to_its_route_until_it_hydrates() {
         }
         .into_any()
     });
-    assert!(panel.contains("<leptos-island"), "{panel}");
     let links = tags(&panel, "a");
     let link = links
         .iter()
@@ -2427,15 +2399,6 @@ fn the_side_panel_island_opens_from_a_link_to_its_route_until_it_hydrates() {
             &[("id", "access-body"), ("class", "fui-side-panel-body")]
         ),
         "{panel}"
-    );
-    assert!(
-        panel.contains("<leptos-children"),
-        "the body is the server's: {panel}"
-    );
-    assert!(
-        panel.contains(r#"\"glyph\":\"shield-check\""#)
-            || panel.contains("&quot;glyph&quot;:&quot;shield-check&quot;"),
-        "the glyph crosses as its Lucide name: {panel}"
     );
 }
 

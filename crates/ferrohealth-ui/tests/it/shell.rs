@@ -229,12 +229,8 @@ fn navigation(rail: Option<Rail>) -> String {
 }
 
 #[test]
-fn the_navigation_is_plain_links_with_the_page_marked_inside_its_drawer_island() {
+fn the_navigation_is_plain_links_with_the_page_marked_inside_its_drawer() {
     let page = navigation(None);
-    assert!(
-        page.contains("<leptos-island"),
-        "the drawer is an island: {page}"
-    );
     assert!(
         has(
             &page,
@@ -517,7 +513,6 @@ fn menu_html(name: Option<&str>, sign_out: bool) -> String {
 fn the_user_menu_is_a_menu_button_over_a_popover() {
     // WAI-ARIA Authoring Practices 1.2, the menu button pattern.
     let menu = menu_html(Some("Demo <Operator>"), true);
-    assert!(menu.contains("<leptos-island"), "an island: {menu}");
     assert!(
         has(
             &menu,
