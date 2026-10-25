@@ -11,7 +11,7 @@
 //! [`routes`]: a link to one of them loads that route's code the moment the
 //! pointer rests on it or the keyboard focuses it, and once the first page
 //! has hydrated and the browser is idle, the routes marked `idle` (the main
-//! navigation's) load too. Each route loads once. No specification governs
+//! navigation's) load too, one after another. Each route loads once. No specification governs
 //! this: our own design.
 
 use std::future::Future;
@@ -80,10 +80,14 @@ mod browser {
         static LOADED: RefCell<BTreeSet<&'static str>> = const { RefCell::new(BTreeSet::new()) };
     }
 
+    /// Whether `route`'s code has not started loading, marking it started.
+    fn first(route: &Route) -> bool {
+        LOADED.with(|loaded| loaded.borrow_mut().insert(route.path))
+    }
+
     /// Starts loading `route`'s code, unless it has started already.
     fn load(route: &Route) {
-        let first = LOADED.with(|loaded| loaded.borrow_mut().insert(route.path));
-        if first {
+        if first(route) {
             leptos::task::spawn_local((route.preload)());
         }
     }
@@ -115,10 +119,16 @@ mod browser {
         let focus = window_event_listener(leptos::ev::focusin, move |event| {
             hovered(routes, &event);
         });
+        // NOTE: no specification governs this: our own design; the routes load one after
+        // another, since every chunk at once runs the browser out of connections.
         request_idle_callback(move || {
-            for route in routes.iter().filter(|route| route.idle) {
-                load(route);
-            }
+            leptos::task::spawn_local(async move {
+                for route in routes.iter().filter(|route| route.idle) {
+                    if first(route) {
+                        (route.preload)().await;
+                    }
+                }
+            });
         });
         on_cleanup(move || {
             pointer.remove();
