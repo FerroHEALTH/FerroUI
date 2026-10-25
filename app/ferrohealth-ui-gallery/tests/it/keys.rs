@@ -447,3 +447,77 @@ async fn on_a_phone_the_dock_stacks_its_decisions_primary_first_at_the_foot()
     })
     .await
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_user_menu_opens_the_legend_where_the_page_has_one() -> Result<(), Box<dyn Error>> {
+    // FerroUI #413: the menu's Keyboard shortcuts opens the legend in place of its link.
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        window(browser, 1440, 900).await?;
+        browser.goto(&gallery.url("/ferrofed/overlays")).await?;
+        browser.hydrated().await?;
+        browser
+            .element(By::Css("button[popovertarget='user-menu']"))
+            .await?
+            .click()
+            .await?;
+        let shortcuts = browser
+            .element(By::Css("#user-menu a[data-ferroui-shortcuts]"))
+            .await?;
+        until("the menu opens", async || {
+            Ok(shortcuts.is_displayed().await?)
+        })
+        .await?;
+        shortcuts.click().await?;
+        until("the legend opens", async || {
+            Ok(browser
+                .driver()
+                .find(By::Css("dialog#shortcuts:modal"))
+                .await
+                .is_ok())
+        })
+        .await?;
+        browser.at(&gallery.url("/ferrofed/overlays")).await?;
+        browser.console_clean("the legend from the menu").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_digit_follows_the_binder_tab_it_names() -> Result<(), Box<dyn Error>> {
+    // FerroUI #413: `2` follows the second link tab of the page's first binder.
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        window(browser, 1440, 900).await?;
+        browser.goto(&gallery.url("/ferrobridge")).await?;
+        browser.hydrated().await?;
+        blur(browser).await?;
+        press(browser, "2").await?;
+        until("the second tab's address is reached", async || {
+            Ok(browser
+                .driver()
+                .current_url()
+                .await?
+                .fragment()
+                .is_some_and(|fragment| fragment == "tabs-diagnostics"))
+        })
+        .await?;
+        window(browser, 390, 844).await?;
+        browser.goto(&gallery.url("/ferrobridge")).await?;
+        browser.hydrated().await?;
+        blur(browser).await?;
+        press(browser, "3").await?;
+        assert!(
+            browser.driver().current_url().await?.fragment().is_none(),
+            "a phone follows no digit"
+        );
+        browser.console_clean("the digit keys").await
+    })
+    .await
+}

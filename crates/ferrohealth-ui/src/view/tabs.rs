@@ -204,9 +204,10 @@ pub(crate) fn joined(row: TabRow, panel: AnyView, class: Option<&'static str>) -
     view! {
         <div class=sheet>
             {select}
-            <nav class="fui-tabs" aria-label=label>
+            <nav class="fui-tabs" aria-label=label data-ferroui-tab-keys="">
                 {links}
             </nav>
+            <crate::island::TabKeys />
             <div class="fui-tab-panel">{panel}</div>
         </div>
     }
