@@ -103,14 +103,15 @@ async fn hovering_a_link_loads_its_routes_code_before_the_click() -> Result<(), 
         let list = browser
             .element(By::Css("#sidebar a[href='/ferroterm/templates/list']"))
             .await?;
-        // NOTE: the templates' route is no main navigation route, so only the hover loads
-        // the chunks it alone needs; the split manifest names them.
+        // NOTE: the templates' route is in the group of pages aside, which the idle prefetch
+        // leaves, so only the hover loads the chunks it alone needs; the split manifest
+        // names them.
         let waiting: u64 = browser
             .driver()
             .execute_async(
                 r"const done = arguments[arguments.length - 1];
                 fetch('/pkg/__wasm_split_manifest.json').then((answer) => answer.json()).then((manifest) => {
-                  const key = Object.keys(manifest).find((name) => name.includes('template_page'));
+                  const key = Object.keys(manifest).find((name) => name.includes('l_aside'));
                   const loaded = performance.getEntriesByType('resource').map((entry) => entry.name);
                   window.fuiWaiting = manifest[key].filter((chunk) => !loaded.some((name) => name.endsWith('/' + chunk + '.wasm')));
                   performance.clearResourceTimings();

@@ -70,8 +70,12 @@ the browser, so a link or a form never reloads the document (FerroUI #410;
 1. **No `islands` feature.** Turn on `hydrate` in the browser half and
    `ssr` in the server half, chosen by target, and never the `leptos`
    feature `islands`.
-2. **Every page a lazy route.** Draw each page as a `leptos_router`
-   `LazyRoute` (`#[lazy_route]`), hydrate with
+2. **Pages in a few lazy routes.** Group your pages into a few
+   `leptos_router` `LazyRoute`s (`#[lazy_route]`), one for each part of your
+   navigation read together, each drawing the page its path names, as the
+   gallery's `app/ferrohealth-ui-gallery/src/routes.rs` does: one lazy route
+   a page splits the code into hundreds of chunks, more than a browser
+   fetches at once. Hydrate with
    `leptos::mount::hydrate_lazy(App)`, write `<HydrationScripts options/>`,
    and build with `cargo leptos build --split`. A build with lazy code and
    no `--split` imports `__wasm_split_placeholder__`, which no browser

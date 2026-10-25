@@ -29,11 +29,12 @@ use leptos::prelude::*;
 use leptos_meta::{Stylesheet, Title, provide_meta_context};
 use leptos_router::components::{Outlet, ParentRoute, Route, Router, Routes};
 use leptos_router::hooks::{use_location, use_params_map, use_query_map};
-use leptos_router::path;
+use leptos_router::{Lazy, path};
 
 use crate::cookies::cookies_requested;
 use crate::locale::gallery_locale;
 use crate::locale::{Msg, tr, tr_with};
+use crate::routes::{LAside, LCore, LFederation, LRecords, LVisual};
 
 /// The gallery's name, as its footer and titles name it, in the page's
 /// locale.
@@ -189,13 +190,7 @@ pub fn document(options: LeptosOptions) -> impl IntoView {
     let lang = locale_of(&cookies).tag();
     view! {
         <!DOCTYPE html>
-        <html
-            lang=lang
-            data-theme=theme
-            data-density=density
-            data-motion=motion
-            data-hints=hints
-        >
+        <html lang=lang data-theme=theme data-density=density data-motion=motion data-hints=hints>
             <head>
                 <meta charset="utf-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -274,47 +269,29 @@ pub fn App() -> impl IntoView {
             <crate::cookies::FollowCookies />
             <Routes fallback=|| view! { <NotFound /> }>
                 <Route path=path!("/") view=Index />
-                <Route path=path!("/sign-in/:brand/:variant") view={leptos_router::Lazy::<crate::routes::LSignInPage>::new()} />
-                <Route path=path!("/fault/:brand") view={leptos_router::Lazy::<crate::routes::LFaultPage>::new()} />
+                <Route path=path!("/sign-in/:brand/:variant") view={Lazy::<LAside>::new()} />
+                <Route path=path!("/fault/:brand") view={Lazy::<LAside>::new()} />
                 <ParentRoute path=path!("/:brand") view=BrandShell>
-                    <Route path=path!("") view={leptos_router::Lazy::<crate::routes::LOverviewPage>::new()} />
-                    <Route path=path!("forms") view={leptos_router::Lazy::<crate::routes::LFormsPage>::new()} />
-                    <Route path=path!("tables") view={leptos_router::Lazy::<crate::routes::LTablesPage>::new()} />
-                    <Route path=path!("code") view={leptos_router::Lazy::<crate::routes::LCodePage>::new()} />
-                    <Route
-                        path=path!("configuration")
-                        view={leptos_router::Lazy::<crate::routes::LConfigurationPage>::new()}
-                    />
-                    <Route
-                        path=path!("configuration/provisioned")
-                        view={leptos_router::Lazy::<crate::routes::LProvisionedPage>::new()}
-                    />
-                    <Route path=path!("overlays") view={leptos_router::Lazy::<crate::routes::LOverlaysPage>::new()} />
-                    <Route path=path!("overlays/access") view={leptos_router::Lazy::<crate::routes::LAccessPage>::new()} />
-                    <Route path=path!("charts") view={leptos_router::Lazy::<crate::routes::LChartsPage>::new()} />
-                    <Route path=path!("layouts") view={leptos_router::Lazy::<crate::routes::LLayoutsPage>::new()} />
-                    <Route path=path!("operations") view={leptos_router::Lazy::<crate::routes::LOperationsPage>::new()} />
-                    <Route path=path!("clinical") view={leptos_router::Lazy::<crate::routes::LClinicalPage>::new()} />
-                    <Route
-                        path=path!("terminology")
-                        view={leptos_router::Lazy::<crate::routes::LTerminologyPage>::new()}
-                    />
-                    <Route path=path!("federation") view={leptos_router::Lazy::<crate::routes::LFederationPage>::new()} />
-                    <Route path=path!("find") view={leptos_router::Lazy::<crate::routes::LFindPage>::new()} />
-                    <Route
-                        path=path!("federation/:part")
-                        view={leptos_router::Lazy::<crate::routes::LFederationPart>::new()}
-                    />
-                    <Route path=path!("preferences") view={leptos_router::Lazy::<crate::routes::LPreferencesPage>::new()} />
-                    <Route
-                        path=path!("preferences/:section")
-                        view={leptos_router::Lazy::<crate::routes::LPreferencesPage>::new()}
-                    />
-                    <Route
-                        path=path!("templates/:variant")
-                        view={leptos_router::Lazy::<crate::routes::LTemplatePage>::new()}
-                    />
-                    <Route path=path!("trees") view={leptos_router::Lazy::<crate::routes::LTreesPage>::new()} />
+                    <Route path=path!("") view={Lazy::<LCore>::new()} />
+                    <Route path=path!("forms") view={Lazy::<LCore>::new()} />
+                    <Route path=path!("tables") view={Lazy::<LCore>::new()} />
+                    <Route path=path!("code") view={Lazy::<LCore>::new()} />
+                    <Route path=path!("configuration") view={Lazy::<LCore>::new()} />
+                    <Route path=path!("configuration/provisioned") view={Lazy::<LCore>::new()} />
+                    <Route path=path!("overlays") view={Lazy::<LFederation>::new()} />
+                    <Route path=path!("overlays/access") view={Lazy::<LFederation>::new()} />
+                    <Route path=path!("charts") view={Lazy::<LVisual>::new()} />
+                    <Route path=path!("layouts") view={Lazy::<LVisual>::new()} />
+                    <Route path=path!("operations") view={Lazy::<LRecords>::new()} />
+                    <Route path=path!("clinical") view={Lazy::<LRecords>::new()} />
+                    <Route path=path!("terminology") view={Lazy::<LRecords>::new()} />
+                    <Route path=path!("federation") view={Lazy::<LFederation>::new()} />
+                    <Route path=path!("find") view={Lazy::<LCore>::new()} />
+                    <Route path=path!("federation/:part") view={Lazy::<LFederation>::new()} />
+                    <Route path=path!("preferences") view={Lazy::<LCore>::new()} />
+                    <Route path=path!("preferences/:section") view={Lazy::<LCore>::new()} />
+                    <Route path=path!("templates/:variant") view={Lazy::<LAside>::new()} />
+                    <Route path=path!("trees") view={Lazy::<LVisual>::new()} />
                 </ParentRoute>
             </Routes>
         </Router>
@@ -874,9 +851,7 @@ fn Index() -> impl IntoView {
             <div class="fui-sign-in-lockup">
                 {lockup("/", mark(Glyph::LAYERS), tr(Msg::FerrohealthUi), tr(Msg::Gallery))}
             </div>
-            <p class="fui-muted">
-                {tr(Msg::EveryComponentLibraryEveryProduct)}
-            </p>
+            <p class="fui-muted">{tr(Msg::EveryComponentLibraryEveryProduct)}</p>
             <div class="fui-stack">{brands}</div>
         </div>
     }

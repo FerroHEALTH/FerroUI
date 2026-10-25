@@ -19,9 +19,9 @@ never publish under it.
 - **The whole page hydrated, in three parts** (FerroUI #410, which
   replaced the islands mode of #196). The server draws every page whole,
   the browser hydrates it, and the console's `leptos_router` draws the next
-  page in the browser, so no link or form reloads the document; each page
-  is a lazy route whose code loads from chunks of its own, prefetched on a
-  link's hover or focus (`widget::prefetch`). `view` holds view functions
+  page in the browser, so no link or form reloads the document; the pages
+  load in a few groups, each a lazy route whose code loads from chunks of
+  its own, prefetched on a link's hover or focus (`widget::prefetch`). `view` holds view functions
   (plain functions, no reactive props, no `#[component]`), drawn on the
   server and again in the browser. `island` holds the ready components
   (toast region, navigation drawer, keyboard tabs, the search box), whose
@@ -81,7 +81,7 @@ Leptos 0.8 source the workspace pins decides.
   `highlight`, `icon`, `tone`, `theme`, `style`), `css/`, `themes/`,
   `vendor/lucide/`, `tests/it/` (contrast, stylesheet rules, rendering).
 - `app/ferrohealth-ui-gallery`: the gallery, server rendered and hydrated
-  whole, each page a lazy route, its halves chosen by target (never by
+  whole, its pages in five lazy routes, its halves chosen by target (never by
   Cargo feature),
   with its browser journeys (the no-WebAssembly journey among them) and
   screenshots under `tests/it/` (`FERROUI_JOURNEYS=1`,

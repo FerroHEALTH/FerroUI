@@ -4,15 +4,15 @@
 //! Loads a page's code before you open it, so a first visit costs no more
 //! than a return.
 //!
-//! A console splits its code by route: each page is a `leptos_router`
-//! `LazyRoute`, whose code loads from chunks of its own under
-//! `cargo leptos build --split` (the Leptos book, "Code Splitting"). A
-//! console names its routes and their `LazyRoute::preload` once, with
+//! A console splits its code by route: its pages load in a few
+//! `leptos_router` `LazyRoute`s, whose code loads from chunks of their own
+//! under `cargo leptos build --split` (the Leptos book, "Code Splitting").
+//! A console names its routes and their `LazyRoute::preload` once, with
 //! [`routes`]: a link to one of them loads that route's code the moment the
 //! pointer rests on it or the keyboard focuses it, and once the first page
 //! has hydrated and the browser is idle, the routes marked `idle` (the main
-//! navigation's) load too, one after another. Each route loads once. No specification governs
-//! this: our own design.
+//! navigation's) load too, one after another. Each route loads once. No
+//! specification governs this: our own design.
 
 use std::future::Future;
 use std::pin::Pin;

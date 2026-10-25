@@ -2,8 +2,9 @@
   first in the browser, so no link or form reloads the document; islands mode
   is gone. Every ready component of `island` is a `#[component]`, the crate no
   longer turns on the `leptos` feature `islands`, and its `split` feature is
-  gone. A console drops `islands` and `split`, draws each page as a
-  `leptos_router` `LazyRoute`, hydrates with `leptos::mount::hydrate_lazy`,
+  gone. A console drops `islands` and `split`, draws its pages in a few
+  `leptos_router` `LazyRoute`s, one for each group of pages read together,
+  hydrates with `leptos::mount::hydrate_lazy`,
   writes `<HydrationScripts options/>`, builds with
   `cargo leptos build --split`, and provides the same locale and state in both
   halves (`docs/consoles.md`, How a console builds). A repeatable list's blank

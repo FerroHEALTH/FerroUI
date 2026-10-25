@@ -30,11 +30,14 @@ owner's ruling on FerroUI #410, 2026-10-25):
 NOTE: the Leptos book, "Hydration" and "Code Splitting"; FerroUI #410. The
 server draws every page whole, the browser hydrates the whole page, and the
 console's `leptos_router` draws the next page in the browser, so a link or
-a form never reloads the document. Each page is a `LazyRoute`, so its code
-loads from chunks of its own under `cargo leptos build --split`, and
-[`widget::prefetch`](src/widget/prefetch.rs) loads a route's code when a
-link to it is hovered or focused, and the main navigation's once the first
-page is idle.
+a form never reloads the document. The pages load in a few groups, each a
+`LazyRoute` whose code loads from chunks of its own under `cargo leptos
+build --split`, and [`widget::prefetch`](src/widget/prefetch.rs) loads a
+route's code when a link to it is hovered or focused, and the main
+navigation's once the first page is idle. One lazy route a page made the
+gallery's 21 pages into 811 chunks, a page needing 300 to 444 of them, and
+Chrome refused the fetches past its limit (`net::ERR_INSUFFICIENT_RESOURCES`);
+five groups make 32 chunks, 16 a group.
 
 FerroUI #196 had chosen islands mode on bundle size and time to interactive.
 The owner ruled on #410 that a page that reloads on every click is not
@@ -50,7 +53,8 @@ change (release build, brotli -q 11, Chrome for Testing with the CPU slowed
 |---|---:|---:|
 | Islands, v0.4.0 | 465420 | 387833 (eight lazy islands) |
 | Whole page, no split | 1557224 | none |
-| Whole page, every page a lazy route | 465338 | 1846251 (all pages) |
+| Whole page, every page a lazy route | 465338 | 1846251 (all pages, 811 chunks) |
+| Whole page, five groups of pages | 474860 | 1456880 (all pages, 32 chunks) |
 
 | Link click, one session | Islands (a new document) | Whole page (in the page) |
 |---|---:|---:|

@@ -72,7 +72,7 @@ diffs an island's children or props and has no fallback for a failed
 navigation (`crates/ferrohealth-ui/CLAUDE.md`). A console turns on
 `hydrate` in its browser half, calls `leptos::mount::hydrate_lazy(App)`
 from its browser entry, writes `<HydrationScripts options/>` in its shell,
-draws every page as a `LazyRoute` and builds with `cargo leptos build
+draws its pages in a few `LazyRoute`s and builds with `cargo leptos build
 --split` (§15.1). The library has three parts:
 
 - **`view`: view functions.** Plain functions returning a typed view, never
@@ -305,9 +305,9 @@ dependency or a heavy generic is justified against the bytes it adds. The
 gallery, which carries every component, is held to a budget in CI:
 `scripts/checks/gallery-bundle.sh` fails when its brotli-compressed entry
 WebAssembly is over the number below, which the script reads from this
-table. The entry is what every page loads before its route's code; each
-page is a lazy route (§15.1), cut out of the entry by `cargo leptos build
---split` and loaded from its own chunks, ahead of the visit by
+table. The entry is what every page loads before its route's code; the
+pages load in five lazy routes (§14.11), cut out of the entry by `cargo
+leptos build --split` and loaded from their own chunks, ahead of the visit by
 `widget::prefetch`. The script prints all the chunks together beside the
 entry, so a chunk that grows is seen.
 
@@ -336,8 +336,11 @@ With the whole page hydrated (#410) every page is a lazy route: the entry is
 465338 bytes, what the islands entry measured with the search panel
 (465420), and each page's code, 1846251 bytes of chunks for all of them,
 loads with its route, ahead of the visit by `widget::prefetch`. Hydrated
-whole with no split the gallery was 1557224 bytes. The budget stayed where
-it was.
+whole with no split the gallery was 1557224 bytes. One lazy route a page
+made 811 chunks, a page needing 300 to 444, and Chrome refused the fetches
+past its limit (`net::ERR_INSUFFICIENT_RESOURCES`), so the 21 pages load in
+five groups: 32 chunks, 16 a group, the entry 474860 bytes and the chunks
+1456880. The budget stayed where it was.
 The gallery's measures in bytes, the first three rows the spike of #196
 (the same gallery both ways):
 
@@ -354,6 +357,7 @@ The gallery's measures in bytes, the first three rows the spike of #196
 | Islands with the search panel (v0.4.0) | 1604276 | 629196 | 465420 | 34813 / 8434 |
 | Whole page, no split (#410 spike) | 5795592 | 2211988 | 1557224 | 34461 / 8189 |
 | Whole page, every page a lazy route (#410) | 1495980 | 599923 | 465338 | 36651 / 8352 |
+| Whole page, five groups of pages (#410) | 1528309 | 613370 | 474860 | 36800 / 8555 |
 
 Time to interactive on the forms page, Chrome for Testing with the CPU
 slowed 4x (the mid-tier phone rate) and the bundle served locally, the
@@ -669,9 +673,13 @@ gallery.
   a generic with a large body used with several types (keep one concrete
   inner function), `serde` where `serde-lite` serves (book
   `deployment/binary_size`). [review]
-- **Every page is a lazy route**: `#[lazy_route]` on a `LazyRoute` and
-  `cargo leptos build --split` (book `deployment/binary_size`, "Code
-  Splitting"; leptos_router_macro `src/lib.rs`), hydrated with
+- **The pages load in a few lazy routes**: `#[lazy_route]` on a `LazyRoute`
+  for each group of pages read together, each drawing the page its path
+  names, and `cargo leptos build --split` (book `deployment/binary_size`,
+  "Code Splitting"; leptos_router_macro `src/lib.rs`). Every split point
+  multiplies the chunks the code shared between routes falls into: a lazy
+  route a page made the gallery 811 chunks, more than Chrome fetches at
+  once, and five groups make 32. Hydrated with
   `hydrate_lazy`, never `hydrate_body`, which panics on a lazy route. A
   build with lazy code and no `--split` is broken, never merely unsplit:
   its glue imports `__wasm_split_placeholder__`, no browser resolves it,
@@ -697,14 +705,18 @@ The library and the consoles hydrate the whole page and split it by route
 
 ### 15.1 Routes and their code
 
-- **Every page is a `LazyRoute`** whose view draws the page component, and
-  the browser entry calls `hydrate_lazy` (leptos `src/mount.rs`). Code
-  every page needs, the shell and the widgets it draws, stays in the entry;
-  a page's own code loads from its chunks. [review; the budget of §12]
+- **The pages load in a few `LazyRoute`s**, one for each group of pages
+  read together, whose view draws the page its path names, and the browser
+  entry calls `hydrate_lazy` (leptos `src/mount.rs`). Code every page
+  needs, the shell and the widgets it draws, stays in the entry; a group's
+  own code loads from its chunks. One lazy route a page splits the code
+  into more chunks than a browser fetches at once (§14.11). [review; the
+  budget of §12; the gallery's journeys]
 - **A route's code loads before the visit**: the console names its routes
   and their `LazyRoute::preload` once with `widget::prefetch::routes`, so a
   link's hover or focus loads its route, and the main navigation's routes
-  load once the first page is idle. [review; `widget::prefetch` tests]
+  load once the first page is idle, one after another. [review;
+  `widget::prefetch` tests]
 
 ### 15.2 Navigation in the page
 
