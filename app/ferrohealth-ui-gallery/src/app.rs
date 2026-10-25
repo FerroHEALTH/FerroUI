@@ -819,7 +819,16 @@ fn brand_shell(brand: Brand, back: String, search: Searched<'_>, fhir: Option<&s
             .into_any(),
         ),
         sidebar: nav,
-        content: view! { <Outlet /> }.into_any(),
+        // NOTE: the Leptos book, `router/18_params_and_queries`: the pages read their query
+        // as the server drew them, so a new query draws the page again.
+        content: {
+            let location = use_location();
+            (move || {
+                location.search.track();
+                view! { <Outlet /> }
+            })
+            .into_any()
+        },
         dock: None,
         footer: footer(),
     });

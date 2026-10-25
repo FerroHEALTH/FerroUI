@@ -89,7 +89,13 @@ pub(crate) fn FollowCookies() -> impl IntoView {
             if let Some(Cookies(cookies)) = cookies {
                 leptos::task::spawn_local(async move {
                     match requested_cookies().await {
-                        Ok(now) => cookies.set(now),
+                        Ok(now) => {
+                            // NOTE: no specification governs this: our own design; the same
+                            // cookies redraw nothing, so a page keeps the focus it took.
+                            if cookies.get_untracked() != now {
+                                cookies.set(now);
+                            }
+                        }
                         Err(error) => leptos::logging::warn!("the cookies did not come: {error}"),
                     }
                 });

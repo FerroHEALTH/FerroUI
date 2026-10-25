@@ -1887,6 +1887,8 @@ async fn at_320_pixels_a_long_pill_in_a_stacked_card_wraps_inside_the_card()
         window(browser, 320, 800).await?;
         browser.goto(&gallery.url("/ferrofed/tables")).await?;
         browser.element(By::Css("main h1")).await?;
+        // The script below rewrites a cell, so it waits for the page to hydrate first.
+        browser.hydrated().await?;
         // NOTE: WCAG 2.2 SC 1.4.10; a state longer than the value column stays inside the card.
         let [pill, card, edge]: [f64; 3] = browser
             .driver()
