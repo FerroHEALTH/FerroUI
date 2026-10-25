@@ -47,6 +47,14 @@ pub fn PageAnnouncer() -> impl IntoView {
     crate::widget::announce::page_announcer()
 }
 
+/// Takes the page's form submits through the router, so a form loads no
+/// new document ([`crate::widget::submit`]). A console draws it once,
+/// inside its `<Router>`.
+#[component]
+pub fn FormNavigator() -> impl IntoView {
+    crate::widget::submit::form_navigator()
+}
+
 /// The keyboard tabs `prefix`, named `label`, one tab per word in `tabs`,
 /// over the panels [`crate::widget::tabs::tab_panels`] drew as its
 /// children.

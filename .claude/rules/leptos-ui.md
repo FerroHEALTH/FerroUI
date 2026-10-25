@@ -721,12 +721,17 @@ The library and the consoles hydrate the whole page and split it by route
 ### 15.2 Navigation in the page
 
 - **The router follows every link and form in the page**: `leptos_router`
-  takes a same-origin `<a>` click, and a form submits through
-  `leptos_router::components::Form` or `<ActionForm>`, so the document,
-  the shell and every component's state survive (book `router/19_a`,
-  `router/20_form`). A link to a server route that answers with no page
-  (the sign-in, a download) carries `rel="external"` (§4). [review; the
-  gallery's journeys assert a link keeps its document]
+  takes a same-origin `<a>` click, and a console draws
+  `island::FormNavigator` once inside its `Router`, which submits a `GET`
+  form in the page and posts a `POST` form marked
+  `widget::submit::NAVIGATES` in the background, drawing the page its
+  redirect names, so the document, the shell and every component's state
+  survive (book `router/19_a`, `router/20_form`). A widget leads elsewhere
+  through `widget::submit::follow`, never by setting the address. A link to
+  a server route that answers with no page (the sign-in, a download)
+  carries `rel="external"` (§4), and a form or submit that must load a new
+  document carries `widget::submit::RELOADS`. [review; the gallery's
+  journeys assert a link and a form keep their document]
 - **A navigation that fails falls back to a full load**: a server function
   or a form the router cannot complete loads the address as a document, so
   the server draws the page or its error, never a blank or stale page.

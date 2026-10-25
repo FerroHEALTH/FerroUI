@@ -189,9 +189,7 @@ pub fn tab_select(
 fn go(href: &str) {
     #[cfg(target_arch = "wasm32")]
     {
-        if window().location().assign(href).is_err() {
-            leptos::logging::warn!("the browser refused to follow a tab");
-        }
+        crate::widget::submit::follow(href);
     }
     #[cfg(not(target_arch = "wasm32"))]
     let _: &str = href;

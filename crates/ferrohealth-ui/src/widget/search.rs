@@ -277,6 +277,11 @@ pub fn search_control(search: SearchBox, words: SearchWords) -> impl IntoView {
             from: suggest_from,
         })),
     };
+    on_cleanup(move || {
+        if let Some(handle) = state.pending.try_get_value().flatten() {
+            handle.clear();
+        }
+    });
     let hydrated = RwSignal::new(false);
     let side = RwSignal::new(Side::Start);
     Effect::new(move |_| {
@@ -777,7 +782,7 @@ fn send(state: Typeahead, ask: Ask, words: String) {
         if state.asked.try_get_value() != Some(mine) {
             return;
         }
-        state.phase.set(match answered {
+        state.phase.try_set(match answered {
             Ok(answer) => Phase::Answered(answer),
             Err(failure) => Phase::Failed(failure),
         });
@@ -991,9 +996,7 @@ fn clear(field: NodeRef<leptos::html::Input>) {
 fn go(href: &str) {
     #[cfg(target_arch = "wasm32")]
     {
-        if window().location().assign(href).is_err() {
-            leptos::logging::warn!("the browser refused to follow a search hit");
-        }
+        crate::widget::submit::follow(href);
     }
     #[cfg(not(target_arch = "wasm32"))]
     let _: &str = href;

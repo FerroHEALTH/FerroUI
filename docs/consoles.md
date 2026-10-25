@@ -96,7 +96,14 @@ the browser, so a link or a form never reloads the document (FerroUI #410;
    beside the toast region: after a navigation in the page it moves the
    focus to the new page's heading and says its title (WCAG 2.2 SC 2.4.3,
    SC 4.1.3).
-7. **The locale both halves.** Provide the same `i18n::Locale` at your root
+7. **Forms in the page.** Draw `island::FormNavigator` once inside your
+   `Router`: a `GET` form navigates in the page, and a `POST` form marked
+   `widget::submit::NAVIGATES` whose route redirects is posted in the
+   background and the router draws the page it names. Mark a form or a
+   submit that must load a new document (an export, a download)
+   `widget::submit::RELOADS`; with no WebAssembly every form submits as the
+   browser does.
+8. **The locale both halves.** Provide the same `i18n::Locale` at your root
    on the server and in the browser (a `SharedValue` of its tag); the
    browser carries the library's catalog.
 

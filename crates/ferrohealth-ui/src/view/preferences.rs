@@ -760,7 +760,7 @@ pub fn preferences_page(page: PreferencesPage) -> AnyView {
 /// and Reset to defaults posting `back` to the console's route `reset`.
 fn reset_dialog(reset: String, back: String) -> impl IntoView {
     let confirm = view! {
-        <form method="post" action=reset>
+        <form method="post" action=reset data-ferroui-navigates="">
             <input type="hidden" name="back" value=back />
             <button type="submit" class=Variant::Primary.class()>
                 {label(Some(Glyph::ROTATE_CCW), tr(Text::PreferencesResetConfirm))}

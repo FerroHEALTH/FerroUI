@@ -566,11 +566,13 @@ async fn the_results_export_menu_submits_the_query_form_to_its_format() -> Resul
                 .starts_with(&csv))
         })
         .await?;
-        let body = browser.element(By::Tag("body")).await?.text().await?;
-        assert!(
-            body.starts_with("csv\nSELECT "),
-            "the query rode along: {body}"
-        );
+        // The export is a download the browser loads as a new document, never a page the
+        // router draws.
+        until("the query rode along", async || {
+            let body = browser.element(By::Tag("body")).await?.text().await?;
+            Ok(body.starts_with("csv\nSELECT "))
+        })
+        .await?;
         browser.console_clean("the results pane's Export").await
     })
     .await

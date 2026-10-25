@@ -641,7 +641,7 @@ async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error
         "/federation" => topology_floor(browser).await?,
         "/charts" => {
             colour_key(browser).await?;
-            crate::widgets::busy_flow_unfolds(browser).await?;
+            crate::widgets::busy_flow_unfolds(browser, false).await?;
         }
         "/layouts" => {
             let items = browser

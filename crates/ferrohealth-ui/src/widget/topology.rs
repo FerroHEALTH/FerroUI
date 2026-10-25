@@ -267,9 +267,7 @@ mod browser {
                         .and_then(|link| link.get_attribute("href"));
                     if let Some(look) = look {
                         event.prevent_default();
-                        if window().location().assign(&look).is_err() {
-                            leptos::logging::warn!("the topology could not open the quick look");
-                        }
+                        crate::widget::submit::follow(&look);
                     }
                 }
                 Some(ask) => {

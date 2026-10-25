@@ -193,7 +193,7 @@ fn switch_view(switch: Switch, shown: Shown) -> AnyView {
 /// `glyph`.
 fn export_item(export: Export, glyph: Glyph, words: Word) -> Item {
     let act = match export {
-        Export::Link(href) => Act::Link(href),
+        Export::Link(href) => Act::Download(href),
         Export::Submit { action, form } => Act::SubmitTo { action, form },
     };
     Item::new(Action {
