@@ -13,7 +13,7 @@
 
 use ferrohealth_ui::i18n::{Arg, Locale, provide_locale};
 use ferrohealth_ui::icon::Glyph;
-use ferrohealth_ui::island::ToastRegion;
+use ferrohealth_ui::island::{PageAnnouncer, ToastRegion};
 use ferrohealth_ui::style::Brand;
 use ferrohealth_ui::table::model::Paging;
 use ferrohealth_ui::theme::{Preferences, Theme, cookie};
@@ -296,6 +296,7 @@ pub fn App() -> impl IntoView {
             </Routes>
         </Router>
         <ToastRegion words=RegionWords::of_page() flash=Vec::new() />
+        <PageAnnouncer />
     }
 }
 

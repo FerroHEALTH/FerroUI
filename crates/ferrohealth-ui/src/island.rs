@@ -39,6 +39,14 @@ pub fn ToastRegion(
     crate::widget::toast::toast_region(words, flash)
 }
 
+/// The polite region that says the title of each page the router draws in
+/// the browser, and moves the focus to its heading. A console draws it
+/// once, at its root, beside the toast region.
+#[component]
+pub fn PageAnnouncer() -> impl IntoView {
+    crate::widget::announce::page_announcer()
+}
+
 /// The keyboard tabs `prefix`, named `label`, one tab per word in `tabs`,
 /// over the panels [`crate::widget::tabs::tab_panels`] drew as its
 /// children.

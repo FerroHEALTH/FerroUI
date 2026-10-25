@@ -65,6 +65,8 @@ web-sys = { version = "0.3.85", default-features = false, features = [
   "Location",
   "MediaQueryList",
   "MouseEvent",
+  "MutationObserver",
+  "MutationObserverInit",
   "NamedNodeMap",
   "NodeList",
   "Navigator",

@@ -3,7 +3,8 @@
 
 //! The journeys of navigation in the page (FerroUI #410): a link keeps the
 //! document and the router draws the next page, back and forward restore
-//! the pages, and hovering a link loads its route's code before the click.
+//! the pages, the new page takes the focus and is announced, and hovering a
+//! link loads its route's code before the click.
 
 use std::error::Error;
 
@@ -60,6 +61,30 @@ async fn a_link_keeps_the_document_and_back_and_forward_restore_the_pages()
             .await?;
         follow(browser, "/ferrobridge/charts", "Charts").await?;
         assert!(marked(browser).await?, "the link loaded no new document");
+        // WCAG 2.2 SC 2.4.3 and SC 4.1.3: the new page takes the focus and is said.
+        until("the new page's heading takes the focus", async || {
+            Ok(browser
+                .driver()
+                .execute(
+                    "return document.activeElement === document.querySelector('main h1');",
+                    vec![],
+                )
+                .await?
+                .convert::<bool>()?)
+        })
+        .await?;
+        until("the region says the new page's title", async || {
+            let said: String = browser
+                .driver()
+                .execute(
+                    "return document.querySelector(\"[data-ferroui-announcer][role='status']\").textContent;",
+                    vec![],
+                )
+                .await?
+                .convert()?;
+            Ok(said.starts_with("Charts"))
+        })
+        .await?;
         assert_eq!(document, browser.loader().await?);
         browser.at(&gallery.url("/ferrobridge/charts")).await?;
         browser

@@ -733,7 +733,9 @@ The library and the consoles hydrate the whole page and split it by route
   [review]
 - **The new page is announced and takes the focus** (WCAG 2.2 SC 2.4.3,
   SC 4.1.3): after a navigation in the page the focus moves to the page's
-  heading and a polite region says its title. [review]
+  heading and a polite region says its title; a console draws
+  `island::PageAnnouncer` once at its root. [test: the gallery's navigation
+  journey]
 
 ### 15.3 State both halves read alike
 

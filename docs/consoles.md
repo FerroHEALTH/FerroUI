@@ -92,7 +92,11 @@ the browser, so a link or a form never reloads the document (FerroUI #410;
 5. **Actions are server functions.** A mutation is a server function behind
    `<ActionForm>`, which runs in the page and posts with no WebAssembly as
    the fallback; a link is a plain `<a>`, which the router follows.
-6. **The locale both halves.** Provide the same `i18n::Locale` at your root
+6. **The page announced.** Draw `island::PageAnnouncer` once at your root,
+   beside the toast region: after a navigation in the page it moves the
+   focus to the new page's heading and says its title (WCAG 2.2 SC 2.4.3,
+   SC 4.1.3).
+7. **The locale both halves.** Provide the same `i18n::Locale` at your root
    on the server and in the browser (a `SharedValue` of its tag); the
    browser carries the library's catalog.
 

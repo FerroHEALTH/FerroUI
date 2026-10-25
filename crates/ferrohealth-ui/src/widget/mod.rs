@@ -27,6 +27,7 @@
 //! ([`worklist::worklist`]).
 
 pub mod action_menu;
+pub mod announce;
 pub mod chart;
 pub mod combobox;
 pub mod copy;
