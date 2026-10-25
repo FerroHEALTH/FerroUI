@@ -1,108 +1,131 @@
 <!-- SPDX-FileCopyrightText: Cadasto B.V. -->
 <!-- SPDX-License-Identifier: BUSL-1.1 -->
+<div align="center">
 
-# FerroUI
+<img src="assets/brand/ferroui-lockup-auto.svg" alt="FerroUI" width="220">
 
-[![crates.io](https://img.shields.io/crates/v/ferrohealth-ui)](https://crates.io/crates/ferrohealth-ui)
+**The component library every FerroHEALTH console is built from, in Rust.**
 
-The shared UI component library of the FerroHEALTH consoles: FerroBRIDGE,
-FerroFED, FerroEHR, FerroTERM and FerroPIX. It is published on crates.io as
-[`ferrohealth-ui`](https://crates.io/crates/ferrohealth-ui), for Leptos 0.8,
-and every console builds its pages from it and from one reviewed design.
+[Documentation](crates/ferrohealth-ui/README.md) ·
+[Quick start](#quick-start) ·
+[What ships today](#what-ships-today) ·
+[Licensing](https://ferrohealth.eu/docs/licensing.html)
+
+**Project**<br>
+[![Release](https://img.shields.io/github/v/release/FerroHEALTH/FerroUI?sort=semver&logo=github&label=release)](https://github.com/FerroHEALTH/FerroUI/releases/latest)
+[![CI](https://img.shields.io/github/actions/workflow/status/FerroHEALTH/FerroUI/ci.yml?branch=main&logo=githubactions&logoColor=white&label=CI)](https://github.com/FerroHEALTH/FerroUI/actions/workflows/ci.yml)
+[![License: BUSL-1.1](https://img.shields.io/badge/License-BUSL--1.1-blue)](LICENSE)
+[![crates.io](https://img.shields.io/crates/v/ferrohealth-ui?logo=rust&label=crates.io)](https://crates.io/crates/ferrohealth-ui)
+[![Docs](https://img.shields.io/docsrs/ferrohealth-ui?logo=docsdotrs&label=docs.rs)](https://docs.rs/ferrohealth-ui)
+
+**Quality and security**<br>
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/FerroHEALTH/FerroUI/badge)](https://scorecard.dev/viewer/?uri=github.com/FerroHEALTH/FerroUI)
+[![CodeQL](https://img.shields.io/github/actions/workflow/status/FerroHEALTH/FerroUI/codeql.yml?branch=main&logo=github&label=CodeQL)](https://github.com/FerroHEALTH/FerroUI/actions/workflows/codeql.yml)
+[![Signed releases](https://img.shields.io/badge/releases-signed-brightgreen?logo=github)](docs/release.md)
+[![SLSA Build L3](https://slsa.dev/images/gh-badge-level3.svg)](docs/release.md)
+
+</div>
+
+## What FerroUI does
+
+The FerroHEALTH products each come with a web console, the screens an
+administrator, a data steward or a terminology editor works in. FerroUI is
+the one set of building blocks all those consoles are made from: page
+layouts, tables, forms, menus, code viewers and clinical views, in five
+brand colours, each in a light and a dark theme.
+
+Because every console uses the same parts, they look and behave alike, and
+a fix or an accessibility improvement reaches all of them at once. Every
+colour pairing meets WCAG 2.2 AA (the web accessibility guidelines), and
+every important action keeps a plain link or form behind it, so a page
+still works when its scripts do not load.
+
+### Who it is for
+
+- **People who use the FerroHEALTH consoles**, who get the same layout,
+  keyboard behaviour and themes in each product.
+- **Developers of the FerroHEALTH consoles**, and of other Leptos
+  applications in Rust, who build pages from reviewed components.
+
+### Why you can trust what it claims
+
+Every release is signed and carries SLSA build provenance, so you can check
+that the crate you use is the one built here. The source is public, and
+every component is in this repository: there is no paid edition with extra
+parts. The contrast of every colour pairing is held by the crate's own test
+and by a browser journey over the gallery, so an accessibility claim is
+checked on every change.
+
+## Part of FerroHEALTH
+
+FerroHEALTH is five servers, each its own product, that reach each other
+only over published standards: FerroEHR stores the record, FerroBRIDGE
+translates it to FHIR and the OMOP research model, FerroFED connects records
+across organisations and borders, FerroPIX matches patient identities, and
+FerroTERM serves the code systems (the shared lists of medical terms). Work
+that every server needs lives in three shared libraries: FerroAUTH for
+sign-in and access control, FerroAUDIT for the audit trail, and FerroUI for
+the web consoles. The consoles of FerroBRIDGE, FerroFED, FerroEHR, FerroTERM
+and FerroPIX are all built from FerroUI.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/hero-dark.png">
   <img alt="Gallery pages in four brands at desktop width (the FerroBRIDGE code page, the FerroFED federation page, the FerroTERM terminology page and the FerroEHR clinical record) beside the FerroPIX tables page on a phone" src="docs/hero.png">
 </picture>
 
-## What a console gets
+## Quick start
 
-- **Islands mode.** The server draws every page whole, and the browser
-  hydrates only the interactive parts. `view` holds the static view
-  functions, `island` the ready islands (the toast region, the navigation
-  drawer, menus, pickers, the tree view and more), and `widget` the
-  interactive parts a console's own island calls.
-- **One interaction contract** for every component
-  ([`design/COMPONENTS.md` § Interaction](design/COMPONENTS.md#interaction)):
-  1. native elements first: `<dialog>`, `popover`, `<details>`, links and
-     forms;
-  2. behaviour in Rust compiled to WebAssembly;
-  3. every page works without the WebAssembly, with a link or a form behind
-     every important action;
-  4. no hand-written JavaScript and no npm, so a strict CSP holds.
-- **Five brands, light and dark.** One plain-CSS stylesheet defines every
-  `fui-` class, and a theme file per brand sets its accent. The page follows
-  the system theme or the user's choice in `data-theme`.
-- **One table model:** sorting, filtering and paging by links and forms,
-  with the state in the URL or, on a screen that can show patient data, in
-  the session.
-- **Highlighters** for YAML, JSON, XML and AQL, the Fluent words of every
-  component, and the vendored Lucide icons.
-- **WCAG 2.2 AA** for every role pairing in every brand, light and dark,
-  held by the crate's contrast test and by a gallery journey over the
-  colours the browser paints.
+Add the crate to a Leptos 0.8 application, pinned exactly:
 
-## The components
-
-Every component has an ID and a spec in
-[`design/COMPONENTS.md`](design/COMPONENTS.md), grouped by the console it
-was first designed for and shared by all of them. The
-[gallery](app/ferrohealth-ui-gallery) draws each one in every brand, light
-and dark, and its screenshots are under [`docs/screenshots/`](docs/screenshots/).
-
-| Family | What it holds | Gallery pages |
-|---|---|---|
-| [Page templates](design/COMPONENTS.md#page-templates) | T1 list, T2 detail, T3 settings, About, the error page | `/templates/…` |
-| [The table](design/COMPONENTS.md#the-table) | the listing with its find field, filters, sort and pager | `/tables` |
-| [From FerroPIX](design/COMPONENTS.md#from-ferropix-r1-to-r29) (R1 to R29) | tabs, the work-list, form fields, the date picker, toasts, the select, sign-in, Your preferences | `/forms`, `/overlays`, `/preferences` |
-| [From FerroFED](design/COMPONENTS.md#from-ferrofed-f1-to-f14-for-every-console) (F1 to F14) | the revision lifecycle, the commit-confirm countdown, the secret field, the fan-out outcome, the topology, the menu, the state mark | `/configuration`, `/federation` |
-| [Shared library pass](design/COMPONENTS.md#added-in-the-shared-library-pass) | the list head, the tab select, the settings panel, search results, the help switch | `/layouts`, `/templates/…` |
-| [From FerroBRIDGE](design/COMPONENTS.md#from-ferrobridge-b1-to-b10-for-every-console) (B1 to B10) | the code viewer and editor, diagnostics, the load report, transforms, the ETL run report, the HL7 v2 viewer, the flow | `/code`, `/operations`, `/charts` |
-| [From FerroTERM](design/COMPONENTS.md#from-ferroterm-m1-to-m6-for-every-console) (M1 to M6) | the concept tree, the coding, the version select, the value set clause, the root matrix, the mapping row | `/terminology`, `/trees` |
-| [From FerroEHR](design/COMPONENTS.md#from-ferroehr-e1-to-e8-for-every-console) (E1 to E8) | the subject line, version history, the clinical reading, the folder tree, the path browser, the query builder, the results pane, the scope grant | `/clinical`, `/trees` |
-
-Each gallery path sits under a brand, such as `/ferrobridge/code`.
-
-## Use it in a console
-
-Pin the exact version that crates.io shows in the badge above. A console
-moves its pin after looking at its own screens.
-
-```toml
-[dependencies]
-ferrohealth-ui = "=X.Y.Z"
+```sh
+cargo add ferrohealth-ui@=0.4.0
 ```
-
-1. Turn on the Leptos `islands` feature, write
-   `<HydrationScripts options islands=true/>` in your shell, and hydrate
-   with `leptos::mount::hydrate_islands()`.
-2. Serve `ferrohealth_ui::style::STYLESHEET` and your brand's
-   `Brand::theme()` as two stylesheets of your own origin, the theme second.
-3. Write `data-theme` on `<html>` from the user's cookie.
-4. Build each page from the templates and components your console's design
-   names under [`design/consoles/`](design/consoles/).
 
 The [crate README](crates/ferrohealth-ui/README.md) is the integration
-guide, and [`docs/consoles.md`](docs/consoles.md) says what the library
-owns, what your console owns, and how to ask for a component.
+guide: the islands setup, the stylesheet and theme, and the page templates.
+To see every component, run the gallery from a checkout with
+[`cargo-leptos`](https://crates.io/crates/cargo-leptos):
 
-## Run the gallery
-
-```
-cd app/ferrohealth-ui-gallery
+```sh
+git clone https://github.com/FerroHEALTH/FerroUI && cd FerroUI/app/ferrohealth-ui-gallery
 cargo leptos watch
 ```
 
 Then open <http://127.0.0.1:3000>.
 
-## Contributing
+## What ships today
 
-See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md) and
-[SUPPORT.md](SUPPORT.md). A component change starts in the
-[design](design/README.md).
+- [Page templates](design/COMPONENTS.md#page-templates): list, detail, settings, About and the error page
+- [The table](design/COMPONENTS.md#the-table): find, filter, sort and page by links and forms, with the state in the URL or the session
+- [Forms and overlays](design/COMPONENTS.md#from-ferropix-r1-to-r29): tabs, form fields, the date picker, toasts, sign-in and the preferences page
+- [Configuration views](design/COMPONENTS.md#from-ferrofed-f1-to-f14-for-every-console): revisions, the commit-confirm countdown, the secret field, the topology
+- [Code and operations views](design/COMPONENTS.md#from-ferrobridge-b1-to-b10-for-every-console): the code viewer and editor, diagnostics, run reports, the HL7 v2 viewer
+- [Terminology views](design/COMPONENTS.md#from-ferroterm-m1-to-m6-for-every-console): the concept tree, the coding, the version select, the value set clause
+- [Clinical views](design/COMPONENTS.md#from-ferroehr-e1-to-e8-for-every-console): version history, the clinical reading, the folder tree, the query builder
+- [Five brands, light and dark](crates/ferrohealth-ui/README.md), with highlighters for YAML, JSON, XML and AQL and the Lucide icons
+- [The gallery](app/ferrohealth-ui-gallery), every component in every brand, with its [screenshots](docs/screenshots/)
+
+<details>
+<summary><b>Published crates</b> (1)</summary>
+
+| Crate | What it does | Version | Docs | Downloads |
+|---|---|---|---|---|
+| [`ferrohealth-ui`](https://crates.io/crates/ferrohealth-ui) | The shared UI components of the FerroHEALTH consoles: Leptos views and widgets, role tokens, highlighters and one table model | [![crates.io](https://img.shields.io/crates/v/ferrohealth-ui?logo=rust&label=crates.io)](https://crates.io/crates/ferrohealth-ui) | [![docs.rs](https://img.shields.io/docsrs/ferrohealth-ui?logo=docsdotrs&label=docs.rs)](https://docs.rs/ferrohealth-ui) | [![downloads](https://img.shields.io/crates/d/ferrohealth-ui?logo=rust&label=downloads)](https://crates.io/crates/ferrohealth-ui) |
+
+</details>
+
+## Learn more
+
+- [The crate README](crates/ferrohealth-ui/README.md), [the component specs](design/COMPONENTS.md) and [what the library and a console each own](docs/consoles.md)
+- [The design](design/README.md), where a component change starts
+- [Changelog](CHANGELOG.md) and [milestones](https://github.com/FerroHEALTH/FerroUI/milestones)
+- [Security policy](SECURITY.md) and the [FerroHEALTH book](https://ferrohealth.eu/docs/)
+- [Contributing](CONTRIBUTING.md), [code of conduct](CODE_OF_CONDUCT.md), [support](SUPPORT.md), [governance](GOVERNANCE.md) and [maintainers](MAINTAINERS.md)
 
 ## Licence
 
-Business Source License 1.1, Licensor Cadasto B.V., converting to Apache 2.0
-four years after each version. See [`LICENSE`](LICENSE) and
-[`NOTICE`](NOTICE). The vendored Lucide icons keep their ISC licence.
+Business Source License 1.1 ([LICENSE](LICENSE)), with Apache License 2.0 as
+the Change License four years after each version; the vendored Lucide icons
+keep their ISC licence. The
+[licensing page](https://ferrohealth.eu/docs/licensing.html) says when you
+need a commercial licence from Cadasto B.V.
