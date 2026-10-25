@@ -672,30 +672,39 @@ pub const fn brand_glyph(brand: Brand) -> Glyph {
 /// navigation the router makes in the browser.
 #[component]
 fn BrandShell() -> impl IntoView {
+    ferrohealth_ui::widget::nav::follow_path();
     let params = use_params_map();
     let location = use_location();
     let query = use_query_map();
+    // NOTE: FerroUI #437; the shell is drawn once per brand and follows the path itself, so
+    // only a change of brand, of the search state the address names or of the nested
+    // section under Federation draws it again.
     let at = Memo::new(move |_| {
         let brand = params.with(|params| params.get_str("brand").and_then(Brand::parse));
         let search = query.with(|query| query.get("search"));
-        let fhir = query.with(|query| query.get(crate::pages::terminology::version_key()));
-        let typed = query.with(|query| query.get("q"));
-        (brand, location.pathname.get(), search, fhir, typed)
+        let nest = brand.and_then(|brand| {
+            location
+                .pathname
+                .with(|path| crate::pages::federation::nest(brand, path, federation_entry(brand)))
+        });
+        (brand, search, nest)
     });
     move || match at.get() {
-        (Some(brand), back, search, fhir, typed) => {
-            let typed = typed.filter(|_| back.ends_with("/find"));
+        (Some(brand), search, _) => {
+            let back = location.pathname.get_untracked();
+            let typed = query
+                .with_untracked(|query| query.get("q"))
+                .filter(|_| back.ends_with("/find"));
             brand_shell(
                 brand,
-                back,
+                &back,
                 Searched {
                     state: search.as_deref(),
                     typed: typed.as_deref(),
                 },
-                fhir.as_deref(),
             )
         }
-        (None, _, _, _, _) => view! { <NotFound /> }.into_any(),
+        (None, _, _) => view! { <NotFound /> }.into_any(),
     }
 }
 
@@ -706,48 +715,16 @@ fn fhir_version(back: &str, chosen: Option<&str>) -> Option<VersionSelect> {
         .then(|| crate::pages::terminology::version_select(back, chosen))
 }
 
-/// What the top bar's search shows: the state the address names and the
-/// words the find page answers.
-#[derive(Debug, Clone, Copy)]
-struct Searched<'a> {
-    /// The state, `busy` or `disabled`.
-    state: Option<&'a str>,
-    /// The words the find page answers.
-    typed: Option<&'a str>,
-}
-
-/// The shell of `brand`'s pages, whose theme switch returns to `back`, its
-/// search `search` and its FHIR version `fhir`.
-fn brand_shell(brand: Brand, back: String, search: Searched<'_>, fhir: Option<&str>) -> AnyView {
-    let lockup = lockup(
-        "/",
-        mark(brand_glyph(brand)),
-        brand.product(),
-        tr(Msg::Gallery),
-    )
-    .into_any();
-    let switch = brand_switch(brand, &back).into_any();
-    let collapsed = rail_requested();
-    let nav = sidebar(Sidebar {
-        id: SIDEBAR_ID,
-        label: tr(Msg::Pages),
-        groups: navigation(brand).into(),
-        current: back.clone(),
-        rail: Some(Rail {
-            collapsed,
-            action: String::from(SIDEBAR_ROUTE),
-            back: back.clone(),
-        }),
-        nest: crate::pages::federation::nest(brand, &back, federation_entry(brand)),
-    });
-    let theme = theme_requested();
+/// The user menu of `brand` on the page at `back`, the FHIR version
+/// `fhir` in view.
+fn operator_menu(brand: Brand, back: &str, fhir: Option<&str>) -> AnyView {
     // A name as long as a FHIR user reference gets, so the top bar shows how
     // it gives way; the synthetic operator the gallery is signed in as.
     let operator = String::from("Practitioner/synthetic-terminologist-on-call");
-    let version = fhir_version(&back, fhir);
-    let mut choices = vec![brand_choices(brand, &back)];
+    let version = fhir_version(back, fhir);
+    let mut choices = vec![brand_choices(brand, back)];
     choices.extend(version.as_ref().map(VersionSelect::choices));
-    let menu = user_menu(UserMenu {
+    user_menu(UserMenu {
         id: "user-menu",
         label: operator.clone(),
         name: Some(operator.clone()),
@@ -760,13 +737,49 @@ fn brand_shell(brand: Brand, back: String, search: Searched<'_>, fhir: Option<&s
             glyph: Glyph::KEY_ROUND,
         }],
         theme: ThemeChoice {
-            current: theme,
+            current: theme_requested(),
             action: String::from(PREFERENCE_ROUTE),
-            back,
+            back: back.to_owned(),
         },
         choices,
         shortcuts: Some(format!("/{}/overlays", brand.key())),
         sign_out: Some(format!("{SIGN_OUT_ROUTE}/{}", brand.key())),
+    })
+    .into_any()
+}
+
+/// What the top bar's search shows: the state the address names and the
+/// words the find page answers.
+#[derive(Debug, Clone, Copy)]
+struct Searched<'a> {
+    /// The state, `busy` or `disabled`.
+    state: Option<&'a str>,
+    /// The words the find page answers.
+    typed: Option<&'a str>,
+}
+
+/// The shell of `brand`'s pages, drawn for the page at `back` and then
+/// following the router, with its search `search`.
+fn brand_shell(brand: Brand, back: &str, search: Searched<'_>) -> AnyView {
+    let lockup = lockup(
+        "/",
+        mark(brand_glyph(brand)),
+        brand.product(),
+        tr(Msg::Gallery),
+    )
+    .into_any();
+    let collapsed = rail_requested();
+    let nav = sidebar(Sidebar {
+        id: SIDEBAR_ID,
+        label: tr(Msg::Pages),
+        groups: navigation(brand).into(),
+        current: back.to_owned(),
+        rail: Some(Rail {
+            collapsed,
+            action: String::from(SIDEBAR_ROUTE),
+            back: back.to_owned(),
+        }),
+        nest: crate::pages::federation::nest(brand, back, federation_entry(brand)),
     });
     let pill = status_pill(StatusPill {
         reach: Reach::Up,
@@ -776,11 +789,23 @@ fn brand_shell(brand: Brand, back: String, search: Searched<'_>, fhir: Option<&s
             &[("version", Arg::from(VERSION))],
         )),
     });
+    // NOTE: FerroUI #437; the parts that name the page in view follow the router, so the
+    // shell around them is drawn once: the brand switch, the version select and the menu.
+    let location = use_location();
+    let query = use_query_map();
+    let page = Memo::new(move |_| {
+        (
+            location.pathname.get(),
+            query.with(|query| query.get(crate::pages::terminology::version_key())),
+        )
+    });
     let end = view! {
-        <span class="fui-wide-only">{switch}</span>
-        {version.map(version_select)}
+        <span class="fui-wide-only">
+            {move || page.with(|(back, _)| brand_switch(brand, back).into_any())}
+        </span>
+        {move || page.with(|(back, fhir)| fhir_version(back, fhir.as_deref()).map(version_select))}
         {pill}
-        {menu}
+        {move || page.with(|(back, fhir)| operator_menu(brand, back, fhir.as_deref()))}
     }
     .into_any();
     let search = crate::search::gallery_search(brand, search.state, search.typed);

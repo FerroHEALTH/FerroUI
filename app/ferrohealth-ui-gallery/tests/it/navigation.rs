@@ -225,3 +225,77 @@ async fn a_get_form_and_a_post_that_redirects_keep_the_document() -> Result<(), 
     })
     .await
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_shell_and_its_state_survive_a_link_to_another_page() -> Result<(), Box<dyn Error>> {
+    // FerroUI #437: the top bar, the navigation and the words in the search stay as they
+    // were; only the page under them changes, and the navigation marks the new page.
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        window(browser, 1440, 900).await?;
+        browser.goto(&gallery.url("/ferrobridge/tables")).await?;
+        browser.hydrated().await?;
+        let search = browser
+            .element(By::Css("#gallery-search[role='combobox']"))
+            .await?;
+        search.send_keys("synthetic").await?;
+        browser
+            .driver()
+            .execute(
+                "window.fuiShell = [document.querySelector('header'), document.getElementById('sidebar')];",
+                vec![],
+            )
+            .await?;
+        browser
+            .driver()
+            .execute(
+                "document.querySelector(\"#sidebar a[href='/ferrobridge/forms']\").click();",
+                vec![],
+            )
+            .await?;
+        until("the router draws the forms page", async || {
+            Ok(browser.driver().current_url().await?.path() == "/ferrobridge/forms")
+        })
+        .await?;
+        browser.element(By::Css("main h1")).await?;
+        let kept: bool = browser
+            .driver()
+            .execute(
+                "return window.fuiShell[0] === document.querySelector('header')
+                    && window.fuiShell[1] === document.getElementById('sidebar');",
+                vec![],
+            )
+            .await?
+            .convert()?;
+        assert!(kept, "the top bar and the navigation are the same elements");
+        assert_eq!(
+            Some(String::from("synthetic")),
+            browser
+                .element(By::Id("gallery-search"))
+                .await?
+                .prop("value")
+                .await?,
+            "the words in the search stay"
+        );
+        browser
+            .element(By::Css(
+                "#sidebar a[href='/ferrobridge/forms'][aria-current='page']",
+            ))
+            .await?;
+        assert!(
+            browser
+                .driver()
+                .find_all(By::Css(
+                    "#sidebar a[href='/ferrobridge/tables'][aria-current='page']"
+                ))
+                .await?
+                .is_empty(),
+            "the old page is no longer marked"
+        );
+        browser.console_clean("the shell across a link").await
+    })
+    .await
+}

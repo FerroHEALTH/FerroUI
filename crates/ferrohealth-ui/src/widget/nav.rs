@@ -117,6 +117,37 @@ pub struct Sidebar {
     pub nest: Option<Nest>,
 }
 
+/// The address of the page in view, its path and its query, as the
+/// console's router knows it ([`follow_path`]).
+#[derive(Debug, Clone, Copy)]
+pub struct CurrentPath(pub Signal<String>);
+
+/// Provides [`CurrentPath`] from the console's router, so the shell drawn
+/// once marks the page in view and returns to it after each navigation in
+/// the page (#437).
+///
+/// Call it once, in the component that draws the shell, inside the
+/// console's `Router`. Without it the shell marks the page it was drawn
+/// for, as before #410.
+pub fn follow_path() {
+    let location = leptos_router::hooks::use_location();
+    provide_context(CurrentPath(Signal::derive(move || {
+        let path = location.pathname.get();
+        let query = location.search.get();
+        if query.is_empty() {
+            path
+        } else {
+            format!("{path}?{query}")
+        }
+    })));
+}
+
+/// The address of the page in view: the router's, when the console follows
+/// it ([`follow_path`]), else `drawn`, the page the shell was drawn for.
+pub(crate) fn current_path(drawn: String) -> Signal<String> {
+    use_context::<CurrentPath>().map_or_else(|| Signal::stored(drawn), |path| path.0)
+}
+
 /// Whether the entry leading to `href` marks the page at `current`: on its
 /// own path, or on a path under it too unless it is `exact`.
 #[must_use]
@@ -194,10 +225,19 @@ fn entry(
 ) -> impl IntoView + use<> {
     let nest = nest.take_if(|nest| nest.under == entry.href);
     let href = entry.href.to_string();
-    let here = if nest.is_some() {
-        Some("location")
-    } else {
-        marks(&href, entry.exact, current).then_some("page")
+    let path = current_path(current.to_owned());
+    let nested = nest.is_some();
+    let here = {
+        let href = href.clone();
+        let exact = entry.exact;
+        move || {
+            if nested {
+                Some("location")
+            } else {
+                path.with(|path| marks(&href, exact, path))
+                    .then_some("page")
+            }
+        }
     };
     // NOTE: WCAG 2.2 SC 1.4.13; a title shows on hover alone, so the rail draws its own tooltip.
     let tooltip = rail.then(|| {
@@ -258,7 +298,7 @@ fn foot(id: &'static str, rail: Rail) -> impl IntoView + use<> {
     };
     view! {
         <form method="post" action=rail.action class="fui-sidebar-foot fui-wide-only" data-ferroui-navigates="">
-            <input type="hidden" name="back" value=rail.back />
+            <input type="hidden" name="back" value=current_path(rail.back) />
             <button
                 type="submit"
                 name="sidebar"
@@ -431,7 +471,7 @@ mod drawer {
 mod nested {
     use leptos::prelude::*;
 
-    use super::{NEST_SHOWN, Nest, NestItem, marks};
+    use super::{NEST_SHOWN, Nest, NestItem, current_path, marks};
     use crate::view::flow::FlowState;
 
     /// The `aria-current` of the parent while its own page is in view, and
@@ -466,7 +506,9 @@ mod nested {
     /// Returns one child, marked as the page in view while `current` is
     /// its page; its full label is its tooltip, since a long one is cut.
     fn child(item: NestItem, current: &str) -> impl IntoView + use<> {
-        let here = marks(&item.href, true, current).then_some("page");
+        let path = current_path(current.to_owned());
+        let href = item.href.clone();
+        let here = move || path.with(|path| marks(&href, true, path)).then_some("page");
         let dot = dot(&item);
         let word = word(&item);
         let title = item.label;
@@ -515,10 +557,16 @@ mod nested {
             children,
             all,
         } = nest;
-        let here = if marks(&parent.href, true, current) {
-            PAGE
-        } else {
-            LOCATION
+        let here = {
+            let path = current_path(current.to_owned());
+            let href = parent.href.clone();
+            move || {
+                if path.with(|path| marks(&href, true, path)) {
+                    PAGE
+                } else {
+                    LOCATION
+                }
+            }
         };
         let total = children.len();
         let count = crate::i18n::number::grouped(u64::try_from(total).unwrap_or(u64::MAX));
