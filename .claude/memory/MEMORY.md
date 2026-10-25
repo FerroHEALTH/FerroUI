@@ -17,7 +17,8 @@
 - [Brand palettes](brand-palettes.md): each product keeps its own accent
   (BRIDGE indigo, FED azure, EHR and TERM teal, PIX plum), a shade moved only to pass
   contrast; owner 2026-10-18
-- [Sign-in screens](sign-in-screens.md): two forms, a basic form and an OAuth2
+- [Sign-in screens](sign-in-screens.md): a plain `POST`, the one exception to
+  the reactive rule; two forms, a basic form and an OAuth2
   button alone (and both together), FerroEHR's card the reference design
 - [Signed commits and the merge queue](merge-queue-signed.md): `main` takes
   only signed commits through pull requests and the merge queue
