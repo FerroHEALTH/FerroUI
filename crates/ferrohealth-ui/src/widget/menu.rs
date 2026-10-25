@@ -184,7 +184,7 @@ fn theme_group(id: &str, theme: ThemeChoice) -> impl IntoView + use<> {
         .collect_view();
     view! {
         <form method="post" action=theme.action class="fui-menu-theme" data-ferroui-navigates="">
-            <input type="hidden" name="back" value=theme.back />
+            <input type="hidden" name="back" value=crate::widget::nav::current_path(theme.back) />
             <div class="fui-menu-label" id=label_id.clone()>
                 {tr(Text::ThemeSwitch)}
             </div>

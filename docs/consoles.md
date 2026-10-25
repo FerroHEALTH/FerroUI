@@ -115,6 +115,15 @@ the browser, so a link or a form never reloads the document (FerroUI #410;
    with an internal error. In a debug build, `explain` says so beside such a
    panic. Code that must touch the DOM runs in an `Effect`, which runs after
    hydration; a test waits for the mark.
+10. **The shell drawn once.** Draw your shell in one component inside your
+    `Router` that calls `widget::nav::follow_path()` first, and draw it
+    again only for what changes the whole shell (another product, another
+    signed-in operator), never for the path: the navigation marks the page
+    in view and the rail's and the theme choice's `back` name it by
+    themselves, so the search's words, the navigation's scroll and every
+    widget in the shell survive a navigation in the page. A part of the top
+    bar that names the page in view (a version select) follows the router
+    in a closure of its own.
 
 ## The top bar's search
 

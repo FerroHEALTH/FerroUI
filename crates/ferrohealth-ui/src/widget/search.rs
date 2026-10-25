@@ -775,12 +775,20 @@ fn typed(field: NodeRef<leptos::html::Input>, state: Typeahead) {
 /// Asks the console's route for the words `words` and shows the answer,
 /// unless a newer ask has started.
 fn send(state: Typeahead, ask: Ask, words: String) {
-    state
+    // NOTE: no specification governs this: our own design; the wait can end after a
+    // navigation disposed the search, so the state is written only while it lives.
+    if state
         .asked
-        .update_value(|asked| *asked = asked.wrapping_add(1));
-    let mine = state.asked.get_value();
-    state.phase.set(Phase::Asking);
-    state.open.set(true);
+        .try_update_value(|asked| *asked = asked.wrapping_add(1))
+        .is_none()
+    {
+        return;
+    }
+    let Some(mine) = state.asked.try_get_value() else {
+        return;
+    };
+    drop(state.phase.try_set(Phase::Asking));
+    let _: Option<bool> = state.open.try_set(true);
     #[cfg(target_arch = "wasm32")]
     wasm_bindgen_futures::spawn_local(async move {
         let answered = fetch(&ask, words.trim()).await;
