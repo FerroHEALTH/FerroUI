@@ -18,6 +18,11 @@
 //! request and on a manual run. A feature pull request commits no image
 //! (`scripts/checks/screenshot-paths.sh`), so between refreshes the committed
 //! set may lack a state a merged change added.
+//!
+//! The capture runs with `prefers-reduced-motion: reduce`, so a spinner or a
+//! skeleton holds still and an unchanged page captures pixel-identical. On a
+//! release pull request the pixel check (`FERROUI_SCREENSHOT_PIXELS=1`)
+//! compares every committed page image with a fresh capture by its pixels.
 
 use std::collections::BTreeSet;
 use std::error::Error;
@@ -248,7 +253,10 @@ async fn every_page_is_captured_in_every_brand_light_and_dark() -> Result<(), Bo
                 .cdp()
                 .send_raw(
                     "Emulation.setEmulatedMedia",
-                    json!({ "features": [{ "name": "prefers-color-scheme", "value": theme }] }),
+                    json!({ "features": [
+                        { "name": "prefers-color-scheme", "value": theme },
+                        { "name": "prefers-reduced-motion", "value": "reduce" },
+                    ] }),
                 )
                 .await?;
             for shot in shots()
@@ -292,7 +300,10 @@ async fn one_brand_is_captured_in_the_pseudo_locale_light_and_dark() -> Result<(
                 .cdp()
                 .send_raw(
                     "Emulation.setEmulatedMedia",
-                    json!({ "features": [{ "name": "prefers-color-scheme", "value": theme }] }),
+                    json!({ "features": [
+                        { "name": "prefers-color-scheme", "value": theme },
+                        { "name": "prefers-reduced-motion", "value": "reduce" },
+                    ] }),
                 )
                 .await?;
             for shot in shots()
@@ -368,4 +379,87 @@ fn every_shot_has_its_light_and_dark_image_and_no_other_image_is_kept() {
             }
         }
     }
+}
+
+/// The environment variable that opts in to the pixel check: a fresh
+/// capture against the committed images, on a release branch.
+const PIXELS_GATE: &str = "FERROUI_SCREENSHOT_PIXELS";
+
+/// The red, green and blue of every pixel of the PNG `bytes`, row by row,
+/// with its width and height; an alpha channel is left out, since every
+/// capture is opaque and the alpha alone never tells two captures apart.
+fn rgb(bytes: &[u8]) -> Result<(u32, u32, Vec<u8>), Box<dyn Error>> {
+    let mut decoder = png::Decoder::new(std::io::Cursor::new(bytes));
+    decoder.set_transformations(png::Transformations::EXPAND | png::Transformations::STRIP_16);
+    let mut reader = decoder.read_info()?;
+    let size = reader
+        .output_buffer_size()
+        .ok_or("the image is too large to decode")?;
+    let mut buffer = vec![0; size];
+    let frame = reader.next_frame(&mut buffer)?;
+    buffer.truncate(frame.buffer_size());
+    let channels = match frame.color_type {
+        png::ColorType::Rgb => 3,
+        png::ColorType::Rgba => 4,
+        other => return Err(format!("a capture is RGB or RGBA, not {other:?}").into()),
+    };
+    let pixels = buffer
+        .chunks_exact(channels)
+        .flat_map(|pixel| pixel.iter().take(3).copied())
+        .collect();
+    Ok((frame.width, frame.height, pixels))
+}
+
+/// Every PNG under `folder`, as paths relative to the workspace root.
+fn images_under(folder: &Path, into: &mut Vec<PathBuf>) -> Result<(), Box<dyn Error>> {
+    for entry in std::fs::read_dir(root().join(folder))? {
+        let path = entry?.path();
+        let relative = path.strip_prefix(root())?.to_path_buf();
+        if path.is_dir() {
+            images_under(&relative, into)?;
+        } else if path.extension().is_some_and(|extension| extension == "png") {
+            into.push(relative);
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn every_committed_screenshot_shows_what_a_fresh_capture_draws() -> Result<(), Box<dyn Error>> {
+    if !std::env::var(PIXELS_GATE).is_ok_and(|value| value == "1") {
+        return Ok(());
+    }
+    let mut images = Vec::new();
+    images_under(Path::new(IMAGES), &mut images)?;
+    // TODO(#434): compare the states too, once two captures of a state hold the same pixels.
+    let states = Path::new(IMAGES).join("states");
+    images.retain(|image| !image.starts_with(&states));
+    images.sort();
+    let mut differ = Vec::new();
+    for image in &images {
+        let name = image.to_string_lossy().replace('\\', "/");
+        let committed = std::process::Command::new("git")
+            .arg("-C")
+            .arg(root())
+            .arg("show")
+            .arg(format!("HEAD:{name}"))
+            .output()?;
+        if !committed.status.success() {
+            differ.push(format!("{name} (not committed)"));
+            continue;
+        }
+        let fresh = std::fs::read(root().join(image))?;
+        if rgb(&committed.stdout)? != rgb(&fresh)? {
+            differ.push(name);
+        }
+    }
+    assert!(
+        differ.is_empty(),
+        "{} of {} committed screenshots no longer show what the gallery draws; land the \
+         refresh pull request (branch chore/screenshots) first (docs/release.md):\n{}",
+        differ.len(),
+        images.len(),
+        differ.join("\n")
+    );
+    Ok(())
 }

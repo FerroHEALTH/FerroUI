@@ -618,6 +618,15 @@ jobs:
           FERROUI_CHROME: ${{ steps.chrome.outputs.chrome-path }}
           FERROUI_CHROMEDRIVER: ${{ steps.chrome.outputs.chromedriver-path }}
         run: cargo nextest run --locked -p ferrohealth-ui-gallery -E 'test(every_page_is_captured)'
+      # On a release pull request every committed page image is compared
+      # with its fresh capture by its pixels, so a release cannot go out on
+      # images that no longer show the gallery (FerroUI #428; no
+      # specification governs this: our own design).
+      - name: The committed screenshots show what the gallery draws
+        if: matrix.part == 'capture' && startsWith(github.head_ref, 'release/')
+        env:
+          FERROUI_SCREENSHOT_PIXELS: "1"
+        run: cargo nextest run --locked -p ferrohealth-ui-gallery -E 'test(every_committed_screenshot_shows_what_a_fresh_capture_draws)'
       - if: matrix.part == 'capture'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

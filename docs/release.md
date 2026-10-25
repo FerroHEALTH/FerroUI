@@ -30,7 +30,14 @@ is the signed tag `vX.Y.Z` on the merge commit of the release pull request on
    state left behind deleted, and the README's hero, `docs/hero.png` and
    `docs/hero-dark.png`, which `hero.py` composes from the new images. CI
    runs the screenshot guard on that branch. Look at every image that
-   changed, in every brand, light and dark.
+   changed, in every brand, light and dark. The capture runs with
+   `prefers-reduced-motion: reduce`, so an unchanged page captures
+   pixel-identical and every image that changed is a change to look at.
+   On the release pull request CI captures the pages again and compares
+   each committed page image with its fresh capture by its pixels
+   (`every_committed_screenshot_shows_what_a_fresh_capture_draws`); a
+   release pull request opened before the refresh fails there, naming each
+   image that no longer matches.
 
 ## The release pull request
 
