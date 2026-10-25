@@ -13,7 +13,7 @@
 
 use ferrohealth_ui::i18n::{Arg, Locale, provide_locale};
 use ferrohealth_ui::icon::Glyph;
-use ferrohealth_ui::island::ToastRegion;
+use ferrohealth_ui::island::{PageAnnouncer, ToastRegion};
 use ferrohealth_ui::style::Brand;
 use ferrohealth_ui::table::model::Paging;
 use ferrohealth_ui::theme::{Preferences, Theme, cookie};
@@ -296,6 +296,7 @@ pub fn App() -> impl IntoView {
             </Routes>
         </Router>
         <ToastRegion words=RegionWords::of_page() flash=Vec::new() />
+        <PageAnnouncer />
     }
 }
 
@@ -818,7 +819,16 @@ fn brand_shell(brand: Brand, back: String, search: Searched<'_>, fhir: Option<&s
             .into_any(),
         ),
         sidebar: nav,
-        content: view! { <Outlet /> }.into_any(),
+        // NOTE: the Leptos book, `router/18_params_and_queries`: the pages read their query
+        // as the server drew them, so a new query draws the page again.
+        content: {
+            let location = use_location();
+            (move || {
+                location.search.track();
+                view! { <Outlet /> }
+            })
+            .into_any()
+        },
         dock: None,
         footer: footer(),
     });

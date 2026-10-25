@@ -55,3 +55,4 @@ allow ^CARGO_PKG_VERSION$               # the environment variable Cargo sets
 allow ^(GET|POST)$                      # an HTTP method
 allow ^theme=\{\}&back=                 # a form body the theme toggle posts
 allow ^fhirUser$                      # a SMART App Launch scope token the scope parser matches; a reader sees the catalog's words
+allow ^main h1$                          # the CSS selector of the page heading the announcer focuses, which the browser code reads
