@@ -75,6 +75,28 @@ mod browser {
 
     use super::{Route, matches};
 
+    /// How long the first page rests before the idle routes load, in
+    /// milliseconds.
+    const SETTLE_MS: i32 = 1500;
+
+    /// The rest between two idle routes, in milliseconds.
+    const REST_MS: i32 = 400;
+
+    /// Waits `ms` milliseconds.
+    async fn pause(ms: i32) {
+        let promise = web_sys::js_sys::Promise::new(&mut |resolve, _reject| {
+            if window()
+                .set_timeout_with_callback_and_timeout_and_arguments_0(&resolve, ms)
+                .is_err()
+            {
+                leptos::logging::warn!("the browser refused the prefetch's rest");
+            }
+        });
+        if wasm_bindgen_futures::JsFuture::from(promise).await.is_err() {
+            leptos::logging::warn!("the prefetch's rest ended early");
+        }
+    }
+
     thread_local! {
         /// The paths of the routes whose code has started loading.
         static LOADED: RefCell<BTreeSet<&'static str>> = const { RefCell::new(BTreeSet::new()) };
@@ -119,13 +141,16 @@ mod browser {
         let focus = window_event_listener(leptos::ev::focusin, move |event| {
             hovered(routes, &event);
         });
-        // NOTE: no specification governs this: our own design; the routes load one after
-        // another, since every chunk at once runs the browser out of connections.
+        // NOTE: no specification governs this: our own design; the routes load one at a
+        // time with a rest between them, since every chunk at once runs the browser out of
+        // connections, and a page left early stops the walk.
         request_idle_callback(move || {
             leptos::task::spawn_local(async move {
+                pause(SETTLE_MS).await;
                 for route in routes.iter().filter(|route| route.idle) {
                     if first(route) {
                         (route.preload)().await;
+                        pause(REST_MS).await;
                     }
                 }
             });
