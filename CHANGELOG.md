@@ -11,6 +11,49 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-25
+
+### Added
+
+- `island::FormNavigator`, which a console draws once inside its `Router`:
+  a `GET` form navigates in the page with its fields in the query, and a
+  `POST` form marked `widget::submit::NAVIGATES` (the library's preference,
+  theme, rail, segmented and pager forms) is posted in the background and the
+  router draws the page its redirect names, falling back to the browser's own
+  submit when the post fails or answers with no redirect. A form or submit
+  marked `widget::submit::RELOADS`, or with a `target`, submits as the browser
+  does, and so does every form with no WebAssembly. `widget::submit::follow`
+  follows an address as a link press does, which the tabs, the tree, the
+  topology and the search panel now use, and `Act::Download` draws a link the
+  router leaves to the browser (`rel="external"`, `download`), which an
+  export link now is (#410).
+- `island::PageAnnouncer`, which a console draws once at its root: after a
+  navigation in the page it moves the focus to the new page's heading and says
+  the page's title in a polite live region, as a new document would (WCAG 2.2
+  SC 2.4.3, SC 4.1.3) (#410).
+- `widget::prefetch::routes` loads a lazy route's code when a link to it is
+  hovered or focused, and the main navigation's routes once the first page is
+  idle, one after another, so a first visit costs no more than a return. The
+  gallery hydrates whole with its 21 pages in five lazy routes: its entry
+  WebAssembly is 483968 bytes brotli-compressed with the navigator and the
+  announcer, under its 491520-byte budget, and its pages' code is 32 chunks
+  (#410).
+
+### Changed
+
+- Breaking: a console hydrates the whole page and draws every page after the
+  first in the browser, so no link or form reloads the document; islands mode
+  is gone. Every ready component of `island` is a `#[component]`, the crate no
+  longer turns on the `leptos` feature `islands`, and its `split` feature is
+  gone. A console drops `islands` and `split`, draws its pages in a few
+  `leptos_router` `LazyRoute`s, one for each group of pages read together,
+  hydrates with `leptos::mount::hydrate_lazy`, writes
+  `<HydrationScripts options/>`, builds with `cargo leptos build --split`,
+  draws `island::FormNavigator` and `island::PageAnnouncer`, and provides
+  the same locale and state in both halves (`docs/consoles.md`, How a console
+  builds). A repeatable list's blank row is a hidden, disabled `fieldset` in
+  place of a `template`, so it hydrates with the page and never posts (#410).
+
 ## [0.4.0] - 2026-10-25
 
 ### Added
@@ -2599,7 +2642,8 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/FerroHEALTH/FerroUI/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.7...v0.4.0
 [0.3.7]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.6...v0.3.7
 [0.3.6]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.5...v0.3.6
