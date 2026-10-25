@@ -174,10 +174,7 @@ fn the_search_answer_scrolls_inside_itself_and_wraps_its_names() {
             && answer.contains("overflow-y: auto;"),
         "forty hits run past the window's foot under the sticky bar: {answer}"
     );
-    let name = body(
-        &[LAYER],
-        ".fui-search-results-name, .fui-search-results li > a > .fui-small",
-    );
+    let name = body(&[LAYER], ".fui-hit-name, .fui-hit-line");
     assert!(
         name.contains("overflow-wrap: break-word;"),
         "a long name runs under the tag: {name}"

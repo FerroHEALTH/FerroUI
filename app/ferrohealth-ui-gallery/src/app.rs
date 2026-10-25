@@ -341,6 +341,7 @@ pub fn App() -> impl IntoView {
                         view=crate::pages::terminology::TerminologyPage
                     />
                     <Route path=path!("federation") view=crate::pages::federation::FederationPage />
+                    <Route path=path!("find") view=crate::pages::find::FindPage />
                     <Route
                         path=path!("federation/:part")
                         view=crate::pages::federation::FederationPart
@@ -457,6 +458,13 @@ macro_rules! entries {
                 href: concat!("/", $key, "/trees").into(),
                 label: tr(Msg::Trees).into(),
                 glyph: Glyph::FOLDER_OPEN,
+                exact: true,
+                count: None,
+            },
+            Entry {
+                href: concat!("/", $key, "/find").into(),
+                label: tr(Msg::FindTitle).into(),
+                glyph: Glyph::SEARCH,
                 exact: true,
                 count: None,
             },
@@ -751,13 +759,23 @@ fn BrandShell() -> impl IntoView {
         let brand = params.with(|params| params.get_str("brand").and_then(Brand::parse));
         let search = query.with(|query| query.get("search"));
         let fhir = query.with(|query| query.get(crate::pages::terminology::version_key()));
-        (brand, location.pathname.get(), search, fhir)
+        let typed = query.with(|query| query.get("q"));
+        (brand, location.pathname.get(), search, fhir, typed)
     });
     move || match at.get() {
-        (Some(brand), back, search, fhir) => {
-            brand_shell(brand, back, search.as_deref(), fhir.as_deref())
+        (Some(brand), back, search, fhir, typed) => {
+            let typed = typed.filter(|_| back.ends_with("/find"));
+            brand_shell(
+                brand,
+                back,
+                Searched {
+                    state: search.as_deref(),
+                    typed: typed.as_deref(),
+                },
+                fhir.as_deref(),
+            )
         }
-        (None, _, _, _) => view! { <NotFound /> }.into_any(),
+        (None, _, _, _, _) => view! { <NotFound /> }.into_any(),
     }
 }
 
@@ -768,9 +786,19 @@ fn fhir_version(back: &str, chosen: Option<&str>) -> Option<VersionSelect> {
         .then(|| crate::pages::terminology::version_select(back, chosen))
 }
 
+/// What the top bar's search shows: the state the address names and the
+/// words the find page answers.
+#[derive(Debug, Clone, Copy)]
+struct Searched<'a> {
+    /// The state, `busy` or `disabled`.
+    state: Option<&'a str>,
+    /// The words the find page answers.
+    typed: Option<&'a str>,
+}
+
 /// The shell of `brand`'s pages, whose theme switch returns to `back`, its
-/// search in the state `search` names and its FHIR version `fhir`.
-fn brand_shell(brand: Brand, back: String, search: Option<&str>, fhir: Option<&str>) -> AnyView {
+/// search `search` and its FHIR version `fhir`.
+fn brand_shell(brand: Brand, back: String, search: Searched<'_>, fhir: Option<&str>) -> AnyView {
     let lockup = lockup(
         "/",
         mark(brand_glyph(brand)),
@@ -835,7 +863,7 @@ fn brand_shell(brand: Brand, back: String, search: Option<&str>, fhir: Option<&s
         {menu}
     }
     .into_any();
-    let search = crate::search::gallery_search(brand, search);
+    let search = crate::search::gallery_search(brand, search.state, search.typed);
     let page = shell(Shell {
         topbar: topbar(TopBar {
             sidebar: SIDEBAR_ID,

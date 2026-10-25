@@ -72,6 +72,10 @@ pub fn router(options: LeptosOptions) -> axum::Router {
         .route(&format!("{EXPORT_ROUTE}/{{format}}"), get(export))
         .route(SIDEBAR_ROUTE, post(choose_sidebar))
         .route(&format!("{SIGN_OUT_ROUTE}/{{brand}}"), post(sign_out))
+        .route(
+            &format!("{}/{{brand}}", crate::search::SUGGEST_ROUTE),
+            get(suggest),
+        )
         .leptos_routes_with_context(&options, routes, provide_request_nonce, {
             let options = options.clone();
             move || crate::app::document(options.clone())
@@ -333,6 +337,32 @@ async fn probe(headers: http::HeaderMap) -> Response {
 
 /// Signs the gallery's synthetic operator out: it holds no session, so it
 /// sends the browser to the brand's signed-out page.
+/// What the typeahead asks the answer route: the words typed.
+#[derive(Debug, serde::Deserialize)]
+struct Asked {
+    /// The words typed.
+    #[serde(default)]
+    q: String,
+}
+
+/// Answers the top bar's typeahead for `brand` with the search answer as
+/// JSON, as a console's answer route does: slowly for
+/// [`crate::search::SLOW`], so the panel's waiting row shows, and with
+/// `503` for [`crate::search::FAILING`], so its error row shows.
+async fn suggest(Path(brand): Path<String>, Query(asked): Query<Asked>) -> Response {
+    let Some(brand) = Brand::parse(&brand) else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+    match asked.q.trim() {
+        crate::search::FAILING => StatusCode::SERVICE_UNAVAILABLE.into_response(),
+        crate::search::SLOW => {
+            tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
+            axum::Json(crate::search::answer(brand, &asked.q)).into_response()
+        }
+        _ => axum::Json(crate::search::answer(brand, &asked.q)).into_response(),
+    }
+}
+
 async fn sign_out(Path(brand): Path<String>) -> Response {
     let Some(brand) = Brand::parse(&brand) else {
         return StatusCode::NOT_FOUND.into_response();

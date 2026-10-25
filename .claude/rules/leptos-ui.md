@@ -28,7 +28,10 @@ the Authoring Practices (`spec-adherence.md`).
   (`crates/ferrohealth-ui/tests/it/stylesheet.rs` holds the library to it).
 - **The library defines no server function**, fetches nothing, and touches no
   browser storage. Data arrives as props; theme persistence, URL policy and
-  the router base are each console's.
+  the router base are each console's. The one fetch is the top bar's
+  typeahead (owner, 2026-10-25): it asks the answer route the console names
+  (`SearchBox::suggest`) on the wire `docs/consoles.md` documents, and the
+  console's route reads its own data.
 - **No patient identifier in a URL.** A listing that can show patient data
   keeps its page, size and sort out of the URL: its forms post them
   (`StateSource::Session`, `table::pager::post_pager`).

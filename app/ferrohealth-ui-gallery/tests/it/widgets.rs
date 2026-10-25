@@ -496,7 +496,7 @@ async fn the_search_box_submits_and_the_preferences_density_posts_on_change()
         search.send_keys("synthetic-007").await?;
         search.send_keys(Key::Enter).await?;
         browser
-            .at(&gallery.url("/ferroterm/tables?q=synthetic-007"))
+            .at(&gallery.url("/ferroterm/find?q=synthetic-007"))
             .await?;
         browser.goto(&gallery.url("/ferroterm/preferences")).await?;
         preferences_hydrated(browser).await?;

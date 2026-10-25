@@ -15146,14 +15146,20 @@
 
   /* ---- The search answer (FerroUI #144, the search result row) ---- */
 
-  /* One overlay surface under the joined search: solid, the strong
-     hairline, the overlay shadow, and in dark a ground lifted above the
-     raised cards. It ends above the window's foot and scrolls inside
-     itself, so every hit stays reachable under the sticky top bar (WCAG 2.2
-     SC 1.4.10). */
+  /* The typeahead panel: one overlay surface anchored under the joined
+     search, solid, the strong hairline, the overlay shadow, and in dark a
+     ground lifted above the raised cards. It is out of the flow, so it moves
+     nothing on the page, and it sits above the sticky top bar's other
+     content. It opens from the field's start edge at least as wide as the
+     field and at most 40rem, never past the window's 16px gutter; the island
+     opens it from the end edge (`is-end`) or as wide as the field
+     (`is-narrow`) when the window has no room. It ends above the window's
+     foot and scrolls inside itself, so every hit stays reachable under the
+     sticky top bar (WCAG 2.2 SC 1.4.10). */
   .fui-search-results {
     position: absolute;
-    inset: calc(100% + 0.375rem) 0 auto 0;
+    top: calc(100% + 0.375rem);
+    inset-inline: -1px;
     z-index: 35;
     border: 1px solid var(--edge-strong);
     border-radius: var(--radius-card);
@@ -15163,6 +15169,27 @@
     max-height: min(32rem, calc(100dvh - var(--bar) - 1rem));
     overflow-y: auto;
     overscroll-behavior: contain;
+    text-align: start;
+  }
+
+  .fui-search-results[hidden] {
+    display: none;
+  }
+
+  @media (width >= 48rem) {
+    .fui-search-results {
+      inset-inline: -1px auto;
+      width: max(calc(100% + 2px), min(40rem, 100vw - 2rem));
+    }
+
+    .fui-search-results.is-end {
+      inset-inline: auto -1px;
+    }
+
+    .fui-search-results.is-narrow {
+      inset-inline: -1px;
+      width: auto;
+    }
   }
 
   :root[data-theme="dark"] .fui-search-results {
@@ -15175,17 +15202,20 @@
     }
   }
 
-  .fui-search-results ul {
+  .fui-search-results-list,
+  .fui-search-results-list > [role="group"] {
     display: grid;
     gap: 0.125rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
   }
 
-  /* A hit: the name over its line, a tag at the end across both rows, so
-     the line keeps a row of its own and the tag never clips it. */
-  .fui-search-results li > a {
+  .fui-search-results-list > [role="group"] + [role="group"] {
+    margin-block-start: 0.25rem;
+  }
+
+  /* A hit, in the panel and on the find page: the mark, then the name over
+     its line, the line on a row of its own, a tag at the end across both
+     rows, so the tag never clips the line. */
+  .fui-hit {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
@@ -15196,51 +15226,70 @@
     text-decoration: none;
   }
 
-  .fui-search-results li > a > .fui-small {
+  .fui-hit > .fui-hit-line {
     grid-row: 2;
   }
 
-  .fui-search-results li > a > :is(.fui-identifier, .fui-tag) {
+  .fui-hit > :is(.fui-identifier, .fui-tag) {
     grid-row: 1 / 3;
     grid-column: 2;
   }
 
-  /* A hit that starts with its dot or glyph: the mark, then the name over
-     its line. */
-  .fui-search-results li > a:has(> :is(.fui-dot, .fui-icon, svg):first-child) {
-    grid-template-columns: auto minmax(0, 1fr);
+  .fui-hit:has(> :is(.fui-dot, .fui-icon, svg):first-child) {
+    grid-template-columns: auto minmax(0, 1fr) auto;
   }
 
-  .fui-search-results li > a:has(> :is(.fui-dot, .fui-icon, svg):first-child) > .fui-small {
+  .fui-hit:has(> :is(.fui-dot, .fui-icon, svg):first-child) > :is(.fui-dot, .fui-icon, svg) {
+    grid-row: 1 / 3;
+    align-self: start;
+    margin-block-start: 0.125rem;
+  }
+
+  .fui-hit:has(> :is(.fui-dot, .fui-icon, svg):first-child) > :is(.fui-hit-name, .fui-hit-line) {
     grid-column: 2;
   }
 
-  .fui-search-results li > a:has(> :is(.fui-dot, .fui-icon, svg):first-child) > :is(.fui-identifier, .fui-tag) {
+  .fui-hit:has(> :is(.fui-dot, .fui-icon, svg):first-child) > :is(.fui-identifier, .fui-tag) {
     grid-column: 3;
   }
 
-  .fui-search-results li a > .fui-dot {
+  .fui-hit > .fui-dot {
     margin-inline: 0.25rem;
-  }
-
-  .fui-search-results li[aria-selected="true"] > a,
-  .fui-search-results li > a[aria-current="true"] {
-    background: var(--accent-tint);
   }
 
   /* A long name or line wraps inside its column, under neither the mark
      nor the tag. */
-  .fui-search-results-name,
-  .fui-search-results li > a > .fui-small {
+  .fui-hit-name,
+  .fui-hit-line {
     min-width: 0;
     overflow-wrap: break-word;
   }
 
-  .fui-search-results-name {
-    font-weight: 600;
+  .fui-hit-name {
+    font-weight: 500;
+  }
+
+  /* The words that match the query: the heavier weight, never a colour
+     alone, so a match reads in forced colours too (family rule 14). */
+  mark.fui-search-match {
+    background: transparent;
+    color: inherit;
+    font-weight: 700;
+  }
+
+  /* The active option: the accent tint and an accent edge at its start, so
+     it never rests on the tint alone (WCAG 2.2 SC 1.4.11). */
+  .fui-search-results [role="option"] {
+    cursor: pointer;
+  }
+
+  .fui-search-results [role="option"][aria-selected="true"] {
+    background: var(--accent-tint);
+    box-shadow: inset 3px 0 0 var(--accent);
   }
 
   .fui-search-results-head {
+    margin: 0;
     padding: 0.25rem 0.5rem;
     color: var(--muted);
     font-size: var(--text-micro);
@@ -15250,11 +15299,36 @@
 
   .fui-search-results-group {
     margin: 0;
-    padding: 0.375rem 0.75rem 0.125rem;
+    padding: 0.375rem 0.5rem 0.125rem;
     color: var(--muted);
     font-size: var(--text-micro);
     line-height: var(--leading-micro);
     font-weight: 600;
+    text-transform: none;
+  }
+
+  /* The row of what is happening: asking, an error, an answer that may not
+     be whole. */
+  .fui-search-results-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0.5rem;
+    color: var(--muted);
+  }
+
+  .fui-search-results-status.fui-tone-bad,
+  .fui-search-results-status.fui-tone-warn {
+    color: var(--ink);
+  }
+
+  .fui-search-results-status.fui-tone-bad > svg {
+    color: var(--bad);
+  }
+
+  .fui-search-results-status.fui-tone-warn > svg {
+    color: var(--warn);
   }
 
   .fui-search-results-more {
@@ -15263,10 +15337,15 @@
     gap: 0.25rem;
     margin-block-start: 0.25rem;
     border-top: 1px solid var(--edge);
-    padding: 0.5rem 0.5rem 0.25rem;
+    border-radius: 0 0 var(--radius-control) var(--radius-control);
+    padding: 0.5rem;
     color: var(--accent);
     font-weight: 500;
-    text-decoration: none;
+  }
+
+  .fui-search-results-more + .fui-search-results-more {
+    margin-block-start: 0;
+    border-top: 0;
   }
 
   .fui-search-results-empty {
@@ -15280,6 +15359,69 @@
   .fui-search-results-empty strong {
     display: block;
     color: var(--ink);
+  }
+
+  @media (forced-colors: active) {
+    .fui-search-results [role="option"][aria-selected="true"] {
+      outline: 2px solid Highlight;
+      outline-offset: -2px;
+    }
+  }
+
+  /* ---- The find page's results: in the page, one list card per kind ---- */
+
+  .fui-find-results {
+    display: grid;
+    gap: var(--space-loose);
+  }
+
+  .fui-find-head {
+    margin: 0;
+  }
+
+  .fui-find-list {
+    margin: 0;
+    padding: 0 0 0.25rem;
+    list-style: none;
+  }
+
+  .fui-find-list > li + li {
+    border-top: 1px solid var(--edge);
+  }
+
+  .fui-find-list .fui-hit {
+    border-radius: 0;
+    padding: 0.625rem var(--space-loose);
+  }
+
+  .fui-find-list .fui-hit:hover {
+    background: var(--surface-sunken);
+  }
+
+  .fui-find-list .fui-hit:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: -2px;
+  }
+
+  .fui-find-empty {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    color: var(--muted);
+  }
+
+  .fui-find-empty strong {
+    display: block;
+    color: var(--ink);
+  }
+
+  .fui-find-more {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    justify-self: start;
+    color: var(--accent);
+    font-weight: 500;
   }
 
   /* ---- R4, the docked decision bar: two fields, the phone stack and the

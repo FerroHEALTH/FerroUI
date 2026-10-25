@@ -25,6 +25,7 @@ pub(crate) const PAGES: &[&str] = &[
     "/configuration",
     "/configuration/provisioned",
     "/federation",
+    "/find",
     "/forms",
     "/layouts",
     "/operations",

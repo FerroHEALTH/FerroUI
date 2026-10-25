@@ -45,7 +45,9 @@ never publish under it.
   by `icon(glyph, size)` beside the word they illustrate; no icon crate.
 - **No component** writes a `style` attribute or a `<style>` element (a
   console keeps `style-src 'self'`), defines a server function, fetches, or
-  touches browser storage. Theme persistence, URL policy and the router base
+  touches browser storage. The one fetch is the top bar's typeahead, which
+  asks the answer route the console names (`SearchBox::suggest`), on the
+  wire `docs/consoles.md` documents. Theme persistence, URL policy and the router base
   are the console's.
 
 ## How we use Leptos

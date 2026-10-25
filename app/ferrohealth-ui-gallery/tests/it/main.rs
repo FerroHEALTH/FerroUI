@@ -40,9 +40,11 @@ mod records;
 mod screenshots;
 mod stack;
 mod states;
+mod sticky;
 mod tabs_and_toasts;
 mod terminology;
 mod trees;
+mod typeahead;
 mod widgets;
 
 /// The environment variable that opts in to the browser journeys.

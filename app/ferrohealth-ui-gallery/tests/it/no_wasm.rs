@@ -594,6 +594,7 @@ async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error
             copy_waits(browser, "file-copy").await?;
         }
         "/configuration" => crate::configuration::config_floor(browser).await?,
+        "/find" => find_page_in_flow(browser).await?,
         "/configuration/provisioned" => crate::configuration::provisioned_floor(browser).await?,
         "/operations" => {
             // NOTE: leptos-ui.md §5: a text area carries its text in the server HTML, so
@@ -865,15 +866,17 @@ async fn trees_content(browser: &Browser) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-/// Follows a hit of the search's answer and saves through the docked bar,
-/// both drawn by the server.
+/// Follows a hit of the find page and saves through the docked bar, both
+/// drawn by the server.
 async fn answer_and_dock(browser: &Browser, gallery: &Gallery) -> Result<(), Box<dyn Error>> {
-    // The search's answer is drawn by the server and its hits are links.
+    // The find page lists the hits in the page, each a link.
     browser
-        .goto(&gallery.url("/ferrofed/forms?search=hits"))
+        .goto(&gallery.url("/ferrofed/find?q=synthetic-00"))
         .await?;
     browser
-        .element(By::Id("gallery-search-hit-1"))
+        .element(By::Css(
+            "main .fui-find-results a.fui-hit[href$='synthetic-001.model.yml']",
+        ))
         .await?
         .click()
         .await?;
@@ -923,6 +926,31 @@ async fn answer_and_dock(browser: &Browser, gallery: &Gallery) -> Result<(), Box
     Ok(())
 }
 
+/// Checks the find page draws its results in the page: under its heading,
+/// in the flow, with no search panel open over them.
+async fn find_page_in_flow(browser: &Browser) -> Result<(), Box<dyn Error>> {
+    browser
+        .element(By::Css("main .fui-find-results a.fui-hit"))
+        .await?;
+    let (below, flowing, overlaid): (bool, bool, bool) = browser
+        .driver()
+        .execute(
+            r"const heading = document.querySelector('main h1').getBoundingClientRect();
+            const results = document.querySelector('main .fui-find-results');
+            const panel = document.querySelector('.fui-search-results');
+            return [results.getBoundingClientRect().top >= heading.bottom,
+              getComputedStyle(results).position === 'static',
+              !!panel && panel.checkVisibility()];",
+            vec![],
+        )
+        .await?
+        .convert()?;
+    assert!(below, "the results start under the page's heading");
+    assert!(flowing, "the results are in the flow");
+    assert!(!overlaid, "no panel opens over the find page");
+    Ok(())
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn forms_post_and_submit_with_the_webassembly_withheld() -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
@@ -939,14 +967,16 @@ async fn forms_post_and_submit_with_the_webassembly_withheld() -> Result<(), Box
                 json!({ "features": [{ "name": "prefers-color-scheme", "value": "light" }] }),
             )
             .await?;
-        // The search box is a GET form.
+        // The search box is a GET form to the find page, which lists the
+        // results in the page under its heading, never as an overlay.
         browser.goto(&gallery.url("/ferrofed/tables")).await?;
         let search = browser.element(By::Id("gallery-search")).await?;
         search.send_keys("synthetic-007").await?;
         search.send_keys(Key::Enter).await?;
         browser
-            .at(&gallery.url("/ferrofed/tables?q=synthetic-007"))
+            .at(&gallery.url("/ferrofed/find?q=synthetic-007"))
             .await?;
+        find_page_in_flow(browser).await?;
         answer_and_dock(browser, &gallery).await?;
         // The user menu opens as a popover, its theme posts, and the page
         // comes back in the choice; so does the density on Your preferences,

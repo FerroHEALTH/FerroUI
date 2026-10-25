@@ -190,6 +190,7 @@ mod code;
 mod configuration;
 mod dock;
 mod federation;
+mod find;
 mod forms;
 mod layouts;
 mod operations;
@@ -212,6 +213,7 @@ const AREAS: &[&[Msg]] = &[
     configuration::ALL,
     dock::ALL,
     federation::ALL,
+    find::ALL,
     forms::ALL,
     layouts::ALL,
     operations::ALL,

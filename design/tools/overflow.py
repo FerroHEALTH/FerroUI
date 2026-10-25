@@ -23,7 +23,7 @@ PROBE = r"""
   // its trigger by design; while it stays inside the viewport, the boxes
   // that hold it do not count as overflowing.
   const popupsInside = (el) => {
-    const ps = el.querySelectorAll('.fui-menu, .fui-listbox, .fui-popover, .fui-datepicker, .fui-tooltip');
+    const ps = el.querySelectorAll('.fui-menu, .fui-listbox, .fui-popover, .fui-datepicker, .fui-tooltip, .fui-search-results');
     if (!ps.length) return false;
     for (const p of ps) { const r = p.getBoundingClientRect(); if (r.width && (r.left < -1 || r.right > vw + 1)) return false; }
     return true;
