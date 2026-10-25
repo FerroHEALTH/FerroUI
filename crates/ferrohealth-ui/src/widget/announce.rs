@@ -132,7 +132,10 @@ mod browser {
             leptos::logging::warn!("the browser refused to watch the page");
         }
         callback.forget();
-        on_cleanup(move || observer.disconnect());
+        let kept = StoredValue::new_local(observer);
+        on_cleanup(move || {
+            let _: Option<()> = kept.try_with_value(web_sys::MutationObserver::disconnect);
+        });
     }
 }
 
