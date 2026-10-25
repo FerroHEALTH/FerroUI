@@ -881,26 +881,48 @@ async fn a_rail_entry_shows_its_words_on_keyboard_focus_until_escape() -> Result
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
         browser.goto(&gallery.url("/ferroehr/tables")).await?;
-        browser
+        let rail = browser
             .element(By::XPath("//button[@name = 'sidebar' and @value = 'rail']"))
-            .await?
-            .click()
             .await?;
         browser
-            .element(By::Css("#sidebar.fui-sidebar-rail"))
+            .click_in_page(&rail, "the sidebar folds to its rail", async || {
+                Ok(!browser
+                    .driver()
+                    .find_all(By::Css("#sidebar.fui-sidebar-rail"))
+                    .await?
+                    .is_empty())
+            })
             .await?;
-        let entry = browser
-            .element(By::Css("#sidebar a.fui-nav-entry[aria-current='page']"))
-            .await?;
-        browser
-            .driver()
-            .execute("arguments[0].focus();", vec![entry.to_json()?])
-            .await?;
-        let tooltip = entry.find(By::ClassName("fui-tooltip")).await?;
+        let current = By::Css("#sidebar a.fui-nav-entry[aria-current='page']");
+        // The router may draw the shell again once the post's page arrives, so each try
+        // finds the entry again. The click left the pointer's modality in the document, so
+        // the focus reaches the entry by the keyboard: back one stop and forward again.
         until("the focused entry shows its words", async || {
-            Ok(tooltip.is_displayed().await?)
+            let Some(entry) = browser.driver().find_all(current.clone()).await?.into_iter().next() else {
+                return Ok(false);
+            };
+            browser
+                .driver()
+                .execute("arguments[0].focus();", vec![entry.to_json()?])
+                .await?;
+            browser
+                .driver()
+                .action_chain()
+                .key_down(Key::Shift)
+                .send_keys(Key::Tab)
+                .key_up(Key::Shift)
+                .send_keys(Key::Tab)
+                .perform()
+                .await?;
+            let tips = entry.find_all(By::ClassName("fui-tooltip")).await?;
+            Ok(match tips.first() {
+                Some(tip) => tip.is_displayed().await?,
+                None => false,
+            })
         })
         .await?;
+        let entry = browser.element(current).await?;
+        let tooltip = entry.find(By::ClassName("fui-tooltip")).await?;
         let [tip_left, tip_top, tip_bottom, rail_right, entry_top, entry_bottom]: [f64; 6] =
             browser
                 .driver()
