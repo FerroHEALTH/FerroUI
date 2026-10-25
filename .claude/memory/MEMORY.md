@@ -25,3 +25,4 @@
 - [Release closes milestone](release-closes-milestone.md): release.yml refuses
   a tag whose milestone is missing or not empty and closes it after every
   leg; check it after a manual or recovery release; owner 2026-10-19 (#124)
+- [Reactive console UI](reactive-console-ui.md): owner 2026-10-25, no full page reload for an interaction; WebAssembly is the normal path, the no-WebAssembly page the fallback (FerroUI #410)
