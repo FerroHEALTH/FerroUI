@@ -340,9 +340,13 @@ pub fn menu_button(
     // NOTE: leptos-ui.md §15.8: `aria-expanded` needs the island, so it
     // appears once it runs, reading whether the menu is already open.
     Effect::new(move || open.set(Some(browser::is_open(menu))));
+    // NOTE: no specification governs this: our own design; a toggle can arrive after a
+    // navigation in the page disposed the menu, so each read and write tries.
     let on_toggle = move |_| {
         let now = browser::is_open(menu);
-        open.set(Some(now));
+        if open.try_set(Some(now)).is_some() {
+            return;
+        }
         if now {
             browser::focus_item(menu, 0);
         } else {
@@ -399,6 +403,7 @@ pub fn menu_button(
                 node_ref=menu
                 on:toggle=on_toggle
                 on:keydown=on_menu_key
+                on:click=move |event| browser::chosen(menu, &event)
             >
                 <p class="fui-menu-sheet-title" aria-hidden="true">
                     {sheet_title}
@@ -432,7 +437,7 @@ mod browser {
     #[cfg(target_arch = "wasm32")]
     fn items(menu: NodeRef<leptos::html::Div>) -> Vec<web_sys::HtmlElement> {
         use leptos::wasm_bindgen::JsCast as _;
-        let Some(menu) = menu.get_untracked() else {
+        let Some(menu) = menu.try_get_untracked().flatten() else {
             return Vec::new();
         };
         let Ok(found) = menu.query_selector_all(ITEMS) else {
@@ -450,7 +455,8 @@ mod browser {
     pub(super) fn is_open(menu: NodeRef<leptos::html::Div>) -> bool {
         #[cfg(target_arch = "wasm32")]
         {
-            menu.get_untracked()
+            menu.try_get_untracked()
+                .flatten()
                 .is_some_and(|menu| menu.matches(":popover-open").unwrap_or(false))
         }
         #[cfg(not(target_arch = "wasm32"))]
@@ -513,7 +519,7 @@ mod browser {
     pub(super) fn open_at(menu: NodeRef<leptos::html::Div>, last: bool) {
         #[cfg(target_arch = "wasm32")]
         {
-            let Some(element) = menu.get_untracked() else {
+            let Some(element) = menu.try_get_untracked().flatten() else {
                 return;
             };
             if !is_open(menu) && element.show_popover().is_err() {
@@ -532,10 +538,29 @@ mod browser {
     }
 
     /// Closes `menu` if it is open.
+    /// Closes `menu` when the click under `event` chose one of its items: a
+    /// link the router follows in the page, or a choice it posts, leaves no
+    /// new document to close it (#410).
+    pub(super) fn chosen(menu: NodeRef<leptos::html::Div>, event: &leptos::ev::MouseEvent) {
+        #[cfg(target_arch = "wasm32")]
+        {
+            use leptos::wasm_bindgen::JsCast as _;
+            let item = event
+                .target()
+                .and_then(|target| target.dyn_into::<web_sys::Element>().ok())
+                .and_then(|target| target.closest(ITEMS).ok().flatten());
+            if item.is_some() {
+                close(menu);
+            }
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        let _: (NodeRef<leptos::html::Div>, &leptos::ev::MouseEvent) = (menu, event);
+    }
+
     pub(super) fn close(menu: NodeRef<leptos::html::Div>) {
         #[cfg(target_arch = "wasm32")]
         {
-            if let Some(element) = menu.get_untracked()
+            if let Some(element) = menu.try_get_untracked().flatten()
                 && is_open(menu)
                 && element.hide_popover().is_err()
             {
@@ -554,8 +579,10 @@ mod browser {
     ) {
         #[cfg(target_arch = "wasm32")]
         {
-            let (Some(element), Some(trigger)) = (menu.get_untracked(), trigger.get_untracked())
-            else {
+            let (Some(element), Some(trigger)) = (
+                menu.try_get_untracked().flatten(),
+                trigger.try_get_untracked().flatten(),
+            ) else {
                 return;
             };
             let held = document().active_element().is_none_or(|active| {

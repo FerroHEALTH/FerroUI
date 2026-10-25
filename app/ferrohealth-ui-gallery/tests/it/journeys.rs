@@ -679,6 +679,66 @@ async fn the_user_menu_posts_the_theme_and_the_choice_is_kept() -> Result<(), Bo
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn the_user_menu_survives_a_navigation_that_draws_another_shell() -> Result<(), Box<dyn Error>>
+{
+    // FerroUI #423: a link of the menu draws its page and closes the menu, and a click
+    // outside the open menu that leaves the brand closes it as the router draws the
+    // index, both with no console error from a menu the router disposed.
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/ferrofed/tables")).await?;
+        browser.hydrated().await?;
+        let open = async || -> Result<(), Box<dyn Error>> {
+            browser
+                .element(By::Css("button[popovertarget='user-menu']"))
+                .await?
+                .click()
+                .await?;
+            until("the menu opens", async || {
+                Ok(browser
+                    .driver()
+                    .find_all(By::Css("#user-menu:popover-open"))
+                    .await?
+                    .len()
+                    == 1)
+            })
+            .await
+        };
+        open().await?;
+        let preferences = browser
+            .element(By::Css("#user-menu a[href='/ferrofed/preferences']"))
+            .await?;
+        browser
+            .click_in_page(&preferences, "the router draws Your preferences", async || {
+                Ok(browser.driver().current_url().await?.path() == "/ferrofed/preferences")
+            })
+            .await?;
+        assert!(
+            browser
+                .driver()
+                .find_all(By::Css("#user-menu:popover-open"))
+                .await?
+                .is_empty(),
+            "the menu closes once its link is followed in the page"
+        );
+        open().await?;
+        let index = browser.element(By::Css("header a[href='/']")).await?;
+        browser
+            .click_in_page(&index, "the router draws the index", async || {
+                Ok(browser.driver().current_url().await?.path() == "/")
+            })
+            .await?;
+        browser
+            .console_clean("the user menu across navigations")
+            .await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn the_keyboard_walks_the_user_menu_and_the_focus_returns_to_its_button()
 -> Result<(), Box<dyn Error>> {
     // WAI-ARIA Authoring Practices 1.2, the menu button pattern.
