@@ -33,7 +33,9 @@ pub async fn acknowledge(
     use ferrohealth_ui::widget::action::{plain_return, with_error};
     use leptos::server_fn::ServerFn as _;
     let outcome = if note.trim().is_empty() {
-        Err(ServerFnError::new("the note is empty"))
+        Err(ServerFnError::new(crate::locale::tr(
+            crate::locale::Msg::AcknowledgeEmpty,
+        )))
     } else {
         Ok(())
     };
