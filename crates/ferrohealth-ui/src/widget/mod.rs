@@ -26,6 +26,7 @@
 //! ([`identifier::identifier`]) and the work-list with a console's own Enter
 //! ([`worklist::worklist`]).
 
+pub mod action;
 pub mod action_menu;
 pub mod announce;
 pub mod chart;

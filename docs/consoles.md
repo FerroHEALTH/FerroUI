@@ -91,7 +91,13 @@ the browser, so a link or a form never reloads the document (FerroUI #410;
    `app/ferrohealth-ui-gallery/src/cookies.rs`).
 5. **Actions are server functions.** A mutation is a server function behind
    `<ActionForm>`, which runs in the page and posts with no WebAssembly as
-   the fallback; a link is a plain `<a>`, which the router follows.
+   the fallback; a link is a plain `<a>`, which the router follows. Your
+   `no-referrer` policy withholds the `Referer` the fallback returns to, so
+   draw `widget::action::return_field()` in the form, take an argument named
+   `widget::action::RETURN`, and on a plain post call `leptos_axum::redirect`
+   with `widget::action::plain_return`, or `with_error` when the function
+   fails, so the page drawn again shows the error in the action's value (the
+   gallery's `app/ferrohealth-ui-gallery/src/acknowledge.rs`).
 6. **The page announced.** Draw `island::PageAnnouncer` once at your root,
    beside the toast region: after a navigation in the page it moves the
    focus to the new page's heading and says its title (WCAG 2.2 SC 2.4.3,

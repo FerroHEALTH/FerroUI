@@ -793,9 +793,12 @@ The library and the consoles hydrate the whole page and split it by route
   after the function's arguments (`arg[field]`). [check L3]
 - **A console's action is a server function behind `<ActionForm>`**: it
   runs in the page with `pending()` and `value()`, and its plain post is
-  the fallback that works with no WebAssembly through server_fn's
-  `form-redirects` (server_fn 0.8.13 `src/lib.rs`; leptos `src/form.rs`).
-  [review]
+  the fallback that works with no WebAssembly. server_fn's
+  `form-redirects` returns that post to the `Referer` (server_fn 0.8.13
+  `src/lib.rs`; leptos `src/form.rs`), which a console's `no-referrer`
+  policy withholds, so the form carries `widget::action::return_field()`
+  and the function redirects to `widget::action::plain_return` or
+  `with_error` (#449). [review]
 
 ### 15.7 The no-WebAssembly fallback
 
