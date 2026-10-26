@@ -11,6 +11,45 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-10-26
+
+### Added
+
+- `island::ShortcutLegend` opens the keyboard shortcut legend on `?`
+  pressed outside a field, and from any control marked
+  `widget::shortcuts::OPENS_LEGEND`, which the user menu's Keyboard
+  shortcuts item now is; never in the phone layout, and the focus returns
+  where it was. The binder's link tabs follow the keys `1` to `9`, pressed
+  outside a field, from 40 rem up (`widget::shortcuts::tab_keys`, drawn by
+  the binder) (#413).
+- `widget::hydration`: `mark()` writes `data-ferroui-hydrated` on the root
+  element once the page has hydrated, which a console's code, scripts and
+  tests wait for before they change the page, and in a debug build
+  `explain()` has a panic before that point say its likely cause, a page
+  changed before hydration ended, where Leptos names none. The consumer
+  guide gives the rule (`docs/consoles.md`, How a console builds) (#424).
+- `SearchBox::all` names the panel's option that submits the search, around
+  the open `query`, for a console whose submit runs another search than the
+  panel's (a patient search the panel never runs); `None` keeps "See all
+  results for “{query}”". `SearchBox::signed_out` is the address the page
+  loads when the answer route answers `401`, so a session that ended while
+  the panel was open hands the page to the console's sign-in (#431).
+
+### Fixed
+
+- The user menu closes once one of its items is chosen: since the router
+  draws the next page in the document, a link or a theme choice in the menu
+  left it open over the new page. Its handlers also read nothing the router
+  has disposed when a toggle or a focus change arrives after a navigation, as
+  the action menu's do (#423).
+- The shell can be drawn once and survive a navigation in the page, as
+  #410 meant: `widget::nav::follow_path()`, called in the component that
+  draws the shell inside the console's `Router`, lets the navigation mark
+  the page in view and the rail's and the theme choice's `back` name it as
+  the router moves, so a console no longer draws its shell again for each
+  path. The search's words and the shell's state now survive a link click
+  in the gallery (`docs/consoles.md`, How a console builds, step 10) (#437).
+
 ## [0.5.0] - 2026-10-25
 
 ### Added
@@ -2642,7 +2681,8 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/FerroHEALTH/FerroUI/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.7...v0.4.0
 [0.3.7]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.6...v0.3.7
