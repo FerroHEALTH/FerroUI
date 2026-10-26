@@ -15,14 +15,14 @@ is the signed tag `vX.Y.Z` on the merge commit of the release pull request on
    otherwise (`scripts/release/milestone.sh check vX.Y.Z`).
 2. **The screenshots are refreshed.** Feature pull requests commit no image
    under `docs/screenshots/`, so the refresh pull request lands first, on the
-   branch `chore/screenshots`:
+   branch `chore/screenshots`. The images come from CI, never from your own
+   machine: a capture draws its fonts as the system that runs it does, so
+   only captures made on the same runner image can be compared. Push the
+   branch, wait for its `gallery (capture)` job, which captures every page
+   and state, and download the job's `gallery-screenshots` artifact:
 
    ```sh
-   scripts/release/gallery-site.sh --release
-   FERROUI_SCREENSHOTS=1 cargo nextest run --locked -p ferrohealth-ui-gallery \
-     -E 'test(every_page_is_captured) | test(every_state_is_captured)'
-   FERROUI_SCREENSHOT_GUARD=1 cargo nextest run --locked -p ferrohealth-ui-gallery \
-     -E 'test(every_shot_has_its_light_and_dark_image)'
+   gh run download <run-id> -n gallery-screenshots -D docs/screenshots
    python3 scripts/release/hero.py
    ```
 
@@ -37,7 +37,15 @@ is the signed tag `vX.Y.Z` on the merge commit of the release pull request on
    each committed page image with its fresh capture by its pixels
    (`every_committed_screenshot_shows_what_a_fresh_capture_draws`); a
    release pull request opened before the refresh fails there, naming each
-   image that no longer matches.
+   image that no longer matches. Every page's footer names the version, so
+   the release pull request commits the artifact of its own capture job
+   too, after the bump, and carries the `screenshots` label.
+
+   A capture on your own machine (`scripts/release/gallery-site.sh
+   --release`, then `FERROUI_SCREENSHOTS=1 cargo nextest run --locked -p
+   ferrohealth-ui-gallery -E 'test(every_page_is_captured) |
+   test(every_state_is_captured)'`) is for looking at a change before you
+   push it; it is never committed.
 
 ## The release pull request
 

@@ -622,12 +622,26 @@ jobs:
       # with its fresh capture by its pixels, so a release cannot go out on
       # images that no longer show the gallery (FerroUI #428; no
       # specification governs this: our own design).
+      # On the refresh and the release pull request the states are captured
+      # too, so the artifact holds the whole set the pull request commits.
+      - name: Capture the states
+        if: >-
+          matrix.part == 'capture'
+          && (github.head_ref == 'chore/screenshots' || startsWith(github.head_ref, 'release/'))
+        env:
+          FERROUI_SCREENSHOTS: "1"
+          FERROUI_CHROME: ${{ steps.chrome.outputs.chrome-path }}
+          FERROUI_CHROMEDRIVER: ${{ steps.chrome.outputs.chromedriver-path }}
+        run: cargo nextest run --locked -p ferrohealth-ui-gallery -E 'test(every_state_is_captured)'
       - name: The committed screenshots show what the gallery draws
         if: matrix.part == 'capture' && startsWith(github.head_ref, 'release/')
         env:
           FERROUI_SCREENSHOT_PIXELS: "1"
         run: cargo nextest run --locked -p ferrohealth-ui-gallery -E 'test(every_committed_screenshot_shows_what_a_fresh_capture_draws)'
-      - if: matrix.part == 'capture'
+      # The artifact is kept when the pixel check fails too: it holds the
+      # captures the refresh and the release pull request commit, since a
+      # capture is compared only with one made on the same runner image.
+      - if: always() && matrix.part == 'capture'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: gallery-screenshots
