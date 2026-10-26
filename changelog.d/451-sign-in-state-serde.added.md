@@ -1,0 +1,1 @@
+- `view::sign_in::State`, `Notice` and `Retry` implement `Serialize` and `Deserialize`, so a console carries a sign-in state its server chose, such as a refused callback, into the hydrated page as a `SharedValue`.

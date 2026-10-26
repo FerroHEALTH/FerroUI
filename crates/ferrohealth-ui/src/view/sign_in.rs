@@ -21,6 +21,7 @@
 
 use leptos::either::Either;
 use leptos::prelude::*;
+use serde::{Deserialize, Serialize};
 
 use crate::i18n::{Text, Word, tr};
 use crate::icon::{Glyph, icon};
@@ -32,7 +33,7 @@ use crate::view::form::{ERROR, INPUT};
 pub const NOTICE_ID: &str = "sign-in-notice";
 
 /// A link the notice offers as the way on, such as Try again.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Retry {
     /// Its words.
     pub label: String,
@@ -41,7 +42,7 @@ pub struct Retry {
 }
 
 /// The words of a state's notice.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Notice {
     /// The cause and the way on, as whole sentences, such as "Your session
     /// ended after 30 minutes without a request. Sign in again to go on.".
@@ -66,7 +67,10 @@ impl Notice {
 }
 
 /// The state the sign-in is in, each with its notice.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+///
+/// It crosses to the browser as JSON, so a console draws a state its server
+/// chose, such as a refused callback, the same in both halves.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum State {
     /// Nothing to say: the card offers its methods.
     #[default]
@@ -213,7 +217,7 @@ pub struct SignIn {
 }
 
 /// Returns the notice of `state`, if it has one.
-fn notice(state: &State) -> Option<impl IntoView + use<>> {
+fn notice(state: &State) -> Option<AnyView> {
     let words = state.notice()?.clone();
     let role = if state.alerts() { "alert" } else { "status" };
     let class = format!("fui-sign-in-notice {}", state.tone().class());
@@ -232,18 +236,21 @@ fn notice(state: &State) -> Option<impl IntoView + use<>> {
             </a>
         }
     });
-    Some(view! {
-        <div role=role id=NOTICE_ID class=class>
-            {words.text}
-            {detail}
-            {retry}
-        </div>
-    })
+    Some(
+        view! {
+            <div role=role id=NOTICE_ID class=class>
+                {words.text}
+                {detail}
+                {retry}
+            </div>
+        }
+        .into_any(),
+    )
 }
 
 /// Returns the provider's action in `state`: a link, a busy button while
 /// redirecting, a disabled button while sign-in is unavailable.
-fn provider_action(provider: Provider, state: &State) -> impl IntoView + use<> {
+fn provider_action(provider: Provider, state: &State) -> AnyView {
     let class = Variant::Primary.class();
     match state {
         State::Redirecting(_) => Either::Left(Either::Left(view! {
@@ -265,11 +272,12 @@ fn provider_action(provider: Provider, state: &State) -> impl IntoView + use<> {
             </a>
         }),
     }
+    .into_any()
 }
 
 /// Returns the basic form, its divider first when it follows the
 /// provider's action, disabled while `disabled`.
-fn basic_form(basic: Basic, after_provider: bool, disabled: bool) -> impl IntoView + use<> {
+fn basic_form(basic: Basic, after_provider: bool, disabled: bool) -> AnyView {
     let divider = after_provider.then(|| {
         let words = basic.divider.map_or_else(|| tr(Text::SignInOr), Word::from);
         view! { <div class="fui-divider">{words}</div> }
@@ -329,6 +337,7 @@ fn basic_form(basic: Basic, after_provider: bool, disabled: bool) -> impl IntoVi
             </button>
         </form>
     }
+    .into_any()
 }
 
 /// Returns the sign-in page's card and caption, `sign_in`, centred by the
@@ -376,19 +385,23 @@ pub fn sign_in(sign_in: SignIn) -> impl IntoView {
     let caption = sign_in
         .caption
         .map(|caption| view! { <p class="fui-sign-in-caption">{caption}</p> });
+    let card = view! {
+        <div class="fui-card fui-sign-in">
+            <div class="fui-sign-in-lockup">{sign_in.lockup}</div>
+            {title}
+            {notice}
+            {unavailable}
+            {provider}
+            {basic}
+            {sign_in.line}
+            {note}
+            {links}
+        </div>
+    }
+    .into_any();
     view! {
         <div class="fui-stack fui-sign-in-stack">
-            <div class="fui-card fui-sign-in">
-                <div class="fui-sign-in-lockup">{sign_in.lockup}</div>
-                {title}
-                {notice}
-                {unavailable}
-                {provider}
-                {basic}
-                {sign_in.line}
-                {note}
-                {links}
-            </div>
+            {card}
             {caption}
         </div>
     }

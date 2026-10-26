@@ -912,6 +912,26 @@ fn redirecting_is_a_busy_disabled_button_and_unavailable_a_disabled_one() {
 }
 
 #[test]
+fn a_stopped_state_crosses_to_the_browser_as_json_and_back_unchanged() {
+    let state = State::Refused(Notice {
+        text: String::from("The sign-in could not be completed."),
+        detail: Some(String::from("The provider answered 502.")),
+        retry: Some(Retry {
+            label: String::from("Try again"),
+            href: String::from("/sign-in"),
+        }),
+    });
+    let json = serde_json::to_string(&state).unwrap();
+    let back: State = serde_json::from_str(&json).unwrap();
+    assert_eq!(back, state, "{json}");
+    assert_eq!(
+        sign_in_html(back, None),
+        sign_in_html(state, None),
+        "the browser draws the card the server drew"
+    );
+}
+
+#[test]
 fn the_basic_form_is_a_plain_post_a_password_manager_reads_with_no_placeholder() {
     let card = sign_in_html(State::Refused(Notice::new("Not signed in.")), Some(basic()));
     assert!(
