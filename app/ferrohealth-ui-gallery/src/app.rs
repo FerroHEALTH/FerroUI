@@ -242,7 +242,6 @@ pub fn App() -> impl IntoView {
     let cookies = RwSignal::new((*SharedValue::new_str(crate::cookies::server_cookies)).clone());
     provide_context(crate::cookies::Cookies(cookies));
     ferrohealth_ui::widget::prefetch::routes(crate::routes::ROUTES);
-    ferrohealth_ui::widget::hydration::mark();
     let tag = SharedValue::new_str(locale_requested);
     provide_locale(gallery_locale(&tag));
     view! {

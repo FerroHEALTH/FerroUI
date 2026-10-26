@@ -36,6 +36,10 @@ intl-memoizer.workspace = true
 # its wasm-bindgen and its CLI; `scripts/checks/browser-floor.sh` builds the
 # library at these floors. The wasm-bindgen crate is reached through leptos.
 [target.'cfg(target_arch = "wasm32")'.dependencies]
+# The browser entry (`widget::hydration::hydrate`) runs leptos's
+# `hydrate_from_async`, which the `hydrate` feature carries; every console
+# hydrates its page whole in the browser, so this adds nothing a console lacks.
+leptos = { workspace = true, features = ["hydrate"] }
 wasm-bindgen-futures = "0.4.58"
 web-sys = { version = "0.3.85", default-features = false, features = [
   "Attr",
