@@ -156,6 +156,8 @@ messages! {
     SearchBrowse = "search-browse",
     /// `Search patients for “{ $query }”`
     SearchPatientsFor = "search-patients-for",
+    /// `The note is empty.`
+    AcknowledgeEmpty = "acknowledge-empty",
     /// `{ $kind } · { $lines } lines`
     SearchFileLine = "search-file-line",
     /// `Search waits while the index is rebuilding`

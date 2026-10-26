@@ -309,3 +309,55 @@ async fn an_export_riding_the_query_form_receives_the_query() -> Result<(), Box<
     assert_eq!(StatusCode::NOT_FOUND, parts.status);
     Ok(())
 }
+
+/// What the gallery answers a plain form post of `body` to the
+/// `acknowledge` server function with, as a browser with no WebAssembly
+/// and no `Referer` sends it.
+async fn acknowledge(body: &str) -> Result<http::response::Parts, Box<dyn Error>> {
+    let request = Request::post("/api/acknowledge")
+        .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+        .header(header::ACCEPT, "text/html,application/xhtml+xml,*/*;q=0.8")
+        .body(Body::from(body.to_owned()))?;
+    Ok(send(request).await?.0)
+}
+
+#[tokio::test]
+async fn a_plain_post_with_no_referer_returns_to_the_page_its_form_names()
+-> Result<(), Box<dyn Error>> {
+    let parts = acknowledge("note=seen&ferroui_return=%2Fferropix%2Fforms%3Ftab%3Dtwo").await?;
+    assert_eq!(StatusCode::FOUND, parts.status);
+    assert_eq!("/ferropix/forms?tab=two", parts.headers[header::LOCATION]);
+    Ok(())
+}
+
+#[tokio::test]
+async fn a_failed_plain_post_returns_with_the_error_the_router_reads() -> Result<(), Box<dyn Error>>
+{
+    let parts = acknowledge("note=&ferroui_return=%2Fferropix%2Fforms").await?;
+    assert_eq!(StatusCode::FOUND, parts.status);
+    let location = parts.headers[header::LOCATION].to_str()?;
+    assert!(
+        location.starts_with("/ferropix/forms?__path=%2Fapi%2Facknowledge&__err="),
+        "{location}"
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn a_return_field_naming_another_origin_is_never_followed() -> Result<(), Box<dyn Error>> {
+    for field in ["%2F%2Fevil.example%2F", "https%3A%2F%2Fevil.example%2F"] {
+        let parts = acknowledge(&format!("note=seen&ferroui_return={field}")).await?;
+        let location = parts
+            .headers
+            .get(header::LOCATION)
+            .map(|value| value.to_str().map(str::to_owned))
+            .transpose()?;
+        assert!(
+            location
+                .as_deref()
+                .is_none_or(|location| !location.contains("evil")),
+            "{field}: {location:?}"
+        );
+    }
+    Ok(())
+}

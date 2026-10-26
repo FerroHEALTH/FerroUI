@@ -79,6 +79,7 @@ save = Save
 search = Search
 search-browse = Browse every file
 search-patients-for = Search patients for “{ $query }”
+acknowledge-empty = The note is empty.
 search-file-line =
     { $kind } · { $lines } { $lines ->
         [one] line

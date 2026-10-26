@@ -14,6 +14,7 @@
 //! every row is invented for the gallery. No specification governs the
 //! gallery: our own design.
 
+pub mod acknowledge;
 pub mod app;
 pub mod clinical_data;
 pub mod cookies;

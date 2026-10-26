@@ -476,3 +476,25 @@ fn the_phone_sheet_shows_one_month_with_both_arrows_and_centred_buttons() {
         assert!(STYLESHEET.contains(rule), "missing: {rule}");
     }
 }
+
+#[test]
+fn the_return_field_names_the_page_in_view_with_its_query() {
+    let field = html(|| {
+        provide_context(ferrohealth_ui::widget::nav::CurrentPath(Signal::stored(
+            String::from("/files?sort=name"),
+        )));
+        ferrohealth_ui::widget::action::return_field().into_any()
+    });
+    assert!(
+        has(
+            &field,
+            "input",
+            &[
+                ("type", "hidden"),
+                ("name", ferrohealth_ui::widget::action::RETURN),
+                ("value", "/files?sort=name"),
+            ]
+        ),
+        "{field}"
+    );
+}
