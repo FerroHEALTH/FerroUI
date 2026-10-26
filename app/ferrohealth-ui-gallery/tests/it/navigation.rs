@@ -272,6 +272,16 @@ async fn the_shell_and_its_state_survive_a_link_to_another_page() -> Result<(), 
             .convert()?;
         assert!(kept, "the top bar and the navigation are the same elements");
         assert_eq!(
+            Some(String::from("1")),
+            browser
+                .driver()
+                .find(By::Css("html"))
+                .await?
+                .attr("data-gallery-shells")
+                .await?,
+            "the browser drew the shell once: the link drew the page alone"
+        );
+        assert_eq!(
             Some(String::from("synthetic")),
             browser
                 .element(By::Id("gallery-search"))
