@@ -748,6 +748,25 @@ fn operator_menu(brand: Brand, back: &str, fhir: Option<&str>) -> AnyView {
     .into_any()
 }
 
+/// Counts each time the browser draws a brand shell, on the root element's
+/// `data-gallery-shells`, so a journey sees whether a navigation drew the
+/// shell again (FerroUI #437).
+fn count_shell_mount() {
+    #[cfg(target_arch = "wasm32")]
+    if let Some(root) = document().document_element() {
+        let drawn = root
+            .get_attribute("data-gallery-shells")
+            .and_then(|count| count.parse::<u32>().ok())
+            .unwrap_or(0);
+        if root
+            .set_attribute("data-gallery-shells", &drawn.saturating_add(1).to_string())
+            .is_err()
+        {
+            leptos::logging::warn!("the browser refused the shell count");
+        }
+    }
+}
+
 /// What the top bar's search shows: the state the address names and the
 /// words the find page answers.
 #[derive(Debug, Clone, Copy)]
@@ -761,6 +780,7 @@ struct Searched<'a> {
 /// The shell of `brand`'s pages, drawn for the page at `back` and then
 /// following the router, with its search `search`.
 fn brand_shell(brand: Brand, back: &str, search: Searched<'_>) -> AnyView {
+    Effect::new(move |_| count_shell_mount());
     let lockup = lockup(
         "/",
         mark(brand_glyph(brand)),

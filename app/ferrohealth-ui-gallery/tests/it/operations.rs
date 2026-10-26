@@ -41,6 +41,8 @@ async fn the_pair_stands_side_by_side_wide_and_stacks_on_a_phone_with_run_across
             .goto(&gallery.url("/ferrobridge/operations"))
             .await?;
         browser.element(By::Css("main h1")).await?;
+        // The measures wait for the layout to hold over two frames, fonts loaded.
+        browser.settled().await?;
         let input = rect(browser, ".fui-transform > .fui-transform-pane:first-child").await?;
         let answer = rect(browser, ".fui-transform > .fui-transform-pane:last-child").await?;
         assert!(level(input.y, answer.y), "side by side at 1440 px: {input:?} {answer:?}");
@@ -56,6 +58,7 @@ async fn the_pair_stands_side_by_side_wide_and_stacks_on_a_phone_with_run_across
             .goto(&gallery.url("/ferrobridge/operations"))
             .await?;
         browser.element(By::Css("main h1")).await?;
+        browser.settled().await?;
         let input = rect(browser, ".fui-transform > .fui-transform-pane:first-child").await?;
         let answer = rect(browser, ".fui-transform > .fui-transform-pane:last-child").await?;
         assert!(level(input.x, answer.x), "stacked at 390 px: {input:?} {answer:?}");

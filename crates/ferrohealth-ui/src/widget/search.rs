@@ -211,21 +211,24 @@ struct Typeahead {
 }
 
 impl Typeahead {
-    /// Closes the panel.
+    /// Closes the panel. A blur or a key can arrive after a navigation
+    /// disposed the search (the page announcer moves the focus to the new
+    /// heading), so each write tries.
     fn close(self) {
-        self.open.set(false);
-        self.active.set(None);
+        let _: Option<bool> = self.open.try_set(false);
+        let _: Option<Option<usize>> = self.active.try_set(None);
     }
 
     /// Drops what was asked and what was answered.
     fn reset(self) {
-        if let Some(handle) = self.pending.get_value() {
+        if let Some(handle) = self.pending.try_get_value().flatten() {
             handle.clear();
         }
-        self.pending.set_value(None);
-        self.asked
-            .update_value(|asked| *asked = asked.wrapping_add(1));
-        self.phase.set(Phase::Idle);
+        let _: Option<Option<TimeoutHandle>> = self.pending.try_set_value(None);
+        let _: Option<()> = self
+            .asked
+            .try_update_value(|asked| *asked = asked.wrapping_add(1));
+        drop(self.phase.try_set(Phase::Idle));
         self.close();
     }
 
@@ -338,7 +341,7 @@ pub fn search_control(search: SearchBox, words: SearchWords) -> impl IntoView {
             node_ref=form
             on:submit=move |_| {
                 state.close();
-                busy.set(true);
+                let _: Option<bool> = busy.try_set(true);
             }
         >
             <label for=id.clone() class="fui-sr-only">
@@ -651,7 +654,7 @@ fn option_view(
             aria-selected=move || if on() { "true" } else { "false" }
             on:mousemove=move |_| {
                 if !on() {
-                    state.active.set(Some(at));
+                    let _: Option<Option<usize>> = state.active.try_set(Some(at));
                 }
             }
             on:click=move |_| pick(at)
@@ -679,7 +682,7 @@ fn keyed(
             }
             event.prevent_default();
             if !state.open.get_untracked() {
-                state.open.set(true);
+                let _: Option<bool> = state.open.try_set(true);
             }
             let down = key == "ArrowDown";
             state
@@ -709,7 +712,7 @@ fn pick(at: usize, state: Typeahead, form: NodeRef<leptos::html::Form>, busy: Rw
     state.close();
     match target {
         Target::Hit(href) | Target::Way(href) => {
-            busy.set(true);
+            let _: Option<bool> = busy.try_set(true);
             go(&href);
         }
         Target::All => submit_form(form),
@@ -745,14 +748,14 @@ fn reopen(state: Typeahead) {
         .phase
         .with_untracked(|phase| matches!(phase, Phase::Answered(_) | Phase::Failed(_)));
     if shown {
-        state.open.set(true);
+        let _: Option<bool> = state.open.try_set(true);
     }
 }
 
 /// Answers new words in `field`: asks for them once they rest, or closes
 /// the panel when they are too short to ask.
 fn typed(field: NodeRef<leptos::html::Input>, state: Typeahead) {
-    state.active.set(None);
+    let _: Option<Option<usize>> = state.active.try_set(None);
     let Some(ask) = state.ask.get_value() else {
         return;
     };
@@ -949,7 +952,9 @@ fn place_on_open(
 fn listen(field: NodeRef<leptos::html::Input>, shortcut: Option<char>, busy: RwSignal<bool>) {
     #[cfg(target_arch = "wasm32")]
     {
-        let back = window_event_listener(leptos::ev::pageshow, move |_| busy.set(false));
+        let back = window_event_listener(leptos::ev::pageshow, move |_| {
+            let _: Option<bool> = busy.try_set(false);
+        });
         let Some(shortcut) = shortcut else {
             on_cleanup(move || back.remove());
             return;
