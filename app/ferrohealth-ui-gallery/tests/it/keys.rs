@@ -189,6 +189,52 @@ async fn enter_submits_to_the_find_page_and_on_an_active_hit_follows_it()
     .await
 }
 
+/// Whether the top bar's search box is still busy: its form marked
+/// `aria-busy`, or its field disabled.
+async fn search_busy(browser: &Browser) -> Result<bool, Box<dyn Error>> {
+    let form = browser
+        .element(By::Css(".fui-topbar form.fui-search"))
+        .await?;
+    let field = browser.element(By::Id("gallery-search")).await?;
+    Ok(form.attr("aria-busy").await?.is_some() || !field.is_enabled().await?)
+}
+
+/// The search box drawn once in the shell ends its busy state when the
+/// router draws the page its submit leads to, so a second search can be
+/// typed (#452).
+#[tokio::test(flavor = "multi_thread")]
+async fn the_search_box_leaves_its_busy_state_once_the_router_draws_its_page()
+-> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        window(browser, 1440, 900).await?;
+        browser.goto(&gallery.url("/ferroterm/forms")).await?;
+        for (words, address) in [
+            ("synthetic-00", "/ferroterm/find?q=synthetic-00"),
+            ("synthetic-001", "/ferroterm/find?q=synthetic-001"),
+        ] {
+            let search = browser.element(By::Id("gallery-search")).await?;
+            until("the search box takes words", async || {
+                Ok(!search_busy(browser).await?)
+            })
+            .await?;
+            search.clear().await?;
+            typed(browser, words).await?;
+            press(browser, Key::Enter).await?;
+            browser.at(&gallery.url(address)).await?;
+            until("the search box leaves its busy state", async || {
+                Ok(!search_busy(browser).await?)
+            })
+            .await?;
+        }
+        browser.console_clean("two searches in the page").await
+    })
+    .await
+}
+
 /// WAI-ARIA Authoring Practices 1.2, the combobox pattern: Escape dismisses
 /// the popup when it is visible, and clears the field only when it is not.
 #[tokio::test(flavor = "multi_thread")]

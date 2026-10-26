@@ -102,7 +102,10 @@ the browser, so a link or a form never reloads the document (FerroUI #410;
    background and the router draws the page it names. Mark a form or a
    submit that must load a new document (an export, a download)
    `widget::submit::RELOADS`; with no WebAssembly every form submits as the
-   browser does.
+   browser does. A post your own server function draws in the page, at an
+   address that does not change, calls `widget::submit::drawn()` once its
+   answer is drawn, so what reads `widget::submit::posts()` reads again and
+   the search box leaves its busy state.
 8. **The locale both halves.** Provide the same `i18n::Locale` at your root
    on the server and in the browser (a `SharedValue` of its tag); the
    browser carries the library's catalog.

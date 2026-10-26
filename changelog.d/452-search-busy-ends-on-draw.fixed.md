@@ -1,0 +1,1 @@
+- The search box leaves its busy state, and its field is enabled again, once the page its submit leads to is drawn: when the router's path changes or a post is drawn in the page. Before, only `pageshow` ended it, which a navigation in a hydrated page never fires, so the field stayed disabled after the first search.

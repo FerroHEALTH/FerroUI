@@ -47,6 +47,16 @@ pub fn posts() -> Signal<u32> {
     }
 }
 
+/// Counts a post the console drew in the page itself.
+///
+/// Call it once the answer of the console's own server function is drawn
+/// at an address that does not change, so what reads [`posts`] reads again
+/// and a busy search box ends its wait (#452).
+pub fn drawn() {
+    #[cfg(target_arch = "wasm32")]
+    browser::POSTS.with(|posts| posts.update(|count| *count = count.wrapping_add(1)));
+}
+
 /// Follows `href` as a press on a link to it does.
 ///
 /// The console's router draws the page in the browser when it has one, and
