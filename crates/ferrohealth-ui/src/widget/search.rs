@@ -948,10 +948,22 @@ fn place_on_open(
 }
 
 /// Listens on the window for the key `shortcut`, which focuses `field`, and
-/// for the page coming back from the history, which ends `busy`.
+/// ends `busy` once the page the submit leads to is drawn: a new page in the
+/// router ([`crate::widget::nav::follow_path`]), a post drawn in the page
+/// ([`crate::widget::submit::posts`]), or the page coming back from the
+/// history (#452).
 fn listen(field: NodeRef<leptos::html::Input>, shortcut: Option<char>, busy: RwSignal<bool>) {
     #[cfg(target_arch = "wasm32")]
     {
+        let path = use_context::<crate::widget::nav::CurrentPath>().map(|path| path.0);
+        let posts = crate::widget::submit::posts();
+        Effect::new(move |seen: Option<(Option<String>, u32)>| {
+            let now = (path.map(|path| path.get()), posts.get());
+            if seen.is_some_and(|seen| seen != now) {
+                let _: Option<bool> = busy.try_set(false);
+            }
+            now
+        });
         let back = window_event_listener(leptos::ev::pageshow, move |_| {
             let _: Option<bool> = busy.try_set(false);
         });

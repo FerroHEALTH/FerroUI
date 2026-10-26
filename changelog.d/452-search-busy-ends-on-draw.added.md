@@ -1,0 +1,1 @@
+- `widget::submit::drawn()` counts a post a console draws in the page through its own server function, so `posts()` changes and the search box ends its wait.
