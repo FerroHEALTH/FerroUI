@@ -329,18 +329,12 @@ async fn answer_plain_post(
     }
     let (reply, body) = reply.into_parts();
     let Ok(body) = axum::body::to_bytes(body, ANSWER_LIMIT).await else {
-        return (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "the action's answer is too large to draw",
-        )
-            .into_response();
+        leptos::logging::error!("the answer of {function} is too large to draw on its page");
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     };
     let Ok(body) = String::from_utf8(body.to_vec()) else {
-        return (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "the action's answer is not text, which its page cannot draw",
-        )
-            .into_response();
+        leptos::logging::error!("the answer of {function} is no text its page can draw");
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     };
     let mut drawn = Request::new(Body::empty());
     *drawn.method_mut() = Method::GET;
