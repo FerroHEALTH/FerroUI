@@ -43,7 +43,10 @@ is the signed tag `vX.Y.Z` on the merge commit of the release pull request on
    that list is what to look at. A release pull request opened before the
    refresh fails there too. Every page's footer names the version, so
    the release pull request commits the artifact of its own capture job
-   too, after the bump, and carries the `screenshots` label.
+   too, after the bump, and carries the `screenshots` label: pass it to
+   `gh pr create --label screenshots`, and CI reads it on the first run.
+   A label added later re-runs that run's `detect` job and every job after
+   it once the run completes (`pr-guards.yml`).
 
    A capture on your own machine (`scripts/release/gallery-site.sh
    --release`, then `FERROUI_SCREENSHOTS=1 cargo nextest run --locked -p

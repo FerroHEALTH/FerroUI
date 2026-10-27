@@ -10,7 +10,10 @@
 # required check, would report a failure. The guards read their escape labels
 # and the description from the API when they run instead. When one of those
 # changes, this job waits for the CI run on the head commit to complete and
-# re-runs each guard whose verdict may no longer hold. Re-running a job
+# re-runs each guard whose verdict may no longer hold. The `screenshots`
+# label also re-runs `detect`, which reads it, when that job started before
+# the label was added, so the run captures the states and checks the pixels
+# (#481). Re-running a job
 # re-runs its dependent jobs ("Re-run a job and its dependent jobs in a
 # workflow run", https://docs.github.com/en/rest/actions/workflow-runs#re-run-a-job-from-a-workflow-run),
 # so `conclusion` reports again in the same run.
@@ -38,7 +41,7 @@ jobs:
   rerun:
     name: pr-guards
     if: >-
-      contains(fromJSON('["no-changelog"]'), github.event.label.name)
+      contains(fromJSON('["no-changelog", "screenshots"]'), github.event.label.name)
       || (github.event.action == 'edited' && github.event.changes.body != null)
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -58,14 +61,22 @@ jobs:
           set -euo pipefail
           case "${ACTION}:${LABEL}" in
             *:no-changelog) guards=(guards) ;;
+            labeled:screenshots) guards=(detect guards) ;;
+            unlabeled:screenshots) guards=(guards) ;;
             edited:) guards=(contribution-licence) ;;
             *) echo "::error::no guard reads ${ACTION} ${LABEL}"; exit 1 ;;
           esac
 
           # A label added can only turn a failure into a pass and a label
           # removed only a pass into a failure; a new description can do both.
+          # `detect` holds the plan it read when it started, so it is stale
+          # when it started before the label was added.
           stale() {
-            case "${ACTION}:$1" in
+            if [ "$1" = detect ]; then
+              [ -n "${labelled}" ] && [[ "$3" < "${labelled}" ]]
+              return
+            fi
+            case "${ACTION}:$2" in
               labeled:failure | unlabeled:success | edited:success | edited:failure) return 0 ;;
               *) return 1 ;;
             esac
@@ -86,6 +97,14 @@ jobs:
             done
             printf '%s\n' "${out}"
           }
+
+          # When the label was added, as ISO 8601 UTC, which orders as text.
+          labelled=""
+          if [ "${ACTION}" = labeled ]; then
+            labelled=$(retry gh api --paginate "repos/${GH_REPO}/issues/${PR}/events" \
+              --jq ".[] | select(.event == \"labeled\" and .label.name == \"${LABEL}\") | .created_at") || exit 1
+            labelled=$(tail -n 1 <<<"${labelled}")
+          fi
 
           run=""
           for _ in $(seq 1 30); do
@@ -120,15 +139,15 @@ jobs:
             fi
             # A failed read is retried, never taken for a missing guard (#380).
             jobs=$(retry gh run view "${run}" --json jobs \
-              --jq '.jobs[] | "\(.name)\t\(.databaseId) \(.conclusion)"') || exit 1
+              --jq '.jobs[] | "\(.name)\t\(.databaseId) \(.conclusion) \(.startedAt)"') || exit 1
             next=""
             for guard in "${guards[@]}"; do
               case "${handled}" in *" ${guard} "*) continue ;; esac
-              job="" outcome=""
-              read -r job outcome < <(awk -F '\t' -v g="${guard}" '$1 == g { print $2; exit }' <<<"${jobs}") || true
+              job="" outcome="" started=""
+              read -r job outcome started < <(awk -F '\t' -v g="${guard}" '$1 == g { print $2; exit }' <<<"${jobs}") || true
               if [ -z "${job}" ]; then
                 echo "${guard} is not a job of CI run ${run}"
-              elif stale "${outcome}"; then
+              elif stale "${guard}" "${outcome}" "${started}"; then
                 next="${job} ${guard}"
                 break
               else

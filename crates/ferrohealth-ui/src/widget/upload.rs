@@ -20,6 +20,7 @@
 //! hydration.
 
 use std::borrow::Cow;
+use std::rc::Rc;
 
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -28,7 +29,7 @@ use crate::highlight::Language;
 use crate::i18n::number::Grouping;
 use crate::i18n::{Phrase, Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
-use crate::widget::editor::{Drawn, Grammar, drawn};
+use crate::widget::editor::{Drawn, Grammar, Heard, drawn};
 
 /// What an upload field accepts and says.
 #[derive(Debug, Clone)]
@@ -378,8 +379,9 @@ pub fn upload_field(
             label: None,
             caret: None,
             current: Signal::stored(None),
+            record: None,
         },
-        move |text| source.set(text),
+        Heard::Text(Rc::new(move |text| source.set(text))),
     );
     view! {
         <div class="fui-upload">

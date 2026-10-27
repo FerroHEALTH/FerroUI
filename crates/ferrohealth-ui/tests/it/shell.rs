@@ -9,7 +9,7 @@ use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::theme::Theme;
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::flow::FlowState;
-use ferrohealth_ui::view::shell::{TopBar, lockup, lockup_plain, mark, topbar};
+use ferrohealth_ui::view::shell::{TopBar, lockup, lockup_plain, mark, skip_link, topbar};
 use ferrohealth_ui::view::sign_in::{
     Basic, NOTICE_ID, Notice, Provider, Retry, SignIn, State, sign_in,
 };
@@ -177,6 +177,17 @@ fn a_plain_lockup_leads_nowhere() {
     assert!(plain.starts_with(r#"<span class="fui-lockup">"#), "{plain}");
     assert!(!plain.contains("<a"), "{plain}");
     assert!(plain.contains("FerroBRIDGE"), "{plain}");
+}
+
+#[test]
+fn the_skip_link_is_a_fragment_link_the_router_leaves_to_the_browser() {
+    // WCAG 2.2 SC 2.4.1: the browser's fragment navigation moves the focus starting point to
+    // the main area, which a link the router takes over never does (#482).
+    let skip = html(|| skip_link().into_any());
+    assert!(
+        skip.starts_with(r##"<a href="#main" target="_self" class="fui-skip">"##),
+        "{skip}"
+    );
 }
 
 /// The navigation with one group of three entries, the page at

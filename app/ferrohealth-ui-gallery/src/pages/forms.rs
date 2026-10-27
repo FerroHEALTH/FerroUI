@@ -41,8 +41,8 @@ use ferrohealth_ui::widget::date::{
     DateField, DateRange, DateWords, QuickChoice, RangeEnd, RangePreset,
 };
 use ferrohealth_ui::widget::editor::{
-    Editor, EditorWords, LineMark, MarkKind, Opened, Panel, code_editor, editor_diagnostics,
-    editor_panel, editor_split, line_id,
+    Editor, EditorWords, LineMark, MarkKind, Opened, Panel, TextEdit, code_editor,
+    code_editor_by_edit, editor_diagnostics, editor_panel, editor_split, line_id,
 };
 use ferrohealth_ui::widget::filter::{keeps, table_filter};
 use ferrohealth_ui::widget::masked::HoldWords;
@@ -769,7 +769,15 @@ fn editor() -> AnyView {
 /// The interactive part of [`editor`], hydrated as the island
 /// [`crate::islands::DraftEditor`].
 pub(crate) fn editor_body(words: Words) -> AnyView {
-    let text = RwSignal::new(String::from(crate::data::YAML));
+    // The console keeps its own copy of the text by the editor's edits, so a
+    // key costs it the edit (#478); the editor's text is the opening one.
+    let text = Signal::stored(String::from(crate::data::YAML));
+    let kept = StoredValue::new(String::from(crate::data::YAML));
+    let breaks = |text: &str| u64::try_from(text.matches('\n').count()).unwrap_or(u64::MAX);
+    let held = RwSignal::new((
+        u64::try_from(crate::data::YAML.len()).unwrap_or(u64::MAX),
+        breaks(crate::data::YAML),
+    ));
     let marks = Signal::stored(vec![
         LineMark {
             line: 4,
@@ -780,25 +788,36 @@ pub(crate) fn editor_body(words: Words) -> AnyView {
             kind: MarkKind::Error,
         },
     ]);
-    let field = code_editor(
+    let field = code_editor_by_edit(
         Editor {
             id: DRAFT.into(),
             language: Language::Yaml,
-            text: text.into(),
+            text,
             marks,
             editable: Signal::stored(true),
         },
-        move |typed| text.set(typed),
+        move |edit: TextEdit| {
+            kept.update_value(|kept| {
+                let removed = kept.get(edit.range.clone()).map_or(0, breaks);
+                if !edit.apply(kept) {
+                    leptos::logging::error!("the gallery's copy of the draft fell out of step");
+                    return;
+                }
+                let bytes = u64::try_from(kept.len()).unwrap_or(u64::MAX);
+                held.update(|(held_bytes, lines)| {
+                    *held_bytes = bytes;
+                    *lines = lines
+                        .saturating_sub(removed)
+                        .saturating_add(breaks(&edit.text));
+                });
+            });
+        },
     );
     let words = StoredValue::new(words);
     let size = move || {
-        text.with(|text| {
-            let bytes = u64::try_from(text.len()).unwrap_or(u64::MAX);
-            let lines = u64::try_from(text.split('\n').count()).unwrap_or(u64::MAX);
-            words.with_value(|words| {
-                words.count(Msg::SizeLines, &[("bytes", bytes), ("lines", lines)])
-            })
-        })
+        let (bytes, breaks) = held.get();
+        let lines = breaks.saturating_add(1);
+        words.with_value(|words| words.count(Msg::SizeLines, &[("bytes", bytes), ("lines", lines)]))
     };
     let diagnostics = [
         (

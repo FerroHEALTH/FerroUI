@@ -274,6 +274,7 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+      pull-requests: read # the labels when the step runs
     outputs:
       cargo: ${{ steps.find.outputs.cargo }}
       gallery: ${{ steps.find.outputs.gallery }}
@@ -296,7 +297,7 @@ jobs:
           QUEUE_BASE: ${{ github.event.merge_group.base_sha }}
           QUEUE_HEAD: ${{ github.event.merge_group.head_sha }}
           HEAD_REF: ${{ github.head_ref }}
-          SCREENSHOTS_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'screenshots') }}
+          PR: ${{ github.event.pull_request.number }}
           # One capture job per brand, in Brand::ALL's order; the gallery's
           # tests hold this list to the brands (the_ci_capture_runs_one_job_per_brand).
           CAPTURE_BRANDS: "ferrobridge ferrofed ferroehr ferroterm ferropix"
@@ -328,7 +329,13 @@ jobs:
           # paths they touch.
           refresh=false
           case "$HEAD_REF" in chore/screenshots | release/*) refresh=true ;; esac
-          if [ "$SCREENSHOTS_LABEL" = true ]; then refresh=true; fi
+          # The labels are read when the step runs: `gh pr create --label`
+          # adds them after the `opened` event, whose payload carries none,
+          # and pr-guards.yml re-runs this job when the label comes later (#481).
+          if [ "$EVENT" = pull_request ]; then
+            labels="$(gh pr view "$PR" --json labels --jq '.labels[].name')"
+            if grep -qx 'screenshots' <<<"$labels"; then refresh=true; fi
+          fi
           if [ "$EVENT" = workflow_dispatch ]; then refresh=true; fi
           gallery=false capture=false
           if [ -f app/ferrohealth-ui-gallery/Cargo.toml ]; then
@@ -424,14 +431,12 @@ jobs:
       - run: cargo nextest run --workspace --locked
       - run: cargo test --doc --workspace --locked
       # Every page and state has both images, and no other image is kept:
-      # on the refresh pull request, a release pull request and a manual run,
-      # since a feature pull request commits no screenshot.
+      # on the runs that capture the states (the refresh pull request, a
+      # release pull request, the `screenshots` label and a manual run, the
+      # `detect` job's `states`), since a feature pull request commits no
+      # screenshot.
       - name: The screenshot set is whole
-        if: >-
-          github.event_name == 'workflow_dispatch'
-          || github.head_ref == 'chore/screenshots'
-          || startsWith(github.head_ref, 'release/')
-          || contains(github.event.pull_request.labels.*.name, 'screenshots')
+        if: needs.detect.outputs.states == 'true'
         env:
           FERROUI_SCREENSHOT_GUARD: "1"
         run: cargo nextest run --locked -p ferrohealth-ui-gallery -E 'test(every_shot_has_its_light_and_dark_image)'

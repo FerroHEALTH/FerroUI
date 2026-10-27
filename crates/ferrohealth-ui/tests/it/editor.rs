@@ -12,8 +12,8 @@ use ferrohealth_ui::view::diagnostics::{
     DiagnosticsWords, FileFindings, Finding, Position, WINDOW, diagnostics, diagnostics_by_file,
 };
 use ferrohealth_ui::widget::editor::{
-    Editor, EditorWords, LineMark, MarkKind, Opened, Panel, code_editor, editor_diagnostics,
-    editor_panel, editor_split,
+    Editor, EditorWords, LineMark, MarkKind, Opened, Panel, code_editor, code_editor_by_edit,
+    editor_diagnostics, editor_panel, editor_panel_by_edit, editor_split,
 };
 use leptos::prelude::*;
 use std::time::{Duration, Instant};
@@ -203,22 +203,25 @@ fn editor(text: &str) -> Editor {
     }
 }
 
+/// The panel of the code editor over `text`, opened as `opened`, its
+/// caret at `at`.
+fn panel_of(text: &str, opened: Opened, at: Position) -> Panel {
+    Panel {
+        editor: editor(text),
+        label: String::from("The draft of a.yml"),
+        lead: String::from("YAML · mapping context"),
+        facts: vec![String::from("UTF-8 · LF")],
+        opened,
+        caret: RwSignal::new(at),
+        tools: Some(view! { <button type="submit">"Check"</button> }.into_any()),
+        end: Some(view! { <span>"console"</span> }.into_any()),
+        words: EditorWords::of_page(),
+    }
+}
+
 /// The code editor over `text`, opened as `opened`, its caret at `at`.
 fn panel(text: &str, opened: Opened, at: Position) -> AnyView {
-    editor_panel(
-        Panel {
-            editor: editor(text),
-            label: String::from("The draft of a.yml"),
-            lead: String::from("YAML · mapping context"),
-            facts: vec![String::from("UTF-8 · LF")],
-            opened,
-            caret: RwSignal::new(at),
-            tools: Some(view! { <button type="submit">"Check"</button> }.into_any()),
-            end: Some(view! { <span>"console"</span> }.into_any()),
-            words: EditorWords::of_page(),
-        },
-        |_| {},
-    )
+    editor_panel(panel_of(text, opened, at), |_| {})
 }
 
 #[test]
@@ -380,6 +383,39 @@ fn the_status_line_says_unchanged_or_new() {
         "an empty editor is short: {new}"
     );
     assert!(new.contains("· 1 line<"), "{new}");
+}
+
+#[test]
+fn a_draft_opened_changed_says_so_and_counts_its_lines() {
+    let shown = html(|| {
+        panel(
+            "a: 1\nb: 2\n\nc: 3\n",
+            Opened::Text(String::from("a: 1\n")),
+            Position::default(),
+        )
+    });
+    assert!(shown.contains("Changed since opened"), "{shown}");
+    assert!(
+        has(&shown, "span", &[("class", "fui-editor-dirty")]),
+        "{shown}"
+    );
+    assert!(shown.contains("· 4 lines<"), "{shown}");
+}
+
+#[test]
+fn an_editor_that_hands_over_edits_draws_as_the_whole_text_one_does() {
+    // No specification governs this: our own design; the callback changes what the console
+    // hears, never what the server draws (#478).
+    let text = "a: 1\nb: 2\n";
+    assert_eq!(
+        html(|| code_editor(editor(text), |_| {})),
+        html(|| code_editor_by_edit(editor(text), |_| {}))
+    );
+    let opened = || Opened::Text(String::from("a: 1\n"));
+    assert_eq!(
+        html(|| editor_panel(panel_of(text, opened(), Position::default()), |_| {})),
+        html(|| editor_panel_by_edit(panel_of(text, opened(), Position::default()), |_| {}))
+    );
 }
 
 #[test]

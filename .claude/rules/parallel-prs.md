@@ -55,7 +55,8 @@ different components off each other's lines. Each one has a check.
 - **The screenshot guard runs on the refresh.** The test that every listed
   page and state has both images and that no other image is kept runs behind
   `FERROUI_SCREENSHOT_GUARD=1`: in CI on `chore/screenshots`, on every
-  `release/` branch, with the `screenshots` label and on a manual run. A
+  `release/` branch, with the `screenshots` label (read when the run
+  starts, and a label added later re-runs the capture) and on a manual run. A
   feature pull request that adds a state passes without its image, says the
   state's name in its body, and the refresh pull request before the tag
   draws it (`docs/release.md`).

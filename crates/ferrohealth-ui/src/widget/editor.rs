@@ -25,6 +25,8 @@
 //! text area takes keys from the first paint, with no WebAssembly too: until
 //! its island runs it shows its own text over the layer's gutter, and what
 //! it holds as the page hydrates goes to the console, so no keystroke is lost.
+//! A console that keeps its own copy of the text takes each edit instead of
+//! the whole text ([`code_editor_by_edit`], [`editor_panel_by_edit`]).
 //! After an edit the text is tokenized once, in time linear in its length,
 //! and the layer redraws only the lines whose highlighting or mark changed:
 //! the lines an edit leaves alike keep their elements, and the lines after
@@ -45,6 +47,7 @@ use std::borrow::Cow;
 use std::cell::{Cell, RefCell};
 use std::collections::{BTreeMap, VecDeque};
 use std::hash::{DefaultHasher, Hash as _, Hasher as _};
+use std::ops::Range;
 use std::rc::Rc;
 
 use leptos::prelude::*;
@@ -264,7 +267,8 @@ fn shared_tail(old: &[u8], new: &[u8]) -> usize {
 }
 
 /// What an edit replaced: the old lines from the 0-based `first`, `removed`
-/// of them, became `inserted` new lines.
+/// of them, became `inserted` new lines, and the old bytes
+/// `start..old_end` became the new bytes `start..new_end`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Edit {
     /// The first line the edit touched.
@@ -273,6 +277,12 @@ struct Edit {
     removed: usize,
     /// The new lines in their place.
     inserted: usize,
+    /// The first byte it changed, on a character boundary.
+    start: usize,
+    /// The end of the bytes it replaced in the old text.
+    old_end: usize,
+    /// The end of the bytes it put in their place in the new text.
+    new_end: usize,
 }
 
 /// A text and where each of its lines starts, which an edit brings up to
@@ -362,11 +372,15 @@ impl Indexed {
         let new_end = new.len().saturating_sub(tail);
         let (Some(old_part), Some(new_part)) = (old.get(head..old_end), new.get(head..new_end))
         else {
+            let old_end = old.len();
             *self = Self::of(new);
             return Some(Edit {
                 first: 0,
                 removed: usize::MAX,
                 inserted: self.starts.len(),
+                start: 0,
+                old_end,
+                new_end: new.len(),
             });
         };
         let first = self.line_of(head);
@@ -404,7 +418,248 @@ impl Indexed {
             first,
             removed: last.saturating_sub(first).saturating_add(1),
             inserted,
+            start: head,
+            old_end,
+            new_end,
         })
+    }
+}
+
+/// One edit the reader made to an editor's text: the bytes `range` of the
+/// text before the edit became `text`.
+///
+/// The offsets count UTF-8 bytes and fall on character boundaries, so a
+/// console that keeps the text as a `String` brings it up to date with
+/// [`TextEdit::apply`], at the cost of the edit.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TextEdit {
+    /// The bytes of the text before the edit that it replaced.
+    pub range: Range<usize>,
+    /// What took their place.
+    pub text: String,
+}
+
+impl TextEdit {
+    /// The edit `edit` that brought a text to `new`.
+    fn of(edit: Edit, new: &str) -> Self {
+        Self {
+            range: edit.start..edit.old_end,
+            text: new
+                .get(edit.start..edit.new_end)
+                .unwrap_or_default()
+                .to_owned(),
+        }
+    }
+
+    /// Applies the edit to `text`, the text before it, and returns whether
+    /// it could: when `range` is no range of `text` on character
+    /// boundaries, as when `text` is not the editor's text before the edit,
+    /// it leaves `text` as it was and returns `false`.
+    #[must_use]
+    pub fn apply(&self, text: &mut String) -> bool {
+        if text.get(self.range.clone()).is_none() {
+            return false;
+        }
+        text.replace_range(self.range.clone(), &self.text);
+        true
+    }
+}
+
+/// Where a text differs from the text it was opened with: before the byte
+/// `head` and in the last `tail` bytes the two agree, so an edit compares
+/// only the bytes between, and never the whole text.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Since {
+    /// The text it was opened with.
+    opened: String,
+    /// How many bytes the two share at their start, at least.
+    head: usize,
+    /// How many bytes the two share at their end, at least.
+    tail: usize,
+    /// Whether the text differs from the opened one.
+    changed: bool,
+}
+
+impl Since {
+    /// How `text` differs from `opened`, measured once.
+    fn of(opened: String, text: &str) -> Self {
+        let (new, old) = (text.as_bytes(), opened.as_bytes());
+        let head = shared_head(new, old);
+        let room = new.len().min(old.len()).saturating_sub(head);
+        let tail = shared_tail(new, old).min(room);
+        let changed = new.len() != old.len() || head.saturating_add(tail) < new.len();
+        Self {
+            opened,
+            head,
+            tail,
+            changed,
+        }
+    }
+
+    /// Takes `edit`, which brought a text `old_len` bytes long to `text`:
+    /// the bytes before it and after it still agree with the opened text
+    /// where they did, and only the bytes between are compared.
+    fn edit(&mut self, edit: &Edit, old_len: usize, text: &str) {
+        self.head = self.head.min(edit.start);
+        self.tail = self.tail.min(old_len.saturating_sub(edit.old_end));
+        let (new, old) = (text.as_bytes(), self.opened.as_bytes());
+        if new.len() != old.len() {
+            self.changed = true;
+            return;
+        }
+        let end = new.len().saturating_sub(self.tail).max(self.head);
+        let (Some(left), Some(right)) = (new.get(self.head..end), old.get(self.head..end)) else {
+            *self = Self::of(std::mem::take(&mut self.opened), text);
+            return;
+        };
+        let head = shared_head(left, right);
+        let room = left.len().saturating_sub(head);
+        let tail = shared_tail(left, right).min(room);
+        self.head = self.head.saturating_add(head);
+        self.tail = self.tail.saturating_add(tail);
+        self.changed = self.head.saturating_add(self.tail) < new.len();
+    }
+}
+
+/// What the code editor's panel shows of its text: the toolbar's line
+/// count, whether the status line says it changed, and whether the panel
+/// is drawn empty.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Measure {
+    /// How many lines the text has, as [`crate::view::code::line_count`]
+    /// counts them.
+    lines: u32,
+    /// Whether it differs from the text it was opened with.
+    changed: bool,
+    /// Whether it holds nothing but white space.
+    blank: bool,
+}
+
+/// What a panel keeps measured of its editor's text, edit by edit.
+#[derive(Debug)]
+struct Measured {
+    /// How the text differs from the opened one; `None` for a new file.
+    since: Option<Since>,
+    /// The measure the panel draws.
+    measure: RwSignal<Measure>,
+}
+
+/// The editor's own record of its text area's text: its lines indexed and,
+/// in a panel, what the panel shows of it, each brought up to date by an
+/// edit at the cost of the edit.
+#[derive(Debug)]
+pub(crate) struct Typed {
+    /// The text, its lines indexed.
+    index: Indexed,
+    /// What the panel shows of it, when the editor is in one.
+    measured: Option<Measured>,
+}
+
+impl Typed {
+    /// The record of `text`.
+    fn of(text: &str) -> Self {
+        Self {
+            index: Indexed::of(text),
+            measured: None,
+        }
+    }
+
+    /// The record of `text` in a panel that measures it against `opened`,
+    /// and the measure it keeps.
+    fn measured(text: &str, opened: &Opened) -> (Self, RwSignal<Measure>) {
+        let index = Indexed::of(text);
+        let since = match opened {
+            Opened::New => None,
+            Opened::Text(first) => Some(Since::of(first.clone(), text)),
+        };
+        let measure = RwSignal::new(Self::measure(&index, since.as_ref()));
+        let typed = Self {
+            index,
+            measured: Some(Measured { since, measure }),
+        };
+        (typed, measure)
+    }
+
+    /// What a panel shows of the text `index` holds, measured by `since`.
+    fn measure(index: &Indexed, since: Option<&Since>) -> Measure {
+        let breaks = index.starts.len().saturating_sub(1);
+        let trailing = usize::from(!index.text.is_empty() && index.text.ends_with('\n'));
+        Measure {
+            lines: number(breaks.saturating_sub(trailing)),
+            changed: since.is_some_and(|since| since.changed),
+            blank: index.text.trim().is_empty(),
+        }
+    }
+
+    /// Brings the record to `new` and returns the edit, or `None` when
+    /// `new` is the text already.
+    fn edit(&mut self, new: &str) -> Option<Edit> {
+        let old_len = self.index.text.len();
+        let edit = self.index.edit(new)?;
+        if let Some(measured) = &mut self.measured {
+            if let Some(since) = &mut measured.since {
+                since.edit(&edit, old_len, &self.index.text);
+            }
+            let now = Self::measure(&self.index, measured.since.as_ref());
+            if measured.measure.get_untracked() != now {
+                measured.measure.set(now);
+            }
+        }
+        Some(edit)
+    }
+}
+
+/// What the console hears of the reader's typing.
+#[derive(Clone)]
+pub(crate) enum Heard {
+    /// The whole text after every edit.
+    Text(Rc<dyn Fn(String)>),
+    /// Each edit, by itself.
+    Edit(Rc<dyn Fn(TextEdit)>),
+}
+
+/// The editor's record of its text area's text, and whom an edit the
+/// reader makes is handed to.
+struct Record {
+    /// The record.
+    typed: RefCell<Typed>,
+    /// The console's edit callback, when it takes edits.
+    on_edit: Option<Rc<dyn Fn(TextEdit)>>,
+}
+
+impl Record {
+    /// The record an editor keeps of `text`: `typed`, a panel's, or one of
+    /// its own when it follows the caret (`caret`) or `heard` takes edits;
+    /// `None` when nothing reads one.
+    fn kept(
+        typed: Option<Typed>,
+        caret: bool,
+        heard: &Heard,
+        text: Signal<String>,
+    ) -> Option<Rc<Self>> {
+        let on_edit = match heard {
+            Heard::Text(_) => None,
+            Heard::Edit(on_edit) => Some(Rc::clone(on_edit)),
+        };
+        // NOTE: no specification governs this: our own design; the caret, the panel's measure and
+        // the console's edits are read from an index of the text area's lines, so a key costs its
+        // edit, not the text (#458, #477, #478).
+        let typed = typed.or_else(|| {
+            (caret || on_edit.is_some()).then(|| text.with_untracked(|text| Typed::of(text)))
+        })?;
+        Some(Rc::new(Self {
+            typed: RefCell::new(typed),
+            on_edit,
+        }))
+    }
+
+    /// Brings the record to `new`; an edit the reader made (`by_reader`)
+    /// goes to the console when it takes edits.
+    fn follow(&self, new: &str, by_reader: bool) {
+        let edit = self.typed.borrow_mut().edit(new);
+        if let (Some(edit), true, Some(on_edit)) = (edit, by_reader, &self.on_edit) {
+            on_edit(TextEdit::of(edit, new));
+        }
     }
 }
 
@@ -569,6 +824,7 @@ impl Layer {
             first,
             removed,
             inserted,
+            ..
         } = edit;
         let end = first.checked_add(removed)?;
         let old = self.lines.get(first..end)?;
@@ -952,6 +1208,29 @@ pub struct Editor {
 /// object.
 #[must_use]
 pub fn code_editor(editor: Editor, on_input: impl Fn(String) + 'static) -> AnyView {
+    plain_editor(editor, Heard::Text(Rc::new(on_input)))
+}
+
+/// Returns the editor over `editor`, as [`code_editor`] does, handing
+/// `on_edit` each edit the reader makes instead of the whole text.
+///
+/// A console keeps its own copy of the text in step with
+/// [`TextEdit::apply`], so a key costs it the edit, not the length of the
+/// text. `editor.text` is the text the editor opens with and any outside
+/// change, such as a reset: the console never writes an edited text back
+/// into it, since the editor takes every text that signal brings as an
+/// outside change and writes it into the text area. An outside change is
+/// not handed to `on_edit`; the console that makes one knows it. A text
+/// typed before the page hydrated comes to `on_edit` as one edit of the
+/// server's text as the page hydrates.
+#[must_use]
+pub fn code_editor_by_edit(editor: Editor, on_edit: impl Fn(TextEdit) + 'static) -> AnyView {
+    plain_editor(editor, Heard::Edit(Rc::new(on_edit)))
+}
+
+/// Returns the editor over `editor`, handing the console what `heard`
+/// asks for.
+fn plain_editor(editor: Editor, heard: Heard) -> AnyView {
     let Editor {
         id,
         language,
@@ -970,8 +1249,9 @@ pub fn code_editor(editor: Editor, on_input: impl Fn(String) + 'static) -> AnyVi
             label: None,
             caret: None,
             current: Signal::stored(None),
+            record: None,
         },
-        on_input,
+        heard,
     )
 }
 
@@ -1026,6 +1306,9 @@ pub(crate) struct Drawn {
     pub(crate) caret: Option<RwSignal<Position>>,
     /// The marked line the cursor is on, which the layer marks current.
     pub(crate) current: Signal<Option<u32>>,
+    /// The record of the text a panel keeps measured; without one the
+    /// editor makes its own when it follows the caret or hands over edits.
+    pub(crate) record: Option<Typed>,
 }
 
 /// How many texts the editor remembers handing to the console before the
@@ -1092,17 +1375,19 @@ impl Echoes {
 /// Writes the console's `text` into the text area `area_ref` when it is an
 /// outside change, and returns the record of the texts handed to the
 /// console, which the text area's input fills. A text typed before the
-/// page hydrated is handed to the console through `on_input` as the page
-/// hydrates, and never written over. `typed`, when the caret is followed,
-/// learns every text written or handed over this way.
+/// page hydrated is handed to the console through `heard` as the page
+/// hydrates, and never written over. `record`, when the editor keeps one,
+/// learns every text written or handed over this way, and so does `shown`,
+/// the text the layer draws for a console that takes edits.
 fn follow_console(
     text: Signal<String>,
     area_ref: NodeRef<leptos::html::Textarea>,
-    on_input: Rc<dyn Fn(String)>,
-    typed: Option<Rc<RefCell<Indexed>>>,
+    heard: Heard,
+    record: Option<Rc<Record>>,
+    shown: Option<RwSignal<String>>,
 ) -> Rc<RefCell<Echoes>> {
     let echoes = Rc::new(RefCell::new(Echoes::default()));
-    let heard = Rc::clone(&echoes);
+    let handed = Rc::clone(&echoes);
     // NOTE: the text area is the source of truth while it is edited; the console's text is
     // written only as an outside change, never as the late echo of an earlier key (#333).
     Effect::new(move |hydrated: Option<()>| {
@@ -1114,26 +1399,52 @@ fn follow_console(
             if let Some(area) = area_ref.get()
                 && area.value() != *console
             {
-                let written = if hydrated.is_some() {
+                if hydrated.is_some() {
                     area.set_value(console);
-                    console.clone()
+                    if let Some(record) = &record {
+                        record.follow(console, false);
+                    }
+                    if let Some(shown) = shown {
+                        shown.set(console.clone());
+                    }
                 } else {
                     // NOTE: the text area takes keys from the first paint (#356), so what it
                     // holds as the page hydrates is the reader's and goes to the console.
                     let typed = area.value();
-                    echoes.borrow_mut().typed(&typed);
-                    on_input(typed.clone());
-                    typed
-                };
-                if let Some(model) = &typed {
-                    model.borrow_mut().edit(&written);
+                    if let Some(record) = &record {
+                        record.follow(&typed, true);
+                    }
+                    hand_over(&heard, &echoes, shown, typed);
                 }
             }
             #[cfg(not(target_arch = "wasm32"))]
-            let (_area, _hydrated, _input, _typed) = (area_ref, hydrated, &on_input, &typed);
+            let (_area, _hydrated, _heard, _record, _shown) =
+                (area_ref, hydrated, &heard, &record, shown);
         });
     });
-    heard
+    handed
+}
+
+/// Hands the text area's `typed` text on: to the console when it takes the
+/// whole text, recorded in `echoes`, and otherwise to `shown`, the text the
+/// layer draws, the console having had the edit.
+fn hand_over(
+    heard: &Heard,
+    echoes: &RefCell<Echoes>,
+    shown: Option<RwSignal<String>>,
+    typed: String,
+) {
+    match heard {
+        Heard::Text(on_input) => {
+            echoes.borrow_mut().typed(&typed);
+            on_input(typed);
+        }
+        Heard::Edit(_) => {
+            if let Some(shown) = shown {
+                shown.set(typed);
+            }
+        }
+    }
 }
 
 /// The text area's content as the server writes it for `text`: escaped,
@@ -1224,31 +1535,31 @@ fn follow_layer(
     });
 }
 
-/// What follows the caret of a text area into `caret`, read from `typed`,
+/// What follows the caret of a text area into `caret`, read from `record`,
 /// the index of the text area's text, which it brings up to date first
 /// when the text area's length says the text changed.
 fn follow_caret(
     caret: Option<RwSignal<Position>>,
-    typed: Option<Rc<RefCell<Indexed>>>,
+    record: Option<Rc<Record>>,
 ) -> Rc<dyn Fn(&HtmlTextAreaElement)> {
     Rc::new(move |area: &HtmlTextAreaElement| {
-        let (Some(caret), Some(typed)) = (caret, &typed) else {
+        let (Some(caret), Some(record)) = (caret, &record) else {
             return;
         };
         let Ok(Some(start)) = area.selection_start() else {
             return;
         };
-        let mut typed = typed.borrow_mut();
-        if area.text_length() != typed.len_units() {
-            typed.edit(&area.value());
+        let behind = area.text_length() != record.typed.borrow().index.len_units();
+        if behind {
+            record.follow(&area.value(), true);
         }
-        caret.set(typed.caret(start));
+        caret.set(record.typed.borrow().index.caret(start));
     })
 }
 
 /// Returns the editor `drawn`, as [`code_editor`], [`editor_panel`] and
-/// the upload field draw it.
-pub(crate) fn drawn(drawn: Drawn, on_input: impl Fn(String) + 'static) -> AnyView {
+/// the upload field draw it, handing the console what `heard` asks for.
+pub(crate) fn drawn(drawn: Drawn, heard: Heard) -> AnyView {
     let Drawn {
         id,
         language,
@@ -1259,8 +1570,13 @@ pub(crate) fn drawn(drawn: Drawn, on_input: impl Fn(String) + 'static) -> AnyVie
         label,
         caret,
         current,
+        record,
     } = drawn;
     let prefix = format!("{id}-L");
+    // NOTE: no specification governs this: our own design; a console that takes edits never
+    // hands the text back, so the layer draws the text area's text, moved in, not copied (#478).
+    let shown = matches!(heard, Heard::Edit(_)).then(|| RwSignal::new(text.get_untracked()));
+    let layer_text = shown.map_or(text, Signal::from);
     let drawn_layer = text.with_untracked(|text| {
         Layer::of(
             language.get_untracked(),
@@ -1275,7 +1591,7 @@ pub(crate) fn drawn(drawn: Drawn, on_input: impl Fn(String) + 'static) -> AnyVie
     follow_layer(
         Followed {
             language,
-            text,
+            text: layer_text,
             marks,
             current,
         },
@@ -1286,15 +1602,12 @@ pub(crate) fn drawn(drawn: Drawn, on_input: impl Fn(String) + 'static) -> AnyVie
     let name = id.clone();
     let first = text.with_untracked(|text| server_text(text));
     let area_ref = NodeRef::<leptos::html::Textarea>::new();
-    let on_input: Rc<dyn Fn(String)> = Rc::new(on_input);
-    // NOTE: no specification governs this: our own design; the caret is read from an index of
-    // the text area's lines, so a key or a click costs its line, not the text (#458).
-    let typed = caret.map(|_| Rc::new(RefCell::new(text.with_untracked(|text| Indexed::of(text)))));
-    let heard = follow_console(text, area_ref, Rc::clone(&on_input), typed.clone());
-    let input_model = typed.clone();
+    let record = Record::kept(record, caret.is_some(), &heard, text);
+    let echoes = follow_console(text, area_ref, heard.clone(), record.clone(), shown);
+    let input_record = record.clone();
     let live = RwSignal::new(false);
     Effect::new(move || live.set(true));
-    let follow = follow_caret(caret, typed);
+    let follow = follow_caret(caret, record);
     let (on_key, on_click, on_select) =
         (Rc::clone(&follow), Rc::clone(&follow), Rc::clone(&follow));
     let invalid = move || {
@@ -1330,11 +1643,10 @@ pub(crate) fn drawn(drawn: Drawn, on_input: impl Fn(String) + 'static) -> AnyVie
                     on:input:target=move |event| {
                         let area = event.target();
                         let typed = area.value();
-                        if let Some(model) = &input_model {
-                            model.borrow_mut().edit(&typed);
+                        if let Some(record) = &input_record {
+                            record.follow(&typed, true);
                         }
-                        heard.borrow_mut().typed(&typed);
-                        on_input(typed);
+                        hand_over(&heard, &echoes, shown, typed);
                         follow(&area);
                     }
                     on:keyup:target=move |event| on_key(&event.target())
@@ -1492,9 +1804,25 @@ fn said(
 /// text after every edit, exactly as typed.
 ///
 /// The editor is 24rem tall, and 6rem while it holds no text; in a panel
-/// section (B10) it has no card frame and runs edge to edge.
+/// section (B10) it has no card frame and runs edge to edge. The toolbar's
+/// line count and the status line's changed state follow each edit at its
+/// cost, never by a scan of the whole text.
 #[must_use]
 pub fn editor_panel(panel: Panel, on_input: impl Fn(String) + 'static) -> AnyView {
+    measured_panel(panel, Heard::Text(Rc::new(on_input)))
+}
+
+/// Returns the code editor (B2) over `panel`, as [`editor_panel`] does,
+/// handing `on_edit` each edit the reader makes instead of the whole text,
+/// on the terms of [`code_editor_by_edit`].
+#[must_use]
+pub fn editor_panel_by_edit(panel: Panel, on_edit: impl Fn(TextEdit) + 'static) -> AnyView {
+    measured_panel(panel, Heard::Edit(Rc::new(on_edit)))
+}
+
+/// Returns the code editor (B2) over `panel`, handing the console what
+/// `heard` asks for.
+fn measured_panel(panel: Panel, heard: Heard) -> AnyView {
     let Panel {
         editor,
         label,
@@ -1515,8 +1843,10 @@ pub fn editor_panel(panel: Panel, on_input: impl Fn(String) + 'static) -> AnyVie
     } = editor;
     let current = current_line(caret, marks);
     let words = StoredValue::new(words);
+    let is_new = matches!(opened, Opened::New);
+    let (record, measure) = text.with_untracked(|text| Typed::measured(text, &opened));
     let bar = move || {
-        let count = text.with(|text| crate::view::code::line_count(text));
+        let count = measure.with(|measure| measure.lines);
         let lines = words.with_value(|words| words.line_count(count));
         if lines.fell_back() {
             let lead = format!("{lead} · ");
@@ -1536,14 +1866,7 @@ pub fn editor_panel(panel: Panel, on_input: impl Fn(String) + 'static) -> AnyVie
             })
             .into_render()
     };
-    let is_new = matches!(opened, Opened::New);
-    let opened = StoredValue::new(opened);
-    let dirty = move || {
-        opened.with_value(|opened| match opened {
-            Opened::New => false,
-            Opened::Text(first) => text.with(|text| text != first),
-        })
-    };
+    let dirty = move || measure.with(|measure| measure.changed);
     let state = move || {
         words
             .with_value(|words| match (is_new, dirty()) {
@@ -1570,13 +1893,14 @@ pub fn editor_panel(panel: Panel, on_input: impl Fn(String) + 'static) -> AnyVie
             label: Some(label),
             caret: Some(caret),
             current,
+            record: Some(record),
         },
-        on_input,
+        heard,
     );
     view! {
         <section
             class="fui-card fui-panel fui-mapping-editor"
-            class:is-empty=move || text.with(|text| text.trim().is_empty())
+            class:is-empty=move || measure.with(|measure| measure.blank)
         >
             <div class="fui-editor-bar">
                 <span>{bar}</span>
@@ -1612,13 +1936,11 @@ pub fn editor_diagnostics(
     editor: Editor,
     caret: RwSignal<Position>,
 ) -> AnyView {
-    let Editor {
-        id, text, marks, ..
-    } = editor;
+    let Editor { id, marks, .. } = editor;
     let current = current_line(caret, marks);
     let on_line = Callback::new(move |at: Position| {
         caret.set(at);
-        place_caret(&id, text, at);
+        place_caret(&id, at);
     });
     let rows = rows(file, words, current, Some(on_line));
     view! {
@@ -1629,8 +1951,9 @@ pub fn editor_diagnostics(
     .into_any()
 }
 
-/// Moves the caret of the text area `id`, which holds `text`, to `at` and
-/// gives it the focus once the link followed has scrolled to the line.
+/// Moves the caret of the text area `id` to `at`, read in the text it
+/// holds, and gives it the focus once the link followed has scrolled to
+/// the line.
 #[cfg_attr(
     not(target_arch = "wasm32"),
     expect(
@@ -1638,7 +1961,7 @@ pub fn editor_diagnostics(
         reason = "the caret moves only in the browser half; the server half has no text area"
     )
 )]
-fn place_caret(id: &str, text: Signal<String>, at: Position) {
+fn place_caret(id: &str, at: Position) {
     #[cfg(target_arch = "wasm32")]
     {
         use leptos::wasm_bindgen::JsCast as _;
@@ -1648,7 +1971,7 @@ fn place_caret(id: &str, text: Signal<String>, at: Position) {
         else {
             return;
         };
-        let offset = text.with_untracked(|text| offset_of(text, at));
+        let offset = offset_of(&area.value(), at);
         // NOTE: HTML Living Standard, "scroll to the fragment": following the link moves the focus to its
         // fragment after this handler, so the editor takes the focus a task later.
         set_timeout(
@@ -1680,7 +2003,7 @@ mod tests {
         ECHOES, Echoes, Layer, LayerLine, LineMark, MarkKind, Patch, caret_at, layer_class,
         layer_lines, line_id, mark_class, mark_index, offset_of, patch, push_layer, server_text,
     };
-    use super::{Indexed, Redraw, shared_head, shared_tail};
+    use super::{Indexed, Redraw, Since, TextEdit, Typed, shared_head, shared_tail};
     use crate::highlight::{Language, Lines, html};
     use crate::view::diagnostics::Position;
     use std::rc::Rc;
@@ -1986,6 +2309,103 @@ mod tests {
                 "{old:?} to {new:?}"
             );
             assert_eq!(None, index.edit(&new), "an unchanged text is no edit");
+        }
+    }
+
+    #[test]
+    fn an_edit_handed_to_the_console_brings_its_text_to_the_new_one() {
+        for (old, new) in edits() {
+            let mut index = Indexed::of(&old);
+            let edit = TextEdit::of(index.edit(&new).expect("the text changed"), &new);
+            let mut kept = old.clone();
+            assert!(edit.apply(&mut kept), "{old:?} to {new:?}");
+            assert_eq!(new, kept, "{old:?} to {new:?} by {edit:?}");
+            assert!(
+                edit.text.len() < new.len() || old.len() < 3,
+                "the edit carries its part, not the text: {edit:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn an_edit_out_of_step_with_the_text_leaves_it_alone() {
+        let edit = TextEdit {
+            range: 1..2,
+            text: String::from("x"),
+        };
+        let mut multi_byte = String::from("✓ok");
+        assert!(!edit.apply(&mut multi_byte), "inside a character");
+        assert_eq!("✓ok", multi_byte);
+        let mut short = String::new();
+        assert!(!edit.apply(&mut short), "past the end");
+        assert_eq!("", short);
+    }
+
+    #[test]
+    fn the_changed_state_follows_each_edit_against_the_opened_text() {
+        let opened = numbered(300);
+        let steps = [
+            opened.replacen("value 150\n", "value 15x\n", 1),
+            opened.clone(),
+            opened.replacen("key_1:", "key_I:", 1),
+            opened
+                .replacen("key_1:", "key_I:", 1)
+                .replacen("value 299", "value 29x", 1),
+            opened.replacen("value 299", "value 29x", 1),
+            opened.clone(),
+            format!("{opened}tail"),
+            opened.clone(),
+            opened.replacen("value 7\n", "value 𝄞\n", 1),
+            opened.replacen("value 7\n", "value ✓\n", 1),
+            String::new(),
+            opened.clone(),
+        ];
+        let mut index = Indexed::of(&opened);
+        let mut since = Since::of(opened.clone(), &opened);
+        assert!(!since.changed, "the opened text is unchanged");
+        for step in steps {
+            let old_len = index.text.len();
+            let Some(edit) = index.edit(&step) else {
+                continue;
+            };
+            since.edit(&edit, old_len, &index.text);
+            assert_eq!(step != opened, since.changed, "after {} bytes", step.len());
+        }
+    }
+
+    #[test]
+    fn a_draft_opened_changed_reads_changed_until_an_edit_undoes_it() {
+        let opened = String::from("a: 1\nb: 2\n");
+        let draft = String::from("a: 1\nb: 3\n");
+        let mut index = Indexed::of(&draft);
+        let mut since = Since::of(opened.clone(), &draft);
+        assert!(since.changed);
+        let edit = index.edit(&opened).expect("the text changed");
+        since.edit(&edit, draft.len(), &index.text);
+        assert!(!since.changed);
+    }
+
+    #[test]
+    fn the_panel_counts_the_lines_as_the_code_view_does() {
+        for (old, new) in edits() {
+            let mut typed = Typed::of(&old);
+            typed.edit(&new);
+            let measure = Typed::measure(&typed.index, None);
+            assert_eq!(
+                crate::view::code::line_count(&new),
+                measure.lines,
+                "{new:?}"
+            );
+            assert_eq!(new.trim().is_empty(), measure.blank, "{new:?}");
+        }
+        for text in ["", "\n", "a", "a\n", "a\nb", "a\n\n", "  \n "] {
+            let measure = Typed::measure(&Indexed::of(text), None);
+            assert_eq!(
+                crate::view::code::line_count(text),
+                measure.lines,
+                "{text:?}"
+            );
+            assert_eq!(text.trim().is_empty(), measure.blank, "{text:?}");
         }
     }
 

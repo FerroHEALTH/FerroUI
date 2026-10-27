@@ -1273,3 +1273,19 @@ async fn every_item_of_more_works_with_the_webassembly_withheld() -> Result<(), 
     })
     .await
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_skip_link_moves_the_focus_to_the_main_area_with_the_webassembly_withheld()
+-> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        withhold_the_webassembly(browser).await?;
+        browser.goto(&gallery.url("/ferrobridge/tables")).await?;
+        crate::skip::the_skip_link_reaches_main(browser).await?;
+        leave(browser, "the skip link").await
+    })
+    .await
+}
