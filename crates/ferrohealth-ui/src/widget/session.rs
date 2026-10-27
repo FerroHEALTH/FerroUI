@@ -339,6 +339,21 @@ pub fn gone() {
     browser::tell(Message::Ended);
 }
 
+/// Says to every other tab that the session has ended, as [`gone`] does,
+/// and loads `address` in this one, whose own watch then stays put rather
+/// than leave for sign-in too.
+///
+/// For a part of the library that meets a `401` and has a page of the
+/// console's own to load, as the search box's `SearchBox::signed_out`.
+#[cfg(target_arch = "wasm32")]
+pub(crate) fn gone_to(address: &str) {
+    browser::away();
+    gone();
+    if window().location().assign(address).is_err() {
+        leptos::logging::warn!("the browser refused the signed-out page");
+    }
+}
+
 /// Shows the dialog `node` as a modal while `open`, and closes it otherwise.
 fn sync(node: NodeRef<leptos::html::Dialog>, open: bool) {
     #[cfg(target_arch = "wasm32")]
@@ -399,6 +414,17 @@ mod browser {
             let _: (Left, u32, RwSignal<bool>, RwSignal<u32>) = (left, warn_at, open, shown);
             Callback::new(|()| {})
         }
+    }
+
+    /// Whether this tab has left for a page of the console's own, so its
+    /// watch no longer leaves for sign-in when it hears the session ended.
+    #[cfg(target_arch = "wasm32")]
+    static AWAY: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+    /// Marks this tab as leaving for a page of the console's own.
+    #[cfg(target_arch = "wasm32")]
+    pub(super) fn away() {
+        AWAY.store(true, std::sync::atomic::Ordering::Relaxed);
     }
 
     /// Says `message` to every other tab, and to this tab's watch.
@@ -530,7 +556,11 @@ mod browser {
                         .as_deref()
                         .and_then(Message::parse)
                     {
-                        Some(Message::Ended) => self.leave(false),
+                        Some(Message::Ended) => {
+                            if !AWAY.load(std::sync::atomic::Ordering::Relaxed) {
+                                self.leave(false);
+                            }
+                        }
                         Some(Message::Extended(left)) => self.learn(left),
                         None => {}
                     },

@@ -169,7 +169,8 @@ The wire of the answer route:
 | Request, `SearchBox::post` on | `POST {suggest}`, `Content-Type: application/x-www-form-urlencoded`, body `{name}={words}`, so a search that can carry clinical content keeps its words out of the URL |
 | Credentials | Same origin: the page's own cookies go with it |
 | Answer | `200` with `application/json`, the `SearchAnswer` serialized by serde, as `serde_json` writes it |
-| `401` with `SearchBox::signed_out` set | The page loads that address, your signed-out page, as any other request of the page would on a session that is over |
+| `401` with `SearchBox::signed_out` set | The page loads that address, your signed-out page, as any other request of the page would on a session that is over, and every other tab of your console leaves for sign-in (`widget::session::gone`) |
+| `401` with no `SearchBox::signed_out` | The panel shows "The search did not answer (401)" as a row, and every tab, this one included, leaves for sign-in (`widget::session::gone`) |
 | Any other status | The panel shows "The search did not answer (status)" as a row |
 | A body that is no `SearchAnswer` | The panel shows that it could not read the answer |
 
