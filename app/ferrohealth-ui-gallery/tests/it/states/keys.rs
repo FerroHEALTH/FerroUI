@@ -76,12 +76,17 @@ async fn search(
     hover(browser, &group).await?;
     shot_of(browser, brand, theme, "hover-search", &bar).await?;
     away(browser).await?;
-    let field = browser.element(By::Id("gallery-search")).await?;
-    field.send_keys("synthetic-007").await?;
+    let panel = crate::keys::typed(browser, "synthetic-007").await?;
     browser
         .driver()
         .execute("document.activeElement.blur();", vec![])
         .await?;
+    // NOTE: no specification governs this: our own design; the shot waits for the panel
+    // the answer opened to close with the focus, so no capture catches it half-way (#434).
+    until("the panel closes with the focus", async || {
+        Ok(!panel.is_displayed().await?)
+    })
+    .await?;
     shot_of(browser, brand, theme, "search-filled", &bar).await?;
     top_bar(browser, gallery, brand, theme, "busy", "search-busy").await?;
     top_bar(

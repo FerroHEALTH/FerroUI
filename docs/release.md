@@ -34,7 +34,7 @@ is the signed tag `vX.Y.Z` on the merge commit of the release pull request on
    `prefers-reduced-motion: reduce`, so an unchanged page captures
    pixel-identical and every image that changed is a change to look at.
    On the release pull request CI captures the pages again and compares
-   each committed page image with its fresh capture by its pixels
+   each committed page and state image with its fresh capture by its pixels
    (`every_committed_screenshot_shows_what_a_fresh_capture_draws`); a
    release pull request opened before the refresh fails there, naming each
    image that no longer matches. Every page's footer names the version, so

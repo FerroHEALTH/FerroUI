@@ -12,7 +12,7 @@ use std::error::Error;
 use ferrohealth_ui::style::Brand;
 use thirtyfour::prelude::*;
 
-use super::{HEIGHT, WIDTH, focus, press, shot_of, shot_of_view};
+use super::{HEIGHT, WIDTH, focus, press, shot_of, shot_of_view, steady, write};
 use crate::browser::{Browser, until};
 use crate::journeys::window;
 use crate::stack::Gallery;
@@ -46,12 +46,28 @@ pub(super) async fn configuration(
     let time = browser
         .element(By::Css("#trial-countdown .fui-countdown-words strong"))
         .await?;
-    until("the countdown runs", async || {
-        Ok(time.text().await? != "1:42")
+    let trial = browser.element(named("Revision 10 runs on trial")).await?;
+    browser.hydrated().await?;
+    browser
+        .driver()
+        .execute(
+            "arguments[0].scrollIntoView({block: 'center'});",
+            vec![trial.to_json()?],
+        )
+        .await?;
+    steady(browser).await?;
+    // NOTE: no specification governs this: our own design; the countdown ticks each second,
+    // so the shot is taken right after it shows one fixed time (#434).
+    until("the countdown shows 1:32", async || {
+        Ok(time.text().await? == "1:32")
     })
     .await?;
-    let trial = browser.element(named("Revision 10 runs on trial")).await?;
-    shot_of(browser, brand, theme, "pending-trial", &trial).await?;
+    write(
+        brand,
+        "pending-trial",
+        theme,
+        &super::element_png(browser, &trial).await?,
+    )?;
     let secrets = browser.element(By::Id("secret-kept")).await?;
     let value = browser.element(By::Id("secret-kept-mode-value")).await?;
     focus(browser, &value).await?;

@@ -26,7 +26,7 @@ use ferrohealth_ui::style::Brand;
 use serde_json::json;
 use thirtyfour::prelude::*;
 
-use crate::browser::{Browser, with_browser};
+use crate::browser::{Browser, until, with_browser};
 use crate::journeys::window;
 use crate::stack::Gallery;
 
@@ -261,16 +261,151 @@ async fn shot_of_unhydrated(
     state: &str,
     element: &WebElement,
 ) -> Result<(), Box<dyn Error>> {
-    browser
+    let png = in_view_and_held(browser, state, element).await?;
+    write(brand, state, theme, &png)
+}
+
+/// The shot of `element` centred in the viewport, once its box, the scroll
+/// and its pixels hold still.
+///
+/// A part above the element that settles late moves it, sometimes after it
+/// was centred, so the element is centred again until a held shot finds it
+/// still in full view (#434).
+async fn in_view_and_held(
+    browser: &Browser,
+    state: &str,
+    element: &WebElement,
+) -> Result<Vec<u8>, Box<dyn Error>> {
+    // NOTE: no specification governs this: our own design; the scroll is a whole pixel,
+    // since a fractional one draws the edges another way each time (#434).
+    let centre = "arguments[0].scrollIntoView({block: 'center'}); window.scrollTo(Math.round(scrollX), Math.round(scrollY));";
+    let place = async || -> Result<String, Box<dyn Error>> {
+        Ok(browser
+            .driver()
+            .execute_async(
+                "const [element, done] = arguments; requestAnimationFrame(() => requestAnimationFrame(() => { const box = element.getBoundingClientRect(); done([box.x, box.y, box.width, box.height, scrollX, scrollY].join(' ')); }));",
+                vec![element.to_json()?],
+            )
+            .await?
+            .convert()?)
+    };
+    let in_view = async || -> Result<bool, Box<dyn Error>> {
+        Ok(browser
+            .driver()
+            .execute(
+                "const box = arguments[0].getBoundingClientRect(); return box.height > innerHeight || (box.top >= 0 && box.bottom <= innerHeight);",
+                vec![element.to_json()?],
+            )
+            .await?
+            .convert()?)
+    };
+    let mut shot = None;
+    until(&format!("{state} stays in full view"), async || {
+        browser
+            .driver()
+            .execute(centre, vec![element.to_json()?])
+            .await?;
+        steady(browser).await?;
+        let mut last = place().await?;
+        until("the element's box and the scroll hold", async || {
+            let now = place().await?;
+            let held = now == last;
+            last = now;
+            Ok(held)
+        })
+        .await?;
+        let png = held(browser, state, async || element_png(browser, element).await).await?;
+        if in_view().await? {
+            shot = Some(png);
+            return Ok(true);
+        }
+        Ok(false)
+    })
+    .await?;
+    shot.ok_or_else(|| format!("no shot of {state} held").into())
+}
+
+/// The part of the viewport `element` covers, cut from a shot of the
+/// viewport.
+///
+/// chromedriver's own element shot scrolls an element taller than the
+/// viewport into view each time, a pixel further for a box at a fractional
+/// offset, so two shots of it differ; the viewport, scrolled where the
+/// capture put it, holds still (#434).
+pub(super) async fn element_png(
+    browser: &Browser,
+    element: &WebElement,
+) -> Result<Vec<u8>, Box<dyn Error>> {
+    let rect: Vec<usize> = browser
         .driver()
         .execute(
-            "arguments[0].scrollIntoView({block: 'center'});",
+            "const box = arguments[0].getBoundingClientRect(), ratio = devicePixelRatio; return [Math.floor(box.left * ratio), Math.floor(box.top * ratio), Math.ceil(box.right * ratio), Math.ceil(box.bottom * ratio)].map((edge) => Math.max(0, edge));",
             vec![element.to_json()?],
         )
-        .await?;
-    steady(browser).await?;
-    let png = element.screenshot_as_png().await?;
-    write(brand, state, theme, &png)
+        .await?
+        .convert()?;
+    let [left, top, right, bottom] = rect[..] else {
+        return Err(format!("the element's box is no rectangle: {rect:?}").into());
+    };
+    let shot = browser.driver().screenshot_as_png().await?;
+    let mut decoder = png::Decoder::new(std::io::Cursor::new(shot));
+    decoder.set_transformations(png::Transformations::EXPAND | png::Transformations::STRIP_16);
+    let mut reader = decoder.read_info()?;
+    let mut buffer = vec![0; reader.output_buffer_size().ok_or("the shot is too large")?];
+    let frame = reader.next_frame(&mut buffer)?;
+    let channels = match frame.color_type {
+        png::ColorType::Rgb => 3,
+        png::ColorType::Rgba => 4,
+        other => return Err(format!("a shot is RGB or RGBA, not {other:?}").into()),
+    };
+    let (width, height) = (
+        usize::try_from(frame.width)?,
+        usize::try_from(frame.height)?,
+    );
+    let (x0, y0) = (left.min(width), top.min(height));
+    let (x1, y1) = (right.min(width), bottom.min(height));
+    if x1 <= x0 || y1 <= y0 {
+        return Err(format!("the element lies outside the viewport: {rect:?}").into());
+    }
+    let stride = width * channels;
+    let mut cut = Vec::with_capacity((x1 - x0) * (y1 - y0) * channels);
+    for row in y0..y1 {
+        let start = row * stride + x0 * channels;
+        cut.extend_from_slice(&buffer[start..start + (x1 - x0) * channels]);
+    }
+    let mut png = Vec::new();
+    let mut encoder = png::Encoder::new(&mut png, u32::try_from(x1 - x0)?, u32::try_from(y1 - y0)?);
+    encoder.set_color(frame.color_type);
+    encoder.set_depth(png::BitDepth::Eight);
+    encoder.write_header()?.write_image_data(&cut)?;
+    Ok(png)
+}
+
+/// The image `take` returns twice in a row, the page settled before each,
+/// so a scroll, a hover or a transition that ends late is never caught
+/// half-way (#434). A shot of an element taller than the viewport makes the
+/// browser lay the page out again, which the settling waits out.
+async fn held<F>(browser: &Browser, state: &str, mut take: F) -> Result<Vec<u8>, Box<dyn Error>>
+where
+    F: AsyncFnMut() -> Result<Vec<u8>, Box<dyn Error>>,
+{
+    let mut last = take().await?;
+    let mut kept = None;
+    until(
+        &format!("two shots of {state} in a row hold the same pixels"),
+        async || {
+            browser.settled().await?;
+            let now = take().await?;
+            if now == last {
+                kept = Some(now);
+                return Ok(true);
+            }
+            last = now;
+            Ok(false)
+        },
+    )
+    .await?;
+    kept.ok_or_else(|| "no shot held".into())
 }
 
 /// Writes the screenshot of the viewport as `state`.
@@ -282,7 +417,10 @@ async fn shot_of_view(
 ) -> Result<(), Box<dyn Error>> {
     browser.hydrated().await?;
     steady(browser).await?;
-    let png = browser.driver().screenshot_as_png().await?;
+    let png = held(browser, state, async || {
+        Ok(browser.driver().screenshot_as_png().await?)
+    })
+    .await?;
     write(brand, state, theme, &png)
 }
 
