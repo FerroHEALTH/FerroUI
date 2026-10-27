@@ -1091,6 +1091,64 @@ async fn the_code_editor_posts_its_draft_unchanged_with_the_webassembly_withheld
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn an_action_answer_is_drawn_on_its_page_with_the_webassembly_withheld()
+-> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        withhold_the_webassembly(browser).await?;
+        browser.goto(&gallery.url("/ferrobridge/forms")).await?;
+        browser
+            .element(By::Id("answer-note"))
+            .await?
+            .send_keys("three little words")
+            .await?;
+        let check = browser
+            .element(By::Css("#answer-form button[type='submit']"))
+            .await?;
+        browser.click_and_load(&check).await?;
+        assert_eq!(
+            "The note has 3 words.",
+            text_of(browser, By::Id("note-answer")).await?,
+            "the page the form was drawn on shows the function's answer"
+        );
+        assert_eq!(
+            Some(String::from("three little words")),
+            browser
+                .element(By::Id("answer-note"))
+                .await?
+                .prop("value")
+                .await?,
+            "the posted note is kept in its field"
+        );
+        assert_eq!(
+            Some(String::from("/ferrobridge/forms")),
+            browser
+                .element(By::Css("#answer-form input[name='ferroui_answer']"))
+                .await?
+                .attr("value")
+                .await?,
+            "the page drawn is the forms page"
+        );
+        let field = browser.element(By::Id("answer-note")).await?;
+        field.clear().await?;
+        let check = browser
+            .element(By::Css("#answer-form button[type='submit']"))
+            .await?;
+        browser.click_and_load(&check).await?;
+        assert_eq!(
+            "The note is empty.",
+            text_of(browser, By::Id("note-answer")).await?,
+            "a refusal is drawn on the page too"
+        );
+        leave(browser, "the answered action").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn popovers_open_with_the_webassembly_withheld() -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
         return Ok(());

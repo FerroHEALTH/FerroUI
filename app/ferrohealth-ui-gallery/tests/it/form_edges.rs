@@ -603,3 +603,107 @@ async fn a_list_in_an_added_sub_card_adds_its_own_rows_in_place() -> Result<(), 
     })
     .await
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn an_action_answers_in_the_page_once_hydrated() -> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/ferrobridge/forms")).await?;
+        browser.hydrated().await?;
+        browser
+            .element(By::Id("answer-note"))
+            .await?
+            .send_keys("two words")
+            .await?;
+        let check = browser
+            .element(By::Css("#answer-form button[type='submit']"))
+            .await?;
+        browser
+            .click_in_page(&check, "the answer is drawn in the page", async || {
+                Ok(!browser
+                    .driver()
+                    .find_all(By::Id("note-answer"))
+                    .await?
+                    .is_empty())
+            })
+            .await?;
+        assert_eq!(
+            "The note has 2 words.",
+            browser
+                .element(By::Id("note-answer"))
+                .await?
+                .text()
+                .await?
+                .trim()
+        );
+        assert_eq!(
+            Some(String::from("two words")),
+            browser
+                .element(By::Id("answer-note"))
+                .await?
+                .prop("value")
+                .await?
+        );
+        browser.at(&gallery.url("/ferrobridge/forms")).await?;
+        browser
+            .console_clean("the action answered in the page")
+            .await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_plain_post_before_hydration_hydrates_the_page_it_drew() -> Result<(), Box<dyn Error>> {
+    // A form's own submit() skips the submit event, so it posts as before hydration.
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/ferrobridge/forms")).await?;
+        browser.hydrated().await?;
+        browser
+            .element(By::Id("answer-note"))
+            .await?
+            .send_keys("one")
+            .await?;
+        let old = browser.loader().await?;
+        browser
+            .driver()
+            .execute(
+                "document.getElementById('answer-form').submit();",
+                Vec::new(),
+            )
+            .await?;
+        until("the post loads a new document", async || {
+            Ok(browser.loader().await? != old)
+        })
+        .await?;
+        browser.at(&gallery.url("/ferrobridge/forms")).await?;
+        browser.hydrated().await?;
+        assert_eq!(
+            "The note has 1 word.",
+            browser
+                .element(By::Id("note-answer"))
+                .await?
+                .text()
+                .await?
+                .trim()
+        );
+        assert_eq!(
+            Some(String::from("one")),
+            browser
+                .element(By::Id("answer-note"))
+                .await?
+                .prop("value")
+                .await?
+        );
+        browser
+            .console_clean("the page a plain post drew, hydrated")
+            .await
+    })
+    .await
+}

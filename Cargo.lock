@@ -483,13 +483,18 @@ dependencies = [
 name = "ferrohealth-ui"
 version = "0.5.4"
 dependencies = [
+ "axum",
  "fluent-templates",
+ "form_urlencoded",
+ "http",
  "hydration_context",
  "intl-memoizer",
  "leptos",
  "leptos_router",
  "serde",
  "serde_json",
+ "tokio",
+ "tower",
  "wasm-bindgen-futures",
  "web-sys",
 ]

@@ -4,6 +4,7 @@
 //! The forms page: the fields, the checkbox row, the highlighted editor with
 //! diagnostics that link to its lines, and the filter over a list.
 
+use crate::acknowledge::CountWords;
 use crate::app::DRAFT_ROUTE;
 use crate::data::{
     CLEAN_FILE, CONTEXT_MAPPING, DRAFT_FINDINGS, DRAFT_MAPPING, DRAFT_OPENED, DRAFT_PATH,
@@ -36,6 +37,7 @@ use ferrohealth_ui::view::surface::{
     panel_section, panel_sections_card, stack, well,
 };
 use ferrohealth_ui::view::template::list::HeadingCount;
+use ferrohealth_ui::widget::action::{answer_field, answered};
 use ferrohealth_ui::widget::combobox::{ComboOption, ComboboxWords, KeyedCombobox, keyed_combobox};
 use ferrohealth_ui::widget::date::{
     DateField, DateRange, DateWords, QuickChoice, RangeEnd, RangePreset,
@@ -49,6 +51,7 @@ use ferrohealth_ui::widget::masked::HoldWords;
 use ferrohealth_ui::widget::pick_or_type::{PickOrType, Picker, pick_or_type};
 use ferrohealth_ui::widget::repeat::{Fields, ROW, Repeat, RepeatAdd, RepeatRow, RowEnd, repeat};
 use ferrohealth_ui::widget::upload::{Upload, UploadWords, upload_field};
+use leptos::form::ActionForm;
 use leptos::prelude::*;
 
 /// A query form: the nodes as checkbox chips, an option as a switch, and its
@@ -705,6 +708,46 @@ fn long_label() -> AnyView {
                     {label(Some(Glyph::X), tr(Msg::Clear))}
                 </button>
             </div>
+        },
+    )
+    .into_any()
+}
+
+/// An action whose answer is drawn on its page: in the page once it has
+/// hydrated, and with no WebAssembly on the page its plain post draws
+/// again, the posted note kept in its field (#485).
+fn answered_action() -> AnyView {
+    let check = ServerAction::<CountWords>::new();
+    let posted = answered(&check);
+    let note = posted.field("note").unwrap_or_default().to_owned();
+    let answer = move || {
+        check.value().get().map(|outcome| match outcome {
+            Ok(count) => view! {
+                <p id="note-answer" class="fui-help">
+                    {tr_with(Msg::NoteWords, &[("count", Arg::from(count))])}
+                </p>
+            }
+            .into_any(),
+            Err(ServerFnError::ServerError(refusal)) => {
+                view! { <p id="note-answer" class=ERROR>{refusal}</p> }.into_any()
+            }
+            Err(error) => {
+                view! { <p id="note-answer" class=ERROR>{error.to_string()}</p> }.into_any()
+            }
+        })
+    };
+    let input = view! { <input id="answer-note" name="note" type="text" class=INPUT value=note /> };
+    card(
+        tr(Msg::ActionAnsweredOnPage),
+        view! {
+            <ActionForm action=check attr:class=FORM attr:id="answer-form">
+                {answer_field()}
+                {field("answer-note", tr(Msg::NoteToCheck), None, input)}
+                <button type="submit" class=Variant::Primary.class()>
+                    {label(Some(Glyph::CHECK), tr(Msg::Check))}
+                </button>
+            </ActionForm>
+            <div aria-live="polite">{answer}</div>
         },
     )
     .into_any()
@@ -1667,6 +1710,7 @@ pub fn FormsPage() -> impl IntoView {
         {nested_reveal()}
     })
     .into_any();
+    let answering = answered_action();
     let headers = editor_headers();
     let dated = grid_start(view! {
         {dates()}
@@ -1693,6 +1737,7 @@ pub fn FormsPage() -> impl IntoView {
             {sections.6}
             {sections.5}
             {unlike}
+            {answering}
             {sections.7}
             {sections.1}
             {sections.2}

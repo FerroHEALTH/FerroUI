@@ -5,6 +5,7 @@
 # `src/locale/forms.rs`, in the order of their ids.
 
 accept-partial-answer = Accept a partial answer
+action-answered-on-page = An action answered on its page
 actions-between = Actions between
 active-concepts-only = Active concepts only
 add = Add
@@ -117,6 +118,12 @@ new-mapping-file = The new mapping file
 new-secret = The new secret
 next-monday = Next Monday
 note-kept-never-read = metadata.note is no key of the grammar: it is kept and never read.
+note-to-check = Note to check
+note-words =
+    { $count ->
+        [one] The note has { $count } word.
+       *[other] The note has { $count } words.
+    }
 observation-status = Observation status
 one-server-resolves = The one this server resolves to
 operational-template = Operational template

@@ -1,12 +1,14 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! An action as a console writes one.
+//! Actions as a console writes them.
 //!
-//! The server function's plain post, with no WebAssembly and no `Referer`,
+//! The plain post of `acknowledge`, with no WebAssembly and no `Referer`,
 //! returns to the page the form names (`ferrohealth_ui::widget::action`,
-//! #449). No page draws it; the HTTP tests post to it as a form with no
-//! WebAssembly does.
+//! #449); no page draws it, and the HTTP tests post to it as a form with no
+//! WebAssembly does. `count_words` answers on its page: the forms page draws
+//! its form with `answer_field`, and a plain post draws that page again
+//! with the count and the posted note (#485).
 #![cfg_attr(
     target_arch = "wasm32",
     allow(
@@ -51,4 +53,34 @@ pub async fn acknowledge(
         leptos_axum::redirect(&to);
     }
     outcome
+}
+
+/// Counts the words of `note`, refusing an empty one.
+///
+/// Its form draws `ferrohealth_ui::widget::action::answer_field`, so a plain
+/// post draws the forms page with the count; the function itself redirects
+/// nowhere.
+///
+/// # Errors
+///
+/// When `note` is empty, or the server function cannot be reached.
+#[cfg_attr(
+    not(target_arch = "wasm32"),
+    allow(
+        clippy::unused_async,
+        reason = "the server function macro wants the function async, and this one awaits nothing; the macro's expansion carries the lint"
+    )
+)]
+#[server(endpoint = "count_words")]
+pub async fn count_words(
+    /// The note whose words are counted.
+    note: String,
+) -> Result<u32, ServerFnError> {
+    let words = note.split_whitespace().count();
+    if words == 0 {
+        return Err(ServerFnError::new(crate::locale::tr(
+            crate::locale::Msg::AcknowledgeEmpty,
+        )));
+    }
+    u32::try_from(words).map_err(|error| ServerFnError::new(error.to_string()))
 }

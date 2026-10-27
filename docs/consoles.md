@@ -97,7 +97,69 @@ the browser, so a link or a form never reloads the document (FerroUI #410;
    `widget::action::RETURN`, and on a plain post call `leptos_axum::redirect`
    with `widget::action::plain_return`, or `with_error` when the function
    fails, so the page drawn again shows the error in the action's value (the
-   gallery's `app/ferrohealth-ui-gallery/src/acknowledge.rs`).
+   gallery's `app/ferrohealth-ui-gallery/src/acknowledge.rs`). That is the
+   redirect mode, right for an action whose outcome is the next page, such
+   as a sign-out. An action whose answer is the point takes the answer mode
+   below.
+
+## An action that answers on its page
+
+A check, a run or a load report is worth only its answer, and a redirect
+draws the page fresh, without the answer and without what the user typed.
+In the answer mode a plain post with no WebAssembly draws the page the form
+was on, with the function's answer as the action's value and the posted
+fields in the form (FerroUI #485). With WebAssembly the action runs in the
+page through its server function, as in the redirect mode. No
+specification governs this: our own design, the progressive-enhancement
+answer to a form whose result is the point.
+
+1. **The router:** wrap your whole router, its routes and layers, in
+   `widget::action::draw_answers` once. Keep your same-origin check for
+   state-changing requests where it is: the post the wrapper forwards
+   keeps the browser's headers, so the check sees it as sent.
+2. **The form:** draw `widget::action::answer_field()` in the
+   `<ActionForm>` in place of `return_field()`. It names the page in view,
+   so it needs `widget::nav::follow_path()` above it (step 10).
+3. **The action:** right after `ServerAction::new()`, call
+   `widget::action::answered(&action)` on both halves. It fills the
+   action's value with the answer the page was drawn with and returns the
+   posted fields (`Posted`); draw each field's value from
+   `posted.field(name)`, which is empty on every other request.
+4. **The function:** write it as for its own client. It takes no
+   `ferroui_return` and calls no redirect; one that calls
+   `leptos_axum::redirect` anyway, such as on a session that is over, is
+   followed.
+
+```rust
+let check = ServerAction::<CheckDraft>::new();
+let posted = widget::action::answered(&check);
+let draft = posted.field("draft").unwrap_or_default().to_owned();
+view! {
+    <ActionForm action=check>
+        {widget::action::answer_field()}
+        <textarea name="draft">{draft}</textarea>
+        <button type="submit">{words.check}</button>
+    </ActionForm>
+    <div aria-live="polite">{move || check.value().get().map(draw_answer)}</div>
+}
+```
+
+What a plain post of an answer form gets, with no WebAssembly:
+
+| | |
+|---|---|
+| Recognised by | `POST` with `Content-Type: application/x-www-form-urlencoded`, an `Accept` that names `text/html`, and a `ferroui_answer` field that is a path on your own origin; every other request passes to your router untouched, the page's own calls among them |
+| The function's call | The same post, its headers kept, without the `ferroui_answer` field and with `Accept: */*`, so it answers as to its own client and redirects nowhere |
+| The function redirects | The redirect is the answer |
+| The page | A `GET` of the field's address with the post's headers, drawn by your router with the answer as the action's value, an error as the error, and the posted fields in `Posted` |
+| Status | The page's own, as for the page a failed redirect-mode post returns to: the function's failure is the action's value |
+| Headers | The page's, the cookies the function set, and `Cache-Control: no-store` |
+| Limits | The post and the answer are read whole up to `widget::action::ANSWER_LIMIT` (16 MiB): a larger post answers `413`, a larger answer, or one that is not UTF-8 text, `500` |
+
+The browser stays at the function's address, and a reload asks to post
+again, as for any form that answers its own post. When the WebAssembly loads
+on such a page, `widget::hydration::hydrate` first puts the page's own
+address in the history, so the router hydrates the page the server drew.
 6. **The page announced.** Draw `island::PageAnnouncer` once at your root,
    beside the toast region: after a navigation in the page it moves the
    focus to the new page's heading and says its title (WCAG 2.2 SC 2.4.3,
