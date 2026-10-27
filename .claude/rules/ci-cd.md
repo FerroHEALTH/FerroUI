@@ -45,7 +45,8 @@ Actions Security Cheat Sheet, SLSA v1.0, OpenSSF Scorecard, and Sigstore.
   alphabetical (`scripts/checks/mod-order.sh`), and on a pull request the
   changelog guard and the screenshot-path guard (`parallel-prs.md`), with
   the labels read when it runs. The `test` job runs the screenshot guard on
-  the refresh pull request, a `release/` branch and a manual run.
+  the refresh pull request, a `release/` branch, the `screenshots` label
+  and a manual run.
 - **What a change reaches** is `scripts/checks/affected.sh`'s answer over
   the paths it touches, read by the `detect` job: a pull request's merge
   commit against its base, a merge group against the queue's base, and
@@ -93,10 +94,15 @@ A compile cache makes a fresh worktree's first build much faster. sccache
 works (`build.rustc-wrapper` in your own `~/.cargo/config.toml`); the
 repository neither needs nor configures one.
 - `.github/workflows/pr-guards.yml`: `ci.yml` runs on `opened`, `synchronize`
-  and `reopened` only, so a commit gets one run; when `no-changelog` or the
-  description changes, this waits for the CI run on the head commit to
-  complete and re-runs `guards` or `contribution-licence`, which re-runs
-  `conclusion` with it.
+  and `reopened` only, so a commit gets one run; when `no-changelog`,
+  `screenshots` or the description changes, this waits for the CI run on
+  the head commit to complete and re-runs `guards` or
+  `contribution-licence`, which re-runs `conclusion` with it. A
+  `screenshots` label added after `detect` started also re-runs `detect`
+  and every job after it, so the run captures the states and checks the
+  pixels; `detect` reads the label from the API when it runs, so a pull
+  request opened with `gh pr create --label screenshots` gets them on its
+  first run.
 - `.github/workflows/codeql.yml`: CodeQL over the `actions` language and Rust.
 - `.github/workflows/scorecard.yml`: OpenSSF Scorecard, published to the
   OpenSSF API and to code scanning.
