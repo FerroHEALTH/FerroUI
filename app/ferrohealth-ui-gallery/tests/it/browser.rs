@@ -257,6 +257,18 @@ impl Browser {
         capabilities.set_no_sandbox()?;
         capabilities.set_disable_dev_shm_usage()?;
         capabilities.add_arg("--window-size=1280,1024")?;
+        // NOTE: no specification governs this: our own design; software raster with one
+        // colour profile and greyscale text draws a state's pixels the same twice (#434).
+        for steady in [
+            "--disable-gpu",
+            "--disable-gpu-rasterization",
+            "--disable-partial-raster",
+            "--disable-lcd-text",
+            "--force-color-profile=srgb",
+            "--font-render-hinting=none",
+        ] {
+            capabilities.add_arg(steady)?;
+        }
         capabilities.set_browser_log_level(LoggingPrefsLogLevel::Info)?;
         let chrome = std::env::var_os(CHROME_ENV)
             .map(PathBuf::from)

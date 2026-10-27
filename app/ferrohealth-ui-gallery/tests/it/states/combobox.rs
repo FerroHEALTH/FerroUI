@@ -83,6 +83,9 @@ pub(super) async fn combobox_states(
         Ok(input.attr("aria-expanded").await?.as_deref() == Some("true"))
     })
     .await?;
+    // NOTE: no specification governs this: our own design; the click that opens the list
+    // may scroll the page, so the input is placed again before the shot (#434).
+    place(&input).await?;
     shot_of_view(browser, brand, theme, "combobox-narrow").await?;
     escape(browser).await?;
     window(browser, WIDTH, HEIGHT).await

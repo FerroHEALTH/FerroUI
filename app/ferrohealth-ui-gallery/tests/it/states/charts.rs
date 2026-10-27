@@ -93,7 +93,7 @@ pub(super) async fn charts(
         .perform()
         .await?;
     browser.settled().await?;
-    let png = flow.screenshot_as_png().await?;
+    let png = super::element_png(browser, &flow).await?;
     super::write(brand, "flow-hover", theme, &png)?;
     away(browser).await?;
     focus(browser, &cdr).await?;
