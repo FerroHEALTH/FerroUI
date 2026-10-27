@@ -91,7 +91,7 @@ fell back to English and draws itself inside `<span lang="en">` when it did
 ## The bundle budget
 
 The gallery's brotli-compressed entry WebAssembly, what every page loads
-before its route's chunks, is held to 491520 bytes (480 KiB) by
+before its route's chunks, is held to 507904 bytes (496 KiB) by
 `scripts/checks/gallery-bundle.sh`, which reads the number from
 `leptos-ui.md` §12. Each console keeps its own budget in its own
 repository: FerroBRIDGE's is 458752 bytes.

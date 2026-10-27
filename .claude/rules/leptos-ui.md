@@ -313,7 +313,7 @@ entry, so a chunk that grows is seen.
 
 | Measure | Budget |
 |---|---|
-| Entry WebAssembly, brotli-compressed | 491520 bytes |
+| Entry WebAssembly, brotli-compressed | 507904 bytes |
 
 The budget is 480 KiB, 34% over the 365376 bytes the gallery measured once
 every island took its words as props and the Fluent loader and catalogs
@@ -341,6 +341,14 @@ made 811 chunks, a page needing 300 to 444, and Chrome refused the fetches
 past its limit (`net::ERR_INSUFFICIENT_RESOURCES`), so the 21 pages load in
 five groups: 32 chunks, 16 a group, the entry 474860 bytes and the chunks
 1456880. The budget stayed where it was.
+It rose to 496 KiB for v0.5.2 (2026-10-27), when the entry stood at 490920
+bytes in CI, 99.9% of 480 KiB, and two parts every console's shell carries
+joined it: the hydration guard that leaves a click to the browser until the
+page has hydrated (#448), 75 bytes on a local build, and the session watch
+with its warning dialog (#444), 12117 bytes on the same build (491536 for
+`main` there, 503653 with the watch). Neither can load with a route, since
+the shell draws both before any route's code has arrived. The new budget
+leaves about 4 KiB over the two.
 The gallery's measures in bytes, the first three rows the spike of #196
 (the same gallery both ways):
 
