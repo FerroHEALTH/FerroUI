@@ -69,10 +69,16 @@ pub struct Shell {
 
 /// Returns the link that skips the chrome to the page, shown once it has
 /// the focus (WCAG 2.2 SC 2.4.1).
+///
+/// The browser follows it on a hydrated page too, so its fragment
+/// navigation moves the sequential focus starting point to the main area
+/// and the next Tab reaches the page's first control.
 #[must_use]
 pub fn skip_link() -> impl IntoView {
+    // NOTE: `leptos_router` 0.8 `handle_anchor_click` leaves a link with a `target` to the browser,
+    // and `_self` is the link's own navigable (HTML Living Standard, "the rules for choosing a navigable").
     view! {
-        <a href=format!("#{MAIN_ID}") class="fui-skip">
+        <a href=format!("#{MAIN_ID}") target="_self" class="fui-skip">
             {tr(Text::SkipToPage)}
         </a>
     }
