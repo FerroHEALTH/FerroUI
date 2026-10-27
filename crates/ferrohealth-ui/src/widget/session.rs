@@ -727,9 +727,7 @@ mod browser {
             Ok(left) => Some(Ok(left)),
             Err(error) => {
                 let (line, column) = (error.line(), error.column());
-                leptos::logging::warn!(
-                    "the session route's answer is unreadable at {line}:{column}"
-                );
+                leptos::logging::warn!("the session answer is unreadable at {line}:{column}");
                 None
             }
         }
