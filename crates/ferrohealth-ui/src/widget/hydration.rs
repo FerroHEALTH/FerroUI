@@ -23,13 +23,6 @@ pub const HYDRATED: &str = "data-ferroui-hydrated";
 /// start of `hydrate` until [`HYDRATED`] replaces it.
 pub const HYDRATING: &str = "data-ferroui-hydrating";
 
-#[cfg(target_arch = "wasm32")]
-thread_local! {
-    /// Whether `hydrate` is the console's browser entry, which then writes
-    /// the mark itself and [`mark`] does nothing.
-    static ENTRY: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
-}
-
 /// Hydrates the page the server drew with the root component `app`.
 ///
 /// Its lazy routes load their code from their own chunks, and the root
@@ -48,9 +41,8 @@ where
     F: FnOnce() -> N + 'static,
     N: IntoView,
 {
-    ENTRY.set(true);
     browser::guard();
-    browser::set(HYDRATING);
+    browser::mark(HYDRATING, None);
     wasm_bindgen_futures::spawn_local(async move {
         let Some(body) = document().body() else {
             leptos::logging::warn!("the page has no body to hydrate");
@@ -60,8 +52,7 @@ where
         // whole page, its lazy routes included, has hydrated.
         let page = hydrate_from_async(body, app).await;
         page.forget();
-        browser::set(HYDRATED);
-        browser::unset(HYDRATING);
+        browser::mark(HYDRATED, Some(HYDRATING));
     });
 }
 
@@ -79,8 +70,11 @@ where
 pub fn mark() {
     Effect::new(move |_| {
         #[cfg(target_arch = "wasm32")]
-        if !ENTRY.get() {
-            browser::set(HYDRATED);
+        if !document()
+            .document_element()
+            .is_some_and(|root| root.has_attribute(HYDRATING))
+        {
+            browser::mark(HYDRATED, None);
         }
     });
 }
@@ -130,21 +124,14 @@ mod browser {
 
     use super::hydrated;
 
-    /// Writes the attribute `name` on the root element.
-    pub(super) fn set(name: &str) {
+    /// Writes the attribute `name` on the root element, and takes `gone` off
+    /// it.
+    pub(super) fn mark(name: &str, gone: Option<&str>) {
         if let Some(root) = document().document_element()
-            && root.set_attribute(name, "").is_err()
+            && (root.set_attribute(name, "").is_err()
+                || gone.is_some_and(|gone| root.remove_attribute(gone).is_err()))
         {
-            leptos::logging::warn!("the browser refused the root's {name}");
-        }
-    }
-
-    /// Takes the attribute `name` off the root element.
-    pub(super) fn unset(name: &str) {
-        if let Some(root) = document().document_element()
-            && root.remove_attribute(name).is_err()
-        {
-            leptos::logging::warn!("the browser refused to drop the root's {name}");
+            leptos::logging::warn!("the browser refused the hydration mark");
         }
     }
 
@@ -167,7 +154,7 @@ mod browser {
                 )
                 .is_err()
             {
-                leptos::logging::warn!("the browser refused the hydration guard on {kind}");
+                leptos::logging::warn!("the browser refused the hydration guard");
             }
         }
         // NOTE: no specification governs this: our own design; the guard lasts as
