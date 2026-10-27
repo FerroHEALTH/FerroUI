@@ -912,9 +912,12 @@ fn place_on_open(
             if !*open {
                 return;
             }
-            side.set(Side::Start);
-            request_animation_frame(move || {
-                let (Some(form), Some(panel)) = (form.get_untracked(), panel.get_untracked())
+            let _: Option<Side> = side.try_set(Side::Start);
+            // NOTE: Leptos 0.8 `Owner::on_cleanup` runs when the effect runs again or its
+            // owner is disposed, so the frame never outlives the search that asked for it.
+            let frame = request_animation_frame_with_handle(move || {
+                let (Some(Some(form)), Some(Some(panel))) =
+                    (form.try_get_untracked(), panel.try_get_untracked())
                 else {
                     return;
                 };
@@ -933,8 +936,13 @@ fn place_on_open(
                     .unwrap_or(f64::MAX);
                 let field = form.get_bounding_client_rect();
                 let wide = panel.get_bounding_client_rect().width();
-                side.set(placed(field.left(), field.right(), wide, view));
+                let _: Option<Side> = side.try_set(placed(field.left(), field.right(), wide, view));
             });
+            // A refused request asked for no frame, so there is none to cancel; Leptos's
+            // own `request_animation_frame` drops the refusal too.
+            if let Ok(frame) = frame {
+                on_cleanup(move || frame.cancel());
+            }
         },
         false,
     );
