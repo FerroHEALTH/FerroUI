@@ -93,7 +93,8 @@ pub fn router(options: LeptosOptions) -> axum::Router {
             provide_request_nonce,
             crate::app::document,
         ));
-    with_security_headers(pages).with_state(options)
+    // A plain post of an answer form draws its page with the action's answer (#485).
+    ferrohealth_ui::widget::action::draw_answers(with_security_headers(pages).with_state(options))
 }
 
 /// Serves the library's stylesheet.

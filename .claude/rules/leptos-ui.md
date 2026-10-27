@@ -813,7 +813,13 @@ The library and the consoles hydrate the whole page and split it by route
   `src/lib.rs`; leptos `src/form.rs`), which a console's `no-referrer`
   policy withholds, so the form carries `widget::action::return_field()`
   and the function redirects to `widget::action::plain_return` or
-  `with_error` (#449). [review]
+  `with_error` (#449). An action whose answer is the point (a check, a run,
+  a load report) draws `widget::action::answer_field()` instead, the
+  console wraps its router in `widget::action::draw_answers`, and the page
+  calls `widget::action::answered(&action)` where it makes the action, so a
+  plain post draws its page with the answer and the posted fields (#485;
+  `docs/consoles.md` § An action that answers on its page). [review; the
+  gallery's answered-action journeys]
 
 - **A protected page leaves when its session ends** (#444): a console
   draws `island::SessionWatch` once in the shell of a signed-in page and

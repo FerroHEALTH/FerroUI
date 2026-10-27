@@ -51,6 +51,10 @@ axum = "0.8.9"
 http = "1.5.0"
 tokio = { version = "1.53.1", default-features = false }
 tower = "0.5.3"
+# The fields of a plain form post, which `widget::action::draw_answers` reads
+# to draw them on the page again. In the lock already under url. Verified
+# against crates.io on 2026-10-27.
+form_urlencoded = "1.2.2"
 tower-http = { version = "0.7.1", default-features = false }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", default-features = false, features = ["std", "fmt", "env-filter", "ansi"] }

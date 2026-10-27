@@ -8,6 +8,8 @@ use super::Msg;
 messages! {
     /// `Accept a partial answer`
     AcceptPartialAnswer = "accept-partial-answer",
+    /// `An action answered on its page`
+    ActionAnsweredOnPage = "action-answered-on-page",
     /// `Actions between`
     ActionsBetween = "actions-between",
     /// `Active concepts only`
@@ -226,6 +228,10 @@ messages! {
     NextMonday = "next-monday",
     /// `metadata.note is no key of the grammar: it is kept and never read.`
     NoteKeptNeverRead = "note-kept-never-read",
+    /// `Note to check`
+    NoteToCheck = "note-to-check",
+    /// `The note has { $count } words.`
+    NoteWords = "note-words",
     /// `Observation status`
     ObservationStatus = "observation-status",
     /// `The one this server resolves to`

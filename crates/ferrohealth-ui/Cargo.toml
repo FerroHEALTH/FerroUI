@@ -30,6 +30,15 @@ serde.workspace = true
 fluent-templates.workspace = true
 intl-memoizer.workspace = true
 
+# The server half of `widget::action`: `draw_answers` wraps a console's axum
+# router so a plain post draws its page with the action's answer. Every
+# console serves through axum already, so this adds nothing a console lacks.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+axum.workspace = true
+form_urlencoded.workspace = true
+http.workspace = true
+tower = { workspace = true, features = ["util"] }
+
 # The widgets' browser code, compiled for the browser alone. Each asks for
 # the lowest release leptos 0.8.22 resolves with (web-sys 0.3.85 pins
 # wasm-bindgen 0.2.108), not the workspace pin, so a console's own lock picks
@@ -102,6 +111,10 @@ leptos_router = { workspace = true, features = ["ssr"] }
 hydration_context.workspace = true
 # A day crosses to the browser as JSON; its unit tests read it back.
 serde_json.workspace = true
+
+# The tests of `widget::action::draw_answers` serve a router in-process.
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+tokio = { workspace = true, features = ["rt", "macros"] }
 
 [lints]
 workspace = true

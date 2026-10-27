@@ -343,6 +343,67 @@ async fn a_failed_plain_post_returns_with_the_error_the_router_reads() -> Result
     Ok(())
 }
 
+/// What the gallery answers a plain form post of `body` to the
+/// `count_words` server function with, as a browser with no WebAssembly
+/// sends it: its status, headers and body.
+async fn count_words(body: &str) -> Result<(http::response::Parts, String), Box<dyn Error>> {
+    let request = Request::post("/api/count_words")
+        .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+        .header(header::ACCEPT, "text/html,application/xhtml+xml,*/*;q=0.8")
+        .body(Body::from(body.to_owned()))?;
+    send(request).await
+}
+
+#[tokio::test]
+async fn a_plain_post_of_an_answer_form_draws_its_page_with_the_answer_and_the_note()
+-> Result<(), Box<dyn Error>> {
+    let (parts, body) = count_words("note=two+words&ferroui_answer=%2Fferrobridge%2Fforms").await?;
+    assert_eq!(StatusCode::OK, parts.status);
+    assert_eq!("no-store", parts.headers[header::CACHE_CONTROL]);
+    assert!(parts.headers.contains_key(header::CONTENT_SECURITY_POLICY));
+    assert!(
+        body.contains("<p id=\"note-answer\" class=\"fui-help\">The note has 2 words.</p>"),
+        "the answer is drawn on the page: {body}"
+    );
+    let note = body
+        .split("id=\"answer-note\"")
+        .nth(1)
+        .and_then(|rest| rest.split('>').next())
+        .unwrap_or_default();
+    assert!(
+        note.contains("name=\"note\"") && note.contains("value=\"two words\""),
+        "the posted note is kept in its field: {note}"
+    );
+    assert!(
+        body.contains("name=\"ferroui_answer\" value=\"/ferrobridge/forms\""),
+        "the page drawn names itself, not the function"
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn a_refused_plain_post_of_an_answer_form_draws_the_refusal_and_keeps_the_note()
+-> Result<(), Box<dyn Error>> {
+    let (parts, body) = count_words("note=+&ferroui_answer=%2Fferrobridge%2Fforms").await?;
+    assert_eq!(StatusCode::OK, parts.status);
+    assert_eq!("no-store", parts.headers[header::CACHE_CONTROL]);
+    assert!(
+        body.contains("<p id=\"note-answer\" class=\"fui-help fui-error\">The note is empty.</p>"),
+        "the refusal is drawn on the page: {body}"
+    );
+    assert!(body.contains("value=\" \""), "the posted note is kept");
+    Ok(())
+}
+
+#[tokio::test]
+async fn the_forms_page_drawn_on_its_own_carries_no_answer() -> Result<(), Box<dyn Error>> {
+    let (parts, body) = get("/ferrobridge/forms").await?;
+    assert_eq!(StatusCode::OK, parts.status);
+    assert!(!body.contains("id=\"note-answer\""));
+    assert!(body.contains("name=\"ferroui_answer\" value=\"/ferrobridge/forms\""));
+    Ok(())
+}
+
 #[tokio::test]
 async fn a_return_field_naming_another_origin_is_never_followed() -> Result<(), Box<dyn Error>> {
     for field in ["%2F%2Fevil.example%2F", "https%3A%2F%2Fevil.example%2F"] {

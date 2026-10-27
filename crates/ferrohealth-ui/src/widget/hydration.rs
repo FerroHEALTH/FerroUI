@@ -41,6 +41,7 @@ where
     F: FnOnce() -> N + 'static,
     N: IntoView,
 {
+    browser::answered_address();
     browser::guard();
     browser::mark(HYDRATING, None);
     wasm_bindgen_futures::spawn_local(async move {
@@ -132,6 +133,34 @@ mod browser {
                 || gone.is_some_and(|gone| root.remove_attribute(gone).is_err()))
         {
             leptos::logging::warn!("the browser refused the hydration guard or its mark");
+        }
+    }
+
+    /// On a page a plain post drew with its answer
+    /// (`widget::action::draw_answers`), puts the address of the page drawn
+    /// in the history in place of the server function's, so the router
+    /// hydrates the page the server drew. An answer form's field names that
+    /// page; on any other page it names the page in view.
+    pub(super) fn answered_address() {
+        let selector = format!("input[name='{}']", crate::widget::action::ANSWER);
+        let Some(address) = document()
+            .query_selector(&selector)
+            .ok()
+            .flatten()
+            .and_then(|field| field.get_attribute("value"))
+        else {
+            return;
+        };
+        let drawn = address.split(['?', '#']).next().unwrap_or_default();
+        let shown = window().location().pathname().unwrap_or_default();
+        if drawn.is_empty() || drawn == shown || !crate::widget::action::own_path(&address) {
+            return;
+        }
+        let replaced = window().history().and_then(|history| {
+            history.replace_state_with_url(&leptos::wasm_bindgen::JsValue::NULL, "", Some(&address))
+        });
+        if replaced.is_err() {
+            leptos::logging::warn!("the browser refused the address of the page drawn");
         }
     }
 
