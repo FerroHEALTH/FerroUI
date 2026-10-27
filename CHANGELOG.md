@@ -11,6 +11,26 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.5.3] - 2026-10-27
+
+### Fixed
+
+- The editor's work per keystroke follows the edit, not the length of the
+  text: an edit re-highlights only the lines it touched (a grammar that reads
+  across lines, JSON, XML, AQL and HL7 v2, is highlighted whole again once
+  typing rests for 250 ms), the caret is read from an index of the lines
+  instead of a scan of the text, and a key no longer reads the text area's
+  text more than once. Typing into a 64 KB document takes the editor about
+  0.4 ms of script per key, down from about 2 ms (#458).
+- The search box's panel placement no longer panics when a navigation
+  disposes the search between the panel opening and the next animation
+  frame: the search cancels the pending frame when it is disposed, and the
+  frame reads and writes nothing of a disposed search (#462).
+- A search whose answer route answers `401` now says to every other tab of
+  the console that the session has ended (`widget::session::gone`), so they
+  leave for sign-in with it; with `SearchBox::signed_out` set its own tab
+  still loads the signed-out page, and its session watch stays put (#474).
+
 ## [0.5.2] - 2026-10-27
 
 ### Added
@@ -2725,7 +2745,8 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.2...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.3...HEAD
+[0.5.3]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/FerroHEALTH/FerroUI/compare/v0.4.0...v0.5.0
