@@ -11,6 +11,22 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.5.5] - 2026-10-27
+
+### Added
+
+- `widget::action` answers a plain post on its page: a console wraps its
+  router in `draw_answers`, draws `answer_field()` in an `<ActionForm>` and
+  calls `answered(&action)` where it makes the action, and with no
+  WebAssembly the post draws the page the form was on with the function's
+  answer, or its error, as the action's value and the posted fields
+  (`Posted`) in the form, `Cache-Control: no-store`. The redirect mode of
+  `return_field` and `with_error` is unchanged, and with WebAssembly the
+  action runs in the page as before. `widget::hydration::hydrate` puts the
+  page's own address in the history before it hydrates such a page.
+  `docs/consoles.md` § An action that answers on its page documents both
+  modes (#485).
+
 ## [0.5.4] - 2026-10-27
 
 ### Added
@@ -2775,7 +2791,8 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.4...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.5...HEAD
+[0.5.5]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.4...v0.5.5
 [0.5.4]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.3...v0.5.4
 [0.5.3]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.1...v0.5.2
