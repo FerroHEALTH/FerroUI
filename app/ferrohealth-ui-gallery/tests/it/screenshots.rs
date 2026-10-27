@@ -19,6 +19,9 @@
 //! (`scripts/checks/screenshot-paths.sh`), so between refreshes the committed
 //! set may lack a state a merged change added.
 //!
+//! [`SHARD`] splits the capture of the pages, the states and the pixel
+//! check over parallel runs by brand, each run taking whole brands.
+//!
 //! The capture runs with `prefers-reduced-motion: reduce`, so a spinner or a
 //! skeleton holds still and an unchanged page captures pixel-identical. On a
 //! release pull request the pixel check (`FERROUI_SCREENSHOT_PIXELS=1`)
@@ -46,6 +49,69 @@ const SCREENSHOTS_GATE: &str = "FERROUI_SCREENSHOTS";
 /// of an image's name (`tables` takes the tables page of every brand). The
 /// whole capture runs when it is unset.
 const PAGES_FILTER: &str = "FERROUI_SCREENSHOT_PAGES";
+
+/// The environment variable that splits the capture and the pixel check
+/// over parallel runs, one per brand: the key of the brand a run takes
+/// (`ferroehr`), and the run of the first brand of `Brand::ALL` takes the
+/// images of no brand too. Unset, one run takes everything. No
+/// specification governs this: our own design.
+const SHARD: &str = "FERROUI_SCREENSHOT_BRAND";
+
+/// One run's part of the capture and the pixel check, read from [`SHARD`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Shard {
+    /// The brand the run takes, or `None` for every brand.
+    brand: Option<Brand>,
+}
+
+impl Shard {
+    /// The part [`SHARD`] names, or the whole when it is unset.
+    pub(crate) fn from_env() -> Result<Self, Box<dyn Error>> {
+        Ok(Self::parse(std::env::var(SHARD).ok().as_deref())?)
+    }
+
+    /// The part of the brand whose key is `value`, or the whole for `None`.
+    fn parse(value: Option<&str>) -> Result<Self, String> {
+        let Some(value) = value else {
+            return Ok(Self { brand: None });
+        };
+        Brand::ALL
+            .into_iter()
+            .find(|brand| brand.key() == value.trim())
+            .map(|brand| Self { brand: Some(brand) })
+            .ok_or_else(|| format!("{SHARD}={value} names no brand"))
+    }
+
+    /// Whether this run takes the brand `brand`.
+    pub(crate) fn takes(self, brand: Brand) -> bool {
+        self.brand.is_none_or(|taken| taken == brand)
+    }
+
+    /// Whether this run takes an image of no brand.
+    fn takes_brandless(self) -> bool {
+        self.brand
+            .is_none_or(|taken| Some(&taken) == Brand::ALL.first())
+    }
+
+    /// Whether this run takes the image at `name`, a path under [`IMAGES`]
+    /// such as `ferrobridge/tables.png` or `states/ferroehr/hover-row.png`.
+    fn takes_image(self, name: &str) -> bool {
+        let mut parts = name.split('/');
+        let first = parts.next().unwrap_or(name);
+        let key = if first == "states" {
+            parts.next()
+        } else {
+            Some(first)
+        };
+        match Brand::ALL
+            .into_iter()
+            .find(|brand| Some(brand.key()) == key)
+        {
+            Some(brand) => self.takes(brand),
+            None => self.takes_brandless(),
+        }
+    }
+}
 
 /// The environment variable that opts in to the screenshot guard.
 const GUARD_GATE: &str = "FERROUI_SCREENSHOT_GUARD";
@@ -84,6 +150,8 @@ struct Shot {
     path: String,
     /// A CSS selector of an element the page shows once loaded.
     ready: &'static str,
+    /// The brand the page is drawn in, if any.
+    brand: Option<Brand>,
 }
 
 /// The name of the page `page` of a brand's pages.
@@ -100,11 +168,13 @@ fn shots() -> Vec<Shot> {
             image: String::from("index"),
             path: String::from("/"),
             ready: ".fui-sign-in",
+            brand: None,
         },
         Shot {
             image: String::from("not-found"),
             path: String::from("/no/such/page"),
             ready: ".fui-empty",
+            brand: None,
         },
     ];
     for brand in Brand::ALL {
@@ -113,22 +183,33 @@ fn shots() -> Vec<Shot> {
                 image: format!("{}/{}", brand.key(), page_name(page)),
                 path: format!("/{}{page}", brand.key()),
                 ready: "main h1",
+                brand: Some(brand),
             });
         }
         shots.push(Shot {
             image: format!("{}/fault", brand.key()),
             path: format!("/fault/{}", brand.key()),
             ready: ".fui-status-page h1",
+            brand: Some(brand),
         });
         for variant in SIGN_INS {
             shots.push(Shot {
                 image: format!("{}/sign-in-{variant}", brand.key()),
                 path: format!("/sign-in/{}/{variant}", brand.key()),
                 ready: ".fui-sign-in",
+                brand: Some(brand),
             });
         }
     }
     shots
+}
+
+/// Whether the run `shard` takes `shot`.
+fn in_shard(shot: &Shot, shard: Shard) -> bool {
+    match shot.brand {
+        Some(brand) => shard.takes(brand),
+        None => shard.takes_brandless(),
+    }
 }
 
 /// Whether the capture takes `image` under the page list `filter`, the value
@@ -240,6 +321,7 @@ async fn every_page_is_captured_in_every_brand_light_and_dark() -> Result<(), Bo
         return Ok(());
     }
     let filter = std::env::var(PAGES_FILTER).ok();
+    let shard = Shard::from_env()?;
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
         window(browser, WIDTH, HEIGHT).await?;
@@ -262,7 +344,7 @@ async fn every_page_is_captured_in_every_brand_light_and_dark() -> Result<(), Bo
                 .await?;
             for shot in shots()
                 .into_iter()
-                .filter(|shot| wanted(&shot.image, filter.as_deref()))
+                .filter(|shot| in_shard(shot, shard) && wanted(&shot.image, filter.as_deref()))
             {
                 for width in WIDTHS {
                     capture(browser, &gallery, &shot, theme, width, IMAGES).await?;
@@ -329,6 +411,58 @@ fn the_page_filter_takes_the_named_pages_of_every_brand_alone() {
     assert!(wanted("index", Some("index")));
     assert!(!wanted("ferrobridge/forms", Some("tables")));
     assert!(!wanted("ferrobridge/sign-in-basic", Some("sign-in")));
+}
+
+#[test]
+fn the_brand_runs_take_every_shot_and_image_once() {
+    assert_eq!(Shard::parse(None), Ok(Shard { brand: None }));
+    assert!(Shard::parse(Some("ferrounknown")).is_err());
+    let runs: Vec<Shard> = Brand::ALL
+        .into_iter()
+        .map(|brand| Shard::parse(Some(brand.key())).expect("a brand's run"))
+        .collect();
+    for shot in shots() {
+        assert_eq!(
+            runs.iter().filter(|run| in_shard(&shot, **run)).count(),
+            1,
+            "{}",
+            shot.image
+        );
+    }
+    for name in [
+        "index.png",
+        "not-found-dark.png",
+        "ferroehr/tables.png",
+        "states/ferropix/hover-row.png",
+    ] {
+        assert_eq!(
+            runs.iter().filter(|run| run.takes_image(name)).count(),
+            1,
+            "{name}"
+        );
+    }
+    let first = runs.first().expect("a first brand");
+    assert!(first.takes_image("index.png"));
+    assert!(!first.takes_image("states/ferrofed/hover-row.png"));
+}
+
+#[test]
+fn the_ci_capture_runs_one_job_per_brand() {
+    let workflow =
+        std::fs::read_to_string(root().join(".github/workflows/ci.yml")).expect("the CI workflow");
+    let line = workflow
+        .lines()
+        .find(|line| line.trim_start().starts_with("CAPTURE_BRANDS:"))
+        .expect("the detect job names the brands the capture runs one job each for");
+    let listed: Vec<&str> = line
+        .split_once(':')
+        .map(|(_, brands)| brands.trim().trim_matches('"').split(' ').collect())
+        .unwrap_or_default();
+    let keys: Vec<&str> = Brand::ALL.into_iter().map(Brand::key).collect();
+    assert_eq!(
+        listed, keys,
+        "CAPTURE_BRANDS in ci.yml lists every brand, in Brand::ALL's order"
+    );
 }
 
 #[test]
@@ -430,8 +564,14 @@ fn every_committed_screenshot_shows_what_a_fresh_capture_draws() -> Result<(), B
     if !std::env::var(PIXELS_GATE).is_ok_and(|value| value == "1") {
         return Ok(());
     }
+    let shard = Shard::from_env()?;
     let mut images = Vec::new();
     images_under(Path::new(IMAGES), &mut images)?;
+    images.retain(|image| {
+        image
+            .strip_prefix(IMAGES)
+            .is_ok_and(|under| shard.takes_image(&under.to_string_lossy().replace('\\', "/")))
+    });
     images.sort();
     let mut differ = Vec::new();
     for image in &images {
@@ -447,7 +587,9 @@ fn every_committed_screenshot_shows_what_a_fresh_capture_draws() -> Result<(), B
             continue;
         }
         let fresh = std::fs::read(root().join(image))?;
-        if rgb(&committed.stdout)? != rgb(&fresh)? {
+        // NOTE: no specification governs this: our own design; equal bytes are equal
+        // pixels, so only files whose bytes differ are decoded and compared.
+        if committed.stdout != fresh && rgb(&committed.stdout)? != rgb(&fresh)? {
             differ.push(name);
         }
     }

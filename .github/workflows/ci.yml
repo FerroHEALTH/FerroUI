@@ -11,7 +11,8 @@
 #      contrast test, rustdoc, cargo-deny, the publish dry run.
 #   3. The gallery tier runs when the change reaches the gallery: the release
 #      site bundle with its size budget and path check, then the browser
-#      journeys and the screenshot capture in Chrome for Testing.
+#      journeys in two parts and, when the change can move a pixel, the
+#      screenshot capture in one job per brand, in Chrome for Testing.
 #   4. The design tier builds the console design library's pages (design/)
 #      and runs its checks in headless Chrome, one job per design set the
 #      change reaches.
@@ -276,6 +277,9 @@ jobs:
     outputs:
       cargo: ${{ steps.find.outputs.cargo }}
       gallery: ${{ steps.find.outputs.gallery }}
+      capture: ${{ steps.find.outputs.capture }}
+      states: ${{ steps.find.outputs.states }}
+      gallery-matrix: ${{ steps.find.outputs.gallery-matrix }}
       design: ${{ steps.find.outputs.design }}
     steps:
       # Two commits: a pull request's checkout is its merge commit, whose
@@ -291,6 +295,11 @@ jobs:
           GH_REPO: ${{ github.repository }}
           QUEUE_BASE: ${{ github.event.merge_group.base_sha }}
           QUEUE_HEAD: ${{ github.event.merge_group.head_sha }}
+          HEAD_REF: ${{ github.head_ref }}
+          # One capture job per brand, in Brand::ALL's order; the gallery's
+          # tests hold this list to the brands (the_ci_capture_runs_one_job_per_brand).
+          CAPTURE_BRANDS: "ferrobridge ferrofed ferroehr ferroterm ferropix"
+          JOURNEY_PARTS: "2"
         run: |
           set -euo pipefail
           case "$EVENT" in
@@ -311,13 +320,27 @@ jobs:
           fi
           echo "$plan"
           get() { printf '%s\n' "$plan" | sed -n "s/^$1=//p"; }
+          # The refresh and the release pull request and a manual run capture
+          # every page and state and compare them with the committed images
+          # by their pixels, whatever paths they touch.
+          refresh=false
+          case "$HEAD_REF" in chore/screenshots | release/*) refresh=true ;; esac
+          if [ "$EVENT" = workflow_dispatch ]; then refresh=true; fi
+          gallery=false capture=false
+          if [ -f app/ferrohealth-ui-gallery/Cargo.toml ]; then
+            if [ "$(get gallery)" = true ] || [ "$refresh" = true ]; then gallery=true; fi
+            if [ "$(get capture)" = true ] || [ "$refresh" = true ]; then capture=true; fi
+          fi
           {
             if [ -f Cargo.toml ]; then echo "cargo=true"; else echo "cargo=false"; fi
-            if [ -f app/ferrohealth-ui-gallery/Cargo.toml ] && [ "$(get gallery)" = true ]; then
-              echo "gallery=true"
-            else
-              echo "gallery=false"
-            fi
+            echo "gallery=$gallery"
+            echo "capture=$capture"
+            echo "states=$refresh"
+            jq -nr --arg parts "$JOURNEY_PARTS" --arg brands "$CAPTURE_BRANDS" --argjson capture "$capture" '
+              ($parts | tonumber) as $n
+              | [range(1; $n + 1) | {name: "journeys \(.)/\($n)", part: "journeys", partition: "\(.)/\($n)", brand: ""}]
+                + (if $capture then [$brands | split(" ")[] | {name: "capture \(.)", part: "capture", partition: "", brand: .}] else [] end)
+              | "gallery-matrix=" + tojson'
             # GitHub runs at most five macOS jobs at once on this plan, so a
             # change that reaches one or two sets runs each console in two
             # jobs (every other page in one), and a wider change one job per set.
@@ -559,13 +582,14 @@ jobs:
 
   # ---- Tier 3 ---------------------------------------------------------------
   # The release site bundle, then in headless Chrome for Testing at the
-  # pinned release, as two jobs side by side over a bundle each builds: the
-  # bundle's size budget and path check with the journeys and the
-  # painted-colour check, and the screenshot capture. A journey or a shot
-  # fails on any error the browser logs. The screenshots are uploaded for
-  # review.
+  # pinned release, in parallel jobs that each build the bundle: the
+  # journeys in two parts (the first with the bundle's size budget and path
+  # check), and, when the change can move a pixel (the `capture` output of
+  # detect), the screenshot capture in one job per brand. A journey or a shot
+  # fails on any error the browser logs. Each capture job uploads its brand's
+  # screenshots, and gallery-screenshots merges them into one artifact.
   gallery:
-    name: gallery (${{ matrix.part }})
+    name: gallery (${{ matrix.name }})
     needs: detect
     if: needs.detect.outputs.gallery == 'true'
     runs-on: ubuntu-latest
@@ -575,7 +599,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        part: [journeys, capture]
+        include: ${{ fromJSON(needs.detect.outputs.gallery-matrix) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -600,53 +624,79 @@ jobs:
       - run: bash scripts/release/gallery-site.sh --release
       # The sizes go to the job summary; the step fails above the budget of
       # .claude/rules/leptos-ui.md §12.
-      - if: matrix.part == 'journeys'
+      - if: matrix.part == 'journeys' && startsWith(matrix.partition, '1/')
         run: bash scripts/checks/gallery-bundle.sh
-      - if: matrix.part == 'journeys'
+      - if: matrix.part == 'journeys' && startsWith(matrix.partition, '1/')
         run: bash scripts/checks/gallery-paths.sh
+      # Every test of the gallery's package, split by count into the parts
+      # (nextest, --partition), so each part opens its share of the browsers.
       - name: Run the journeys
         if: matrix.part == 'journeys'
         env:
           FERROUI_JOURNEYS: "1"
           FERROUI_CHROME: ${{ steps.chrome.outputs.chrome-path }}
           FERROUI_CHROMEDRIVER: ${{ steps.chrome.outputs.chromedriver-path }}
-        run: cargo nextest run --locked -p ferrohealth-ui-gallery
+          PARTITION: ${{ matrix.partition }}
+        run: cargo nextest run --locked -p ferrohealth-ui-gallery --partition "count:$PARTITION"
       - name: Capture the screenshots
         if: matrix.part == 'capture'
         env:
           FERROUI_SCREENSHOTS: "1"
+          FERROUI_SCREENSHOT_BRAND: ${{ matrix.brand }}
           FERROUI_CHROME: ${{ steps.chrome.outputs.chrome-path }}
           FERROUI_CHROMEDRIVER: ${{ steps.chrome.outputs.chromedriver-path }}
         run: cargo nextest run --locked -p ferrohealth-ui-gallery -E 'test(every_page_is_captured)'
-      # On a release pull request every committed page image is compared
-      # with its fresh capture by its pixels, so a release cannot go out on
-      # images that no longer show the gallery (FerroUI #428; no
-      # specification governs this: our own design).
-      # On the refresh and the release pull request the states are captured
-      # too, so the artifact holds the whole set the pull request commits.
+      # On the refresh and the release pull request and a manual run the states are captured
+      # too, so the artifact holds the whole set the pull request commits,
+      # and every committed page and state image is compared with its fresh
+      # capture by its pixels, so neither commits images that no longer show
+      # the gallery (FerroUI #428; no specification governs this: our own
+      # design).
       - name: Capture the states
-        if: >-
-          matrix.part == 'capture'
-          && (github.head_ref == 'chore/screenshots' || startsWith(github.head_ref, 'release/'))
+        if: matrix.part == 'capture' && needs.detect.outputs.states == 'true'
         env:
           FERROUI_SCREENSHOTS: "1"
+          FERROUI_SCREENSHOT_BRAND: ${{ matrix.brand }}
           FERROUI_CHROME: ${{ steps.chrome.outputs.chrome-path }}
           FERROUI_CHROMEDRIVER: ${{ steps.chrome.outputs.chromedriver-path }}
         run: cargo nextest run --locked -p ferrohealth-ui-gallery -E 'test(every_state_is_captured)'
       - name: The committed screenshots show what the gallery draws
-        if: matrix.part == 'capture' && startsWith(github.head_ref, 'release/')
+        if: matrix.part == 'capture' && needs.detect.outputs.states == 'true'
         env:
           FERROUI_SCREENSHOT_PIXELS: "1"
+          FERROUI_SCREENSHOT_BRAND: ${{ matrix.brand }}
         run: cargo nextest run --locked -p ferrohealth-ui-gallery -E 'test(every_committed_screenshot_shows_what_a_fresh_capture_draws)'
       # The artifact is kept when the pixel check fails too: it holds the
       # captures the refresh and the release pull request commit, since a
-      # capture is compared only with one made on the same runner image.
+      # capture is compared only with one made on the same runner image. Each
+      # job uploads its own brand's images; the first brand's job also the
+      # images of no brand.
       - if: always() && matrix.part == 'capture'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
+          name: gallery-screenshots-${{ matrix.brand }}
+          path: |
+            docs/screenshots/${{ matrix.brand }}/
+            docs/screenshots/states/${{ matrix.brand }}/
+            ${{ matrix.brand == 'ferrobridge' && 'docs/screenshots/*.png' || '!docs/screenshots/*.png' }}
+          retention-days: 1
+
+  # The brands' screenshots as the one `gallery-screenshots` artifact the
+  # refresh and the release pull request download (docs/release.md).
+  gallery-screenshots:
+    name: gallery-screenshots
+    needs: [detect, gallery]
+    if: always() && needs.detect.outputs.capture == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions: {}
+    steps:
+      - uses: actions/upload-artifact/merge@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
           name: gallery-screenshots
-          path: docs/screenshots/
+          pattern: gallery-screenshots-*
           retention-days: 14
+          delete-merged: true
 
   # ---- Tier 4 ---------------------------------------------------------------
   # Every first-party file of the design library carries the SPDX lines.
@@ -728,6 +778,7 @@ jobs:
       - crate-version-guard
       - dependency-review
       - gallery
+      - gallery-screenshots
       - design-licence
       - design
     if: always()

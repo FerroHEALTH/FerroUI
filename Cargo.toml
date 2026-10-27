@@ -181,6 +181,32 @@ panic = "unwind"
 overflow-checks = true
 debug = "line-tables-only"
 
+# The PNG decoder and encoder the gallery's screenshot tests run on every
+# capture, optimized in the test build too: unoptimized, decoding and cutting
+# a state's shot and the pixel check's thousands of images take most of the
+# capture's time (the Cargo reference, profiles; no specification governs
+# this: our own design).
+[profile.dev.package.png]
+opt-level = 3
+
+[profile.dev.package.fdeflate]
+opt-level = 3
+
+[profile.dev.package.flate2]
+opt-level = 3
+
+[profile.dev.package.miniz_oxide]
+opt-level = 3
+
+[profile.dev.package.crc32fast]
+opt-level = 3
+
+[profile.dev.package.adler2]
+opt-level = 3
+
+[profile.dev.package.simd-adler32]
+opt-level = 3
+
 # The gallery's WebAssembly bundle, built by cargo-leptos: optimized for size,
 # as each console builds its own (the Cargo reference, profiles; no
 # specification governs this: our own design).

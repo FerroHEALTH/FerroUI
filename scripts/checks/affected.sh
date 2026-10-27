@@ -14,6 +14,9 @@
 #   wasm=true|false     browser code changed, so the wasm32 clippy runs
 #   gallery=true|false  the gallery's site bundle, its budget, its journeys
 #                       and its capture are reached
+#   capture=true|false  the change can move a pixel the screenshot capture
+#                       draws: everything the gallery tier reaches but a
+#                       journey module that is no capture harness
 #   journeys=...        a nextest filter of the journeys the change reaches,
 #                       `all`, or empty (scripts/fast.sh)
 #   design=...          the design sets whose pages the change reaches
@@ -78,12 +81,12 @@ words_of() {
 
 classify() {
   local all="$1" path stem dir module
-  local rust=false lib=false app=false wasm=false gallery=false
+  local rust=false lib=false app=false wasm=false gallery=false capture=false
   local journeys_all=false page_wide=false design_all=false
   local words="" modules="" sets=""
 
   everything() {
-    rust=true lib=true app=true wasm=true gallery=true journeys_all=true design_all=true
+    rust=true lib=true app=true wasm=true gallery=true capture=true journeys_all=true design_all=true
   }
 
   if [ "$all" = true ]; then everything; fi
@@ -95,13 +98,13 @@ classify() {
         everything
         ;;
       Cargo.toml | Cargo.lock | rust-toolchain.toml | .config/*)
-        rust=true lib=true app=true wasm=true gallery=true journeys_all=true
+        rust=true lib=true app=true wasm=true gallery=true capture=true journeys_all=true
         ;;
       clippy.toml | rustfmt.toml | deny.toml)
         rust=true lib=true app=true
         ;;
       scripts/release/gallery-*.sh | scripts/release/journey-tools.sh | scripts/checks/gallery-*.sh)
-        gallery=true journeys_all=true
+        gallery=true capture=true journeys_all=true
         ;;
       scripts/checks/browser-floor.sh)
         rust=true lib=true wasm=true
@@ -110,10 +113,10 @@ classify() {
         rust=true app=true
         ;;
       crates/ferrohealth-ui/css/*)
-        rust=true lib=true app=true gallery=true page_wide=true design_all=true
+        rust=true lib=true app=true gallery=true capture=true page_wide=true design_all=true
         ;;
       crates/ferrohealth-ui/themes/*.css)
-        rust=true lib=true app=true gallery=true page_wide=true
+        rust=true lib=true app=true gallery=true capture=true page_wide=true
         stem="${path##*/}"
         sets="$sets $(sets_of_brand "${stem%.css}")"
         ;;
@@ -121,7 +124,7 @@ classify() {
         rust=true lib=true
         ;;
       crates/ferrohealth-ui/src/view/* | crates/ferrohealth-ui/src/widget/* | crates/ferrohealth-ui/src/table/* | crates/ferrohealth-ui/src/highlight/* | app/ferrohealth-ui-gallery/src/pages/*)
-        rust=true app=true wasm=true gallery=true
+        rust=true app=true wasm=true gallery=true capture=true
         case "$path" in app/*) ;; *) lib=true ;; esac
         stem="${path##*/}"
         stem="${stem%.rs}"
@@ -132,10 +135,10 @@ classify() {
         words="$words $(words_of "$stem")"
         ;;
       crates/*)
-        rust=true lib=true app=true wasm=true gallery=true journeys_all=true
+        rust=true lib=true app=true wasm=true gallery=true capture=true journeys_all=true
         ;;
       app/ferrohealth-ui-gallery/tests/it/*/*)
-        rust=true app=true gallery=true journeys_all=true
+        rust=true app=true gallery=true capture=true journeys_all=true
         ;;
       app/ferrohealth-ui-gallery/tests/it/*.rs)
         # Every module of tests/it/ is a journey module that runs whole, but
@@ -145,13 +148,15 @@ classify() {
         module="${path##*/}"
         module="${module%.rs}"
         case "$module" in
-          browser | main | stack) journeys_all=true ;;
-          http | screenshots) ;;
+          browser | main | stack) journeys_all=true capture=true ;;
+          http) ;;
+          screenshots) capture=true ;;
+          states) capture=true modules="$modules $module" ;;
           *) modules="$modules $module" ;;
         esac
         ;;
       app/*)
-        rust=true app=true wasm=true gallery=true journeys_all=true
+        rust=true app=true wasm=true gallery=true capture=true journeys_all=true
         ;;
       design/consoles/*)
         dir="${path#design/consoles/}"
@@ -199,6 +204,7 @@ classify() {
   echo "packages=$packages"
   echo "wasm=$wasm"
   echo "gallery=$gallery"
+  echo "capture=$capture"
   echo "journeys=$journeys"
   echo "design=$design"
 }
@@ -243,6 +249,17 @@ self_test() {
   expect "the gallery build script reaches the gallery" 'scripts/release/gallery-site.sh\n' "gallery=true"
   expect "the screenshots reach the gallery's tests" 'docs/screenshots/ferrobridge/overview-light.png\n' "packages=ferrohealth-ui-gallery"
   expect "the screenshots skip the browser" 'docs/screenshots/ferrobridge/overview-light.png\n' "gallery=false"
+  expect "a widget reaches the capture" 'crates/ferrohealth-ui/src/widget/toast.rs\n' "capture=true"
+  expect "a gallery page reaches the capture" 'app/ferrohealth-ui-gallery/src/pages/forms.rs\n' "capture=true"
+  expect "a theme reaches the capture" 'crates/ferrohealth-ui/themes/ferrofed.css\n' "capture=true"
+  expect "a state area reaches the capture" 'app/ferrohealth-ui-gallery/tests/it/states/overview.rs\n' "capture=true"
+  expect "the capture harness reaches the capture" 'app/ferrohealth-ui-gallery/tests/it/screenshots.rs\n' "capture=true"
+  expect "the browser harness reaches the capture" 'app/ferrohealth-ui-gallery/tests/it/browser.rs\n' "capture=true"
+  expect "a journey module skips the capture" 'app/ferrohealth-ui-gallery/tests/it/widgets.rs\n' "capture=false"
+  expect "a journey module still reaches the gallery" 'app/ferrohealth-ui-gallery/tests/it/widgets.rs\n' "gallery=true"
+  expect "the HTTP tests skip the capture" 'app/ferrohealth-ui-gallery/tests/it/http.rs\n' "capture=false"
+  expect "docs skip the capture" 'README.md\n' "capture=false"
+  expect "the workflow reaches the capture" '.github/workflows/ci.yml\n' "capture=true"
   if ! classify true < /dev/null | grep -qxF "design=$every"; then
     echo "self-test: --all does not reach every design set" >&2
     failed=1
