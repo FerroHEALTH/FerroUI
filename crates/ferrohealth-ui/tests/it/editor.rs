@@ -12,8 +12,8 @@ use ferrohealth_ui::view::diagnostics::{
     DiagnosticsWords, FileFindings, Finding, Position, WINDOW, diagnostics, diagnostics_by_file,
 };
 use ferrohealth_ui::widget::editor::{
-    Editor, EditorWords, LineMark, MarkKind, Opened, Panel, code_editor, editor_diagnostics,
-    editor_panel, editor_split,
+    Editor, EditorWords, LineMark, MarkKind, Opened, Panel, code_editor, code_editor_by_edit,
+    editor_diagnostics, editor_panel, editor_panel_by_edit, editor_split,
 };
 use leptos::prelude::*;
 use std::time::{Duration, Instant};
@@ -400,6 +400,22 @@ fn a_draft_opened_changed_says_so_and_counts_its_lines() {
         "{shown}"
     );
     assert!(shown.contains("· 4 lines<"), "{shown}");
+}
+
+#[test]
+fn an_editor_that_hands_over_edits_draws_as_the_whole_text_one_does() {
+    // No specification governs this: our own design; the callback changes what the console
+    // hears, never what the server draws (#478).
+    let text = "a: 1\nb: 2\n";
+    assert_eq!(
+        html(|| code_editor(editor(text), |_| {})),
+        html(|| code_editor_by_edit(editor(text), |_| {}))
+    );
+    let opened = || Opened::Text(String::from("a: 1\n"));
+    assert_eq!(
+        html(|| editor_panel(panel_of(text, opened(), Position::default()), |_| {})),
+        html(|| editor_panel_by_edit(panel_of(text, opened(), Position::default()), |_| {}))
+    );
 }
 
 #[test]

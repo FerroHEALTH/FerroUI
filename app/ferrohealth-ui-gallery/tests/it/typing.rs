@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Typing into a large document: the editor's work per keystroke follows
-//! the change, not the length of the text (#458), and the code editor's
-//! panel keeps its line count and changed state by the edit (#477).
+//! the change, not the length of the text (#458), the code editor's panel
+//! keeps its line count and changed state by the edit (#477), and a
+//! console that takes each edit keeps its own copy of the text in step
+//! (#478).
 
 use std::error::Error;
 
@@ -224,6 +226,7 @@ async fn a_key_typed_into_a_large_document_costs_what_it_costs_in_a_small_one()
                 put(browser, id, opened).await?;
                 panel_says(browser, id, opened, "Unchanged").await?;
             } else {
+                // The gallery keeps its copy of this draft by the edits alone.
                 let bytes = last.len();
                 let lines = last.split('\n').count();
                 browser
