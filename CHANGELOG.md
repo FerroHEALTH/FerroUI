@@ -11,6 +11,36 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.5.4] - 2026-10-27
+
+### Added
+
+- `widget::editor::code_editor_by_edit` and
+  `widget::editor::editor_panel_by_edit` draw the editor and the code
+  editor panel as `code_editor` and `editor_panel` do, and hand the console
+  each edit the reader makes as a `widget::editor::TextEdit` (the replaced
+  byte range and its replacement) instead of the whole text, so a console
+  keeps its own copy in step with `TextEdit::apply` at the cost of the
+  edit. The editor's `text` signal then carries the opening text and
+  outside changes only; the console does not write each edited text back
+  into it. `code_editor` and `editor_panel` are unchanged (#478).
+
+### Fixed
+
+- The code editor panel (`widget::editor::editor_panel`) keeps its
+  toolbar's line count and its status line's changed state by each edit:
+  the count comes from the editor's index of the lines, and the changed
+  state compares only the bytes between the parts the draft still shares
+  with the opened text, so a key no longer counts the lines of the whole
+  text or compares the whole draft with the opened one (#477).
+- The shell's skip link (`view::shell::skip_link`) now moves the focus to
+  the main area on a page that hydrates whole: it carries `target="_self"`,
+  which the `leptos_router` link handler leaves to the browser, so the
+  browser's fragment navigation moves the sequential focus starting point to
+  `#main` and the next Tab reaches the page's first control (WCAG 2.2 SC
+  2.4.1). Without hydration it stays a plain fragment link. A console that
+  set `target="_self"` on the link after hydration can drop that (#482).
+
 ## [0.5.3] - 2026-10-27
 
 ### Fixed
@@ -2745,7 +2775,8 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.3...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.4...HEAD
+[0.5.4]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.3...v0.5.4
 [0.5.3]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.0...v0.5.1
