@@ -361,3 +361,61 @@ async fn a_return_field_naming_another_origin_is_never_followed() -> Result<(), 
     }
     Ok(())
 }
+
+/// The panics any thread of this test process has raised since
+/// [`count_panics`] was called.
+static PANICS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+/// Counts every panic of the process in [`PANICS`], keeping the hook that
+/// prints it.
+fn count_panics() {
+    let previous = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        PANICS.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        previous(info);
+    }));
+}
+
+/// Reads the next frame of `body`: whether one came before its end.
+async fn frame(body: &mut Body) -> Result<bool, axum::Error> {
+    use axum::body::HttpBody as _;
+    std::future::poll_fn(|cx| std::pin::Pin::new(&mut *body).poll_frame(cx))
+        .await
+        .transpose()
+        .map(|frame| frame.is_some())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_forms_page_left_while_it_streams_raises_no_server_panic() -> Result<(), Box<dyn Error>> {
+    count_panics();
+    let service = gallery();
+    let forms = || Request::get("/ferropix/forms").body(Body::empty());
+    let mut frames = 0_usize;
+    let mut body = service.clone().oneshot(forms()?).await?.into_body();
+    while frame(&mut body).await? {
+        frames += 1;
+    }
+    // Each response is dropped after one more frame than the last, as a
+    // browser drops a page it leaves while the page still streams (#457).
+    for _ in 0..5 {
+        for kept in 0..frames {
+            let response = service.clone().oneshot(forms()?).await?;
+            assert_eq!(StatusCode::OK, response.status());
+            let mut body = response.into_body();
+            for _ in 0..kept {
+                frame(&mut body).await?;
+            }
+            drop(body);
+            tokio::task::yield_now().await;
+        }
+    }
+    let rendered = service.oneshot(forms()?).await?;
+    let bytes = axum::body::to_bytes(rendered.into_body(), 8 * 1024 * 1024).await?;
+    assert!(!bytes.is_empty(), "the forms page drew nothing");
+    assert_eq!(
+        0,
+        PANICS.load(std::sync::atomic::Ordering::SeqCst),
+        "the server panicked while it drew the forms page"
+    );
+    Ok(())
+}

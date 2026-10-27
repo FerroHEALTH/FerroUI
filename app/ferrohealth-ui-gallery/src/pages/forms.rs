@@ -1195,8 +1195,12 @@ pub(crate) fn reloading_editor_body(words: Words) -> AnyView {
             count
         }
     });
+    // NOTE: leptos_server 0.8.8 `src/local_resource.rs`: a server render that reads a
+    // local resource panics once its suspense context is gone, so only the browser reads it.
+    let hydrated = RwSignal::new(false);
+    Effect::new(move || hydrated.set(true));
     let drawn = move || {
-        Suspend::new(async move {
+        hydrated.get().then(|| Suspend::new(async move {
             let count = read.await;
             view! {
                 <p id="reloaded" class="fui-help">{words.with_value(|words| words.count(Msg::ReadTimesAgain, &[("count", u64::from(count))]))}</p>
@@ -1211,7 +1215,7 @@ pub(crate) fn reloading_editor_body(words: Words) -> AnyView {
                     move |typed| text.set(typed),
                 )}
             }
-        })
+        }))
     };
     view! {
         <div class="fui-cluster">
