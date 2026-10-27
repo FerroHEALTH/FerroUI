@@ -131,7 +131,7 @@ mod browser {
             && (root.set_attribute(name, "").is_err()
                 || gone.is_some_and(|gone| root.remove_attribute(gone).is_err()))
         {
-            leptos::logging::warn!("the browser refused the hydration mark");
+            leptos::logging::warn!("the browser refused the hydration guard or its mark");
         }
     }
 
@@ -154,7 +154,7 @@ mod browser {
                 )
                 .is_err()
             {
-                leptos::logging::warn!("the browser refused the hydration guard");
+                leptos::logging::warn!("the browser refused the hydration guard or its mark");
             }
         }
         // NOTE: no specification governs this: our own design; the guard lasts as
