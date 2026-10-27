@@ -1,1 +1,0 @@
-- The sign-in card erases its sections into `AnyView`, so a console's server build renders it under rustc's default recursion limit and needs no `#![recursion_limit]`. The library's tests compile every view at a limit of 80, which keeps 48 levels for a console's own nesting.

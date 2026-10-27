@@ -11,6 +11,50 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-10-27
+
+### Added
+
+- A signed-in page leaves for sign-in the moment its session ends:
+  `island::SessionWatch` (`widget::session`) loads the console's sign-in
+  page with the page's address as `return` when the session is gone, warns
+  with a modal alert dialog at least 20 seconds (120 by default) before an
+  idle timeout with Stay signed in and Sign out (WCAG 2.2 SC 2.2.1), asks
+  again when the tab is shown or focused, and ends every tab of the console
+  together over a `BroadcastChannel`. Only the user's own input extends the
+  session. A console draws the watch in the shell of a signed-in page,
+  answers its session route on the wire `docs/consoles.md` § The session's
+  end documents (`GET` reads, `POST` extends, `401` when gone), draws
+  `island::SessionEnded` on its signed-out page, and calls
+  `widget::session::gone()` for a `401` its own code meets (#444).
+- `widget::action` carries the page a console's `<ActionForm>` returns to with no WebAssembly in the form: `return_field()` draws the hidden `ferroui_return` field, and the server function redirects a plain post to `plain_return()`, a path on the console's own origin, or to `with_error()`, which adds the error the router reads into the action's value. Before, server_fn sent the post back to the `Referer`, which every console's `no-referrer` policy withholds, so the browser landed on `/` (#449).
+- `view::sign_in::State`, `Notice` and `Retry` implement `Serialize` and `Deserialize`, so a console carries a sign-in state its server chose, such as a refused callback, into the hydrated page as a `SharedValue` (#451).
+- `widget::submit::drawn()` counts a post a console draws in the page through its own server function, so `posts()` changes and the search box ends its wait (#452).
+
+### Deprecated
+
+- `widget::hydration::mark()`: its effect can run while a lazy route's code
+  is still on its way, so the mark could come before the page hydrated.
+  Hydrate with `widget::hydration::hydrate(App)`, which writes the mark when
+  hydration ends (#448).
+
+### Fixed
+
+- The top bar's search writes its state only while it lives: a blur, a
+  submit or a history `pageshow` that arrives after a navigation disposed
+  the search no longer reads a disposed value (#445).
+- A click or a submit while a lazy route still hydrates no longer panics
+  the page. `widget::hydration::hydrate(App)`, the new browser entry in place
+  of `leptos::mount::hydrate_lazy`, leaves every click and submit to the
+  browser until the page and its lazy route have hydrated, so a link loads
+  its page and a form posts as with no WebAssembly. It writes
+  `data-ferroui-hydrated` when hydration ends, where `widget::hydration::mark()`
+  wrote it from an effect that can run before a lazy route has hydrated;
+  `mark()` is deprecated and does nothing once `hydrate` is the entry. A
+  console calls `hydrate` from its browser entry and drops `mark()` (#448).
+- The sign-in card erases its sections into `AnyView`, so a console's server build renders it under rustc's default recursion limit and needs no `#![recursion_limit]`. The library's tests compile every view at a limit of 80, which keeps 48 levels for a console's own nesting (#450).
+- The search box leaves its busy state, and its field is enabled again, once the page its submit leads to is drawn: when the router's path changes or a post is drawn in the page. Before, only `pageshow` ended it, which a navigation in a hydrated page never fires, so the field stayed disabled after the first search (#452).
+
 ## [0.5.1] - 2026-10-26
 
 ### Added
@@ -2681,7 +2725,8 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.2...HEAD
+[0.5.2]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/FerroHEALTH/FerroUI/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/FerroHEALTH/FerroUI/compare/v0.3.7...v0.4.0
