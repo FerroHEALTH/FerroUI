@@ -564,12 +564,15 @@ jobs:
   # painted-colour check, and the screenshot capture. A journey or a shot
   # fails on any error the browser logs. The screenshots are uploaded for
   # review.
+  # The capture holds each state until two shots of it agree (FerroUI #434),
+  # which took the state capture of a release pull request to 31 minutes and
+  # the whole job past 45 (#465).
   gallery:
     name: gallery (${{ matrix.part }})
     needs: detect
     if: needs.detect.outputs.gallery == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 75
     permissions:
       contents: read
     strategy:
