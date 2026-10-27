@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Typing into a large document: the editor's work per keystroke follows
-//! the change, not the length of the text (#458).
+//! the change, not the length of the text (#458), and the code editor's
+//! panel keeps its line count and changed state by the edit (#477).
 
 use std::error::Error;
 
@@ -120,9 +121,10 @@ fn median(times: &[f64]) -> f64 {
 
 /// Types a round into the editor `id` at 2 KB and at 64 KB, checks each
 /// layer draws the text area's text, and returns the median time of a key
-/// at each size.
-async fn rounds(browser: &Browser, id: &str) -> Result<[f64; 2], Box<dyn Error>> {
+/// at each size and the text the last round left.
+async fn rounds(browser: &Browser, id: &str) -> Result<([f64; 2], String), Box<dyn Error>> {
     let mut medians = [0.0; 2];
+    let mut last = String::new();
     for (bytes, median_of) in [2 * 1024, 64 * 1024].into_iter().zip(&mut medians) {
         let text = document(bytes);
         let typed = round(browser, id, &text).await?;
@@ -142,8 +144,56 @@ async fn rounds(browser: &Browser, id: &str) -> Result<[f64; 2], Box<dyn Error>>
             "the layer of {id} draws the text area's text, line by line"
         );
         *median_of = median(&typed.times);
+        last = typed.value;
     }
-    Ok(medians)
+    Ok((medians, last))
+}
+
+/// Writes `text` into the editor whose text area is `id` as one input.
+async fn put(browser: &Browser, id: &str, text: &str) -> Result<(), Box<dyn Error>> {
+    browser
+        .driver()
+        .execute(
+            r"const area = document.getElementById(arguments[0]);
+            area.focus();
+            area.select();
+            document.execCommand('insertText', false, arguments[1]);",
+            vec![serde_json::to_value(id)?, serde_json::to_value(text)?],
+        )
+        .await?;
+    Ok(())
+}
+
+/// Waits until the code editor panel around the text area `id` counts
+/// the lines of `text` in its toolbar and its status line says `state`.
+async fn panel_says(
+    browser: &Browser,
+    id: &str,
+    text: &str,
+    state: &str,
+) -> Result<(), Box<dyn Error>> {
+    let lines = ferrohealth_ui::view::code::line_count(text).to_string();
+    until(
+        &format!("the panel of {id} counts {lines} lines and says {state:?}"),
+        async || {
+            let [bar, status]: [String; 2] = browser
+                .driver()
+                .execute(
+                    r"const panel = document.getElementById(arguments[0]).closest('section');
+                    return [
+                      panel.querySelector('.fui-editor-bar > span').textContent,
+                      panel.querySelector('.fui-editor-status').textContent,
+                    ];",
+                    vec![serde_json::to_value(id)?],
+                )
+                .await?
+                .convert()?;
+            let count = bar.rsplit('·').next().unwrap_or_default();
+            let digits: String = count.chars().filter(char::is_ascii_digit).collect();
+            Ok(digits == lines && status.contains(state))
+        },
+    )
+    .await
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -161,16 +211,26 @@ async fn a_key_typed_into_a_large_document_costs_what_it_costs_in_a_small_one()
                 browser.editor_live(&area).await
             })
             .await?;
-            let [small, large] = rounds(browser, id).await?;
+            let ([small, large], last) = rounds(browser, id).await?;
             // A text 32 times longer costs a little more per key for the copies of
             // the text, never 32 times more; the floor is three ticks of the clock.
             assert!(
                 large <= 5.0 * small.max(0.3),
                 "a key in {id} costs {large:.3} ms in 64 KB against {small:.3} ms in 2 KB"
             );
+            if id == "gallery-mapping" {
+                panel_says(browser, id, &last, "Changed since opened").await?;
+                let opened = ferrohealth_ui_gallery::data::DRAFT_OPENED;
+                put(browser, id, opened).await?;
+                panel_says(browser, id, opened, "Unchanged").await?;
+            } else {
+                let bytes = last.len();
+                let lines = last.split('\n').count();
+                browser
+                    .text("p", &format!("{bytes} bytes in {lines} lines."))
+                    .await?;
+            }
         }
-        let bytes = document(64 * 1024).len() + KEYS;
-        browser.text("p", &format!("{bytes} bytes")).await?;
         browser.console_clean("typing into a large document").await
     })
     .await

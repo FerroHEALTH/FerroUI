@@ -203,22 +203,25 @@ fn editor(text: &str) -> Editor {
     }
 }
 
+/// The panel of the code editor over `text`, opened as `opened`, its
+/// caret at `at`.
+fn panel_of(text: &str, opened: Opened, at: Position) -> Panel {
+    Panel {
+        editor: editor(text),
+        label: String::from("The draft of a.yml"),
+        lead: String::from("YAML · mapping context"),
+        facts: vec![String::from("UTF-8 · LF")],
+        opened,
+        caret: RwSignal::new(at),
+        tools: Some(view! { <button type="submit">"Check"</button> }.into_any()),
+        end: Some(view! { <span>"console"</span> }.into_any()),
+        words: EditorWords::of_page(),
+    }
+}
+
 /// The code editor over `text`, opened as `opened`, its caret at `at`.
 fn panel(text: &str, opened: Opened, at: Position) -> AnyView {
-    editor_panel(
-        Panel {
-            editor: editor(text),
-            label: String::from("The draft of a.yml"),
-            lead: String::from("YAML · mapping context"),
-            facts: vec![String::from("UTF-8 · LF")],
-            opened,
-            caret: RwSignal::new(at),
-            tools: Some(view! { <button type="submit">"Check"</button> }.into_any()),
-            end: Some(view! { <span>"console"</span> }.into_any()),
-            words: EditorWords::of_page(),
-        },
-        |_| {},
-    )
+    editor_panel(panel_of(text, opened, at), |_| {})
 }
 
 #[test]
@@ -380,6 +383,23 @@ fn the_status_line_says_unchanged_or_new() {
         "an empty editor is short: {new}"
     );
     assert!(new.contains("· 1 line<"), "{new}");
+}
+
+#[test]
+fn a_draft_opened_changed_says_so_and_counts_its_lines() {
+    let shown = html(|| {
+        panel(
+            "a: 1\nb: 2\n\nc: 3\n",
+            Opened::Text(String::from("a: 1\n")),
+            Position::default(),
+        )
+    });
+    assert!(shown.contains("Changed since opened"), "{shown}");
+    assert!(
+        has(&shown, "span", &[("class", "fui-editor-dirty")]),
+        "{shown}"
+    );
+    assert!(shown.contains("· 4 lines<"), "{shown}");
 }
 
 #[test]
