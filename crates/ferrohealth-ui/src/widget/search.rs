@@ -798,11 +798,12 @@ fn send(state: Typeahead, ask: Ask, words: String) {
         if state.asked.try_get_value() != Some(mine) {
             return;
         }
-        if let (Err(Failure::Status(401)), Some(to)) = (&answered, ask.signed_out.as_deref()) {
-            if window().location().assign(to).is_err() {
-                leptos::logging::warn!("the browser refused the signed-out page");
+        if matches!(answered, Err(Failure::Status(401))) {
+            if let Some(to) = ask.signed_out.as_deref() {
+                crate::widget::session::gone_to(to);
+                return;
             }
-            return;
+            crate::widget::session::gone();
         }
         state.phase.try_set(match answered {
             Ok(answer) => Phase::Answered(answer),

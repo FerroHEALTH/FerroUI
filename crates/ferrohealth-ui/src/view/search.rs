@@ -93,7 +93,9 @@ pub struct SearchBox {
     /// The address the page loads when the answer route answers
     /// `401 Unauthorized`: the session is over, so the console's own
     /// signed-out page takes over, as any other request of the page would
-    /// (RFC 9110 §15.5.2). `None` shows the panel's error row.
+    /// (RFC 9110 §15.5.2). `None` shows the panel's error row. Either way
+    /// every other tab hears that the session has ended
+    /// ([`crate::widget::session::gone`]).
     pub signed_out: Option<String>,
 }
 

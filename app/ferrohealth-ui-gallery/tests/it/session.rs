@@ -5,7 +5,8 @@
 //! leaves for sign-in with its return address and no user action, the idle
 //! warning keeps the session with Stay signed in and gives the focus back,
 //! a tab shown again asks whether its session still holds, sign-out in one
-//! tab ends every tab, and a read of the session never extends it.
+//! tab ends every tab, so does a search that meets the end of the session,
+//! and a read of the session never extends it.
 
 use std::error::Error;
 
@@ -225,6 +226,48 @@ async fn sign_out_in_one_tab_ends_every_tab() -> Result<(), Box<dyn Error>> {
         browser
             .at(&gallery.url("/sign-in/ferrobridge/expired?return=/ferrobridge"))
             .await?;
+        only_the_refusal(browser).await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_search_that_meets_the_end_of_the_session_ends_every_tab() -> Result<(), Box<dyn Error>> {
+    // FerroUI #474: the search's 401 loads the signed-out page in its own tab and tells every
+    // other tab, which leaves for sign-in although its own session route still answers.
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        window(browser, 1440, 900).await?;
+        start(browser, &gallery, 600, 3600).await?;
+        let first = browser.driver().window().await?;
+        let second = browser.driver().new_tab().await?;
+        browser.driver().switch_to_window(second.clone()).await?;
+        browser.goto(&gallery.url("/ferrobridge/tables")).await?;
+        browser.hydrated().await?;
+        browser.driver().switch_to_window(first.clone()).await?;
+        let search = browser
+            .element(By::Css("#gallery-search[role='combobox']"))
+            .await?;
+        search.click().await?;
+        search
+            .send_keys(ferrohealth_ui_gallery::search::SIGNED_OUT)
+            .await?;
+        let signed_out = gallery.url("/sign-in/ferrobridge/expired");
+        browser.at(&signed_out).await?;
+        browser.driver().switch_to_window(second).await?;
+        browser
+            .at(&gallery.url("/sign-in/ferrobridge/expired?return=/ferrobridge/tables"))
+            .await?;
+        only_the_refusal(browser).await?;
+        browser.driver().switch_to_window(first).await?;
+        assert_eq!(
+            browser.driver().current_url().await?.as_str(),
+            signed_out,
+            "the searching tab stays on the signed-out page"
+        );
         only_the_refusal(browser).await
     })
     .await
