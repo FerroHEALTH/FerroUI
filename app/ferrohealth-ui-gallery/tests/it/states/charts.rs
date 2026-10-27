@@ -69,15 +69,13 @@ pub(super) async fn charts(
     let cdr = flow.find(By::Css(".fui-tnode-link[href='#cdr']")).await?;
     browser
         .driver()
-        .execute(
-            "arguments[0].scrollIntoView({block: 'center'});",
-            vec![flow.to_json()?],
-        )
+        .execute(super::CENTRE, vec![flow.to_json()?])
         .await?;
     browser.settled().await?;
     // A pointer move to an element can scroll the page and leave the card
     // from under the pointer, so the pointer goes to the card's centre in
-    // the viewport, which scrolls nothing.
+    // the viewport, which scrolls nothing, and the shot centres the flow
+    // where it already is.
     let centre = browser
         .driver()
         .execute(
@@ -92,9 +90,7 @@ pub(super) async fn charts(
         .move_to(x, y)
         .perform()
         .await?;
-    browser.settled().await?;
-    let png = super::element_png(browser, &flow).await?;
-    super::write(brand, "flow-hover", theme, &png)?;
+    shot_of(browser, brand, theme, "flow-hover", &flow).await?;
     away(browser).await?;
     focus(browser, &cdr).await?;
     shot_of(browser, brand, theme, "flow-focus", &flow).await?;

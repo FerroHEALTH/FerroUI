@@ -341,6 +341,23 @@ impl Browser {
         .into())
     }
 
+    /// Hides the scrollbars for the rest of the session, called before its
+    /// first page loads.
+    ///
+    /// A page laid out with its scrollbars showing is 15 pixels narrower,
+    /// wraps its text at that width and can keep it once they are hidden,
+    /// and a scrollbar's thumb sits wherever the last scroll left it, so a
+    /// capture lays out and draws every page at the window's own width,
+    /// whichever pages the session loaded before it (#472). No
+    /// specification governs this: our own design.
+    pub(crate) async fn hide_scrollbars(&self) -> Result<(), Box<dyn Error>> {
+        self.driver
+            .cdp()
+            .send_raw("Emulation.setScrollbarsHidden", json!({ "hidden": true }))
+            .await?;
+        Ok(())
+    }
+
     /// Waits until the page has hydrated: the root element carries the
     /// library's mark (`ferrohealth_ui::widget::hydration::HYDRATED`), so a
     /// capture never shows a part the browser has yet to draw and a script

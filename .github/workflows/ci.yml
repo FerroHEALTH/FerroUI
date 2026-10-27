@@ -296,6 +296,7 @@ jobs:
           QUEUE_BASE: ${{ github.event.merge_group.base_sha }}
           QUEUE_HEAD: ${{ github.event.merge_group.head_sha }}
           HEAD_REF: ${{ github.head_ref }}
+          SCREENSHOTS_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'screenshots') }}
           # One capture job per brand, in Brand::ALL's order; the gallery's
           # tests hold this list to the brands (the_ci_capture_runs_one_job_per_brand).
           CAPTURE_BRANDS: "ferrobridge ferrofed ferroehr ferroterm ferropix"
@@ -320,11 +321,14 @@ jobs:
           fi
           echo "$plan"
           get() { printf '%s\n' "$plan" | sed -n "s/^$1=//p"; }
-          # The refresh and the release pull request and a manual run capture
-          # every page and state and compare them with the committed images
-          # by their pixels, whatever paths they touch.
+          # The refresh and the release pull request, a pull request with the
+          # `screenshots` label (which commits images, as the screenshot-path
+          # guard allows it) and a manual run capture every page and state and
+          # compare them with the committed images by their pixels, whatever
+          # paths they touch.
           refresh=false
           case "$HEAD_REF" in chore/screenshots | release/*) refresh=true ;; esac
+          if [ "$SCREENSHOTS_LABEL" = true ]; then refresh=true; fi
           if [ "$EVENT" = workflow_dispatch ]; then refresh=true; fi
           gallery=false capture=false
           if [ -f app/ferrohealth-ui-gallery/Cargo.toml ]; then
