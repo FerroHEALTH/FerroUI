@@ -28,6 +28,7 @@ use thirtyfour::prelude::*;
 
 use crate::browser::{Browser, until, with_browser};
 use crate::journeys::window;
+use crate::screenshots::Shard;
 use crate::stack::Gallery;
 
 // The areas, one file each, kept in alphabetical order.
@@ -112,11 +113,12 @@ fn listed(state: &str) -> Result<(), Box<dyn Error>> {
     }
 }
 
-/// Every listed state the capture did not write in some brand and theme.
-fn unwritten() -> Vec<String> {
+/// Every listed state the capture did not write in some brand of `shard`
+/// and theme.
+fn unwritten(shard: Shard) -> Vec<String> {
     let written = WRITTEN.lock().unwrap_or_else(PoisonError::into_inner);
     let mut missing = Vec::new();
-    for brand in Brand::ALL {
+    for brand in Brand::ALL.into_iter().filter(|brand| shard.takes(*brand)) {
         for theme in ["light", "dark"] {
             for state in all() {
                 if !written.contains(&(brand.key(), theme.to_owned(), state.to_owned())) {
@@ -314,7 +316,7 @@ async fn in_view_and_held(
             Ok(held)
         })
         .await?;
-        let png = held(browser, state, async || element_png(browser, element).await).await?;
+        let png = held(browser, state, Part::Element(element)).await?;
         if in_view().await? {
             shot = Some(png);
             return Ok(true);
@@ -336,6 +338,16 @@ pub(super) async fn element_png(
     browser: &Browser,
     element: &WebElement,
 ) -> Result<Vec<u8>, Box<dyn Error>> {
+    let (rect, shot) = element_shot(browser, element).await?;
+    cut(&shot, rect)
+}
+
+/// The box of `element` in device pixels, as left, top, right and bottom,
+/// and a shot of the viewport taken right after it was measured.
+async fn element_shot(
+    browser: &Browser,
+    element: &WebElement,
+) -> Result<([usize; 4], Vec<u8>), Box<dyn Error>> {
     let rect: Vec<usize> = browser
         .driver()
         .execute(
@@ -348,6 +360,12 @@ pub(super) async fn element_png(
         return Err(format!("the element's box is no rectangle: {rect:?}").into());
     };
     let shot = browser.driver().screenshot_as_png().await?;
+    Ok(([left, top, right, bottom], shot))
+}
+
+/// The part `[left, top, right, bottom]` of the viewport shot `shot`, as a
+/// PNG of its own.
+fn cut(shot: &[u8], [left, top, right, bottom]: [usize; 4]) -> Result<Vec<u8>, Box<dyn Error>> {
     let mut decoder = png::Decoder::new(std::io::Cursor::new(shot));
     decoder.set_transformations(png::Transformations::EXPAND | png::Transformations::STRIP_16);
     let mut reader = decoder.read_info()?;
@@ -365,7 +383,11 @@ pub(super) async fn element_png(
     let (x0, y0) = (left.min(width), top.min(height));
     let (x1, y1) = (right.min(width), bottom.min(height));
     if x1 <= x0 || y1 <= y0 {
-        return Err(format!("the element lies outside the viewport: {rect:?}").into());
+        return Err(format!(
+            "the element lies outside the viewport: {:?}",
+            [left, top, right, bottom]
+        )
+        .into());
     }
     let stride = width * channels;
     let mut cut = Vec::with_capacity((x1 - x0) * (y1 - y0) * channels);
@@ -381,23 +403,62 @@ pub(super) async fn element_png(
     Ok(png)
 }
 
-/// The image `take` returns twice in a row, the page settled before each,
-/// so a scroll, a hover or a transition that ends late is never caught
-/// half-way (#434). A shot of an element taller than the viewport makes the
-/// browser lay the page out again, which the settling waits out.
-async fn held<F>(browser: &Browser, state: &str, mut take: F) -> Result<Vec<u8>, Box<dyn Error>>
-where
-    F: AsyncFnMut() -> Result<Vec<u8>, Box<dyn Error>>,
-{
-    let mut last = take().await?;
+/// What a held shot is cut from: the whole viewport, or the box of an
+/// element in it.
+#[derive(Debug, Clone, Copy)]
+enum Part<'a> {
+    /// The whole viewport.
+    View,
+    /// The box of this element.
+    Element(&'a WebElement),
+}
+
+/// A viewport shot and the box of the part it is cut to, if any.
+type Taken = (Option<[usize; 4]>, Vec<u8>);
+
+/// Takes a viewport shot of `part`.
+async fn take(browser: &Browser, part: Part<'_>) -> Result<Taken, Box<dyn Error>> {
+    Ok(match part {
+        Part::View => (None, browser.driver().screenshot_as_png().await?),
+        Part::Element(element) => {
+            let (rect, shot) = element_shot(browser, element).await?;
+            (Some(rect), shot)
+        }
+    })
+}
+
+/// The image of the taken shot `taken`.
+fn image((rect, shot): &Taken) -> Result<Vec<u8>, Box<dyn Error>> {
+    match rect {
+        Some(rect) => cut(shot, *rect),
+        None => Ok(shot.clone()),
+    }
+}
+
+/// The image of `part` that two shots in a row hold, the page settled
+/// before each, so a scroll, a hover or a transition that ends late is
+/// never caught half-way (#434). A shot of an element taller than the
+/// viewport makes the browser lay the page out again, which the settling
+/// waits out.
+///
+/// Chrome encodes the same pixels to the same bytes, so two viewport shots
+/// with the same bytes and the same box hold the same image, and only a
+/// pair whose bytes differ is cut and compared by its image.
+async fn held(browser: &Browser, state: &str, part: Part<'_>) -> Result<Vec<u8>, Box<dyn Error>> {
+    let mut last = take(browser, part).await?;
     let mut kept = None;
     until(
         &format!("two shots of {state} in a row hold the same pixels"),
         async || {
             browser.settled().await?;
-            let now = take().await?;
+            let now = take(browser, part).await?;
             if now == last {
-                kept = Some(now);
+                kept = Some(image(&now)?);
+                return Ok(true);
+            }
+            let cut_now = image(&now)?;
+            if image(&last)? == cut_now {
+                kept = Some(cut_now);
                 return Ok(true);
             }
             last = now;
@@ -417,10 +478,7 @@ async fn shot_of_view(
 ) -> Result<(), Box<dyn Error>> {
     browser.hydrated().await?;
     steady(browser).await?;
-    let png = held(browser, state, async || {
-        Ok(browser.driver().screenshot_as_png().await?)
-    })
-    .await?;
+    let png = held(browser, state, Part::View).await?;
     write(brand, state, theme, &png)
 }
 
@@ -429,6 +487,7 @@ async fn every_state_is_captured_in_every_brand_light_and_dark() -> Result<(), B
     if !std::env::var("FERROUI_SCREENSHOTS").is_ok_and(|value| value == "1") {
         return Ok(());
     }
+    let shard = Shard::from_env()?;
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
         window(browser, WIDTH, HEIGHT).await?;
@@ -446,7 +505,7 @@ async fn every_state_is_captured_in_every_brand_light_and_dark() -> Result<(), B
                     json!({ "features": [{ "name": "prefers-color-scheme", "value": theme }, { "name": "prefers-reduced-motion", "value": "reduce" }] }),
                 )
                 .await?;
-            for brand in Brand::ALL {
+            for brand in Brand::ALL.into_iter().filter(|brand| shard.takes(*brand)) {
                 // The areas in alphabetical order, so two new areas land on
                 // different lines (`scripts/checks/mod-order.sh`).
                 charts::charts(browser, &gallery, brand, theme).await?;
@@ -474,7 +533,7 @@ async fn every_state_is_captured_in_every_brand_light_and_dark() -> Result<(), B
                 upload::upload(browser, &gallery, brand, theme).await?;
             }
         }
-        let missing = unwritten();
+        let missing = unwritten(shard);
         if missing.is_empty() {
             Ok(())
         } else {

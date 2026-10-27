@@ -18,8 +18,10 @@ is the signed tag `vX.Y.Z` on the merge commit of the release pull request on
    branch `chore/screenshots`. The images come from CI, never from your own
    machine: a capture draws its fonts as the system that runs it does, so
    only captures made on the same runner image can be compared. Push the
-   branch, wait for its `gallery (capture)` job, which captures every page
-   and state, and download the job's `gallery-screenshots` artifact:
+   branch, wait for its `gallery (capture <brand>)` jobs, one per brand,
+   which capture every page and state, and download the
+   `gallery-screenshots` artifact the `gallery-screenshots` job merges
+   from them:
 
    ```sh
    gh run download <run-id> -n gallery-screenshots -D docs/screenshots
@@ -33,11 +35,13 @@ is the signed tag `vX.Y.Z` on the merge commit of the release pull request on
    changed, in every brand, light and dark. The capture runs with
    `prefers-reduced-motion: reduce`, so an unchanged page captures
    pixel-identical and every image that changed is a change to look at.
-   On the release pull request CI captures the pages again and compares
-   each committed page and state image with its fresh capture by its pixels
-   (`every_committed_screenshot_shows_what_a_fresh_capture_draws`); a
-   release pull request opened before the refresh fails there, naming each
-   image that no longer matches. Every page's footer names the version, so
+   On the refresh and the release pull request CI captures every page and
+   state again and compares each committed image with its fresh capture by
+   its pixels (`every_committed_screenshot_shows_what_a_fresh_capture_draws`),
+   so the refresh proves its images show the tree it lands on. Before the
+   images are committed that check fails, naming each image that changes:
+   that list is what to look at. A release pull request opened before the
+   refresh fails there too. Every page's footer names the version, so
    the release pull request commits the artifact of its own capture job
    too, after the bump, and carries the `screenshots` label.
 
