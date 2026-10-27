@@ -40,6 +40,7 @@ mod preferences;
 mod records;
 mod render;
 mod search;
+mod session;
 mod shell;
 mod state;
 mod stylesheet;

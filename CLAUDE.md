@@ -47,10 +47,12 @@ never publish under it.
   by `icon(glyph, size)` beside the word they illustrate; no icon crate.
 - **No component** writes a `style` attribute or a `<style>` element (a
   console keeps `style-src 'self'`), defines a server function, fetches, or
-  touches browser storage. The one fetch is the top bar's typeahead, which
-  asks the answer route the console names (`SearchBox::suggest`), on the
-  wire `docs/consoles.md` documents. Theme persistence, URL policy and the router base
-  are the console's.
+  touches browser storage. Two fetch, each on a wire `docs/consoles.md`
+  documents: the top bar's typeahead asks the answer route the console
+  names (`SearchBox::suggest`), and the session watch
+  (`island::SessionWatch`, #444) asks the console's session route what the
+  session has left. Theme persistence, URL policy and the router base are
+  the console's.
 
 ## How we use Leptos
 

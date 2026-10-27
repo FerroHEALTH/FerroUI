@@ -22,7 +22,8 @@
 //!
 //! Every page works with no WebAssembly: what an island adds is behaviour on
 //! top of complete server-rendered HTML, with a link or a form behind every
-//! action. Data arrives as props, nothing fetches, and browser-only code
+//! action. Data arrives as props, only the search box's typeahead and the
+//! session watch fetch, from routes the console names, and browser-only code
 //! runs inside an event handler or an effect. No component writes a
 //! `style` attribute or a `<style>` element, so a console keeps
 //! `style-src 'self'`, and no component defines a server function or

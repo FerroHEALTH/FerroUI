@@ -361,3 +361,39 @@ async fn a_return_field_naming_another_origin_is_never_followed() -> Result<(), 
     }
     Ok(())
 }
+
+#[tokio::test]
+async fn the_session_route_reads_without_extending_extends_on_a_post_and_refuses_a_gone_session()
+-> Result<(), Box<dyn Error>> {
+    // OWASP Session Management Cheat Sheet: only the user's activity renews the idle timeout.
+    use ferrohealth_ui_gallery::session::{Kept, SESSION_COOKIE, SESSION_ROUTE, now};
+    let kept = Kept::started(now().saturating_sub(10_000), 900, 3600);
+    let cookie = format!("{SESSION_COOKIE}={}", kept.value());
+    let ask = |method: &str, cookie: &str| {
+        Request::builder()
+            .method(method)
+            .uri(SESSION_ROUTE)
+            .header(header::COOKIE, cookie)
+            .body(Body::empty())
+    };
+    let (parts, body) = send(ask("GET", &cookie)?).await?;
+    assert_eq!(StatusCode::OK, parts.status, "{body}");
+    assert!(
+        parts.headers.get(header::SET_COOKIE).is_none(),
+        "a read never extends"
+    );
+    let read: ferrohealth_ui::widget::session::Left = serde_json::from_str(&body)?;
+    assert!((889..=890).contains(&read.idle), "{read:?}");
+    let (parts, body) = send(ask("POST", &cookie)?).await?;
+    assert_eq!(StatusCode::OK, parts.status, "{body}");
+    let extended: ferrohealth_ui::widget::session::Left = serde_json::from_str(&body)?;
+    assert!(extended.idle >= 899, "{extended:?}");
+    assert!(
+        parts.headers[header::SET_COOKIE]
+            .to_str()?
+            .starts_with(&format!("{SESSION_COOKIE}=")),
+    );
+    let (parts, _) = send(ask("GET", "gallery-theme=dark")?).await?;
+    assert_eq!(StatusCode::UNAUTHORIZED, parts.status);
+    Ok(())
+}
