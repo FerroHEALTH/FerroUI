@@ -76,7 +76,9 @@ On the branch `release/vX.Y.Z`:
 4. **The gates pass.** CI runs the screenshot guard on every `release/`
    branch, so a release pull request cannot merge while a listed page or
    state lacks its images. The crate-version guard checks the version, the
-   lock and the changelog section agree.
+   lock and the changelog section agree. A release pull request is merged
+   only after its own `gallery (capture)` job, the state capture and the
+   pixel check included, has passed, and never directly past the queue.
 
 ## Preflight
 
