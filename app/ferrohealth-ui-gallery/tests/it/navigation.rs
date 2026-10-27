@@ -15,6 +15,7 @@ use thirtyfour::prelude::*;
 use crate::browser::{Browser, until, with_browser};
 use crate::journeys::window;
 use crate::journeys_enabled;
+use crate::keys::typed;
 use crate::stack::Gallery;
 
 /// The text of the page's heading.
@@ -370,6 +371,94 @@ async fn the_shell_and_its_state_survive_a_link_to_another_page() -> Result<(), 
             "the old page is no longer marked"
         );
         browser.console_clean("the shell across a link").await
+    })
+    .await
+}
+
+/// Holds every animation frame the page asks for until `window.fuiRelease()`
+/// runs them, each in a task of its own so a panic in one reaches the log.
+const HOLD_FRAMES: &str = r"const ask = window.requestAnimationFrame.bind(window);
+    const drop = window.cancelAnimationFrame.bind(window);
+    window.fuiHeld = new Map();
+    let next = -1;
+    window.requestAnimationFrame = (frame) => { const id = next--; window.fuiHeld.set(id, frame); return id; };
+    window.cancelAnimationFrame = (id) => { if (!window.fuiHeld.delete(id)) drop(id); };
+    window.fuiRelease = () => {
+      window.requestAnimationFrame = ask;
+      window.cancelAnimationFrame = drop;
+      const held = [...window.fuiHeld.values()];
+      window.fuiHeld.clear();
+      held.forEach((frame) => setTimeout(() => frame(performance.now()), 0));
+      return held.length;
+    };";
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_navigation_before_the_panels_frame_keeps_the_page_working() -> Result<(), Box<dyn Error>>
+{
+    // FerroUI #462: the brand switch draws the shell again, which disposes the search while
+    // the panel's placement still waits for its frame; the frame comes after, and the page
+    // works on.
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        window(browser, 1440, 900).await?;
+        browser.goto(&gallery.url("/ferropix/forms")).await?;
+        browser.hydrated().await?;
+        let document = browser.loader().await?;
+        browser
+            .driver()
+            .execute(
+                "window.fuiKept = true; window.fuiShells = document.documentElement.dataset.galleryShells;",
+                vec![],
+            )
+            .await?;
+        browser.driver().execute(HOLD_FRAMES, vec![]).await?;
+        typed(browser, "synthetic-00").await?;
+        let held: i64 = browser
+            .driver()
+            .execute("return window.fuiHeld.size;", vec![])
+            .await?
+            .convert()?;
+        assert!(held >= 1, "the panel's placement waits for a frame");
+        browser
+            .driver()
+            .execute(
+                "document.querySelector(\"header a[href='/ferrobridge/forms']\").click();",
+                vec![],
+            )
+            .await?;
+        browser.at(&gallery.url("/ferrobridge/forms")).await?;
+        until("the shell is drawn again", async || {
+            Ok(browser
+                .driver()
+                .execute(
+                    "return document.documentElement.dataset.galleryShells !== window.fuiShells;",
+                    vec![],
+                )
+                .await?
+                .convert()?)
+        })
+        .await?;
+        browser
+            .driver()
+            .execute("return window.fuiRelease();", vec![])
+            .await?;
+        browser
+            .driver()
+            .execute_async(
+                "const done = arguments[0]; setTimeout(() => requestAnimationFrame(() => done()), 50);",
+                vec![],
+            )
+            .await?;
+        browser
+            .console_clean("the held frame after the navigation")
+            .await?;
+        assert!(marked(browser).await?, "the page kept its document");
+        assert_eq!(document, browser.loader().await?);
+        typed(browser, "synthetic").await?;
+        browser.console_clean("the search on the new page").await
     })
     .await
 }
