@@ -47,6 +47,7 @@ mod tabs_and_toasts;
 mod terminology;
 mod trees;
 mod typeahead;
+mod typing;
 mod widgets;
 
 /// The environment variable that opts in to the browser journeys.
