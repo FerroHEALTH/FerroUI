@@ -32,7 +32,9 @@ browser, so no link or form reloads the document: write
 ```text
 #[wasm_bindgen]
 pub fn hydrate() {
-    leptos::mount::hydrate_lazy(App);
+    console_error_panic_hook::set_once();
+    ferrohealth_ui::widget::hydration::explain();
+    ferrohealth_ui::widget::hydration::hydrate(App);
 }
 ```
 

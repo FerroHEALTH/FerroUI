@@ -3,11 +3,13 @@
 
 //! The journeys of navigation in the page (FerroUI #410): a link keeps the
 //! document and the router draws the next page, back and forward restore
-//! the pages, the new page takes the focus and is announced, and hovering a
-//! link loads its route's code before the click.
+//! the pages, the new page takes the focus and is announced, hovering a
+//! link loads its route's code before the click, and a click while the
+//! route still hydrates loads the next page as a document (#448).
 
 use std::error::Error;
 
+use serde_json::json;
 use thirtyfour::prelude::*;
 
 use crate::browser::{Browser, until, with_browser};
@@ -105,6 +107,68 @@ async fn a_link_keeps_the_document_and_back_and_forward_restore_the_pages()
         .await?;
         assert!(marked(browser).await?, "back and forward load no document");
         browser.console_clean("navigation in the page").await
+    })
+    .await
+}
+
+/// The split chunk of the group the tables page is in, which the journey
+/// holds back so the page stays mid-hydration.
+const CORE_CHUNK: &str = "split___l_core_view_";
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_click_while_the_route_still_hydrates_loads_the_page_and_nothing_panics()
+-> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        window(browser, 1440, 900).await?;
+        // The tables page's own chunk is held at the request stage and never
+        // continued, so its lazy route stays hydrating after the shell has
+        // hydrated and the router listens: the window of #448, held open.
+        let cdp = browser.driver().cdp();
+        cdp.send_raw(
+            "Fetch.enable",
+            json!({ "patterns": [{ "urlPattern": format!("*{CORE_CHUNK}*"), "requestStage": "Request" }] }),
+        )
+        .await?;
+        browser.goto(&gallery.url("/ferrobridge/tables")).await?;
+        browser
+            .element(By::Css(format!(
+                "html[{}]",
+                ferrohealth_ui::widget::hydration::HYDRATING
+            )))
+            .await?;
+        let document = browser.loader().await?;
+        browser
+            .element(By::Css("#sidebar a[href='/ferrobridge/charts']"))
+            .await?
+            .click()
+            .await?;
+        until("the click loads the charts", async || {
+            Ok(heading(browser).await? == "Charts")
+        })
+        .await?;
+        assert_ne!(
+            document,
+            browser.loader().await?,
+            "a click before the page hydrated is the browser's own"
+        );
+        browser.at(&gallery.url("/ferrobridge/charts")).await?;
+        cdp.send_raw("Fetch.disable", json!({})).await?;
+        browser.hydrated().await?;
+        let others: Vec<String> = browser
+            .console_errors()
+            .await?
+            .into_iter()
+            .filter(|entry| !entry.contains(CORE_CHUNK))
+            .collect();
+        assert!(
+            others.is_empty(),
+            "the browser logged more than the withheld chunk: {others:#?}"
+        );
+        Ok(())
     })
     .await
 }
