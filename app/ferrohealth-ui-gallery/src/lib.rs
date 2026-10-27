@@ -39,5 +39,5 @@ pub mod trees_data;
 pub fn hydrate() {
     console_error_panic_hook::set_once();
     ferrohealth_ui::widget::hydration::explain();
-    leptos::mount::hydrate_lazy(app::App);
+    ferrohealth_ui::widget::hydration::hydrate(app::App);
 }

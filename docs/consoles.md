@@ -76,7 +76,7 @@ the browser, so a link or a form never reloads the document (FerroUI #410;
    gallery's `app/ferrohealth-ui-gallery/src/routes.rs` does: one lazy route
    a page splits the code into hundreds of chunks, more than a browser
    fetches at once. Hydrate with
-   `leptos::mount::hydrate_lazy(App)`, write `<HydrationScripts options/>`,
+   `widget::hydration::hydrate(App)` (step 9), write `<HydrationScripts options/>`,
    and build with `cargo leptos build --split`. A build with lazy code and
    no `--split` imports `__wasm_split_placeholder__`, which no browser
    resolves, and nothing hydrates; check your glue for it, as the gallery's
@@ -115,10 +115,15 @@ the browser, so a link or a form never reloads the document (FerroUI #410;
 8. **The locale both halves.** Provide the same `i18n::Locale` at your root
    on the server and in the browser (a `SharedValue` of its tag); the
    browser carries the library's catalog.
-9. **Nothing changes the page before it hydrates.** Call
-   `widget::hydration::mark()` once from your root component and
-   `widget::hydration::explain()` first in your browser entry. The root
-   element carries `data-ferroui-hydrated` once the page has hydrated; no
+9. **Nothing changes the page before it hydrates.** Your browser entry
+   sets its panic hook, calls `widget::hydration::explain()`, and hydrates
+   with `widget::hydration::hydrate(App)`, which runs leptos's
+   `hydrate_lazy` path and writes `data-ferroui-hydrated` on the root
+   element once the page and its lazy route have hydrated. Until then a
+   click or a submit is left to the browser, which loads the link or posts
+   the form as with no WebAssembly, so the router never draws a page while
+   the lazy route still hydrates. `widget::hydration::mark()` is
+   deprecated: its effect can run before a lazy route has hydrated. No
    code, script or test of yours adds, removes or rewrites a node the server
    drew before then, or the hydration walk stops on a node it did not expect
    with an internal error. In a debug build, `explain` says so beside such a

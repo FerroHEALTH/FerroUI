@@ -72,7 +72,7 @@ consoles behave alike and no interaction reloads the page:
 on every click is not acceptable; the Leptos 0.8.22 islands router never
 diffs an island's children or props and has no fallback for a failed
 navigation (`crates/ferrohealth-ui/CLAUDE.md`). A console turns on
-`hydrate` in its browser half, calls `leptos::mount::hydrate_lazy(App)`
+`hydrate` in its browser half, calls `widget::hydration::hydrate(App)`
 from its browser entry, writes `<HydrationScripts options/>` in its shell,
 draws its pages in a few `LazyRoute`s and builds with `cargo leptos build
 --split` (§15.1). The library has three parts:
@@ -709,7 +709,8 @@ The library and the consoles hydrate the whole page and split it by route
 
 - **The pages load in a few `LazyRoute`s**, one for each group of pages
   read together, whose view draws the page its path names, and the browser
-  entry calls `hydrate_lazy` (leptos `src/mount.rs`). Code every page
+  entry calls `widget::hydration::hydrate`, which runs `hydrate_from_async`
+  as `hydrate_lazy` does (leptos `src/mount.rs`). Code every page
   needs, the shell and the widgets it draws, stays in the entry; a group's
   own code loads from its chunks. One lazy route a page splits the code
   into more chunks than a browser fetches at once (§14.11). [review; the
@@ -748,9 +749,13 @@ The library and the consoles hydrate the whole page and split it by route
   stops with an internal error on a node the server did not draw (the
   Leptos book, "Hydration Bugs"). Code that touches the DOM runs in an
   `Effect`, a test or script waits for the root element's
-  `data-ferroui-hydrated` (`widget::hydration::mark`), and a debug build's
-  `widget::hydration::explain` names the cause beside such a panic.
-  [review; the gallery's journeys wait for the mark]
+  `data-ferroui-hydrated`, which `widget::hydration::hydrate` writes once
+  the page and its lazy route have hydrated, and a debug build's
+  `widget::hydration::explain` names the cause beside such a panic. Until
+  the mark, the library leaves every click and submit to the browser, since
+  the router would draw the next page under the hydration walk (#448).
+  [review; the gallery's journeys wait for the mark, and one clicks while a
+  throttled route hydrates]
 
 ### 15.3 State both halves read alike
 
