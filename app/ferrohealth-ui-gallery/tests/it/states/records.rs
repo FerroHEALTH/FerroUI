@@ -11,7 +11,7 @@ use std::error::Error;
 use ferrohealth_ui::style::Brand;
 use thirtyfour::prelude::*;
 
-use super::{press, shot_of};
+use super::{press, shot_of, shot_of_view};
 use crate::browser::{Browser, until};
 use crate::stack::Gallery;
 
@@ -76,9 +76,7 @@ pub(super) async fn records(
     let card = browser
         .element(By::Css(".fui-list-card:has(.fui-worklist-grid)"))
         .await?;
-    browser.settled().await?;
-    let png = browser.driver().screenshot_as_png().await?;
-    super::write(brand, "worklist-focus-scrolled", theme, &png)?;
+    shot_of_view(browser, brand, theme, "worklist-focus-scrolled").await?;
     key(browser, Key::End).await?;
     shot_of(browser, brand, theme, "worklist-focus-last", &card).await?;
     let stacked = browser

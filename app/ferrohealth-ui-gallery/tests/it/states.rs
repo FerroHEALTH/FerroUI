@@ -206,17 +206,12 @@ async fn escape(browser: &Browser) -> Result<(), Box<dyn Error>> {
 /// The capture's own rule: the text caret, which blinks, is not drawn, so
 /// two captures of a state hold the same pixels (FerroUI #434). It goes in
 /// through the DevTools protocol, which the page's Content-Security-Policy
-/// leaves alone; the scrollbars are hidden by `Emulation.setScrollbarsHidden`.
-/// No specification governs this: our own design.
+/// leaves alone. No specification governs this: our own design.
 const STEADY: &str = "*, *::before, *::after { caret-color: transparent !important; }";
 
-/// Adds [`STEADY`] to the page in view, hides its scrollbars, whose thumb a
-/// capture catches wherever the last scroll left it, and waits for the page
-/// to settle.
+/// Adds [`STEADY`] to the page in view and waits for the page to settle.
 async fn steady(browser: &Browser) -> Result<(), Box<dyn Error>> {
     let cdp = browser.driver().cdp();
-    cdp.send_raw("Emulation.setScrollbarsHidden", json!({ "hidden": true }))
-        .await?;
     cdp.send_raw("DOM.enable", json!({})).await?;
     cdp.send_raw("CSS.enable", json!({})).await?;
     let tree = cdp.send_raw("Page.getFrameTree", json!({})).await?;
@@ -267,6 +262,11 @@ async fn shot_of_unhydrated(
     write(brand, state, theme, &png)
 }
 
+/// The script that centres `arguments[0]` in the viewport at a whole
+/// pixel of scroll, since a fractional one draws the edges another way each
+/// time (#434). No specification governs this: our own design.
+const CENTRE: &str = "arguments[0].scrollIntoView({block: 'center'}); window.scrollTo(Math.round(scrollX), Math.round(scrollY));";
+
 /// The shot of `element` centred in the viewport, once its box, the scroll
 /// and its pixels hold still.
 ///
@@ -278,9 +278,6 @@ async fn in_view_and_held(
     state: &str,
     element: &WebElement,
 ) -> Result<Vec<u8>, Box<dyn Error>> {
-    // NOTE: no specification governs this: our own design; the scroll is a whole pixel,
-    // since a fractional one draws the edges another way each time (#434).
-    let centre = "arguments[0].scrollIntoView({block: 'center'}); window.scrollTo(Math.round(scrollX), Math.round(scrollY));";
     let place = async || -> Result<String, Box<dyn Error>> {
         Ok(browser
             .driver()
@@ -305,7 +302,7 @@ async fn in_view_and_held(
     until(&format!("{state} stays in full view"), async || {
         browser
             .driver()
-            .execute(centre, vec![element.to_json()?])
+            .execute(CENTRE, vec![element.to_json()?])
             .await?;
         steady(browser).await?;
         let mut last = place().await?;
@@ -491,6 +488,7 @@ async fn every_state_is_captured_in_every_brand_light_and_dark() -> Result<(), B
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
         window(browser, WIDTH, HEIGHT).await?;
+        browser.hide_scrollbars().await?;
         for theme in ["light", "dark"] {
             browser.goto(&gallery.url("/")).await?;
             browser.driver().delete_all_cookies().await?;

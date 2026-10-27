@@ -325,6 +325,7 @@ async fn every_page_is_captured_in_every_brand_light_and_dark() -> Result<(), Bo
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
         window(browser, WIDTH, HEIGHT).await?;
+        browser.hide_scrollbars().await?;
         for theme in ["light", "dark"] {
             browser.goto(&gallery.url("/")).await?;
             browser.driver().delete_all_cookies().await?;
@@ -364,6 +365,7 @@ async fn one_brand_is_captured_in_the_pseudo_locale_light_and_dark() -> Result<(
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
         window(browser, WIDTH, HEIGHT).await?;
+        browser.hide_scrollbars().await?;
         for theme in ["light", "dark"] {
             browser.goto(&gallery.url("/")).await?;
             browser.driver().delete_all_cookies().await?;
