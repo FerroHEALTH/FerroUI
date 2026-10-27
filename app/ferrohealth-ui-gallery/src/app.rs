@@ -249,6 +249,7 @@ pub fn App() -> impl IntoView {
         <Router>
             <crate::cookies::FollowCookies />
             <FormNavigator />
+            <crate::session::GallerySession />
             <Routes fallback=|| view! { <NotFound /> }>
                 <Route path=path!("/") view=Index />
                 <Route path=path!("/sign-in/:brand/:variant") view={Lazy::<LAside>::new()} />

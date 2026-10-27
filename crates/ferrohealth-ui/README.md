@@ -119,7 +119,9 @@ with Cancel; a control the top bar shows from 40rem up, such as a version
 choice, moves into the menu below it (`Choices`).
 
 No component writes a `style` attribute or a `<style>` element, defines a
-server function, fetches, or touches browser storage.
+server function, or touches browser storage. Two fetch, from routes you
+name: the search box's typeahead and the session watch
+(`island::SessionWatch`), each on the wire `docs/consoles.md` documents.
 
 ## Locales
 

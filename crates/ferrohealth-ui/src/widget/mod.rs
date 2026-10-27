@@ -10,7 +10,9 @@
 //! the widget shares state with the console's code. Its browser code runs
 //! only inside an event handler or an effect, behind
 //! `#[cfg(target_arch = "wasm32")]`, so it renders the same on the server
-//! and in the browser, and its first paint is the server's. None fetches.
+//! and in the browser, and its first paint is the server's. Only the search
+//! box ([`search`]) and the session watch ([`session`]) fetch, each from a
+//! route the console names.
 //!
 //! The widgets that own their state are ready islands. The others are
 //! island parts: each takes a signal, a callback or a closure that ties it
@@ -51,6 +53,7 @@ pub mod prefetch;
 pub mod repeat;
 pub mod search;
 pub mod segmented;
+pub mod session;
 pub mod shortcuts;
 pub mod side_panel;
 pub mod submit;

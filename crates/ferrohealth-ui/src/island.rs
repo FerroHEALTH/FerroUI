@@ -525,6 +525,29 @@ pub fn PreferenceForm(
     crate::widget::preference::preference_form(action, back, save, saved, children().into_any())
 }
 
+/// The watch over the console's session ([`crate::widget::session`]): it
+/// leaves a protected page for sign-in the moment the session ends, warns
+/// before an idle timeout with Stay signed in, and ends every tab of the
+/// console together. A console draws it once, in the shell of a signed-in
+/// page.
+#[component]
+pub fn SessionWatch(
+    /// The session route, the sign-in and sign-out addresses, what the
+    /// session had left as the server drew the page, and the words
+    /// ([`crate::widget::session::Watch::new`]).
+    watch: crate::widget::session::Watch,
+) -> impl IntoView {
+    crate::widget::session::session_watch(watch)
+}
+
+/// Tells every other tab of the console that the session has ended, so each
+/// leaves for sign-in ([`crate::widget::session::gone`]). A console draws it
+/// on its signed-out page; it draws nothing.
+#[component]
+pub fn SessionEnded() -> impl IntoView {
+    Effect::new(move |_| crate::widget::session::gone());
+}
+
 #[cfg(test)]
 mod tests {
     #[test]

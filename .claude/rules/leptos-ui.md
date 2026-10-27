@@ -28,10 +28,12 @@ the Authoring Practices (`spec-adherence.md`).
   (`crates/ferrohealth-ui/tests/it/stylesheet.rs` holds the library to it).
 - **The library defines no server function**, fetches nothing, and touches no
   browser storage. Data arrives as props; theme persistence, URL policy and
-  the router base are each console's. The one fetch is the top bar's
-  typeahead (owner, 2026-10-25): it asks the answer route the console names
-  (`SearchBox::suggest`) on the wire `docs/consoles.md` documents, and the
-  console's route reads its own data.
+  the router base are each console's. Two components fetch, each on a wire
+  `docs/consoles.md` documents, and each from a route the console names
+  that reads its own data: the top bar's typeahead (owner, 2026-10-25)
+  asks the answer route (`SearchBox::suggest`), and the session watch
+  (#444, `island::SessionWatch`) asks the session route what the session
+  has left, extending it only for the user's own input.
 - **No patient identifier in a URL.** A listing that can show patient data
   keeps its page, size and sort out of the URL: its forms post them
   (`StateSource::Session`, `table::pager::post_pager`).
@@ -812,6 +814,16 @@ The library and the consoles hydrate the whole page and split it by route
   policy withholds, so the form carries `widget::action::return_field()`
   and the function redirects to `widget::action::plain_return` or
   `with_error` (#449). [review]
+
+- **A protected page leaves when its session ends** (#444): a console
+  draws `island::SessionWatch` once in the shell of a signed-in page and
+  `island::SessionEnded` on its signed-out page, and calls
+  `widget::session::gone()` when its own code meets a `401`. The page then
+  loads the sign-in page with its return address, warns before an idle
+  timeout (WCAG 2.2 SC 2.2.1), and every tab of the console ends together.
+  A background poll never counts as the user's activity: only the user's
+  input extends the session (`docs/consoles.md` § The session's end).
+  [review; the gallery's session journeys]
 
 ### 15.7 The no-WebAssembly fallback
 

@@ -44,6 +44,7 @@ mod operations;
 mod preferences;
 mod records;
 mod refusals;
+mod session;
 mod shell;
 mod sign_in;
 mod tables;
@@ -70,6 +71,7 @@ pub(super) const AREAS: &[(&str, &[crate::i18n::Text])] = &[
     ("preferences", preferences::ALL),
     ("records", records::ALL),
     ("refusals", refusals::ALL),
+    ("session", session::ALL),
     ("shell", shell::ALL),
     ("sign_in", sign_in::ALL),
     ("tables", tables::ALL),

@@ -39,6 +39,7 @@ mod operations;
 mod painted;
 mod records;
 mod screenshots;
+mod session;
 mod stack;
 mod states;
 mod sticky;

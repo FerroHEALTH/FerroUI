@@ -207,6 +207,53 @@ JSON:
 A hit's `mark` is `{ "Glyph": "<lucide name>" }` or `{ "Dot": "Ok" }`
 (a `tone::Tone`); every field but `query` may be left out.
 
+## The session's end
+
+A signed-in page leaves for your sign-in page the moment its session ends,
+warns before an idle timeout, and ends with every other tab of your console
+(FerroUI #444; WCAG 2.2 SC 2.2.1 and SC 2.2.5; the OWASP Session Management
+Cheat Sheet). The library draws and times everything; your console provides
+four parts.
+
+1. **The watch:** draw `island::SessionWatch` once in the shell of a
+   signed-in page, with `widget::session::Watch::new(status, sign_in,
+   sign_out, left)`: your session route, your sign-in page, your sign-out
+   route, and what the session had left as your server drew the page,
+   carried to the browser in a `SharedValue` (How a console builds, step 4). Never draw it
+   on the sign-in or signed-out page.
+2. **The session route:** the wire below. Check the session on it as on any
+   other route.
+3. **The signed-out page:** draw `island::SessionEnded` on it, which tells
+   every other tab that the session has ended.
+4. **A `401` your own code meets:** call `widget::session::gone()`, as a
+   server function whose session is gone does, and every tab leaves.
+
+| | |
+|---|---|
+| Read | `GET {status}`, `Accept: application/json`, the page's own cookies. A read never extends the session: answer it without touching the idle timeout. |
+| Extend | `POST {status}` with no body. It is the user's own activity (Stay signed in, or their input once a minute): start the idle timeout again, never past the absolute lifetime. |
+| Answer | `200` with `application/json`: `{"idle": 840, "absolute": 27000}`, the whole seconds left until the idle timeout and until the absolute lifetime ends (`widget::session::Left`) |
+| Gone | `401`: the page loads `{sign_in}?return={path and query}`, and every tab leaves |
+| Any other status, or no answer | The page keeps its own count, and leaves once that has run out |
+
+When it asks:
+
+- when the warning is due, `Watch::warn_at` seconds before the idle
+  timeout (120 by default, never fewer than 20), and when the session is
+  due to end;
+- when the tab is shown again or regains the focus, and when the browser
+  restores the page from its back-forward cache;
+- after the user's own key or pointer input, at most once a minute, to
+  extend.
+
+Your background polling (a health check, a status refresh) must not extend
+the session on your server, or an open tab never idles out: only the
+user's requests count as activity. Your sign-in page reads `return`, keeps
+it to a path of your own, and leads back to it after sign-in. Keeping a
+draft the user was typing through sign-in is yours, where your console has
+drafts. With no WebAssembly nothing changes: your server redirects the next
+request to sign-in, as before.
+
 ## Which document governs what
 
 | Question | Document |

@@ -58,4 +58,6 @@ allow ^fhirUser$                      # a SMART App Launch scope token the scope
 allow ^main h1$                          # the CSS selector of the page heading the announcer focuses, which the browser code reads
 allow ^FerroUI: this panic came before the page hydrated   # a debug build's note to a developer in the browser console, never a reader's text
 allow ^nav\[\{TAB_KEYS\}\] a\[href\]$   # the CSS selector of the binder's link tabs, which the browser code reads
+allow ^extended \{\} \{\}$                # the session message one tab sends the others, never drawn
+allow ^0123456789ABCDEF$                 # the hex digits of a percent-encoded return address
 allow ^use widget::hydration::hydrate as the browser entry   # a #[deprecated] note, which the compiler shows a console's developer and no page draws

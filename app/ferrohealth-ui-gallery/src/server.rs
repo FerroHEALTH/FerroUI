@@ -73,6 +73,14 @@ pub fn router(options: LeptosOptions) -> axum::Router {
         .route(SIDEBAR_ROUTE, post(choose_sidebar))
         .route(&format!("{SIGN_OUT_ROUTE}/{{brand}}"), post(sign_out))
         .route(
+            crate::session::SESSION_ROUTE,
+            get(session_left).post(session_extended),
+        )
+        .route(
+            &format!("{}/{{brand}}", crate::session::SESSION_START),
+            get(session_started),
+        )
+        .route(
             &format!("{}/{{brand}}", crate::search::SUGGEST_ROUTE),
             get(suggest),
         )
@@ -371,7 +379,93 @@ async fn sign_out(Path(brand): Path<String>) -> Response {
     let Some(brand) = Brand::parse(&brand) else {
         return StatusCode::NOT_FOUND.into_response();
     };
-    Redirect::to(&format!("/sign-in/{}/signed-out", brand.key())).into_response()
+    redirect_with(
+        &format!("/sign-in/{}/signed-out", brand.key()),
+        &[session_ended()],
+    )
+}
+
+/// The cookie that ends the gallery's session.
+fn session_ended() -> String {
+    format!(
+        "{}=; Path=/; SameSite=Lax; HttpOnly; Max-Age=0",
+        crate::session::SESSION_COOKIE
+    )
+}
+
+/// The cookie that keeps the session `kept`.
+fn session_cookie(kept: crate::session::Kept) -> String {
+    format!(
+        "{}={}; Path=/; SameSite=Lax; HttpOnly",
+        crate::session::SESSION_COOKIE,
+        kept.value()
+    )
+}
+
+/// The lengths a journey starts a session with, in seconds.
+#[derive(Debug, serde::Deserialize)]
+struct Lengths {
+    /// The idle timeout.
+    idle: u32,
+    /// The absolute lifetime.
+    absolute: u32,
+}
+
+/// Starts a session of the `idle` and `absolute` lengths, and leads to the
+/// brand's overview.
+async fn session_started(Path(brand): Path<String>, Query(lengths): Query<Lengths>) -> Response {
+    let Some(brand) = Brand::parse(&brand) else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+    let kept = crate::session::Kept::started(crate::session::now(), lengths.idle, lengths.absolute);
+    redirect_with(&format!("/{}", brand.key()), &[session_cookie(kept)])
+}
+
+/// The session the request's cookies keep, while it lasts.
+fn session_of(headers: &http::HeaderMap) -> Option<crate::session::Kept> {
+    let cookies = headers
+        .get(http::header::COOKIE)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or_default();
+    crate::session::Kept::read(cookies).filter(|kept| kept.left(crate::session::now()).is_some())
+}
+
+/// The answer that the session is gone: `401`, and its cookie cleared.
+fn session_gone() -> Response {
+    let mut response = StatusCode::UNAUTHORIZED.into_response();
+    if let Ok(value) = HeaderValue::from_str(&session_ended()) {
+        response.headers_mut().append(SET_COOKIE, value);
+    }
+    response
+}
+
+/// What the session has left, which a read never extends.
+async fn session_left(headers: http::HeaderMap) -> Response {
+    let now = crate::session::now();
+    match session_of(&headers).and_then(|kept| kept.left(now)) {
+        Some(left) => axum::Json(left).into_response(),
+        None => session_gone(),
+    }
+}
+
+/// The user's activity: the idle timeout starts again, and the answer says
+/// what the session has left.
+async fn session_extended(headers: http::HeaderMap) -> Response {
+    let now = crate::session::now();
+    let Some(kept) = session_of(&headers).map(|kept| kept.extended(now)) else {
+        return session_gone();
+    };
+    let Some(left) = kept.left(now) else {
+        return session_gone();
+    };
+    let mut response = axum::Json(left).into_response();
+    match HeaderValue::from_str(&session_cookie(kept)) {
+        Ok(value) => {
+            response.headers_mut().append(SET_COOKIE, value);
+            response
+        }
+        Err(_invalid) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
 }
 
 /// The redirect to `back` that keeps `value` in the cookie `name`.

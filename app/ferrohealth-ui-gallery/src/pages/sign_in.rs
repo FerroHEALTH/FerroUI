@@ -8,6 +8,7 @@
 //! form after a wrong password and while paused.
 
 use ferrohealth_ui::icon::Glyph;
+use ferrohealth_ui::island::SessionEnded;
 use ferrohealth_ui::style::Brand;
 use ferrohealth_ui::view::shell::{centred, lockup_plain, mark};
 use ferrohealth_ui::view::sign_in::{Basic, Notice, Provider, Retry, SignIn, State, sign_in};
@@ -143,7 +144,9 @@ pub fn SignInPage() -> impl IntoView {
         Some((brand, key.to_owned()))
     });
     let (brand, key) = named.unwrap_or((Brand::Bridge, String::from("provider")));
+    let ended = (key == "signed-out").then(|| view! { <SessionEnded /> });
     view! {
+        {ended}
         {super::title_in(tr(Msg::SignIn), Some(brand))}
         <Stylesheet id="brand-theme" href=theme_path(brand) />
         {centred(card(brand, &key), footer())}

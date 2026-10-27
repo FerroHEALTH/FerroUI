@@ -28,6 +28,7 @@ pub mod search;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod server;
+pub mod session;
 pub mod terminology_data;
 pub mod trees_data;
 

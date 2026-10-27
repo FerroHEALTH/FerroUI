@@ -88,6 +88,41 @@ fell back to English and draws itself inside `<span lang="en">` when it did
 (WCAG 2.2 SC 3.1.2), and a widget that writes a count carries the page's
 `i18n::number::Grouping` among its words.
 
+## The session's end (FerroUI #444)
+
+No specification governs the timers and the broadcast: our own design, held
+to WCAG 2.2 (SC 2.2.1, SC 2.2.5) and the OWASP Session Management Cheat
+Sheet (idle and absolute timeouts, logout across tabs). The decisions:
+
+- **What the browser knows:** the seconds the session has left, idle and
+  absolute (`widget::session::Left`), never a deadline, so a wrong browser
+  clock moves nothing, and never a token. The server draws them into the
+  page (carried by a `SharedValue`) and answers its session route with the
+  same; the wire is in `docs/consoles.md` § The session's end.
+- **Leaving:** when the time is up the watch asks the route; a `401`, or no
+  answer once the browser's own count has run out, loads the console's
+  sign-in page with the page's path and query as `return`. A `401` the
+  console's own code meets does the same through `widget::session::gone()`.
+- **The warning:** `WARN_AT` seconds (120) before the idle timeout, never
+  fewer than 20, a modal `<dialog role="alertdialog">` names the time left
+  and offers Stay signed in, which takes the focus, and Sign out; Escape
+  stays signed in, and the browser returns the focus on close. An absolute
+  lifetime that ends first gets no warning, since nothing can extend it.
+- **Re-checking:** `visibilitychange`, `focus` and `pageshow` ask the route,
+  which covers a laptop that slept while its timers stood still.
+- **Idle means the user is idle:** a `GET` of the route never extends the
+  session; a `POST` does, sent for Stay signed in and for the user's own
+  key or pointer input at most once a minute. A console's background poll
+  must not extend its session on the server either.
+- **Every tab:** a `BroadcastChannel` named `ferroui-session`, bound to the
+  console's origin, carries `ended` and `extended <idle> <absolute>`. The
+  `storage` event the issue named as a fallback would write browser storage,
+  which the library never touches. A browser with no `BroadcastChannel`
+  still leaves each tab at its own count or its next re-check, and the
+  server's own redirect on the next request stays the fallback.
+- **Nothing lost:** the return address brings the user back to the page;
+  keeping a draft through sign-in is the console's, where it has drafts.
+
 ## The bundle budget
 
 The gallery's brotli-compressed entry WebAssembly, what every page loads
