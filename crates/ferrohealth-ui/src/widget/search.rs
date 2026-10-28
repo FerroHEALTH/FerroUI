@@ -219,7 +219,11 @@ impl Typeahead {
         let _: Option<Option<usize>> = self.active.try_set(None);
     }
 
-    /// Drops what was asked and what was answered.
+    /// Drops what was asked and what was answered, and closes the panel.
+    ///
+    /// A submit or a followed option calls this: the page it leads to is
+    /// drawn in place, so the search box lives on, and an ask still waiting
+    /// for the words to rest would open the panel over that page (#494).
     fn reset(self) {
         if let Some(handle) = self.pending.try_get_value().flatten() {
             handle.clear();
@@ -340,7 +344,7 @@ pub fn search_control(search: SearchBox, words: SearchWords) -> impl IntoView {
             aria-busy=move || busy.get().then_some("true")
             node_ref=form
             on:submit=move |_| {
-                state.close();
+                state.reset();
                 let _: Option<bool> = busy.try_set(true);
             }
         >
@@ -709,7 +713,7 @@ fn pick(at: usize, state: Typeahead, form: NodeRef<leptos::html::Form>, busy: Rw
     let Some(target) = state.targets().into_iter().nth(at) else {
         return;
     };
-    state.close();
+    state.reset();
     match target {
         Target::Hit(href) | Target::Way(href) => {
             let _: Option<bool> = busy.try_set(true);
