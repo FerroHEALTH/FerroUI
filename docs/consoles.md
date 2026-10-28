@@ -128,7 +128,7 @@ answer to a form whose result is the point.
 4. **The function:** write it as for its own client. It takes no
    `ferroui_return` and calls no redirect; one that calls
    `leptos_axum::redirect` anyway, such as on a session that is over, is
-   followed.
+   followed: the browser gets a `303 See Other` to the address it named.
 
 ```rust
 let check = ServerAction::<CheckDraft>::new();
@@ -150,7 +150,7 @@ What a plain post of an answer form gets, with no WebAssembly:
 |---|---|
 | Recognised by | `POST` with `Content-Type: application/x-www-form-urlencoded`, an `Accept` that names `text/html`, and a `ferroui_answer` field that is a path on your own origin; every other request passes to your router untouched, the page's own calls among them |
 | The function's call | The same post, its headers kept, without the `ferroui_answer` field and with `Accept: */*`, so it answers as to its own client and redirects nowhere |
-| The function redirects | The redirect is the answer |
+| The function redirects | A 3xx it answers is the answer. A call of `leptos_axum::redirect`, which under `Accept: */*` answers `200` with `Location` and the `serverfnredirect` header (leptos_axum 0.8.10 `redirect`), answers `303 See Other` to that `Location` with the cookies the function set and `Cache-Control: no-store` (RFC 9110 §15.4.4) |
 | The page | A `GET` of the field's address with the post's headers, drawn by your router with the answer as the action's value, an error as the error, and the posted fields in `Posted` |
 | Status | The page's own, as for the page a failed redirect-mode post returns to: the function's failure is the action's value |
 | Headers | The page's, the cookies the function set, and `Cache-Control: no-store` |

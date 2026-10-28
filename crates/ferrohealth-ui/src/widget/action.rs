@@ -262,8 +262,12 @@ pub const ANSWER_LIMIT: usize = 16 * 1024 * 1024;
 /// redirect-mode post returns to does, with the function's error in the
 /// action's value, with the cookies the function set and with
 /// `Cache-Control: no-store`. A
-/// function that redirects is followed, and every other request passes to
-/// `router` untouched, a call from the page's own WebAssembly among them.
+/// function that redirects is followed: a 3xx it answers is the answer, and
+/// a call of `leptos_axum::redirect`, which under `Accept: */*` answers
+/// `200` with `Location` and the `serverfnredirect` header, answers
+/// `303 See Other` to that `Location` with the cookies the function set.
+/// Every other request passes to `router` untouched, a call from the page's
+/// own WebAssembly among them.
 /// Wrap the router your routes and layers make, inside any layer that
 /// checks the origin of a state-changing request: the forwarded post keeps
 /// the request's headers, so such a check sees it as the browser sent it.
@@ -327,6 +331,9 @@ async fn answer_plain_post(
     if reply.status().is_redirection() {
         return reply;
     }
+    if let Some(leave) = redirected(&reply) {
+        return leave;
+    }
     let (reply, body) = reply.into_parts();
     let Ok(body) = axum::body::to_bytes(body, ANSWER_LIMIT).await else {
         leptos::logging::error!("the answer of {function} is too large to draw on its page");
@@ -358,6 +365,36 @@ async fn answer_plain_post(
         .headers_mut()
         .insert(CACHE_CONTROL, HeaderValue::from_static("no-store"));
     response
+}
+
+/// The `303` that sends the browser where a function that called
+/// `leptos_axum::redirect` asked, with the cookies it set.
+///
+/// Asked for no HTML, `leptos_axum` 0.8.10 `redirect` answers `200` with
+/// `Location` and the `serverfnredirect` header for its own client to
+/// follow, so the browser, which follows only a 3xx (RFC 9110 §15.4), is
+/// sent there by a See Other: the outcome of a post, fetched by `GET`
+/// (RFC 9110 §15.4.4).
+#[cfg(not(target_arch = "wasm32"))]
+fn redirected(reply: &axum::response::Response) -> Option<axum::response::Response> {
+    use axum::response::IntoResponse as _;
+    use http::header::{CACHE_CONTROL, LOCATION, SET_COOKIE};
+    use http::{HeaderValue, StatusCode};
+    use leptos::server_fn::redirect::REDIRECT_HEADER;
+
+    if !reply.headers().contains_key(REDIRECT_HEADER) {
+        return None;
+    }
+    let location = reply.headers().get(LOCATION)?.clone();
+    let mut leave = StatusCode::SEE_OTHER.into_response();
+    leave.headers_mut().insert(LOCATION, location);
+    for cookie in reply.headers().get_all(SET_COOKIE) {
+        leave.headers_mut().append(SET_COOKIE, cookie.clone());
+    }
+    leave
+        .headers_mut()
+        .insert(CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    Some(leave)
 }
 
 /// What `router` answers `request` with.
@@ -513,6 +550,21 @@ mod answers {
         (StatusCode::FOUND, [(LOCATION, "/signed-out")]).into_response()
     }
 
+    /// A server function that sends the browser elsewhere through
+    /// `leptos_axum::redirect`, as a session that is over does.
+    #[cfg_attr(
+        not(target_arch = "wasm32"),
+        allow(
+            clippy::unused_async,
+            reason = "the server function macro wants the function async, and this one awaits nothing; the macro's expansion carries the lint"
+        )
+    )]
+    #[leptos::server(endpoint = "sign_out")]
+    async fn sign_out() -> Result<(), ServerFnError> {
+        leptos_axum::redirect("/signed-out");
+        Ok(())
+    }
+
     /// The page, drawing what it was handed as JSON with its own address.
     async fn page(request: Request) -> Response {
         let answered = request.extensions().get::<Answered>().cloned();
@@ -530,6 +582,7 @@ mod answers {
                 .route("/api/check", post(check))
                 .route("/api/fail", post(fail))
                 .route("/api/leave", post(leave))
+                .route("/api/sign_out", post(leptos_axum::handle_server_fns))
                 .route("/page", get(page)),
         )
     }
@@ -609,6 +662,18 @@ mod answers {
             .unwrap();
         assert_eq!(StatusCode::FOUND, parts.status);
         assert_eq!("/signed-out", parts.headers[LOCATION]);
+    }
+
+    #[tokio::test]
+    async fn a_function_that_calls_leptos_axum_redirect_is_followed() {
+        let (parts, body) = send("/api/sign_out", HTML, "ferroui_answer=%2Fpage")
+            .await
+            .unwrap();
+        assert_eq!(StatusCode::SEE_OTHER, parts.status);
+        assert_eq!("/signed-out", parts.headers[LOCATION]);
+        assert_eq!("no-store", parts.headers[CACHE_CONTROL]);
+        assert!(!parts.headers.contains_key("serverfnredirect"));
+        assert_eq!("", body);
     }
 
     #[tokio::test]
