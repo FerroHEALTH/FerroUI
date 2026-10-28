@@ -423,8 +423,8 @@ fn delete_location() -> AnyView {
 }
 
 /// The settings both T3 pages show, Mode at the next start; read from a
-/// file (`file`), Timeout comes from the environment and Best effort is the
-/// default.
+/// file (`file`), Timeout comes from the environment, Retries from the
+/// command line and Best effort is the default.
 fn settings(file: bool) -> Vec<Setting> {
     let row = |label: Msg,
                description: Msg,
@@ -454,7 +454,7 @@ fn settings(file: bool) -> Vec<Setting> {
             String::from("2"),
             "limits.retries",
             false,
-            None,
+            Some(ValueSource::CommandLine),
         ),
         row(
             Msg::ModeSetting,
