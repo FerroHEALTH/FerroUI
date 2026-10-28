@@ -412,3 +412,48 @@ async fn a_console_names_the_option_that_submits_its_search() -> Result<(), Box<
     })
     .await
 }
+
+/// The router draws the find page in place, so the search box lives on: a
+/// submit made before the words rest drops the ask still waiting, and the
+/// panel stays closed over the page (#494).
+#[tokio::test(flavor = "multi_thread")]
+async fn a_submit_before_the_words_rest_leaves_the_panel_closed_over_the_page()
+-> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        window(browser, 1440, 900).await?;
+        browser.goto(&gallery.url("/ferroterm/forms")).await?;
+        let search = browser
+            .element(By::Css("#gallery-search[role='combobox']"))
+            .await?;
+        search.click().await?;
+        press(browser, "synthetic-00" + Key::Enter).await?;
+        browser
+            .at(&gallery.url("/ferroterm/find?q=synthetic-00"))
+            .await?;
+        tokio::time::sleep(ferrohealth_ui::widget::search::SETTLE * 5).await;
+        let panel = browser
+            .driver()
+            .find(By::Id("gallery-search-panel"))
+            .await?;
+        assert!(
+            !panel.is_displayed().await?,
+            "the ask the submit overtook opens no panel over the find page"
+        );
+        assert_eq!(
+            Some(String::from("false")),
+            browser
+                .element(By::Id("gallery-search"))
+                .await?
+                .attr("aria-expanded")
+                .await?
+        );
+        browser
+            .console_clean("the submit before the words rest")
+            .await
+    })
+    .await
+}
