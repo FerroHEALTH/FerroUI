@@ -11,6 +11,16 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.5.6] - 2026-10-28
+
+### Added
+
+- `view::template::settings::ValueSource::CommandLine`, "From the command line" with the keyboard glyph, marks a settings row whose value a `--set key=value` argument set at start, which wins over the environment, the file and a revision. A console built on `ferrohealth-server` maps the command-line layer `ferrohealth-config` reports to it in place of drawing the row unmarked. `ValueSource` is `#[non_exhaustive]`, so no console's code breaks; the message `setting-source-command-line` joins the library's `templates` catalog (#488).
+
+### Fixed
+
+- `widget::action::draw_answers` follows a server function that calls `leptos_axum::redirect` during a plain post of an answer form. Under the forwarded `Accept: */*` that call answers `200` with `Location` and the `serverfnredirect` header, which the wrapper used to draw as the form's page with no answer; it now answers `303 See Other` to that `Location`, with the cookies the function set. A console that answered `303` itself to work around this can call `leptos_axum::redirect` again (#489).
+
 ## [0.5.5] - 2026-10-27
 
 ### Added
@@ -2791,7 +2801,8 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.5...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.6...HEAD
+[0.5.6]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.5...v0.5.6
 [0.5.5]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.4...v0.5.5
 [0.5.4]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.3...v0.5.4
 [0.5.3]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.2...v0.5.3
