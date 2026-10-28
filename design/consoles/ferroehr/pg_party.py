@@ -247,7 +247,7 @@ def page_relationship_new():
 
 
 def page_relationship_new_refused():
-    rf = refusal("The CDR refused the relationship, so nothing was created.", request="POST /ferroehr/rest/openehr/v1/demographic/party_relationship",
+    rf = refusal("The CDR refused the relationship, so nothing was created.", request="POST /ferroehr/rest/extensions/v1/demographic/party_relationship",
                  issues=[("bad", "Error", "422 Unprocessable Content", "/target: no ORGANISATION with this uid.")])
     return relationship_form(rf, refused=True, d=edit_dock(msg("circle-x", "Not created."), "Create this relationship", "party-relationships.html", disabled="Fix the target first"))
 
@@ -290,7 +290,7 @@ def page_relationship_edit():
 
 
 def page_relationship_edit_conflict():
-    rf = refusal("Another client saved a new version since you opened it, so the CDR refused the save (412).", request=f"PUT /ferroehr/rest/openehr/v1/demographic/party_relationship/{REL1}::{SYSTEM_ID}::1",
+    rf = refusal("Another client saved a new version since you opened it, so the CDR refused the save (412).", request=f"PUT /ferroehr/rest/extensions/v1/demographic/party_relationship/{REL1}::{SYSTEM_ID}::1",
                  issues=[("bad", "Error", "412 Precondition Failed", "If-Match names version 1; the latest is version 2.")])
     rf += f'<div class="fui-cluster">{button("secondary", "Reload version 2", "refresh-cw")}<span class="fui-small fui-muted">Reloading shows version 2 here and replaces your edit.</span></div>'
     return relationship_edit(rf, edit_dock(msg("circle-x", "Not saved."), "Save", "relationship.html", disabled="Reload the latest version first"), changed=True)
