@@ -24,6 +24,7 @@ filter-showing-of = Showing { $shown } of { $total }
 key-copy = Copy the key { $key }
 key-copy-title = Copy the key
 next-start = Next start
+setting-source-command-line = From the command line
 setting-source-default = Default
 setting-source-environment = From the environment
 setting-source-file = From the file

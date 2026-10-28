@@ -403,6 +403,27 @@ fn a_value_from_the_environment_says_so_after_the_value() {
 }
 
 #[test]
+fn a_value_from_the_command_line_says_so_with_its_glyph() {
+    assert_eq!(Glyph::KEYBOARD, ValueSource::CommandLine.glyph());
+    let page = file_page(vec![Setting {
+        source: Some(ValueSource::CommandLine),
+        ..setting("telemetry.format", false)
+    }]);
+    let source = page
+        .find(r#"<span class="fui-setting-source">"#)
+        .unwrap_or_else(|| panic!("the source marker: {page}"));
+    let marker = &page[source..];
+    let marker = &marker[..marker.find("</span>").unwrap_or(marker.len())];
+    assert!(
+        marker.contains(r#"aria-hidden="true""#)
+            && marker.contains(Glyph::KEYBOARD.markup())
+            && marker.ends_with("From the command line"),
+        "the keyboard glyph is hidden and the words name the command line: {marker}"
+    );
+    assert!(!page.contains("From the environment"), "{page}");
+}
+
+#[test]
 fn a_default_value_says_so_after_the_value() {
     let page = file_page(vec![Setting {
         source: Some(ValueSource::Default),

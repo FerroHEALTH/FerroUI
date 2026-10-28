@@ -65,6 +65,9 @@ pub enum ValueSource {
     /// The configuration file, in a managed configuration whose section
     /// the file sets: "From the file".
     File,
+    /// A `--set key=value` argument on the command line, which wins over
+    /// the environment, the file and a revision: "From the command line".
+    CommandLine,
 }
 
 impl ValueSource {
@@ -75,6 +78,7 @@ impl ValueSource {
             Self::Environment => Glyph::SQUARE_TERMINAL,
             Self::Default => Glyph::ROTATE_CCW,
             Self::File => Glyph::FILE_TEXT,
+            Self::CommandLine => Glyph::KEYBOARD,
         }
     }
 
@@ -85,6 +89,7 @@ impl ValueSource {
             Self::Environment => Text::SettingSourceEnvironment,
             Self::Default => Text::SettingSourceDefault,
             Self::File => Text::SettingSourceFile,
+            Self::CommandLine => Text::SettingSourceCommandLine,
         })
     }
 }
