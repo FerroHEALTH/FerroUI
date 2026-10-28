@@ -115,6 +115,8 @@ serde_json.workspace = true
 # The tests of `widget::action::draw_answers` serve a router in-process.
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 tokio = { workspace = true, features = ["rt", "macros"] }
+# A server function of those tests redirects through `leptos_axum::redirect`.
+leptos_axum.workspace = true
 
 [lints]
 workspace = true

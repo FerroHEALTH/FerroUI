@@ -490,6 +490,7 @@ dependencies = [
  "hydration_context",
  "intl-memoizer",
  "leptos",
+ "leptos_axum",
  "leptos_router",
  "serde",
  "serde_json",
