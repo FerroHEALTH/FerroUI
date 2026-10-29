@@ -11,4 +11,5 @@ pub mod forms;
 pub mod preferences;
 pub mod records;
 pub mod sign_in;
+pub mod tables;
 pub mod templates;
