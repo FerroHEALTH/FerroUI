@@ -29,3 +29,4 @@ mod render;
 mod shell;
 mod state;
 mod stylesheet;
+mod table;

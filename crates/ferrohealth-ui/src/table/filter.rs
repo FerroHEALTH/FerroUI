@@ -191,7 +191,7 @@ struct ChoiceView {
 
 #[derive(Template)]
 #[template(
-    source = r#"<details class="fui-anchor" data-fui="menu"><summary class="{{ button }}{% if filtered %} is-filtered{% endif %}">{{ glyph }}{{ words }}{{ chevron }}</summary>{% if own %}<form method="get"{% if let Some(action) = action %} action="{{ action }}"{% endif %} class="{{ class }}" aria-label="{{ title }}">{{ carried }}{{ body }}</form>{% else %}<div role="group" class="{{ class }}" aria-label="{{ title }}">{{ body }}</div>{% endif %}</details>"#,
+    source = r#"<details data-fui="menu" class="fui-anchor"><summary class="{{ button }}{% if filtered %} is-filtered{% endif %}">{{ glyph }}{{ words }}{{ chevron }}</summary>{% if own %}<form method="get"{% if let Some(action) = action %} action="{{ action }}"{% endif %} class="{{ class }}" aria-label="{{ title }}">{{ carried }}{{ body }}</form>{% else %}<div role="group" class="{{ class }}" aria-label="{{ title }}">{{ body }}</div>{% endif %}</details>"#,
     ext = "html"
 )]
 struct MenuView {

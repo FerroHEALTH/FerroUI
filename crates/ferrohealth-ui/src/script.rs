@@ -35,6 +35,10 @@ pub const LOADER: Module = Module {
 pub const MODULES: &[Module] = &[
     LOADER,
     Module {
+        file: "copy.js",
+        text: include_str!("../scripts/copy.js"),
+    },
+    Module {
         file: "dialog.js",
         text: include_str!("../scripts/dialog.js"),
     },

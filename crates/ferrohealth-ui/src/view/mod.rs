@@ -14,8 +14,10 @@
 //! folds, a form posts, and a script module adds the keys and the in-page
 //! switches on top.
 
+pub mod action;
 pub mod action_menu;
 pub mod button;
+pub mod copy;
 pub mod dialog;
 pub mod dock;
 pub mod empty;
@@ -28,12 +30,16 @@ pub mod menu;
 pub mod nav;
 pub mod notice;
 pub mod path;
+pub mod popover;
+pub mod replica;
 pub mod segmented;
 pub mod shell;
 pub mod shortcuts;
 pub mod sign_in;
 pub mod state;
 pub mod status;
+pub mod surface;
 pub mod tabs;
 pub mod tag;
+pub mod template;
 pub mod toast;
