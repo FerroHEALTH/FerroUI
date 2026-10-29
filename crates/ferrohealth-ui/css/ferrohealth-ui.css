@@ -28,6 +28,13 @@
     --surface: #f8fafc;
     --surface-raised: #ffffff;
     --surface-sunken: #f1f5f9;
+    /* The hover bar of an item on a raised surface (a menu, a popup's
+       options, a tree row): a neutral tint, apart from the accent tint of a
+       chosen item and the bad ground of a destructive one (#498). As far
+       from the panel as muted text on it allows at 4.5:1, 1.37:1 here and
+       1.53:1 in dark; 3:1 (WCAG 2.2 SC 1.4.11) would fail that text. The
+       accent text never sits on it: a chosen item keeps the accent tint. */
+    --surface-hover: #d5dde8;
     --surface-head: #f8fafc;
     --edge: #e2e8f0;
     --edge-strong: #cbd5e1;
@@ -127,6 +134,7 @@
     --surface: #0b1020;
     --surface-raised: #0f172a;
     --surface-sunken: #1e293b;
+    --surface-hover: #2a394e;
     --surface-head: #131c31;
     --edge: #1e293b;
     --edge-strong: #334155;
@@ -173,6 +181,7 @@
       --surface: #0b1020;
       --surface-raised: #0f172a;
       --surface-sunken: #1e293b;
+      --surface-hover: #2a394e;
       --surface-head: #131c31;
       --edge: #1e293b;
       --edge-strong: #334155;
@@ -2970,7 +2979,7 @@
 
   .fui-combobox-option:hover,
   .fui-combobox-option[data-active] {
-    background: var(--surface-sunken);
+    background: var(--surface-hover);
   }
 
   .fui-combobox-option[data-active] {
@@ -3238,7 +3247,7 @@
   }
 
   .fui-tree-row:hover {
-    background: var(--surface-sunken);
+    background: var(--surface-hover);
   }
 
   .fui-tree-item:focus-visible > .fui-tree-row {
@@ -3434,7 +3443,7 @@
   }
 
   .fui-menu-item:hover {
-    background: var(--surface-sunken);
+    background: var(--surface-hover);
   }
 
   .fui-menu-item[aria-pressed="true"],
@@ -7679,12 +7688,18 @@
   }
 
   .fui-listbox-option:hover {
-    background: var(--surface-sunken);
+    background: var(--surface-hover);
   }
 
   .fui-listbox-option[aria-selected="true"] {
     color: var(--accent);
     font-weight: 500;
+  }
+
+  /* The chosen option keeps the accent tint under the pointer and the
+     focus: the accent text never sits on the hover bar. */
+  .fui-listbox-option[aria-selected="true"]:is(:hover, :focus-visible) {
+    background: var(--accent-tint);
   }
 
   .fui-listbox-text {
@@ -10070,8 +10085,14 @@
   }
 
   .fui-menu .fui-menu-item:is(:hover, :focus-visible) {
-    background: var(--surface-sunken);
+    background: var(--surface-hover);
     color: var(--ink);
+  }
+
+  /* A chosen item keeps the accent tint under the pointer and the focus, so
+     the hover never hides which one is chosen. */
+  .fui-menu .fui-menu-item:is([aria-pressed="true"], [aria-current="true"]):is(:hover, :focus-visible) {
+    background: var(--accent-tint);
   }
 
   .fui-menu .fui-menu-item:is(:hover, :focus-visible) > .fui-icon {
@@ -10104,7 +10125,7 @@
     cursor: not-allowed;
   }
 
-  .fui-menu .fui-menu-item[aria-disabled="true"]:hover {
+  .fui-menu .fui-menu-item[aria-disabled="true"]:is(:hover, :focus-visible) {
     background: transparent;
   }
 
@@ -10358,7 +10379,7 @@
   }
 
   .fui-listbox-option:focus-visible {
-    background: var(--surface-sunken);
+    background: var(--surface-hover);
     outline: 2px solid var(--focus);
     outline-offset: -2px;
   }
