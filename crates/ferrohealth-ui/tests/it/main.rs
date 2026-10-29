@@ -33,6 +33,8 @@ mod kbd;
 mod markup;
 mod preferences;
 mod render;
+mod search;
+mod session;
 mod shell;
 mod state;
 mod stylesheet;
