@@ -117,6 +117,9 @@ serde_json.workspace = true
 tokio = { workspace = true, features = ["rt", "macros"] }
 # A server function of those tests redirects through `leptos_axum::redirect`.
 leptos_axum.workspace = true
+# A hydrated `<ActionForm>` reads its form with it; the secret marks' tests
+# read a form as it does.
+serde_qs.workspace = true
 
 [lints]
 workspace = true

@@ -63,6 +63,10 @@ serde_json = "1.0.151"
 # needs to render to HTML in a test as it does in a page. In the lock
 # already under Leptos.
 hydration_context = { version = "0.3.2", default-features = false }
+# Test-only: the parser a hydrated `<ActionForm>` reads its form with
+# (leptos 0.8 `FromFormData`), so the secret marks are tested against it. In
+# the lock already under server_fn. Verified against crates.io on 2026-10-29.
+serde_qs = { version = "0.15.0", default-features = false }
 # Test-only: the gallery's browser journeys, a WebDriver client in Rust over
 # chromedriver with the Chrome DevTools Protocol for the window size, the
 # colour scheme and the painted colours.

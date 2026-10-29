@@ -456,7 +456,10 @@ fn a_secret_value_input_carries_its_secret_mark() {
             "input",
             &[
                 ("type", "hidden"),
-                ("name", "ferroui_secret"),
+                (
+                    "name",
+                    "ferroui_secret_636c69656e742d7365637265745b76616c75655d"
+                ),
                 ("value", "client-secret[value]"),
             ]
         ),
