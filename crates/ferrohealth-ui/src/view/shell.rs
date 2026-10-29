@@ -20,7 +20,7 @@ use std::borrow::Cow;
 use askama::Template;
 
 use crate::html::{Html, Render as _};
-use crate::i18n::{Locale, Text, tr};
+use crate::i18n::{Locale, Text, Word, tr};
 use crate::icon::{Glyph, icon};
 use crate::serve::Assets;
 use crate::theme::Preferences;
@@ -50,11 +50,6 @@ impl Footer {
         // NOTE: no specification governs this: our own design; the product's
         // name and its version are data, drawn as they stand in every locale.
         format!("{} {}", self.product, self.version)
-    }
-
-    /// The footer's line before its About link.
-    fn line(&self) -> String {
-        format!("{} · {MAKER} · ", self.release())
     }
 }
 
@@ -150,19 +145,76 @@ pub struct Shell {
 }
 
 #[derive(Template)]
-#[template(path = "shell/page.html")]
+#[template(path = "shell/parts.html", block = "skip")]
+struct SkipView {
+    main_id: &'static str,
+    words: Word,
+}
+
+/// Returns the skip link to the page's main region, the first thing the
+/// keyboard reaches (WCAG 2.2 SC 2.4.1).
+#[must_use]
+pub fn skip_link(locale: &Locale) -> Html {
+    SkipView {
+        main_id: MAIN_ID,
+        words: tr(locale, Text::SkipToPage),
+    }
+    .html()
+}
+
+#[derive(Template)]
+#[template(path = "shell/parts.html", block = "footer")]
+struct FooterView {
+    line: String,
+    about: Cow<'static, str>,
+    words: Word,
+}
+
+/// Returns the footer: the product and its version, the maker and the link
+/// to About.
+#[must_use]
+pub fn footer(locale: &Locale, footer: Footer) -> Html {
+    FooterView {
+        line: format!("{} · {MAKER} ·", footer.release()),
+        about: footer.about,
+        words: tr(locale, Text::FooterAbout),
+    }
+    .html()
+}
+
+#[derive(Template)]
+#[template(path = "shell/parts.html", block = "drawer")]
+struct DrawerView {
+    sidebar: &'static str,
+    words: Word,
+    glyph: Html,
+}
+
+/// Returns the button that opens the navigation `sidebar_id` as a drawer
+/// below 48 rem, with the `show-modal` command, so it opens with no
+/// script.
+#[must_use]
+pub fn drawer_button(locale: &Locale, sidebar_id: &'static str) -> Html {
+    DrawerView {
+        sidebar: sidebar_id,
+        words: tr(locale, Text::OpenMenu),
+        glyph: icon(Glyph::MENU, "18"),
+    }
+    .html()
+}
+
+#[derive(Template)]
+#[template(path = "shell/parts.html", block = "page")]
 struct PageView {
     main_id: &'static str,
-    skip: crate::i18n::Word,
+    skip: Html,
     topbar: Html,
     banner: Option<Html>,
     sidebar: Html,
     content: Html,
     dock: Option<Html>,
     toasts: Html,
-    footer_line: String,
-    about: Cow<'static, str>,
-    about_words: crate::i18n::Word,
+    footer: Html,
 }
 
 /// Returns a signed-in page: the skip link (WCAG 2.2 SC 2.4.1), the top
@@ -177,58 +229,65 @@ pub fn shell(locale: &Locale, shell: Shell) -> Html {
         content,
         dock,
         toasts,
-        footer,
+        footer: foot,
     } = shell;
     PageView {
         main_id: MAIN_ID,
-        skip: tr(locale, Text::SkipToPage),
+        skip: skip_link(locale),
         topbar,
         banner,
         sidebar,
         content,
         dock,
         toasts,
-        footer_line: footer.line(),
-        about: footer.about,
-        about_words: tr(locale, Text::FooterAbout),
+        footer: footer(locale, foot),
     }
     .html()
 }
 
 #[derive(Template)]
-#[template(path = "shell/centred.html")]
+#[template(path = "shell/parts.html", block = "centred")]
 struct CentredView {
     main_id: &'static str,
     content: Html,
     toasts: Html,
-    footer_line: String,
-    about: Cow<'static, str>,
-    about_words: crate::i18n::Word,
+    footer: Html,
 }
 
 /// Returns a page that centres `content` (the sign-in, a page the console
 /// does not serve, a fault) above the footer.
 #[must_use]
-pub fn centred(locale: &Locale, content: Html, toasts: Html, footer: Footer) -> Html {
+pub fn centred(locale: &Locale, content: Html, toasts: Html, foot: Footer) -> Html {
     CentredView {
         main_id: MAIN_ID,
         content,
         toasts,
-        footer_line: footer.line(),
-        about: footer.about,
-        about_words: tr(locale, Text::FooterAbout),
+        footer: footer(locale, foot),
     }
     .html()
+}
+
+#[derive(Template)]
+#[template(path = "shell/parts.html", block = "mark")]
+struct MarkView {
+    glyph: Html,
 }
 
 /// Returns a mark for a product that has no drawn one: `glyph` in the
 /// accent. A console with a drawn mark passes [`brand_mark`] to [`lockup`].
 #[must_use]
 pub fn mark(glyph: Glyph) -> Html {
-    Html::raw(format!(
-        "<span class=\"fui-mark\" aria-hidden=\"true\">{}</span>",
-        icon(glyph, "22")
-    ))
+    MarkView {
+        glyph: icon(glyph, "22"),
+    }
+    .html()
+}
+
+#[derive(Template)]
+#[template(path = "shell/parts.html", block = "brand_mark")]
+struct BrandMarkView<'a> {
+    light: &'a str,
+    dark: &'a str,
 }
 
 /// Returns a console's own drawn mark, light and dark: the image at
@@ -236,11 +295,16 @@ pub fn mark(glyph: Glyph) -> Html {
 /// the console's own origin and chosen by the stylesheet.
 #[must_use]
 pub fn brand_mark(light: &str, dark: &str) -> Html {
-    Html::raw(format!(
-        "<span class=\"fui-brand-mark\" aria-hidden=\"true\"><img class=\"fui-brand-light\" src=\"{}\" alt=\"\" width=\"24\" height=\"24\"><img class=\"fui-brand-dark\" src=\"{}\" alt=\"\" width=\"24\" height=\"24\"></span>",
-        Html::text(light),
-        Html::text(dark)
-    ))
+    BrandMarkView { light, dark }.html()
+}
+
+#[derive(Template)]
+#[template(path = "shell/parts.html", block = "lockup")]
+struct LockupView<'a> {
+    href: Option<&'a str>,
+    mark: Html,
+    name: &'a str,
+    word: &'a str,
 }
 
 /// Returns the lockup that leads to `href`: the decorative `mark` beside
@@ -253,25 +317,26 @@ pub fn lockup(
     name: impl AsRef<str>,
     word: impl AsRef<str>,
 ) -> Html {
-    let mark = String::from(mark);
-    Html::raw(format!(
-        "<a href=\"{}\" class=\"fui-lockup\">{mark}<span class=\"fui-lockup-name\">{} <span class=\"fui-lockup-accent\">{}</span></span></a>",
-        Html::text(href),
-        Html::text(name),
-        Html::text(word)
-    ))
+    LockupView {
+        href: Some(href.as_ref()),
+        mark,
+        name: name.as_ref(),
+        word: word.as_ref(),
+    }
+    .html()
 }
 
 /// Returns the lockup [`lockup`] draws as plain text that leads nowhere,
 /// for a page shown before sign-in.
 #[must_use]
 pub fn lockup_plain(mark: Html, name: impl AsRef<str>, word: impl AsRef<str>) -> Html {
-    let mark = String::from(mark);
-    Html::raw(format!(
-        "<span class=\"fui-lockup\">{mark}<span class=\"fui-lockup-name\">{} <span class=\"fui-lockup-accent\">{}</span></span></span>",
-        Html::text(name),
-        Html::text(word)
-    ))
+    LockupView {
+        href: None,
+        mark,
+        name: name.as_ref(),
+        word: word.as_ref(),
+    }
+    .html()
 }
 
 /// What the top bar holds, start to end.
@@ -290,11 +355,9 @@ pub struct TopBar {
 }
 
 #[derive(Template)]
-#[template(path = "shell/topbar.html")]
+#[template(path = "shell/parts.html", block = "topbar")]
 struct TopBarView {
-    sidebar: &'static str,
-    open_menu: String,
-    menu_glyph: Html,
+    drawer: Html,
     lockup: Html,
     search: Option<Html>,
     end: Html,
@@ -309,9 +372,7 @@ struct TopBarView {
 #[must_use]
 pub fn topbar(locale: &Locale, bar: TopBar) -> Html {
     TopBarView {
-        sidebar: bar.sidebar,
-        open_menu: tr(locale, Text::OpenMenu).text().to_owned(),
-        menu_glyph: icon(Glyph::MENU, "18"),
+        drawer: drawer_button(locale, bar.sidebar),
         lockup: bar.lockup,
         search: bar.search,
         end: bar.end,

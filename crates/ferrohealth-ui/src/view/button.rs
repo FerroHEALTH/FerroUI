@@ -144,7 +144,7 @@ mod tests {
                 ),
             "{html}"
         );
-        assert!(html.as_str().contains("New &lt;thing&gt;</a>"), "{html}");
+        assert!(html.as_str().contains("New &#60;thing&#62;</a>"), "{html}");
         assert!(html.as_str().contains("<svg"), "{html}");
     }
 }

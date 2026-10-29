@@ -29,7 +29,7 @@ use crate::i18n::number::grouped;
 use crate::i18n::{Locale, Text, Word, tr};
 use crate::icon::{Glyph, icon};
 use crate::view::button::Variant;
-use crate::view::state::Mark;
+use crate::view::flow::FlowState;
 
 /// The count an entry carries (R12): a number while one is known, nothing
 /// at zero, and a muted dash with the reason when none is known.
@@ -137,7 +137,7 @@ fn count(locale: &Locale, count: Count) -> Html {
         Count::Known { count, words } => (count, words),
         Count::Unknown { why } => {
             return Html::raw(format!(
-                "<span class=\"fui-nav-count fui-nav-count-unknown\" title=\"{}\"><span aria-hidden=\"true\">\u{2013}</span><span class=\"fui-sr-only\">{}</span></span>",
+                "<span title=\"{}\" class=\"fui-nav-count fui-nav-count-unknown\"><span aria-hidden=\"true\">\u{2013}</span><span class=\"fui-sr-only\">{}</span></span>",
                 Html::text(&why),
                 Html::text(&why)
             ));
@@ -145,7 +145,7 @@ fn count(locale: &Locale, count: Count) -> Html {
     };
     let long = shown > RAIL_COUNT_MAX;
     let short = if long {
-        format!("<span class=\"fui-nav-count-short\" aria-hidden=\"true\">{RAIL_COUNT_MAX}+</span>")
+        format!("<span aria-hidden=\"true\" class=\"fui-nav-count-short\">{RAIL_COUNT_MAX}+</span>")
     } else {
         String::new()
     };
@@ -155,7 +155,7 @@ fn count(locale: &Locale, count: Count) -> Html {
         "fui-nav-count"
     };
     Html::raw(format!(
-        "<span class=\"{class}\" title=\"{}\"><span class=\"fui-nav-count-whole\" aria-hidden=\"true\">{}</span>{short}<span class=\"fui-sr-only\">{}</span></span>",
+        "<span title=\"{}\" class=\"{class}\"><span aria-hidden=\"true\" class=\"fui-nav-count-whole\">{}</span>{short}<span class=\"fui-sr-only\">{}</span></span>",
         Html::text(&words),
         grouped(locale, u64::from(shown)),
         Html::text(&words)
@@ -295,8 +295,9 @@ pub struct NestItem {
     pub href: String,
     /// Its state, drawn as the dot's shape and colour (family rule 12); an
     /// item switched off draws no shape, only its word.
-    pub state: Mark,
-    /// The state as the dot's accessible name and tooltip.
+    pub state: FlowState,
+    /// The state as the dot's accessible name and tooltip, such as
+    /// "Reachable".
     pub state_words: String,
     /// Whether the label is an identifier, drawn in the code face.
     pub mono: bool,
@@ -356,17 +357,17 @@ struct NestItemView {
 
 impl NestItemView {
     fn of(item: NestItem, current: &str) -> Self {
-        let dot = if item.state == Mark::Off {
+        let dot = if item.state == FlowState::Off {
             Html::raw(format!(
                 "<span class=\"fui-sr-only\">{}</span>",
                 Html::text(&item.state_words)
             ))
         } else {
             Html::raw(format!(
-                "<span class=\"fui-dot {}\" role=\"img\" aria-label=\"{}\" title=\"{}\"></span>",
-                item.state.tone().class(),
+                "<span role=\"img\" aria-label=\"{}\" title=\"{}\" class=\"fui-dot {}\"></span>",
                 Html::text(&item.state_words),
-                Html::text(&item.state_words)
+                Html::text(&item.state_words),
+                item.state.tone().class()
             ))
         };
         let word = if item.mono {
@@ -434,14 +435,14 @@ fn section(locale: &Locale, nest: Nest, current: &str) -> Html {
 #[cfg(test)]
 mod tests {
     use super::{NEST_SHOWN, NestItem, marks, shown};
-    use crate::view::state::Mark;
+    use crate::view::flow::FlowState;
 
     fn nodes(count: usize) -> Vec<NestItem> {
         (0..count)
             .map(|at| NestItem {
                 label: format!("node-{at}"),
                 href: format!("/org/node-{at}"),
-                state: Mark::Ok,
+                state: FlowState::Up,
                 state_words: String::from("Reachable"),
                 mono: true,
             })

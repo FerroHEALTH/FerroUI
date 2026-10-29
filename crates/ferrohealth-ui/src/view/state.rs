@@ -16,6 +16,7 @@ use askama::Template;
 use crate::html::{Html, Render as _};
 use crate::i18n::Word;
 use crate::tone::Tone;
+use crate::view::flow::FlowState;
 
 /// What a state mark says, which sets its shape and its colour.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -41,6 +42,18 @@ impl Mark {
             Self::Warn => Tone::Warn,
             Self::Bad => Tone::Bad,
             Self::Neutral | Self::Off => Tone::Neutral,
+        }
+    }
+}
+
+impl From<FlowState> for Mark {
+    fn from(state: FlowState) -> Self {
+        match state {
+            FlowState::Up => Self::Ok,
+            FlowState::Degraded => Self::Warn,
+            FlowState::Unreachable => Self::Bad,
+            FlowState::NotChecked => Self::Neutral,
+            FlowState::Off => Self::Off,
         }
     }
 }

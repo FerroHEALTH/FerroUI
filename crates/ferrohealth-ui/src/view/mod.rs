@@ -16,7 +16,9 @@
 
 pub mod action_menu;
 pub mod button;
+pub mod dialog;
 pub mod empty;
+pub mod flow;
 pub mod form;
 pub mod help;
 pub mod kbd;
@@ -26,6 +28,7 @@ pub mod notice;
 pub mod path;
 pub mod segmented;
 pub mod shell;
+pub mod sign_in;
 pub mod state;
 pub mod status;
 pub mod tabs;

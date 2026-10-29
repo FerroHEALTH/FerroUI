@@ -126,15 +126,16 @@ impl Extend<Html> for Html {
 }
 
 /// Writes `text` into `out` with the five characters HTML reserves
-/// escaped, so it reads as text in an element or an attribute.
+/// escaped, so it reads as text in an element or an attribute, in the
+/// entities Askama's own escaper writes, so a page escapes one way.
 pub fn escape_into(out: &mut String, text: &str) {
     for c in text.chars() {
         match c {
             '&' => out.push_str("&amp;"),
-            '<' => out.push_str("&lt;"),
-            '>' => out.push_str("&gt;"),
-            '"' => out.push_str("&quot;"),
-            '\'' => out.push_str("&#x27;"),
+            '<' => out.push_str("&#60;"),
+            '>' => out.push_str("&#62;"),
+            '"' => out.push_str("&#34;"),
+            '\'' => out.push_str("&#39;"),
             c => out.push(c),
         }
     }
@@ -160,7 +161,7 @@ mod tests {
     #[test]
     fn text_is_escaped_and_raw_markup_is_kept() {
         assert_eq!(
-            "a &lt;b&gt; &amp; &quot;c&#x27;",
+            "a &#60;b&#62; &amp; &#34;c&#39;",
             Html::text("a <b> & \"c'").as_str()
         );
         assert_eq!("<b>x</b>", Html::raw(String::from("<b>x</b>")).as_str());
