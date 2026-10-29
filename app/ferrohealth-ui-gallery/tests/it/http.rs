@@ -265,6 +265,58 @@ async fn a_tab_your_preferences_lacks_answers_404() -> Result<(), Box<dyn Error>
     Ok(())
 }
 
+/// A row's danger confirmation is the `<ActionForm>` of its server
+/// function: with no WebAssembly it posts there as a plain form, and the
+/// function sends the browser back naming the member removed (#500).
+#[tokio::test]
+async fn a_removal_dialog_is_its_actions_form_and_a_plain_post_of_it_removes_the_row()
+-> Result<(), Box<dyn Error>> {
+    let (parts, body) = get("/ferrofed/overlays").await?;
+    assert_eq!(StatusCode::OK, parts.status);
+    let dialog = body
+        .split(r#"<dialog id="remove-node-b""#)
+        .nth(1)
+        .and_then(|rest| rest.split("</dialog>").next())
+        .unwrap_or_default();
+    assert!(
+        dialog.contains(r#"action="/api/remove_member""#)
+            && dialog.contains(r#"method="post""#)
+            && dialog.contains(r#"class="fui-dialog-form""#),
+        "the dialog's form is the action's form: {dialog}"
+    );
+    assert!(
+        dialog.contains(r#"name="member" value="node-b""#)
+            && dialog.contains(r#"name="reason""#)
+            && dialog.contains(r#"type="submit""#),
+        "the fields and the confirm sit inside it: {dialog}"
+    );
+    let request = Request::post("/api/remove_member")
+        .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+        .header(header::ACCEPT, "text/html,application/xhtml+xml,*/*;q=0.8")
+        .body(Body::from(
+            "member=node-b&back=%2Fferrofed%2Foverlays&reason=Replaced+by+node-b2",
+        ))?;
+    let (parts, _) = send(request).await?;
+    assert!(parts.status.is_redirection(), "{:?}", parts.status);
+    assert_eq!(
+        "/ferrofed/overlays?removed=node-b",
+        parts.headers[header::LOCATION]
+    );
+    let request = Request::post("/api/remove_member")
+        .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+        .header(header::ACCEPT, "*/*")
+        .body(Body::from(
+            "member=node-b&back=%2Fferrofed%2Foverlays&reason=+",
+        ))?;
+    let (parts, _) = send(request).await?;
+    assert!(
+        !parts.status.is_success() && !parts.status.is_redirection(),
+        "a blank reason is refused: {:?}",
+        parts.status
+    );
+    Ok(())
+}
+
 #[tokio::test]
 async fn a_removal_returns_naming_the_member_and_refuses_one_with_no_reason()
 -> Result<(), Box<dyn Error>> {

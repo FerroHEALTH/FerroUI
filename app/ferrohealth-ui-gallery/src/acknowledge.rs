@@ -8,7 +8,9 @@
 //! #449); no page draws it, and the HTTP tests post to it as a form with no
 //! WebAssembly does. `count_words` answers on its page: the forms page draws
 //! its form with `answer_field`, and a plain post draws that page again
-//! with the count and the posted note (#485).
+//! with the count and the posted note (#485). `remove_member` is the
+//! overlays page's row removal, whose danger confirmation is its
+//! `<ActionForm>` (`danger_action_dialog`, #500).
 #![cfg_attr(
     target_arch = "wasm32",
     allow(
@@ -83,4 +85,43 @@ pub async fn count_words(
         )));
     }
     u32::try_from(words).map_err(|error| ServerFnError::new(error.to_string()))
+}
+
+/// Removes the synthetic member `member` for `reason` and sends the
+/// browser to `back`, naming the member removed: in the page through the
+/// router once hydrated, and as a plain post's redirect before.
+///
+/// # Errors
+///
+/// When `member` is not one the gallery lists, `reason` is blank, or the
+/// server function cannot be reached.
+#[cfg_attr(
+    not(target_arch = "wasm32"),
+    allow(
+        clippy::unused_async,
+        reason = "the server function macro wants the function async, and this one awaits nothing; the macro's expansion carries the lint"
+    )
+)]
+#[server(endpoint = "remove_member")]
+pub async fn remove_member(
+    /// The member removed, one of the gallery's synthetic members.
+    member: String,
+    /// Why, which a console keeps with the revision.
+    reason: String,
+    /// The page to return to.
+    back: String,
+) -> Result<(), ServerFnError> {
+    if !crate::data::MEMBERS.contains(&member.as_str()) {
+        return Err(ServerFnError::new(crate::locale::tr(
+            crate::locale::Msg::NoSuchMember,
+        )));
+    }
+    if reason.trim().is_empty() {
+        return Err(ServerFnError::new(crate::locale::tr(
+            crate::locale::Msg::RemovalNeedsReason,
+        )));
+    }
+    let back = crate::server::return_path(&back);
+    leptos_axum::redirect(&format!("{back}?removed={member}"));
+    Ok(())
 }

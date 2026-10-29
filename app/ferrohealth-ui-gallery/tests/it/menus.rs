@@ -441,6 +441,46 @@ async fn a_row_menus_remove_asks_why_and_removes_the_row_by_keyboard() -> Result
     .await
 }
 
+/// The confirmation is the `<ActionForm>` of a server function, so once
+/// the page has hydrated its confirm runs the removal in the page and the
+/// router draws the page the function names, with no new document (#500).
+#[tokio::test(flavor = "multi_thread")]
+async fn a_rows_removal_runs_its_server_action_in_the_page() -> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/ferrofed/overlays")).await?;
+        browser.hydrated().await?;
+        browser
+            .driver()
+            .execute(
+                "document.getElementById('remove-node-c').showModal();",
+                vec![],
+            )
+            .await?;
+        browser
+            .element(By::Id("remove-node-c-reason"))
+            .await?
+            .send_keys("Replaced by node-c2")
+            .await?;
+        let confirm = browser
+            .element(By::Css("#remove-node-c button[type='submit']"))
+            .await?;
+        browser
+            .click_in_page(&confirm, "the removal runs in the page", async || {
+                Ok(browser.driver().current_url().await?.as_str()
+                    == gallery.url("/ferrofed/overlays?removed=node-c"))
+            })
+            .await?;
+        browser.element(By::Id("member-removed")).await?;
+        browser.element(By::Id("remove-node-b")).await?;
+        browser.console_clean("a removal in the page").await
+    })
+    .await
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn a_confirmation_in_a_rows_actions_cell_wraps_its_sentence_on_a_phone()
 -> Result<(), Box<dyn Error>> {
