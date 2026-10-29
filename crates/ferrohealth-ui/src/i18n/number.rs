@@ -170,8 +170,12 @@ pub fn format_number<M: MemoizerKind>(value: &FluentValue<'_>, memoizer: &M) -> 
     let language = memoizer
         .with_try_get_threadsafe::<Language, _, _>((), |language| language.0.clone())
         .ok()?;
-    // NOTE: no specification governs this: our own design; the bundle's language gives the marks.
-    let marks = Marks::of(&Locale::of(language));
+    // NOTE: no specification governs this: our own design; the locale being formatted,
+    // with a console's catalog of its language, gives the marks when the languages agree.
+    let marks = match super::formatting() {
+        Some(page) if page.language == language => Marks::of(&page),
+        _ => Marks::of(&Locale::of(language)),
+    };
     Some(marks.write(&number.as_string(), number.options.use_grouping))
 }
 

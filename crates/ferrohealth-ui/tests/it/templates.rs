@@ -768,7 +768,7 @@ fn error(status: Status, detail: bool) -> String {
             ErrorPage {
                 status,
                 title: String::from("No mapping file at <this> path"),
-                body: Html::raw(String::from(r#""The bridge reads no such file.""#)),
+                body: Html::raw(String::from("The bridge reads no such file.")),
                 hint: Some(Html::raw(String::from(
                     "<code>__ferrobridge.operator</code>",
                 ))),

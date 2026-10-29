@@ -561,10 +561,10 @@ fn grant_view(locale: &Locale, grant: &ScopeGrant) -> String {
 /// Returns the scopes `grants` as one list named `label`, such as "Scopes
 /// the CDR supports", in `locale`.
 #[must_use]
-pub fn scope_grants(locale: &Locale, label: &str, grants: &[ScopeGrant]) -> Html {
+pub fn scope_grants(locale: &Locale, label: &str, grants: Vec<ScopeGrant>) -> Html {
     let items: String = grants
-        .iter()
-        .map(|grant| grant_view(locale, grant))
+        .into_iter()
+        .map(|grant| grant_view(locale, &grant))
         .collect();
     Html::raw(format!(
         "<ul aria-label=\"{}\" class=\"fui-scopes\">{items}</ul>",

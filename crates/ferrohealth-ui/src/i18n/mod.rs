@@ -31,6 +31,7 @@
 //! (<https://projectfluent.org/fluent/guide/>).
 
 use std::borrow::Cow;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
 
@@ -182,6 +183,34 @@ pub struct Locale {
     supplement: Option<&'static (dyn Loader + Send + Sync)>,
 }
 
+thread_local! {
+    // NOTE: no specification governs this: our own design; a Fluent bundle's number
+    // formatter sees its language alone, so the locale being formatted rides here.
+    static FORMATTING: RefCell<Option<Locale>> = const { RefCell::new(None) };
+}
+
+/// The locale whose message is being formatted, for the life of the value.
+struct Formatting(Option<Locale>);
+
+impl Formatting {
+    /// Marks `locale` as the one being formatted, until the value drops.
+    fn of(locale: &Locale) -> Self {
+        Self(FORMATTING.replace(Some(locale.clone())))
+    }
+}
+
+impl Drop for Formatting {
+    fn drop(&mut self) {
+        FORMATTING.set(self.0.take());
+    }
+}
+
+/// The locale whose message is being formatted, if any: the number
+/// formatter reads its marks from that locale's catalogs.
+fn formatting() -> Option<Locale> {
+    FORMATTING.with_borrow(Clone::clone)
+}
+
 impl fmt::Debug for Locale {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Locale")
@@ -291,6 +320,7 @@ impl Locale {
         args: &[(&'static str, Arg)],
     ) -> String {
         let args = fluent_args(args);
+        let _formatting = Formatting::of(self);
         catalog
             .try_lookup_complete(&self.language, id, Some(&args))
             .unwrap_or_else(|| missing(id))
@@ -309,6 +339,7 @@ impl Locale {
     /// because no catalog of the page's language holds it.
     fn library_word(&self, id: &str, args: &[(&'static str, Arg)]) -> Word {
         let args = fluent_args(args);
+        let _formatting = Formatting::of(self);
         // NOTE: no specification governs this: our own design; a message a catalog
         // lacks, or cannot format, is looked for in the next one, ending in English.
         let own = self
