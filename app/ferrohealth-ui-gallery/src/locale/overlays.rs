@@ -56,6 +56,8 @@ messages! {
     MoreAlone = "more-alone",
     /// `New name`
     NewName = "new-name",
+    /// The refusal of a removal of a member the gallery does not list.
+    NoSuchMember = "no-such-member",
     /// `Open the tables`
     OpenTheTables = "open-the-tables",
     /// `Opened by their trigger with no script; Escape and Cancel close them and the focus...`
@@ -98,6 +100,8 @@ messages! {
     RemoveMemberBody = "remove-member-body",
     /// The question of the confirmation that removes the member `$member`.
     RemoveMemberTitle = "remove-member-title",
+    /// The refusal of a removal with a blank reason.
+    RemovalNeedsReason = "removal-needs-reason",
     /// `Members, each removed from its row menu with a reason`
     RemoveMembers = "remove-members",
     /// `Rename`

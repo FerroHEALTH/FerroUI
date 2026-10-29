@@ -112,10 +112,14 @@ pub async fn remove_member(
     back: String,
 ) -> Result<(), ServerFnError> {
     if !crate::data::MEMBERS.contains(&member.as_str()) {
-        return Err(ServerFnError::new("no such member"));
+        return Err(ServerFnError::new(crate::locale::tr(
+            crate::locale::Msg::NoSuchMember,
+        )));
     }
     if reason.trim().is_empty() {
-        return Err(ServerFnError::new("a removal needs a reason"));
+        return Err(ServerFnError::new(crate::locale::tr(
+            crate::locale::Msg::RemovalNeedsReason,
+        )));
     }
     let back = crate::server::return_path(&back);
     leptos_axum::redirect(&format!("{back}?removed={member}"));
