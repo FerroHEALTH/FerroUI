@@ -11,6 +11,37 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.5.8] - 2026-10-29
+
+### Added
+
+- `view::dialog::danger_action_dialog` draws a danger confirmation with fields
+  inside the `<ActionForm>` a console draws for its server action (class
+  `view::dialog::DIALOG_FORM`): once the page has hydrated, its confirm runs the
+  action in the page and the dialog closes when the console's `done` signal turns
+  true; with no WebAssembly the form posts to the server function's address as
+  a plain form. `danger_form_dialog` keeps posting to a plain route (#500).
+
+### Changed
+
+- Every menu item that is not destructive or disabled draws a visible bar under
+  the pointer and the keyboard focus, in the new `--surface-hover` token: a
+  neutral tint a little darker than the panel in light and a little lighter in
+  dark (1.37:1 and 1.53:1 against it, the most muted text on it allows at
+  4.5:1). Danger items keep `--bad-ground`, a pressed or current item and a
+  chosen listbox option keep `--accent-tint` under the pointer, and a disabled
+  item draws no bar. The combobox and listbox options and the tree rows hover
+  with the same token (#498).
+
+### Fixed
+
+- A form can mark any number of secret fields: `widget::action::secret_mark`
+  names each mark after the field it marks (`ferroui_secret_` and the
+  name's bytes in hexadecimal), so a hydrated `<ActionForm>` with two marks
+  no longer fails on `serde_qs` refusing a name posted twice. The plain post
+  still keeps every marked value out of the answered page, and a mark named
+  `ferroui_secret` alone, as 0.5.7 drew it, is still read (#503).
+
 ## [0.5.7] - 2026-10-29
 
 ### Fixed
@@ -2823,7 +2854,8 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.7...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.8...HEAD
+[0.5.8]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.7...v0.5.8
 [0.5.7]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.6...v0.5.7
 [0.5.6]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.5...v0.5.6
 [0.5.5]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.4...v0.5.5
