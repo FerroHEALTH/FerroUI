@@ -2057,6 +2057,103 @@ async fn a_pick_or_type_field_shows_one_control_and_its_own_label_at_a_time()
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn a_pick_or_type_fields_back_puts_its_picker_on_a_listed_option()
+-> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url("/ferroterm/forms")).await?;
+        let combo = browser
+            .element(By::Css("#pick-canonical-choice[role='combobox']"))
+            .await?;
+        let shown = async |css: &str| -> Result<bool, Box<dyn Error>> {
+            Ok(browser.element(By::Css(css)).await?.is_displayed().await?)
+        };
+        let choose = async |css: &str| -> Result<(), Box<dyn Error>> {
+            Ok(browser.element(By::Css(css)).await?.click().await?)
+        };
+        let another = "#pick-version-choice option[value='another']";
+        let select = browser.element(By::Id("pick-version-choice")).await?;
+        // With nothing listed chosen before, back puts the select on its first option.
+        choose(another).await?;
+        until("the typed version shows", async || {
+            shown("#pick-version").await
+        })
+        .await?;
+        choose("#pick-version-back").await?;
+        until("the version list shows again", async || {
+            shown("#pick-version-choice").await
+        })
+        .await?;
+        assert_eq!(
+            select.prop("selectedIndex").await?.as_deref(),
+            Some("0"),
+            "the select leaves its another option for its first"
+        );
+        choose("#pick-version-choice option[value='2.80']").await?;
+        choose(another).await?;
+        until("the typed version shows again", async || {
+            shown("#pick-version").await
+        })
+        .await?;
+        choose("#pick-version-back").await?;
+        until("the version list shows once more", async || {
+            shown("#pick-version-choice").await
+        })
+        .await?;
+        assert_eq!(
+            select.prop("value").await?.as_deref(),
+            Some("2.80"),
+            "the select returns to the version chosen before another"
+        );
+        choose(another).await?;
+        until("choosing another again types again", async || {
+            shown("#pick-version").await
+        })
+        .await?;
+        // The combobox returns to the code system chosen before another.
+        let posted = browser
+            .element(By::Css(
+                ".fui-combobox-box:has(#pick-canonical-choice) > input[type='hidden']",
+            ))
+            .await?;
+        combo.click().await?;
+        choose("#pick-canonical-choice-list li[role='option']:first-child").await?;
+        combo.click().await?;
+        choose("#pick-canonical-choice-list li[role='option']:last-child").await?;
+        until("the typed canonical shows", async || {
+            shown("#pick-canonical").await
+        })
+        .await?;
+        choose("#pick-canonical-back").await?;
+        until("the code system list shows again", async || {
+            shown("#pick-canonical-choice").await
+        })
+        .await?;
+        assert_eq!(
+            posted.prop("value").await?.as_deref(),
+            Some("http://loinc.org"),
+            "the combobox returns to the code system chosen before another"
+        );
+        assert_eq!(
+            combo.prop("value").await?.as_deref(),
+            Some("LOINC"),
+            "the combobox reads the code system it is on"
+        );
+        combo.click().await?;
+        choose("#pick-canonical-choice-list li[role='option']:last-child").await?;
+        until("choosing another again types again", async || {
+            shown("#pick-canonical").await
+        })
+        .await?;
+        browser.console_clean("the pick-or-type back").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn a_reveal_inside_a_reveal_answers_to_its_own_choice_alone() -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
         return Ok(());
