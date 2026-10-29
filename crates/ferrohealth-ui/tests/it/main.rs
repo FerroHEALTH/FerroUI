@@ -20,6 +20,7 @@
 )]
 
 mod chrome;
+mod config;
 mod console;
 mod contrast;
 mod controls;

@@ -62,6 +62,7 @@ pub mod replica;
 pub mod results;
 pub mod root_matrix;
 pub mod row_preview;
+pub mod secret;
 pub mod segmented;
 pub mod shell;
 pub mod shortcuts;
