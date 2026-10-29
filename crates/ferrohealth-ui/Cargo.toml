@@ -25,7 +25,6 @@ include = [
   "locales/**",
   "vendor/**",
   "tests/**",
-  "askama.toml",
   "README.md",
 ]
 

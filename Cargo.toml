@@ -22,7 +22,10 @@ publish = false
 # the four FerroHEALTH consoles resolve, so the library adds no second copy to
 # any of them. Verified against crates.io on 2026-10-18.
 [workspace.dependencies]
-askama = "0.16.1"
+# The library's templates, compiled in. No `config` feature: the templates
+# sit in the default `templates/` directory with the default whitespace, and
+# the feature's TOML reader is unmaintained (RUSTSEC-2026-0374).
+askama = { version = "0.16.1", default-features = false, features = ["derive", "std"] }
 leptos = { version = "0.8.22", default-features = false }
 leptos_router = { version = "0.8.17", default-features = false }
 leptos_meta = { version = "0.8.7", default-features = false }
