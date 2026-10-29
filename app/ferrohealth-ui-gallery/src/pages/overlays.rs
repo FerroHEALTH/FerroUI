@@ -66,9 +66,9 @@ fn raises(flash: &Flash) -> String {
         })
         .unwrap_or_default();
     format!(
-        " {RAISES}=\"{}\" data-fui-toast-title=\"{}\"{line}{action}",
-        flash.tone.name(),
-        t(&flash.title)
+        " data-fui-toast-title=\"{}\" {RAISES}=\"{}\"{line}{action}",
+        t(&flash.title),
+        flash.tone.name()
     )
 }
 
