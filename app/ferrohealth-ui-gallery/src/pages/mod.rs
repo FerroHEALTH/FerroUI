@@ -5,6 +5,7 @@
 //! draws it whole.
 
 pub mod code;
+pub mod configuration;
 pub mod dock;
 pub mod find;
 pub mod forms;
