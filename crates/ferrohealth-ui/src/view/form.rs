@@ -550,9 +550,11 @@ struct Mark<'a> {
 }
 
 /// Returns the hidden mark that keeps the field `name` out of the fields a
-/// page draws again ([`Posted::read`]): a secret the reader typed, such as
-/// a password, reaches the console's handler and never comes back into
-/// the page. Draw it in the same form as the field.
+/// page draws again ([`Posted::read`]).
+///
+/// A secret the reader typed, such as a password, reaches the console's
+/// handler and never comes back into the page. Draw it in the same form
+/// as the field.
 #[must_use]
 pub fn secret_mark(name: &str) -> Html {
     Mark {
