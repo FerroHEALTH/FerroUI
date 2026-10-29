@@ -9,6 +9,7 @@
 
 use std::error::Error;
 
+use serde_json::Value;
 use thirtyfour::prelude::*;
 
 use crate::browser::{Browser, until, with_browser};
@@ -270,6 +271,86 @@ async fn a_field_that_forbids_the_future_offers_no_later_day_or_month() -> Resul
             .find(By::Css("table[aria-label='September 2026']"))
             .await?;
         browser.console_clean("the forbidden future").await
+    })
+    .await
+}
+
+/// What the title of `picker` draws after its text: the path of the glyph
+/// it ends with, whether that glyph is hidden from assistive technology,
+/// whether it is drawn in the title's own colour, and the text before it.
+async fn title_glyph(browser: &Browser, picker: &WebElement) -> Result<Value, Box<dyn Error>> {
+    let title = picker.find(By::Css("button.fui-datepicker-title")).await?;
+    let found = browser
+        .driver()
+        .execute(
+            "const title = arguments[0];
+             const svg = title.lastElementChild;
+             if (!svg || svg.tagName.toLowerCase() !== 'svg') return null;
+             const box = svg.getBoundingClientRect();
+             return {
+               path: svg.querySelector('path').getAttribute('d'),
+               hidden: svg.getAttribute('aria-hidden'),
+               stroke: svg.getAttribute('stroke'),
+               same_colour: getComputedStyle(svg).color === getComputedStyle(title).color,
+               drawn: box.width > 0 && box.height > 0,
+               text: title.textContent.trim(),
+               label: title.getAttribute('aria-label'),
+             };",
+            vec![title.to_json()?],
+        )
+        .await?;
+    Ok(found.json().clone())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_month_title_shows_the_chevron_of_the_chooser_it_opens() -> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.goto(&gallery.url(FORMS)).await?;
+        let picker = open_picker(browser, "audit-from").await?;
+        let month = title_glyph(browser, &picker).await?;
+        assert_eq!(
+            Some("m6 9 6 6 6-6"),
+            month["path"].as_str(),
+            "the month title ends with the chevron-down glyph: {month}"
+        );
+        assert_eq!(
+            Some("true"),
+            month["hidden"].as_str(),
+            "the glyph is hidden, the title's name says the action (WCAG 2.2 SC 1.1.1): {month}"
+        );
+        assert_eq!(Some("currentColor"), month["stroke"].as_str(), "{month}");
+        assert_eq!(
+            Some(true),
+            month["same_colour"].as_bool(),
+            "the glyph takes the title's colour: {month}"
+        );
+        assert_eq!(Some(true), month["drawn"].as_bool(), "{month}");
+        assert_eq!(Some("October 2026"), month["text"].as_str(), "{month}");
+        assert_eq!(
+            Some("Choose the month and year, now October 2026"),
+            month["label"].as_str(),
+            "{month}"
+        );
+        picker
+            .find(By::Css("button.fui-datepicker-title"))
+            .await?
+            .click()
+            .await?;
+        picker.find(By::Css("div.fui-datepicker-months")).await?;
+        let year = title_glyph(browser, &picker).await?;
+        assert_eq!(
+            Some("m18 15-6-6-6 6"),
+            year["path"].as_str(),
+            "the year title, which goes back to the days, ends with chevron-up: {year}"
+        );
+        assert_eq!(Some("true"), year["hidden"].as_str(), "{year}");
+        assert_eq!(Some(true), year["same_colour"].as_bool(), "{year}");
+        assert_eq!(Some("2026"), year["text"].as_str(), "{year}");
+        browser.console_clean("the month title's chevron").await
     })
     .await
 }

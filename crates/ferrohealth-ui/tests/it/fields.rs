@@ -293,6 +293,33 @@ fn the_group_draws_the_fields_one_edge_and_the_focus_ring_round_its_parts() {
 }
 
 #[test]
+fn the_date_field_hands_its_module_the_chevrons_of_the_picker_titles() {
+    let page = html(date_field(audit_from("2026-10-14", None)));
+    let (_, template) = page
+        .split_once("<template data-fui-icons>")
+        .expect("the field's icon template");
+    let (template, _) = template.split_once("</template>").expect("its end");
+    for (name, path) in [
+        ("chevron-down", "m6 9 6 6 6-6"),
+        ("chevron-up", "m18 15-6-6-6 6"),
+    ] {
+        let (_, glyph) = template
+            .split_once(&format!("<span data-icon=\"{name}\">"))
+            .unwrap_or_else(|| panic!("the template holds {name}: {template}"));
+        let (glyph, _) = glyph.split_once("</span>").expect("its end");
+        assert!(glyph.contains(path), "{name} draws its outline: {glyph}");
+        assert!(
+            glyph.contains(r#"aria-hidden="true""#),
+            "{name} is hidden from assistive technology: {glyph}"
+        );
+        assert!(
+            glyph.contains(r#"width="14""#) && glyph.contains(r#"stroke="currentColor""#),
+            "{name} is drawn at 14 in the title's colour: {glyph}"
+        );
+    }
+}
+
+#[test]
 fn the_server_draws_the_date_field_closed_with_its_typed_value_posting() {
     let page = html(date_field(audit_from("2026-10-14", None)));
     let input = tags(&page, "input")

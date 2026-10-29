@@ -512,13 +512,15 @@ struct FieldView<'a> {
     icons: Html,
 }
 
-/// The icons the `date` module draws the picker's arrows with, in a
-/// template the page never shows.
+/// The icons the `date` module draws the picker's arrows and the chevrons of
+/// its titles with, in a template the page never shows.
 fn icons() -> Html {
     Html::raw(format!(
-        "<template data-fui-icons><span data-icon=\"chevron-left\">{}</span><span data-icon=\"chevron-right\">{}</span></template>",
+        "<template data-fui-icons><span data-icon=\"chevron-left\">{}</span><span data-icon=\"chevron-right\">{}</span><span data-icon=\"chevron-down\">{}</span><span data-icon=\"chevron-up\">{}</span></template>",
         icon(Glyph::CHEVRON_LEFT, "16"),
-        icon(Glyph::CHEVRON_RIGHT, "16")
+        icon(Glyph::CHEVRON_RIGHT, "16"),
+        icon(Glyph::CHEVRON_DOWN, "14"),
+        icon(Glyph::CHEVRON_UP, "14")
     ))
 }
 
