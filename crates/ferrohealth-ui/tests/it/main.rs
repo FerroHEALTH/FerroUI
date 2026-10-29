@@ -27,6 +27,7 @@ mod fields;
 mod filter;
 mod kbd;
 mod markup;
+mod preferences;
 mod render;
 mod shell;
 mod state;

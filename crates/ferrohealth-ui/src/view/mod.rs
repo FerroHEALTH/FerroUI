@@ -37,6 +37,7 @@ pub mod path;
 pub mod pick_or_type;
 pub mod picker;
 pub mod popover;
+pub mod preferences;
 pub mod refusal;
 pub mod replica;
 pub mod segmented;
