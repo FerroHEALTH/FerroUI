@@ -19,4 +19,5 @@ pub mod records;
 pub mod sign_in;
 pub mod tables;
 pub mod templates;
+pub mod terminology;
 pub mod trees;

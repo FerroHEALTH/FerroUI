@@ -468,7 +468,13 @@ pub const fn brand_glyph(brand: Brand) -> Glyph {
 /// The FHIR version select (M3) the top bar of the visit's page carries:
 /// the terminology page's alone.
 fn fhir_version(visit: &Visit) -> Option<VersionSelect> {
-    visit.path.ends_with("/terminology").then(|| None).flatten()
+    visit.path.ends_with("/terminology").then(|| {
+        crate::pages::terminology::version_select(
+            visit,
+            &visit.path,
+            visit.param(crate::pages::terminology::version_key()),
+        )
+    })
 }
 
 /// The user menu of the visit's brand.

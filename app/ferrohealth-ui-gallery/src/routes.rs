@@ -111,6 +111,7 @@ pub fn draw(visit: &Visit) -> Drawn {
     }
     match page {
         Page::SignIn => pages::sign_in::page(visit),
+        Page::Terminology => pages::terminology::page(visit),
         Page::Charts => pages::charts::page(visit),
         Page::Layouts => pages::layouts::page(visit),
         Page::Clinical => pages::clinical::page(visit),
