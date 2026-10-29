@@ -51,6 +51,10 @@ pub const MODULES: &[Module] = &[
         text: include_str!("../scripts/copy.js"),
     },
     Module {
+        file: "countdown.js",
+        text: include_str!("../scripts/countdown.js"),
+    },
+    Module {
         file: "date.js",
         text: include_str!("../scripts/date.js"),
     },
