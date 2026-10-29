@@ -408,6 +408,10 @@ fn is_saved(saved: Option<&str>, cookie: &str) -> bool {
 
 /// Returns the rows of Appearance: the theme and the density as preview
 /// cards, and reduced motion.
+#[expect(
+    clippy::too_many_lines,
+    reason = "the three rows and their five preview cards read as one list, as on main"
+)]
 fn appearance(locale: &Locale, page: &PreferencesPage, post: &Post) -> Vec<Html> {
     let saved = page.saved.as_deref();
     let accent = || Arg::from(page.accent.clone());

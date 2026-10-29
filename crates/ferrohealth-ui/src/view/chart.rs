@@ -1118,9 +1118,11 @@ struct LegendView<'a> {
 }
 
 /// Returns the legend of the plot `plot`, named `label`, one entry per
-/// series in `entries`, with `gap` saying what a break in a line means when
-/// the chart has one: a static key the `chart` module turns into toggles.
-/// A console draws it through [`line_chart`].
+/// series in `entries`.
+///
+/// `gap` says what a break in a line means when the chart has one. It is
+/// a static key the `chart` module turns into toggles; a console draws it
+/// through [`line_chart`].
 #[must_use]
 pub fn legend(plot: &str, label: String, entries: Vec<LegendEntry>, gap: Option<Word>) -> Html {
     LegendView {

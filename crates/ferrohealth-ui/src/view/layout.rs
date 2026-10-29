@@ -34,7 +34,6 @@ fn each(items: Vec<Html>, open: &str, close: &str) -> String {
         .concat()
 }
 
-
 /// A step of space between the parts of a stack.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Gap {
@@ -191,11 +190,7 @@ pub fn field_row(row: FieldRow, body: Html) -> Html {
 #[must_use]
 pub fn keyed_field_row(id: &str, row: FieldRow, body: Html) -> Html {
     wrap(
-        &format!(
-            "<div id=\"{}\" class=\"{}\">",
-            Html::text(id),
-            row.class()
-        ),
+        &format!("<div id=\"{}\" class=\"{}\">", Html::text(id), row.class()),
         body,
         "</div>",
     )
