@@ -111,6 +111,12 @@ pub fn draw(visit: &Visit) -> Drawn {
     }
     match page {
         Page::SignIn => pages::sign_in::page(visit),
+        Page::Forms => pages::forms::page(visit),
+        Page::Code => pages::code::page(visit),
+        Page::Preferences => pages::preferences::page(visit),
+        Page::Find => pages::find::page(visit),
+        Page::Fault => pages::templates::fault(visit),
+        Page::Template => pages::templates::page(visit),
         _ => crate::app::not_found(visit),
     }
 }
@@ -119,8 +125,10 @@ pub fn draw(visit: &Visit) -> Drawn {
 /// posted to it, for a page that takes a post; `None` for any other.
 #[must_use]
 pub fn posted(visit: &Visit, body: &str) -> Option<Drawn> {
-    let _ = (visit, body);
-    None
+    match Page::of(&visit.path)? {
+        Page::Forms => Some(crate::pages::forms::posted(visit, body)),
+        _ => None,
+    }
 }
 
 #[cfg(test)]

@@ -18,6 +18,7 @@ pub mod app;
 pub mod clinical_data;
 pub mod data;
 pub mod locale;
+pub mod markup;
 pub mod pages;
 pub mod records_data;
 pub mod routes;

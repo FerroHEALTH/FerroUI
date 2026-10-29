@@ -4,4 +4,11 @@
 //! The gallery's pages, one module each, every one a `page(&Visit)` that
 //! draws it whole.
 
+pub mod code;
+pub mod dock;
+pub mod find;
+pub mod forms;
+pub mod preferences;
+pub mod records;
 pub mod sign_in;
+pub mod templates;

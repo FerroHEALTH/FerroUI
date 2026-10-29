@@ -12,6 +12,7 @@
 //! and after a submit the state follows what was submitted: a save with a
 //! reason is done, a save without one asks for it.
 
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::view::button::Variant;
 use ferrohealth_ui::view::dock::{
@@ -19,11 +20,10 @@ use ferrohealth_ui::view::dock::{
 };
 use ferrohealth_ui::view::form::{FORM, INPUT, keyed_field};
 use ferrohealth_ui::view::surface::card;
-use leptos::prelude::*;
-use leptos_router::hooks::use_query_map;
 
 use crate::data::NEW_PATH;
-use crate::locale::{Msg, tr, tr_with};
+use crate::locale::Msg;
+use crate::visit::Visit;
 
 /// The id of the long form the bar saves.
 const FORM_ID: &str = "long-form";
@@ -51,9 +51,9 @@ enum State {
 
 /// The state the address asks for: its `dock` query, or what its form
 /// submitted; `None` when it asks for neither, and the page draws no bar.
-fn asked() -> Option<State> {
-    use_query_map().with_untracked(|query| {
-        let state = match query.get("dock").as_deref() {
+fn asked(v: &Visit) -> Option<State> {
+    {
+        let state = match v.param("dock") {
             Some("idle") => State::Idle,
             Some("missing") => State::Missing,
             Some("disabled") => State::Disabled,
@@ -62,7 +62,7 @@ fn asked() -> Option<State> {
             Some("stale") => State::Stale,
             Some("bare") => State::Bare,
             Some("path") => State::Path,
-            _ => match (query.get("decision").as_deref(), query.get("reason")) {
+            _ => match (v.param("decision"), v.param("reason")) {
                 (Some("save"), Some(reason)) if !reason.trim().is_empty() => State::Done,
                 (Some("save"), _) => State::Missing,
                 (Some(_), _) => State::Idle,
@@ -70,61 +70,53 @@ fn asked() -> Option<State> {
             },
         };
         Some(state)
-    })
+    }
 }
 
 /// A long form whose actions are the page's docked bar: a control the
 /// keyboard reaches is scrolled clear of the bar. Its first field is
 /// required, which Save waits on and Discard leaves.
-pub(crate) fn long_form() -> AnyView {
-    let fields = (1..=14_u32)
+pub(crate) fn long_form(v: &Visit) -> Html {
+    let fields: Html = (1..=14_u32)
         .map(|index| {
             let id = format!("long-field-{index}");
-            let input_id = id.clone();
+            let required = if index == 1 { " required" } else { "" };
+            let control = Html::raw(format!(
+                "<input id=\"{id}\" type=\"text\" class=\"{INPUT}\" value=\"value-{index}\"{required}>"
+            ));
             keyed_field(
                 id,
-                tr_with(Msg::SyntheticSetting, &[("index", index.into())]),
+                v.tr_with(Msg::SyntheticSetting, &[("index", index.into())]),
                 None,
-                view! {
-                    <input
-                        id=input_id
-                        type="text"
-                        class=INPUT
-                        value=format!("value-{index}")
-                        required=index == 1
-                    />
-                },
+                control,
             )
         })
-        .collect_view();
+        .collect();
     card(
-        tr(Msg::LongForm),
-        view! {
-            <form method="get" class=FORM id=FORM_ID>
-                {fields}
-            </form>
-        },
+        v.tr(Msg::LongForm),
+        Html::raw(format!(
+            "<form method=\"get\" class=\"{FORM}\" id=\"{FORM_ID}\">{fields}</form>"
+        )),
     )
-    .into_any()
 }
 
 /// The docked bar that saves the long form, in the state the address asks
 /// for, when it asks for one.
-pub(crate) fn dock() -> Option<AnyView> {
-    let state = asked()?;
+pub(crate) fn dock(v: &Visit) -> Option<Html> {
+    let state = asked(v)?;
     let held = matches!(state, State::Submitting | State::Done | State::Stale);
     let reason = DockField {
         id: String::from("dock-reason"),
         name: String::from("reason"),
-        label: tr(Msg::DockReason),
+        label: v.tr(Msg::DockReason),
         value: match state {
             State::Missing | State::Disabled => String::new(),
-            _ => tr(Msg::DockReasonSample),
+            _ => v.tr(Msg::DockReasonSample),
         },
-        placeholder: tr(Msg::DockReasonPlaceholder),
+        placeholder: v.tr(Msg::DockReasonPlaceholder),
         shortcut: Some(String::from("r")),
-        error: (state == State::Missing).then(|| tr(Msg::DockReasonMissing)),
-        help: Some(tr(Msg::DockReasonHelp)),
+        error: (state == State::Missing).then(|| v.tr(Msg::DockReasonMissing)),
+        help: Some(v.tr(Msg::DockReasonHelp)),
         disabled: held,
         focus: state == State::Missing,
     };
@@ -135,33 +127,33 @@ pub(crate) fn dock() -> Option<AnyView> {
             DockField {
                 id: String::from("dock-path"),
                 name: String::from("path"),
-                label: tr(Msg::DockPath),
+                label: v.tr(Msg::DockPath),
                 value: String::from(NEW_PATH),
-                help: Some(tr(Msg::DockPathHelp)),
+                help: Some(v.tr(Msg::DockPathHelp)),
                 ..DockField::default()
             },
         ],
         _ => vec![reason],
     };
     let line = match state {
-        State::Done => Some(DockLine::Done(tr(Msg::DockSaved))),
+        State::Done => Some(DockLine::Done(v.tr(Msg::DockSaved))),
         State::Stale => Some(DockLine::Stale {
-            said: tr(Msg::DockStale),
+            said: v.tr(Msg::DockStale),
             ways: vec![DockLink {
                 href: String::from("?"),
-                words: tr(Msg::DockOpenCurrent),
+                words: v.tr(Msg::DockOpenCurrent),
                 variant: Variant::Secondary,
             }],
         }),
         State::Bare => Some(DockLine::State {
             glyph: Some(Glyph::PENCIL),
-            said: tr(Msg::DockDraftChanges),
+            said: v.tr(Msg::DockDraftChanges),
         }),
         _ => None,
     };
     let discard = Decision {
         value: String::from("discard"),
-        label: tr(Msg::DockDiscard),
+        label: v.tr(Msg::DockDiscard),
         glyph: Some(Glyph::X),
         state: if held {
             DecisionState::Held
@@ -174,9 +166,9 @@ pub(crate) fn dock() -> Option<AnyView> {
     let save = Decision {
         value: String::from("save"),
         label: if state == State::Submitting {
-            tr(Msg::DockSaving)
+            v.tr(Msg::DockSaving)
         } else {
-            tr(Msg::SaveSettings)
+            v.tr(Msg::SaveSettings)
         },
         variant: Variant::Primary,
         glyph: Some(Glyph::SAVE),
@@ -184,14 +176,14 @@ pub(crate) fn dock() -> Option<AnyView> {
         state: match state {
             State::Submitting => DecisionState::Busy,
             State::Done | State::Stale => DecisionState::Held,
-            State::Disabled => DecisionState::Blocked(tr(Msg::DockGiveReason)),
+            State::Disabled => DecisionState::Blocked(v.tr(Msg::DockGiveReason)),
             _ => DecisionState::Ready,
         },
         ..Decision::default()
     };
     Some(decision_bar(DecisionBar {
         id: String::from("gallery-dock"),
-        label: tr(Msg::DockLabel),
+        label: v.tr(Msg::DockLabel),
         form: DockForm::Page(String::from(FORM_ID)),
         fields,
         line,
