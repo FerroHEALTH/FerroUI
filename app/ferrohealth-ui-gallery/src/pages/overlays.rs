@@ -36,7 +36,7 @@ use ferrohealth_ui::view::side_panel::{Opener, SidePanel, SidePanelWords, side_p
 use ferrohealth_ui::view::surface::{
     card, chip, cluster, definitions, grid, page_header, panel, split, stack,
 };
-use ferrohealth_ui::view::toast::{Flash, ToastLink};
+use ferrohealth_ui::view::toast::{Flash, RAISES, ToastLink};
 
 use crate::app::{Page, REMOVE_ROUTE};
 use crate::locale::Msg;
@@ -45,6 +45,27 @@ use crate::visit::Visit;
 
 /// The files a row of the modal dialogs' list names.
 const FILES: [&str; 2] = ["synthetic-007.model.yml", "synthetic-011.extension.yml"];
+
+/// The attributes with which the `toast` module raises `flash` in place of
+/// following its link.
+fn raises(flash: &Flash) -> String {
+    let mut attributes = format!(
+        " {RAISES}=\"{}\" data-fui-toast-title=\"{}\"",
+        flash.tone.name(),
+        t(&flash.title)
+    );
+    if let Some(line) = &flash.line {
+        attributes.push_str(&format!(" data-fui-toast-line=\"{}\"", t(line)));
+    }
+    if let Some(action) = &flash.action {
+        attributes.push_str(&format!(
+            " data-fui-toast-action=\"{}\" data-fui-toast-href=\"{}\"",
+            t(&action.label),
+            t(&action.href)
+        ));
+    }
+    attributes
+}
 
 /// The path of this brand's page `page`.
 fn page_path(v: &Visit, page: &str) -> String {
@@ -69,8 +90,9 @@ fn confirm_and_toast(v: &Visit, dialog: &str, danger: bool) -> Html {
             v.tr(Msg::Reload),
         )
     };
+    let raised = told(v, toast).map(|flash| raises(&flash)).unwrap_or_default();
     h(format!(
-        "<a href=\"{}?toast={toast}\" id=\"confirm-{dialog}\" class=\"{class}\" data-fui=\"keep\">{}{}</a>",
+        "<a href=\"{}?toast={toast}\" id=\"confirm-{dialog}\" class=\"{class}\"{raised} data-fui=\"keep\">{}{}</a>",
         t(page_path(v, "overlays")),
         icon(glyph, "16"),
         t(words)
@@ -434,10 +456,16 @@ fn modals(v: &Visit) -> Html {
             width: Width::Narrow,
             body: h(format!("<p>{}</p>", t(v.tr(Msg::FileGoesGoodRunningSet)))),
             actions: h(format!(
-                "<a href=\"{}?toast=row-deleted&amp;row={}\" id=\"confirm-delete-row\" class=\"{}\" data-fui=\"keep\">{}{}</a>",
+                "<a href=\"{}?toast=row-deleted&amp;row={}\" id=\"confirm-delete-row\" class=\"{}\"{} data-fui=\"keep\">{}{}</a>",
                 t(&here),
                 t(&named),
                 Variant::Destructive.class(),
+                pending
+                    .map(|row| raises(&Flash::new(
+                        Tone::Ok,
+                        v.tr_with(Msg::RowDeleted, &[("row", Arg::from(row))])
+                    )))
+                    .unwrap_or_default(),
                 icon(Glyph::TRASH, "16"),
                 t(v.tr(Msg::Delete))
             )),
@@ -530,9 +558,14 @@ fn side_panel_card(v: &Visit) -> Html {
 /// The toast the address's `toast` names, as the action that led here
 /// answered it.
 fn flash(v: &Visit) -> Option<Flash> {
+    told(v, v.param("toast")?)
+}
+
+/// The toast the key `key` names.
+fn told(v: &Visit, key: &str) -> Option<Flash> {
     let tables = super::overview::brand_page(v, "tables");
     let here = page_path(v, "overlays");
-    Some(match v.param("toast")? {
+    Some(match key {
         "ok" => Flash::new(Tone::Ok, v.tr(Msg::SavedSetReloaded))
             .line(v.tr(Msg::ThreeFilesCompiledFacadeServes))
             .action(ToastLink {
@@ -574,8 +607,11 @@ fn toasts(v: &Visit) -> Html {
     ]
     .into_iter()
     .map(|(tone, words)| {
+        let raised = told(v, tone.name())
+            .map(|flash| raises(&flash))
+            .unwrap_or_default();
         h(format!(
-            "<a href=\"{}?toast={}\" class=\"{}\" data-toast=\"{}\" data-fui=\"keep\">{}</a>",
+            "<a href=\"{}?toast={}\" class=\"{}\" data-toast=\"{}\"{raised} data-fui=\"keep\">{}</a>",
             t(&here),
             tone.name(),
             Variant::Secondary.class(),

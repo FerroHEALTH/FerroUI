@@ -71,7 +71,7 @@ pub(crate) async fn window(
 /// Waits until the overlays page has hydrated: its ok toast button raises a
 /// toast, which carries an action and so waits for its Dismiss.
 pub(crate) async fn hydrated_toasts(browser: &Browser) -> Result<(), Box<dyn Error>> {
-    let raise = browser.element(By::Css("button[data-toast='ok']")).await?;
+    let raise = browser.element(By::Css("a[data-toast='ok']")).await?;
     until("the toasts answer a press", async || {
         raise.click().await?;
         Ok(!browser
@@ -571,7 +571,7 @@ async fn session_pager_posts(browser: &Browser, gallery: &Gallery) -> Result<(),
     );
     let last = browser.element(last).await?;
     browser
-        .click_in_page(&last, "the session pager draws the last page", async || {
+        .click_through(&last, "the session pager draws the last page", async || {
             Ok(browser
                 .driver()
                 .find_all(By::XPath("//p[contains(., '126-137 of 137')]"))
@@ -637,7 +637,7 @@ async fn the_user_menu_posts_the_theme_and_the_choice_is_kept() -> Result<(), Bo
             .await?;
         until("the menu opens", async || Ok(dark.is_displayed().await?)).await?;
         browser
-            .click_in_page(&dark, "the theme the post kept takes effect", async || {
+            .click_through(&dark, "the theme the post kept takes effect", async || {
                 Ok(!browser
                     .driver()
                     .find_all(By::Css(r#"html[data-theme="dark"]"#))
@@ -712,7 +712,7 @@ async fn the_user_menu_survives_a_navigation_that_draws_another_shell() -> Resul
             .element(By::Css("#user-menu a[href='/ferrofed/preferences']"))
             .await?;
         browser
-            .click_in_page(&preferences, "the router draws Your preferences", async || {
+            .click_through(&preferences, "the router draws Your preferences", async || {
                 Ok(browser.driver().current_url().await?.path() == "/ferrofed/preferences")
             })
             .await?;
@@ -727,7 +727,7 @@ async fn the_user_menu_survives_a_navigation_that_draws_another_shell() -> Resul
         open().await?;
         let index = browser.element(By::Css("header a[href='/']")).await?;
         browser
-            .click_in_page(&index, "the router draws the index", async || {
+            .click_through(&index, "the router draws the index", async || {
                 Ok(browser.driver().current_url().await?.path() == "/")
             })
             .await?;
@@ -945,7 +945,7 @@ async fn a_rail_entry_shows_its_words_on_keyboard_focus_until_escape() -> Result
             .element(By::XPath("//button[@name = 'sidebar' and @value = 'rail']"))
             .await?;
         browser
-            .click_in_page(&rail, "the sidebar folds to its rail", async || {
+            .click_through(&rail, "the sidebar folds to its rail", async || {
                 Ok(!browser
                     .driver()
                     .find_all(By::Css("#sidebar.fui-sidebar-rail"))

@@ -14,7 +14,9 @@
 //! out after [`DWELL_MS`], the count held while the pointer or the focus is
 //! on the region (WCAG 2.2 SC 2.2.1), keeps one with an action until it is
 //! dismissed, shows at most [`SHOWN_MAX`] and raises a toast any module asks
-//! for with a `fui:toast` event, cloning the region's `<template>`. A toast
+//! for with a `fui:toast` event, cloning the region's `<template>`; a link
+//! marked [`RAISES`] to a page that answers with a toast raises that toast
+//! in place of loading the page. A toast
 //! holds no clinical data: it says what happened, never what was in it.
 
 use askama::Template;
@@ -31,6 +33,12 @@ pub const DWELL_MS: u64 = 6000;
 
 /// The most toasts the region shows at once.
 pub const SHOWN_MAX: usize = 3;
+
+/// The attribute of a link whose page answers with a toast, naming the
+/// toast's tone (`ok`, `info`, `warn`, `bad`); `data-fui-toast-title`,
+/// `-line`, `-action` and `-href` carry its words and its action, and the
+/// `toast` module raises it in place of following the link.
+pub const RAISES: &str = "data-fui-toast";
 
 /// A toast's action that leads somewhere: a link drawn as a small button.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

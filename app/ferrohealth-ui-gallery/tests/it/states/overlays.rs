@@ -65,7 +65,7 @@ async fn overlay(
 async fn raised_toasts(browser: &Browser, brand: Brand, theme: &str) -> Result<(), Box<dyn Error>> {
     for tone in ["ok", "info", "warn", "bad"] {
         let raise = browser
-            .element(By::Css(format!("button[data-toast='{tone}']")))
+            .element(By::Css(format!("a[data-toast='{tone}']")))
             .await?;
         press(browser, &raise).await?;
     }

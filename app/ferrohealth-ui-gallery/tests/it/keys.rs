@@ -511,7 +511,7 @@ async fn the_user_menu_opens_the_legend_where_the_page_has_one() -> Result<(), B
             .click()
             .await?;
         let shortcuts = browser
-            .element(By::Css("#user-menu a[data-ferroui-shortcuts]"))
+            .element(By::Css("#user-menu a[data-fui-shortcuts]"))
             .await?;
         until("the menu opens", async || {
             Ok(shortcuts.is_displayed().await?)

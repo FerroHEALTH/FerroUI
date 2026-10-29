@@ -470,10 +470,10 @@ impl Browser {
         .await
     }
 
-    /// Clicks `control`, a link or a form the router takes in the page, and
-    /// waits until `done` holds; the document stays the same (FerroUI #410),
-    /// which it checks.
-    pub(crate) async fn click_in_page<F>(
+    /// Clicks `control`, a link or a form whose answer is the next page,
+    /// waits until that page has replaced the one `control` is in, and then
+    /// until `done` holds.
+    pub(crate) async fn click_through<F>(
         &self,
         control: &WebElement,
         what: &str,
@@ -482,15 +482,8 @@ impl Browser {
     where
         F: AsyncFnMut() -> Result<bool, Box<dyn Error>>,
     {
-        self.hydrated().await?;
-        let old = self.loader().await?;
-        control.click().await?;
-        until(what, done).await?;
-        if self.loader().await? == old {
-            Ok(())
-        } else {
-            Err(format!("{what} loaded a new document; the router keeps the page").into())
-        }
+        self.click_and_load(control).await?;
+        until(what, done).await
     }
 
     /// Whether the editor around the text area `area` has hydrated: its

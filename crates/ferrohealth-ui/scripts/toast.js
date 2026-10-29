@@ -6,8 +6,9 @@
 // the region, keeps a toast with an action until it is dismissed, shows at
 // most three (the oldest that is no refusal and has no action leaving
 // first), and raises a toast any module asks for with a "fui:toast" event
-// carrying { tone, title, line }. The region's <template> is the toast's
-// shape, its words the server's.
+// carrying { tone, title, line, action }, and one a link marked
+// data-fui-toast asks for in place of loading its page. The region's
+// <template> is the toast's shape, its words the server's.
 export const DWELL_MS = 6000;
 export const SHOWN_MAX = 3;
 
@@ -67,7 +68,7 @@ export function enhance(region) {
   document.addEventListener("fui:toast", (event) => {
     const template = region.querySelector("template");
     if (!template) return;
-    const { tone = "info", title = "", line = "" } = event.detail || {};
+    const { tone = "info", title = "", line = "", action = null } = event.detail || {};
     const toast = template.content.firstElementChild.cloneNode(true);
     toast.classList.add("fui-tone-" + tone);
     if (tone === "bad") toast.setAttribute("role", "alert");
@@ -80,8 +81,37 @@ export function enhance(region) {
       if (line) lineSlot.textContent = line;
       else lineSlot.remove();
     }
+    const link = toast.querySelector("a[data-fui-action]");
+    if (link && action && action.href) {
+      link.href = action.href;
+      link.textContent = action.label || "";
+      link.hidden = false;
+    } else if (link) link.remove();
     region.appendChild(toast);
     for (const leaving of trim(toasts())) leaving.remove();
     settle(toast);
+  });
+
+  // A link to a page that answers with a toast raises that toast in place:
+  // data-fui-toast names its tone, and its title, line and action ride in
+  // data-fui-toast-title, -line, -action and -href.
+  document.addEventListener("click", (event) => {
+    const control = event.target.closest("[data-fui-toast]");
+    if (!control) return;
+    event.preventDefault();
+    // A confirm inside a dialog has done the dialog's work.
+    const dialog = control.closest("dialog");
+    if (dialog && dialog.open) dialog.close();
+    const words = control.dataset;
+    document.dispatchEvent(
+      new CustomEvent("fui:toast", {
+        detail: {
+          tone: words.fuiToast,
+          title: words.fuiToastTitle,
+          line: words.fuiToastLine,
+          action: words.fuiToastHref ? { label: words.fuiToastAction, href: words.fuiToastHref } : null,
+        },
+      }),
+    );
   });
 }

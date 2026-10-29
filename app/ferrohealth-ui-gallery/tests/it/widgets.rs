@@ -291,7 +291,7 @@ pub(crate) async fn busy_flow_unfolds(
         .await?;
     if in_page {
         browser
-            .click_in_page(&summary, "the summary card unfolds the lane", async || {
+            .click_through(&summary, "the summary card unfolds the lane", async || {
                 Ok(!browser.driver().find_all(By::Css(quiet)).await?.is_empty())
             })
             .await?;
@@ -515,7 +515,7 @@ async fn the_search_box_submits_and_the_preferences_density_posts_on_change()
         let compact = density_card(browser, "compact").await?;
         let saved = gallery.url("/ferroterm/preferences?saved=density");
         browser
-            .click_in_page(
+            .click_through(
                 &compact,
                 "the density the post kept takes effect",
                 async || {
@@ -540,7 +540,7 @@ async fn the_search_box_submits_and_the_preferences_density_posts_on_change()
         .await?;
         let comfortable = density_card(browser, "comfortable").await?;
         browser
-            .click_in_page(&comfortable, "the density goes back", async || {
+            .click_through(&comfortable, "the density goes back", async || {
                 Ok(!browser
                     .driver()
                     .find_all(By::Css(r#"html[data-density="comfortable"]"#))
@@ -718,7 +718,7 @@ async fn the_open_pager_steps_with_no_total() -> Result<(), Box<dyn Error>> {
                 .element(By::Css(format!("{pager} [data-page='{key}']")))
                 .await?;
             browser
-                .click_in_page(&control, &format!("{key} shows {shown}"), async || {
+                .click_through(&control, &format!("{key} shows {shown}"), async || {
                     Ok(range(pager).await? == shown)
                 })
                 .await

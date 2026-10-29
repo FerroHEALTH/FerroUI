@@ -469,7 +469,7 @@ async fn a_rows_removal_runs_its_server_action_in_the_page() -> Result<(), Box<d
             .element(By::Css("#remove-node-c button[type='submit']"))
             .await?;
         browser
-            .click_in_page(&confirm, "the removal runs in the page", async || {
+            .click_through(&confirm, "the removal runs in the page", async || {
                 Ok(browser.driver().current_url().await?.as_str()
                     == gallery.url("/ferrofed/overlays?removed=node-c"))
             })

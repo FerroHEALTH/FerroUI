@@ -605,7 +605,7 @@ async fn a_list_in_an_added_sub_card_adds_its_own_rows_in_place() -> Result<(), 
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn an_action_answers_in_the_page_once_hydrated() -> Result<(), Box<dyn Error>> {
+async fn an_action_answers_on_the_page_its_form_posts_to() -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
         return Ok(());
     }
@@ -621,15 +621,7 @@ async fn an_action_answers_in_the_page_once_hydrated() -> Result<(), Box<dyn Err
         let check = browser
             .element(By::Css("#answer-form button[type='submit']"))
             .await?;
-        browser
-            .click_in_page(&check, "the answer is drawn in the page", async || {
-                Ok(!browser
-                    .driver()
-                    .find_all(By::Id("note-answer"))
-                    .await?
-                    .is_empty())
-            })
-            .await?;
+        browser.click_and_load(&check).await?;
         assert_eq!(
             "The note has 2 words.",
             browser
