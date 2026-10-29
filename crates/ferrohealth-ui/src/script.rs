@@ -39,6 +39,10 @@ pub const MODULES: &[Module] = &[
         text: include_str!("../scripts/calendar.js"),
     },
     Module {
+        file: "chart.js",
+        text: include_str!("../scripts/chart.js"),
+    },
+    Module {
         file: "combobox.js",
         text: include_str!("../scripts/combobox.js"),
     },
@@ -57,6 +61,10 @@ pub const MODULES: &[Module] = &[
     Module {
         file: "dialog.js",
         text: include_str!("../scripts/dialog.js"),
+    },
+    Module {
+        file: "document.js",
+        text: include_str!("../scripts/document.js"),
     },
     Module {
         file: "drawer.js",

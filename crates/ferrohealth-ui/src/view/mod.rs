@@ -17,12 +17,14 @@
 pub mod action;
 pub mod action_menu;
 pub mod button;
+pub mod chart;
 pub mod code;
 pub mod combobox;
 pub mod copy;
 pub mod date;
 pub mod dialog;
 pub mod dock;
+pub mod document;
 pub mod empty;
 pub mod error_page;
 pub mod filter;
