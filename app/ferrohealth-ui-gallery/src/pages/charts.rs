@@ -12,13 +12,14 @@
 //! thresholds too, and its compact cell. The query's `open` names the busy
 //! flow's lanes unfolded (`callers`, `upstreams`).
 
-use crate::locale::{Msg, tr, tr_with};
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::chart::{
     ACCENT, ActivityChart, BAD, LineChart, NEUTRAL, Series, activity_chart,
 };
+use ferrohealth_ui::view::chart::{ChartWords, line_chart};
 use ferrohealth_ui::view::flow::{
     EdgeRule, Flow, FlowCard, FlowEdge, FlowLane, FlowRule, FlowState, LaneFold, flow, rule_button,
     rule_dialog,
@@ -26,13 +27,14 @@ use ferrohealth_ui::view::flow::{
 use ferrohealth_ui::view::funnel::{Bar, Funnel, FunnelPart, bar_list, funnel};
 use ferrohealth_ui::view::score::{Contribution, Score, Threshold, score_bar, score_breakdown};
 use ferrohealth_ui::view::surface::{card, definitions, page_header, stack, titled_panel};
-use ferrohealth_ui::widget::chart::{ChartWords, line_chart};
-use leptos::prelude::*;
-use leptos_router::hooks::use_query_map;
-use serde::{Deserialize, Serialize};
+
+use crate::app::Page;
+use crate::locale::Msg;
+use crate::markup::{h, t};
+use crate::visit::Visit;
 
 /// The days of the synthetic week, as the X axis labels them.
-fn days() -> [String; 7] {
+fn days(v: &Visit) -> [String; 7] {
     [
         Msg::Mon,
         Msg::Tue,
@@ -42,18 +44,18 @@ fn days() -> [String; 7] {
         Msg::Sat,
         Msg::Sun,
     ]
-    .map(tr)
+    .map(|msg| v.tr(msg))
 }
 
 /// The line chart of three synthetic series, one with a gap, its legend
 /// the library's island.
-fn lines() -> AnyView {
-    card(tr(Msg::LineChart), requests_chart(RequestsWords::of_page())).into_any()
+fn lines(v: &Visit) -> Html {
+    card(v.tr(Msg::LineChart), requests_chart(RequestsWords::of(v)))
 }
 
 /// The words the line chart draws, resolved on the server.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct RequestsWords {
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct RequestsWords {
     label: String,
     summary: String,
     reads: String,
@@ -64,23 +66,23 @@ pub struct RequestsWords {
 }
 
 impl RequestsWords {
-    /// The words in the page's locale.
-    fn of_page() -> Self {
+    /// The words in the visit's locale.
+    fn of(v: &Visit) -> Self {
         Self {
-            label: tr(Msg::RequestsPerDay),
-            summary: tr(Msg::ThreeSyntheticSeriesOverWeek),
-            reads: tr(Msg::Reads),
-            writes: tr(Msg::Writes),
-            refusals: tr(Msg::Refusals),
-            days: days(),
-            chart: ChartWords::of_page(),
+            label: v.tr(Msg::RequestsPerDay),
+            summary: v.tr(Msg::ThreeSyntheticSeriesOverWeek),
+            reads: v.tr(Msg::Reads),
+            writes: v.tr(Msg::Writes),
+            refusals: v.tr(Msg::Refusals),
+            days: days(v),
+            chart: ChartWords::of(&v.locale),
         }
     }
 }
 
 /// The line chart of three synthetic series in `words`, its legend showing
 /// and hiding each.
-fn requests_chart(words: RequestsWords) -> AnyView {
+fn requests_chart(words: RequestsWords) -> Html {
     let RequestsWords {
         label,
         summary,
@@ -120,10 +122,10 @@ fn requests_chart(words: RequestsWords) -> AnyView {
 /// The line chart of eight synthetic lanes of small values over twelve
 /// days: past the six colours a lane takes its own mark, the value axis
 /// keeps the decimals of its step, and a narrow card thins the dates.
-fn many_lines() -> AnyView {
+fn many_lines(v: &Visit) -> Html {
     let series = (0_u8..8)
         .map(|lane| Series {
-            name: tr_with(Msg::ManyLane, &[("index", (lane + 1).to_string().into())]),
+            name: v.tr_with(Msg::ManyLane, &[("index", (lane + 1).to_string().into())]),
             points: (0_u8..12)
                 .map(|day| {
                     (
@@ -137,8 +139,8 @@ fn many_lines() -> AnyView {
         .collect();
     let chart = LineChart {
         id: "lanes",
-        label: tr(Msg::ManySeriesLabel),
-        summary: tr(Msg::ManySeriesSummary),
+        label: v.tr(Msg::ManySeriesLabel),
+        summary: v.tr(Msg::ManySeriesSummary),
         series,
         x_ticks: (0_u8..12)
             .map(|day| (f64::from(day), format!("2026-10-{:02}", day + 1)))
@@ -147,56 +149,54 @@ fn many_lines() -> AnyView {
         y_range: None,
     };
     card(
-        tr(Msg::LineChartMany),
-        line_chart(&chart, ChartWords::of_page()),
+        v.tr(Msg::LineChartMany),
+        line_chart(&chart, ChartWords::of(&v.locale)),
     )
-    .into_any()
 }
 
 /// The activity line of thirty synthetic days.
-fn activity() -> AnyView {
+fn activity(v: &Visit) -> Html {
     let counts = [
         0, 1, 0, 2, 3, 1, 0, 0, 4, 2, 1, 0, 3, 5, 2, 0, 1, 1, 0, 2, 6, 3, 1, 0, 0, 2, 4, 1, 0, 2,
     ];
     let points = (0_u32..).zip(counts).collect();
     card(
-        tr(Msg::Activity),
+        v.tr(Msg::Activity),
         activity_chart(&ActivityChart {
             name: "commits",
-            label: tr(Msg::CommitsPerDay),
-            summary: tr(Msg::N48SyntheticCommitsOver30),
+            label: v.tr(Msg::CommitsPerDay),
+            summary: v.tr(Msg::N48SyntheticCommitsOver30),
             points,
             ticks: vec![
-                (0, tr(Msg::Sep19)),
-                (9, tr(Msg::Sep28)),
-                (19, tr(Msg::Oct8)),
-                (29, tr(Msg::Oct18)),
+                (0, v.tr(Msg::Sep19)),
+                (9, v.tr(Msg::Sep28)),
+                (19, v.tr(Msg::Oct8)),
+                (29, v.tr(Msg::Oct18)),
             ],
         }),
     )
-    .into_any()
 }
 
 /// The run report of a run that refused 3 compositions of two million: the
 /// refused part keeps a width that shows.
-fn tiny_report() -> AnyView {
+fn tiny_report(v: &Visit) -> Html {
     let body = funnel(&Funnel {
         figure: String::from("2,000,003"),
-        words: tr(Msg::RunCompositionsRead),
-        label: tr(Msg::RunTinySentence),
+        words: v.tr(Msg::RunCompositionsRead),
+        label: v.tr(Msg::RunTinySentence),
         parts: vec![
-            part(Msg::RunWritten, 2_000_000, "2,000,000", Tone::Ok),
-            part(Msg::RunSkipped, 0, "0", Tone::Neutral),
-            part(Msg::RunRefused, 3, "3", Tone::Bad),
+            part(v, Msg::RunWritten, 2_000_000, "2,000,000", Tone::Ok),
+            part(v, Msg::RunSkipped, 0, "0", Tone::Neutral),
+            part(v, Msg::RunRefused, 3, "3", Tone::Bad),
         ],
     });
-    card(tr(Msg::RunReportTiny), body).into_any()
+    card(v.tr(Msg::RunReportTiny), body)
 }
 
 /// One part of a run report's stacked bar.
-fn part(label: Msg, count: u64, figure: &str, tone: Tone) -> FunnelPart {
+fn part(v: &Visit, label: Msg, count: u64, figure: &str, tone: Tone) -> FunnelPart {
     FunnelPart {
-        label: tr(label),
+        label: v.tr(label),
         count,
         figure: figure.to_owned(),
         tone,
@@ -214,25 +214,25 @@ fn table_row(name: &str, count: u64, figure: &str) -> Bar {
 
 /// The run report of a synthetic ETL run: the stacked bar of where the
 /// compositions went, with refusals or with none, and the rows per table.
-fn run_report(refused: bool) -> AnyView {
+fn run_report(v: &Visit, refused: bool) -> Html {
     let (figure, label, parts) = if refused {
         (
             "1,240",
-            tr(Msg::RunSentence),
+            v.tr(Msg::RunSentence),
             vec![
-                part(Msg::RunWritten, 1180, "1,180", Tone::Ok),
-                part(Msg::RunSkipped, 52, "52", Tone::Neutral),
-                part(Msg::RunRefused, 8, "8", Tone::Bad),
+                part(v, Msg::RunWritten, 1180, "1,180", Tone::Ok),
+                part(v, Msg::RunSkipped, 52, "52", Tone::Neutral),
+                part(v, Msg::RunRefused, 8, "8", Tone::Bad),
             ],
         )
     } else {
         (
             "860",
-            tr(Msg::RunCleanSentence),
+            v.tr(Msg::RunCleanSentence),
             vec![
-                part(Msg::RunWritten, 812, "812", Tone::Ok),
-                part(Msg::RunSkipped, 48, "48", Tone::Neutral),
-                part(Msg::RunRefused, 0, "0", Tone::Bad),
+                part(v, Msg::RunWritten, 812, "812", Tone::Ok),
+                part(v, Msg::RunSkipped, 48, "48", Tone::Neutral),
+                part(v, Msg::RunRefused, 0, "0", Tone::Bad),
             ],
         )
     };
@@ -256,21 +256,25 @@ fn run_report(refused: bool) -> AnyView {
     } else {
         Msg::RunReportClean
     };
-    let body = view! {
-        {funnel(&Funnel {
+    let body = Html::join([
+        funnel(&Funnel {
             figure: figure.to_owned(),
-            words: tr(Msg::RunCompositionsRead),
+            words: v.tr(Msg::RunCompositionsRead),
             label,
             parts,
-        })}
-        <h3 class="fui-small fui-muted">{tr(Msg::RunRowsPerTable)}</h3>
-        {bar_list(&tr(Msg::RunBarlistLabel), &bars)}
-    };
-    card(tr(title), stack(body)).into_any()
+        }),
+        h(format!(
+            "<h3 class=\"fui-small fui-muted\">{}</h3>",
+            t(v.tr(Msg::RunRowsPerTable))
+        )),
+        bar_list(&v.tr(Msg::RunBarlistLabel), &bars),
+    ]);
+    card(v.tr(title), stack(body))
 }
 
 /// A card of a flow.
 fn flow_card(
+    v: &Visit,
     id: &str,
     glyph: Glyph,
     name: Msg,
@@ -281,8 +285,8 @@ fn flow_card(
     FlowCard {
         id: id.to_owned(),
         glyph,
-        name: tr(name),
-        line: tr(line),
+        name: v.tr(name),
+        line: v.tr(line),
         state,
         href: format!("#{id}"),
         path: path.iter().map(|step| (*step).to_owned()).collect(),
@@ -304,6 +308,7 @@ fn flow_edge(from: &str, to: &str, state: FlowState, label: Option<String>) -> F
 /// The lanes of the synthetic bridge, the CDR, the terminology server and
 /// the HL7 v2 face each in the state and line given.
 fn bridge_lanes(
+    v: &Visit,
     cdr: (FlowState, Msg),
     term: (FlowState, Msg),
     hl7: (FlowState, Msg),
@@ -312,7 +317,7 @@ fn bridge_lanes(
     let to_term = ["clients", "facade", "hub", "term"];
     let from_senders = ["senders", "hl7", "hub", "cdr"];
     let lane = |title: Msg, cards: Vec<FlowCard>| FlowLane {
-        title: tr(title),
+        title: v.tr(title),
         cards,
         fold: None,
     };
@@ -321,6 +326,7 @@ fn bridge_lanes(
             Msg::FlowCallers,
             vec![
                 flow_card(
+                    v,
                     "clients",
                     Glyph::USERS,
                     Msg::FlowFhirClients,
@@ -329,6 +335,7 @@ fn bridge_lanes(
                     &to_cdr,
                 ),
                 flow_card(
+                    v,
                     "senders",
                     Glyph::RADIO_TOWER,
                     Msg::FlowHl7Senders,
@@ -342,6 +349,7 @@ fn bridge_lanes(
             Msg::FlowFaces,
             vec![
                 flow_card(
+                    v,
                     "facade",
                     Glyph::NETWORK,
                     Msg::FlowFacade,
@@ -350,6 +358,7 @@ fn bridge_lanes(
                     &to_cdr,
                 ),
                 flow_card(
+                    v,
                     "hl7",
                     Glyph::ROUTE,
                     Msg::FlowHl7,
@@ -362,6 +371,7 @@ fn bridge_lanes(
         lane(
             Msg::FlowMappingSet,
             vec![flow_card(
+                v,
                 "hub",
                 Glyph::LAYERS,
                 Msg::FlowBridge,
@@ -373,8 +383,17 @@ fn bridge_lanes(
         lane(
             Msg::FlowUpstreams,
             vec![
-                flow_card("cdr", Glyph::DATABASE, Msg::FlowCdr, cdr.1, cdr.0, &to_cdr),
                 flow_card(
+                    v,
+                    "cdr",
+                    Glyph::DATABASE,
+                    Msg::FlowCdr,
+                    cdr.1,
+                    cdr.0,
+                    &to_cdr,
+                ),
+                flow_card(
+                    v,
                     "term",
                     Glyph::BOOK_A,
                     Msg::FlowTerm,
@@ -388,7 +407,7 @@ fn bridge_lanes(
 }
 
 /// degraded terminology server and the HL7 v2 face switched off.
-fn bridge_flow(problems: bool) -> AnyView {
+fn bridge_flow(v: &Visit, problems: bool) -> Html {
     let (cdr, cdr_line, term, term_line, hl7, hl7_line) = if problems {
         (
             FlowState::Unreachable,
@@ -408,13 +427,13 @@ fn bridge_flow(problems: bool) -> AnyView {
             Msg::FlowHl7On,
         )
     };
-    let lanes = bridge_lanes((cdr, cdr_line), (term, term_line), (hl7, hl7_line));
+    let lanes = bridge_lanes(v, (cdr, cdr_line), (term, term_line), (hl7, hl7_line));
     let edges = vec![
         flow_edge("clients", "facade", FlowState::Up, None),
         flow_edge("senders", "hl7", hl7, None),
         flow_edge("facade", "hub", FlowState::Up, None),
         flow_edge("hl7", "hub", hl7, None),
-        flow_edge("hub", "cdr", cdr, Some(tr(Msg::FlowNoAnswerLabel))),
+        flow_edge("hub", "cdr", cdr, Some(v.tr(Msg::FlowNoAnswerLabel))),
         flow_edge("hub", "term", term, Some(String::from("503"))),
     ];
     let (id, title, foot) = if problems {
@@ -426,40 +445,46 @@ fn bridge_flow(problems: bool) -> AnyView {
     } else {
         ("flow-rest", Msg::FlowTitle, Msg::FlowFootSteady)
     };
-    let drawn = flow(&Flow {
-        id: id.to_owned(),
-        label: tr(Msg::FlowBridgeAsFlow),
-        list_label: tr(Msg::FlowBridgeLaneByLane),
-        lanes,
-        edges,
-        foot: tr(foot),
-    });
+    let drawn = flow(
+        &v.locale,
+        &Flow {
+            id: id.to_owned(),
+            label: v.tr(Msg::FlowBridgeAsFlow),
+            list_label: v.tr(Msg::FlowBridgeLaneByLane),
+            lanes,
+            edges,
+            foot: v.tr(foot),
+        },
+    );
     if problems {
-        return titled_panel(tr(title), (), drawn).into_any();
+        return titled_panel(v.tr(title), Html::empty(), drawn);
     }
     let rule = |state, meaning| EdgeRule {
         state,
-        meaning: tr(meaning),
+        meaning: v.tr(meaning),
     };
-    let help = rule_dialog(FlowRule {
-        id: "flow-rule".into(),
-        rules: vec![
-            rule(FlowState::Up, Msg::FlowRuleUp),
-            rule(FlowState::Degraded, Msg::FlowRuleDegraded),
-            rule(FlowState::Unreachable, Msg::FlowRuleUnreachable),
-            rule(FlowState::Off, Msg::FlowRuleOff),
-        ],
-        note: tr(Msg::FlowRuleNote),
-    });
-    view! {
-        {titled_panel(tr(title), rule_button("flow-rule".into()), drawn)}
-        {help}
-    }
-    .into_any()
+    let help = rule_dialog(
+        &v.locale,
+        FlowRule {
+            id: "flow-rule".into(),
+            rules: vec![
+                rule(FlowState::Up, Msg::FlowRuleUp),
+                rule(FlowState::Degraded, Msg::FlowRuleDegraded),
+                rule(FlowState::Unreachable, Msg::FlowRuleUnreachable),
+                rule(FlowState::Off, Msg::FlowRuleOff),
+            ],
+            note: v.tr(Msg::FlowRuleNote),
+        },
+    );
+    Html::join([
+        titled_panel(v.tr(title), rule_button(&v.locale, "flow-rule"), drawn),
+        help,
+    ])
 }
 
 /// A card of the busy bridge, named by its kind and its number.
 fn busy_card(
+    v: &Visit,
     (id, glyph, kind, number): (String, Glyph, Msg, u8),
     (state, line): (FlowState, Msg),
     path: Vec<String>,
@@ -468,8 +493,8 @@ fn busy_card(
         href: format!("#{id}"),
         id,
         glyph,
-        name: format!("{} {number:02}", tr(kind)),
-        line: tr(line),
+        name: format!("{} {number:02}", v.tr(kind)),
+        line: v.tr(line),
         state,
         path,
         hub: false,
@@ -480,7 +505,7 @@ fn busy_card(
 /// and the label of its edges: most call the FHIR facade, every sixth is
 /// an HL7 v2 sender, the third of every six calls the operator API, and
 /// every fifth client calls the operator API too.
-fn busy_callers() -> Vec<(FlowCard, Vec<&'static str>, Option<String>)> {
+fn busy_callers(v: &Visit) -> Vec<(FlowCard, Vec<&'static str>, Option<String>)> {
     (1_u8..=30)
         .map(|number| {
             let faces = match (number % 6, number % 5) {
@@ -499,7 +524,7 @@ fn busy_callers() -> Vec<(FlowCard, Vec<&'static str>, Option<String>)> {
                 18 => (
                     FlowState::Degraded,
                     Msg::FlowBusyRejected,
-                    Some(tr(Msg::FlowBusyAe)),
+                    Some(v.tr(Msg::FlowBusyAe)),
                 ),
                 22 => (FlowState::Off, Msg::FlowBusyOff, None),
                 26 => (FlowState::NotChecked, Msg::FlowBusyNotChecked, None),
@@ -516,7 +541,7 @@ fn busy_callers() -> Vec<(FlowCard, Vec<&'static str>, Option<String>)> {
                 .first()
                 .map(|face| vec![id.clone(), (*face).to_owned(), String::from("hub")])
                 .unwrap_or_default();
-            let card = busy_card((id, glyph, kind, number), (state, line), path);
+            let card = busy_card(v, (id, glyph, kind, number), (state, line), path);
             (card, faces, label)
         })
         .collect()
@@ -525,7 +550,7 @@ fn busy_callers() -> Vec<(FlowCard, Vec<&'static str>, Option<String>)> {
 /// The thirty upstreams of the busy bridge, each with the label of its
 /// edge: CDRs, terminology servers and identity services in turn, two
 /// degraded, one unreachable, one switched off and one not yet checked.
-fn busy_upstreams() -> Vec<(FlowCard, Option<String>)> {
+fn busy_upstreams(v: &Visit) -> Vec<(FlowCard, Option<String>)> {
     (1_u8..=30)
         .map(|number| {
             let (glyph, kind) = match number % 3 {
@@ -537,7 +562,7 @@ fn busy_upstreams() -> Vec<(FlowCard, Option<String>)> {
                 4 => (
                     FlowState::Unreachable,
                     Msg::FlowNoAnswer,
-                    Some(tr(Msg::FlowNoAnswerLabel)),
+                    Some(v.tr(Msg::FlowNoAnswerLabel)),
                 ),
                 11 => (
                     FlowState::Degraded,
@@ -547,7 +572,7 @@ fn busy_upstreams() -> Vec<(FlowCard, Option<String>)> {
                 19 => (
                     FlowState::Degraded,
                     Msg::FlowBusySlow,
-                    Some(tr(Msg::FlowBusySlowLabel)),
+                    Some(v.tr(Msg::FlowBusySlowLabel)),
                 ),
                 23 => (FlowState::Off, Msg::FlowBusyOff, None),
                 27 => (FlowState::NotChecked, Msg::FlowBusyNotChecked, None),
@@ -555,7 +580,7 @@ fn busy_upstreams() -> Vec<(FlowCard, Option<String>)> {
             };
             let id = format!("upstream-{number:02}");
             let path = vec![String::from("hub"), id.clone()];
-            let card = busy_card((id, glyph, kind, number), (state, line), path);
+            let card = busy_card(v, (id, glyph, kind, number), (state, line), path);
             (card, label)
         })
         .collect()
@@ -564,7 +589,7 @@ fn busy_upstreams() -> Vec<(FlowCard, Option<String>)> {
 /// A busy synthetic bridge: thirty callers through three faces into the
 /// mapping set and out to thirty upstreams, some of each in a problem
 /// state, its callers and upstreams folded unless `open` names them.
-fn busy_flow(open: &[String]) -> AnyView {
+fn busy_flow(v: &Visit, open: &[String]) -> Html {
     let fold = |lane: &str| {
         let unfolded = open.iter().any(|each| each == lane);
         let mut next: Vec<&str> = open
@@ -586,8 +611,8 @@ fn busy_flow(open: &[String]) -> AnyView {
             toggle: format!("{query}#busy-flow"),
         })
     };
-    let callers = busy_callers();
-    let upstreams = busy_upstreams();
+    let callers = busy_callers(v);
+    let upstreams = busy_upstreams(v);
     let mut edges = Vec::new();
     for (card, faces, label) in &callers {
         for face in faces {
@@ -601,16 +626,16 @@ fn busy_flow(open: &[String]) -> AnyView {
         edges.push(flow_edge("hub", &card.id, card.state, label.clone()));
     }
     let face = |id: &str, glyph: Glyph, name: Msg, line: Msg| {
-        flow_card(id, glyph, name, line, FlowState::Up, &[])
+        flow_card(v, id, glyph, name, line, FlowState::Up, &[])
     };
     let lanes = vec![
         FlowLane {
-            title: tr(Msg::FlowCallers),
+            title: v.tr(Msg::FlowCallers),
             cards: callers.into_iter().map(|(card, _, _)| card).collect(),
             fold: fold("callers"),
         },
         FlowLane {
-            title: tr(Msg::FlowFaces),
+            title: v.tr(Msg::FlowFaces),
             cards: vec![
                 face("facade", Glyph::NETWORK, Msg::FlowFacade, Msg::FlowFacadeOn),
                 face("hl7", Glyph::ROUTE, Msg::FlowHl7, Msg::FlowHl7On),
@@ -624,8 +649,9 @@ fn busy_flow(open: &[String]) -> AnyView {
             fold: None,
         },
         FlowLane {
-            title: tr(Msg::FlowMappingSet),
+            title: v.tr(Msg::FlowMappingSet),
             cards: vec![flow_card(
+                v,
                 "hub",
                 Glyph::LAYERS,
                 Msg::FlowBridge,
@@ -636,40 +662,46 @@ fn busy_flow(open: &[String]) -> AnyView {
             fold: None,
         },
         FlowLane {
-            title: tr(Msg::FlowUpstreams),
+            title: v.tr(Msg::FlowUpstreams),
             cards: upstreams.into_iter().map(|(card, _)| card).collect(),
             fold: fold("upstreams"),
         },
     ];
-    let drawn = flow(&Flow {
-        id: String::from("flow-busy"),
-        label: tr(Msg::FlowBusyLabel),
-        list_label: tr(Msg::FlowBusyList),
-        lanes,
-        edges,
-        foot: tr(Msg::FlowBusyFoot),
-    });
-    view! { <div id="busy-flow">{titled_panel(tr(Msg::FlowBusyTitle), (), drawn)}</div> }.into_any()
+    let drawn = flow(
+        &v.locale,
+        &Flow {
+            id: String::from("flow-busy"),
+            label: v.tr(Msg::FlowBusyLabel),
+            list_label: v.tr(Msg::FlowBusyList),
+            lanes,
+            edges,
+            foot: v.tr(Msg::FlowBusyFoot),
+        },
+    );
+    h(format!(
+        "<div id=\"busy-flow\">{}</div>",
+        titled_panel(v.tr(Msg::FlowBusyTitle), Html::empty(), drawn)
+    ))
 }
 
 /// One contribution of a synthetic score.
-fn contribution(label: Msg, reading: Msg, weight: f64) -> Contribution {
+fn contribution(v: &Visit, label: Msg, reading: Msg, weight: f64) -> Contribution {
     Contribution {
-        label: tr(label),
-        reading: Some(tr(reading)),
+        label: v.tr(label),
+        reading: Some(v.tr(reading)),
         weight,
     }
 }
 
 /// The thresholds of the synthetic scores.
-fn thresholds() -> Vec<Threshold> {
+fn thresholds(v: &Visit) -> Vec<Threshold> {
     [
         (Msg::ScorePossible, 0.60),
         (Msg::ScoreProbable, 0.80),
         (Msg::ScoreCertain, 0.95),
     ]
     .map(|(label, at)| Threshold {
-        label: tr(label),
+        label: v.tr(label),
         at,
     })
     .to_vec()
@@ -677,32 +709,32 @@ fn thresholds() -> Vec<Threshold> {
 
 /// A synthetic score breakdown: between two thresholds, or at one, with a
 /// positive, a negative and a zero weight.
-fn breakdown(at_threshold: bool) -> AnyView {
+fn breakdown(v: &Visit, at_threshold: bool) -> Html {
     let score = if at_threshold {
         Score {
             total: 1.4,
             value: 0.60,
-            grade: tr(Msg::ScorePossible),
+            grade: v.tr(Msg::ScorePossible),
             contributions: vec![
-                contribution(Msg::ScoreBirthDate, Msg::ScoreExact, 3.1),
-                contribution(Msg::ScoreGivenName, Msg::ScoreJaroFar, -1.7),
-                contribution(Msg::ScorePostalCode, Msg::ScoreMissing, 0.0),
+                contribution(v, Msg::ScoreBirthDate, Msg::ScoreExact, 3.1),
+                contribution(v, Msg::ScoreGivenName, Msg::ScoreJaroFar, -1.7),
+                contribution(v, Msg::ScorePostalCode, Msg::ScoreMissing, 0.0),
             ],
-            thresholds: thresholds(),
+            thresholds: thresholds(v),
         }
     } else {
         Score {
             total: 4.1,
             value: 0.87,
-            grade: tr(Msg::ScoreProbable),
+            grade: v.tr(Msg::ScoreProbable),
             contributions: vec![
-                contribution(Msg::ScoreBirthDate, Msg::ScoreExact, 3.1),
-                contribution(Msg::ScoreFamilyName, Msg::ScoreJaroNear, 2.4),
-                contribution(Msg::ScoreSex, Msg::ScoreExact, 0.3),
-                contribution(Msg::ScorePostalCode, Msg::ScoreMissing, 0.0),
-                contribution(Msg::ScoreGivenName, Msg::ScoreJaroFar, -1.7),
+                contribution(v, Msg::ScoreBirthDate, Msg::ScoreExact, 3.1),
+                contribution(v, Msg::ScoreFamilyName, Msg::ScoreJaroNear, 2.4),
+                contribution(v, Msg::ScoreSex, Msg::ScoreExact, 0.3),
+                contribution(v, Msg::ScorePostalCode, Msg::ScoreMissing, 0.0),
+                contribution(v, Msg::ScoreGivenName, Msg::ScoreJaroFar, -1.7),
             ],
-            thresholds: thresholds(),
+            thresholds: thresholds(v),
         }
     };
     let title = if at_threshold {
@@ -710,12 +742,12 @@ fn breakdown(at_threshold: bool) -> AnyView {
     } else {
         Msg::ScoreBreakdown
     };
-    card(tr(title), score_breakdown(&score)).into_any()
+    card(v.tr(title), score_breakdown(&v.locale, &score))
 }
 
 /// A score among four close thresholds, its field's long word wrapping:
 /// the labels too close for one row take more.
-fn close_breakdown() -> AnyView {
+fn close_breakdown(v: &Visit) -> Html {
     let thresholds = [
         (Msg::ScorePossible, 0.80),
         (Msg::ScoreProbable, 0.83),
@@ -723,86 +755,74 @@ fn close_breakdown() -> AnyView {
         (Msg::ScoreExactBand, 0.99),
     ]
     .map(|(label, at)| Threshold {
-        label: tr(label),
+        label: v.tr(label),
         at,
     })
     .to_vec();
     let score = Score {
         total: 2.9,
         value: 0.84,
-        grade: tr(Msg::ScoreProbable),
+        grade: v.tr(Msg::ScoreProbable),
         contributions: vec![
-            contribution(Msg::ScoreLongField, Msg::ScoreExact, 2.4),
-            contribution(Msg::ScoreSex, Msg::ScoreExact, 0.5),
+            contribution(v, Msg::ScoreLongField, Msg::ScoreExact, 2.4),
+            contribution(v, Msg::ScoreSex, Msg::ScoreExact, 0.5),
         ],
         thresholds,
     };
-    card(tr(Msg::ScoreClose), score_breakdown(&score)).into_any()
+    card(v.tr(Msg::ScoreClose), score_breakdown(&v.locale, &score))
 }
 
 /// The compact score of a table cell, once per grade.
-fn score_cells() -> AnyView {
+fn score_cells(v: &Visit) -> Html {
     card(
-        tr(Msg::ScoreCells),
+        v.tr(Msg::ScoreCells),
         definitions(vec![
-            (tr(Msg::ScoreCertain), score_bar(0.97, Tone::Ok)),
-            (tr(Msg::ScoreProbable), score_bar(0.87, Tone::Info)),
-            (tr(Msg::ScorePossible), score_bar(0.64, Tone::Warn)),
+            (
+                v.tr(Msg::ScoreCertain),
+                score_bar(&v.locale, 0.97, Tone::Ok),
+            ),
+            (
+                v.tr(Msg::ScoreProbable),
+                score_bar(&v.locale, 0.87, Tone::Info),
+            ),
+            (
+                v.tr(Msg::ScorePossible),
+                score_bar(&v.locale, 0.64, Tone::Warn),
+            ),
         ]),
     )
-    .into_any()
 }
 
 /// The charts page.
-#[component]
-#[expect(
-    clippy::must_use_candidate,
-    reason = "the #[component] macro drops a #[must_use] from the function it writes"
-)]
-pub fn ChartsPage() -> impl IntoView {
+#[must_use]
+pub fn page(v: &Visit) -> Page {
     let header = page_header(
-        tr(Msg::Charts),
-        Some(tr(Msg::DrawnSvgServerScaledCard)),
+        &v.locale,
+        v.tr(Msg::Charts),
+        Some(v.tr(Msg::DrawnSvgServerScaledCard)),
         ActionGroup::none(),
-    )
-    .into_any();
-    let sections = (lines(), many_lines(), activity());
-    let reports = (run_report(true), run_report(false), tiny_report());
-    let open: Vec<String> = use_query_map().with_untracked(|query| {
-        query
-            .get_str("open")
-            .unwrap_or_default()
-            .split(',')
-            .filter(|lane| !lane.is_empty())
-            .map(str::to_owned)
-            .collect()
-    });
-    let flows = (bridge_flow(false), bridge_flow(true), busy_flow(&open));
-    let scores = (
-        breakdown(false),
-        breakdown(true),
-        close_breakdown(),
-        score_cells(),
     );
-    view! {
-        {super::title(tr(Msg::Charts))}
-        {header}
-        {stack(
-            view! {
-                {sections.0}
-                {sections.1}
-                {sections.2}
-                {reports.0}
-                {reports.1}
-                {reports.2}
-                {flows.0}
-                {flows.1}
-                {flows.2}
-                {scores.0}
-                {scores.1}
-                {scores.2}
-                {scores.3}
-            },
-        )}
-    }
+    let open: Vec<String> = v
+        .param("open")
+        .unwrap_or_default()
+        .split(',')
+        .filter(|lane| !lane.is_empty())
+        .map(str::to_owned)
+        .collect();
+    let body = stack(Html::join([
+        lines(v),
+        many_lines(v),
+        activity(v),
+        run_report(v, true),
+        run_report(v, false),
+        tiny_report(v),
+        bridge_flow(v, false),
+        bridge_flow(v, true),
+        busy_flow(v, &open),
+        breakdown(v, false),
+        breakdown(v, true),
+        close_breakdown(v),
+        score_cells(v),
+    ]));
+    Page::shell(v.tr(Msg::Charts), Html::join([header, body]))
 }

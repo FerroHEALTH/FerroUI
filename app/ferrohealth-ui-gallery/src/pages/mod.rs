@@ -4,6 +4,7 @@
 //! The gallery's pages, one module each, every one a `page(&Visit)` that
 //! draws it whole.
 
+pub mod charts;
 pub mod clinical;
 pub mod code;
 pub mod configuration;
