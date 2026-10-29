@@ -23,6 +23,7 @@ pub mod clause;
 pub mod code;
 pub mod coding;
 pub mod combobox;
+pub mod compare;
 pub mod copy;
 pub mod date;
 pub mod diagnostics;
