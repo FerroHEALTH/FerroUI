@@ -108,8 +108,6 @@ messages! {
     DraftOf = "draft-of",
     /// The heading of the card of the two editor headers.
     EditorHeaders = "editor-headers",
-    /// `An editor that reloads`
-    EditorReloads = "editor-reloads",
     /// `EHR id (optional)`
     EhrIdOptional = "ehr-id-optional",
     /// `ehr_id (UUID), blank lets the server mint one`
@@ -248,10 +246,6 @@ messages! {
     PrimaryDisabled = "primary-disabled",
     /// `The file names no profile the bridge knows.`
     ProfileUnknown = "profile-unknown",
-    /// `Read it again`
-    ReadAgain = "read-again",
-    /// The reload count: read `$count` times again.
-    ReadTimesAgain = "read-times-again",
     /// `Remove this clause`
     RemoveClause = "remove-clause",
     /// The name of the button that removes the value `$value`.

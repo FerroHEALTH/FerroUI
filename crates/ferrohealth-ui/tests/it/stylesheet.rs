@@ -867,3 +867,28 @@ fn a_long_word_wraps_in_a_banner_a_notice_a_settings_description_and_its_source(
         "{source}"
     );
 }
+
+#[test]
+fn a_copy_buttons_glyph_and_words_are_spaced_as_any_buttons_in_both_states() {
+    let state = rule("  .fui-copy > .fui-button > :is([data-fui-ready], [data-fui-done])");
+    assert!(
+        state.contains("display: contents;"),
+        "a state's glyph and words take the button's own row and gap: {state}"
+    );
+    assert!(
+        rule("  [hidden]").contains("display: none !important;"),
+        "the state a button does not show stays hidden"
+    );
+    for (button, leading) in [
+        ("  .fui-copy > .fui-button", "var(--leading-body)"),
+        ("  .fui-copy > .fui-button-small", "var(--leading-small)"),
+    ] {
+        let glyph = rule(&format!(
+            "{button} > :is([data-fui-ready], [data-fui-done]) > .fui-icon"
+        ));
+        assert!(
+            glyph.contains(&format!("height: {leading};")),
+            "a state's glyph sits in a box one line tall, as a button's own: {glyph}"
+        );
+    }
+}
