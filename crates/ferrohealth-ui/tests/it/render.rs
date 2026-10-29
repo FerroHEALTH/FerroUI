@@ -1,99 +1,92 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Every view rendered to HTML on the host, as a console's server draws it
-//! and as a read-only screen hands it to the browser: what each must say,
-//! what each must never carry, and the escaping of what it is given.
+//! Every view rendered to HTML on the host, as a console's handler draws
+//! it: what each must say, what each must never carry, and the escaping of
+//! what it is given.
 
 use ferrohealth_ui::highlight::Language;
-use ferrohealth_ui::i18n::{Phrase, Word};
+use ferrohealth_ui::html::Html;
+use ferrohealth_ui::i18n::{Locale, Phrase, Word};
 use ferrohealth_ui::icon::Glyph;
-use ferrohealth_ui::island::{
-    Combobox, CopyButton, KeyboardTabs, PickerField, SidePanel, ToastRegion,
-};
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::action::{ActionGroup, action_button, action_group};
+use ferrohealth_ui::view::action_menu::{
+    Act, Action, Choice, Item, Listbox, Menu, Pick, labelled_menu, listbox, more_menu, row_menu,
+};
 use ferrohealth_ui::view::button::{Variant, link_button};
 use ferrohealth_ui::view::chart::{ActivityChart, LineChart, Series, activity_chart};
+use ferrohealth_ui::view::chart::{ChartWords, line_chart};
 use ferrohealth_ui::view::code::{
     Code, CodeHead, Digest, Gravity, LineDiagnostic, code_card, code_section, code_viewer,
 };
+use ferrohealth_ui::view::combobox::{ComboOption, Combobox, ComboboxWords, combobox};
+use ferrohealth_ui::view::copy::{CopySource, CopyWords, copy_from};
 use ferrohealth_ui::view::dialog::{
     ConfirmForm, Confirmation, Explanation, confirm_dialog, danger_form_dialog, info_dialog,
 };
+use ferrohealth_ui::view::document::DocumentView;
 use ferrohealth_ui::view::document::{Document, document_pane};
+use ferrohealth_ui::view::editor::{Editor, code_editor};
 use ferrohealth_ui::view::empty::{empty_state, skeleton};
 use ferrohealth_ui::view::form::{
     ERROR, Field, INPUT, SELECT, action_field, described_by, error_id, field, help_id, keyed_check,
     keyed_check_field, keyed_field,
 };
 use ferrohealth_ui::view::help::{HelpWords, explained_check_field, help_switch};
+use ferrohealth_ui::view::pick_or_type::{PickOrType, Picker, pick_or_type};
+use ferrohealth_ui::view::picker::{self, picker_field};
 use ferrohealth_ui::view::popover::{PopoverForm, popover_form};
 use ferrohealth_ui::view::refusal::{Issue, Refusal, Severity, refusal};
 use ferrohealth_ui::view::shell::{Footer, footer, lockup, mark};
+use ferrohealth_ui::view::side_panel::{Opener, SidePanel, SidePanelWords, side_panel};
 use ferrohealth_ui::view::surface::{
     Header, SectionHead, Stat, add_row, definitions, page_header, page_heading, panel_section,
     panel_sections, section_intro, source_split, stat_card,
 };
 use ferrohealth_ui::view::tabs::{Tab, binder};
+use ferrohealth_ui::view::tabs::{keyboard_tabs, tab_panels};
 use ferrohealth_ui::view::template::list::HeadingCount;
-use ferrohealth_ui::widget::action_menu::{
-    Act, Action, Choice, Item, Listbox, Menu, Pick, labelled_menu, listbox, more_menu, row_menu,
-};
-use ferrohealth_ui::widget::chart::{ChartWords, line_chart};
-use ferrohealth_ui::widget::combobox::{ComboOption, ComboboxWords};
-use ferrohealth_ui::widget::copy::{CopySource, CopyWords};
-use ferrohealth_ui::widget::document::DocumentView;
-use ferrohealth_ui::widget::editor::{Editor, code_editor};
-use ferrohealth_ui::widget::pick_or_type::{PickOrType, Picker, pick_or_type};
-use ferrohealth_ui::widget::picker::{self, picker_field};
-use ferrohealth_ui::widget::side_panel::{Opener, SidePanelWords};
-use ferrohealth_ui::widget::tabs::tab_panels;
-use ferrohealth_ui::widget::toast::{Flash, RegionWords, ToastLink};
-use leptos::prelude::*;
+use ferrohealth_ui::view::toast::{Flash, ToastLink, toast_region};
 
 use crate::markup::{has, tags};
 
-/// The HTML `view` renders to, under a reactive owner as a server render
-/// runs.
-pub(crate) fn html(view: impl FnOnce() -> AnyView) -> String {
-    let owner = Owner::new();
-    owner.with(|| view().to_html())
+/// The locale every render test draws in.
+pub(crate) fn en() -> Locale {
+    Locale::english()
 }
 
-/// `view` rendered to HTML in a page tree with the server's shared
-/// context, as a page draws an island that takes children.
-pub(crate) fn page_html(view: impl FnOnce() -> AnyView) -> String {
-    let owner = Owner::new_root(Some(std::sync::Arc::new(
-        hydration_context::SsrSharedContext::new(),
-    )));
-    owner.with(|| view().to_html())
+/// The markup `view` renders, as a string a test reads.
+pub(crate) fn html(view: Html) -> String {
+    view.into()
 }
 
 #[test]
 fn a_refusal_lists_its_issues_with_their_text_and_counts_the_silent_ones() {
-    let shown = html(|| {
-        refusal(&Refusal {
-            status: Some(422),
-            summary: String::from("the bridge refused the request."),
-            issues: vec![
-                Issue::new(Severity::Information, "informational"),
-                Issue::new(Severity::Error, "processing")
-                    .text("no program maps <the> template")
-                    .place("Bundle.entry[0]")
-                    .details(vec![String::from("<b>MSG</b>")]),
-            ],
-            request: Some(String::from("GET /fhir?q=<script>alert(1)</script>")),
-            evidence: Some(String::from("<img src=x onerror=alert(1)>")),
-        })
-        .into_any()
+    let shown = html({
+        refusal(
+            &en(),
+            &Refusal {
+                status: Some(422),
+                summary: String::from("the bridge refused the request."),
+                issues: vec![
+                    Issue::new(Severity::Information, "informational"),
+                    Issue::new(Severity::Error, "processing")
+                        .text("no program maps <the> template")
+                        .place("Bundle.entry[0]")
+                        .details(vec![String::from("<b>MSG</b>")]),
+                ],
+                request: Some(String::from("GET /fhir?q=<script>alert(1)</script>")),
+                evidence: Some(String::from("<img src=x onerror=alert(1)>")),
+            },
+        )
     });
     assert!(
         shown.contains("422: the bridge refused the request."),
         "{shown}"
     );
     assert!(
-        shown.contains("no program maps &lt;the&gt; template"),
+        shown.contains("no program maps &#60;the&#62; template"),
         "{shown}"
     );
     assert!(
@@ -102,15 +95,15 @@ fn a_refusal_lists_its_issues_with_their_text_and_counts_the_silent_ones() {
     );
     assert!(!shown.contains("informational"), "{shown}");
     assert!(
-        shown.contains("&lt;b&gt;MSG&lt;/b&gt;"),
+        shown.contains("&#60;b&#62;MSG&#60;/b&#62;"),
         "a detail code is text: {shown}"
     );
     assert!(
-        shown.contains("GET /fhir?q=&lt;script&gt;alert(1)&lt;/script&gt;"),
+        shown.contains("GET /fhir?q=&#60;script&#62;alert(1)&#60;/script&#62;"),
         "the request is text: {shown}"
     );
     assert!(
-        shown.contains("&lt;img src=x onerror=alert(1)&gt;"),
+        shown.contains("&#60;img src=x onerror=alert(1)&#62;"),
         "the evidence is text: {shown}"
     );
     assert!(
@@ -122,12 +115,14 @@ fn a_refusal_lists_its_issues_with_their_text_and_counts_the_silent_ones() {
 #[test]
 fn a_refusal_with_no_answer_shows_its_summary_alone_and_says_no_answer_to_assistive_technology() {
     // WAI-ARIA 1.2 `alert`: the live title still carries "No answer", hidden from sight.
-    let shown = html(|| {
-        refusal(&Refusal {
-            summary: String::from("The identifier index did not answer."),
-            ..Refusal::default()
-        })
-        .into_any()
+    let shown = html({
+        refusal(
+            &en(),
+            &Refusal {
+                summary: String::from("The identifier index did not answer."),
+                ..Refusal::default()
+            },
+        )
     });
     assert!(
         !shown.contains("No answer: The identifier index"),
@@ -146,13 +141,15 @@ fn a_refusal_with_no_answer_shows_its_summary_alone_and_says_no_answer_to_assist
         title.contains("The identifier index did not answer."),
         "{shown}"
     );
-    let answered = html(|| {
-        refusal(&Refusal {
-            status: Some(503),
-            summary: String::from("The identifier index is down."),
-            ..Refusal::default()
-        })
-        .into_any()
+    let answered = html({
+        refusal(
+            &en(),
+            &Refusal {
+                status: Some(503),
+                summary: String::from("The identifier index is down."),
+                ..Refusal::default()
+            },
+        )
     });
     assert!(
         !answered.contains("No answer"),
@@ -162,25 +159,19 @@ fn a_refusal_with_no_answer_shows_its_summary_alone_and_says_no_answer_to_assist
 
 #[test]
 fn a_page_header_carries_a_subtitle_with_inline_markup_in_the_subtitle_style() {
-    let shown = html(|| {
+    let shown = html({
         page_heading(
+            &en(),
             Header {
                 title: Word::from("vital-signs.context.yml"),
                 subtitle: Some(Word::from("A text that the view replaces.")),
-                subtitle_view: Some(
-                    view! {
-                        "Context of " <strong>"Observation"</strong> " on "
-                        <a href="/templates/synthetic.vital_signs.v1">
-                            <code>"synthetic.vital_signs.v1"</code>
-                        </a> ", saved by the console."
-                    }
-                    .into_any(),
-                ),
+                subtitle_view: Some(Html::raw(String::from(
+                    r#"Context of <strong>Observation</strong> on <a href="/templates/synthetic.vital_signs.v1"><code>synthetic.vital_signs.v1</code></a>, saved by the console."#,
+                ))),
                 ..Header::default()
             },
             ActionGroup::none(),
         )
-        .into_any()
     });
     assert!(
         shown.contains(
@@ -192,8 +183,9 @@ fn a_page_header_carries_a_subtitle_with_inline_markup_in_the_subtitle_style() {
         !shown.contains("A text that the view replaces."),
         "the view takes the text's place: {shown}"
     );
-    let plain = html(|| {
+    let plain = html({
         page_heading(
+            &en(),
             Header {
                 title: Word::from("Files"),
                 subtitle: Some(Word::from("Every mapping file the bridge serves.")),
@@ -201,7 +193,6 @@ fn a_page_header_carries_a_subtitle_with_inline_markup_in_the_subtitle_style() {
             },
             ActionGroup::none(),
         )
-        .into_any()
     });
     assert!(
         plain.contains(r#"<p class="fui-page-subtitle">Every mapping file the bridge serves.</p>"#),
@@ -212,17 +203,18 @@ fn a_page_header_carries_a_subtitle_with_inline_markup_in_the_subtitle_style() {
 #[test]
 fn each_row_gives_its_confirmation_and_popover_form_an_id_of_its_own() {
     // HTML Living Standard: an id is unique in its tree, so each row's trigger opens its own dialog.
-    let shown = html(|| {
+    let shown = html({
         ["node-b", "node-c"]
             .into_iter()
             .map(|member| {
                 let confirm = confirm_dialog(
+                    &en(),
                     Confirmation {
                         id: format!("remove-{member}").into(),
                         title: Word::from("Remove it?"),
                         message: Word::from("It leaves the federation."),
                     },
-                    (),
+                    Html::default(),
                 );
                 let popover = popover_form(PopoverForm {
                     id: format!("rename-{member}").into(),
@@ -230,12 +222,11 @@ fn each_row_gives_its_confirmation_and_popover_form_an_id_of_its_own() {
                     glyph: Glyph::PENCIL,
                     label: "Rename".into(),
                     title: "Rename the member".into(),
-                    body: ().into_any(),
+                    body: Html::default(),
                 });
-                view! { {confirm} {popover} }
+                confirm.then(popover)
             })
-            .collect_view()
-            .into_any()
+            .collect::<Html>()
     });
     for member in ["node-b", "node-c"] {
         let remove = format!("remove-{member}");
@@ -288,13 +279,17 @@ fn code(text: &str) -> Code {
 
 #[test]
 fn a_code_viewer_escapes_its_text_numbers_its_lines_and_draws_each_finding_under_its_line() {
-    let viewer = html(|| code_viewer(None, &code("a: \"</pre>\"\nb: 2\nc: 3\n")));
+    let viewer = html(code_viewer(
+        &en(),
+        None,
+        &code("a: \"</pre>\"\nb: 2\nc: 3\n"),
+    ));
     assert!(viewer.contains("&lt;/pre&gt;"), "{viewer}");
     assert!(
         !viewer.contains("<unknown>") && !viewer.contains("FC-<1>"),
         "{viewer}"
     );
-    assert!(viewer.contains("An &lt;unknown&gt; key."), "{viewer}");
+    assert!(viewer.contains("An &#60;unknown&#62; key."), "{viewer}");
     assert!(
         has(
             &viewer,
@@ -341,7 +336,10 @@ fn a_code_viewer_escapes_its_text_numbers_its_lines_and_draws_each_finding_under
                 ),
                 ("role", "region"),
                 ("tabindex", "0"),
-                ("aria-label", "The &lt;file&gt;, one numbered line per line"),
+                (
+                    "aria-label",
+                    "The &#60;file&#62;, one numbered line per line"
+                ),
             ]
         ),
         "{viewer}"
@@ -352,8 +350,9 @@ fn a_code_viewer_escapes_its_text_numbers_its_lines_and_draws_each_finding_under
 
 #[test]
 fn a_code_card_names_its_path_in_its_head_with_the_tags_the_count_and_the_digest() {
-    let card = html(|| {
+    let card = html({
         code_card(
+            &en(),
             CodeHead {
                 title: String::from("fhirconnect/a <b>.yml"),
                 tags: vec![String::from("FHIRconnect")],
@@ -373,11 +372,11 @@ fn a_code_card_names_its_path_in_its_head_with_the_tags_the_count_and_the_digest
             "button",
             &[("id", "file-copy"), ("type", "button"), ("hidden", "")]
         ),
-        "Copy is the copy island in the head, hidden until it works: {card}"
+        "Copy is the copy module in the head, hidden until it works: {card}"
     );
     assert!(
         has(&card, "h2", &[("class", "fui-codeview-path")])
-            && card.contains("fhirconnect/<wbr>a &lt;b&gt;.yml"),
+            && card.contains("fhirconnect/<wbr>a &#60;b&#62;.yml"),
         "the path is the title and breaks after its slash alone: {card}"
     );
     assert!(
@@ -404,8 +403,9 @@ fn a_code_card_names_its_path_in_its_head_with_the_tags_the_count_and_the_digest
 
 #[test]
 fn a_code_section_carries_the_head_in_its_heading_row_and_the_viewer_has_none() {
-    let section = html(|| {
+    let section = html({
         code_section(
+            &en(),
             CodeHead {
                 title: String::from("Source"),
                 ..CodeHead::default()
@@ -424,15 +424,15 @@ fn a_code_section_carries_the_head_in_its_heading_row_and_the_viewer_has_none() 
 
 #[test]
 fn an_informational_dialog_explains_and_offers_only_close() {
-    let dialog = html(|| {
+    let dialog = html({
         info_dialog(
+            &en(),
             Explanation {
                 id: "how-config".into(),
                 title: Word::from("How <configuration> works"),
             },
-            view! { <p>"Read at start."</p> },
+            Html::raw(String::from("<p>Read at start.</p>")),
         )
-        .into_any()
     });
     assert!(
         dialog.starts_with(
@@ -445,7 +445,7 @@ fn an_informational_dialog_explains_and_offers_only_close() {
         "{dialog}"
     );
     assert!(
-        dialog.contains("How &lt;configuration&gt; works"),
+        dialog.contains("How &#60;configuration&#62; works"),
         "{dialog}"
     );
     assert!(dialog.contains("<p>Read at start.</p>"), "{dialog}");
@@ -472,8 +472,9 @@ fn an_informational_dialog_explains_and_offers_only_close() {
 
 #[test]
 fn a_heading_counts_the_items_it_shows_of_a_larger_set() {
-    let section = html(|| {
+    let section = html({
         panel_section(
+            &en(),
             Some(SectionHead {
                 title: String::from("Code systems"),
                 count: Some(HeadingCount::Shown {
@@ -482,7 +483,7 @@ fn a_heading_counts_the_items_it_shows_of_a_larger_set() {
                 }),
                 actions: None,
             }),
-            view! { <p>"Rows"</p> },
+            Html::raw(String::from("<p>Rows</p>")),
         )
     });
     let count = section
@@ -499,21 +500,24 @@ fn a_heading_counts_the_items_it_shows_of_a_larger_set() {
 
 #[test]
 fn panel_sections_draw_a_heading_row_with_its_count_and_no_card_of_their_own() {
-    let panel = html(|| {
-        panel_sections(view! {
-            {panel_section(
+    let panel = html({
+        panel_sections(Html::join([
+            panel_section(
+                &en(),
                 Some(SectionHead {
                     title: String::from("Models <x>"),
                     count: Some(HeadingCount::All(3)),
-                    actions: Some(view! { <a href="/add">"Add"</a> }.into_any()),
+                    actions: Some(Html::raw(String::from(r#"<a href="/add">Add</a>"#))),
                 }),
-                view! {
-                    {section_intro("One <sentence>.")}
-                    {add_row(view! { <button type="button">"Add"</button> })}
-                },
-            )}
-            {panel_section(None, view! { <p>"Prose"</p> })}
-        })
+                Html::join([
+                    section_intro("One <sentence>."),
+                    add_row(Html::raw(String::from(
+                        r#"<button type="button">Add</button>"#,
+                    ))),
+                ]),
+            ),
+            panel_section(&en(), None, Html::raw(String::from("<p>Prose</p>"))),
+        ]))
     });
     assert!(panel.starts_with(r#"<div class="fui-panel">"#), "{panel}");
     assert!(
@@ -521,13 +525,13 @@ fn panel_sections_draw_a_heading_row_with_its_count_and_no_card_of_their_own() {
         "never a card in the panel: {panel}"
     );
     assert_eq!(2, tags(&panel, "section").len(), "{panel}");
-    assert!(panel.contains("Models &lt;x&gt;"), "{panel}");
+    assert!(panel.contains("Models &#60;x&#62;"), "{panel}");
     assert!(
         panel.contains(r#"<span class="fui-list-count">· 3</span>"#),
         "{panel}"
     );
     assert!(has(&panel, "div", &[("class", "fui-actions")]), "{panel}");
-    assert!(panel.contains("One &lt;sentence&gt;."), "{panel}");
+    assert!(panel.contains("One &#60;sentence&#62;."), "{panel}");
     assert!(
         has(
             &panel,
@@ -545,16 +549,17 @@ fn panel_sections_draw_a_heading_row_with_its_count_and_no_card_of_their_own() {
         tags(&panel, "h3").len(),
         "a section with no head draws no heading: {panel}"
     );
-    let split = html(|| {
+    let split = html({
         source_split(
             code_viewer(
+                &en(),
                 Some(CodeHead {
                     title: String::from("a.yml"),
                     ..CodeHead::default()
                 }),
                 &code("a: 1"),
             ),
-            panel_section(None, "Diagnostics".into_any()),
+            panel_section(&en(), None, Html::text("Diagnostics")),
         )
     });
     assert!(
@@ -569,10 +574,11 @@ fn panel_sections_draw_a_heading_row_with_its_count_and_no_card_of_their_own() {
 
 #[test]
 fn a_page_heading_in_the_body_face_writes_no_class_on_its_title() {
-    let plain = html(|| page_header("Dashboard", None, ActionGroup::none()).into_any());
+    let plain = html(page_header(&en(), "Dashboard", None, ActionGroup::none()));
     assert!(plain.contains("<h1>Dashboard</h1>"), "{plain}");
-    let mono = html(|| {
+    let mono = html({
         page_heading(
+            &en(),
             Header {
                 title: Word::from("vitals.v1"),
                 mono: true,
@@ -580,7 +586,6 @@ fn a_page_heading_in_the_body_face_writes_no_class_on_its_title() {
             },
             ActionGroup::none(),
         )
-        .into_any()
     });
     assert!(
         mono.contains(r#"<h1 class="fui-page-title-mono">vitals.v1</h1>"#),
@@ -591,20 +596,23 @@ fn a_page_heading_in_the_body_face_writes_no_class_on_its_title() {
 /// A document pane over `text`, opening on `opening`, with a rendered view
 /// when `rendered`.
 fn pane(opening: DocumentView, rendered: bool) -> String {
-    page_html(move || {
-        document_pane(Document {
-            id: String::from("doc"),
-            label: String::from("Composition"),
-            formats: vec![
-                (String::from("?format=json"), String::from("JSON")),
-                (String::from("?format=xml"), String::from("XML")),
-            ],
-            format: 0,
-            language: Language::Json,
-            text: String::from("{\"a\": \"</pre>\"}"),
-            opening,
-            rendered: rendered.then(|| view! { <p>"A reading"</p> }.into_any()),
-        })
+    html({
+        document_pane(
+            &en(),
+            Document {
+                id: String::from("doc"),
+                label: String::from("Composition"),
+                formats: vec![
+                    (String::from("?format=json"), String::from("JSON")),
+                    (String::from("?format=xml"), String::from("XML")),
+                ],
+                format: 0,
+                language: Language::Json,
+                text: String::from("{\"a\": \"</pre>\"}"),
+                opening,
+                rendered: rendered.then(|| Html::raw(String::from("<p>A reading</p>"))),
+            },
+        )
     })
 }
 
@@ -638,7 +646,7 @@ fn a_document_pane_draws_every_view_on_the_server_each_reached_by_a_link() {
         "{raw}"
     );
     assert!(has(&raw, "div", &[("data-shown", "raw")]), "{raw}");
-    assert!(raw.contains("&lt;/pre&gt;"), "{raw}");
+    assert!(raw.contains("&#60;/pre&#62;"), "{raw}");
     assert!(!raw.contains("</pre>\""), "{raw}");
     assert!(
         has(
@@ -702,7 +710,7 @@ fn the_figures_table_names_each_point_by_its_own_label() {
         (1.0, String::from("Tue 09:00")),
         (2.0, String::from("Wed 09:00")),
     ];
-    let page = html(|| line_chart(&chart, ChartWords::of_page()));
+    let page = html(line_chart(&chart, ChartWords::of(&en())));
     let rows: Vec<&str> = page
         .split(r#"<th scope="row">"#)
         .skip(1)
@@ -720,8 +728,8 @@ fn the_figures_table_names_each_point_by_its_own_label() {
 }
 
 #[test]
-fn the_legend_is_a_static_key_before_the_page_hydrates() {
-    let page = html(|| line_chart(&trend("Readings"), ChartWords::of_page()));
+fn the_legend_is_a_static_key_before_its_module_runs() {
+    let page = html(line_chart(&trend("Readings"), ChartWords::of(&en())));
     let keys = tags(&page, "span")
         .into_iter()
         .filter(|span| span.get("class").map(String::as_str) == Some("fui-legend-key"))
@@ -730,7 +738,7 @@ fn the_legend_is_a_static_key_before_the_page_hydrates() {
     assert_eq!(
         vec![
             String::from("systolic"),
-            String::from("diastolic &lt;b&gt;")
+            String::from("diastolic &#60;b&#62;")
         ],
         keys,
         "every series is named beside its swatch, escaped: {page}"
@@ -739,7 +747,7 @@ fn the_legend_is_a_static_key_before_the_page_hydrates() {
     assert!(page.contains("fui-swatch fui-series-1"), "{page}");
     assert!(
         tags(&page, "button").is_empty(),
-        "no chip offers a press before the page hydrates: {page}"
+        "no chip offers a press before its module runs: {page}"
     );
     assert!(
         has(&page, "div", &[("role", "group"), ("aria-label", "Series")]),
@@ -749,7 +757,7 @@ fn the_legend_is_a_static_key_before_the_page_hydrates() {
 
 #[test]
 fn every_series_is_drawn_once_and_shown_in_the_plot_the_legend_names() {
-    let page = html(|| line_chart(&trend("Readings <mmHg>"), ChartWords::of_page()));
+    let page = html(line_chart(&trend("Readings <mmHg>"), ChartWords::of(&en())));
     assert!(page.contains("fui-chart-line fui-series-0"), "{page}");
     assert!(page.contains("fui-chart-line fui-series-1"), "{page}");
     assert!(
@@ -758,7 +766,7 @@ fn every_series_is_drawn_once_and_shown_in_the_plot_the_legend_names() {
             .all(|group| !group.contains_key("hidden")),
         "every series shows as the page arrives: {page}"
     );
-    assert!(page.contains("Readings &lt;mmHg&gt;"), "{page}");
+    assert!(page.contains("Readings &#60;mmHg&#62;"), "{page}");
     assert!(
         has(
             &page,
@@ -795,7 +803,7 @@ fn an_activity_chart_labels_every_day_its_ticks_name() {
             (29, String::from("21 Oct")),
         ],
     };
-    let page = html(|| activity_chart(&chart).into_any());
+    let page = html(activity_chart(&chart));
     let labels: Vec<&str> = page
         .split("<text class=\"fui-chart-label")
         .skip(1)
@@ -814,14 +822,14 @@ fn an_activity_chart_labels_every_day_its_ticks_name() {
 /// The picker over two synthetic value sets, holding `value`.
 fn picker_holding(value: &str) -> String {
     let value = value.to_owned();
-    html(move || {
+    html({
         picker_field(picker::Picker {
             id: String::from("run-value-set"),
             name: String::from("url"),
             label: "Value set".into(),
             choose_label: "Choose a value set".into(),
             help: None,
-            choices: Signal::stored(vec![
+            choices: (vec![
                 (
                     String::from("http://example.org/vs/a"),
                     String::from("Synthetic A"),
@@ -831,7 +839,7 @@ fn picker_holding(value: &str) -> String {
                     String::from("Synthetic B"),
                 ),
             ]),
-            value: RwSignal::new(value),
+            value: (value),
             empty_word: "Choose one".into(),
             other_word: "Another".into(),
         })
@@ -863,7 +871,7 @@ fn the_server_marks_the_pickers_initial_choice_and_fills_its_input() {
             "input",
             &[("name", "url"), ("value", "http://example.org/vs/b")]
         ),
-        "the form posts the value before the page hydrates: {listed}"
+        "the form posts the value before its module runs: {listed}"
     );
     let typed = picker_holding("http://example.org/vs/mine");
     assert!(
@@ -893,20 +901,63 @@ fn the_server_marks_the_pickers_initial_choice_and_fills_its_input() {
 
 #[test]
 fn the_surfaces_render_and_none_writes_a_style_attribute() {
-    let page = html(|| {
-        view! {
-            {lockup("/", mark(Glyph::LAYERS), "FerroUI", "Gallery")}
-            {stat_card(Stat { glyph: Glyph::USERS, value: String::from("12"), label: "Members".into(), href: Some(String::from("/members")) })}
-            {definitions(vec![("Version", "0.1.0".into_any())])}
-            {binder("Views", vec![Tab::new("a", "/a", "A"), Tab::new("b", "/b", "B")], "b", ().into_any())}
-            {empty_state(Glyph::INBOX, "Nothing here", "No file yet.", ())}
-            {skeleton(3, "Loading the files.")}
-            {link_button(String::from("/new"), Variant::Primary, Some(Glyph::PLUS), "New")}
-            {action_button(Action::new(Some(Glyph::REFRESH_CW), "Reload", Act::Dialog(String::from("delete"))), Variant::Secondary)}
-            {confirm_dialog(Confirmation { id: "delete".into(), title: "Delete it?".into(), message: "It goes for good.".into() }, ())}
-            {footer(Footer { product: "FerroUI Gallery".into(), version: "0.1.0".into(), about: "/about".into() })}
-        }
-        .into_any()
+    let page = html({
+        Html::join([
+            lockup("/", mark(Glyph::LAYERS), "FerroUI", "Gallery"),
+            stat_card(Stat {
+                glyph: Glyph::USERS,
+                value: String::from("12"),
+                label: "Members".into(),
+                href: Some(String::from("/members")),
+            }),
+            definitions(vec![("Version", Html::text("0.1.0"))]),
+            binder(
+                &en(),
+                "Views",
+                vec![Tab::new("a", "/a", "A"), Tab::new("b", "/b", "B")],
+                "b",
+                Html::default(),
+            ),
+            empty_state(
+                Glyph::INBOX,
+                "Nothing here",
+                "No file yet.",
+                Html::default(),
+            ),
+            skeleton(3, "Loading the files."),
+            link_button(
+                String::from("/new"),
+                Variant::Primary,
+                Some(Glyph::PLUS),
+                "New",
+            ),
+            action_button(
+                &en(),
+                Action::new(
+                    Some(Glyph::REFRESH_CW),
+                    "Reload",
+                    Act::Dialog(String::from("delete")),
+                ),
+                Variant::Secondary,
+            ),
+            confirm_dialog(
+                &en(),
+                Confirmation {
+                    id: "delete".into(),
+                    title: "Delete it?".into(),
+                    message: "It goes for good.".into(),
+                },
+                Html::default(),
+            ),
+            footer(
+                &en(),
+                Footer {
+                    product: "FerroUI Gallery".into(),
+                    version: "0.1.0".into(),
+                    about: "/about".into(),
+                },
+            ),
+        ])
     });
     for expected in [
         "fui-lockup-accent",
@@ -926,19 +977,23 @@ fn the_surfaces_render_and_none_writes_a_style_attribute() {
 
 #[test]
 fn a_start_grid_writes_the_start_class_and_the_grid_does_not() {
-    let start = html(|| ferrohealth_ui::view::surface::grid_start(view! { <p>"a"</p> }).into_any());
+    let start = html(ferrohealth_ui::view::surface::grid_start(Html::raw(
+        String::from("<p>a</p>"),
+    )));
     assert!(
         start.contains(r#"class="fui-grid fui-grid-start""#),
         "{start}"
     );
-    let plain = html(|| ferrohealth_ui::view::surface::grid(view! { <p>"a"</p> }).into_any());
+    let plain = html(ferrohealth_ui::view::surface::grid(Html::raw(
+        String::from("<p>a</p>"),
+    )));
     assert!(plain.contains(r#"class="fui-grid""#), "{plain}");
 }
 
 #[test]
 fn a_timestamp_is_a_time_element_with_the_reading_form_and_the_raw_title() {
     let raw = "2026-10-18T23:18:37.039437+00:00";
-    let drawn = html(|| ferrohealth_ui::view::time::timestamp(raw).into_any());
+    let drawn = html(ferrohealth_ui::view::time::timestamp(&en(), raw));
     for expected in [
         "<time datetime=",
         r#"class="fui-time""#,
@@ -953,9 +1008,12 @@ fn a_timestamp_is_a_time_element_with_the_reading_form_and_the_raw_title() {
 #[test]
 fn a_relative_time_carries_its_full_timestamp_as_its_title() {
     // NOTE: COMPONENTS.md family rule 11: relative in lists, the full timestamp in the tooltip.
-    let drawn = html(|| {
-        ferrohealth_ui::view::time::relative("2026-10-21T09:12:11+00:00", "2026-10-21T09:42:11Z")
-            .into_any()
+    let drawn = html({
+        ferrohealth_ui::view::time::relative(
+            &en(),
+            "2026-10-21T09:12:11+00:00",
+            "2026-10-21T09:42:11Z",
+        )
     });
     for expected in [
         r#"class="fui-time""#,
@@ -965,19 +1023,22 @@ fn a_relative_time_carries_its_full_timestamp_as_its_title() {
     ] {
         assert!(drawn.contains(expected), "{expected}: {drawn}");
     }
-    let verbatim =
-        html(|| ferrohealth_ui::view::time::relative("<never>", "2026-10-21T09:42:11Z").into_any());
+    let verbatim = html(ferrohealth_ui::view::time::relative(
+        &en(),
+        "<never>",
+        "2026-10-21T09:42:11Z",
+    ));
     assert!(
-        verbatim.contains("&lt;never&gt;") && !verbatim.contains("<time"),
+        verbatim.contains("&#60;never&#62;") && !verbatim.contains("<time"),
         "{verbatim}"
     );
 }
 
 #[test]
 fn a_timestamp_that_is_no_date_time_is_drawn_verbatim_and_escaped() {
-    let drawn = html(|| ferrohealth_ui::view::time::timestamp("<not a date>").into_any());
+    let drawn = html(ferrohealth_ui::view::time::timestamp(&en(), "<not a date>"));
     assert!(drawn.contains(r#"<span class="fui-time">"#), "{drawn}");
-    assert!(drawn.contains("&lt;not a date&gt;"), "{drawn}");
+    assert!(drawn.contains("&#60;not a date&#62;"), "{drawn}");
     assert!(!drawn.contains("<time"), "{drawn}");
     assert!(!drawn.contains("datetime="), "{drawn}");
 }
@@ -985,14 +1046,13 @@ fn a_timestamp_that_is_no_date_time_is_drawn_verbatim_and_escaped() {
 #[test]
 fn a_stat_label_carries_its_whole_text_as_its_title() {
     let label = "Code systems with a long synthetic name";
-    let drawn = html(|| {
+    let drawn = html({
         stat_card(Stat {
             glyph: Glyph::USERS,
             value: String::from("12"),
             label: label.into(),
             href: None,
         })
-        .into_any()
     });
     assert!(
         drawn.contains(&format!(r#"<span title="{label}">{label}</span>"#)),
@@ -1003,7 +1063,7 @@ fn a_stat_label_carries_its_whole_text_as_its_title() {
 #[test]
 fn a_field_with_an_id_made_per_row_names_its_own_control_and_help() {
     let rows = ["include-0", "exclude-1"];
-    let fields = html(|| {
+    let fields = html({
         rows.iter()
             .map(|key| {
                 let id = format!("compose-search-{key}");
@@ -1012,11 +1072,12 @@ fn a_field_with_an_id_made_per_row_names_its_own_control_and_help() {
                     id.clone(),
                     "Find a code",
                     Some("Type two letters or more.".to_owned()),
-                    view! { <input id=id name="q" class=INPUT aria-describedby=help /> },
+                    Html::raw(format!(
+                        r#"<input id="{id}" name="q" class="{INPUT}" aria-describedby="{help}">"#
+                    )),
                 )
             })
-            .collect_view()
-            .into_any()
+            .collect::<Html>()
     });
     for key in rows {
         let id = format!("compose-search-{key}");
@@ -1033,17 +1094,22 @@ fn a_field_with_an_id_made_per_row_names_its_own_control_and_help() {
             "{fields}"
         );
     }
-    let checks = html(|| {
-        view! {
-            {keyed_check(String::from("keep-2"), "Keep", view! { <input type="checkbox" id="keep-2" /> })}
-            {keyed_check_field(
+    let checks = html({
+        Html::join([
+            keyed_check(
+                "keep-2",
+                "Keep",
+                Html::raw(String::from(r#"<input type="checkbox" id="keep-2">"#)),
+            ),
+            keyed_check_field(
                 String::from("inactive-2"),
                 "Inactive codes",
                 "Codes a system retired.",
-                view! { <input type="checkbox" id="inactive-2" aria-describedby="inactive-2-help" /> },
-            )}
-        }
-        .into_any()
+                Html::raw(String::from(
+                    r#"<input type="checkbox" id="inactive-2" aria-describedby="inactive-2-help">"#,
+                )),
+            ),
+        ])
     });
     assert!(checks.contains(r#"<label for="keep-2">"#), "{checks}");
     assert!(checks.contains(r#"<label for="inactive-2">"#), "{checks}");
@@ -1060,17 +1126,21 @@ fn a_field_with_an_id_made_per_row_names_its_own_control_and_help() {
 #[test]
 fn a_field_label_is_a_static_word_or_a_string_made_at_run_time() {
     let member = String::from("node-a");
-    let fields = html(move || {
-        view! {
-            {field("static-label", "Base URL", None, view! { <input id="static-label" class=INPUT /> })}
-            {keyed_field(
+    let fields = html({
+        Html::join([
+            field(
+                "static-label",
+                "Base URL",
+                None,
+                Html::raw(format!(r#"<input id="static-label" class="{INPUT}">"#)),
+            ),
+            keyed_field(
                 format!("base-{member}"),
                 format!("Base URL of {member}"),
                 None,
-                view! { <input id="base-node-a" class=INPUT /> },
-            )}
-        }
-        .into_any()
+                Html::raw(format!(r#"<input id="base-node-a" class="{INPUT}">"#)),
+            ),
+        ])
     });
     assert!(
         has(
@@ -1093,10 +1163,12 @@ fn a_field_label_is_a_static_word_or_a_string_made_at_run_time() {
 
 #[test]
 fn a_field_with_a_hidden_label_keeps_it_bound_to_its_control() {
-    let row = html(|| {
+    let row = html({
         Field::new("value-3", "Value")
             .label_hidden()
-            .view(view! { <input id="value-3" class=INPUT /> })
+            .view(Html::raw(format!(
+                r#"<input id="value-3" class="{INPUT}">"#
+            )))
     });
     // WCAG 2.2 SC 1.3.1 and SC 4.1.2: the name stays programmatic.
     assert!(
@@ -1113,16 +1185,21 @@ fn a_field_with_a_hidden_label_keeps_it_bound_to_its_control() {
 #[test]
 fn a_field_draws_its_trailing_line_after_its_help_and_the_control_names_both() {
     let id = "member-base";
-    let drawn = html(move || {
+    let drawn = html({
         let described = described_by(id, true, true);
         Field::new(id, "Base URL")
             .help("Where the gateway reaches the member.")
-            .after(view! {
-                <p id=error_id(id) class=ERROR aria-live="polite">
-                    "The address must be absolute."
-                </p>
-            })
-            .view(view! { <input id=id class=INPUT aria-describedby=described /> })
+            .after(Html::raw(format!(
+                r#"<p id="{}" class="{}" aria-live="polite">The address must be absolute.</p>"#,
+                error_id(id),
+                ERROR
+            )))
+            .view(Html::raw(format!(
+                r#"<input id="{}" class="{}" aria-describedby="{}">"#,
+                id,
+                INPUT,
+                described.unwrap_or_default()
+            )))
     });
     assert!(
         has(
@@ -1163,14 +1240,17 @@ fn a_field_draws_its_trailing_line_after_its_help_and_the_control_names_both() {
 
 #[test]
 fn an_action_field_holds_its_button_and_error_line_with_no_label() {
-    let drawn = html(|| {
+    let drawn = html({
         action_field(
-            view! {
-                <button type="button" id="add-value" aria-describedby=error_id("add-value")>
-                    "Add value"
-                </button>
-            },
-            view! { <p id=error_id("add-value") class=ERROR hidden></p> },
+            Html::raw(format!(
+                r#"<button type="button" id="add-value" aria-describedby="{}">Add value</button>"#,
+                error_id("add-value")
+            )),
+            Html::raw(format!(
+                r#"<p id="{}" class="{}" hidden></p>"#,
+                error_id("add-value"),
+                ERROR
+            )),
         )
     });
     assert!(!drawn.contains("<label"), "{drawn}");
@@ -1188,24 +1268,16 @@ fn an_action_field_holds_its_button_and_error_line_with_no_label() {
 
 /// A picker over two versions or a typed one, `typing` saying which shows.
 fn version_field(typing: bool, labelled: bool) -> String {
-    html(move || {
-        let select = view! {
-            <select id="version-pick" class=SELECT aria-describedby=help_id("version")>
-                <option value="">"The one this server resolves to"</option>
-                <option value="other">"Another version"</option>
-            </select>
-        }
-        .into_any();
+    html({
+        let select = Html::raw(format!(
+            r#"<select id="version-pick" class="{}" aria-describedby="{}"><option value="">The one this server resolves to</option><option value="other">Another version</option></select>"#,
+            SELECT,
+            help_id("version")
+        ));
         let picker = if labelled {
-            Picker::Labelled(
-                view! {
-                    <div class="fui-field">
-                        <label for="version-pick" class="fui-label">"Version"</label>
-                        {select}
-                    </div>
-                }
-                .into_any(),
-            )
+            Picker::Labelled(Html::raw(format!(
+                r#"<div class="fui-field"><label for="version-pick" class="fui-label">Version</label>{select}</div>"#
+            )))
         } else {
             Picker::Control {
                 id: String::from("version-pick"),
@@ -1216,10 +1288,16 @@ fn version_field(typing: bool, labelled: bool) -> String {
             label: String::from("Version"),
             picker,
             typed_id: String::from("version"),
-            typed: view! { <input id="version" name="version" class=INPUT aria-describedby=help_id("version") /> }
-                .into_any(),
-            typing: Signal::stored(typing),
-            after: Some(view! { <p id=help_id("version") class="fui-help">"Its version."</p> }.into_any()),
+            typed: Html::raw(format!(
+                r#"<input id="version" name="version" class="{}" aria-describedby="{}">"#,
+                INPUT,
+                help_id("version")
+            )),
+            typing: (typing),
+            after: Some(Html::raw(format!(
+                r#"<p id="{}" class="fui-help">Its version.</p>"#,
+                help_id("version")
+            ))),
         })
     })
 }
@@ -1265,12 +1343,15 @@ fn a_pick_or_type_field_shows_one_control_with_its_own_label() {
 
 #[test]
 fn an_explained_checkbox_keeps_its_help_named_under_the_forms_switch() {
-    let drawn = html(|| {
+    let drawn = html({
         explained_check_field(
             "run-inactive",
             "Include inactive concepts",
             "An inactive concept is listed and marked.",
-            view! { <input type="checkbox" id="run-inactive" aria-describedby=help_id("run-inactive") /> },
+            Html::raw(format!(
+                r#"<input type="checkbox" id="run-inactive" aria-describedby="{}">"#,
+                help_id("run-inactive")
+            )),
         )
     });
     assert!(has(&drawn, "label", &[("for", "run-inactive")]), "{drawn}");
@@ -1291,7 +1372,7 @@ fn an_explained_checkbox_keeps_its_help_named_under_the_forms_switch() {
 
 #[test]
 fn the_help_switch_is_a_native_checkbox_that_submits_nothing() {
-    let drawn = html(|| help_switch("run-help", HelpWords::of_page()));
+    let drawn = html(help_switch("run-help", HelpWords::of(&en())));
     assert!(
         has(
             &drawn,
@@ -1319,14 +1400,18 @@ fn the_help_switch_is_a_native_checkbox_that_submits_nothing() {
 #[test]
 fn a_keyed_field_row_carries_its_id_and_its_columns() {
     use ferrohealth_ui::view::layout::{FieldRow, field_row, keyed_field_row};
-    let keyed = html(|| keyed_field_row(String::from("values-2-row"), FieldRow::WithActions, "x"));
+    let keyed = html(keyed_field_row(
+        "values-2-row",
+        FieldRow::WithActions,
+        Html::text("x"),
+    ));
     assert!(
         keyed.contains(
             r#"<div id="values-2-row" class="fui-field-row fui-field-row-actions">x</div>"#
         ),
         "{keyed}"
     );
-    let plain = html(|| field_row(FieldRow::Halves, "y"));
+    let plain = html(field_row(FieldRow::Halves, Html::text("y")));
     assert!(
         plain.contains(r#"<div class="fui-field-row fui-field-row-halves">y</div>"#),
         "{plain}"
@@ -1353,19 +1438,16 @@ fn a_row_depth_names_its_level_and_holds_at_the_deepest_step() {
 }
 
 #[test]
-fn an_editor_carries_its_text_escaped_so_a_form_posts_it_with_no_webassembly() {
+fn an_editor_carries_its_text_escaped_so_a_form_posts_it_with_no_script() {
     // HTML Living Standard §13.1.2.2: a text area's text is escapable raw text.
-    let page = html(|| {
-        code_editor(
-            Editor {
-                id: "draft".into(),
-                language: Language::Yaml,
-                text: Signal::stored(String::from("a: </textarea><b>&")),
-                marks: Signal::stored(Vec::new()),
-                editable: Signal::stored(true),
-            },
-            |_| {},
-        )
+    let page = html({
+        code_editor(&Editor {
+            id: "draft".into(),
+            language: Language::Yaml,
+            text: String::from("a: </textarea><b>&"),
+            marks: Vec::new(),
+            editable: true,
+        })
     });
     assert!(
         page.contains(">a: &lt;/textarea&gt;&lt;b&gt;&amp;</textarea>"),
@@ -1374,22 +1456,21 @@ fn an_editor_carries_its_text_escaped_so_a_form_posts_it_with_no_webassembly() {
 }
 
 #[test]
-fn the_keyboard_tabs_show_the_first_panel_and_hide_the_others_before_any_webassembly() {
+fn the_keyboard_tabs_show_the_first_panel_and_hide_the_others_before_any_script() {
     // WAI-ARIA Authoring Practices 1.2, the tabs pattern.
-    let page = page_html(|| {
-        view! {
-            <KeyboardTabs
-                label=String::from("Answer")
-                prefix=String::from("answer")
-                tabs=vec![String::from("Table"), String::from("Raw")]
-            >
-                {tab_panels("answer", vec![
-                    view! { <p>"Rows"</p> }.into_any(),
-                    view! { <p>"Text"</p> }.into_any(),
-                ])}
-            </KeyboardTabs>
-        }
-        .into_any()
+    let page = html({
+        keyboard_tabs(
+            "Answer",
+            "answer",
+            &[String::from("Table"), String::from("Raw")],
+            tab_panels(
+                "answer",
+                vec![
+                    Html::raw(String::from("<p>Rows</p>")),
+                    Html::raw(String::from("<p>Text</p>")),
+                ],
+            ),
+        )
     });
     assert!(page.contains(r#"id="answer-tab-0""#), "{page}");
     assert!(
@@ -1402,7 +1483,7 @@ fn the_keyboard_tabs_show_the_first_panel_and_hide_the_others_before_any_webasse
     );
     assert!(
         page.contains(
-            r#"<div class="fui-tabbed"><div role="tablist" aria-label="Answer" class="fui-tabs">"#
+            r#"<div class="fui-tabbed"><div role="tablist" aria-label="Answer" data-fui="tabs" class="fui-tabs">"#
         ),
         "the tabs are joined to their panels as binder tabs: {page}"
     );
@@ -1414,32 +1495,34 @@ fn the_keyboard_tabs_show_the_first_panel_and_hide_the_others_before_any_webasse
 
 #[test]
 fn the_toast_region_draws_the_flash_toasts_the_server_hands_it() {
-    let page = html(|| {
-        view! {
-            <ToastRegion
-                words=RegionWords { region: Word::from("Notices"), dismiss: Word::from("Dismiss") }
-                flash=vec![
-                    Flash {
-                        tone: Tone::Ok,
-                        title: String::from("Saved <now>."),
-                        line: Some(String::from("3 files compiled.")),
-                        action: Some(ToastLink {
-                            label: String::from("Open History"),
-                            href: String::from("/history"),
-                        }),
-                    },
-                    Flash { tone: Tone::Bad, title: String::from("Refused."), line: None, action: None },
-                ]
-            />
-        }
-        .into_any()
+    let page = html({
+        toast_region(
+            &en(),
+            vec![
+                Flash {
+                    tone: Tone::Ok,
+                    title: String::from("Saved <now>."),
+                    line: Some(String::from("3 files compiled.")),
+                    action: Some(ToastLink {
+                        label: String::from("Open History"),
+                        href: String::from("/history"),
+                    }),
+                },
+                Flash {
+                    tone: Tone::Bad,
+                    title: String::from("Refused."),
+                    line: None,
+                    action: None,
+                },
+            ],
+        )
     });
     assert!(
         page.contains(r#"role="status" aria-live="polite" aria-label="Notices""#),
         "{page}"
     );
     assert!(
-        page.contains("<strong>Saved &lt;now&gt;.</strong><span>3 files compiled.</span>"),
+        page.contains("<strong>Saved &#60;now&#62;.</strong><span>3 files compiled.</span>"),
         "the title over its line, escaped: {page}"
     );
     assert!(
@@ -1474,9 +1557,9 @@ fn the_toast_region_draws_the_flash_toasts_the_server_hands_it() {
             "button",
             &[("aria-label", "Dismiss"), ("hidden", "")]
         ),
-        "Dismiss is named, and absent until the page hydrates: {page}"
+        "Dismiss is named, and absent until its module runs: {page}"
     );
-    // Shell edge audit, row 3: with no WebAssembly a flash toast still closes.
+    // Shell edge audit, row 3: with no script a flash toast still closes.
     assert_eq!(
         2,
         page.matches(r#"<details open class="fui-toast-close"><summary aria-label="Dismiss" title="Dismiss" class="fui-icon-button">"#).count(),
@@ -1500,24 +1583,21 @@ fn the_toast_region_shows_a_few_toasts_and_keeps_each_refusal_and_each_with_an_a
             href: String::from("/open"),
         }),
     };
-    let page = html(|| {
-        view! {
-            <ToastRegion
-                words=RegionWords { region: Word::from("Notices"), dismiss: Word::from("Dismiss") }
-                flash=vec![
-                    flash("Zeroth.", false),
-                    flash("First.", false),
-                    flash("Second.", true),
-                    flash("Third.", false),
-                    flash("Fourth.", false),
-                    flash("Fifth.", false),
-                ]
-            />
-        }
-        .into_any()
+    let page = html({
+        toast_region(
+            &en(),
+            vec![
+                flash("Zeroth.", false),
+                flash("First.", false),
+                flash("Second.", true),
+                flash("Third.", false),
+                flash("Fourth.", false),
+                flash("Fifth.", false),
+            ],
+        )
     });
     assert_eq!(
-        ferrohealth_ui::widget::toast::SHOWN_MAX,
+        ferrohealth_ui::view::toast::SHOWN_MAX,
         page.matches("<strong>").count(),
         "{page}"
     );
@@ -1537,8 +1617,9 @@ fn the_toast_region_shows_a_few_toasts_and_keeps_each_refusal_and_each_with_an_a
 
 #[test]
 fn binder_tabs_join_their_panel_and_mark_the_current_page_with_its_count_and_draft() {
-    let page = page_html(|| {
+    let page = html({
         binder(
+            &en(),
             "Sections",
             vec![
                 Tab::new("nodes", "/nodes", "Nodes").count(12, "12 nodes"),
@@ -1546,7 +1627,7 @@ fn binder_tabs_join_their_panel_and_mark_the_current_page_with_its_count_and_dra
                 Tab::new("keyboard", "/keyboard", "Keyboard"),
             ],
             "nodes",
-            view! { <p>"The panel"</p> }.into_any(),
+            Html::raw(String::from("<p>The panel</p>")),
         )
     });
     assert!(page.starts_with(r#"<div class="fui-tabbed">"#), "{page}");
@@ -1581,7 +1662,7 @@ fn binder_tabs_join_their_panel_and_mark_the_current_page_with_its_count_and_dra
         "{page}"
     );
     assert!(
-        page.contains("Consent &lt;draft&gt;"),
+        page.contains("Consent &#60;draft&#62;"),
         "the label is escaped: {page}"
     );
     assert!(has(&page, "a", &[("data-tab", "keyboard")]), "{page}");
@@ -1596,8 +1677,8 @@ fn binder_tabs_join_their_panel_and_mark_the_current_page_with_its_count_and_dra
 }
 
 #[test]
-fn past_five_binder_tabs_a_phone_select_waits_disabled_for_the_webassembly() {
-    let page = page_html(|| {
+fn past_five_binder_tabs_a_phone_select_waits_disabled_for_the_script() {
+    let page = html({
         let tabs = (1..=7)
             .map(|index| {
                 let tab = Tab::new(
@@ -1609,7 +1690,7 @@ fn past_five_binder_tabs_a_phone_select_waits_disabled_for_the_webassembly() {
             })
             .chain([Tab::new("keyboard", "/keyboard", "Keyboard")])
             .collect();
-        binder("Sections", tabs, "t3", ().into_any())
+        binder(&en(), "Sections", tabs, "t3", Html::default())
     });
     assert!(
         page.contains(r#"class="fui-tabbed fui-tabbed-many""#),
@@ -1617,7 +1698,7 @@ fn past_five_binder_tabs_a_phone_select_waits_disabled_for_the_webassembly() {
     );
     assert!(
         has(&page, "select", &[("disabled", "")]),
-        "no-WebAssembly floor: the row of links serves until the select works: {page}"
+        "no-script floor: the row of links serves until the select works: {page}"
     );
     assert!(
         page.contains(
@@ -1659,14 +1740,14 @@ fn past_five_binder_tabs_a_phone_select_waits_disabled_for_the_webassembly() {
 #[test]
 fn two_phone_tab_selects_on_one_page_repeat_no_id() {
     // NOTE: HTML Living Standard, the id attribute: an id is unique in its tree.
-    let page = page_html(|| {
+    let page = html({
         let row = |label: &str| {
             let tabs = (1..=7)
                 .map(|index| Tab::new(format!("t{index}"), format!("/{label}/t{index}"), "Tab"))
                 .collect();
-            binder(label, tabs, "t1", ().into_any())
+            binder(&en(), label, tabs, "t1", Html::default())
         };
-        view! { {row("Sections")} {row("Views")} }.into_any()
+        Html::join([row("Sections"), row("Views")])
     });
     assert_eq!(2, tags(&page, "select").len(), "{page}");
     let mut ids: Vec<&str> = page
@@ -1684,15 +1765,16 @@ fn two_phone_tab_selects_on_one_page_repeat_no_id() {
 fn the_popover_form_is_a_native_modal_dialog_inside_its_anchor() {
     // WAI-ARIA Authoring Practices, the dialog (modal) pattern: the page behind is inert and the
     // focus stays inside; HTML Living Standard, the `command` attribute opens it with no script.
-    let page = html(|| {
+    let page = html({
         popover_form(PopoverForm {
             id: "save".into(),
             variant: Variant::Secondary,
             glyph: Glyph::SAVE,
             label: "Save <it>".into(),
             title: "Save to the CDR".into(),
-            body: view! { <form method="post"><button type="submit">"Save"</button></form> }
-                .into_any(),
+            body: Html::raw(String::from(
+                r#"<form method="post"><button type="submit">Save</button></form>"#,
+            )),
         })
     });
     assert!(page.starts_with(r#"<span class="fui-anchor">"#), "{page}");
@@ -1729,7 +1811,7 @@ fn the_popover_form_is_a_native_modal_dialog_inside_its_anchor() {
         page.contains(r#"<p id="save-title" class="fui-popover-title">Save to the CDR</p>"#),
         "{page}"
     );
-    assert!(page.contains("Save &lt;it&gt;"), "{page}");
+    assert!(page.contains("Save &#60;it&#62;"), "{page}");
 }
 
 #[test]
@@ -1754,21 +1836,21 @@ fn a_phrase_fills_its_open_placeables_and_leaves_the_rest() {
 /// value and one named like the other choice, holding `value`.
 fn picker_named_like_another(value: &str) -> String {
     let value = value.to_owned();
-    html(move || {
+    html({
         picker_field(picker::Picker {
             id: String::from("run-value-set"),
             name: String::from("url"),
             label: "Value set".into(),
             choose_label: "Choose a value set".into(),
             help: None,
-            choices: Signal::stored(vec![
+            choices: (vec![
                 (
                     String::from("\u{FFFD}another"),
                     String::from("Old sentinel"),
                 ),
                 (String::from("another"), String::from("Named another")),
             ]),
-            value: RwSignal::new(value),
+            value: (value),
             empty_word: "Choose one".into(),
             other_word: "Another".into(),
         })
@@ -1835,8 +1917,9 @@ fn file_menu() -> Menu {
 
 /// The action group of an Edit link and the file's More menu, rendered.
 fn file_group() -> String {
-    page_html(|| {
+    html({
         action_group(
+            &en(),
             ActionGroup::primary(Action::new(
                 Some(Glyph::PENCIL),
                 "Edit",
@@ -1892,7 +1975,7 @@ fn the_action_group_draws_one_primary_then_more_with_the_destructive_item_last()
     );
     assert!(
         !page.contains("aria-expanded"),
-        "the server leaves the state to the summary until the island runs: {page}"
+        "the server leaves the state to the summary until the module runs: {page}"
     );
     let separator = page.find(r#"role="separator""#).expect("a separator");
     let delete = page
@@ -1919,7 +2002,7 @@ fn the_action_group_draws_one_primary_then_more_with_the_destructive_item_last()
 }
 
 #[test]
-fn every_item_of_more_works_with_no_webassembly_and_a_disabled_one_says_why() {
+fn every_item_of_more_works_with_no_script_and_a_disabled_one_says_why() {
     let page = file_group();
     assert!(
         has(&page, "form", &[("method", "post"), ("action", "/check")]),
@@ -1932,7 +2015,7 @@ fn every_item_of_more_works_with_no_webassembly_and_a_disabled_one_says_why() {
             &[
                 ("type", "hidden"),
                 ("name", "path"),
-                ("value", "a &lt;b&gt;.yml")
+                ("value", "a &#60;b&#62;.yml")
             ]
         ),
         "its fields are escaped: {page}"
@@ -1947,7 +2030,7 @@ fn every_item_of_more_works_with_no_webassembly_and_a_disabled_one_says_why() {
     );
     assert!(
         page.contains(
-            r#"<span class="fui-menu-item-desc">The file is provisioned &amp; read-only</span>"#
+            r#"<span class="fui-menu-item-desc">The file is provisioned &#38; read-only</span>"#
         ),
         "a disabled item says its reason as a line of its own: {page}"
     );
@@ -1963,7 +2046,7 @@ fn every_item_of_more_works_with_no_webassembly_and_a_disabled_one_says_why() {
             "button",
             &[("class", "fui-menu-cancel"), ("hidden", "")]
         ),
-        "Cancel waits for the island: {page}"
+        "Cancel waits for the module: {page}"
     );
     assert!(
         page.contains("fui-menu-sheet"),
@@ -1974,8 +2057,9 @@ fn every_item_of_more_works_with_no_webassembly_and_a_disabled_one_says_why() {
 
 #[test]
 fn a_split_primary_carries_its_variants_and_more_alone_has_no_primary() {
-    let split = page_html(|| {
+    let split = html({
         action_group(
+            &en(),
             ActionGroup::primary(Action::new(
                 Some(Glyph::SAVE),
                 "Save",
@@ -2008,12 +2092,15 @@ fn a_split_primary_carries_its_variants_and_more_alone_has_no_primary() {
         ),
         "{split}"
     );
-    let alone = page_html(|| action_group(ActionGroup::more_only(file_menu())));
+    let alone = html(action_group(&en(), ActionGroup::more_only(file_menu())));
     assert!(!alone.contains("fui-button-primary"), "{alone}");
     assert!(alone.contains("fui-more"), "{alone}");
-    let none = page_html(|| action_group(ActionGroup::none()));
+    let none = html(action_group(&en(), ActionGroup::none()));
     assert!(!none.contains("<div"), "{none}");
-    let empty = page_html(|| action_group(ActionGroup::more_only(Menu::new("x", "X", Vec::new()))));
+    let empty = html(action_group(
+        &en(),
+        ActionGroup::more_only(Menu::new("x", "X", Vec::new())),
+    ));
     assert!(
         !empty.contains("<div"),
         "a More with no item is left out: {empty}"
@@ -2022,7 +2109,7 @@ fn a_split_primary_carries_its_variants_and_more_alone_has_no_primary() {
 
 #[test]
 fn a_copy_item_waits_hidden_and_its_menu_carries_the_copy_words() {
-    // NOTE: leptos-ui.md §15.8: a control only script can work is absent before hydration.
+    // NOTE: console-ui.md §1: a control only script can work is absent before its module runs.
     let menu = Menu::new(
         "ehr-more",
         "More actions for the EHR",
@@ -2032,7 +2119,7 @@ fn a_copy_item_waits_hidden_and_its_menu_carries_the_copy_words() {
             Act::Copy(String::from("7d44b88c-4199-4bad-97dc-d78268e01398")),
         ))],
     );
-    let page = page_html(|| more_menu(menu));
+    let page = html(more_menu(&en(), &menu));
     assert!(
         has(
             &page,
@@ -2050,13 +2137,14 @@ fn a_copy_item_waits_hidden_and_its_menu_carries_the_copy_words() {
         .find(|button| button.contains_key("data-fui-copy"))
         .expect("the copy item");
     assert!(item.contains_key("hidden"), "{page}");
-    let plain = page_html(|| more_menu(file_menu()));
+    let plain = html(more_menu(&en(), &file_menu()));
     assert!(
         !plain.contains("Copied to the clipboard."),
         "a menu with no copy item carries no copy words: {plain}"
     );
-    let button = page_html(|| {
+    let button = html({
         action_button(
+            &en(),
             Action::new(None, "Copy the id", Act::Copy(String::from("id-1"))),
             Variant::Secondary,
         )
@@ -2072,10 +2160,13 @@ fn a_popover_form_sits_beside_the_primary_before_more() {
         glyph: Glyph::SAVE,
         label: "Save to the CDR".into(),
         title: "Save to the CDR".into(),
-        body: view! { <form method="post"><button type="submit">"Save"</button></form> }.into_any(),
+        body: Html::raw(String::from(
+            r#"<form method="post"><button type="submit">Save</button></form>"#,
+        )),
     };
-    let page = page_html(|| {
+    let page = html({
         action_group(
+            &en(),
             ActionGroup::primary(Action::new(
                 Some(Glyph::PLAY),
                 "Run",
@@ -2095,7 +2186,7 @@ fn a_popover_form_sits_beside_the_primary_before_more() {
         has(&page, "dialog", &[("id", "save"), ("class", "fui-popover")]),
         "{page}"
     );
-    let alone = page_html(|| action_group(ActionGroup::none().popover(save())));
+    let alone = html(action_group(&en(), ActionGroup::none().popover(save())));
     assert!(
         alone.contains("fui-action-group"),
         "a popover alone draws: {alone}"
@@ -2104,7 +2195,7 @@ fn a_popover_form_sits_beside_the_primary_before_more() {
 
 #[test]
 fn a_row_menu_is_a_named_icon_button() {
-    let page = page_html(|| row_menu(file_menu()));
+    let page = html(row_menu(&en(), &file_menu()));
     assert!(
         has(
             &page,
@@ -2119,32 +2210,35 @@ fn a_row_menu_is_a_named_icon_button() {
 }
 
 #[test]
-fn the_select_button_shows_its_choice_and_each_option_works_with_no_webassembly() {
-    let page = page_html(|| {
-        listbox(Listbox {
-            id: String::from("lang-list"),
-            label: String::from("Language"),
-            value: Word::from("English"),
-            choices: vec![
-                Choice {
-                    label: Word::from("English"),
-                    note: None,
-                    lang: Some(String::from("en")),
-                    selected: true,
-                    pick: Pick::Post {
-                        action: String::from("/locale"),
-                        fields: vec![(String::from("locale"), String::from("en"))],
+fn the_select_button_shows_its_choice_and_each_option_works_with_no_script() {
+    let page = html({
+        listbox(
+            &en(),
+            &Listbox {
+                id: String::from("lang-list"),
+                label: String::from("Language"),
+                value: Word::from("English"),
+                choices: vec![
+                    Choice {
+                        label: Word::from("English"),
+                        note: None,
+                        lang: Some(String::from("en")),
+                        selected: true,
+                        pick: Pick::Post {
+                            action: String::from("/locale"),
+                            fields: vec![(String::from("locale"), String::from("en"))],
+                        },
                     },
-                },
-                Choice {
-                    label: Word::from("1.0.0"),
-                    note: Some(Word::from("Older")),
-                    lang: None,
-                    selected: false,
-                    pick: Pick::Link(String::from("?version=1.0.0")),
-                },
-            ],
-        })
+                    Choice {
+                        label: Word::from("1.0.0"),
+                        note: Some(Word::from("Older")),
+                        lang: None,
+                        selected: false,
+                        pick: Pick::Link(String::from("?version=1.0.0")),
+                    },
+                ],
+            },
+        )
     });
     assert!(
         has(&page, "details", &[("class", "fui-select-anchor")]),
@@ -2206,58 +2300,88 @@ fn the_select_button_shows_its_choice_and_each_option_works_with_no_webassembly(
 }
 
 #[test]
+fn a_combobox_option_that_asks_for_a_typed_value_is_marked_other() {
+    let combo = html(combobox(Combobox {
+        id: "pick-canonical",
+        name: "picked",
+        label: "Code system".into(),
+        placeholder: "Choose one".into(),
+        options: vec![
+            ComboOption::new("http://loinc.org", "LOINC"),
+            ComboOption::new("another", "Another canonical").other(),
+        ],
+        selected: None,
+        words: ComboboxWords {
+            no_match: Word::from("No match"),
+            more: Word::from("Type to narrow"),
+        },
+    }));
+    assert!(
+        has(
+            &combo,
+            "option",
+            &[("value", "another"), ("data-other", "")]
+        ),
+        "{combo}"
+    );
+    assert!(
+        tags(&combo, "option")
+            .iter()
+            .filter(|option| option.contains_key("data-other"))
+            .count()
+            == 1,
+        "only the other option is marked: {combo}"
+    );
+}
+
+#[test]
 fn the_combobox_and_picker_draw_their_native_floor_on_the_server() {
-    let combo = html(|| {
-        view! {
-            <Combobox
-                id=String::from("choose-system")
-                name=String::from("system")
-                label=String::from("Code system")
-                placeholder=String::from("Choose one")
-                options=vec![ComboOption::new("loinc", "LOINC <lab>")]
-                selected=Some(String::from("loinc"))
-                described_by=None
-                words=ComboboxWords { no_match: Word::from("No match"), more: Word::from("Type to narrow") }
-            />
-        }
-        .into_any()
-    });
+    let combo = html(combobox(Combobox {
+        id: "choose-system",
+        name: "system",
+        label: "Code system".into(),
+        placeholder: "Choose one".into(),
+        options: vec![ComboOption::new("loinc", "LOINC <lab>")],
+        selected: Some(String::from("loinc")),
+        words: ComboboxWords {
+            no_match: Word::from("No match"),
+            more: Word::from("Type to narrow"),
+        },
+    }));
     assert!(
         has(
             &combo,
             "select",
             &[("id", "choose-system"), ("name", "system")]
         ),
-        "a native select posts with no WebAssembly: {combo}"
+        "a native select posts with no script: {combo}"
     );
     assert!(
         has(&combo, "option", &[("value", "loinc"), ("selected", "")]),
         "{combo}"
     );
-    assert!(combo.contains("LOINC &lt;lab&gt;"), "{combo}");
-    let picker = html(|| {
-        view! {
-            <PickerField
-                id=String::from("run-value-set")
-                name=String::from("url")
-                label=String::from("Value set")
-                choose_label=String::from("Choose a value set")
-                help=Some(String::from("The set to expand."))
-                choices=vec![(String::from("http://example.org/vs/a"), String::from("Synthetic A"))]
-                value=String::from("http://example.org/vs/mine")
-                empty_word=String::from("Choose one")
-                other_word=String::from("Another")
-            />
-        }
-        .into_any()
-    });
+    assert!(combo.contains("LOINC &#60;lab&#62;"), "{combo}");
+    let picker = html(picker_field(picker::Picker {
+        id: String::from("run-value-set"),
+        name: String::from("url"),
+        label: "Value set".into(),
+        choose_label: "Choose a value set".into(),
+        help: Some("The set to expand.".into()),
+        choices: vec![(
+            String::from("http://example.org/vs/a"),
+            String::from("Synthetic A"),
+        )],
+        value: String::from("http://example.org/vs/mine"),
+        empty_word: "Choose one".into(),
+        other_word: "Another".into(),
+    }));
     assert!(
         has(
             &picker,
             "input",
             &[("name", "url"), ("value", "http://example.org/vs/mine")]
         ),
-        "the input posts the value with no WebAssembly: {picker}"
+        "the input posts the value with no script: {picker}"
     );
     // The line follows the switch of a form that has one, and shows in any other.
     assert!(
@@ -2280,17 +2404,12 @@ fn copy_words() -> CopyWords {
 
 #[test]
 fn the_copy_button_waits_hidden_and_leaves_its_text_to_the_page() {
-    let copy = html(|| {
-        view! {
-            <CopyButton
-                id=String::from("about-copy")
-                label=String::from("Copy <it>")
-                source=CopySource::Text(String::from("{\"name\": \"<x>\"}"))
-                words=copy_words()
-            />
-        }
-        .into_any()
-    });
+    let copy = html(copy_from(
+        "about-copy",
+        "Copy <it>",
+        CopySource::Text(String::from("{\"name\": \"<x>\"}")),
+        copy_words(),
+    ));
     assert!(
         has(
             &copy,
@@ -2302,9 +2421,9 @@ fn the_copy_button_waits_hidden_and_leaves_its_text_to_the_page() {
                 ("hidden", "")
             ]
         ),
-        "§15.8: with no WebAssembly no Copy shows: {copy}"
+        "§1: with no script no Copy shows: {copy}"
     );
-    assert!(copy.contains("Copy &lt;it&gt;"), "{copy}");
+    assert!(copy.contains("Copy &#60;it&#62;"), "{copy}");
     assert!(
         !copy.contains("<x>"),
         "the text crosses to the browser escaped: {copy}"
@@ -2320,25 +2439,21 @@ fn the_copy_button_waits_hidden_and_leaves_its_text_to_the_page() {
 }
 
 #[test]
-fn the_side_panel_opens_from_a_link_to_its_route_until_it_hydrates() {
-    let panel = page_html(|| {
-        view! {
-            <SidePanel
-                id=String::from("access")
-                title=String::from("Access <now>")
-                opener=Opener {
-                    label: String::from("View access"),
-                    glyph: Some(Glyph::SHIELD_CHECK),
-                    variant: Variant::Secondary,
-                    href: String::from("/session/access"),
-                }
-                words=SidePanelWords { close: Word::from("Close") }
-            >
-                <p>"Signed in as a synthetic operator."</p>
-            </SidePanel>
-        }
-        .into_any()
-    });
+fn the_side_panel_opens_from_a_link_to_its_route_until_its_module_runs() {
+    let panel = html(side_panel(SidePanel {
+        id: String::from("access"),
+        title: String::from("Access <now>"),
+        opener: Opener {
+            label: String::from("View access"),
+            glyph: Some(Glyph::SHIELD_CHECK),
+            variant: Variant::Secondary,
+            href: String::from("/session/access"),
+        },
+        body: Html::raw(String::from("<p>Signed in as a synthetic operator.</p>")),
+        words: SidePanelWords {
+            close: Word::from("Close"),
+        },
+    }));
     let links = tags(&panel, "a");
     let link = links
         .iter()
@@ -2346,7 +2461,7 @@ fn the_side_panel_opens_from_a_link_to_its_route_until_it_hydrates() {
         .expect("the opener is a link to the content's route");
     assert!(
         !link.contains_key("hidden"),
-        "the link shows with no WebAssembly: {panel}"
+        "the link shows with no script: {panel}"
     );
     assert!(
         has(
@@ -2360,7 +2475,7 @@ fn the_side_panel_opens_from_a_link_to_its_route_until_it_hydrates() {
                 ("hidden", "")
             ]
         ),
-        "the button that opens it in place waits for the WebAssembly: {panel}"
+        "the button that opens it in place waits for the script: {panel}"
     );
     assert!(
         has(
@@ -2376,7 +2491,7 @@ fn the_side_panel_opens_from_a_link_to_its_route_until_it_hydrates() {
         "a modal dialog, so the page behind is inert while it shows (WAI-ARIA Authoring Practices, the dialog (modal) pattern): {panel}"
     );
     assert!(
-        panel.contains(r#"<h2 id="access-title" class="fui-card-title">Access &lt;now&gt;</h2>"#),
+        panel.contains(r#"<h2 id="access-title" class="fui-card-title">Access &#60;now&#62;</h2>"#),
         "{panel}"
     );
     assert!(
@@ -2404,7 +2519,7 @@ fn the_side_panel_opens_from_a_link_to_its_route_until_it_hydrates() {
 
 /// A row whose menu's Remove… opens its own danger confirmation, which
 /// asks for a required Reason inside the form it posts.
-fn removal_row(member: &str) -> AnyView {
+fn removal_row(member: &str) -> Html {
     let id = format!("remove-{member}");
     let menu = Menu::new(
         format!("row-{member}"),
@@ -2417,6 +2532,7 @@ fn removal_row(member: &str) -> AnyView {
         Act::Dialog(id.clone()),
     ))]);
     let dialog = danger_form_dialog(
+        &en(),
         Confirmation {
             id: id.into(),
             title: format!("Remove {member}?").into(),
@@ -2424,24 +2540,21 @@ fn removal_row(member: &str) -> AnyView {
         },
         ConfirmForm {
             action: format!("/members/{member}/remove"),
-            fields: view! {
-                <input type="hidden" name="member" value=member.to_owned() />
-                <textarea id="reason" name="reason" required></textarea>
-            }
-            .into_any(),
+            fields: Html::raw(format!(
+                r#"<input type="hidden" name="member" value="{member}"><textarea id="reason" name="reason" required></textarea>"#
+            )),
         },
-        view! { <button type="submit" class=Variant::Destructive.class()>"Remove"</button> },
+        Html::raw(format!(
+            r#"<button type="submit" class="{}">Remove</button>"#,
+            Variant::Destructive.class()
+        )),
     );
-    view! {
-        {row_menu(menu)}
-        {dialog}
-    }
-    .into_any()
+    row_menu(&en(), &menu).then(dialog)
 }
 
 #[test]
 fn a_danger_confirmation_holds_the_consoles_fields_inside_the_form_it_posts() {
-    let shown = page_html(|| removal_row("node-b"));
+    let shown = html(removal_row("node-b"));
     assert!(
         has(
             &shown,
@@ -2508,27 +2621,28 @@ fn a_danger_confirmation_holds_the_consoles_fields_inside_the_form_it_posts() {
 
 #[test]
 fn a_danger_confirmation_with_no_fields_draws_no_form_of_its_own() {
-    let shown = html(|| {
+    let shown = html({
         ferrohealth_ui::view::dialog::danger_dialog(
+            &en(),
             Confirmation {
                 id: "delete".into(),
                 title: "Delete it?".into(),
                 message: "It goes for good.".into(),
             },
-            (),
+            Html::default(),
         )
-        .into_any()
     });
     assert!(tags(&shown, "form").is_empty(), "{shown}");
 }
 
 #[test]
 fn a_menu_item_submits_the_consoles_form_to_another_address() {
-    let shown = page_html(|| {
+    let shown = html({
         labelled_menu(
+            &en(),
             Glyph::DOWNLOAD,
             "Export".into(),
-            Menu::new(
+            &Menu::new(
                 "export",
                 "Export",
                 vec![
@@ -2593,8 +2707,9 @@ fn a_menu_item_submits_the_consoles_form_to_another_address() {
         ) && shown.contains(">Export<"),
         "a small labelled trigger, named by its words (WCAG 2.2 SC 2.5.3): {shown}"
     );
-    let button = page_html(|| {
+    let button = html({
         action_button(
+            &en(),
             Action::new(
                 None,
                 "Export CSV",

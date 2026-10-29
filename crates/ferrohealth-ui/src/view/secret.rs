@@ -18,11 +18,12 @@
 //! draws the state alone ([`secret_state`]) in its read-only settings. No
 //! specification governs the component: our own design.
 
-use leptos::prelude::*;
+use askama::Template;
 
-use crate::i18n::{Phrase, Text, tr, tr_with};
+use crate::html::{Html, Render as _};
+use crate::i18n::{Locale, Phrase, Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
-use crate::view::form::{ERROR, described_by, error_id, help_id};
+use crate::view::form::{ERROR, described_by, error_id, help_id, secret_mark};
 
 /// What is set now.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -127,87 +128,123 @@ impl SecretField {
     /// has no secrets directory to write a value to; reading it from a file
     /// still works.
     #[must_use]
-    pub fn refuse_value(self) -> Self {
+    pub fn refuse_value(self, locale: &Locale) -> Self {
         Self {
             choice: SecretChoice::Value,
-            error: Some(tr(Text::SecretNoDirectory).into()),
+            error: Some(locale.text(Text::SecretNoDirectory)),
             ..self
         }
     }
 }
 
-/// Returns the state `state` with its glyph: by reference, in the muted
-/// words a settings row or a secret field's head draws.
+/// Returns the state `state` with its glyph, in `locale`: by reference,
+/// in the muted words a settings row or a secret field's head draws.
 ///
 /// ```
+/// use ferrohealth_ui::i18n::Locale;
 /// use ferrohealth_ui::view::secret::{SecretState, secret_state};
-/// use leptos::prelude::*;
 ///
-/// let html = Owner::new().with(|| {
-///     secret_state(&SecretState::Set(String::from("/run/secrets/db-url"))).to_html()
-/// });
+/// let html = secret_state(
+///     &Locale::english(),
+///     &SecretState::Set(String::from("/run/secrets/db-url")),
+/// ).to_string();
 /// assert!(html.contains("<code>/run/secrets/db-url</code>"));
 /// ```
 #[must_use]
-pub fn secret_state(state: &SecretState) -> AnyView {
-    state_view(state, None)
+pub fn secret_state(locale: &Locale, state: &SecretState) -> Html {
+    state_view(locale, state, None)
 }
 
 /// The state [`secret_state`] draws, with the id `id` when it has one.
-fn state_view(state: &SecretState, id: Option<String>) -> AnyView {
+fn state_view(locale: &Locale, state: &SecretState, id: Option<&str>) -> Html {
     let (glyph, words) = match state {
-        SecretState::Set(file) => (Glyph::LOCK, around(Text::SecretSet, file)),
-        SecretState::Redacted => (Glyph::LOCK, tr(Text::SecretRedacted).into_render()),
-        SecretState::Unset => (Glyph::LOCK, tr(Text::SecretUnset).into_render()),
-        SecretState::Unreadable(file) => (Glyph::TRIANGLE_ALERT, around(Text::SecretBroken, file)),
+        SecretState::Set(file) => (Glyph::LOCK, around(locale, Text::SecretSet, file)),
+        SecretState::Redacted => (Glyph::LOCK, tr(locale, Text::SecretRedacted).into()),
+        SecretState::Unset => (Glyph::LOCK, tr(locale, Text::SecretUnset).into()),
+        SecretState::Unreadable(file) => (
+            Glyph::TRIANGLE_ALERT,
+            around(locale, Text::SecretBroken, file),
+        ),
     };
     let modifier = match state {
-        SecretState::Unset => Some("is-unset"),
-        SecretState::Unreadable(_) => Some("is-broken"),
-        SecretState::Set(_) | SecretState::Redacted => None,
+        SecretState::Unset => " is-unset",
+        SecretState::Unreadable(_) => " is-broken",
+        SecretState::Set(_) | SecretState::Redacted => "",
     };
-    let class = modifier.map_or_else(
-        || String::from("fui-secret-now"),
-        |modifier| format!("fui-secret-now {modifier}"),
-    );
-    view! {
-        <span class=class id=id>
-            {icon(glyph, "12")}
-            {words}
-        </span>
-    }
-    .into_any()
+    let id = id.map_or_else(String::new, |id| format!(" id=\"{}\"", Html::text(id)));
+    Html::raw(format!(
+        "<span{id} class=\"fui-secret-now{modifier}\">{}{words}</span>",
+        icon(glyph, "12")
+    ))
 }
 
 /// Returns the message `text` around the path `file`, the path in the code
 /// face.
-fn around(text: Text, file: &str) -> AnyView {
+fn around(locale: &Locale, text: Text, file: &str) -> Html {
     let mark = Phrase::open_mark("file");
-    let words = tr_with(text, &[("file", Phrase::open("file"))]);
-    let lang = words.lang();
+    let words: Word = tr_with(locale, text, &[("file", Phrase::open("file"))]);
     let (before, after) = words.text().split_once(&mark).unwrap_or((words.text(), ""));
-    let (before, after) = (before.to_owned(), after.to_owned());
-    let file = file.to_owned();
-    let drawn = view! {
-        {before}
-        <code>{file}</code>
-        {after}
-    };
-    match lang {
-        Some(lang) => view! { <span lang=lang>{drawn}</span> }.into_any(),
-        None => drawn.into_any(),
-    }
+    let drawn = format!(
+        "{}<code>{}</code>{}",
+        Html::text(before),
+        Html::text(file),
+        Html::text(after)
+    );
+    Html::raw(match words.lang() {
+        Some(lang) => format!("<span lang=\"{lang}\">{drawn}</span>"),
+        None => drawn,
+    })
 }
 
-/// Returns the secret field `field`, with `hint` (a key hint, R15) after
-/// its label.
+/// One choice of the field's segmented radios.
+struct Segment {
+    radio: String,
+    key: &'static str,
+    checked: bool,
+    words: Word,
+}
+
+#[derive(Template)]
+#[template(path = "secret/secret.html", block = "field")]
+struct FieldView<'a> {
+    id: &'a str,
+    label: &'a str,
+    hint: Option<Html>,
+    now: Html,
+    mode: String,
+    segments: Vec<Segment>,
+    parts: Vec<Html>,
+}
+
+#[derive(Template)]
+#[template(path = "secret/secret.html", block = "control")]
+struct ControlView<'a> {
+    id: &'a str,
+    name: &'a str,
+    label: Word,
+    mark: Option<Html>,
+    kind: &'static str,
+    mono: bool,
+    value: &'a str,
+    invalid: bool,
+    described: Option<String>,
+    error: Option<&'a str>,
+    error_id: String,
+    error_class: &'static str,
+    alert: Html,
+    help_id: String,
+    help: Word,
+}
+
+/// Returns the secret field `field` in `locale`, with `hint` (a key hint,
+/// R15) after its label.
 ///
 /// The head names the secret and what is set now; under it the choices,
 /// Keep reading Leave unset and Clear left out for a secret that is not
 /// set; under them the chosen choice's control: the value, the path, or
 /// the warning that Clear removes the secret.
 #[must_use]
-pub fn secret_field(field: SecretField, hint: Option<AnyView>) -> AnyView {
+pub fn secret_field(locale: &Locale, field: &SecretField, hint: Option<Html>) -> Html {
     let SecretField {
         id,
         label,
@@ -216,161 +253,104 @@ pub fn secret_field(field: SecretField, hint: Option<AnyView>) -> AnyView {
         path,
         error,
     } = field;
-    let set = state != SecretState::Unset;
-    let choices: Vec<(SecretChoice, Text)> = if set {
-        vec![
+    let set = *state != SecretState::Unset;
+    let choices: &[(SecretChoice, Text)] = if set {
+        &[
             (SecretChoice::Keep, Text::SecretKeep),
             (SecretChoice::Value, Text::SecretValue),
             (SecretChoice::File, Text::SecretFile),
             (SecretChoice::Clear, Text::SecretClear),
         ]
     } else {
-        vec![
+        &[
             (SecretChoice::Keep, Text::SecretLeaveUnset),
             (SecretChoice::Value, Text::SecretValue),
             (SecretChoice::File, Text::SecretFile),
         ]
     };
-    let label_id = format!("{id}-label");
     let now_id = format!("{id}-now");
-    let mode = format!("{id}[mode]");
+    let error_on = |on: SecretChoice| error.as_deref().filter(|_| *choice == on);
     let segments = choices
         .iter()
-        .map(|&(each, words)| {
-            let radio = format!("{id}-mode-{}", each.key());
-            let target = radio.clone();
-            view! {
-                <label for=target class="fui-segment">
-                    <input
-                        type="radio"
-                        id=radio
-                        name=mode.clone()
-                        value=each.key()
-                        checked=each == choice
-                        class="fui-sr-only"
-                    />
-                    {tr(words)}
-                </label>
-            }
+        .map(|&(each, words)| Segment {
+            radio: format!("{id}-mode-{}", each.key()),
+            key: each.key(),
+            checked: each == *choice,
+            words: tr(locale, words),
         })
-        .collect_view();
-    let error_on = |on: SecretChoice| error.as_deref().filter(|_| choice == on);
+        .collect();
     let parts = choices
         .iter()
-        .map(|&(each, _)| {
-            let part = match each {
-                SecretChoice::Keep => ().into_any(),
-                SecretChoice::Value => value_control(&id, error_on(SecretChoice::Value)),
-                SecretChoice::File => file_control(&id, path.clone(), error_on(SecretChoice::File)),
-                SecretChoice::Clear => view! {
-                    <p class="fui-secret-clear">
-                        {icon(Glyph::TRIANGLE_ALERT, "14")}
-                        {tr(Text::SecretClearNote)}
-                    </p>
-                }
-                .into_any(),
-            };
-            view! { <div class="fui-revealed">{part}</div> }
+        .map(|&(each, _)| match each {
+            SecretChoice::Keep => Html::default(),
+            SecretChoice::Value => control(
+                locale,
+                id,
+                Control::Value,
+                "",
+                error_on(SecretChoice::Value),
+            ),
+            SecretChoice::File => control(
+                locale,
+                id,
+                Control::File,
+                path,
+                error_on(SecretChoice::File),
+            ),
+            SecretChoice::Clear => Html::raw(format!(
+                "<p class=\"fui-secret-clear\">{}{}</p>",
+                icon(Glyph::TRIANGLE_ALERT, "14"),
+                tr(locale, Text::SecretClearNote)
+            )),
         })
-        .collect_view();
-    view! {
-        <div class="fui-secret" id=id.clone()>
-            <div class="fui-secret-head">
-                <span class="fui-label" id=label_id.clone()>
-                    {label}
-                    {hint}
-                </span>
-                {state_view(&state, Some(now_id.clone()))}
-            </div>
-            <div class="fui-reveal">
-                <fieldset
-                    class="fui-fieldset fui-choice"
-                    aria-labelledby=label_id
-                    aria-describedby=now_id
-                >
-                    <div class="fui-segmented">{segments}</div>
-                </fieldset>
-                <div class="fui-reveal-parts">{parts}</div>
-            </div>
-        </div>
+        .collect();
+    FieldView {
+        id,
+        label,
+        hint,
+        now: state_view(locale, state, Some(&now_id)),
+        mode: format!("{id}[mode]"),
+        segments,
+        parts,
     }
-    .into_any()
+    .html()
 }
 
-/// The error line `error` of the control `id`, when there is one.
-fn error_line(id: &str, error: Option<&str>) -> Option<AnyView> {
-    error.map(|error| {
-        let error = error.to_owned();
-        view! {
-            <p id=error_id(id) class=ERROR>
-                {icon(Glyph::CIRCLE_ALERT, "14")}
-                " "
-                {error}
-            </p>
-        }
-        .into_any()
-    })
+/// The two controls a choice shows.
+#[derive(Clone, Copy)]
+enum Control {
+    /// Set a value: a password input the page never fills.
+    Value,
+    /// Read from a file: the path, in the code face.
+    File,
 }
 
-/// The control of Set a value: a password input the page never fills.
-fn value_control(field: &str, error: Option<&str>) -> AnyView {
-    let id = format!("{field}-value");
-    let name = format!("{field}[value]");
-    let mark = crate::widget::action::secret_mark(&name);
-    let invalid = error.is_some().then_some("true");
-    let line = error_line(&id, error);
-    view! {
-        <div class="fui-secret-control">
-            <label for=id.clone() class="fui-label">
-                {tr(Text::SecretValueLabel)}
-            </label>
-            {mark}
-            <input
-                id=id.clone()
-                name=name
-                type="password"
-                class="fui-input"
-                autocomplete="off"
-                spellcheck="false"
-                aria-invalid=invalid
-                aria-describedby=described_by(&id, true, line.is_some())
-            />
-            {line}
-            <p id=help_id(&id) class="fui-help">
-                {tr(Text::SecretValueHelp)}
-            </p>
-        </div>
+/// The control `which` of the field `field`, holding `value`, with the
+/// error line `error` when there is one.
+fn control(locale: &Locale, field: &str, which: Control, value: &str, error: Option<&str>) -> Html {
+    let (suffix, label, help) = match which {
+        Control::Value => ("value", Text::SecretValueLabel, Text::SecretValueHelp),
+        Control::File => ("file", Text::SecretFileLabel, Text::SecretFileHelp),
+    };
+    let id = format!("{field}-{suffix}");
+    let name = format!("{field}[{suffix}]");
+    let is_value = matches!(which, Control::Value);
+    ControlView {
+        id: &id,
+        name: &name,
+        label: tr(locale, label),
+        mark: is_value.then(|| secret_mark(&name)),
+        kind: if is_value { "password" } else { "text" },
+        mono: !is_value,
+        value,
+        invalid: error.is_some(),
+        described: described_by(&id, true, error.is_some()),
+        error,
+        error_id: error_id(&id),
+        error_class: ERROR,
+        alert: icon(Glyph::CIRCLE_ALERT, "14"),
+        help_id: help_id(&id),
+        help: tr(locale, help),
     }
-    .into_any()
-}
-
-/// The control of Read from a file: the path, in the code face.
-fn file_control(field: &str, path: String, error: Option<&str>) -> AnyView {
-    let id = format!("{field}-file");
-    let name = format!("{field}[file]");
-    let invalid = error.is_some().then_some("true");
-    let line = error_line(&id, error);
-    view! {
-        <div class="fui-secret-control">
-            <label for=id.clone() class="fui-label">
-                {tr(Text::SecretFileLabel)}
-            </label>
-            <input
-                id=id.clone()
-                name=name
-                type="text"
-                class="fui-input fui-mono"
-                value=path
-                spellcheck="false"
-                autocomplete="off"
-                aria-invalid=invalid
-                aria-describedby=described_by(&id, true, line.is_some())
-            />
-            {line}
-            <p id=help_id(&id) class="fui-help">
-                {tr(Text::SecretFileHelp)}
-            </p>
-        </div>
-    }
-    .into_any()
+    .html()
 }

@@ -19,7 +19,7 @@ use crate::stack::Gallery;
 /// The forms page of the brand the journeys use.
 const FORMS: &str = "/ferropix/forms";
 
-/// The calendar button of the date field `id`, once the page has hydrated
+/// The calendar button of the date field `id`, once the page has been enhanced
 /// and turned it on.
 pub(crate) async fn calendar(browser: &Browser, id: &str) -> Result<WebElement, Box<dyn Error>> {
     let button = browser
@@ -27,9 +27,10 @@ pub(crate) async fn calendar(browser: &Browser, id: &str) -> Result<WebElement, 
             "//input[@id = '{id}']/following-sibling::button"
         )))
         .await?;
-    until("the calendar turns on as the page hydrates", async || {
-        Ok(button.is_enabled().await?)
-    })
+    until(
+        "the calendar turns on as the page is enhanced",
+        async || Ok(button.is_enabled().await?),
+    )
     .await?;
     Ok(button)
 }
@@ -65,9 +66,10 @@ pub(crate) async fn open_range(browser: &Browser) -> Result<WebElement, Box<dyn 
             "//form[@id = 'date-range']//button[@aria-haspopup = 'dialog']",
         ))
         .await?;
-    until("the range button shows as the page hydrates", async || {
-        Ok(button.is_displayed().await?)
-    })
+    until(
+        "the range button shows as the page is enhanced",
+        async || Ok(button.is_displayed().await?),
+    )
     .await?;
     browser
         .driver()

@@ -8,7 +8,7 @@ Each component of the library is compared with the four consoles' versions
 wins: looks, density, hover and focus, accessibility, keyboard path. The
 winner is then restyled to the library's one type scale, spacing scale,
 radius and shadow set, hover and focus treatment and role tokens
-(`.claude/rules/leptos-ui.md` §11). The reference screenshots are under
+(`.claude/rules/console-ui.md` §11). The reference screenshots are under
 `reference/` (see its `PROVENANCE.md`); the gallery's are under
 `../screenshots/`, a page per brand in light and dark and the interaction
 states under `../screenshots/states/`.

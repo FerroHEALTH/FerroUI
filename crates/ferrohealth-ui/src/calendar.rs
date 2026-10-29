@@ -312,12 +312,13 @@ impl DateOrder {
         }
     }
 
-    /// The order of the page being drawn, from its catalog's `date-order`.
+    /// The order of a page in `locale`, from its catalog's `date-order`.
     #[must_use]
-    pub fn of_page() -> Self {
+    pub fn of(locale: &crate::i18n::Locale) -> Self {
         // NOTE: no specification governs this: our own design; a catalog that names
         // no order the library knows takes ISO 8601 alone.
-        Self::parse(crate::i18n::tr(crate::i18n::Text::DateOrder).text()).unwrap_or_default()
+        Self::parse(crate::i18n::tr(locale, crate::i18n::Text::DateOrder).text())
+            .unwrap_or_default()
     }
 }
 

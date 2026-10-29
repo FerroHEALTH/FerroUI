@@ -7,10 +7,12 @@
 //! escaped.
 
 use ferrohealth_ui::highlight::Language;
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::i18n::Word;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::action::ActionGroup;
+use ferrohealth_ui::view::action_menu::{Act, Action};
 use ferrohealth_ui::view::error_page::{Detail, ErrorPage, Status, Way, error_page};
 use ferrohealth_ui::view::shell::{Footer, footer};
 use ferrohealth_ui::view::status::pill;
@@ -27,17 +29,9 @@ use ferrohealth_ui::view::template::settings::{
     How, Managed, Setting, SettingsPage, Source, ValueSource, revision_line, setting_row,
     settings_page,
 };
-use ferrohealth_ui::widget::action_menu::{Act, Action};
-use leptos::prelude::*;
 
 use crate::markup::{has, tags};
-
-/// The HTML `view` renders to, under a reactive owner as a server render
-/// runs, without the hydration markers Leptos writes between parts.
-fn html(view: impl FnOnce() -> AnyView) -> String {
-    let owner = Owner::new();
-    owner.with(|| view().to_html()).replace("<!>", "")
-}
+use crate::render::{en, html};
 
 /// A header titled `title` with a one-sentence intro.
 fn header(title: &str) -> Header {
@@ -59,30 +53,37 @@ fn row() -> TabRow {
 
 /// A list page of `total` items with every optional part offered.
 fn list(total: Option<u64>, filters: ActiveFilters, tabs: bool) -> String {
-    html(move || {
-        list_page(ListPage {
-            header: header("Locations"),
-            actions: ActionGroup::primary(Action::new(
-                None,
-                "New location",
-                Act::Link(String::from("/new")),
-            )),
-            total,
-            summary: Some(view! { <div class="fui-summary-chips">"summary"</div> }.into_any()),
-            toolbar: Some(view! { <div class="fui-list-toolbar">"toolbar"</div> }.into_any()),
-            filters,
-            card: ListCard {
-                title: String::from("Locations"),
-                count: total.map(HeadingCount::All),
-                order: None,
-                tabs: tabs.then(row),
-                actions: None,
-                body: view! { <table class="fui-table"></table> }.into_any(),
-                pager: total
-                    .filter(|count| *count > 25)
-                    .map(|_| view! { <nav class="fui-pager">"pager"</nav> }.into_any()),
+    html({
+        list_page(
+            &en(),
+            ListPage {
+                header: header("Locations"),
+                actions: ActionGroup::primary(Action::new(
+                    None,
+                    "New location",
+                    Act::Link(String::from("/new")),
+                )),
+                total,
+                summary: Some(Html::raw(String::from(
+                    r#"<div class="fui-summary-chips">summary</div>"#,
+                ))),
+                toolbar: Some(Html::raw(String::from(
+                    r#"<div class="fui-list-toolbar">toolbar</div>"#,
+                ))),
+                filters,
+                card: ListCard {
+                    title: String::from("Locations"),
+                    count: total.map(HeadingCount::All),
+                    order: None,
+                    tabs: tabs.then(row),
+                    actions: None,
+                    body: Html::raw(String::from(r#"<table class="fui-table"></table>"#)),
+                    pager: total
+                        .filter(|count| *count > 25)
+                        .map(|_| Html::raw(String::from(r#"<nav class="fui-pager">pager</nav>"#))),
+                },
             },
-        })
+        )
     })
 }
 
@@ -161,7 +162,7 @@ fn binder_tabs_carry_the_title_and_the_card_is_their_panel() {
     );
     assert!(
         page.contains(
-            r#"<div class="fui-tabbed"><nav aria-label="Sections" data-ferroui-tab-keys="" class="fui-tabs">"#
+            r#"<div class="fui-tabbed"><nav aria-label="Sections" data-fui-tab-keys="" data-fui="tabs keep" class="fui-tabs">"#
         ),
         "{page}"
     );
@@ -190,14 +191,17 @@ fn the_active_filters_say_what_they_keep_and_each_is_removed_by_a_link() {
     };
     let page = list(Some(21), filters, false);
     assert!(page.contains("Showing 7 of 21"), "R14 with a count: {page}");
-    assert!(page.contains("State: &lt;degraded&gt;"), "escaped: {page}");
+    assert!(
+        page.contains("State: &#60;degraded&#62;"),
+        "escaped: {page}"
+    );
     assert!(
         has(
             &page,
             "a",
             &[
                 ("href", "/things?state="),
-                ("aria-label", "Remove the filter State: &lt;degraded&gt;")
+                ("aria-label", "Remove the filter State: &#60;degraded&#62;")
             ]
         ),
         "{page}"
@@ -222,7 +226,7 @@ fn the_active_filters_say_what_they_keep_and_each_is_removed_by_a_link() {
 
 #[test]
 fn an_empty_list_offers_the_primary_action_as_one_quiet_text_link() {
-    let line = html(|| {
+    let line = html({
         list_empty(
             String::from("No location yet."),
             Some((String::from("Add the first location"), String::from("/new"))),
@@ -240,17 +244,17 @@ fn an_empty_list_offers_the_primary_action_as_one_quiet_text_link() {
 
 #[test]
 fn the_trail_turns_into_a_back_link_and_the_badge_sits_beside_the_title() {
-    let page = html(|| {
+    let page = html({
         page_heading(
+            &en(),
             Header {
                 title: Word::from("Locatie <Noord>"),
                 crumbs: vec![Crumb::new("Locations", "/things")],
-                badge: Some(pill(Tone::Ok, "Reachable").into_any()),
+                badge: Some(pill(Tone::Ok, "Reachable")),
                 ..Header::default()
             },
             ActionGroup::none(),
         )
-        .into_any()
     });
     assert!(
         page.contains(r#"<li><a href="/things"><span"#)
@@ -262,11 +266,11 @@ fn the_trail_turns_into_a_back_link_and_the_badge_sits_beside_the_title() {
         "the arrow a phone shows before the parent: {page}"
     );
     assert!(
-        page.contains(r#"<li aria-current="page">Locatie &lt;Noord&gt;</li>"#),
+        page.contains(r#"<li aria-current="page">Locatie &#60;Noord&#62;</li>"#),
         "{page}"
     );
     assert!(
-        page.contains(r#"<div class="fui-page-title-line"><h1>Locatie &lt;Noord&gt;</h1>"#),
+        page.contains(r#"<div class="fui-page-title-line"><h1>Locatie &#60;Noord&#62;</h1>"#),
         "{page}"
     );
     assert!(page.contains("Reachable"), "{page}");
@@ -274,27 +278,33 @@ fn the_trail_turns_into_a_back_link_and_the_badge_sits_beside_the_title() {
 
 #[test]
 fn a_detail_page_puts_its_one_section_under_binder_tabs() {
-    let page = html(|| {
-        detail_page(DetailPage {
-            header: header("Locatie Noord"),
-            actions: ActionGroup::none(),
-            stepper: None,
-            tabs: Some(row()),
-            body: view! { <p>"Overview"</p> }.into_any(),
-        })
+    let page = html({
+        detail_page(
+            &en(),
+            DetailPage {
+                header: header("Locatie Noord"),
+                actions: ActionGroup::none(),
+                stepper: None,
+                tabs: Some(row()),
+                body: Html::raw(String::from("<p>Overview</p>")),
+            },
+        )
     });
     assert!(
-        page.contains(r#"<div class="fui-stack"><div class="fui-tabbed"><nav aria-label="Sections" data-ferroui-tab-keys="" class="fui-tabs"><a href="/all" aria-current="page" data-tab="all" class="fui-tab">tabs</a></nav><!--<() />--><div class="fui-tab-panel"><p>Overview</p>"#),
+        page.contains(r#"<div class="fui-stack"><div class="fui-tabbed"><nav aria-label="Sections" data-fui-tab-keys="" data-fui="tabs keep" class="fui-tabs"><a href="/all" aria-current="page" data-tab="all" class="fui-tab">tabs</a></nav><div class="fui-tab-panel"><p>Overview</p>"#),
         "{page}"
     );
-    let plain = html(|| {
-        detail_page(DetailPage {
-            header: header("Locatie Noord"),
-            actions: ActionGroup::none(),
-            stepper: None,
-            tabs: None,
-            body: view! { <p>"Overview"</p> }.into_any(),
-        })
+    let plain = html({
+        detail_page(
+            &en(),
+            DetailPage {
+                header: header("Locatie Noord"),
+                actions: ActionGroup::none(),
+                stepper: None,
+                tabs: None,
+                body: Html::raw(String::from("<p>Overview</p>")),
+            },
+        )
     });
     assert!(
         !plain.contains("fui-tabbed"),
@@ -304,14 +314,17 @@ fn a_detail_page_puts_its_one_section_under_binder_tabs() {
 
 #[test]
 fn the_stepper_leads_by_links_and_marks_an_end_unavailable() {
-    let page = html(|| {
-        stepper(Stepper {
-            label: String::from("Candidates"),
-            position: String::from("Candidate 1 of 12"),
-            what: String::from("candidate"),
-            previous: None,
-            next: Some(String::from("/queue/2")),
-        })
+    let page = html({
+        stepper(
+            &en(),
+            Stepper {
+                label: String::from("Candidates"),
+                position: String::from("Candidate 1 of 12"),
+                what: String::from("candidate"),
+                previous: None,
+                next: Some(String::from("/queue/2")),
+            },
+        )
     });
     assert!(
         has(
@@ -357,7 +370,7 @@ fn setting(key: &str, next_start: bool) -> Setting {
     Setting {
         label: String::from("Format"),
         description: String::from("auto, json or pretty."),
-        value: view! { <code>"json"</code> }.into_any(),
+        value: Html::raw(String::from("<code>json</code>")),
         keys: vec![key.to_owned()],
         next_start,
         source: None,
@@ -366,18 +379,21 @@ fn setting(key: &str, next_start: bool) -> Setting {
 
 /// A file-only settings page of `settings`.
 fn file_page(settings: Vec<Setting>) -> String {
-    html(|| {
-        settings_page(SettingsPage {
-            header: header("Configuration"),
-            actions: ActionGroup::none(),
-            source: Source::File {
-                file: String::from("ferrobridge.toml"),
-                how: How::Page(String::from("#")),
+    html({
+        settings_page(
+            &en(),
+            SettingsPage {
+                header: header("Configuration"),
+                actions: ActionGroup::none(),
+                source: Source::File {
+                    file: String::from("ferrobridge.toml"),
+                    how: How::Page(String::from("#")),
+                },
+                tabs: None,
+                settings,
+                replica: None,
             },
-            tabs: None,
-            settings,
-            replica: None,
-        })
+        )
     })
 }
 
@@ -447,8 +463,9 @@ fn a_value_from_the_file_carries_no_source_marker() {
 
 #[test]
 fn a_managed_value_from_the_file_says_so() {
-    let row = html(|| {
+    let row = html({
         setting_row(
+            &en(),
             Setting {
                 source: Some(ValueSource::File),
                 ..setting("limits.mode", false)
@@ -464,8 +481,9 @@ fn a_managed_value_from_the_file_says_so() {
 
 #[test]
 fn a_managed_setting_shows_next_start_before_its_source() {
-    let row = html(|| {
+    let row = html({
         setting_row(
+            &en(),
             Setting {
                 source: Some(ValueSource::Environment),
                 ..setting("limits.mode", true)
@@ -482,21 +500,26 @@ fn a_managed_setting_shows_next_start_before_its_source() {
 
 #[test]
 fn a_file_only_configuration_says_where_it_is_set_and_has_no_badge_or_marker() {
-    let page = html(|| {
-        settings_page(SettingsPage {
-            header: Header {
-                badge: Some(view! { <span class="fui-mode-badge">"Managed"</span> }.into_any()),
-                ..header("Configuration")
+    let page = html({
+        settings_page(
+            &en(),
+            SettingsPage {
+                header: Header {
+                    badge: Some(Html::raw(String::from(
+                        r#"<span class="fui-mode-badge">Managed</span>"#,
+                    ))),
+                    ..header("Configuration")
+                },
+                actions: ActionGroup::none(),
+                source: Source::File {
+                    file: String::from("ferrobridge.toml"),
+                    how: How::Page(String::from("/configuration/how")),
+                },
+                tabs: Some(row()),
+                settings: vec![setting("telemetry.format", true)],
+                replica: None,
             },
-            actions: ActionGroup::none(),
-            source: Source::File {
-                file: String::from("ferrobridge.toml"),
-                how: How::Page(String::from("/configuration/how")),
-            },
-            tabs: Some(row()),
-            settings: vec![setting("telemetry.format", true)],
-            replica: None,
-        })
+        )
     });
     assert!(
         page.contains(r#"Set in <code>ferrobridge.toml</code> · read at start · <a href="/configuration/how">How configuration works</a>"#),
@@ -519,18 +542,21 @@ fn a_file_only_configuration_says_where_it_is_set_and_has_no_badge_or_marker() {
 #[test]
 fn a_file_line_opens_the_informational_dialog_with_no_script() {
     // NOTE: HTML Living Standard, the button element's command attribute: show-modal opens a dialog.
-    let page = html(|| {
-        settings_page(SettingsPage {
-            header: header("Configuration"),
-            actions: ActionGroup::none(),
-            source: Source::File {
-                file: String::from("ferrobridge.toml"),
-                how: How::Dialog("how-configuration".into()),
+    let page = html({
+        settings_page(
+            &en(),
+            SettingsPage {
+                header: header("Configuration"),
+                actions: ActionGroup::none(),
+                source: Source::File {
+                    file: String::from("ferrobridge.toml"),
+                    how: How::Dialog("how-configuration".into()),
+                },
+                tabs: None,
+                settings: vec![setting("telemetry.format", false)],
+                replica: None,
             },
-            tabs: None,
-            settings: vec![setting("telemetry.format", false)],
-            replica: None,
-        })
+        )
     });
     assert!(
         has(
@@ -558,18 +584,21 @@ fn a_file_line_opens_the_informational_dialog_with_no_script() {
 
 #[test]
 fn a_setting_names_its_key_with_a_labelled_copy_button() {
-    let page = html(|| {
-        settings_page(SettingsPage {
-            header: header("Configuration"),
-            actions: ActionGroup::none(),
-            source: Source::File {
-                file: String::from("ferrobridge.toml"),
-                how: How::Page(String::from("#")),
+    let page = html({
+        settings_page(
+            &en(),
+            SettingsPage {
+                header: header("Configuration"),
+                actions: ActionGroup::none(),
+                source: Source::File {
+                    file: String::from("ferrobridge.toml"),
+                    how: How::Page(String::from("#")),
+                },
+                tabs: None,
+                settings: vec![setting("telemetry.<format>", false)],
+                replica: None,
             },
-            tabs: None,
-            settings: vec![setting("telemetry.<format>", false)],
-            replica: None,
-        })
+        )
     });
     assert!(
         has(
@@ -578,10 +607,10 @@ fn a_setting_names_its_key_with_a_labelled_copy_button() {
             &[
                 ("type", "button"),
                 ("class", "fui-key-hint"),
-                ("aria-label", "Copy the key telemetry.&lt;format&gt;")
+                ("aria-label", "Copy the key telemetry.&#60;format&#62;")
             ]
         ),
-        "R15: a labelled button the keyboard reaches once hydrated: {page}"
+        "R15: a labelled button the keyboard reaches once enhanced: {page}"
     );
     assert!(
         has(
@@ -589,11 +618,11 @@ fn a_setting_names_its_key_with_a_labelled_copy_button() {
             "button",
             &[("class", "fui-key-hint"), ("hidden", "")]
         ),
-        "§15.8: the button waits for the WebAssembly: {page}"
+        "§1: the button waits for the script: {page}"
     );
     assert!(
         page.contains(
-            r#"<span class="fui-key-hint is-text"><code>telemetry.&lt;format&gt;</code></span>"#
+            r#"<span class="fui-key-hint is-text"><code>telemetry.&#60;format&#62;</code></span>"#
         ),
         "until then the key is selectable text: {page}"
     );
@@ -605,22 +634,27 @@ fn a_setting_names_its_key_with_a_labelled_copy_button() {
 
 #[test]
 fn a_managed_configuration_shows_its_badge_revision_intro_and_marker() {
-    let page = html(|| {
-        settings_page(SettingsPage {
-            header: header("Settings"),
-            actions: ActionGroup::none(),
-            source: Source::Managed(Box::new(Managed {
-                badge: view! { <span class="fui-mode-badge">"Managed"</span> }.into_any(),
-                revision: Some(revision_line(
-                    view! { <strong>"Revision 7"</strong> }.into_any(),
-                )),
-                intro: String::from("How calls behave."),
-                actions: Some(view! { <a href="/edit">"Edit"</a> }.into_any()),
-            })),
-            tabs: None,
-            settings: vec![setting("mode", true)],
-            replica: None,
-        })
+    let page = html({
+        settings_page(
+            &en(),
+            SettingsPage {
+                header: header("Settings"),
+                actions: ActionGroup::none(),
+                source: Source::Managed(Box::new(Managed {
+                    badge: Html::raw(String::from(
+                        r#"<span class="fui-mode-badge">Managed</span>"#,
+                    )),
+                    revision: Some(revision_line(Html::raw(String::from(
+                        "<strong>Revision 7</strong>",
+                    )))),
+                    intro: String::from("How calls behave."),
+                    actions: Some(Html::raw(String::from(r#"<a href="/edit">Edit</a>"#))),
+                })),
+                tabs: None,
+                settings: vec![setting("mode", true)],
+                replica: None,
+            },
+        )
     });
     assert!(
         page.contains(
@@ -648,30 +682,33 @@ fn the_about_page_writes_the_console_version_in_the_footer_form() {
         version: "0.1.0".into(),
         about: "/about".into(),
     };
-    let page = html(|| {
-        about_page(AboutPage {
-            header: header("About"),
-            release: release.clone().release(),
-            versions: vec![(String::from("Server"), "Example 0.1.0".into_any())],
-            manufacturer: Manufacturer {
-                licence: String::from("Business Source License 1.1"),
-                support: Link {
-                    label: String::from("info@cadasto.com"),
-                    href: String::from("mailto:info@cadasto.com"),
+    let page = html({
+        about_page(
+            &en(),
+            AboutPage {
+                header: header("About"),
+                release: release.clone().release(),
+                versions: vec![(String::from("Server"), Html::text("Example 0.1.0"))],
+                manufacturer: Manufacturer {
+                    licence: String::from("Business Source License 1.1"),
+                    support: Link {
+                        label: String::from("info@cadasto.com"),
+                        href: String::from("mailto:info@cadasto.com"),
+                    },
+                    documentation: None,
                 },
-                documentation: None,
+                cards: Vec::new(),
+                self_description: Some(SelfDescription {
+                    title: String::from("The self-description"),
+                    line: String::from("What the server declares."),
+                    language: Language::Json,
+                    text: String::from("{\"name\": \"<x>\"}"),
+                    copy_id: String::from("about-copy"),
+                    download: String::from("/about/document.json"),
+                }),
+                replica: None,
             },
-            cards: Vec::new(),
-            self_description: Some(SelfDescription {
-                title: String::from("The self-description"),
-                line: String::from("What the server declares."),
-                language: Language::Json,
-                text: String::from("{\"name\": \"<x>\"}"),
-                copy_id: String::from("about-copy"),
-                download: String::from("/about/document.json"),
-            }),
-            replica: None,
-        })
+        )
     });
     assert!(
         page.contains("<dt>Console</dt><dd>Example Console 0.1.0</dd>"),
@@ -701,7 +738,7 @@ fn the_about_page_writes_the_console_version_in_the_footer_form() {
         "{page}"
     );
     assert!(
-        page.contains("&lt;x&gt;"),
+        page.contains("&#60;x&#62;"),
         "the document is escaped: {page}"
     );
     assert!(
@@ -714,9 +751,9 @@ fn the_about_page_writes_the_console_version_in_the_footer_form() {
     );
     assert!(
         has(&page, "button", &[("id", "about-copy"), ("hidden", "")]),
-        "Copy is the copy island, hidden until it works: {page}"
+        "Copy is the copy module, hidden until it works: {page}"
     );
-    let foot = html(|| footer(release).into_any());
+    let foot = html(footer(&en(), release));
     assert!(
         foot.contains("Example Console 0.1.0 · Cadasto B.V. · "),
         "{foot}"
@@ -725,29 +762,34 @@ fn the_about_page_writes_the_console_version_in_the_footer_form() {
 
 /// The error page of `status`, with its detail when `detail`.
 fn error(status: Status, detail: bool) -> String {
-    html(move || {
-        error_page(ErrorPage {
-            status,
-            title: String::from("No mapping file at <this> path"),
-            body: view! { "The bridge reads no such file." }.into_any(),
-            hint: Some(view! { <code>"__ferrobridge.operator"</code> }.into_any()),
-            ways: vec![
-                Way {
-                    label: String::from("Every mapping file"),
-                    href: String::from("/mappings/files"),
-                    glyph: Some(Glyph::FILES),
-                },
-                Way {
-                    label: String::from("Dashboard"),
-                    href: String::from("/"),
-                    glyph: None,
-                },
-            ],
-            detail: detail.then(|| Detail {
-                time: String::from("2026-10-21 09:42:11 UTC"),
-                request_id: String::from("0199c2a4-77e1"),
-            }),
-        })
+    html({
+        error_page(
+            &en(),
+            ErrorPage {
+                status,
+                title: String::from("No mapping file at <this> path"),
+                body: Html::raw(String::from("The bridge reads no such file.")),
+                hint: Some(Html::raw(String::from(
+                    "<code>__ferrobridge.operator</code>",
+                ))),
+                ways: vec![
+                    Way {
+                        label: String::from("Every mapping file"),
+                        href: String::from("/mappings/files"),
+                        glyph: Some(Glyph::FILES),
+                    },
+                    Way {
+                        label: String::from("Dashboard"),
+                        href: String::from("/"),
+                        glyph: None,
+                    },
+                ],
+                detail: detail.then(|| Detail {
+                    time: String::from("2026-10-21 09:42:11 UTC"),
+                    request_id: String::from("0199c2a4-77e1"),
+                }),
+            },
+        )
     })
 }
 
@@ -770,7 +812,7 @@ fn the_error_page_says_the_status_in_words_before_its_number() {
 fn the_error_page_names_the_error_and_leads_on_by_links() {
     let page = error(Status::NotFound, false);
     assert!(
-        page.contains("<h1>No mapping file at &lt;this&gt; path</h1>"),
+        page.contains("<h1>No mapping file at &#60;this&#62; path</h1>"),
         "{page}"
     );
     assert!(
@@ -823,24 +865,27 @@ fn the_error_page_folds_the_time_and_request_id_away() {
 
 #[test]
 fn a_detail_page_of_a_queue_holds_its_stepper_in_the_title_row() {
-    let page = html(|| {
-        detail_page(DetailPage {
-            header: header("Candidate 3"),
-            actions: ActionGroup::primary(Action::new(
-                None,
-                "Link",
-                Act::Link(String::from("/link")),
-            )),
-            stepper: Some(Stepper {
-                label: String::from("Candidates"),
-                position: String::from("Candidate 3 of 12"),
-                what: String::from("candidate"),
-                previous: Some(String::from("/queue/2")),
-                next: Some(String::from("/queue/4")),
-            }),
-            tabs: None,
-            body: view! { <p>"Overview"</p> }.into_any(),
-        })
+    let page = html({
+        detail_page(
+            &en(),
+            DetailPage {
+                header: header("Candidate 3"),
+                actions: ActionGroup::primary(Action::new(
+                    None,
+                    "Link",
+                    Act::Link(String::from("/link")),
+                )),
+                stepper: Some(Stepper {
+                    label: String::from("Candidates"),
+                    position: String::from("Candidate 3 of 12"),
+                    what: String::from("candidate"),
+                    previous: Some(String::from("/queue/2")),
+                    next: Some(String::from("/queue/4")),
+                }),
+                tabs: None,
+                body: Html::raw(String::from("<p>Overview</p>")),
+            },
+        )
     });
     assert!(
         page.contains(

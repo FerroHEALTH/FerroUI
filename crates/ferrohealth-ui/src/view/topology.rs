@@ -18,18 +18,24 @@
 //! it, with a minimap for a large federation and the quick look beside the
 //! canvas.
 //!
-//! Every page works with no WebAssembly: a card is a link to its page, its
+//! Every page works with no script: a card is a link to its page, its
 //! quick look a link, a group's collapse a link, the Status menu a `GET`
 //! form, and the List twin is the same graph as an indented tree, the
-//! phone's view and the screen reader's. The island
-//! [`crate::island::TopologyKeys`] adds zoom by the cluster and the keys,
-//! panning by the pointer, the quick look on "i" or Space, and the arrows
-//! along the List. No specification governs the drawing: our own design;
-//! the List twin follows the WAI-ARIA Authoring Practices tree view pattern.
+//! phone's view and the screen reader's. The `topology` module adds zoom
+//! by the cluster and the keys ([`stepped`], [`asked`]), panning by the
+//! pointer, the quick look on "i" or Space, and the arrows along the List
+//! ([`moved`]). The zoom cluster's buttons arrive disabled, saying why,
+//! and the module enables them. Zoom is the drawing's width in CSS pixels
+//! per unit, written as the drawing's `width` and `height` attributes,
+//! never a style; panning is the canvas's own scroll. No specification
+//! governs the drawing: our own design; the List twin and its keys follow
+//! the WAI-ARIA Authoring Practices tree view pattern.
 
-use leptos::prelude::*;
+use askama::Template;
+use serde::{Deserialize, Serialize};
 
-use crate::i18n::{Arg, Text, Word, tr, tr_with};
+use crate::html::{Html, Render as _};
+use crate::i18n::{Arg, Locale, Phrase, Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::table::filter::{FilterChoice, FilterMenu, MenuForm, filter_menu};
 use crate::view::button::Variant;
@@ -37,7 +43,6 @@ use crate::view::flow::{
     CardDrawing, FlowState, LabelAt, Place, card_drawing, curve, edge_line, ends, line_sample,
     path_drawing, units,
 };
-use crate::widget::topology::TopologyWords;
 
 /// One card of a topology: the hub, a caller, a group or a child.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -185,7 +190,7 @@ pub struct QuickLook {
     /// The page that closes it.
     pub close: String,
     /// Its body: the state, the facts and the actions.
-    pub body: AnyView,
+    pub body: Html,
 }
 
 /// A link of the zoom cluster that the server answers, such as Collapse
@@ -224,10 +229,10 @@ pub struct Topology {
     pub status: StatusMenu,
     /// The console's own tools at the toolbar's start, such as a find
     /// field, after the Status menu.
-    pub tools: Option<AnyView>,
+    pub tools: Option<Html>,
     /// The console's own words at the toolbar's end, such as when the map
     /// was read.
-    pub updated: Option<AnyView>,
+    pub updated: Option<Html>,
     /// Collapse every group, or `None` where nothing folds.
     pub collapse_all: Option<ClusterLink>,
     /// The minimap's switch, or `None` for a map that has none; while it is
@@ -235,6 +240,96 @@ pub struct Topology {
     pub minimap: Option<ClusterLink>,
     /// The quick look that is open, if any.
     pub look: Option<QuickLook>,
+}
+
+/// The words the `topology` module writes as the scale changes, resolved
+/// on the server.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct TopologyWords {
+    /// The readout, such as "125 %", its `value` left open.
+    pub readout: Phrase,
+    /// The readout's accessible name, such as "Zoom 125 %", its `value`
+    /// left open.
+    pub level: Phrase,
+}
+
+impl TopologyWords {
+    /// The words in `locale`.
+    #[must_use]
+    pub fn of(locale: &Locale) -> Self {
+        Self {
+            readout: Phrase::new(tr_with(
+                locale,
+                Text::TopologyZoom,
+                &[("value", Phrase::open("value"))],
+            )),
+            level: Phrase::new(tr_with(
+                locale,
+                Text::TopologyZoomLevel,
+                &[("value", Phrase::open("value"))],
+            )),
+        }
+    }
+}
+
+/// The scales the zoom steps through, in CSS pixels per unit.
+pub const STEPS: [f64; 9] = [0.25, 0.33, 0.5, 0.67, 0.8, 1.0, 1.25, 1.5, 2.0];
+
+/// The scale one step in (`inward`) or out from `scale`: the next of
+/// [`STEPS`] past it, held at the first and the last.
+#[must_use]
+pub fn stepped(scale: f64, inward: bool) -> f64 {
+    let next = if inward {
+        STEPS.iter().copied().find(|step| *step > scale + 0.005)
+    } else {
+        STEPS
+            .iter()
+            .rev()
+            .copied()
+            .find(|step| *step < scale - 0.005)
+    };
+    let held = if inward { STEPS.last() } else { STEPS.first() };
+    next.or_else(|| held.copied()).unwrap_or(scale)
+}
+
+/// What a key pressed in the topology asks for.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Ask {
+    /// One step in.
+    ZoomIn,
+    /// One step out.
+    ZoomOut,
+    /// The whole drawing in the canvas's width.
+    Fit,
+    /// The quick look of the card with the focus.
+    Look,
+}
+
+/// What the key `key` asks for: on the canvas `+` and `=` zoom in, `-`
+/// zooms out and `0` fits; on a card "i" and Space open its quick look.
+#[must_use]
+pub fn asked(key: &str, on_card: bool) -> Option<Ask> {
+    match key {
+        "+" | "=" => Some(Ask::ZoomIn),
+        "-" | "_" => Some(Ask::ZoomOut),
+        "0" => Some(Ask::Fit),
+        "i" | " " if on_card => Some(Ask::Look),
+        _ => None,
+    }
+}
+
+/// The row the arrows move to in the List from row `at` of `count`:
+/// down and up one, Home the first, End the last, held at the ends.
+#[must_use]
+pub fn moved(key: &str, at: usize, count: usize) -> Option<usize> {
+    let last = count.checked_sub(1)?;
+    match key {
+        "ArrowDown" => Some((at + 1).min(last)),
+        "ArrowUp" => Some(at.saturating_sub(1)),
+        "Home" => Some(0),
+        "End" => Some(last),
+        _ => None,
+    }
 }
 
 /// A card's height, a row's height, the gap between groups, the hub's
@@ -499,16 +594,18 @@ fn place_side<'a>(laid: &mut Layout<'a>, rows: Stacked<'a>, hub: Place) {
 
 /// The edge from a caller above the hub down to the hub: a vertical curve
 /// from the caller's foot to the hub's top.
-fn caller_edge(from: Place, to: Place, state: FlowState) -> AnyView {
+fn caller_edge(from: Place, to: Place, state: FlowState) -> Html {
     let (x1, y1) = (from.x + from.width / 2.0, from.y + from.height);
     let (x2, y2) = (to.x + to.width / 2.0, to.y);
     let bend = f64::midpoint(y1, y2);
-    let d = format!("M{x1:.1} {y1:.1} C{x1:.1} {bend:.1}, {x2:.1} {bend:.1}, {x2:.1} {y2:.1}");
-    view! { <path class=state.edge() d=d></path> }.into_any()
+    Html::raw(format!(
+        "<path d=\"M{x1:.1} {y1:.1} C{x1:.1} {bend:.1}, {x2:.1} {bend:.1}, {x2:.1} {y2:.1}\" class=\"{}\"></path>",
+        state.edge()
+    ))
 }
 
 /// The drawing of one edge of the layout.
-fn edge(edge: Edge<'_>, on_path: bool) -> AnyView {
+fn edge(edge: Edge<'_>, on_path: bool) -> Html {
     if edge.down {
         caller_edge(edge.from, edge.to, edge.state)
     } else {
@@ -523,10 +620,11 @@ fn edge(edge: Edge<'_>, on_path: bool) -> AnyView {
     }
 }
 
-/// The accessible name of `card`, the hub's without a state.
-fn card_name(card: &TopologyCard, hub: bool) -> String {
+/// The accessible name of `card` in `locale`, the hub's without a state.
+fn card_name(locale: &Locale, card: &TopologyCard, hub: bool) -> String {
     String::from(if hub {
         tr_with(
+            locale,
             Text::FlowHub,
             &[
                 ("title", card.name.clone().into()),
@@ -535,53 +633,57 @@ fn card_name(card: &TopologyCard, hub: bool) -> String {
         )
     } else {
         tr_with(
+            locale,
             Text::FlowCard,
             &[
                 ("title", card.name.clone().into()),
                 ("note", card.line.clone().into()),
-                ("status", card.state.word().into()),
+                ("status", card.state.word(locale).into()),
             ],
         )
     })
 }
 
 /// The controls at a card's end: its quick look, and a group's collapse.
-fn controls(card: &TopologyCard, group: Option<&TopologyGroup>, width: f64) -> Option<AnyView> {
+fn controls(
+    locale: &Locale,
+    card: &TopologyCard,
+    group: Option<&TopologyGroup>,
+    width: f64,
+) -> Option<Html> {
     let toggle = group.and_then(|group| {
-        let href = group.toggle.clone()?;
+        let href = group.toggle.as_deref()?;
         let (glyph, text) = if group.collapsed {
             (Glyph::CHEVRON_RIGHT, Text::TopologyExpand)
         } else {
             (Glyph::CHEVRON_DOWN, Text::TopologyCollapse)
         };
-        let name = tr_with(text, &[("title", card.name.clone().into())]);
-        let tip = name.clone();
-        let at = format!("translate({:.1} 9)", width - 26.0);
-        Some(view! {
-            <g class="fui-tnode-toggle" transform=at>
-                <a href=href aria-label=name>
-                    <title>{tip}</title>
-                    <rect width="16" height="16" fill="transparent"></rect>
-                    {icon(glyph, "16")}
-                </a>
-            </g>
-        })
+        let name = Html::text(tr_with(locale, text, &[("title", card.name.clone().into())]).text());
+        Some(format!(
+            "<g transform=\"translate({:.1} 9)\" class=\"fui-tnode-toggle\"><a href=\"{}\" aria-label=\"{name}\"><title>{name}</title><rect width=\"16\" height=\"16\" fill=\"transparent\"></rect>{}</a></g>",
+            width - 26.0,
+            Html::text(href),
+            icon(glyph, "16")
+        ))
     });
-    let look = card.look.clone().map(|href| {
-        let name = tr_with(Text::TopologyLookOf, &[("title", card.name.clone().into())]);
+    let look = card.look.as_deref().map(|href| {
+        let name = tr_with(locale, Text::TopologyLookOf, &[("title", card.name.clone().into())]);
         let left = width - if toggle.is_some() { 50.0 } else { 26.0 };
-        let at = format!("translate({left:.1} 8)");
-        view! {
-            <g class="fui-tnode-info" transform=at>
-                <a href=href aria-label=name>
-                    <title>{tr(Text::TopologyLook)}</title>
-                    <rect width="18" height="18" rx="5"></rect>
-                    <g transform="translate(3 3)">{icon(Glyph::INFO, "12")}</g>
-                </a>
-            </g>
-        }
+        format!(
+            "<g transform=\"translate({left:.1} 8)\" class=\"fui-tnode-info\"><a href=\"{}\" aria-label=\"{}\"><title>{}</title><rect width=\"18\" height=\"18\" rx=\"5\"></rect><g transform=\"translate(3 3)\">{}</g></a></g>",
+            Html::text(href),
+            Html::text(name.text()),
+            tr(locale, Text::TopologyLook),
+            icon(Glyph::INFO, "12")
+        )
     });
-    (toggle.is_some() || look.is_some()).then(|| view! { {look} {toggle} }.into_any())
+    (toggle.is_some() || look.is_some()).then(|| {
+        Html::raw(format!(
+            "{}{}",
+            look.unwrap_or_default(),
+            toggle.unwrap_or_default()
+        ))
+    })
 }
 
 /// The most characters of a card's name and line its width leaves room
@@ -604,10 +706,10 @@ fn count_of(measure: f64) -> usize {
 
 /// The drawing of one laid-out card: its path from the hub with the pulse,
 /// then the card itself.
-fn card_view(laid: &Laid<'_>, selected: Option<&str>) -> AnyView {
+fn card_view(locale: &Locale, laid: &Laid<'_>, selected: Option<&str>) -> Html {
     let card = laid.card;
     let hub = laid.kind == "fui-tnode-gateway";
-    let path = (laid.via.len() > 1).then(|| {
+    let path = if laid.via.len() > 1 {
         let lines = laid.edges.iter().map(|each| edge(*each, true)).collect();
         let route = laid
             .via
@@ -618,8 +720,10 @@ fn card_view(laid: &Laid<'_>, selected: Option<&str>) -> AnyView {
             })
             .collect::<Vec<_>>()
             .join(" ");
-        path_drawing(lines, route)
-    });
+        path_drawing(lines, &route)
+    } else {
+        Html::default()
+    };
     let count = usize::from(card.look.is_some())
         + usize::from(laid.group.is_some_and(|group| group.toggle.is_some()));
     let drawing = card_drawing(CardDrawing {
@@ -630,26 +734,22 @@ fn card_view(laid: &Laid<'_>, selected: Option<&str>) -> AnyView {
         line: card.line.clone(),
         state: card.state,
         href: card.href.clone(),
-        label: card_name(card, hub),
+        label: card_name(locale, card, hub),
         hub,
         mono: card.mono,
         selected: selected == Some(card.id.as_str()),
         most: most(laid.place.width, card.mono, count, hub),
         more: Vec::new(),
-        controls: controls(card, laid.group, laid.place.width),
+        controls: controls(locale, card, laid.group, laid.place.width),
     });
-    view! {
-        <g class="fui-pipeline-card">
-            {path}
-            {drawing}
-        </g>
-    }
-    .into_any()
+    Html::raw(format!(
+        "<g class=\"fui-pipeline-card\">{path}{drawing}</g>"
+    ))
 }
 
-/// The description of the map: each problem edge with its state and
-/// label, or that there is none, then the List's sentence.
-fn problems(topology: &Topology) -> String {
+/// The description of the map in `locale`: each problem edge with its
+/// state and label, or that there is none, then the List's sentence.
+fn problems(locale: &Locale, topology: &Topology) -> String {
     let mut sentences = Vec::new();
     let mut note = |from: &TopologyCard, to: &TopologyCard| {
         if !to.state.is_problem() {
@@ -658,7 +758,7 @@ fn problems(topology: &Topology) -> String {
         let mut args = vec![
             ("from", from.name.clone().into()),
             ("to", to.name.clone().into()),
-            ("status", to.state.word().into()),
+            ("status", to.state.word(locale).into()),
         ];
         let text = match &to.edge_label {
             Some(label) => {
@@ -667,7 +767,7 @@ fn problems(topology: &Topology) -> String {
             }
             None => Text::FlowEdge,
         };
-        sentences.push(String::from(tr_with(text, &args)));
+        sentences.push(String::from(tr_with(locale, text, &args)));
     };
     for side in [&topology.start, &topology.end].into_iter().flatten() {
         for group in &side.groups {
@@ -680,234 +780,210 @@ fn problems(topology: &Topology) -> String {
         }
     }
     let lead = if sentences.is_empty() {
-        tr(Text::FlowSteady).into()
+        tr(locale, Text::FlowSteady).into()
     } else {
         format!("{}.", sentences.join(". "))
     };
-    format!("{lead} {}", tr(Text::TopologyMapList).text())
+    format!("{lead} {}", tr(locale, Text::TopologyMapList).text())
 }
 
 /// The minimap of `layout`: a rectangle per card in its tone, and the
 /// frame of what the map shows, the whole drawing at first. A tall
 /// federation narrows it to keep it inside its tallest measure.
-fn minimap(layout: &Layout<'_>) -> AnyView {
+fn minimap(locale: &Locale, layout: &Layout<'_>) -> Html {
     let scale = (MINIMAP / layout.width.max(1.0)).min(MINIMAP_TALL / layout.height.max(1.0));
     let (width, height) = (layout.width * scale, layout.height * scale);
-    let rects = layout
+    let rects: Vec<String> = layout
         .cards
         .iter()
         .map(|laid| {
-            let class = format!("fui-minimap-node {}", laid.card.state.tone().class());
-            view! {
-                <rect
-                    class=class
-                    x=format!("{:.1}", laid.place.x * scale)
-                    y=format!("{:.1}", laid.place.y * scale)
-                    width=format!("{:.1}", laid.place.width * scale)
-                    height=format!("{:.1}", (laid.place.height * scale).max(2.0))
-                    rx="1"
-                ></rect>
-            }
+            format!(
+                "<rect x=\"{:.1}\" y=\"{:.1}\" width=\"{:.1}\" height=\"{:.1}\" rx=\"1\" class=\"fui-minimap-node {}\"></rect>",
+                laid.place.x * scale,
+                laid.place.y * scale,
+                laid.place.width * scale,
+                (laid.place.height * scale).max(2.0),
+                laid.card.state.tone().class()
+            )
         })
-        .collect_view();
-    let view_box = format!("-4 -4 {:.0} {:.0}", width + 8.0, height + 8.0);
-    view! {
-        <div class="fui-topology-minimap" role="img" aria-label=tr(Text::TopologyMinimapFrame)>
-            <svg
-                viewBox=view_box
-                width=format!("{:.0}", width + 8.0)
-                height=format!("{:.0}", height + 8.0)
-                aria-hidden="true"
-            >
-                {rects}
-                <rect
-                    class="fui-minimap-view"
-                    data-scale=format!("{scale:.6}")
-                    x="0"
-                    y="0"
-                    width=format!("{width:.1}")
-                    height=format!("{height:.1}")
-                    rx="2"
-                ></rect>
-            </svg>
-        </div>
-    }
-    .into_any()
+        .collect();
+    let (outer_width, outer_height) = (width + 8.0, height + 8.0);
+    Html::raw(format!(
+        "<div role=\"img\" aria-label=\"{}\" class=\"fui-topology-minimap\"><svg viewBox=\"-4 -4 {outer_width:.0} {outer_height:.0}\" width=\"{outer_width:.0}\" height=\"{outer_height:.0}\" aria-hidden=\"true\">{}<rect data-scale=\"{scale:.6}\" x=\"0\" y=\"0\" width=\"{width:.1}\" height=\"{height:.1}\" rx=\"2\" class=\"fui-minimap-view\"></rect></svg></div>",
+        Html::text(tr(locale, Text::TopologyMinimapFrame).text()),
+        rects.concat()
+    ))
 }
 
 /// One icon button of the zoom cluster with its tooltip above it, waiting
-/// for the page's script while `waits`.
-fn cluster_button(glyph: Glyph, words: Word, zoom: &'static str, wait: &Word) -> AnyView {
-    let tip = words.clone();
-    let why = wait.clone();
-    view! {
-        <span class="fui-anchor">
-            <button
-                type="button"
-                class="fui-icon-button"
-                aria-label=words
-                data-zoom=zoom
-                disabled=true
-                title=why
-            >
-                {icon(glyph, "16")}
-            </button>
-            <span class="fui-tooltip fui-tooltip-above" role="tooltip">
-                {tip}
-            </span>
-        </span>
-    }
-    .into_any()
+/// for the `topology` module, which `wait` says.
+fn cluster_button(glyph: Glyph, words: &Word, zoom: &'static str, wait: &Word) -> String {
+    format!(
+        "<span class=\"fui-anchor\"><button type=\"button\" aria-label=\"{}\" data-zoom=\"{zoom}\" disabled title=\"{}\" class=\"fui-icon-button\">{}</button><span role=\"tooltip\" class=\"fui-tooltip fui-tooltip-above\">{words}</span></span>",
+        Html::text(words.text()),
+        Html::text(wait.text()),
+        icon(glyph, "16")
+    )
 }
 
 /// One link of the zoom cluster that the server answers, pressed while on.
-fn cluster_link(glyph: Glyph, words: Word, link: ClusterLink) -> AnyView {
-    let tip = words.clone();
-    view! {
-        <span class="fui-anchor">
-            <a
-                href=link.href
-                class="fui-icon-button"
-                aria-label=words
-                aria-pressed=link.on.to_string()
-            >
-                {icon(glyph, "16")}
-            </a>
-            <span class="fui-tooltip fui-tooltip-above" role="tooltip">
-                {tip}
-            </span>
-        </span>
-    }
-    .into_any()
+fn cluster_link(glyph: Glyph, words: &Word, link: &ClusterLink) -> String {
+    format!(
+        "<span class=\"fui-anchor\"><a href=\"{}\" aria-label=\"{}\" aria-pressed=\"{}\" class=\"fui-icon-button\">{}</a><span role=\"tooltip\" class=\"fui-tooltip fui-tooltip-above\">{words}</span></span>",
+        Html::text(&link.href),
+        Html::text(words.text()),
+        link.on,
+        icon(glyph, "16")
+    )
 }
 
 /// The zoom cluster: zoom in and out, the readout and Fit, which wait for
-/// the page's script, then the server's links.
-fn cluster(collapse_all: Option<ClusterLink>, minimap: Option<ClusterLink>) -> AnyView {
-    let wait = tr(Text::TopologyZoomWait);
-    let level = tr_with(Text::TopologyZoomLevel, &[("value", Arg::from(100))]);
-    let readout = tr_with(Text::TopologyZoom, &[("value", Arg::from(100))]);
+/// the `topology` module, then the server's links.
+fn cluster(
+    locale: &Locale,
+    collapse_all: Option<&ClusterLink>,
+    minimap: Option<&ClusterLink>,
+) -> String {
+    let wait = tr(locale, Text::TopologyZoomWait);
+    let level = tr_with(
+        locale,
+        Text::TopologyZoomLevel,
+        &[("value", Arg::from(100))],
+    );
+    let readout = tr_with(locale, Text::TopologyZoom, &[("value", Arg::from(100))]);
     let links = collapse_all.is_some() || minimap.is_some();
-    let collapse = collapse_all.map(|link| {
+    let collapse = collapse_all.map_or_else(String::new, |link| {
         let (glyph, text) = if link.on {
             (Glyph::CHEVRON_DOWN, Text::TopologyExpandAll)
         } else {
             (Glyph::CHEVRON_UP, Text::TopologyCollapseAll)
         };
-        cluster_link(glyph, tr(text), link)
+        cluster_link(glyph, &tr(locale, text), link)
     });
-    let minimap = minimap.map(|link| cluster_link(Glyph::LAYERS, tr(Text::TopologyMinimap), link));
-    let fit_tip = tr(Text::TopologyFitWhole);
-    view! {
-        <div class="fui-topology-zoom" role="toolbar" aria-label=tr(Text::TopologyControls)>
-            {cluster_button(Glyph::PLUS, tr(Text::TopologyZoomIn), "in", &wait)}
-            {cluster_button(Glyph::MINUS, tr(Text::TopologyZoomOut), "out", &wait)}
-            <span class="fui-topology-zoom-level" role="status" aria-label=level data-zoom-readout="">
-                {readout}
-            </span>
-            <button
-                type="button"
-                class=Variant::Ghost.small()
-                data-zoom="fit"
-                disabled=true
-                title=wait.clone()
-                data-title=fit_tip
-            >
-                {tr(Text::TopologyFit)}
-            </button>
-            {links.then(|| view! { <span class="fui-topology-zoom-sep" aria-hidden="true"></span> })}
-            {collapse}
-            {minimap}
-        </div>
-    }
-    .into_any()
+    let minimap = minimap.map_or_else(String::new, |link| {
+        cluster_link(Glyph::LAYERS, &tr(locale, Text::TopologyMinimap), link)
+    });
+    let sep = if links {
+        "<span aria-hidden=\"true\" class=\"fui-topology-zoom-sep\"></span>"
+    } else {
+        ""
+    };
+    format!(
+        "<div role=\"toolbar\" aria-label=\"{controls}\" class=\"fui-topology-zoom\">{zoom_in}{zoom_out}<span role=\"status\" aria-label=\"{level}\" data-zoom-readout=\"\" class=\"fui-topology-zoom-level\">{readout}</span><button type=\"button\" data-zoom=\"fit\" disabled title=\"{wait_text}\" data-title=\"{fit_tip}\" class=\"{ghost}\">{fit}</button>{sep}{collapse}{minimap}</div>",
+        controls = Html::text(tr(locale, Text::TopologyControls).text()),
+        zoom_in = cluster_button(Glyph::PLUS, &tr(locale, Text::TopologyZoomIn), "in", &wait),
+        zoom_out = cluster_button(
+            Glyph::MINUS,
+            &tr(locale, Text::TopologyZoomOut),
+            "out",
+            &wait
+        ),
+        level = Html::text(level.text()),
+        wait_text = Html::text(wait.text()),
+        fit_tip = Html::text(tr(locale, Text::TopologyFitWhole).text()),
+        ghost = Variant::Ghost.small(),
+        fit = tr(locale, Text::TopologyFit),
+    )
 }
 
 /// The health dot of `state` with its word as its accessible name; a state
 /// switched off has no shape.
-fn state_dot(state: FlowState) -> AnyView {
-    let word = state.word();
+fn state_dot(locale: &Locale, state: FlowState) -> String {
+    let word = state.word(locale);
     if state == FlowState::Off {
-        return view! { <span class="fui-sr-only">{word}</span> }.into_any();
+        return format!("<span class=\"fui-sr-only\">{word}</span>");
     }
-    let class = format!("fui-dot {}", state.tone().class());
-    let tip = word.clone();
-    view! { <span class=class role="img" aria-label=word title=tip></span> }.into_any()
+    let text = Html::text(word.text());
+    format!(
+        "<span role=\"img\" aria-label=\"{text}\" title=\"{text}\" class=\"fui-dot {}\"></span>",
+        state.tone().class()
+    )
 }
 
 /// A state as its shape and its word (F12), with a quiet detail after it;
 /// a state switched off draws no shape, as its muted row says.
-fn state_word(state: FlowState, detail: Option<String>) -> AnyView {
-    let word = state.word();
+fn state_word(locale: &Locale, state: FlowState, detail: Option<String>) -> Html {
+    let word = state.word(locale);
     if state == FlowState::Off {
-        let detail = detail.map(|detail| view! { <span class="fui-status-detail">{detail}</span> });
-        return view! { <span class="fui-state fui-tone-neutral is-muted">{word} {detail}</span> }
-            .into_any();
+        let detail = detail.map_or_else(String::new, |detail| {
+            format!(
+                " <span class=\"fui-status-detail\">{}</span>",
+                Html::text(&detail)
+            )
+        });
+        return Html::raw(format!(
+            "<span class=\"fui-state fui-tone-neutral is-muted\">{word}{detail}</span>"
+        ));
     }
     crate::view::state::state(state.into(), word, detail)
 }
 
 /// The Status menu: the filter menu of the states, each its line, its dot,
 /// its word and its count.
-fn status_menu(menu: StatusMenu) -> AnyView {
-    let StatusMenu {
-        action,
-        name,
-        states,
-    } = menu;
-    let choices = states
-        .into_iter()
+fn status_menu(locale: &Locale, menu: &StatusMenu) -> Html {
+    let choices = menu
+        .states
+        .iter()
         .map(|each| {
             FilterChoice::new(
                 each.state.key(),
-                each.state.word(),
+                each.state.word(locale),
                 u64::from(each.count),
                 each.shown,
             )
-            .mark(view! { {line_sample(each.state)} {state_dot(each.state)} })
+            .mark(Html::raw(format!(
+                "{}{}",
+                line_sample(each.state),
+                state_dot(locale, each.state)
+            )))
         })
         .collect();
-    filter_menu(FilterMenu {
-        id: "topology-show",
-        name: &name,
-        glyph: Glyph::FUNNEL,
-        label: tr(Text::TopologyStatus),
-        title: tr(Text::TopologyStates).text().to_owned(),
-        choices,
-        note: Some(tr(Text::TopologyLegend)),
-        form: MenuForm::Own {
-            action: Some(&action),
-            fields: &[],
+    filter_menu(
+        locale,
+        FilterMenu {
+            id: "topology-show",
+            name: &menu.name,
+            glyph: Glyph::FUNNEL,
+            label: tr(locale, Text::TopologyStatus),
+            title: tr(locale, Text::TopologyStates).text().to_owned(),
+            choices,
+            note: Some(tr(locale, Text::TopologyLegend)),
+            form: MenuForm::Own {
+                action: Some(&menu.action),
+                fields: &[],
+            },
         },
-    })
+    )
 }
 
 /// The Map and List switch: two links, the view in force pressed, and in
 /// the automatic view the stylesheet presses the List below 48 rem.
-fn view_switch(view_in_force: TopologyView, (map, list): (String, String)) -> AnyView {
+fn view_switch(
+    locale: &Locale,
+    view_in_force: TopologyView,
+    (map, list): &(String, String),
+) -> String {
     let map_on = view_in_force != TopologyView::List;
     let class = if view_in_force == TopologyView::Auto {
         "fui-segmented fui-view-switch fui-view-auto"
     } else {
         "fui-segmented fui-view-switch"
     };
-    view! {
-        <div role="group" aria-label=tr(Text::TopologyView) class=class>
-            <a href=map class="fui-segment fui-view-map" aria-pressed=map_on.to_string()>
-                {icon(Glyph::NETWORK, "14")}
-                {tr(Text::TopologyViewMap)}
-            </a>
-            <a href=list class="fui-segment fui-view-list" aria-pressed=(!map_on).to_string()>
-                {icon(Glyph::LIST_CHECKS, "14")}
-                {tr(Text::TopologyViewList)}
-            </a>
-        </div>
-    }
-    .into_any()
+    format!(
+        "<div role=\"group\" aria-label=\"{label}\" class=\"{class}\"><a href=\"{map}\" aria-pressed=\"{map_on}\" class=\"fui-segment fui-view-map\">{map_glyph}{map_words}</a><a href=\"{list}\" aria-pressed=\"{list_on}\" class=\"fui-segment fui-view-list\">{list_glyph}{list_words}</a></div>",
+        label = Html::text(tr(locale, Text::TopologyView).text()),
+        map = Html::text(map),
+        list = Html::text(list),
+        list_on = !map_on,
+        map_glyph = icon(Glyph::NETWORK, "14"),
+        map_words = tr(locale, Text::TopologyViewMap),
+        list_glyph = icon(Glyph::LIST_CHECKS, "14"),
+        list_words = tr(locale, Text::TopologyViewList),
+    )
 }
 
 /// The quick look beside the canvas.
-fn quick_look(look: QuickLook) -> AnyView {
+fn quick_look(locale: &Locale, look: QuickLook) -> String {
     let QuickLook {
         card: _,
         title,
@@ -917,27 +993,20 @@ fn quick_look(look: QuickLook) -> AnyView {
         body,
     } = look;
     let title = if mono {
-        view! { <code>{title}</code> }.into_any()
+        format!("<code>{}</code>", Html::text(&title))
     } else {
-        title.into_any()
+        Html::text(&title).to_string()
     };
-    let line = line.map(|line| view! { <p class="fui-small fui-muted">{line}</p> });
-    let close_words = tr(Text::TopologyLookClose);
-    view! {
-        <aside class="fui-topology-panel" aria-labelledby="topology-look-title">
-            <div class="fui-side-panel-head">
-                <div>
-                    <h2 id="topology-look-title" class="fui-card-title">{title}</h2>
-                    {line}
-                </div>
-                <a href=close class="fui-icon-button" aria-label=close_words.clone() title=close_words>
-                    {icon(Glyph::X, "16")}
-                </a>
-            </div>
-            <div class="fui-side-panel-body fui-stack">{body}</div>
-        </aside>
-    }
-    .into_any()
+    let line = line.map_or_else(String::new, |line| {
+        format!("<p class=\"fui-small fui-muted\">{}</p>", Html::text(&line))
+    });
+    let close_words = Html::text(tr(locale, Text::TopologyLookClose).text());
+    format!(
+        "<aside aria-labelledby=\"topology-look-title\" class=\"fui-topology-panel\"><div class=\"fui-side-panel-head\"><div><h2 id=\"topology-look-title\" class=\"fui-card-title\">{title}</h2>{line}</div><a href=\"{close}\" aria-label=\"{close_words}\" title=\"{close_words}\" class=\"fui-icon-button\">{x}</a></div><div class=\"fui-side-panel-body fui-stack\">{body}</div></aside>",
+        close = Html::text(&close),
+        x = icon(Glyph::X, "16"),
+        body = String::from(body),
+    )
 }
 
 /// The parts of the map the server answers: the zoom cluster's links and
@@ -951,105 +1020,53 @@ struct MapParts {
 
 /// The map: the canvas with its two layers, the minimap and the zoom
 /// cluster, and the quick look beside it.
-fn map(topology: &Topology, layout: &Layout<'_>, parts: MapParts) -> AnyView {
+fn map(locale: &Locale, topology: &Topology, layout: &Layout<'_>, parts: MapParts) -> String {
     let MapParts {
         collapse_all,
         minimap: minimap_link,
         look,
     } = parts;
     let selected = look.as_ref().map(|look| look.card.clone());
-    let view_box = format!(
-        "-8 -8 {:.0} {:.0}",
-        layout.width + 16.0,
-        layout.height + 16.0
-    );
-    let lanes = layout
+    let (width, height) = (layout.width + 16.0, layout.height + 16.0);
+    let lanes: Vec<String> = layout
         .lanes
         .iter()
         .map(|(x, y, title, middle)| {
             let anchor = if *middle { "middle" } else { "start" };
-            let title = (*title).to_owned();
-            view! {
-                <text class="fui-topology-lane" x=format!("{x:.1}") y=format!("{y:.1}") text-anchor=anchor>
-                    {title}
-                </text>
-            }
+            format!(
+                "<text x=\"{x:.1}\" y=\"{y:.1}\" text-anchor=\"{anchor}\" class=\"fui-topology-lane\">{}</text>",
+                Html::text(title)
+            )
         })
-        .collect_view();
-    let rule = layout.rule.map(|(from, to)| {
-        view! {
-            <line
-                class="fui-topology-hairline"
-                x1=format!("{from:.1}")
-                x2=format!("{to:.1}")
-                y1="84"
-                y2="84"
-            ></line>
-        }
+        .collect();
+    let rule = layout.rule.map_or_else(String::new, |(from, to)| {
+        format!(
+            "<line x1=\"{from:.1}\" x2=\"{to:.1}\" y1=\"84\" y2=\"84\" class=\"fui-topology-hairline\"></line>"
+        )
     });
-    let edges = layout
-        .edges
-        .iter()
-        .map(|each| edge(*each, false))
-        .collect_view();
-    let cards = layout
+    let edges: Html = layout.edges.iter().map(|each| edge(*each, false)).collect();
+    let cards: Html = layout
         .cards
         .iter()
-        .map(|laid| card_view(laid, selected.as_deref()))
-        .collect_view();
-    let title = format!("{}-title", topology.id);
-    let desc = format!("{}-desc", topology.id);
-    let named_by = format!("{title} {desc}");
+        .map(|laid| card_view(locale, laid, selected.as_deref()))
+        .collect();
+    let id = Html::text(&topology.id);
     let minimap_on = minimap_link.as_ref().is_some_and(|link| link.on);
-    let shown_minimap = minimap_on.then(|| minimap(layout));
-    let cluster = cluster(collapse_all, minimap_link);
-    let look = look.map(quick_look);
-    let has_panel = look.is_some();
-    let width = format!("{:.0}", layout.width + 16.0);
-    let height = format!("{:.0}", layout.height + 16.0);
-    view! {
-        <div class="fui-topology-map" class:has-panel=has_panel>
-            <div class="fui-topology-canvas">
-                <div
-                    class="fui-topology-scroll"
-                    tabindex="0"
-                    role="group"
-                    aria-label=tr(Text::TopologyMapKeys)
-                    aria-keyshortcuts="+ - 0 i Space"
-                >
-                    <div class="fui-pipeline-stage" data-width=width data-height=height>
-                        <svg
-                            class="fui-topology-svg fui-pipeline-edges"
-                            viewBox=view_box.clone()
-                            width=width.clone()
-                            height=height.clone()
-                            role="img"
-                            aria-labelledby=named_by
-                        >
-                            <title id=title>{topology.label.clone()}</title>
-                            <desc id=desc>{problems(topology)}</desc>
-                            <g>{lanes} {rule}</g>
-                            <g>{edges}</g>
-                        </svg>
-                        <svg
-                            class="fui-topology-svg fui-pipeline-cards"
-                            viewBox=view_box
-                            width=width.clone()
-                            height=height.clone()
-                            role="group"
-                            aria-label=topology.label.clone()
-                        >
-                            {cards}
-                        </svg>
-                    </div>
-                </div>
-                {shown_minimap}
-                {cluster}
-            </div>
-            {look}
-        </div>
-    }
-    .into_any()
+    let shown_minimap = if minimap_on {
+        minimap(locale, layout)
+    } else {
+        Html::default()
+    };
+    let cluster = cluster(locale, collapse_all.as_ref(), minimap_link.as_ref());
+    let has_panel = if look.is_some() { " has-panel" } else { "" };
+    let look = look.map_or_else(String::new, |look| quick_look(locale, look));
+    let label = Html::text(&topology.label);
+    format!(
+        "<div class=\"fui-topology-map{has_panel}\"><div class=\"fui-topology-canvas\"><div tabindex=\"0\" role=\"group\" aria-label=\"{keys}\" aria-keyshortcuts=\"+ - 0 i Space\" class=\"fui-topology-scroll\"><div data-width=\"{width:.0}\" data-height=\"{height:.0}\" class=\"fui-pipeline-stage\"><svg viewBox=\"-8 -8 {width:.0} {height:.0}\" width=\"{width:.0}\" height=\"{height:.0}\" role=\"img\" aria-labelledby=\"{id}-title {id}-desc\" class=\"fui-topology-svg fui-pipeline-edges\"><title id=\"{id}-title\">{label}</title><desc id=\"{id}-desc\">{desc}</desc><g>{lanes}{rule}</g><g>{edges}</g></svg><svg viewBox=\"-8 -8 {width:.0} {height:.0}\" width=\"{width:.0}\" height=\"{height:.0}\" role=\"group\" aria-label=\"{label}\" class=\"fui-topology-svg fui-pipeline-cards\">{cards}</svg></div></div>{shown_minimap}{cluster}</div>{look}</div>",
+        keys = Html::text(tr(locale, Text::TopologyMapKeys).text()),
+        desc = Html::text(problems(locale, topology)),
+        lanes = lanes.concat(),
+    )
 }
 
 /// One row of the List twin.
@@ -1065,21 +1082,42 @@ struct Row<'a> {
 
 /// The lane row of the List: a side's title and its quiet line, a heading
 /// for the rows under it and no item of the tree.
-fn lane_row(title: &str, line: &str) -> AnyView {
-    let (title, line) = (title.to_owned(), line.to_owned());
-    view! {
-        <li role="presentation" class="fui-tree-lane">
-            <span>{title}</span>
-            <span class="fui-small fui-muted">{line}</span>
-        </li>
-    }
-    .into_any()
+fn lane_row(title: &str, line: &str) -> String {
+    format!(
+        "<li role=\"presentation\" class=\"fui-tree-lane\"><span>{}</span><span class=\"fui-small fui-muted\">{}</span></li>",
+        Html::text(title),
+        Html::text(line)
+    )
+}
+
+#[derive(Template)]
+#[template(
+    source = r#"<li role="treeitem"{% if let Some(expanded) = expanded %} aria-expanded="{{ expanded }}"{% endif %} aria-level="{{ level }}" aria-posinset="{{ posinset }}" aria-setsize="{{ setsize }}" class="{{ class }}{% if muted %} is-excluded{% endif %}"><span class="fui-tree-name">{% if let Some(fold) = fold %}{{ fold }}{% endif %}{{ glyph }}<a href="{{ href }}">{{ name }}</a></span><span>{{ state }}</span><span class="fui-small fui-muted">{% if let Some(measure) = measure %}{{ measure }}{% endif %}</span><span class="fui-small fui-muted">{% if let Some(note) = note %}{{ note }}{% endif %}</span><span class="fui-tree-act">{% if let Some(action) = action %}<form method="post" action="{{ action.action }}"><input type="hidden" name="{{ action.name }}" value="{{ action.value }}"><button type="submit" class="{{ ghost }}">{{ action_glyph }}{{ action.label }}</button></form>{% endif %}</span></li>"#,
+    ext = "html"
+)]
+struct ItemView<'a> {
+    expanded: Option<bool>,
+    level: u8,
+    posinset: usize,
+    setsize: usize,
+    class: &'static str,
+    muted: bool,
+    fold: Option<Html>,
+    glyph: Html,
+    href: &'a str,
+    name: Html,
+    state: Html,
+    measure: Option<&'a str>,
+    note: Option<&'a str>,
+    action: Option<&'a RowAction>,
+    action_glyph: Html,
+    ghost: &'static str,
 }
 
 /// One item row of the List: the name with its glyph as a link to its
 /// page, a group's fold as a link, the state, the measure, the note and
 /// the action.
-fn item_row(row: Row<'_>) -> AnyView {
+fn item_row(locale: &Locale, row: Row<'_>) -> String {
     let Row {
         level,
         card,
@@ -1088,137 +1126,135 @@ fn item_row(row: Row<'_>) -> AnyView {
         posinset,
         setsize,
     } = row;
-    let expanded = group.map(|group| (!group.collapsed).to_string());
     let fold = group.and_then(|group| {
-        let href = group.toggle.clone()?;
+        let href = group.toggle.as_deref()?;
         let (glyph, text) = if group.collapsed {
             (Glyph::CHEVRON_RIGHT, Text::TopologyExpand)
         } else {
             (Glyph::CHEVRON_DOWN, Text::TopologyCollapse)
         };
-        let name = tr_with(text, &[("title", card.name.clone().into())]);
-        Some(view! {
-            <a href=href class="fui-tree-fold" aria-label=name tabindex="-1">
-                {icon(glyph, "14")}
-            </a>
-        })
+        let name = tr_with(locale, text, &[("title", card.name.clone().into())]);
+        Some(Html::raw(format!(
+            "<a href=\"{}\" aria-label=\"{}\" tabindex=\"-1\" class=\"fui-tree-fold\">{}</a>",
+            Html::text(href),
+            Html::text(name.text()),
+            icon(glyph, "14")
+        )))
     });
     let name = if card.mono {
-        view! { <code>{card.name.clone()}</code> }.into_any()
+        Html::raw(format!("<code>{}</code>", Html::text(&card.name)))
     } else if level == 1 {
-        view! { <strong>{card.name.clone()}</strong> }.into_any()
+        Html::raw(format!("<strong>{}</strong>", Html::text(&card.name)))
     } else {
-        card.name.clone().into_any()
+        Html::text(&card.name)
     };
-    let action = card.action.clone().map(|action| {
-        view! {
-            <form method="post" action=action.action>
-                <input type="hidden" name=action.name value=action.value />
-                <button type="submit" class=Variant::Ghost.small()>
-                    {icon(action.glyph, "14")}
-                    {action.label}
-                </button>
-            </form>
-        }
-    });
     let class = match level {
         1 => "fui-tree-row",
         2 => "fui-tree-row fui-tree-l2",
         _ => "fui-tree-row fui-tree-l3",
     };
-    let muted = card.state == FlowState::Off;
-    view! {
-        <li
-            role="treeitem"
-            aria-expanded=expanded
-            class=class
-            class:is-excluded=muted
-        >
-            <span class="fui-tree-name">
-                {fold}
-                {icon(card.glyph, "16")}
-                <a href=card.href.clone()>{name}</a>
-            </span>
-            <span>{state_word(card.state, detail)}</span>
-            <span class="fui-small fui-muted">{card.measure.clone()}</span>
-            <span class="fui-small fui-muted">{card.note.clone()}</span>
-            <span class="fui-tree-act">{action}</span>
-        </li>
+    ItemView {
+        expanded: group.map(|group| !group.collapsed),
+        level,
+        posinset,
+        setsize,
+        class,
+        muted: card.state == FlowState::Off,
+        fold,
+        glyph: icon(card.glyph, "16"),
+        href: &card.href,
+        name,
+        state: state_word(locale, card.state, detail),
+        measure: card.measure.as_deref(),
+        note: card.note.as_deref(),
+        action: card.action.as_ref(),
+        action_glyph: card
+            .action
+            .as_ref()
+            .map_or_else(Html::default, |action| icon(action.glyph, "14")),
+        ghost: Variant::Ghost.small(),
     }
-    // Leptos names no typed `aria-level`, `aria-posinset` or `aria-setsize`
-    // attribute, so they are set by name.
-    .attr("aria-level", level.to_string())
-    .attr("aria-posinset", posinset.to_string())
-    .attr("aria-setsize", setsize.to_string())
-    .into_any()
+    .html()
+    .into()
 }
 
 /// The List twin: the same graph as an indented tree, the hub first, then
 /// each lane with its groups and their children, folded as the map is.
-fn list(topology: &Topology) -> AnyView {
-    let mut rows = vec![item_row(Row {
-        level: 1,
-        card: &topology.hub,
-        group: None,
-        detail: None,
-        posinset: 1,
-        setsize: 1,
-    })];
+fn list(locale: &Locale, topology: &Topology) -> String {
+    let mut rows = vec![item_row(
+        locale,
+        Row {
+            level: 1,
+            card: &topology.hub,
+            group: None,
+            detail: None,
+            posinset: 1,
+            setsize: 1,
+        },
+    )];
     if let Some(callers) = &topology.callers {
         rows.push(lane_row(&callers.title, &callers.line));
         let size = callers.cards.len();
         for (index, card) in callers.cards.iter().enumerate() {
-            rows.push(item_row(Row {
-                level: 2,
-                card,
-                group: None,
-                detail: None,
-                posinset: index + 1,
-                setsize: size,
-            }));
+            rows.push(item_row(
+                locale,
+                Row {
+                    level: 2,
+                    card,
+                    group: None,
+                    detail: None,
+                    posinset: index + 1,
+                    setsize: size,
+                },
+            ));
         }
     }
     for side in [&topology.start, &topology.end].into_iter().flatten() {
         rows.push(lane_row(&side.title, &side.line));
         let size = side.groups.len();
         for (index, group) in side.groups.iter().enumerate() {
-            rows.push(item_row(Row {
-                level: 2,
-                card: &group.card,
-                group: Some(group),
-                detail: group.card.edge_label.clone(),
-                posinset: index + 1,
-                setsize: size,
-            }));
+            rows.push(item_row(
+                locale,
+                Row {
+                    level: 2,
+                    card: &group.card,
+                    group: Some(group),
+                    detail: group.card.edge_label.clone(),
+                    posinset: index + 1,
+                    setsize: size,
+                },
+            ));
             if group.collapsed {
                 continue;
             }
             let count = group.children.len();
             for (place, child) in group.children.iter().enumerate() {
-                rows.push(item_row(Row {
-                    level: 3,
-                    card: child,
-                    group: None,
-                    detail: child
-                        .edge_label
-                        .clone()
-                        .filter(|_| child.state.is_problem()),
-                    posinset: place + 1,
-                    setsize: count,
-                }));
+                rows.push(item_row(
+                    locale,
+                    Row {
+                        level: 3,
+                        card: child,
+                        group: None,
+                        detail: child
+                            .edge_label
+                            .clone()
+                            .filter(|_| child.state.is_problem()),
+                        posinset: place + 1,
+                        setsize: count,
+                    },
+                ));
             }
         }
     }
-    view! {
-        <ul role="tree" aria-label=topology.list_label.clone() class="fui-topology-list">
-            {rows}
-        </ul>
-    }
-    .into_any()
+    format!(
+        "<ul role=\"tree\" aria-label=\"{}\" class=\"fui-topology-list\">{}</ul>",
+        Html::text(&topology.list_label),
+        rows.concat()
+    )
 }
 
-/// Returns the topology `topology` inside the island that adds zoom,
-/// panning and the keys.
+/// Returns the topology `topology` in `locale`, wrapped for the `topology`
+/// module that adds zoom, panning and the keys.
 ///
 /// It draws the toolbar with the Status menu and the view switch, the map
 /// with its zoom cluster, minimap and quick look, and its List twin.
@@ -1226,28 +1262,65 @@ fn list(topology: &Topology) -> AnyView {
 /// Put it on its own page under the page header; the map takes the width
 /// of the column.
 #[must_use]
-pub fn topology(mut topology: Topology) -> AnyView {
-    let class = topology.view.class().to_owned();
-    let status = status_menu(topology.status.clone());
-    let tools = topology.tools.take();
-    let updated = topology.updated.take();
+pub fn topology(locale: &Locale, mut topology: Topology) -> Html {
+    let status = status_menu(locale, &topology.status);
+    let tools = topology.tools.take().unwrap_or_default();
+    let updated = topology.updated.take().unwrap_or_default();
     let parts = MapParts {
         collapse_all: topology.collapse_all.take(),
         minimap: topology.minimap.take(),
         look: topology.look.take(),
     };
-    let switch = view_switch(topology.view, topology.views.clone());
-    let list = list(&topology);
-    let map = map(&topology, &layout(&topology), parts);
-    view! {
-        <crate::island::TopologyKeys class words=TopologyWords::of_page()>
-            <div class="fui-topology-bar">
-                <div class="fui-topology-bar-start">{status} {tools}</div>
-                <div class="fui-topology-bar-end">{updated} {switch}</div>
-            </div>
-            <div class="fui-topology-mapwrap">{map}</div>
-            <div class="fui-topology-listwrap">{list}</div>
-        </crate::island::TopologyKeys>
+    let switch = view_switch(locale, topology.view, &topology.views);
+    let list = list(locale, &topology);
+    let map = map(locale, &topology, &layout(&topology), parts);
+    // NOTE: serde_json `to_string` fails only for a map with a key that is no
+    // string, and the words hold none.
+    let words = serde_json::to_string(&TopologyWords::of(locale)).unwrap_or_default();
+    Html::raw(format!(
+        "<div data-fui=\"topology\" data-fui-words=\"{words}\" class=\"{class}\"><div class=\"fui-topology-bar\"><div class=\"fui-topology-bar-start\">{status}{tools}</div><div class=\"fui-topology-bar-end\">{updated}{switch}</div></div><div class=\"fui-topology-mapwrap\">{map}</div><div class=\"fui-topology-listwrap\">{list}</div></div>",
+        words = Html::text(&words),
+        class = topology.view.class(),
+    ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Ask, STEPS, asked, moved, stepped};
+
+    #[test]
+    fn a_step_moves_to_the_next_scale_and_holds_at_the_ends() {
+        assert!((stepped(1.0, true) - 1.25).abs() < f64::EPSILON);
+        assert!((stepped(1.0, false) - 0.8).abs() < f64::EPSILON);
+        assert!(
+            (stepped(0.71, true) - 0.8).abs() < f64::EPSILON,
+            "a fitted scale between two steps goes to the next"
+        );
+        assert!((stepped(0.71, false) - 0.67).abs() < f64::EPSILON);
+        assert!((stepped(2.0, true) - STEPS[STEPS.len() - 1]).abs() < f64::EPSILON);
+        assert!((stepped(0.25, false) - STEPS[0]).abs() < f64::EPSILON);
     }
-    .into_any()
+
+    #[test]
+    fn the_keys_zoom_on_the_canvas_and_open_the_quick_look_on_a_card() {
+        assert_eq!(Some(Ask::ZoomIn), asked("+", false));
+        assert_eq!(Some(Ask::ZoomIn), asked("=", true));
+        assert_eq!(Some(Ask::ZoomOut), asked("-", false));
+        assert_eq!(Some(Ask::Fit), asked("0", false));
+        assert_eq!(Some(Ask::Look), asked("i", true));
+        assert_eq!(Some(Ask::Look), asked(" ", true));
+        assert_eq!(None, asked(" ", false), "Space off a card scrolls");
+        assert_eq!(None, asked("x", true));
+    }
+
+    #[test]
+    fn the_arrows_walk_the_list_and_hold_at_its_ends() {
+        assert_eq!(Some(1), moved("ArrowDown", 0, 3));
+        assert_eq!(Some(2), moved("ArrowDown", 2, 3));
+        assert_eq!(Some(0), moved("ArrowUp", 0, 3));
+        assert_eq!(Some(0), moved("Home", 2, 3));
+        assert_eq!(Some(2), moved("End", 0, 3));
+        assert_eq!(None, moved("Enter", 0, 3));
+        assert_eq!(None, moved("ArrowDown", 0, 0));
+    }
 }

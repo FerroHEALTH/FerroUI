@@ -5,6 +5,7 @@
 //! transform pair with its options row, Run and the request (B5), the OMOP
 //! row preview (B6) and the HL7 v2 viewer (B8).
 
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::view::form::{Field, INPUT};
 use ferrohealth_ui::view::hl7v2::{Hl7Field, Hl7Segment, hl7v2_raw, hl7v2_segments};
@@ -14,19 +15,18 @@ use ferrohealth_ui::view::transform::{
     Answer, AnswerState, Density, Request, Run, RunState, TransformPane, field_checks, request,
     run_button, transform_options, transform_pair,
 };
-use leptos::prelude::*;
 
 use crate::markup::{has, tags};
-use crate::render::{html, page_html};
+use crate::render::{en, html};
 
 /// A load report of `outcome` arriving as `arrival`, with two counts and an
 /// action when `action`.
 fn report(outcome: Outcome, arrival: Arrival, action: bool) -> String {
-    html(move || {
+    html({
         load_report(LoadReport {
             outcome,
             arrival,
-            title: view! { "Loaded " <strong>"12 mappings"</strong> }.into_any(),
+            title: Html::raw(String::from(r"Loaded <strong>12 mappings</strong>")),
             counts: vec![
                 Count {
                     value: String::from("0"),
@@ -37,7 +37,7 @@ fn report(outcome: Outcome, arrival: Arrival, action: bool) -> String {
                     noun: String::from("warnings <b>"),
                 },
             ],
-            action: action.then(|| view! { <a href="#issues">"Show"</a> }.into_any()),
+            action: action.then(|| Html::raw(String::from(r##"<a href="#issues">Show</a>"##))),
         })
     })
 }
@@ -56,15 +56,15 @@ fn a_load_report_draws_its_tone_glyph_title_counts_and_one_action() {
         assert!(line.contains("<strong>12 mappings</strong>"), "{line}");
         assert!(has(&line, "ul", &[("class", "fui-load-counts")]), "{line}");
         assert!(line.contains("<strong>3</strong>"), "{line}");
-        assert!(line.contains("warnings &lt;b&gt;"), "escaped: {line}");
+        assert!(line.contains("warnings &#60;b&#62;"), "escaped: {line}");
         assert!(has(&line, "div", &[("class", "fui-actions")]), "{line}");
         assert!(!line.contains("style="), "{line}");
     }
-    let bare = html(|| {
+    let bare = html({
         load_report(LoadReport {
             outcome: Outcome::Ok,
             arrival: Arrival::WithPage,
-            title: "Found".into_any(),
+            title: Html::text("Found"),
             counts: Vec::new(),
             action: None,
         })
@@ -85,7 +85,7 @@ fn a_load_report_is_a_status_message_only_after_an_action() {
 
 /// Run in `state`.
 fn run(state: RunState) -> String {
-    html(move || {
+    html({
         run_button(Run {
             id: String::from("pg-run"),
             label: String::from("Convert to FHIR"),
@@ -152,12 +152,20 @@ fn run_posts_the_form_says_its_keys_waits_while_running_and_says_why_it_is_off()
 #[test]
 fn the_options_row_marks_a_dense_row_an_id_field_and_a_check_group() {
     let row = |density| {
-        html(move || {
+        html({
             let id = Field::new("pg-uid", "Version uid")
                 .holds_id()
-                .view(view! { <input id="pg-uid" name="uid" class=INPUT /> });
-            let checks = field_checks(view! { <input id="pg-active" type="checkbox" /> });
-            transform_options(density, view! { {id} {checks} }, view! { <span></span> })
+                .view(Html::raw(format!(
+                    r#"<input id="pg-uid" name="uid" class="{INPUT}">"#
+                )));
+            let checks = field_checks(Html::raw(String::from(
+                r#"<input id="pg-active" type="checkbox">"#,
+            )));
+            transform_options(
+                density,
+                Html::join([id, checks]),
+                Html::raw(String::from("<span></span>")),
+            )
         })
     };
     let plain = row(Density::Plain);
@@ -182,7 +190,8 @@ fn the_options_row_marks_a_dense_row_an_id_field_and_a_check_group() {
         ),
         "{dense}"
     );
-    let ordinary = html(|| Field::new("pg-x", "X").view(view! { <input id="pg-x" /> }));
+    let ordinary =
+        html(Field::new("pg-x", "X").view(Html::raw(String::from(r#"<input id="pg-x">"#))));
     assert!(
         has(&ordinary, "div", &[("class", "fui-field")]),
         "{ordinary}"
@@ -191,20 +200,24 @@ fn the_options_row_marks_a_dense_row_an_id_field_and_a_check_group() {
 
 /// A pair whose answer pane holds `answer`, its state `state`.
 fn pair(answer: Answer, state: Option<AnswerState>) -> String {
-    html(move || {
+    html({
         transform_pair(
             TransformPane {
                 title: String::from("Composition"),
                 tags: vec![String::from("FLAT")],
                 state: None,
                 actions: None,
-                body: view! { <textarea id="pg-in" name="in"></textarea> }.into_any(),
+                body: Html::raw(String::from(
+                    r#"<textarea id="pg-in" name="in"></textarea>"#,
+                )),
             },
             TransformPane {
                 title: String::from("Bundle"),
                 tags: vec![String::from("FHIR R4")],
                 state,
-                actions: Some(view! { <button type="button">"Copy"</button> }.into_any()),
+                actions: Some(Html::raw(String::from(
+                    r#"<button type="button">Copy</button>"#,
+                ))),
                 body: answer.view(),
             },
         )
@@ -246,7 +259,9 @@ fn the_pair_draws_two_panes_with_their_heads_and_the_answer_in_each_state() {
         "a run in progress is announced: {running}"
     );
     let answered = pair(
-        Answer::Answered(view! { <div class="fui-code-panel"></div> }.into_any()),
+        Answer::Answered(Html::raw(String::from(
+            r#"<div class="fui-code-panel"></div>"#,
+        ))),
         Some(AnswerState {
             outcome: Outcome::Ok,
             word: String::from("Converted"),
@@ -270,7 +285,9 @@ fn the_pair_draws_two_panes_with_their_heads_and_the_answer_in_each_state() {
         "the word carries the state, the dot its shape: {answered}"
     );
     let refused = pair(
-        Answer::Refused(view! { <div role="alert" class="fui-alert"></div> }.into_any()),
+        Answer::Refused(Html::raw(String::from(
+            r#"<div role="alert" class="fui-alert"></div>"#,
+        ))),
         Some(AnswerState {
             outcome: Outcome::Bad,
             word: String::from("Refused"),
@@ -286,19 +303,25 @@ fn the_pair_draws_two_panes_with_their_heads_and_the_answer_in_each_state() {
 
 #[test]
 fn a_request_breaks_after_slashes_and_ampersands_and_carries_copy_and_the_raw_answer() {
-    let line = page_html(|| {
-        request(Request {
-            text: String::from("GET /fhir/CodeSystem/$lookup?system=a&code=<1>"),
-            copy: Some(String::from("rq-copy")),
-            raw: Some((
-                String::from("The Parameters"),
-                view! { <pre>"{}"</pre> }.into_any(),
-            )),
-        })
+    let line = html({
+        request(
+            &en(),
+            Request {
+                text: String::from("GET /fhir/CodeSystem/$lookup?system=a&code=<1>"),
+                copy: Some(String::from("rq-copy")),
+                raw: Some((
+                    String::from("The Parameters"),
+                    Html::raw(String::from("<pre>{}</pre>")),
+                )),
+            },
+        )
     });
     assert!(has(&line, "div", &[("class", "fui-request")]), "{line}");
     assert!(line.contains("GET /<wbr>fhir/<wbr>"), "{line}");
-    assert!(line.contains("system=a&amp;<wbr>code=&lt;1&gt;"), "{line}");
+    assert!(
+        line.contains("system=a&#38;<wbr>code=&#60;1&#62;"),
+        "{line}"
+    );
     assert!(has(&line, "button", &[("id", "rq-copy")]), "{line}");
     assert!(
         has(&line, "details", &[("class", "fui-disclosure")]),
@@ -312,28 +335,31 @@ fn the_row_preview_counts_each_tables_rows_and_marks_an_unresolved_concept_in_wo
         column: column.to_owned(),
         value,
     };
-    let preview = html(move || {
-        row_preview(vec![
-            RowTable {
-                name: String::from("MEASUREMENT"),
-                detail: Some(String::from("synthetic_measurement")),
-                rows: vec![
-                    vec![field(
-                        "value_as_number",
-                        RowValue::Value(String::from("72.4")),
-                    )],
-                    vec![field(
-                        "value_as_number",
-                        RowValue::Value(String::from("<73>")),
-                    )],
-                ],
-            },
-            RowTable {
-                name: String::from("OBSERVATION"),
-                detail: None,
-                rows: vec![vec![field("observation_concept_id", RowValue::ConceptZero)]],
-            },
-        ])
+    let preview = html({
+        row_preview(
+            &en(),
+            vec![
+                RowTable {
+                    name: String::from("MEASUREMENT"),
+                    detail: Some(String::from("synthetic_measurement")),
+                    rows: vec![
+                        vec![field(
+                            "value_as_number",
+                            RowValue::Value(String::from("72.4")),
+                        )],
+                        vec![field(
+                            "value_as_number",
+                            RowValue::Value(String::from("<73>")),
+                        )],
+                    ],
+                },
+                RowTable {
+                    name: String::from("OBSERVATION"),
+                    detail: None,
+                    rows: vec![vec![field("observation_concept_id", RowValue::ConceptZero)]],
+                },
+            ],
+        )
     });
     assert!(
         has(&preview, "div", &[("class", "fui-rowgraph")]),
@@ -346,7 +372,7 @@ fn the_row_preview_counts_each_tables_rows_and_marks_an_unresolved_concept_in_wo
         "{preview}"
     );
     assert!(preview.contains("1 row<"), "{preview}");
-    assert!(preview.contains("&lt;73&gt;"), "escaped: {preview}");
+    assert!(preview.contains("&#60;73&#62;"), "escaped: {preview}");
     assert!(
         has(&preview, "span", &[("class", "fui-concept-zero")]),
         "{preview}"
@@ -363,15 +389,18 @@ fn the_row_preview_tells_null_from_an_empty_text_and_wraps_a_long_value() {
         column: column.to_owned(),
         value,
     };
-    let preview = html(move || {
-        row_preview(vec![RowTable {
-            name: String::from("OBSERVATION"),
-            detail: None,
-            rows: vec![vec![
-                field("value_as_string", RowValue::Null),
-                field("value_source_value", RowValue::Value(String::new())),
-            ]],
-        }])
+    let preview = html({
+        row_preview(
+            &en(),
+            vec![RowTable {
+                name: String::from("OBSERVATION"),
+                detail: None,
+                rows: vec![vec![
+                    field("value_as_string", RowValue::Null),
+                    field("value_source_value", RowValue::Value(String::new())),
+                ]],
+            }],
+        )
     });
     assert!(
         preview.contains(r#"<dd><span class="fui-rowgraph-null">NULL</span></dd>"#),
@@ -393,7 +422,7 @@ fn the_row_preview_tells_null_from_an_empty_text_and_wraps_a_long_value() {
 
 #[test]
 fn the_raw_message_tints_segment_ids_and_separators_one_segment_per_line() {
-    let raw = html(|| {
+    let raw = html({
         hl7v2_raw(
             "The message",
             "MSH|^~\\&|GAL\rPID|1||<SYN>^^^GAL\r\nOBX|1\r",
@@ -431,7 +460,7 @@ fn the_raw_message_tints_segment_ids_and_separators_one_segment_per_line() {
 
 #[test]
 fn the_parsed_message_draws_a_block_per_segment_with_position_name_and_value() {
-    let parsed = html(|| {
+    let parsed = html({
         hl7v2_segments(
             "The message as read",
             vec![Hl7Segment {
@@ -462,5 +491,8 @@ fn the_parsed_message_draws_a_block_per_segment_with_position_name_and_value() {
         has(&parsed, "dd", &[("class", "fui-hl7-name")]),
         "the name a phone drops: {parsed}"
     );
-    assert!(parsed.contains("SYN-0042^^^GAL&amp;&lt;x&gt;"), "{parsed}");
+    assert!(
+        parsed.contains("SYN-0042^^^GAL&#38;&#60;x&#62;"),
+        "{parsed}"
+    );
 }

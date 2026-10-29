@@ -358,16 +358,12 @@ impl Browser {
         Ok(())
     }
 
-    /// Waits until the page has hydrated: the root element carries the
-    /// library's mark (`ferrohealth_ui::widget::hydration::HYDRATED`), so a
-    /// capture never shows a part the browser has yet to draw and a script
-    /// never changes the page before the hydration walk ends.
+    /// Waits until the page's script runs: the root element carries the
+    /// loader's mark (`ferrohealth_ui::script::MARK`), so a journey never
+    /// acts on a control before its module can answer.
     pub(crate) async fn hydrated(&self) -> Result<(), Box<dyn Error>> {
-        self.element(By::Css(format!(
-            "html[{}]",
-            ferrohealth_ui::widget::hydration::HYDRATED
-        )))
-        .await?;
+        self.element(By::Css(format!("html[{}]", ferrohealth_ui::script::MARK)))
+            .await?;
         Ok(())
     }
 
@@ -474,10 +470,10 @@ impl Browser {
         .await
     }
 
-    /// Clicks `control`, a link or a form the router takes in the page, and
-    /// waits until `done` holds; the document stays the same (FerroUI #410),
-    /// which it checks.
-    pub(crate) async fn click_in_page<F>(
+    /// Clicks `control`, a link or a form whose answer is the next page,
+    /// waits until that page has replaced the one `control` is in, and then
+    /// until `done` holds.
+    pub(crate) async fn click_through<F>(
         &self,
         control: &WebElement,
         what: &str,
@@ -486,19 +482,12 @@ impl Browser {
     where
         F: AsyncFnMut() -> Result<bool, Box<dyn Error>>,
     {
-        self.hydrated().await?;
-        let old = self.loader().await?;
-        control.click().await?;
-        until(what, done).await?;
-        if self.loader().await? == old {
-            Ok(())
-        } else {
-            Err(format!("{what} loaded a new document; the router keeps the page").into())
-        }
+        self.click_and_load(control).await?;
+        until(what, done).await
     }
 
-    /// Whether the editor around the text area `area` has hydrated: its
-    /// stack drops `is-static` once its island runs. The text area takes
+    /// Whether the editor around the text area `area` has been enhanced: its
+    /// stack drops `is-static` once its module runs. The text area takes
     /// keys from the first paint, so its `readonly` tells nothing (#356).
     pub(crate) async fn editor_live(&self, area: &WebElement) -> Result<bool, Box<dyn Error>> {
         let live = self

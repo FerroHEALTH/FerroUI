@@ -50,15 +50,57 @@
 # Mutation-proven in both directions: adding a carrier no graph edge supports
 # fails naming it, and removing a real one fails naming the unlisted path.
 #
-# Usage: scripts/checks/vex-reachability.sh   (no arguments)
+# A document with no statement passes: no advisory is accepted, so no path
+# claim exists to compare. Its `statements` must still be an array, read by a
+# jq that succeeded.
+#
+# Usage: scripts/checks/vex-reachability.sh [--self-test]
 # VEX_DIR moves the VEX directory (default security/vex) and
 # VEX_REACHABILITY_KEY names the extension key (default ferroui:reachability).
 set -euo pipefail
 
 # shellcheck source=scripts/lib/guard-args.sh
 . "$(dirname "$0")/../lib/guard-args.sh"
-guard_no_args "$@"
+self="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
 cd "$(dirname "$0")/../.."
+
+# Runs the guard over fixtures: a document with no statement passes; one
+# with no statements array, and a statement with no path claim or a wrong
+# one, each fail.
+self_test() {
+  local dir status
+  dir="$(mktemp -d)"
+  trap 'rm -rf "$dir"' RETURN
+  write() {
+    mkdir -p "$dir/$1"
+    printf '%s\n' "$2" > "$dir/$1/rust-advisories.openvex.json"
+  }
+  run() {
+    status=0
+    VEX_DIR="$dir/$1" bash "$self" > "$dir/$1.out" 2>&1 || status=$?
+  }
+  write empty '{"statements":[]}'
+  run empty
+  [[ "$status" -eq 0 ]] || { cat "$dir/empty.out" >&2; echo "self-test: the empty document was refused" >&2; return 1; }
+  write missing '{}'
+  run missing
+  [[ "$status" -ne 0 ]] || { echo "self-test: a document with no statements array passed" >&2; return 1; }
+  write unclaimed '{"statements":[{"vulnerability":{"name":"RUSTSEC-0000-0000"}}]}'
+  run unclaimed
+  [[ "$status" -ne 0 ]] || { echo "self-test: a statement with no path claim passed" >&2; return 1; }
+  write wrong '{"statements":[{"vulnerability":{"name":"RUSTSEC-0000-0000"},"ferroui:reachability":{"package":"serde","direct_dependents":["no-such-crate"],"workspace_roots":[]}}]}'
+  run wrong
+  [[ "$status" -ne 0 ]] || { echo "self-test: a path claim the graph lacks passed" >&2; return 1; }
+  echo "vex-reachability: self-test passed"
+}
+
+case "${1:-}" in
+  --self-test)
+    self_test
+    exit $?
+    ;;
+  *) guard_no_args "$@" ;;
+esac
 
 readonly DOC="${VEX_DIR:-security/vex}/rust-advisories.openvex.json"
 readonly KEY="${VEX_REACHABILITY_KEY:-ferroui:reachability}"
@@ -96,11 +138,18 @@ note() { echo "vex-reachability: $*" >&2; fail=1; }
 # silence as agreement: a document with no `statements` array, or a jq failure
 # inside the process substitution feeding the loop, would run zero iterations
 # and report every statement verified.
-expected="$(jq -r '.statements | length' "$DOC")"
-[[ "$expected" -gt 0 ]] 2>/dev/null || {
-  echo "error: $DOC declares no statements, so nothing would be verified" >&2
+expected="$(jq -e -r '.statements | if type == "array" then length else error("no array") end' "$DOC" 2> /dev/null)" || {
+  echo "error: $DOC has no statements array, so nothing could be verified" >&2
   exit 1
 }
+[[ "$expected" =~ ^[0-9]+$ ]] || {
+  echo "error: $DOC counts no statements" >&2
+  exit 1
+}
+if [[ "$expected" -eq 0 ]]; then
+  echo "ok: $DOC accepts no advisory, so no path claim needs checking"
+  exit 0
+fi
 
 # One set per file, so `comm` can do the two-direction difference; `comm`
 # requires sorted input and treats a blank line as an element, hence the filter.

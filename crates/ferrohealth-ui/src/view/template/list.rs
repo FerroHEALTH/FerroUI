@@ -14,10 +14,11 @@
 //! says so in one quiet line with the same action as a text link
 //! ([`list_empty`]), never a second primary button.
 
-use leptos::prelude::*;
+use askama::Template;
 
+use crate::html::{Html, Render as _};
 use crate::i18n::number::grouped;
-use crate::i18n::{Text, tr, tr_with};
+use crate::i18n::{Locale, Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::view::action::ActionGroup;
 use crate::view::surface::{Header, page_heading};
@@ -105,12 +106,12 @@ pub struct ListCard {
     /// header row of its own.
     pub tabs: Option<TabRow>,
     /// The header row's actions at its far end, when it has any.
-    pub actions: Option<AnyView>,
+    pub actions: Option<Html>,
     /// The list: a table edge to edge, or [`list_empty`].
-    pub body: AnyView,
+    pub body: Html,
     /// The pager in the card's foot, when there are more rows than one page
     /// holds.
-    pub pager: Option<AnyView>,
+    pub pager: Option<Html>,
 }
 
 /// What a list page shows.
@@ -125,9 +126,9 @@ pub struct ListPage {
     /// stated end (a history, an audit log, routes).
     pub total: Option<u64>,
     /// The summary strip: chips that each filter the list, with a count.
-    pub summary: Option<AnyView>,
+    pub summary: Option<Html>,
     /// The toolbar: the find field and the filter menus.
-    pub toolbar: Option<AnyView>,
+    pub toolbar: Option<Html>,
     /// The filters set on the list.
     pub filters: ActiveFilters,
     /// The card that holds the list.
@@ -138,7 +139,7 @@ pub struct ListPage {
 /// toolbar where the list is long enough to need them, the active filter
 /// chips while a filter is set, and the card.
 #[must_use]
-pub fn list_page(page: ListPage) -> AnyView {
+pub fn list_page(locale: &Locale, page: ListPage) -> Html {
     let ListPage {
         header,
         actions,
@@ -148,15 +149,18 @@ pub fn list_page(page: ListPage) -> AnyView {
         filters,
         card,
     } = page;
-    let heading = page_heading(header, actions).into_any();
-    let summary = summary.filter(|_| shows_summary(total));
-    let toolbar = toolbar.filter(|_| shows_toolbar(total));
-    let filters = (!filters.chips.is_empty()).then(|| active_filters(filters, total));
-    view! {
-        {heading}
-        <div class="fui-list-page">{summary} {toolbar} {filters} {list_card(card)}</div>
-    }
-    .into_any()
+    let heading = page_heading(locale, header, actions);
+    let summary = summary.filter(|_| shows_summary(total)).unwrap_or_default();
+    let toolbar = toolbar.filter(|_| shows_toolbar(total)).unwrap_or_default();
+    let filters = if filters.chips.is_empty() {
+        Html::empty()
+    } else {
+        active_filters(locale, filters, total)
+    };
+    Html::raw(format!(
+        "{heading}<div class=\"fui-list-page\">{summary}{toolbar}{filters}{}</div>",
+        list_card(locale, card)
+    ))
 }
 
 /// Returns the active filter chips of a list of `total` items: "Showing 7
@@ -166,7 +170,7 @@ pub fn list_page(page: ListPage) -> AnyView {
 /// Each removal is a link to the list without that filter, so it works
 /// with no script and the filters stay in the address.
 #[must_use]
-pub fn active_filters(filters: ActiveFilters, total: Option<u64>) -> AnyView {
+pub fn active_filters(locale: &Locale, filters: ActiveFilters, total: Option<u64>) -> Html {
     let ActiveFilters {
         chips,
         clear,
@@ -174,35 +178,42 @@ pub fn active_filters(filters: ActiveFilters, total: Option<u64>) -> AnyView {
     } = filters;
     let showing = match (shown, total) {
         (Some(shown), Some(total)) => tr_with(
+            locale,
             Text::FilterShowingOf,
             &[("shown", shown.into()), ("total", total.into())],
         ),
-        _ => tr(Text::FilterShowing),
+        _ => tr(locale, Text::FilterShowing),
     };
-    let chips = chips
-        .into_iter()
-        .map(|chip| {
-            let name = tr_with(Text::FilterRemove, &[("filter", chip.label.clone().into())]);
-            view! {
-                <span class="fui-filter-chip">
-                    {chip.label} <a href=chip.remove aria-label=name>
-                        {icon(Glyph::X, "12")}
-                    </a>
-                </span>
-            }
-        })
-        .collect_view();
-    view! {
-        <div class="fui-filter-chips">
-            <span class="fui-small fui-muted">{showing}</span>
-            {chips}
-            <a href=clear class="fui-button fui-button-ghost fui-button-small">
-                {icon(Glyph::X, "16")}
-                {tr(Text::FilterClear)}
-            </a>
-        </div>
+    ChipsView {
+        showing,
+        chips: chips
+            .into_iter()
+            .map(|chip| {
+                let name = tr_with(
+                    locale,
+                    Text::FilterRemove,
+                    &[("filter", chip.label.clone().into())],
+                );
+                (chip, name.text().to_owned())
+            })
+            .collect(),
+        x_small: icon(Glyph::X, "12"),
+        clear,
+        x: icon(Glyph::X, "16"),
+        clear_words: tr(locale, Text::FilterClear),
     }
-    .into_any()
+    .html()
+}
+
+#[derive(Template)]
+#[template(path = "template/list.html", block = "chips")]
+struct ChipsView {
+    showing: Word,
+    chips: Vec<(FilterChip, String)>,
+    x_small: Html,
+    clear: String,
+    x: Html,
+    clear_words: Word,
 }
 
 /// Returns the card that holds a list, as [`list_page`] draws it.
@@ -210,7 +221,7 @@ pub fn active_filters(filters: ActiveFilters, total: Option<u64>) -> AnyView {
 /// Without tabs it is a section named by the list's title, opening with
 /// the header row; with tabs, the tabs' panel holds the list.
 #[must_use]
-pub fn list_card(card: ListCard) -> AnyView {
+pub fn list_card(locale: &Locale, card: ListCard) -> Html {
     let ListCard {
         title,
         count,
@@ -220,37 +231,39 @@ pub fn list_card(card: ListCard) -> AnyView {
         body,
         pager,
     } = card;
-    let foot = pager.map(|pager| view! { <div class="fui-list-foot">{pager}</div> });
+    let foot = pager
+        .map(|pager| Html::raw(format!("<div class=\"fui-list-foot\">{pager}</div>")))
+        .unwrap_or_default();
     if let Some(tabs) = tabs {
-        let panel = view! {
-            <section class="fui-worklist fui-list-panel" aria-label=title>
-                {body}
-                {foot}
-            </section>
-        }
-        .into_any();
-        return joined(tabs, panel, None);
+        let panel = Html::raw(format!(
+            "<section aria-label=\"{}\" class=\"fui-worklist fui-list-panel\">{body}{foot}</section>",
+            Html::text(&title)
+        ));
+        return joined(locale, tabs, panel, None);
     }
-    let name = title.clone();
-    view! {
-        <section class="fui-card fui-panel fui-worklist fui-list-card" aria-label=name>
-            <div class="fui-panel-head fui-list-head">
-                <h2 class="fui-card-title">
-                    <span>
-                        {match count {
-                            Some(count) => counted(title, count),
-                            None => title.into_any(),
-                        }}
-                    </span>
-                </h2>
-                {order.map(|order| view! { <p class="fui-sort-note">{order}</p> })}
-                <div class="fui-actions">{actions}</div>
-            </div>
-            {body}
-            {foot}
-        </section>
+    CardView {
+        name: title.clone(),
+        title: match count {
+            Some(count) => counted(locale, title, count),
+            None => Html::text(title),
+        },
+        order,
+        actions: actions.unwrap_or_default(),
+        body,
+        foot,
     }
-    .into_any()
+    .html()
+}
+
+#[derive(Template)]
+#[template(path = "template/list.html", block = "card")]
+struct CardView {
+    name: String,
+    title: Html,
+    order: Option<String>,
+    actions: Html,
+    body: Html,
+    foot: Html,
 }
 
 /// Returns `title` with its `count` after a middle dot, muted, for a list
@@ -259,32 +272,42 @@ pub fn list_card(card: ListCard) -> AnyView {
 /// The count reads "· 15", or "· 6 of 15" for the items shown of a larger
 /// set, each number with the locale's marks.
 #[must_use]
-pub fn counted(title: String, count: HeadingCount) -> AnyView {
+pub fn counted(locale: &Locale, title: String, count: HeadingCount) -> Html {
     let count = match count {
-        HeadingCount::All(all) => format!("· {}", grouped(all)).into_any(),
+        HeadingCount::All(all) => format!("· {}", grouped(locale, all)),
         HeadingCount::Shown { shown, total } => {
             let words = tr_with(
+                locale,
                 Text::CountShownOf,
                 &[("shown", shown.into()), ("total", total.into())],
             );
-            view! { "· " {words} }.into_any()
+            format!("· {words}")
         }
     };
-    view! {
-        {title}
-        " "
-        <span class="fui-list-count">{count}</span>
-    }
-    .into_any()
+    Html::raw(format!(
+        "{} <span class=\"fui-list-count\">{count}</span>",
+        Html::text(title)
+    ))
 }
 
 /// Returns an empty list's one quiet line: the console's `sentence` and,
 /// when items can be created here, the same action as the title row's
 /// primary as a text link (`label` to `href`), never a second button.
 #[must_use]
-pub fn list_empty(sentence: String, action: Option<(String, String)>) -> AnyView {
-    let link = action.map(|(label, href)| view! { " " <a href=href>{label}</a> });
-    view! { <p class="fui-transform-empty">{sentence} {link}</p> }.into_any()
+pub fn list_empty(sentence: String, action: Option<(String, String)>) -> Html {
+    let link = action
+        .map(|(label, href)| {
+            format!(
+                " <a href=\"{}\">{}</a>",
+                Html::text(href),
+                Html::text(label)
+            )
+        })
+        .unwrap_or_default();
+    Html::raw(format!(
+        "<p class=\"fui-transform-empty\">{}{link}</p>",
+        Html::text(sentence)
+    ))
 }
 
 #[cfg(test)]

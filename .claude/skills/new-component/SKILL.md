@@ -1,6 +1,6 @@
 ---
 name: new-component
-description: Walks a FerroUI component from its COMPONENTS.md id to a merged change, in the design's order. Covers the design pages, the choice between a server view and an island, the API, the CSS layer, the render, stylesheet and contrast tests, the gallery entry in every brand light and dark, the no-WebAssembly journey, the design check, the screenshots and the changelog fragment. Use when an issue asks for a new or rebuilt component.
+description: Walks a FerroUI component from its COMPONENTS.md id to a merged change, in the design's order. Covers the design pages, the template and its script module, the API, the CSS layer, the render, stylesheet and contrast tests, the gallery entry in every brand light and dark, the no-script journey, the design check, the screenshots and the changelog fragment. Use when an issue asks for a new or rebuilt component.
 allowed-tools: Read, Grep, Glob, Bash, Edit, Write
 argument-hint: "<issue number>"
 ---
@@ -12,8 +12,8 @@ argument-hint: "<issue number>"
 
 One component, end to end. The order is the design library's
 (`.claude/rules/console-design.md`): the design first, then the Rust. The
-component rules are `.claude/rules/leptos-ui.md`; §14 is the Leptos way and
-§15 the islands rules, and every step below names the section it obeys.
+component rules are `.claude/rules/console-ui.md`, and every step below
+names the section it obeys.
 
 ## Steps
 
@@ -29,41 +29,36 @@ component rules are `.claude/rules/leptos-ui.md`; §14 is the Leptos way and
    then run `design/tools/render.sh <set>` for each console that draws the
    component and `scripts/fast.sh`, which checks every design set your
    change reaches, before any Rust.
-3. **Choose a server view or an island** (§15.1). Ask, in order:
-   - Can HTML, CSS and a native element do it (`<dialog>`, `popover`,
-     `<details>`, a link, a `GET` or `POST` form, a checkbox with `:has()`)?
-     Then it is a view function in `crates/ferrohealth-ui/src/view/`, and it
-     ships no WebAssembly.
-   - Does it need browser code? Then the smallest interactive part is an
-     `#[island]` in `src/widget/`, and everything static is a server view
-     passed in as its children (§15.3).
-   - Does its interactive part share state with another island? Then the
-     two nest: the provider is the outer island, and the other is built
-     inside its children (§15.4). Siblings share nothing.
+3. **Choose the markup and the module** (§1, §3). Ask, in order:
+   - Can HTML, CSS and a native element do it (`<dialog>` with `command`,
+     `popover`, `<details>`, a link, a `GET` or `POST` form, a checkbox with
+     `:has()`)? Then it is a component in `crates/ferrohealth-ui/src/view/`
+     over a template under `templates/<area>/`, and it needs no module.
+   - Does it need browser code? Then its root asks for a module with
+     `data-fui="<job>"`, and the module under `crates/ferrohealth-ui/scripts/`
+     enhances what the template drew, within the script budget (§12).
 4. **Write the API.**
-   - A view function takes plain values, never a signal (§1).
-   - An island's props are `Serialize + DeserializeOwned`: no closure, no
-     `Callback`, no `usize` or `isize`, and no clinical data the page does
-     not already show (§15.2).
-   - Words are `String` props the console resolved from its catalog. The
-     library's own words come from `i18n`, looked up on the server side of
-     the island (§13, §15.4). A new library word is a `Text` declared in
-     `src/i18n/words/<area>.rs` with its English in `locales/en/<area>.ftl`,
-     each in the order of the ids.
-   - A form view renders fields named after the console's server-function
-     arguments, or takes the console's `ActionForm` as children. The library
-     defines no server function (§15.7).
-   - Document the component and every prop.
-5. **Write the no-WebAssembly floor** (§15.8). The server HTML shows the
-   content, and a link or a form does the important action. A control that
-   only script can work is absent or disabled before hydration, and says
-   why.
+   - A component takes plain values and `&Locale` where it draws words, and
+     its children as `Html` (§1).
+   - Words come from the catalogs on the server: the library's own from
+     `i18n`, a console's as `String` from its catalog (§13). A module's words
+     ride in data attributes or a `<template>`. A new library word is a
+     `Text` declared in `src/i18n/words/<area>.rs` with its English in
+     `locales/en/<area>.ftl`, each in the order of the ids.
+   - A form names its fields for the console's handler; the library holds
+     no route (§0).
+   - Document the component and every argument.
+5. **Write the no-script floor** (§1). The server HTML shows the content,
+   and a link or a form does the important action. A control that only
+   script can work is drawn `hidden` or `disabled`, and its module shows or
+   enables it.
 6. **Write the CSS in the right layer.** Classes are `fui-`, in the
    `components` layer of `crates/ferrohealth-ui/css/ferrohealth-ui.css`,
    naming role tokens only (§8): no palette entry, no inline style (§0). A
    new role joins `tests/it/contrast.rs` in the same change (§7).
 7. **Write the tests.**
-   - Logic in plain functions with unit tests beside them (§14.12).
+   - Logic in plain functions with unit tests beside them; a module's
+     logic that the Rust decides too answers the same.
    - `crates/ferrohealth-ui/tests/it/render.rs`: the rendered HTML says what
      it must and never carries what it must not, read through
      `markup::tags` by attribute name. Cover the escaping of every text
@@ -87,10 +82,10 @@ component rules are `.claude/rules/leptos-ui.md`; §14 is the Leptos way and
      alphabetical position; `scripts/checks/mod-order.sh` checks it.
    - Add a journey for each behaviour to `tests/it/journeys.rs` or
      `tests/it/widgets.rs`.
-   - Add an assertion to the no-WebAssembly journey (#196): the content and
-     the key action work with the WebAssembly withheld.
+   - Add an assertion to the no-script journey (`tests/it/no_script.rs`):
+     the content and the key action work with the modules refused.
 9. **Run the gates.**
-   - `scripts/fast.sh`: rustfmt, clippy (wasm32 when browser code changed),
+   - `scripts/fast.sh`: rustfmt, clippy,
      nextest and the doctests, the journeys of the area you touched, and
      `design/tools/check.sh` for each design set your change reaches, with
      no baseline entry added. The browser steps wait on the machine-wide
@@ -98,10 +93,9 @@ component rules are `.claude/rules/leptos-ui.md`; §14 is the Leptos way and
      full gate.
    - The guards: `bash scripts/checks/mod-order.sh`,
      `bash scripts/release/changelog.sh --check`,
-     `bash scripts/checks/leptos-rules.sh`, `bash scripts/checks/stray-literals.sh crates/ferrohealth-ui/src app/ferrohealth-ui-gallery/src` and `bash scripts/checks/comment-style.sh --all`.
+     `bash scripts/checks/markup-rules.sh crates/ferrohealth-ui/src crates/ferrohealth-ui/templates app/ferrohealth-ui-gallery/src`, `bash scripts/checks/script-budget.sh`, `bash scripts/checks/stray-literals.sh crates/ferrohealth-ui/src crates/ferrohealth-ui/templates app/ferrohealth-ui-gallery/src` and `bash scripts/checks/comment-style.sh --all`.
 10. **Look at it.** Never run the full screenshot capture. Capture only the
-    pages you touched, over the release site bundle from
-    `scripts/release/gallery-site.sh --release`:
+    pages you touched:
     `scripts/chrome-lock.sh env FERROUI_SCREENSHOTS=1 FERROUI_SCREENSHOT_PAGES=<page,...> cargo nextest run --locked -p ferrohealth-ui-gallery -E 'test(every_page_is_captured)'`.
     Look at every image that changed, in every brand, light and dark, at
     1440 and 390 px; the `gallery-screenshots` artifact of CI holds the
@@ -110,11 +104,11 @@ component rules are `.claude/rules/leptos-ui.md`; §14 is the Leptos way and
     feature pull request commits no screenshot, the coordinator's refresh
     pull request does (`.claude/rules/parallel-prs.md`). Name each new state
     in the pull request body. Refresh the `docs/qa/` pair (§11).
-11. **Check the bundle.** Run `bash scripts/checks/gallery-bundle.sh` after
-    the release build. A rise past the budget is its own pull request with
-    the measured size (§12).
+11. **Check the script budget.** Run `bash scripts/checks/script-budget.sh`
+    after a module changes; a module that grows past its share splits
+    (§12).
 12. **Review and record.**
-    - Run `/leptos-check` over the diff and fix what it finds.
+    - Run `/console-check` over the diff and fix what it finds.
     - Add the changelog fragment
       `changelog.d/<issue>-<kebab-slug>.<section>.md` (one per section),
       naming any API break and what a console changes. Never edit

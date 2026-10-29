@@ -5,7 +5,10 @@
 # locales/, never in the code (no specification governs this: our own
 # design).
 #
-# It reads the hand-written .rs files under each ROOT, up to the file's
+# It reads the Askama templates (.html) under each ROOT and reports every
+# text between tags, and every reader's attribute (as in 1), holding a
+# letter outside the template's own syntax. It reads the hand-written .rs
+# files under each ROOT, up to the file's
 # `#[cfg(test)]` module, and reports every string literal that reads as
 # words a reader sees:
 #
@@ -15,7 +18,9 @@
 #   2. a text node of a `view!`: a literal between two tags (`>"Close"<`)
 #      or alone on its line, holding a letter;
 #   3. any other literal holding words: an upper-case letter, or a space
-#      next to a letter, outside its `{}` placeables, and not a class list.
+#      next to a letter, outside its `{}` placeables, and not a class list;
+#      in a literal of markup the tags and attributes are passed over and
+#      the text between them read, and a reader's attribute read as in 1.
 #
 # A single lower-case word in code (`=> "fatal"`) reads as a key and is
 # passed over, so a word drawn that way is review's to catch. Lines that
@@ -69,20 +74,30 @@ files=()
 while IFS= read -r file; do
   files+=("$file")
 done < <(find "$@" -type f -name '*.rs' | LC_ALL=C sort)
-if [ "${#files[@]}" -eq 0 ]; then
-  echo "stray-literals: no .rs file under $*"
+if [ "${#files[@]}" -eq 0 ] && [ -z "$(find "$@" -type f -name '*.html' | head -n 1)" ]; then
+  echo "stray-literals: no .rs or .html file under $*"
   exit 0
 fi
 
-found="$(
+found=""
+[ "${#files[@]}" -eq 0 ] || found="$(
   awk -v allowfile="$allow" '
     function wordy(t,    bare, n, i, toks, plain) {
       bare = t
+      gsub(/\\u\{[0-9A-Fa-f]+\}/, "", bare)
+      gsub(/<\{[a-z_]*\}/, "<x", bare)
+      gsub(/<\/\{[a-z_]*\}/, "</x", bare)
       gsub(/\{[^{}]*\}/, "", bare)
       if (bare !~ /[A-Za-z]/) return 0
+      if (bare ~ /^ (hidden|disabled|checked|selected|open|required|readonly|multiple|inert)$/) return 0
+      if (bare ~ /<\/?[a-z]/ || bare ~ /^ [a-z][a-z-]*=\\"/) {
+        if (bare ~ /(^|[ \t])(aria-label|title|placeholder|alt|data-label|aria-description|aria-roledescription|aria-valuetext|label)=\\"[^"]*[A-Za-z]/) return 1
+        gsub(/<\/?[a-z][a-z0-9]*([ \t][^<>]*)?\/?>/, " ", bare)
+        gsub(/(^|[ \t])[a-z][a-z-]*=\\"[^"]*\\"/, " ", bare)
+      }
       n = split(bare, toks, /[ \t]+/)
       plain = 1
-      for (i = 1; i <= n; i++) if (toks[i] != "" && toks[i] !~ /^fui-[a-z0-9-]+$/) plain = 0
+      for (i = 1; i <= n; i++) if (toks[i] != "" && toks[i] !~ /^(fui|is|has)-[a-z0-9-]+$/) plain = 0
       if (plain) return 0
       if (bare ~ /[A-Z]/) return 1
       if (bare ~ /[A-Za-z][ \t]/ || bare ~ /[ \t][A-Za-z]/) return 1
@@ -90,7 +105,7 @@ found="$(
     }
     function classes(t,    n, i, toks) {
       n = split(t, toks, /[ \t]+/)
-      for (i = 1; i <= n; i++) if (toks[i] != "" && toks[i] !~ /^fui-[a-z0-9-]+$/) return 0
+      for (i = 1; i <= n; i++) if (toks[i] != "" && toks[i] !~ /^(fui|is|has)-[a-z0-9-]+$/) return 0
       return 1
     }
     BEGIN {
@@ -159,7 +174,7 @@ found="$(
         } else if (pre ~ />[ \t]*$/ && after ~ /^[ \t]*</) {
           hit = lit ~ /[A-Za-z]/
         } else if (pre ~ /^[ \t]*$/ && after ~ /^[ \t]*$/) {
-          hit = lit ~ /[A-Za-z]/ && !classes(lit)
+          hit = lit ~ /[A-Za-z]/ && !classes(lit) && (lit !~ /^ |</ || wordy(lit))
         } else {
           hit = wordy(lit)
         }
@@ -171,6 +186,30 @@ found="$(
     }
   ' ${files[@]+"${files[@]}"}
 )"
+
+templates=()
+while IFS= read -r file; do
+  templates+=("$file")
+done < <(find "$@" -type f -name '*.html' | LC_ALL=C sort)
+if [ "${#templates[@]}" -gt 0 ]; then
+  found="$(
+    printf '%s\n' "$found"
+    awk '
+      {
+        text = $0
+        gsub(/\{\{[^}]*\}\}|\{%[^%]*%\}|\{#[^#]*#\}/, "", text)
+        if (text ~ /(^|[ \t])(aria-label|title|placeholder|alt|data-label|aria-description|aria-roledescription|aria-valuetext|label)="[^"]*[A-Za-z]/) {
+          print FILENAME ":" FNR ": a reader\x27s attribute holds words"
+          next
+        }
+        gsub(/<[^<>]*>/, " ", text)
+        gsub(/&[a-z]+;|&#[0-9]+;/, " ", text)
+        if (text ~ /[A-Za-z]/) print FILENAME ":" FNR ": \"" text "\""
+      }
+    ' "${templates[@]}"
+  )"
+  found="$(printf '%s\n' "$found" | sed '/^$/d')"
+fi
 
 counts="$(printf '%s\n' "$found" | sed -n 's/^\([^:]*\):[0-9]*:.*/\1/p' | LC_ALL=C sort | uniq -c | awk '{print $1, $2}')"
 

@@ -16,16 +16,14 @@
 //! lifecycle together. No specification governs the components: our own
 //! design.
 
-use leptos::prelude::*;
-
-use crate::i18n::{Text, tr};
+use crate::html::Html;
+use crate::i18n::{Locale, Text, tr};
 use crate::icon::{Glyph, icon};
-use crate::island::CommitCountdown;
 use crate::tone::Tone;
 use crate::view::action::small_action_button;
+use crate::view::action_menu::Action;
 use crate::view::button::Variant;
-use crate::widget::action_menu::Action;
-use crate::widget::countdown::Countdown;
+use crate::view::countdown::{Countdown, countdown};
 
 /// Where a step of a lifecycle stands.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -113,52 +111,54 @@ pub struct Lifecycle {
 /// stacked below it.
 ///
 /// ```
+/// use ferrohealth_ui::i18n::Locale;
 /// use ferrohealth_ui::view::lifecycle::{Lifecycle, Step, StepState, lifecycle};
-/// use leptos::prelude::*;
 ///
-/// let html = Owner::new().with(|| {
-///     lifecycle(Lifecycle {
+/// let html = lifecycle(
+///     &Locale::english(),
+///     Lifecycle {
 ///         label: String::from("Where this revision stands"),
 ///         steps: vec![
 ///             Step::new(StepState::Done, "Saved", "by you, 09:51"),
 ///             Step::new(StepState::Current, "Apply", "yours, or any operator's"),
 ///         ],
-///     })
-///     .to_html()
-/// });
+///     },
+/// ).to_string();
 /// assert!(html.contains(r#"aria-current="step""#));
 /// ```
 #[must_use]
-pub fn lifecycle(lifecycle: Lifecycle) -> AnyView {
+pub fn lifecycle(locale: &Locale, lifecycle: Lifecycle) -> Html {
     let Lifecycle { label, steps } = lifecycle;
-    let steps = steps.into_iter().map(step).collect_view();
-    view! {
-        <ol class="fui-lifecycle" aria-label=label>
-            {steps}
-        </ol>
-    }
-    .into_any()
+    let steps: String = steps
+        .into_iter()
+        .map(|each| step(locale, each))
+        .collect::<Vec<_>>()
+        .concat();
+    Html::raw(format!(
+        "<ol aria-label=\"{}\" class=\"fui-lifecycle\">{steps}</ol>",
+        Html::text(label)
+    ))
 }
 
 /// Returns one step as its list item.
-fn step(step: Step) -> AnyView {
+fn step(locale: &Locale, step: Step) -> String {
     let Step { state, title, line } = step;
-    let current = (state == StepState::Current).then_some("step");
-    view! {
-        <li class=state.class() aria-current=current>
-            <span class="fui-lifecycle-dot" aria-hidden="true">
-                {state.glyph().map(|glyph| icon(glyph, "12"))}
-            </span>
-            <span class="fui-lifecycle-text">
-                <strong>
-                    <span class="fui-sr-only">{tr(state.word()).map(|words| format!("{words} "))}</span>
-                    {title}
-                </strong>
-                <span>{line}</span>
-            </span>
-        </li>
-    }
-    .into_any()
+    let current = if state == StepState::Current {
+        " aria-current=\"step\""
+    } else {
+        ""
+    };
+    let word = tr(locale, state.word()).map(|words| format!("{words} "));
+    format!(
+        "<li{current} class=\"{}\"><span aria-hidden=\"true\" class=\"fui-lifecycle-dot\">{}</span><span class=\"fui-lifecycle-text\"><strong><span class=\"fui-sr-only\">{word}</span>{}</strong><span>{}</span></span></li>",
+        state.class(),
+        state
+            .glyph()
+            .map(|glyph| icon(glyph, "12"))
+            .unwrap_or_default(),
+        Html::text(title),
+        Html::text(line)
+    )
 }
 
 /// A revision waiting on a step: its words, its glyph, its tone and its
@@ -185,10 +185,15 @@ pub struct PendingCard {
 /// is not open yet, or what to check first).
 ///
 /// Each action is a link or a form post, so the card works with no
-/// WebAssembly; the countdown of a revision on trial is the one island it
-/// may hold ([`trial_actions`]).
+/// script; the countdown of a revision on trial is the one part that
+/// counts in the browser ([`trial_actions`]).
 #[must_use]
-pub fn pending_card(card: PendingCard, actions: Option<AnyView>, body: Option<AnyView>) -> AnyView {
+pub fn pending_card(
+    locale: &Locale,
+    card: PendingCard,
+    actions: Option<Html>,
+    body: Option<Html>,
+) -> Html {
     let PendingCard {
         title,
         line,
@@ -200,38 +205,38 @@ pub fn pending_card(card: PendingCard, actions: Option<AnyView>, body: Option<An
         || String::from("fui-pending"),
         |tone| format!("fui-pending {}", tone.class()),
     );
-    let role = tone.map(|_| "status");
-    let actions = actions.map(|actions| view! { <div class="fui-actions">{actions}</div> });
-    let name = title.clone();
-    view! {
-        <section class=class role=role aria-label=name>
-            <div class="fui-pending-head">
-                {icon(glyph, "18")}
-                <div class="fui-revision-text">
-                    <strong>{title}</strong>
-                    <span>{line}</span>
-                </div>
-                {actions}
-            </div>
-            {lifecycle(steps)}
-            {body}
-        </section>
-    }
-    .into_any()
+    let role = if tone.is_some() {
+        " role=\"status\""
+    } else {
+        ""
+    };
+    let actions = actions
+        .map(|actions| format!("<div class=\"fui-actions\">{actions}</div>"))
+        .unwrap_or_default();
+    let name = Html::text(&title);
+    Html::raw(format!(
+        "<section{role} aria-label=\"{name}\" class=\"{class}\"><div class=\"fui-pending-head\">{}<div class=\"fui-revision-text\"><strong>{name}</strong><span>{}</span></div>{actions}</div>{}{}</section>",
+        icon(glyph, "18"),
+        Html::text(line),
+        lifecycle(locale, steps),
+        body.unwrap_or_default()
+    ))
 }
 
 /// Returns the actions of a revision on trial (F2): the countdown
 /// `countdown`, then `roll_back` ("Roll back now") and the primary
 /// `confirm` beside it, both small buttons.
 ///
-/// The countdown is the island [`CommitCountdown`]; with no WebAssembly it
+/// The countdown is [`crate::view::countdown::countdown`]; with no script it
 /// shows the time left as the server drew it, and both actions still work.
 #[must_use]
-pub fn trial_actions(countdown: Countdown, roll_back: Action, confirm: Action) -> AnyView {
-    view! {
-        <CommitCountdown countdown=countdown />
-        {small_action_button(roll_back, Variant::Secondary)}
-        {small_action_button(confirm, Variant::Primary)}
-    }
-    .into_any()
+pub fn trial_actions(
+    locale: &Locale,
+    timer: Countdown,
+    roll_back: Action,
+    confirm: Action,
+) -> Html {
+    countdown(timer)
+        .then(small_action_button(locale, roll_back, Variant::Secondary))
+        .then(small_action_button(locale, confirm, Variant::Primary))
 }

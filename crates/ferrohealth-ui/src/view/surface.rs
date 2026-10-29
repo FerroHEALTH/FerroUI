@@ -10,10 +10,10 @@
 
 use std::borrow::Cow;
 
-use leptos::prelude::*;
+use askama::Template;
 
-use crate::i18n::{Message, Text, Word, tr};
-
+use crate::html::{Html, Render as _};
+use crate::i18n::{Locale, Message, Text, Word, tr};
 use crate::icon::{Glyph, icon};
 use crate::view::action::{ActionGroup, action_group};
 use crate::view::template::list::{HeadingCount, counted};
@@ -49,14 +49,14 @@ pub struct Header {
     /// and a code link (`<strong>`, `<code>`, `<a>`), drawn in place of
     /// `subtitle` when there is one. It is phrasing content: no block
     /// inside it (HTML Living Standard, the `p` element).
-    pub subtitle_view: Option<AnyView>,
+    pub subtitle_view: Option<Html>,
     /// The page's ancestors, the root first; none for a page with no trail.
     pub crumbs: Vec<Crumb>,
     /// Whether the title is drawn in the code face, for an identifier.
     pub mono: bool,
     /// The state of what the page shows, beside its title (a state, a pill
     /// or a mode badge), when it has one.
-    pub badge: Option<AnyView>,
+    pub badge: Option<Html>,
 }
 
 /// How a page's trail ends.
@@ -79,73 +79,58 @@ enum Trail {
 /// pattern). Below 40 rem it is one back link to the parent, the title
 /// under it saying where you are.
 #[must_use]
-pub fn page_heading(header: Header, actions: ActionGroup) -> impl IntoView {
-    heading(header, Trail::Here, action_group(actions))
+pub fn page_heading(locale: &Locale, header: Header, actions: ActionGroup) -> Html {
+    heading(locale, header, Trail::Here, action_group(locale, actions))
 }
 
 /// Returns the header [`page_heading`] draws, with `steps` (the previous
 /// and next of a queue, R5) at the far end in place of an action group.
-pub(crate) fn stepped_heading(header: Header, steps: AnyView) -> AnyView {
-    heading(header, Trail::Here, steps).into_any()
+pub(crate) fn stepped_heading(locale: &Locale, header: Header, steps: Html) -> Html {
+    heading(locale, header, Trail::Here, steps)
 }
 
-/// Returns a crumb's link, with the arrow it shows as a back link.
-fn crumb_link(crumb: Crumb) -> impl IntoView {
-    view! {
-        <a href=crumb.href>
-            <span class="fui-crumb-back" aria-hidden="true">
-                {icon(Glyph::ARROW_LEFT, "14")}
-            </span>
-            {crumb.label}
-        </a>
-    }
-}
-
-/// Returns the separator after a crumb, hidden from assistive technology.
-fn crumb_sep() -> impl IntoView {
-    view! {
-        <span class="fui-crumb-sep" aria-hidden="true">
-            "/"
-        </span>
-    }
+#[derive(Template)]
+#[template(path = "surface/surface.html", block = "trail")]
+struct TrailView<'a> {
+    breadcrumb: Word,
+    here: bool,
+    crumbs: Vec<(Crumb, bool)>,
+    back: Html,
+    title: &'a str,
 }
 
 /// Returns the trail `crumbs` ending as `trail` says, after them the
 /// current page `title` when it ends there.
-fn trail_of(crumbs: Vec<Crumb>, trail: Trail, title: &str) -> AnyView {
+fn trail_of(locale: &Locale, crumbs: Vec<Crumb>, trail: Trail, title: &str) -> Html {
     let last = crumbs.len().saturating_sub(1);
-    let links = crumbs
-        .into_iter()
-        .enumerate()
-        .map(|(at, crumb)| {
-            let sep = (trail == Trail::Here || at < last).then(crumb_sep);
-            view! { <li>{crumb_link(crumb)} {sep}</li> }
-        })
-        .collect_view();
-    match trail {
-        Trail::Here => view! {
-            <nav class="fui-crumbs" aria-label=tr(Text::Breadcrumb)>
-                <ol>{links} <li aria-current="page">{title.to_owned()}</li></ol>
-            </nav>
-        }
-        .into_any(),
-        Trail::Parent => view! {
-            <nav class="fui-crumbs is-parent" aria-label=tr(Text::Breadcrumb)>
-                <ol>{links}</ol>
-            </nav>
-        }
-        .into_any(),
+    let here = trail == Trail::Here;
+    TrailView {
+        breadcrumb: tr(locale, Text::Breadcrumb),
+        here,
+        crumbs: crumbs
+            .into_iter()
+            .enumerate()
+            .map(|(at, crumb)| (crumb, here || at < last))
+            .collect(),
+        back: icon(Glyph::ARROW_LEFT, "14"),
+        title,
     }
+    .html()
 }
 
-/// The subtitle line of a header: `view` when there is one, else `text`.
-fn subtitle_line(view: Option<AnyView>, text: Option<Word>) -> Option<AnyView> {
-    let line = view.or_else(|| text.map(IntoRender::into_render))?;
-    Some(view! { <p class="fui-page-subtitle">{line}</p> }.into_any())
+#[derive(Template)]
+#[template(path = "surface/surface.html", block = "heading")]
+struct HeadingView {
+    trail: Option<Html>,
+    badge: Option<Html>,
+    mono: bool,
+    title: Word,
+    actions: Html,
+    subtitle: Option<Html>,
 }
 
 /// The header [`page_heading`] and [`editor_heading`] draw.
-fn heading(header: Header, trail: Trail, actions: AnyView) -> impl IntoView {
+fn heading(locale: &Locale, header: Header, trail: Trail, actions: Html) -> Html {
     let Header {
         title,
         subtitle,
@@ -154,37 +139,29 @@ fn heading(header: Header, trail: Trail, actions: AnyView) -> impl IntoView {
         mono,
         badge,
     } = header;
-    let trail = (!crumbs.is_empty()).then(|| trail_of(crumbs, trail, title.text()));
-    // Two arms, so a title in the body face writes no `class` attribute.
-    let h1 = if mono {
-        view! { <h1 class="fui-page-title-mono">{title}</h1> }.into_any()
-    } else {
-        view! { <h1>{title}</h1> }.into_any()
-    };
-    let title_line = match badge {
-        Some(badge) => view! { <div class="fui-page-title-line">{h1} {badge}</div> }.into_any(),
-        None => h1,
-    };
-    view! {
-        <header class="fui-page-header">
-            {trail} <div class="fui-page-heading">
-                {title_line}
-                <div class="fui-actions">{actions}</div>
-            </div>
-            {subtitle_line(subtitle_view, subtitle)}
-        </header>
+    let trail = (!crumbs.is_empty()).then(|| trail_of(locale, crumbs, trail, title.text()));
+    HeadingView {
+        trail,
+        badge,
+        mono,
+        title,
+        actions,
+        subtitle: subtitle_view.or_else(|| subtitle.map(Html::from)),
     }
+    .html()
 }
 
 /// Returns the header that opens a page: its `title`, one `subtitle` line
 /// when there is one, and the action group `actions` at the far end.
 #[must_use]
 pub fn page_header(
+    locale: &Locale,
     title: impl Into<Word>,
     subtitle: Option<String>,
     actions: ActionGroup,
-) -> impl IntoView {
+) -> Html {
     page_heading(
+        locale,
         Header {
             title: title.into(),
             subtitle: subtitle.map(Word::from),
@@ -233,12 +210,15 @@ impl Mode {
 /// console whose document title must name it words a second message with
 /// `$name`.
 #[must_use]
-pub fn editor_title(message: Message, mode: &Mode) -> String {
+pub fn editor_title(locale: &Locale, message: Message, mode: &Mode) -> String {
     let name = match mode {
         Mode::Creating => String::new(),
         Mode::Editing(name) => name.clone(),
     };
-    message.text_with(&[("mode", mode.key().into()), ("name", name.into())])
+    message.text_with(
+        locale,
+        &[("mode", mode.key().into()), ("name", name.into())],
+    )
 }
 
 /// Returns the header that opens an editor in `mode`, so a reader tells from
@@ -254,62 +234,81 @@ pub fn editor_title(message: Message, mode: &Mode) -> String {
 /// so it is drawn in the body face even around an identifier.
 #[must_use]
 pub fn editor_heading(
+    locale: &Locale,
     message: Message,
     mode: &Mode,
     header: Header,
     actions: ActionGroup,
-) -> AnyView {
-    let title = editor_title(message, mode);
+) -> Html {
+    let title = editor_title(locale, message, mode);
     heading(
+        locale,
         Header {
             title: Word::new(title),
             mono: false,
             ..header
         },
         Trail::Parent,
-        action_group(actions),
+        action_group(locale, actions),
     )
-    .into_any()
+}
+
+/// `body` between the markup `open` and `close`, both the library's own.
+fn wrap(open: &str, body: Html, close: &str) -> Html {
+    let mut out = String::from(open);
+    out.push_str(&String::from(body));
+    out.push_str(close);
+    Html::raw(out)
 }
 
 /// Returns the small muted line under a page's header that says who
 /// answered the page (a replica, a server); nothing for no line.
 #[must_use]
-pub fn page_meta(line: Option<String>) -> impl IntoView {
-    line.map(|line| view! { <p class="fui-page-meta">{line}</p> })
+pub fn page_meta(line: Option<String>) -> Html {
+    line.map(|line| wrap("<p class=\"fui-page-meta\">", Html::text(line), "</p>"))
+        .unwrap_or_default()
 }
 
 /// Returns a card titled `title` holding `body`, a section under a
 /// level-two heading.
 #[must_use]
-pub fn card(title: impl Into<String>, body: impl IntoView + 'static) -> impl IntoView {
-    let body = body.into_any();
-    view! {
-        <section class="fui-card">
-            <h2 class="fui-card-title">{title.into()}</h2>
-            {body}
-        </section>
-    }
+pub fn card(title: impl Into<String>, body: Html) -> Html {
+    wrap(
+        &format!(
+            "<section class=\"fui-card\"><h2 class=\"fui-card-title\">{}</h2>",
+            Html::text(title.into())
+        ),
+        body,
+        "</section>",
+    )
 }
 
 /// Returns a card titled `title` holding `body` that spans the whole row of
 /// the grid it sits in.
 #[must_use]
-pub fn wide_card(title: impl Into<String>, body: impl IntoView + 'static) -> impl IntoView {
-    let body = body.into_any();
-    view! {
-        <section class="fui-card fui-card-wide">
-            <h2 class="fui-card-title">{title.into()}</h2>
-            {body}
-        </section>
-    }
+pub fn wide_card(title: impl Into<String>, body: Html) -> Html {
+    wrap(
+        &format!(
+            "<section class=\"fui-card fui-card-wide\"><h2 class=\"fui-card-title\">{}</h2>",
+            Html::text(title.into())
+        ),
+        body,
+        "</section>",
+    )
 }
 
 /// Returns a card holding `body` with no heading of its own.
 #[must_use]
-pub fn panel(body: impl IntoView + 'static) -> impl IntoView {
-    let body = body.into_any();
-    view! { <div class="fui-card">{body}</div> }
+pub fn panel(body: Html) -> Html {
+    wrap("<div class=\"fui-card\">", body, "</div>")
+}
+
+#[derive(Template)]
+#[template(path = "surface/surface.html", block = "titled_panel")]
+struct TitledPanel {
+    title: String,
+    actions: Html,
+    body: Html,
 }
 
 /// Returns a panel: a card whose first row holds its title and actions.
@@ -320,22 +319,21 @@ pub fn panel(body: impl IntoView + 'static) -> impl IntoView {
 /// `title` and `actions` sit over `body`, which runs to the card's edges (a table, a list). Pass a
 /// `body` with its own padding through [`panel_body`] when it is prose.
 #[must_use]
-pub fn titled_panel(
-    title: impl Into<String>,
-    actions: impl IntoView + 'static,
-    body: impl IntoView + 'static,
-) -> impl IntoView {
-    let actions = actions.into_any();
-    let body = body.into_any();
-    view! {
-        <section class="fui-card fui-panel">
-            <div class="fui-panel-head">
-                <h2 class="fui-card-title">{title.into()}</h2>
-                <div class="fui-actions">{actions}</div>
-            </div>
-            {body}
-        </section>
+pub fn titled_panel(title: impl Into<String>, actions: Html, body: Html) -> Html {
+    TitledPanel {
+        title: title.into(),
+        actions,
+        body,
     }
+    .html()
+}
+
+#[derive(Template)]
+#[template(path = "surface/surface.html", block = "card_action")]
+struct CardAction {
+    href: String,
+    label: String,
+    glyph: Html,
 }
 
 /// Returns the action at the far end of a card's or a panel's header, such
@@ -347,21 +345,19 @@ pub fn titled_panel(
 /// Pass it as a [`titled_panel`]'s actions. The arrow is decoration beside
 /// the words, hidden from assistive technology.
 #[must_use]
-pub fn card_action(href: impl Into<String>, label: impl Into<String>) -> AnyView {
-    view! {
-        <a href=href.into() class="fui-card-action">
-            <span>{label.into()}</span>
-            {icon(Glyph::ARROW_RIGHT, "14")}
-        </a>
+pub fn card_action(href: impl Into<String>, label: impl Into<String>) -> Html {
+    CardAction {
+        href: href.into(),
+        label: label.into(),
+        glyph: icon(Glyph::ARROW_RIGHT, "14"),
     }
-    .into_any()
+    .html()
 }
 
 /// Returns `body` with the card's padding, for a panel's prose.
 #[must_use]
-pub fn panel_body(body: impl IntoView + 'static) -> impl IntoView {
-    let body = body.into_any();
-    view! { <div class="fui-panel-body">{body}</div> }
+pub fn panel_body(body: Html) -> Html {
+    wrap("<div class=\"fui-panel-body\">", body, "</div>")
 }
 
 /// What a panel section's heading row shows.
@@ -373,7 +369,7 @@ pub struct SectionHead {
     /// section holds a list: every item, or the items shown of a larger set.
     pub count: Option<HeadingCount>,
     /// The section's actions at the row's end.
-    pub actions: Option<AnyView>,
+    pub actions: Option<Html>,
 }
 
 /// Returns the parts of a tab panel, `sections` drawn by [`panel_section`],
@@ -382,22 +378,30 @@ pub struct SectionHead {
 /// The tab panel is their one frame: no part is a card inside it, on a
 /// desktop or on a phone.
 #[must_use]
-pub fn panel_sections(sections: impl IntoView + 'static) -> AnyView {
-    let sections = sections.into_any();
-    view! { <div class="fui-panel">{sections}</div> }.into_any()
+pub fn panel_sections(sections: Html) -> Html {
+    wrap("<div class=\"fui-panel\">", sections, "</div>")
 }
 
 /// Returns `sections` drawn by [`panel_section`] in a card of their own,
 /// named `label`, for a page with no tabs: the card is their one frame.
 #[must_use]
-pub fn panel_sections_card(label: impl Into<String>, sections: impl IntoView + 'static) -> AnyView {
-    let sections = sections.into_any();
-    view! {
-        <section class="fui-card fui-panel" aria-label=label.into()>
-            {sections}
-        </section>
-    }
-    .into_any()
+pub fn panel_sections_card(label: impl Into<String>, sections: Html) -> Html {
+    wrap(
+        &format!(
+            "<section aria-label=\"{}\" class=\"fui-card fui-panel\">",
+            Html::text(label.into())
+        ),
+        sections,
+        "</section>",
+    )
+}
+
+#[derive(Template)]
+#[template(path = "surface/surface.html", block = "panel_section")]
+struct PanelSection {
+    title: Option<Html>,
+    actions: Option<Html>,
+    body: Html,
 }
 
 /// Returns one part of a tab panel (B10): its heading row, when it has
@@ -409,50 +413,56 @@ pub fn panel_sections_card(label: impl Into<String>, sections: impl IntoView + '
 /// heading in the page outline (WCAG 2.2 SC 1.3.1). No specification
 /// governs the layout: our own design.
 #[must_use]
-pub fn panel_section(head: Option<SectionHead>, body: impl IntoView + 'static) -> AnyView {
-    let body = body.into_any();
-    let head = head.map(
-        |SectionHead {
-             title,
-             count,
-             actions,
-         }| {
-            let title = match count {
-                Some(count) => counted(title, count),
-                None => title.into_any(),
-            };
-            let actions = actions.map(|actions| view! { <div class="fui-actions">{actions}</div> });
-            view! {
-                <div class="fui-panel-section-head">
-                    <h3 class="fui-panel-section-title">{title}</h3>
-                    {actions}
-                </div>
-            }
-        },
-    );
-    view! { <section class="fui-panel-section">{head} {body}</section> }.into_any()
+pub fn panel_section(locale: &Locale, head: Option<SectionHead>, body: Html) -> Html {
+    let (title, actions) = match head {
+        Some(SectionHead {
+            title,
+            count,
+            actions,
+        }) => (
+            Some(match count {
+                Some(count) => counted(locale, title, count),
+                None => Html::text(title),
+            }),
+            actions,
+        ),
+        None => (None, None),
+    };
+    PanelSection {
+        title,
+        actions,
+        body,
+    }
+    .html()
 }
 
 /// Returns the one sentence under a section's heading that says what the
 /// section holds.
 #[must_use]
-pub fn section_intro(sentence: impl Into<String>) -> AnyView {
-    view! { <p class="fui-small fui-muted fui-section-intro">{sentence.into()}</p> }.into_any()
+pub fn section_intro(sentence: impl Into<String>) -> Html {
+    wrap(
+        "<p class=\"fui-small fui-muted fui-section-intro\">",
+        Html::text(sentence.into()),
+        "</p>",
+    )
 }
 
 /// Returns the row of Add buttons under a list of rows in a section.
 #[must_use]
-pub fn add_row(buttons: impl IntoView + 'static) -> AnyView {
-    let buttons = buttons.into_any();
-    view! { <div class="fui-cluster fui-add-row">{buttons}</div> }.into_any()
+pub fn add_row(buttons: Html) -> Html {
+    wrap("<div class=\"fui-cluster fui-add-row\">", buttons, "</div>")
 }
 
 /// Returns a file beside its diagnostics in a tab panel: `file`, a
 /// [`crate::view::code::code_viewer`] with its head, and `side`, a
 /// [`panel_section`], split by a hairline and stacked under 64 rem.
 #[must_use]
-pub fn source_split(file: AnyView, side: AnyView) -> AnyView {
-    view! { <div class="fui-panel fui-source-split">{file} {side}</div> }.into_any()
+pub fn source_split(file: Html, side: Html) -> Html {
+    wrap(
+        "<div class=\"fui-panel fui-source-split\">",
+        file.then(side),
+        "</div>",
+    )
 }
 
 /// What a stat card shows.
@@ -469,18 +479,14 @@ pub struct Stat {
     pub href: Option<String>,
 }
 
-/// Returns the card around a stat's `inner`: the whole card a link to
-/// `href` when the stat leads to a page.
-fn stat_frame(href: Option<String>, inner: AnyView) -> AnyView {
-    match href {
-        Some(href) => view! {
-            <a href=href class="fui-card fui-stat">
-                {inner}
-            </a>
-        }
-        .into_any(),
-        None => view! { <div class="fui-card fui-stat">{inner}</div> }.into_any(),
-    }
+#[derive(Template)]
+#[template(path = "surface/surface.html", block = "stat")]
+struct StatView {
+    href: Option<String>,
+    glyph: Html,
+    value: String,
+    label: Cow<'static, str>,
+    mark: Html,
 }
 
 /// Returns a stat card: the glyph in a square on the accent's tint, the
@@ -491,84 +497,74 @@ fn stat_frame(href: Option<String>, inner: AnyView) -> AnyView {
 /// label on one line, the label cut with an ellipsis and named whole in its
 /// `title`.
 #[must_use]
-pub fn stat_card(stat: Stat) -> impl IntoView {
-    let title = stat.label.to_string();
-    let inner = view! {
-        <span class="fui-stat-glyph">{icon(stat.glyph, "20")}</span>
-        <div class="fui-stat-text">
-            <div class="fui-stat-value">{stat.value}</div>
-            <div class="fui-stat-label">
-                <span title=title>{stat.label}</span>
-            </div>
-        </div>
-    }
-    .into_any();
-    stat_frame(stat.href, inner)
+pub fn stat_card(stat: Stat) -> Html {
+    stat_card_marked(stat, Html::empty())
 }
 
 /// Returns a stat card as [`stat_card`] draws it, with `mark` (a pill or a
 /// badge that says more, such as "2 failing") after the label.
 #[must_use]
-pub fn stat_card_marked(stat: Stat, mark: impl IntoView + 'static) -> impl IntoView {
-    let title = stat.label.to_string();
-    let inner = view! {
-        <span class="fui-stat-glyph">{icon(stat.glyph, "20")}</span>
-        <div class="fui-stat-text">
-            <div class="fui-stat-value">{stat.value}</div>
-            <div class="fui-stat-label">
-                <span title=title>{stat.label}</span>
-                {mark}
-            </div>
-        </div>
+pub fn stat_card_marked(stat: Stat, mark: Html) -> Html {
+    StatView {
+        href: stat.href,
+        glyph: icon(stat.glyph, "20"),
+        value: stat.value,
+        label: stat.label,
+        mark,
     }
-    .into_any();
-    stat_frame(stat.href, inner)
+    .html()
+}
+
+#[derive(Template)]
+#[template(path = "surface/surface.html", block = "definitions")]
+struct Definitions {
+    rows: Vec<(Word, Html)>,
 }
 
 /// Returns a compact definition grid: each label beside its value from
 /// 40 rem up, one above the other below it.
 #[must_use]
-pub fn definitions(rows: Vec<(impl Into<Word>, AnyView)>) -> impl IntoView {
-    let rows = rows
-        .into_iter()
-        .map(|(label, value)| {
-            let label: Word = label.into();
-            view! {
-                <dt>{label}</dt>
-                <dd>{value}</dd>
-            }
-        })
-        .collect_view();
-    view! { <dl class="fui-facts">{rows}</dl> }
+pub fn definitions(rows: Vec<(impl Into<Word>, Html)>) -> Html {
+    Definitions {
+        rows: rows
+            .into_iter()
+            .map(|(label, value)| (label.into(), value))
+            .collect(),
+    }
+    .html()
+}
+
+#[derive(Template)]
+#[template(path = "surface/surface.html", block = "facts_row")]
+struct FactsRow {
+    rows: Vec<(String, Html)>,
 }
 
 /// Returns facts across a row, as a detail page opens: each label small and
 /// upper case over its value, the columns sharing the width.
 #[must_use]
-pub fn facts_row(rows: Vec<(impl Into<String>, AnyView)>) -> impl IntoView {
-    let rows = rows
-        .into_iter()
-        .map(|(label, value)| {
-            let label = label.into();
-            view! {
-                <div>
-                    <dt>{label}</dt>
-                    <dd>{value}</dd>
-                </div>
-            }
-        })
-        .collect_view();
-    view! { <dl class="fui-facts-row">{rows}</dl> }
+pub fn facts_row(rows: Vec<(impl Into<String>, Html)>) -> Html {
+    FactsRow {
+        rows: rows
+            .into_iter()
+            .map(|(label, value)| (label.into(), value))
+            .collect(),
+    }
+    .html()
 }
 
 /// Returns `value`, or the muted word "none" when it is empty, for a
 /// definition whose value can be absent.
 #[must_use]
-pub fn or_none(value: String) -> AnyView {
+pub fn or_none(locale: &Locale, value: String) -> Html {
     if value.is_empty() {
-        view! { <span class="fui-muted">{tr(Text::NoneValue)}</span> }.into_any()
+        wrap(
+            "<span class=\"fui-muted\">",
+            tr(locale, Text::NoneValue).into(),
+            "</span>",
+        )
     } else {
-        value.into_any()
+        Html::text(value)
     }
 }
 
@@ -578,8 +574,22 @@ pub fn or_none(value: String) -> AnyView {
 /// A kind, a format, an owner or a namespace is a tag
 /// ([`crate::view::tag::tag`]), in the UI face.
 #[must_use]
-pub fn chip(text: impl Into<String>) -> impl IntoView {
-    view! { <span class="fui-chip">{text.into()}</span> }
+pub fn chip(text: impl Into<String>) -> Html {
+    wrap(
+        "<span class=\"fui-chip\">",
+        Html::text(text.into()),
+        "</span>",
+    )
+}
+
+#[derive(Template)]
+#[template(path = "surface/surface.html", block = "linked")]
+struct Linked {
+    href: String,
+    glyph: Html,
+    title: String,
+    go: Html,
+    body: Html,
 }
 
 /// Returns a card that is one link to `href`: its title, then `body`.
@@ -589,12 +599,8 @@ pub fn chip(text: impl Into<String>) -> impl IntoView {
 /// keyboard. `body` holds no link or control of its own, since the card is
 /// one.
 #[must_use]
-pub fn link_card(
-    href: impl Into<String>,
-    title: impl Into<String>,
-    body: impl IntoView + 'static,
-) -> AnyView {
-    linked(href.into(), None, title.into(), body.into_any())
+pub fn link_card(href: impl Into<String>, title: impl Into<String>, body: Html) -> Html {
+    linked(href.into(), None, title.into(), body)
 }
 
 /// Returns the card [`link_card`] draws, with `glyph` before its title.
@@ -603,92 +609,97 @@ pub fn link_card_glyph(
     href: impl Into<String>,
     glyph: Glyph,
     title: impl Into<String>,
-    body: impl IntoView + 'static,
-) -> AnyView {
-    linked(href.into(), Some(glyph), title.into(), body.into_any())
+    body: Html,
+) -> Html {
+    linked(href.into(), Some(glyph), title.into(), body)
 }
 
 /// The card both [`link_card`] and [`link_card_glyph`] draw.
-fn linked(href: String, glyph: Option<Glyph>, title: String, body: AnyView) -> AnyView {
-    view! {
-        <a href=href class="fui-card fui-card-link">
-            <h2 class="fui-card-title">
-                {glyph.map(|glyph| icon(glyph, "16"))} <span>{title}</span>
-                <span class="fui-card-go">{icon(Glyph::CHEVRON_RIGHT, "16")}</span>
-            </h2>
-            {body}
-        </a>
+fn linked(href: String, glyph: Option<Glyph>, title: String, body: Html) -> Html {
+    Linked {
+        href,
+        glyph: glyph.map(|glyph| icon(glyph, "16")).unwrap_or_default(),
+        title,
+        go: icon(Glyph::CHEVRON_RIGHT, "16"),
+        body,
     }
-    .into_any()
+    .html()
 }
 
 /// Returns `body` in a well: a sunken box set apart inside a card.
 #[must_use]
-pub fn well(body: impl IntoView + 'static) -> impl IntoView {
-    let body = body.into_any();
-    view! { <div class="fui-well">{body}</div> }
+pub fn well(body: Html) -> Html {
+    wrap("<div class=\"fui-well\">", body, "</div>")
+}
+
+#[derive(Template)]
+#[template(path = "surface/surface.html", block = "disclosure")]
+struct Disclosure {
+    summary: String,
+    body: Html,
 }
 
 /// Returns a disclosure: `summary` the browser folds `body` under.
 #[must_use]
-pub fn disclosure(summary: impl Into<String>, body: impl IntoView + 'static) -> impl IntoView {
-    let body = body.into_any();
-    view! {
-        <details class="fui-disclosure">
-            <summary>{summary.into()}</summary>
-            <div>{body}</div>
-        </details>
+pub fn disclosure(summary: impl Into<String>, body: Html) -> Html {
+    Disclosure {
+        summary: summary.into(),
+        body,
     }
+    .html()
 }
 
 /// Returns `children` one above the other with the loose gap between.
 #[must_use]
-pub fn stack(children: impl IntoView + 'static) -> impl IntoView {
-    let children = children.into_any();
-    view! { <div class="fui-stack">{children}</div> }
+pub fn stack(children: Html) -> Html {
+    wrap("<div class=\"fui-stack\">", children, "</div>")
 }
 
 /// Returns `children` in a grid of columns at least 16 rem wide that share
 /// the whole row.
 #[must_use]
-pub fn grid(children: impl IntoView + 'static) -> impl IntoView {
-    let children = children.into_any();
-    view! { <div class="fui-grid">{children}</div> }
+pub fn grid(children: Html) -> Html {
+    wrap("<div class=\"fui-grid\">", children, "</div>")
 }
 
 /// Returns `children` in the grid [`grid`] draws, each card at its own
 /// height rather than stretched to its row's tallest: for cards of unlike
 /// length side by side.
 #[must_use]
-pub fn grid_start(children: impl IntoView + 'static) -> impl IntoView {
-    let children = children.into_any();
-    view! { <div class="fui-grid fui-grid-start">{children}</div> }
+pub fn grid_start(children: Html) -> Html {
+    wrap(
+        "<div class=\"fui-grid fui-grid-start\">",
+        children,
+        "</div>",
+    )
 }
 
 /// Returns stat cards in the grid a dashboard opens with, closer together.
 #[must_use]
-pub fn stat_grid(children: impl IntoView + 'static) -> impl IntoView {
-    let children = children.into_any();
-    view! { <div class="fui-grid fui-grid-stats">{children}</div> }
+pub fn stat_grid(children: Html) -> Html {
+    wrap(
+        "<div class=\"fui-grid fui-grid-stats\">",
+        children,
+        "</div>",
+    )
 }
 
 /// Returns `children` in a wrapping row, centred on the cross axis.
 #[must_use]
-pub fn cluster(children: impl IntoView + 'static) -> impl IntoView {
-    let children = children.into_any();
-    view! { <div class="fui-cluster">{children}</div> }
+pub fn cluster(children: Html) -> Html {
+    wrap("<div class=\"fui-cluster\">", children, "</div>")
+}
+
+#[derive(Template)]
+#[template(path = "surface/surface.html", block = "split")]
+struct Split {
+    start: Html,
+    end: Html,
 }
 
 /// Returns `start` and `end` on one wrapping row, `start` at the start and
 /// `end` at the end: a header line with its actions.
 #[must_use]
-pub fn split(start: impl IntoView + 'static, end: impl IntoView + 'static) -> impl IntoView {
-    let start = start.into_any();
-    let end = end.into_any();
-    view! {
-        <div class="fui-split">
-            <div>{start}</div>
-            <div class="fui-cluster">{end}</div>
-        </div>
-    }
+pub fn split(start: Html, end: Html) -> Html {
+    Split { start, end }.html()
 }

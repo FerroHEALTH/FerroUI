@@ -8,10 +8,11 @@
 //! it disabled, say the reason in a help line under it and name that line
 //! with `aria-describedby`, so a reader who reaches the button hears why.
 
-use leptos::prelude::*;
+use askama::Template;
 use serde::{Deserialize, Serialize};
 
-use crate::i18n::{Text, Word, tr};
+use crate::html::{Html, Render as _};
+use crate::i18n::{Locale, Text, Word, tr};
 use crate::icon::{Glyph, icon};
 
 /// What a button is for, which sets how much it stands out.
@@ -67,28 +68,42 @@ impl Variant {
         }
     }
 
-    /// The variant's name in the page's locale, as the gallery labels it.
+    /// The variant's name in `locale`, as the gallery labels it.
     #[must_use]
-    pub fn name(self) -> Word {
-        tr(match self {
-            Self::Primary => Text::VariantPrimary,
-            Self::Secondary => Text::VariantSecondary,
-            Self::Danger => Text::VariantDanger,
-            Self::Destructive => Text::VariantDestructive,
-            Self::Ghost => Text::VariantGhost,
-        })
+    pub fn name(self, locale: &Locale) -> Word {
+        tr(
+            locale,
+            match self {
+                Self::Primary => Text::VariantPrimary,
+                Self::Secondary => Text::VariantSecondary,
+                Self::Danger => Text::VariantDanger,
+                Self::Destructive => Text::VariantDestructive,
+                Self::Ghost => Text::VariantGhost,
+            },
+        )
     }
 }
 
 /// Returns the inside of a button: the icon `glyph`, when there is one,
 /// beside the word `label`.
 #[must_use]
-pub fn label<L: Into<Word>>(glyph: Option<Glyph>, label: L) -> impl IntoView + use<L> {
+pub fn label(glyph: Option<Glyph>, label: impl Into<Word>) -> Html {
     let label: Word = label.into();
-    view! {
-        {glyph.map(|glyph| icon(glyph, "16"))}
-        {label}
-    }
+    Html::join([
+        glyph.map(|glyph| icon(glyph, "16")).unwrap_or_default(),
+        label.into(),
+    ])
+}
+
+#[derive(Template)]
+#[template(
+    source = r#"<a href="{{ href }}" class="{{ class }}">{{ inside }}</a>"#,
+    ext = "html"
+)]
+struct LinkButton {
+    href: String,
+    class: &'static str,
+    inside: Html,
 }
 
 /// Returns a link to `href` drawn as a button of `variant`, with `glyph`
@@ -99,12 +114,37 @@ pub fn link_button(
     variant: Variant,
     glyph: Option<Glyph>,
     text: impl Into<String>,
-) -> AnyView {
-    let text = text.into();
-    view! {
-        <a href=href class=variant.class()>
-            {label(glyph, text)}
-        </a>
+) -> Html {
+    LinkButton {
+        href,
+        class: variant.class(),
+        inside: label(glyph, text.into()),
     }
-    .into_any()
+    .html()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Variant, link_button};
+    use crate::icon::Glyph;
+
+    #[test]
+    fn a_link_button_carries_its_variant_and_escapes_its_words() {
+        let html = link_button(
+            String::from("/a?b=1&c=2"),
+            Variant::Primary,
+            Some(Glyph::PLUS),
+            "New <thing>",
+        );
+        assert!(
+            html.as_str()
+                .starts_with(r#"<a href="/a?b=1&#38;c=2" class="fui-button fui-button-primary">"#)
+                || html.as_str().starts_with(
+                    r#"<a href="/a?b=1&#38;c=2" class="fui-button fui-button-primary">"#
+                ),
+            "{html}"
+        );
+        assert!(html.as_str().contains("New &#60;thing&#62;</a>"), "{html}");
+        assert!(html.as_str().contains("<svg"), "{html}");
+    }
 }

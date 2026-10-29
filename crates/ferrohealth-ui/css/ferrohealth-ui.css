@@ -233,15 +233,6 @@
     box-sizing: border-box;
   }
 
-  /* The elements Leptos islands mode wraps an island and its children in
-     draw no box of their own, so a flex or grid parent lays out what an
-     island draws as its own children; each container's rhythm between its
-     children reaches through them too. */
-  leptos-island,
-  leptos-children {
-    display: contents;
-  }
-
   html {
     background: var(--surface);
     -webkit-text-size-adjust: 100%;
@@ -764,8 +755,7 @@
     gap: var(--space-default);
   }
 
-  .fui-topbar-end > *,
-  .fui-topbar-end > :where(leptos-island, leptos-children) > * {
+  .fui-topbar-end > * {
     flex-shrink: 0;
   }
 
@@ -942,9 +932,7 @@
      unbroken line inside it (a URL, a scrolling code box): a grid item's
      automatic minimum is its content, which would widen the page. */
   .fui-stack > *,
-  .fui-grid > *,
-  .fui-stack > :where(leptos-island, leptos-children) > *,
-  .fui-grid > :where(leptos-island, leptos-children) > * {
+  .fui-grid > * {
     min-width: 0;
   }
 
@@ -1185,8 +1173,7 @@
   }
 
   @media (width < 48rem) {
-    .fui-sidebar > .fui-drawer-only + .fui-sidebar-nav > .fui-nav-group:first-child + .fui-nav-list,
-    .fui-sidebar > .fui-drawer-only + .fui-sidebar-nav > leptos-children > .fui-nav-group:first-child + .fui-nav-list {
+    .fui-sidebar > .fui-drawer-only + .fui-sidebar-nav > .fui-nav-group:first-child + .fui-nav-list {
       border-top: 1px solid var(--edge);
       padding-block-start: 0.375rem;
     }
@@ -1715,9 +1702,7 @@
     padding: var(--space-loose);
   }
 
-  .fui-card > * + *,
-  .fui-card > :where(leptos-island, leptos-children) > * + *,
-  .fui-card > * + :where(leptos-island, leptos-children) > :where(:first-child) {
+  .fui-card > * + * {
     margin-block-start: 0.75rem;
   }
 
@@ -1951,9 +1936,7 @@
     padding: 0;
   }
 
-  .fui-panel > * + *,
-  .fui-panel > :where(leptos-island, leptos-children) > * + *,
-  .fui-panel > * + :where(leptos-island, leptos-children) > :where(:first-child) {
+  .fui-panel > * + * {
     margin-block-start: 0;
   }
 
@@ -2553,9 +2536,8 @@
     vertical-align: top;
   }
 
-  /* A row menu in the actions cell (its island draws no box) sits on the
+  /* A row menu in the actions cell (its menu draws no box) sits on the
      same first line, its 2 rem trigger centred on the line. */
-  .fui-table-actions > :where(leptos-island, leptos-children) > .fui-anchor,
   .fui-table-actions > .fui-anchor {
     margin-block: calc((var(--leading-body) - 2rem) / 2);
     vertical-align: top;
@@ -2803,8 +2785,7 @@
     gap: 0.75rem;
   }
 
-  .fui-field-flow > *,
-  .fui-field-flow > :where(leptos-island, leptos-children) > * {
+  .fui-field-flow > * {
     min-width: 0;
     flex: 1 1 10rem;
   }
@@ -3207,8 +3188,8 @@
     accent-color: var(--accent);
   }
 
-  /* The picker's input, hidden once the page has hydrated and a listed
-     choice is chosen; before hydration both controls show. */
+  /* The picker's input, hidden once the module runs and a listed
+     choice is chosen; before it runs both controls show. */
   .fui-picker {
     gap: var(--space-default);
   }
@@ -3469,9 +3450,7 @@
     text-align: start;
   }
 
-  .fui-sign-in > * + *,
-  .fui-sign-in > :where(leptos-island, leptos-children) > * + *,
-  .fui-sign-in > * + :where(leptos-island, leptos-children) > :where(:first-child) {
+  .fui-sign-in > * + * {
     margin-block-start: 0;
   }
 
@@ -3526,9 +3505,7 @@
     line-height: var(--leading-micro);
   }
 
-  .fui-menu > * + *,
-  .fui-menu > :where(leptos-island, leptos-children) > * + *,
-  .fui-menu > * + :where(leptos-island, leptos-children) > :where(:first-child) {
+  .fui-menu > * + * {
     margin-block-start: 0.75rem;
   }
 
@@ -3575,9 +3552,7 @@
   /* A confirmation with fields draws its parts inside the one form it
      posts, which keeps the dialog's rhythm between them. */
   .fui-dialog > * + *,
-  .fui-dialog > .fui-dialog-form > * + *,
-  .fui-dialog > :where(leptos-island, leptos-children) > * + *,
-  .fui-dialog > * + :where(leptos-island, leptos-children) > :where(:first-child) {
+  .fui-dialog > .fui-dialog-form > * + * {
     margin-block-start: 0.75rem;
   }
 
@@ -3627,7 +3602,7 @@
     }
   }
 
-  /* Dismiss before the page hydrates: a native disclosure whose summary is
+  /* Dismiss before the module runs: a native disclosure whose summary is
      the button; closing it hides its toast. */
   .fui-toast-close > summary {
     list-style: none;
@@ -3721,9 +3696,7 @@
     white-space: pre-line;
   }
 
-  .fui-alert > * + *,
-  .fui-alert > :where(leptos-island, leptos-children) > * + *,
-  .fui-alert > * + :where(leptos-island, leptos-children) > :where(:first-child) {
+  .fui-alert > * + * {
     margin-block-start: var(--space-default);
   }
 
@@ -4059,9 +4032,9 @@
     outline: none;
   }
 
-  /* Until its island runs, with no WebAssembly too, the text area shows
-     its own text in ink and scrolls itself, and the layer keeps only its
-     gutter and marks, so a key typed before the page hydrates shows. */
+  /* Until its module runs, with no script too, the text area shows its
+     own text in ink and scrolls itself, and the layer keeps only its
+     gutter and marks, so a key typed before the module runs shows. */
   .fui-editor-stack.is-static > .fui-editor-input {
     overflow: auto;
     color: var(--ink);
@@ -4097,9 +4070,7 @@
     display: none;
   }
 
-  .fui-modal-body > * + *,
-  .fui-modal-body > :where(leptos-island, leptos-children) > * + *,
-  .fui-modal-body > * + :where(leptos-island, leptos-children) > :where(:first-child) {
+  .fui-modal-body > * + * {
     margin-block-start: 0.75rem;
   }
 
@@ -4163,9 +4134,7 @@
     padding: var(--space-loose);
   }
 
-  .fui-side-panel-body > * + *,
-  .fui-side-panel-body > :where(leptos-island, leptos-children) > * + *,
-  .fui-side-panel-body > * + :where(leptos-island, leptos-children) > :where(:first-child) {
+  .fui-side-panel-body > * + * {
     margin-block-start: 0.75rem;
   }
 
@@ -4495,8 +4464,8 @@
     stroke-width: 1.5;
   }
 
-  /* The legend as a static key, before the page hydrates or with no
-     WebAssembly: each swatch beside its name, no control. */
+  /* The legend as a static key, before the module runs or with no
+     script: each swatch beside its name, no control. */
   .fui-legend-key {
     display: inline-flex;
     align-items: center;
@@ -4566,7 +4535,7 @@
     display: none;
   }
 
-  /* With no WebAssembly a view's link targets it, and the view targeted
+  /* With no script a view's link targets it, and the view targeted
      shows in place of the chosen one, its segment marked. */
   .fui-document-views:not(.is-live):has(.fui-document-view:target) .fui-document-view:not(:target) {
     display: none;
@@ -5474,7 +5443,7 @@
     }
   }
 
-  /* The work-list island adds no box of its own. */
+  /* The work-list's grid adds no box of its own. */
   .fui-worklist-grid {
     display: contents;
   }
@@ -5903,8 +5872,7 @@
   }
 
   /* The sheet: the panel's edge runs under the inactive tabs. */
-  .fui-tabbed > .fui-tab-panel,
-  .fui-tabbed > leptos-children > .fui-tab-panel {
+  .fui-tabbed > .fui-tab-panel {
     min-width: 0;
     border: 1px solid var(--edge-strong);
     border-radius: var(--radius-card);
@@ -5913,8 +5881,7 @@
   }
 
   /* A card inside the sheet is the sheet: no second frame. */
-  .fui-tabbed > .fui-tab-panel > :is(.fui-card, .fui-panel),
-  .fui-tabbed > leptos-children > .fui-tab-panel > :is(.fui-card, .fui-panel) {
+  .fui-tabbed > .fui-tab-panel > :is(.fui-card, .fui-panel) {
     border: 0;
     box-shadow: none;
     padding: 0;
@@ -5922,18 +5889,15 @@
 
   /* A titled table fills the sheet edge to edge: the sheet gives up its
      padding and the head keeps it. */
-  .fui-tabbed > .fui-tab-panel:has(> .fui-panel),
-  .fui-tabbed > leptos-children > .fui-tab-panel:has(> .fui-panel) {
+  .fui-tabbed > .fui-tab-panel:has(> .fui-panel) {
     padding: 0;
   }
 
-  .fui-tabbed > .fui-tab-panel > .fui-panel > .fui-panel-head,
-  .fui-tabbed > leptos-children > .fui-tab-panel > .fui-panel > .fui-panel-head {
+  .fui-tabbed > .fui-tab-panel > .fui-panel > .fui-panel-head {
     padding: 0.75rem var(--space-loose);
   }
 
-  .fui-tabbed > .fui-tab-panel > .fui-panel > .fui-table-scroll,
-  .fui-tabbed > leptos-children > .fui-tab-panel > .fui-panel > .fui-table-scroll {
+  .fui-tabbed > .fui-tab-panel > .fui-panel > .fui-table-scroll {
     border-radius: 0 0 var(--radius-card) var(--radius-card);
   }
 
@@ -5955,13 +5919,11 @@
       padding-inline: 0.75rem;
     }
 
-    .fui-tabbed > .fui-tab-panel,
-    .fui-tabbed > leptos-children > .fui-tab-panel {
+    .fui-tabbed > .fui-tab-panel {
       padding: 0.75rem;
     }
 
-    .fui-tabbed > .fui-tab-panel > .fui-panel > .fui-table-stack,
-    .fui-tabbed > leptos-children > .fui-tab-panel > .fui-panel > .fui-table-stack {
+    .fui-tabbed > .fui-tab-panel > .fui-panel > .fui-table-stack {
       padding: 0 0.75rem 0.75rem;
     }
   }
@@ -6220,9 +6182,7 @@
     inset-inline: 0 auto;
   }
 
-  .fui-menu-anchored > * + *,
-  .fui-menu-anchored > :where(leptos-island, leptos-children) > * + *,
-  .fui-menu-anchored > * + :where(leptos-island, leptos-children) > :where(:first-child) {
+  .fui-menu-anchored > * + * {
     margin-block-start: 0;
   }
 
@@ -6665,7 +6625,7 @@
     padding-inline-start: 0.125rem;
   }
 
-  .fui-input-group > .fui-input:has(+ :is(.fui-input-suffix, .fui-input-toggle, leptos-island)) {
+  .fui-input-group > .fui-input:has(+ :is(.fui-input-suffix, .fui-input-toggle)) {
     padding-inline-end: 0.25rem;
   }
 
@@ -6679,18 +6639,6 @@
   }
 
   .fui-input-group > .fui-input-toggle:focus-visible {
-    outline: 2px solid var(--focus);
-    outline-offset: -2px;
-  }
-
-  /* An inner button that is an island, such as a masked input's eye, sits
-     in the group through its island's box-less wrapper. */
-  .fui-input-group > leptos-island > .fui-input-toggle {
-    width: 1.875rem;
-    height: 1.875rem;
-  }
-
-  .fui-input-group > leptos-island > .fui-input-toggle:focus-visible {
     outline: 2px solid var(--focus);
     outline-offset: -2px;
   }
@@ -6725,7 +6673,7 @@
   }
 
   /* A range's From and To fields, which show in place of its button until
-     the page's WebAssembly runs. */
+     the page's module runs. */
   .fui-date-range-fields {
     display: flex;
     flex-wrap: wrap;
@@ -7249,9 +7197,7 @@
     padding: 0.875rem var(--space-loose) 0;
   }
 
-  .fui-setting-card > * + *,
-  .fui-setting-card > :where(leptos-island, leptos-children) > * + *,
-  .fui-setting-card > * + :where(leptos-island, leptos-children) > :where(:first-child) {
+  .fui-setting-card > * + * {
     margin-block-start: 0;
   }
 
@@ -7956,9 +7902,7 @@
   }
 
   .fui-identifier-shown > *,
-  .fui-identifier-tools > *,
-  .fui-identifier-shown > :where(leptos-island, leptos-children) > *,
-  .fui-identifier-tools > :where(leptos-island, leptos-children) > * {
+  .fui-identifier-tools > * {
     white-space: nowrap;
   }
 
@@ -8305,9 +8249,7 @@
     padding: 0.75rem var(--space-loose) var(--space-loose);
   }
 
-  .fui-popover > * + *,
-  .fui-popover > :where(leptos-island, leptos-children) > * + *,
-  .fui-popover > * + :where(leptos-island, leptos-children) > :where(:first-child) {
+  .fui-popover > * + * {
     margin-block-start: 0.75rem;
   }
 
@@ -9083,7 +9025,7 @@
     border-color: color-mix(in srgb, var(--accent) 45%, transparent);
   }
 
-  /* The island's list and the wrapper that keeps a row and its error line
+  /* The list and the wrapper that keeps a row and its error line
      together, so Remove takes both; neither draws a box, so the rows lay
      out as the list's own children. */
   .fui-repeat,
@@ -10326,7 +10268,7 @@
   /* F13 and R29 on their native floor: the trigger is the summary of a
      `<details>`, so the menu opens with no script; its marker is dropped,
      an open menu's trigger looks pressed as aria-expanded makes it once
-     the island runs, and a form around an item adds no box. */
+     the module runs, and a form around an item adds no box. */
   details.fui-anchor,
   details.fui-select-anchor {
     display: inline-block;
@@ -11019,8 +10961,7 @@
   }
 
   @media (width < 40rem) {
-    .fui-dock-actions > *,
-    .fui-dock-actions > :where(leptos-island, leptos-children) > * {
+    .fui-dock-actions > * {
       flex: 1 1 100%;
     }
   }
@@ -11142,7 +11083,7 @@
     opacity: 1;
   }
 
-  /* Until the page hydrates the key is text to select, with no button. */
+  /* Until the module runs the key is text to select, with no button. */
   .fui-key-hint.is-text {
     cursor: text;
   }
@@ -11175,8 +11116,8 @@
 
   /* Many tabs on a phone: a select names every section at once, and its Go
      button leads there, so choosing alone changes nothing (WCAG 3.2.2). It
-     takes the row's place only once it works (enabled, which the island does
-     as it hydrates); until then the row of links serves. */
+     takes the row's place only once it works (enabled, which the module does
+     as it runs); until then the row of links serves. */
   .fui-tabs-select {
     display: none;
   }
@@ -13527,8 +13468,7 @@
     gap: var(--space-default);
   }
 
-  .fui-at-time > .fui-field,
-  .fui-at-time > :where(leptos-island, leptos-children) > .fui-field {
+  .fui-at-time > .fui-field {
     margin: 0;
     min-width: 0;
     flex: 0 1 18rem;
@@ -14297,9 +14237,8 @@
   }
 
   /* B2 in a B10 section has no card frame and runs edge to edge, drawn
-     there itself or as an island. */
-  .fui-panel-section > .fui-mapping-editor,
-  .fui-panel-section > leptos-island > .fui-mapping-editor {
+     there itself. */
+  .fui-panel-section > .fui-mapping-editor {
     margin-inline: calc(var(--space-loose) * -1);
     border: 0;
     border-top: 1px solid var(--edge);
@@ -14307,8 +14246,7 @@
     box-shadow: none;
   }
 
-  .fui-panel-section > .fui-mapping-editor:last-child,
-  .fui-panel-section > leptos-island:last-child > .fui-mapping-editor {
+  .fui-panel-section > .fui-mapping-editor:last-child {
     margin-block-end: calc(var(--space-loose) * -1);
   }
 
@@ -15165,7 +15103,7 @@
     }
   }
 
-  /* A repeatable list's blank row: a disabled fieldset that hydrates with the
+  /* A repeatable list's blank row: a disabled fieldset that arrives with the
      page, never shows and never posts; Add copies its rows. */
   .fui-repeat-blank[hidden] {
     display: none;
@@ -15178,7 +15116,7 @@
      ground lifted above the raised cards. It is out of the flow, so it moves
      nothing on the page, and it sits above the sticky top bar's other
      content. It opens from the field's start edge at least as wide as the
-     field and at most 40rem, never past the window's 16px gutter; the island
+     field and at most 40rem, never past the window's 16px gutter; the module
      opens it from the end edge (`is-end`) or as wide as the field
      (`is-narrow`) when the window has no room. It ends above the window's
      foot and scrolls inside itself, so every hit stays reachable under the

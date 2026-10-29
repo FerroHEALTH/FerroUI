@@ -15,9 +15,10 @@
 //! the same title as the document's. No specification governs the page:
 //! our own design.
 
-use leptos::prelude::*;
+use askama::Template;
 
-use crate::i18n::{Text, Word, tr, tr_with};
+use crate::html::{Html, Render as _};
+use crate::i18n::{Locale, Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::view::button::{Variant, link_button};
 
@@ -54,13 +55,14 @@ impl Status {
 
     /// The status in words, then its number: "Not allowed · 403".
     #[must_use]
-    pub fn line(self) -> Word {
+    pub fn line(self, locale: &Locale) -> Word {
         let words = match self {
-            Self::Forbidden => tr(Text::ErrorForbidden),
-            Self::NotFound => tr(Text::ErrorNotFound),
-            Self::Fault => tr(Text::ErrorFault),
+            Self::Forbidden => tr(locale, Text::ErrorForbidden),
+            Self::NotFound => tr(locale, Text::ErrorNotFound),
+            Self::Fault => tr(locale, Text::ErrorFault),
         };
         tr_with(
+            locale,
             Text::ErrorStatus,
             &[
                 ("words", words.into()),
@@ -99,9 +101,9 @@ pub struct ErrorPage {
     /// scope": the page's first heading and the document's title.
     pub title: String,
     /// What it means for the reader and what to do.
-    pub body: AnyView,
+    pub body: Html,
     /// A quiet line with the raw scope, role or key, when it helps.
-    pub hint: Option<AnyView>,
+    pub hint: Option<Html>,
     /// The ways on, the first the primary; at least one.
     pub ways: Vec<Way>,
     /// The time and the request id, when the console has them.
@@ -111,7 +113,7 @@ pub struct ErrorPage {
 /// Returns the error page (R20): the glyph, the status line, the title,
 /// the body and its hint, the ways on, and the detail folded away.
 #[must_use]
-pub fn error_page(page: ErrorPage) -> AnyView {
+pub fn error_page(locale: &Locale, page: ErrorPage) -> Html {
     let ErrorPage {
         status,
         title,
@@ -131,35 +133,33 @@ pub fn error_page(page: ErrorPage) -> AnyView {
             };
             link_button(way.href, variant, way.glyph, way.label)
         })
-        .collect_view();
-    let hint = hint.map(|hint| view! { <p class="fui-small fui-muted">{hint}</p> });
-    let detail = detail.map(|detail| {
-        view! {
-            <details class="fui-disclosure">
-                <summary>{tr(Text::ErrorDetail)}</summary>
-                <div>
-                    <dl class="fui-facts">
-                        <dt>{tr(Text::ErrorTime)}</dt>
-                        <dd>{detail.time}</dd>
-                        <dt>{tr(Text::ErrorRequest)}</dt>
-                        <dd>
-                            <code>{detail.request_id}</code>
-                        </dd>
-                    </dl>
-                </div>
-            </details>
-        }
-    });
-    view! {
-        <div class="fui-status-page">
-            <span class="fui-empty-glyph">{icon(status.glyph(), "24")}</span>
-            <p class="fui-status-page-code">{status.line()}</p>
-            <h1>{title}</h1>
-            <p>{body}</p>
-            {hint}
-            <div class="fui-actions">{ways}</div>
-            {detail}
-        </div>
+        .collect();
+    PageView {
+        glyph: icon(status.glyph(), "24"),
+        line: status.line(locale),
+        title,
+        body,
+        hint,
+        ways,
+        detail,
+        detail_words: tr(locale, Text::ErrorDetail),
+        time_words: tr(locale, Text::ErrorTime),
+        request_words: tr(locale, Text::ErrorRequest),
     }
-    .into_any()
+    .html()
+}
+
+#[derive(Template)]
+#[template(path = "error_page/page.html")]
+struct PageView {
+    glyph: Html,
+    line: Word,
+    title: String,
+    body: Html,
+    hint: Option<Html>,
+    ways: Html,
+    detail: Option<Detail>,
+    detail_words: Word,
+    time_words: Word,
+    request_words: Word,
 }

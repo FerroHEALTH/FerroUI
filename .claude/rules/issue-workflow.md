@@ -40,7 +40,7 @@ between issues live in `issue-relationships.md`; the public board is
    sequencing, never a prose "see also" deferral.
 3. **Do the work.** At pickup, move the issue to `In Progress` on the board
    (`scripts/gh/project.sh status <n> in-progress`). First read the governing
-   specification text (WCAG 2.2, WAI-ARIA, HTML, CSS and the Leptos book
+   specification text (WCAG 2.2, WAI-ARIA, HTML, CSS and the Askama book
    are the oracles, see `spec-adherence.md`). A research issue
    delivers cited evidence and a recommendation, and records the decision on
    the issue thread.

@@ -12,7 +12,7 @@ Every FerroHEALTH console (FerroBRIDGE, FerroEHR, FerroFED, FerroPIX,
 FerroTERM; [[family-architecture]]) draws in FerroUI, the shared component
 library (`ferrohealth-ui` on crates.io, FerroHEALTH/FerroUI), pinned exactly
 (`=X.Y.Z`) from crates.io, never a submodule or a path dependency (owner,
-2026-10-18). Every console is reactive ([[reactive-console-ui]]).
+2026-10-18). Every console is server-rendered with a little plain JavaScript ([[reactive-console-ui]]).
 
 - **One uniform design.** Each component takes the best of the
   products' versions on its merits and is restyled to one type scale,
@@ -38,8 +38,8 @@ library (`ferrohealth-ui` on crates.io, FerroHEALTH/FerroUI), pinned exactly
   2026-10-19). English is the one language that ships and the family is
   ready for more: a new language is a catalog directory and no code change. Every
   word a FerroUI component draws is a message of its Fluent catalog
-  (`locales/en/<area>.ftl`), the locale is chosen once per render
-  through `i18n::provide_locale` and written as `<html lang>`, and a
+  (`locales/en/<area>.ftl`), the locale is chosen once per request,
+  passed to every component as `&Locale` and written as `<html lang>`, and a
   console catalogs its own page strings the same way, held by the
-  stray-literal check (`leptos-ui.md` §13). No Dutch or German catalog is
+  stray-literal check (`console-ui.md` §13). No Dutch or German catalog is
   added.

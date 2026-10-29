@@ -68,10 +68,10 @@ pub(crate) async fn window(
     Ok(())
 }
 
-/// Waits until the overlays page has hydrated: its ok toast button raises a
+/// Waits until the overlays page has been enhanced: its ok toast button raises a
 /// toast, which carries an action and so waits for its Dismiss.
 pub(crate) async fn hydrated_toasts(browser: &Browser) -> Result<(), Box<dyn Error>> {
-    let raise = browser.element(By::Css("button[data-toast='ok']")).await?;
+    let raise = browser.element(By::Css("a[data-toast='ok']")).await?;
     until("the toasts answer a press", async || {
         raise.click().await?;
         Ok(!browser
@@ -85,7 +85,7 @@ pub(crate) async fn hydrated_toasts(browser: &Browser) -> Result<(), Box<dyn Err
     .await
 }
 
-/// Waits until the overview has hydrated: its keyboard tabs answer an
+/// Waits until the overview has been enhanced: its keyboard tabs answer an
 /// arrow key.
 pub(crate) async fn hydrated_tabs(browser: &Browser) -> Result<(), Box<dyn Error>> {
     let first = browser.element(By::Id("answer-tab-0")).await?;
@@ -269,7 +269,7 @@ async fn the_editor_keeps_every_byte_typed_and_a_diagnostic_leads_to_its_line()
     with_browser(async |browser| {
         browser.goto(&gallery.url("/ferroterm/forms")).await?;
         let draft = browser.element(By::Id("gallery-draft")).await?;
-        until("the editor hydrates", async || {
+        until("the editor is enhanced", async || {
             browser.editor_live(&draft).await
         })
         .await?;
@@ -283,9 +283,6 @@ async fn the_editor_keeps_every_byte_typed_and_a_diagnostic_leads_to_its_line()
             Ok(draft.prop("value").await?.as_deref() == Some(expected.as_str()))
         })
         .await?;
-        browser
-            .text("p", &format!("{} bytes", expected.len()))
-            .await?;
         let layer = browser
             .element(By::XPath(
                 "//textarea[@id = 'gallery-draft']/preceding-sibling::pre[contains(@class, 'fui-editor-layer')]",
@@ -341,7 +338,7 @@ async fn the_editor_redraws_only_the_lines_an_edit_changes() -> Result<(), Box<d
     with_browser(async |browser| {
         browser.goto(&gallery.url("/ferroterm/forms")).await?;
         let draft = browser.element(By::Id("gallery-draft")).await?;
-        until("the editor hydrates", async || {
+        until("the editor is enhanced", async || {
             browser.editor_live(&draft).await
         })
         .await?;
@@ -433,7 +430,7 @@ async fn the_code_editor_keeps_its_cursor_its_marks_and_its_diagnostics_in_step(
     with_browser(async |browser| {
         browser.goto(&gallery.url("/ferrobridge/forms")).await?;
         let draft = browser.element(By::Id("gallery-mapping")).await?;
-        until("the code editor hydrates", async || {
+        until("the code editor is enhanced", async || {
             browser.editor_live(&draft).await
         })
         .await?;
@@ -571,7 +568,7 @@ async fn session_pager_posts(browser: &Browser, gallery: &Gallery) -> Result<(),
     );
     let last = browser.element(last).await?;
     browser
-        .click_in_page(&last, "the session pager draws the last page", async || {
+        .click_through(&last, "the session pager draws the last page", async || {
             Ok(browser
                 .driver()
                 .find_all(By::XPath("//p[contains(., '126-137 of 137')]"))
@@ -637,7 +634,7 @@ async fn the_user_menu_posts_the_theme_and_the_choice_is_kept() -> Result<(), Bo
             .await?;
         until("the menu opens", async || Ok(dark.is_displayed().await?)).await?;
         browser
-            .click_in_page(&dark, "the theme the post kept takes effect", async || {
+            .click_through(&dark, "the theme the post kept takes effect", async || {
                 Ok(!browser
                     .driver()
                     .find_all(By::Css(r#"html[data-theme="dark"]"#))
@@ -712,7 +709,7 @@ async fn the_user_menu_survives_a_navigation_that_draws_another_shell() -> Resul
             .element(By::Css("#user-menu a[href='/ferrofed/preferences']"))
             .await?;
         browser
-            .click_in_page(&preferences, "the router draws Your preferences", async || {
+            .click_through(&preferences, "the router draws Your preferences", async || {
                 Ok(browser.driver().current_url().await?.path() == "/ferrofed/preferences")
             })
             .await?;
@@ -727,7 +724,7 @@ async fn the_user_menu_survives_a_navigation_that_draws_another_shell() -> Resul
         open().await?;
         let index = browser.element(By::Css("header a[href='/']")).await?;
         browser
-            .click_in_page(&index, "the router draws the index", async || {
+            .click_through(&index, "the router draws the index", async || {
                 Ok(browser.driver().current_url().await?.path() == "/")
             })
             .await?;
@@ -945,7 +942,7 @@ async fn a_rail_entry_shows_its_words_on_keyboard_focus_until_escape() -> Result
             .element(By::XPath("//button[@name = 'sidebar' and @value = 'rail']"))
             .await?;
         browser
-            .click_in_page(&rail, "the sidebar folds to its rail", async || {
+            .click_through(&rail, "the sidebar folds to its rail", async || {
                 Ok(!browser
                     .driver()
                     .find_all(By::Css("#sidebar.fui-sidebar-rail"))
@@ -999,7 +996,7 @@ async fn a_rail_entry_shows_its_words_on_keyboard_focus_until_escape() -> Result
             tip_left >= rail_right - 1.0 && tip_top < entry_bottom && tip_bottom > entry_top,
             "the tooltip sits beside its entry, past the rail: tooltip {tip_left} {tip_top}-{tip_bottom}, rail right {rail_right}, entry {entry_top}-{entry_bottom}"
         );
-        // Escape is the island's, so it is pressed again until the island has hydrated.
+        // Escape is the module's, so it is pressed again until the module has run.
         until("Escape hides the tooltip", async || {
             browser
                 .driver()
@@ -1117,7 +1114,7 @@ async fn the_side_panel_takes_the_focus_to_its_close_button_and_gives_it_back()
                 "button[commandfor='access'][aria-controls='access']",
             ))
             .await?;
-        // The button shows once the island has hydrated, and its link hides.
+        // The button shows once the module has run, and its link hides.
         until("the panel's button shows", async || {
             Ok(opener.is_displayed().await?)
         })
@@ -1650,19 +1647,7 @@ async fn a_control_tabbed_to_above_the_fold_lands_below_the_sticky_top_bar()
         window(browser, 1440, 900).await?;
         browser.goto(&gallery.url("/ferroehr/forms")).await?;
         browser.element(By::Css("main h1")).await?;
-        // NOTE: Leptos 0.8 `#[island(lazy)]` hydrates after the page loads, and a
-        // masked identifier swaps its fallback link for its button then.
-        until("the identifiers have hydrated", async || {
-            let pending = browser
-                .driver()
-                .execute(
-                    "return document.querySelectorAll('.fui-identifier-press[hidden]').length;",
-                    vec![],
-                )
-                .await?;
-            Ok(*pending.json() == json!(0))
-        })
-        .await?;
+        browser.hydrated().await?;
         // From the foot of the page, the focus goes to the control after one
         // well above the fold without scrolling; Shift+Tab then moves to
         // that control, which the browser scrolls into view at the top.
@@ -1884,51 +1869,6 @@ async fn a_keyed_combobox_names_its_help_and_keeps_its_own_choice() -> Result<()
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn an_editor_inside_a_reloading_transition_keeps_taking_keys() -> Result<(), Box<dyn Error>> {
-    if !journeys_enabled() {
-        return Ok(());
-    }
-    let gallery = Gallery::start().await?;
-    with_browser(async |browser| {
-        browser.goto(&gallery.url("/ferroterm/forms")).await?;
-        let draft = browser.element(By::Id("reloading-draft")).await?;
-        until("the editor hydrates", async || {
-            browser.editor_live(&draft).await
-        })
-        .await?;
-        draft.send_keys("x").await?;
-        for round in 1..=2 {
-            browser
-                .element(By::Id("reload-draft"))
-                .await?
-                .click()
-                .await?;
-            // The old editor stays on screen while the read is pending, and a
-            // key typed into it then reached a disposed signal.
-            browser
-                .element(By::Id("reloading-draft"))
-                .await?
-                .send_keys("y")
-                .await?;
-            browser
-                .text("p[@id='reloaded']", &format!("Read {round} times again."))
-                .await?;
-        }
-        let typed: String = measure(
-            browser,
-            "return document.getElementById('reloading-draft').value;",
-        )
-        .await?;
-        assert!(
-            typed.trim_end().ends_with("xyy"),
-            "the editor kept `{typed}`"
-        );
-        browser.console_clean("the reloading editor").await
-    })
-    .await
-}
-
-#[tokio::test(flavor = "multi_thread")]
 async fn stat_cards_keep_their_glyphs_and_figures_in_line() -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
         return Ok(());
@@ -1982,7 +1922,7 @@ async fn at_320_pixels_a_long_pill_in_a_stacked_card_wraps_inside_the_card()
         window(browser, 320, 800).await?;
         browser.goto(&gallery.url("/ferrofed/tables")).await?;
         browser.element(By::Css("main h1")).await?;
-        // The script below rewrites a cell, so it waits for the page to hydrate first.
+        // The script below rewrites a cell, so it waits for the page to be enhanced first.
         browser.hydrated().await?;
         // NOTE: WCAG 2.2 SC 1.4.10; a state longer than the value column stays inside the card.
         let [pill, card, edge]: [f64; 3] = browser
@@ -2051,7 +1991,7 @@ async fn a_pick_or_type_field_shows_one_control_and_its_own_label_at_a_time()
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
         browser.goto(&gallery.url("/ferroterm/forms")).await?;
-        // The combobox replaces its select once the page hydrates, which is
+        // The combobox replaces its select once the page is enhanced, which is
         // when the select's change listener is there too.
         browser
             .element(By::Css("#pick-canonical-choice[role='combobox']"))

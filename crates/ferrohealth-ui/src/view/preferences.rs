@@ -15,8 +15,9 @@
 //! and [`select_preference`].
 //!
 //! Each preference is its own cookie, set by a plain form post to the
-//! console's route ([`crate::island::PreferenceForm`]), so the page works
-//! with no WebAssembly; the console keeps the cookie and draws the page
+//! console's route, so the page works with no script; once the
+//! `preference` module runs, a change posts at once and the Save button
+//! leaves. The console keeps the cookie and draws the page
 //! again with the row it kept marked Saved, in a fixed slot above the
 //! control that never moves it (R28). The page says it is only for you, in
 //! this browser, and Reset to defaults asks first, then posts to the
@@ -25,18 +26,19 @@
 //! the preview cards are a radio group (WAI-ARIA 1.2, `radiogroup`, by a
 //! `fieldset` of native radios) and the language select is R29.
 
-use leptos::prelude::*;
+use askama::Template;
 
 use crate::calendar::Weekday;
+use crate::html::{Html, Render as _};
 use crate::i18n::{Arg, Locale, Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::theme::{Density, Hints, Language, Motion, Preference, Preferences, Theme, WeekStart};
 use crate::view::action::ActionGroup;
+use crate::view::action_menu::{Choice, Listbox, Pick, listbox};
 use crate::view::button::{Variant, label};
 use crate::view::dialog::{Confirmation, confirm_dialog};
 use crate::view::surface::{Header, page_heading};
 use crate::view::tabs::{Tab, TabRow, joined};
-use crate::widget::action_menu::{Choice, Listbox, Pick, listbox};
 
 /// The id of the reset dialog, which Reset to defaults opens.
 pub const RESET_DIALOG: &str = "preferences-reset";
@@ -143,7 +145,7 @@ pub struct PreferencesPage {
     pub reset: String,
     /// The console's own rows of this tab, after the library's, built with
     /// [`preference_row`].
-    pub own: Vec<AnyView>,
+    pub own: Vec<Html>,
 }
 
 /// One row of a preference: its label and line, and its control.
@@ -157,7 +159,7 @@ pub struct PreferenceRow {
     /// field; a group names itself.
     pub control_id: Option<String>,
     /// The control.
-    pub control: AnyView,
+    pub control: Html,
     /// Whether the preference was just kept, which marks the row Saved.
     pub saved: bool,
 }
@@ -166,7 +168,7 @@ pub struct PreferenceRow {
 /// control, with Saved in its fixed slot above the control when the
 /// preference was just kept (R28).
 #[must_use]
-pub fn preference_row(row: PreferenceRow) -> AnyView {
+pub fn preference_row(locale: &Locale, row: PreferenceRow) -> Html {
     let PreferenceRow {
         label,
         description,
@@ -174,27 +176,24 @@ pub fn preference_row(row: PreferenceRow) -> AnyView {
         control,
         saved,
     } = row;
-    let label = match control_id {
-        Some(id) => view! { <label for=id class="fui-setting-label">{label}</label> }.into_any(),
-        None => view! { <span class="fui-setting-label">{label}</span> }.into_any(),
-    };
-    let mark = saved.then(|| {
-        view! {
-            <span class="fui-setting-saved" role="status">
-                {icon(Glyph::CHECK, "14")}
-                {tr(Text::PreferencesSaved)}
-            </span>
-        }
-    });
-    view! {
-        <div class="fui-setting-row">
-            <div class="fui-setting-text">
-                {label} <p class="fui-setting-desc">{description}</p>
-            </div>
-            <div class="fui-setting-control">{mark} {control}</div>
-        </div>
+    RowView {
+        control_id,
+        label,
+        description,
+        saved: saved.then(|| (icon(Glyph::CHECK, "14"), tr(locale, Text::PreferencesSaved))),
+        control,
     }
-    .into_any()
+    .html()
+}
+
+#[derive(Template)]
+#[template(path = "preferences/preferences.html", block = "row")]
+struct RowView {
+    control_id: Option<String>,
+    label: Word,
+    description: Word,
+    saved: Option<(Html, Word)>,
+    control: Html,
 }
 
 /// A preference chosen from a native select.
@@ -213,9 +212,9 @@ pub struct SelectPreference {
 }
 
 /// Returns a preference's select in its form: it posts on every change
-/// once the page has hydrated, and through its Save button before.
+/// once the `preference` module runs, and through its Save button before.
 #[must_use]
-pub fn select_preference(select: SelectPreference) -> AnyView {
+pub fn select_preference(locale: &Locale, select: SelectPreference) -> Html {
     let SelectPreference {
         name,
         choices,
@@ -223,24 +222,25 @@ pub fn select_preference(select: SelectPreference) -> AnyView {
         post,
         saved,
     } = select;
-    let options = choices
-        .into_iter()
-        .map(|(value, words)| {
-            let chosen = value == current;
-            let lang = words.lang();
-            view! {
-                <option value=value selected=chosen lang=lang>
-                    {String::from(words)}
-                </option>
-            }
-        })
-        .collect_view();
-    let control = view! {
-        <select id=name.clone() name=name class="fui-select fui-setting-select">
-            {options}
-        </select>
-    };
-    form(post, saved, control.into_any())
+    let control = SelectView {
+        choices: choices
+            .into_iter()
+            .map(|(value, words)| {
+                let chosen = value == current;
+                (value, words, chosen)
+            })
+            .collect(),
+        name,
+    }
+    .html();
+    form(locale, post, saved, control)
+}
+
+#[derive(Template)]
+#[template(path = "preferences/preferences.html", block = "select")]
+struct SelectView {
+    name: String,
+    choices: Vec<(String, Word, bool)>,
 }
 
 /// A preference that is on or off, drawn as a switch.
@@ -259,10 +259,10 @@ pub struct SwitchPreference {
 }
 
 /// Returns a preference's switch in its form: it posts `on`, or `off` when
-/// turned off, on every change once the page has hydrated, and through its
-/// Save button before.
+/// turned off, on every change once the `preference` module runs, and
+/// through its Save button before.
 #[must_use]
-pub fn switch_preference(switch: SwitchPreference) -> AnyView {
+pub fn switch_preference(locale: &Locale, switch: SwitchPreference) -> Html {
     let SwitchPreference {
         name,
         label,
@@ -272,31 +272,41 @@ pub fn switch_preference(switch: SwitchPreference) -> AnyView {
     } = switch;
     // NOTE: HTML, "Constructing the entry list": an unchecked checkbox posts nothing,
     // so a hidden `off` goes first and a checked box's `on` after it wins.
-    let control = view! {
-        <input type="hidden" name=name.clone() value="off" />
-        <input
-            type="checkbox"
-            class="fui-switch"
-            id=name.clone()
-            name=name
-            value="on"
-            checked=on
-            aria-label=label
-        />
-    };
-    form(post, saved, control.into_any())
+    let control = SwitchView { name, label, on }.html();
+    form(locale, post, saved, control)
+}
+
+#[derive(Template)]
+#[template(path = "preferences/preferences.html", block = "switch")]
+struct SwitchView {
+    name: String,
+    label: String,
+    on: bool,
 }
 
 /// Returns `control` in the form of one preference, posting to `post`.
-fn form(post: Post, saved: bool, control: AnyView) -> AnyView {
+fn form(locale: &Locale, post: Post, saved: bool, control: Html) -> Html {
     let Post { action, back } = post;
-    let save = tr(Text::PreferencesSave);
-    view! {
-        <crate::island::PreferenceForm action back save saved>
-            {control}
-        </crate::island::PreferenceForm>
+    FormView {
+        action,
+        saved,
+        back,
+        control,
+        small: Variant::Secondary.small(),
+        save: tr(locale, Text::PreferencesSave),
     }
-    .into_any()
+    .html()
+}
+
+#[derive(Template)]
+#[template(path = "preferences/preferences.html", block = "form")]
+struct FormView {
+    action: String,
+    saved: bool,
+    back: String,
+    control: Html,
+    small: &'static str,
+    save: Word,
 }
 
 /// The preview a choice card draws, hidden from assistive technology.
@@ -312,49 +322,29 @@ enum Preview {
 
 /// Returns the small page a theme card draws: a top bar, a sidebar and a
 /// main column in the theme's preview accent.
-fn page_preview(class: &'static str) -> impl IntoView {
-    view! {
-        <span class=class aria-hidden="true">
-            <span class="pv-top"></span>
-            <span class="pv-body">
-                <span class="pv-side">
-                    <i></i>
-                    <i></i>
-                    <i></i>
-                </span>
-                <span class="pv-main">
-                    <i class="pv-title"></i>
-                    <i></i>
-                    <i></i>
-                    <i class="pv-short"></i>
-                    <b></b>
-                </span>
-            </span>
-        </span>
-    }
+fn page_preview(class: &'static str) -> Html {
+    PagePreview { class }.html()
+}
+
+#[derive(Template)]
+#[template(path = "preferences/preferences.html", block = "page_preview")]
+struct PagePreview {
+    class: &'static str,
 }
 
 /// Returns `preview` drawn.
-fn preview(preview: Preview) -> AnyView {
+fn preview(preview: Preview) -> Html {
     match preview {
-        Preview::Page(class) => page_preview(class).into_any(),
-        Preview::Split => view! {
-            <span class="fui-preview fui-preview-split" aria-hidden="true">
-                {page_preview("fui-preview fui-preview-light")}
-                {page_preview("fui-preview fui-preview-dark")}
-            </span>
-        }
-        .into_any(),
-        Preview::Table(class, rows) => {
-            let rows = (0..rows).map(|_| view! { <i></i> }).collect_view();
-            view! {
-                <span class=class aria-hidden="true">
-                    <span class="pv-head"></span>
-                    {rows}
-                </span>
-            }
-            .into_any()
-        }
+        Preview::Page(class) => page_preview(class),
+        Preview::Split => Html::raw(format!(
+            "<span aria-hidden=\"true\" class=\"fui-preview fui-preview-split\">{}{}</span>",
+            page_preview("fui-preview fui-preview-light"),
+            page_preview("fui-preview fui-preview-dark")
+        )),
+        Preview::Table(class, rows) => Html::raw(format!(
+            "<span aria-hidden=\"true\" class=\"{class}\"><span class=\"pv-head\"></span>{}</span>",
+            "<i></i>".repeat(rows)
+        )),
     }
 }
 
@@ -373,39 +363,41 @@ struct Card {
 
 /// Returns the radio preview cards (R28) named `legend`, posting `name`,
 /// the card whose value is `current` checked.
-fn choice_cards(name: &'static str, legend: Word, current: &str, cards: Vec<Card>) -> AnyView {
-    let cards = cards
-        .into_iter()
-        .map(|card| {
-            let checked = card.value == current;
-            view! {
-                <label class="fui-choice-card">
-                    <input
-                        type="radio"
-                        class="fui-sr-only"
-                        name=name
-                        value=card.value
-                        checked=checked
-                    />
-                    {preview(card.preview)}
-                    <span class="fui-choice-card-text">
-                        <span class="fui-choice-card-title">{card.title}</span>
-                        <span class="fui-choice-card-sub">{card.note}</span>
-                    </span>
-                    <span class="fui-choice-card-check" aria-hidden="true">
-                        {icon(Glyph::CHECK, "12")}
-                    </span>
-                </label>
-            }
-        })
-        .collect_view();
-    view! {
-        <fieldset class="fui-choice-cards">
-            <legend class="fui-sr-only">{legend}</legend>
-            {cards}
-        </fieldset>
+fn choice_cards(name: &'static str, legend: Word, current: &str, cards: Vec<Card>) -> Html {
+    CardsView {
+        legend,
+        name,
+        cards: cards
+            .into_iter()
+            .map(|card| CardView {
+                checked: card.value == current,
+                value: card.value,
+                preview: preview(card.preview),
+                title: card.title,
+                note: card.note,
+            })
+            .collect(),
+        check: icon(Glyph::CHECK, "12"),
     }
-    .into_any()
+    .html()
+}
+
+/// One card as the template writes it.
+struct CardView {
+    value: &'static str,
+    checked: bool,
+    preview: Html,
+    title: Word,
+    note: Word,
+}
+
+#[derive(Template)]
+#[template(path = "preferences/preferences.html", block = "cards")]
+struct CardsView {
+    legend: Word,
+    name: &'static str,
+    cards: Vec<CardView>,
+    check: Html,
 }
 
 /// Whether the preference kept in the cookie `cookie` is the one `saved`
@@ -416,33 +408,45 @@ fn is_saved(saved: Option<&str>, cookie: &str) -> bool {
 
 /// Returns the rows of Appearance: the theme and the density as preview
 /// cards, and reduced motion.
-fn appearance(page: &PreferencesPage, post: &Post) -> Vec<AnyView> {
+#[expect(
+    clippy::too_many_lines,
+    reason = "the three rows and their five preview cards read as one list, as on main"
+)]
+fn appearance(locale: &Locale, page: &PreferencesPage, post: &Post) -> Vec<Html> {
     let saved = page.saved.as_deref();
     let accent = || Arg::from(page.accent.clone());
     let theme_cards = vec![
         Card {
             value: Theme::Light.key(),
             preview: Preview::Page("fui-preview fui-preview-light"),
-            title: Theme::Light.label(),
-            note: tr_with(Text::PreferencesThemeLightNote, &[("accent", accent())]),
+            title: Theme::Light.label(locale),
+            note: tr_with(
+                locale,
+                Text::PreferencesThemeLightNote,
+                &[("accent", accent())],
+            ),
         },
         Card {
             value: Theme::Dark.key(),
             preview: Preview::Page("fui-preview fui-preview-dark"),
-            title: Theme::Dark.label(),
-            note: tr_with(Text::PreferencesThemeDarkNote, &[("accent", accent())]),
+            title: Theme::Dark.label(locale),
+            note: tr_with(
+                locale,
+                Text::PreferencesThemeDarkNote,
+                &[("accent", accent())],
+            ),
         },
         Card {
             value: Theme::System.key(),
             preview: Preview::Split,
-            title: Theme::System.label(),
-            note: tr(Text::PreferencesThemeSystemNote),
+            title: Theme::System.label(locale),
+            note: tr(locale, Text::PreferencesThemeSystemNote),
         },
     ];
     let theme_saved = is_saved(saved, Theme::COOKIE);
     let theme = choice_cards(
         Theme::COOKIE,
-        tr(Text::ThemeSwitch),
+        tr(locale, Text::ThemeSwitch),
         page.preferences.theme.key(),
         theme_cards,
     );
@@ -450,56 +454,68 @@ fn appearance(page: &PreferencesPage, post: &Post) -> Vec<AnyView> {
         Card {
             value: Density::Comfortable.key(),
             preview: Preview::Table("fui-preview fui-preview-table fui-preview-comfortable", 3),
-            title: Density::Comfortable.label(),
-            note: tr(Text::PreferencesDensityComfortableNote),
+            title: Density::Comfortable.label(locale),
+            note: tr(locale, Text::PreferencesDensityComfortableNote),
         },
         Card {
             value: Density::Compact.key(),
             preview: Preview::Table("fui-preview fui-preview-table fui-preview-compact", 5),
-            title: Density::Compact.label(),
-            note: tr(Text::PreferencesDensityCompactNote),
+            title: Density::Compact.label(locale),
+            note: tr(locale, Text::PreferencesDensityCompactNote),
         },
     ];
     let density_saved = is_saved(saved, Density::COOKIE);
     let density = choice_cards(
         Density::COOKIE,
-        tr(Text::DensitySwitch),
+        tr(locale, Text::DensitySwitch),
         page.preferences.density.key(),
         density_cards,
     );
     let motion_saved = is_saved(saved, Motion::COOKIE);
-    let motion = select_preference(SelectPreference {
-        name: String::from(Motion::COOKIE),
-        choices: Motion::ALL
-            .into_iter()
-            .map(|motion| (String::from(motion.key()), motion.label()))
-            .collect(),
-        current: String::from(page.preferences.motion.key()),
-        post: post.clone(),
-        saved: motion_saved,
-    });
-    vec![
-        preference_row(PreferenceRow {
-            label: tr(Text::ThemeSwitch),
-            description: tr(Text::PreferencesThemeDesc),
-            control_id: None,
-            control: form(post.clone(), theme_saved, theme),
-            saved: theme_saved,
-        }),
-        preference_row(PreferenceRow {
-            label: tr(Text::DensitySwitch),
-            description: tr(Text::PreferencesDensityDesc),
-            control_id: None,
-            control: form(post.clone(), density_saved, density),
-            saved: density_saved,
-        }),
-        preference_row(PreferenceRow {
-            label: tr(Text::PreferencesMotion),
-            description: tr(Text::PreferencesMotionDesc),
-            control_id: Some(String::from(Motion::COOKIE)),
-            control: motion,
+    let motion = select_preference(
+        locale,
+        SelectPreference {
+            name: String::from(Motion::COOKIE),
+            choices: Motion::ALL
+                .into_iter()
+                .map(|motion| (String::from(motion.key()), motion.label(locale)))
+                .collect(),
+            current: String::from(page.preferences.motion.key()),
+            post: post.clone(),
             saved: motion_saved,
-        }),
+        },
+    );
+    vec![
+        preference_row(
+            locale,
+            PreferenceRow {
+                label: tr(locale, Text::ThemeSwitch),
+                description: tr(locale, Text::PreferencesThemeDesc),
+                control_id: None,
+                control: form(locale, post.clone(), theme_saved, theme),
+                saved: theme_saved,
+            },
+        ),
+        preference_row(
+            locale,
+            PreferenceRow {
+                label: tr(locale, Text::DensitySwitch),
+                description: tr(locale, Text::PreferencesDensityDesc),
+                control_id: None,
+                control: form(locale, post.clone(), density_saved, density),
+                saved: density_saved,
+            },
+        ),
+        preference_row(
+            locale,
+            PreferenceRow {
+                label: tr(locale, Text::PreferencesMotion),
+                description: tr(locale, Text::PreferencesMotionDesc),
+                control_id: Some(String::from(Motion::COOKIE)),
+                control: motion,
+                saved: motion_saved,
+            },
+        ),
     ]
 }
 
@@ -511,12 +527,13 @@ fn appearance(page: &PreferencesPage, post: &Post) -> Vec<AnyView> {
 /// of `language` to `post`.
 #[must_use]
 pub fn language_select(
+    locale: &Locale,
     id: &str,
     current: &Language,
     languages: &[Locale],
     browser: &Locale,
     post: &Post,
-) -> AnyView {
+) -> Html {
     let pick = |value: String| Pick::Post {
         action: post.action.clone(),
         fields: vec![
@@ -524,11 +541,12 @@ pub fn language_select(
             (String::from("back"), post.back.clone()),
         ],
     };
-    let follow = tr(Text::PreferencesLanguageBrowser);
+    let follow = tr(locale, Text::PreferencesLanguageBrowser);
     let mut value = follow.clone();
     let mut choices = vec![Choice {
         label: follow,
         note: Some(tr_with(
+            locale,
             Text::PreferencesLanguageBrowserNote,
             &[("language", Arg::from(browser.text(Text::LanguageName)))],
         )),
@@ -551,64 +569,78 @@ pub fn language_select(
             pick: pick(tag),
         });
     }
-    listbox(Listbox {
-        id: id.to_owned(),
-        label: tr(Text::LanguageSwitch).into(),
-        value,
-        choices,
-    })
+    listbox(
+        locale,
+        &Listbox {
+            id: id.to_owned(),
+            label: tr(locale, Text::LanguageSwitch).into(),
+            value,
+            choices,
+        },
+    )
 }
 
 /// Returns the rows of Language and region: the language and the first
 /// day of the week.
-fn language(page: &PreferencesPage, post: &Post) -> Vec<AnyView> {
+fn language(locale: &Locale, page: &PreferencesPage, post: &Post) -> Vec<Html> {
     let saved = page.saved.as_deref();
     let week_saved = is_saved(saved, WeekStart::COOKIE);
     let from_language = tr_with(
+        locale,
         Text::WeekStartLanguage,
         &[(
             "weekday",
-            Arg::from(tr(weekday_text(page.week_from_language))),
+            Arg::from(tr(locale, weekday_text(page.week_from_language))),
         )],
     );
-    let week = select_preference(SelectPreference {
-        name: String::from(WeekStart::COOKIE),
-        choices: WeekStart::ALL
-            .into_iter()
-            .map(|start| {
-                let words = match start {
-                    WeekStart::Language => from_language.clone(),
-                    WeekStart::Monday => tr(Text::WeekdayMonday),
-                    WeekStart::Sunday => tr(Text::WeekdaySunday),
-                };
-                (String::from(start.key()), words)
-            })
-            .collect(),
-        current: String::from(page.preferences.week_start.key()),
-        post: post.clone(),
-        saved: week_saved,
-    });
-    vec![
-        preference_row(PreferenceRow {
-            label: tr(Text::LanguageSwitch),
-            description: tr(Text::PreferencesLanguageDesc),
-            control_id: None,
-            control: language_select(
-                LANGUAGE_LIST,
-                &page.preferences.language,
-                &page.languages,
-                &page.browser,
-                post,
-            ),
-            saved: is_saved(saved, Language::COOKIE),
-        }),
-        preference_row(PreferenceRow {
-            label: tr(Text::PreferencesWeek),
-            description: tr(Text::PreferencesWeekDesc),
-            control_id: Some(String::from(WeekStart::COOKIE)),
-            control: week,
+    let week = select_preference(
+        locale,
+        SelectPreference {
+            name: String::from(WeekStart::COOKIE),
+            choices: WeekStart::ALL
+                .into_iter()
+                .map(|start| {
+                    let words = match start {
+                        WeekStart::Language => from_language.clone(),
+                        WeekStart::Monday => tr(locale, Text::WeekdayMonday),
+                        WeekStart::Sunday => tr(locale, Text::WeekdaySunday),
+                    };
+                    (String::from(start.key()), words)
+                })
+                .collect(),
+            current: String::from(page.preferences.week_start.key()),
+            post: post.clone(),
             saved: week_saved,
-        }),
+        },
+    );
+    vec![
+        preference_row(
+            locale,
+            PreferenceRow {
+                label: tr(locale, Text::LanguageSwitch),
+                description: tr(locale, Text::PreferencesLanguageDesc),
+                control_id: None,
+                control: language_select(
+                    locale,
+                    LANGUAGE_LIST,
+                    &page.preferences.language,
+                    &page.languages,
+                    &page.browser,
+                    post,
+                ),
+                saved: is_saved(saved, Language::COOKIE),
+            },
+        ),
+        preference_row(
+            locale,
+            PreferenceRow {
+                label: tr(locale, Text::PreferencesWeek),
+                description: tr(locale, Text::PreferencesWeekDesc),
+                control_id: Some(String::from(WeekStart::COOKIE)),
+                control: week,
+                saved: week_saved,
+            },
+        ),
     ]
 }
 
@@ -627,39 +659,51 @@ const fn weekday_text(day: Weekday) -> Text {
 
 /// Returns the rows of Keyboard: the shortcut hints, and the link to the
 /// legend where the console has one.
-fn keyboard(page: &PreferencesPage, post: &Post) -> Vec<AnyView> {
+fn keyboard(locale: &Locale, page: &PreferencesPage, post: &Post) -> Vec<Html> {
     let hints_saved = is_saved(page.saved.as_deref(), Hints::COOKIE);
-    let hints = select_preference(SelectPreference {
-        name: String::from(Hints::COOKIE),
-        choices: Hints::ALL
-            .into_iter()
-            .map(|hints| (String::from(hints.key()), hints.label()))
-            .collect(),
-        current: String::from(page.preferences.hints.key()),
-        post: post.clone(),
-        saved: hints_saved,
-    });
-    let mut rows = vec![preference_row(PreferenceRow {
-        label: tr(Text::PreferencesHints),
-        description: tr(Text::PreferencesHintsDesc),
-        control_id: Some(String::from(Hints::COOKIE)),
-        control: hints,
-        saved: hints_saved,
-    })];
+    let hints = select_preference(
+        locale,
+        SelectPreference {
+            name: String::from(Hints::COOKIE),
+            choices: Hints::ALL
+                .into_iter()
+                .map(|hints| (String::from(hints.key()), hints.label(locale)))
+                .collect(),
+            current: String::from(page.preferences.hints.key()),
+            post: post.clone(),
+            saved: hints_saved,
+        },
+    );
+    let mut rows = vec![preference_row(
+        locale,
+        PreferenceRow {
+            label: tr(locale, Text::PreferencesHints),
+            description: tr(locale, Text::PreferencesHintsDesc),
+            control_id: Some(String::from(Hints::COOKIE)),
+            control: hints,
+            saved: hints_saved,
+        },
+    )];
     if let Some(href) = page.shortcuts.clone() {
-        let link = view! {
-            <a href=href class=Variant::Secondary.small() aria-keyshortcuts="?">
-                {label(Some(Glyph::KEYBOARD), tr(Text::PreferencesShortcutsOpen))}
-                <kbd class="fui-kbd">"?"</kbd>
-            </a>
-        };
-        rows.push(preference_row(PreferenceRow {
-            label: tr(Text::PreferencesShortcuts),
-            description: tr(Text::PreferencesShortcutsDesc),
-            control_id: None,
-            control: link.into_any(),
-            saved: false,
-        }));
+        let link = Html::raw(format!(
+            "<a href=\"{}\" aria-keyshortcuts=\"?\" class=\"{}\">{}<kbd class=\"fui-kbd\">?</kbd></a>",
+            Html::text(href),
+            Variant::Secondary.small(),
+            label(
+                Some(Glyph::KEYBOARD),
+                tr(locale, Text::PreferencesShortcutsOpen)
+            )
+        ));
+        rows.push(preference_row(
+            locale,
+            PreferenceRow {
+                label: tr(locale, Text::PreferencesShortcuts),
+                description: tr(locale, Text::PreferencesShortcutsDesc),
+                control_id: None,
+                control: link,
+                saved: false,
+            },
+        ));
     }
     rows
 }
@@ -668,15 +712,15 @@ fn keyboard(page: &PreferencesPage, post: &Post) -> Vec<AnyView> {
 /// of the tab `page.section`, the line that says where the preferences are
 /// kept, and Reset to defaults with its confirmation.
 #[must_use]
-pub fn preferences_page(page: PreferencesPage) -> AnyView {
+pub fn preferences_page(locale: &Locale, page: PreferencesPage) -> Html {
     let post = Post {
         action: page.action.clone(),
         back: page.routes.of(page.section).to_owned(),
     };
     let mut rows = match page.section {
-        Section::Appearance => appearance(&page, &post),
-        Section::Language => language(&page, &post),
-        Section::Keyboard => keyboard(&page, &post),
+        Section::Appearance => appearance(locale, &page, &post),
+        Section::Language => language(locale, &page, &post),
+        Section::Keyboard => keyboard(locale, &page, &post),
     };
     let PreferencesPage {
         section,
@@ -696,28 +740,27 @@ pub fn preferences_page(page: PreferencesPage) -> AnyView {
         Tab::new(
             Section::Appearance.key(),
             routes.appearance.clone(),
-            tr(Text::PreferencesAppearance),
+            tr(locale, Text::PreferencesAppearance),
         ),
         Tab::new(
             Section::Language.key(),
             routes.language.clone(),
-            tr(language_tab),
+            tr(locale, language_tab),
         ),
         Tab::new(
             Section::Keyboard.key(),
             routes.keyboard.clone(),
-            tr(Text::PreferencesKeyboard),
+            tr(locale, Text::PreferencesKeyboard),
         ),
     ];
-    let panel = view! {
-        <div class="fui-settings-panel">
-            <div class="fui-setting-rows">{rows}</div>
-        </div>
-    }
-    .into_any();
+    let panel = Html::raw(format!(
+        "<div class=\"fui-settings-panel\"><div class=\"fui-setting-rows\">{}</div></div>",
+        Html::join(rows)
+    ));
     let sheet = joined(
+        locale,
         TabRow {
-            label: tr(Text::PreferencesSections).into(),
+            label: tr(locale, Text::PreferencesSections).into(),
             tabs,
             current: String::from(section.key()),
         },
@@ -725,53 +768,58 @@ pub fn preferences_page(page: PreferencesPage) -> AnyView {
         Some("fui-settings-tabbed"),
     );
     let heading = page_heading(
+        locale,
         Header {
-            title: tr(Text::YourPreferences),
-            subtitle: Some(tr(Text::PreferencesIntro)),
+            title: tr(locale, Text::YourPreferences),
+            subtitle: Some(tr(locale, Text::PreferencesIntro)),
             ..Header::default()
         },
         ActionGroup::none(),
-    )
-    .into_any();
+    );
     let Post { back, .. } = post;
-    view! {
-        {heading}
-        <div class="fui-stack">
-            {sheet}
-            <div class="fui-settings-foot">
-                <p class="fui-small fui-muted">{tr(Text::PreferencesFoot)}</p>
-                <button
-                    type="button"
-                    class=Variant::Ghost.small()
-                    command="show-modal"
-                    commandfor=RESET_DIALOG
-                    aria-haspopup="dialog"
-                >
-                    {label(Some(Glyph::ROTATE_CCW), tr(Text::PreferencesReset))}
-                </button>
-            </div>
-        </div>
-        {reset_dialog(reset, back)}
+    PageView {
+        heading,
+        sheet,
+        foot: tr(locale, Text::PreferencesFoot),
+        reset_dialog_id: RESET_DIALOG,
+        ghost: Variant::Ghost.small(),
+        reset_label: label(Some(Glyph::ROTATE_CCW), tr(locale, Text::PreferencesReset)),
+        reset_dialog: reset_dialog(locale, &reset, &back),
     }
-    .into_any()
+    .html()
+}
+
+#[derive(Template)]
+#[template(path = "preferences/preferences.html", block = "page")]
+struct PageView {
+    heading: Html,
+    sheet: Html,
+    foot: Word,
+    reset_dialog_id: &'static str,
+    ghost: &'static str,
+    reset_label: Html,
+    reset_dialog: Html,
 }
 
 /// Returns the reset dialog: what a reset does and leaves alone, Cancel,
 /// and Reset to defaults posting `back` to the console's route `reset`.
-fn reset_dialog(reset: String, back: String) -> impl IntoView {
-    let confirm = view! {
-        <form method="post" action=reset data-ferroui-navigates="">
-            <input type="hidden" name="back" value=back />
-            <button type="submit" class=Variant::Primary.class()>
-                {label(Some(Glyph::ROTATE_CCW), tr(Text::PreferencesResetConfirm))}
-            </button>
-        </form>
-    };
+fn reset_dialog(locale: &Locale, reset: &str, back: &str) -> Html {
+    let confirm = Html::raw(format!(
+        "<form method=\"post\" action=\"{}\"><input type=\"hidden\" name=\"back\" value=\"{}\"><button type=\"submit\" class=\"{}\">{}</button></form>",
+        Html::text(reset),
+        Html::text(back),
+        Variant::Primary.class(),
+        label(
+            Some(Glyph::ROTATE_CCW),
+            tr(locale, Text::PreferencesResetConfirm)
+        )
+    ));
     confirm_dialog(
+        locale,
         Confirmation {
             id: RESET_DIALOG.into(),
-            title: tr(Text::PreferencesResetTitle),
-            message: tr(Text::PreferencesResetBody),
+            title: tr(locale, Text::PreferencesResetTitle),
+            message: tr(locale, Text::PreferencesResetBody),
         },
         confirm,
     )

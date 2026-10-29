@@ -9,9 +9,10 @@
 //! `OperationOutcome` or a diagnostic list into [`Issue`]s with the types
 //! its own crates model, and the refusal draws them.
 
-use leptos::prelude::*;
+use askama::Template;
 
-use crate::i18n::{Text, Word, tr, tr_with};
+use crate::html::{Html, Render as _};
+use crate::i18n::{Locale, Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::tone::Tone;
 
@@ -32,14 +33,8 @@ pub enum Severity {
 impl Severity {
     /// The word a reader sees, in the page's locale.
     #[must_use]
-    pub fn word(self) -> Word {
-        tr(self.text())
-    }
-
-    /// The word as a view, marked English on a page in another language
-    /// when no catalog of the page's language holds it.
-    fn drawn(self) -> AnyView {
-        tr_with(self.text(), &[]).into_render()
+    pub fn word(self, locale: &Locale) -> Word {
+        tr(locale, self.text())
     }
 
     /// The word's message.
@@ -179,76 +174,70 @@ pub fn split_issues<'a>(shown: &'a [&'a Issue]) -> (&'a [&'a Issue], &'a [&'a Is
 /// [`ISSUES_OPEN`] gravest, folds the rest up to [`ISSUES_DRAWN`] under a
 /// native `<details>`, which opens with no script, and counts any past that.
 #[must_use]
-pub fn issue_list(issues: &[Issue]) -> impl IntoView + use<> {
+pub fn issue_list(locale: &Locale, issues: &[Issue]) -> Html {
     let (shown, left_out) = shown_issues(issues);
     let (open, folded, counted) = split_issues(&shown);
-    let items = issue_items(open);
-    let more = (!folded.is_empty()).then(|| {
-        let summary = tr_with(Text::IssuesMore, &[("count", folded.len().into())]);
-        let items = issue_items(folded);
-        view! {
-            <details class="fui-issues-more">
-                <summary>{summary}</summary>
-                <ul class="fui-issues">{items}</ul>
-            </details>
-        }
-    });
-    let not_drawn = (counted > 0).then(|| {
-        view! {
-            <p class="fui-muted">{tr_with(Text::IssuesNotDrawn, &[("count", counted.into())])}</p>
-        }
-    });
-    let left = (left_out > 0).then(|| {
-        view! {
-            <p class="fui-muted">
-                {tr_with(Text::IssuesLeftOut, &[("count", left_out.into())])}
-            </p>
-        }
-    });
-    view! {
-        <ul class="fui-issues">{items}</ul>
-        {more}
-        {not_drawn}
-        {left}
+    IssuesView {
+        open: issue_items(locale, open),
+        more: (!folded.is_empty()).then(|| {
+            (
+                tr_with(locale, Text::IssuesMore, &[("count", folded.len().into())]),
+                issue_items(locale, folded),
+            )
+        }),
+        not_drawn: (counted > 0)
+            .then(|| tr_with(locale, Text::IssuesNotDrawn, &[("count", counted.into())])),
+        left: (left_out > 0)
+            .then(|| tr_with(locale, Text::IssuesLeftOut, &[("count", left_out.into())])),
     }
+    .html()
+}
+
+#[derive(Template)]
+#[template(path = "refusal/refusal.html", block = "issues")]
+struct IssuesView {
+    open: Html,
+    more: Option<(Word, Html)>,
+    not_drawn: Option<Word>,
+    left: Option<Word>,
+}
+
+/// One issue as the list draws it.
+struct IssueView<'a> {
+    badge: &'static str,
+    severity: Word,
+    code: &'a str,
+    place: Option<&'a str>,
+    text: Option<&'a str>,
+    details: &'a [String],
+}
+
+#[derive(Template)]
+#[template(path = "refusal/refusal.html", block = "items")]
+struct ItemsView<'a> {
+    issues: Vec<IssueView<'a>>,
+    place_words: Word,
+    blank: Word,
 }
 
 /// Returns `issues` as the items of an issue list.
-fn issue_items(issues: &[&Issue]) -> impl IntoView + use<> {
-    issues
-        .iter()
-        .map(|issue| {
-            let text = match &issue.text {
-                Some(text) => text.clone().into_any(),
-                None => view! {
-                    <span class="fui-muted">{tr_with(Text::IssueBlank, &[])}</span>
-                }
-                .into_any(),
-            };
-            let place = (!issue.place.is_empty()).then(|| {
-                view! {
-                    " " {tr_with(Text::IssuePlace, &[])} " "
-                    <code>{issue.place.clone()}</code>
-                }
-            });
-            let details = issue
-                .details
-                .iter()
-                .map(|code| view! { <code class="fui-issue-detail">{code.clone()}</code> })
-                .collect_view();
-            view! {
-                <li>
-                    <span class=issue.severity.tone().badge()>{issue.severity.drawn()}</span>
-                    <span class="fui-issue-head">
-                        <code>{issue.code.clone()}</code>
-                        {place}
-                        ":"
-                    </span>
-                    <span class="fui-issue-text">{text} {details}</span>
-                </li>
-            }
-        })
-        .collect_view()
+fn issue_items(locale: &Locale, issues: &[&Issue]) -> Html {
+    ItemsView {
+        issues: issues
+            .iter()
+            .map(|issue| IssueView {
+                badge: issue.severity.tone().badge(),
+                severity: issue.severity.word(locale),
+                code: &issue.code,
+                place: Some(issue.place.as_str()).filter(|place| !place.is_empty()),
+                text: issue.text.as_deref(),
+                details: &issue.details,
+            })
+            .collect(),
+        place_words: tr(locale, Text::IssuePlace),
+        blank: tr(locale, Text::IssueBlank),
+    }
+    .html()
 }
 
 /// The visible title of `refusal`: its status before its summary, or the
@@ -257,9 +246,10 @@ fn issue_items(issues: &[&Issue]) -> impl IntoView + use<> {
 /// [`refusal`] leads a title with no status with "No answer" for
 /// assistive technology alone ([`refusal_lead`]).
 #[must_use]
-pub fn refusal_title(refusal: &Refusal) -> Word {
+pub fn refusal_title(locale: &Locale, refusal: &Refusal) -> Word {
     match refusal.status {
         Some(status) => tr_with(
+            locale,
             Text::RefusalStatus,
             &[
                 ("status", status.to_string().into()),
@@ -274,8 +264,11 @@ pub fn refusal_title(refusal: &Refusal) -> Word {
 /// none came, so assistive technology says so, or `None` when the title's
 /// status says what came.
 #[must_use]
-pub fn refusal_lead(refusal: &Refusal) -> Option<Word> {
-    refusal.status.is_none().then(|| tr(Text::RefusalNoAnswer))
+pub fn refusal_lead(locale: &Locale, refusal: &Refusal) -> Option<Word> {
+    refusal
+        .status
+        .is_none()
+        .then(|| tr(locale, Text::RefusalNoAnswer))
 }
 
 /// Returns `refusal` as an alert: its status, its summary, the request it
@@ -285,55 +278,49 @@ pub fn refusal_lead(refusal: &Refusal) -> Option<Word> {
 /// the live region (WAI-ARIA 1.2, `alert`), so an assistive technology says
 /// what was refused and never reads a long list of issues at once.
 #[must_use]
-pub fn refusal(refusal: &Refusal) -> impl IntoView + use<> {
-    let title = refusal_title(refusal);
-    let lead = refusal_lead(refusal).map(|lead| {
-        view! {
-            <span class="fui-sr-only">{lead}</span>
-            " "
-        }
-    });
-    let request = refusal
-        .request
-        .clone()
-        .map(|request| view! { <p class="fui-alert-request"><code>{request}</code></p> });
-    let issues = (!refusal.issues.is_empty()).then(|| issue_list(&refusal.issues));
-    let evidence = refusal.evidence.clone().map(|evidence| {
-        view! {
-            <div
-                class="fui-code-panel fui-alert-evidence"
-                role="region"
-                aria-label=tr(Text::RefusalEvidence)
-                tabindex="0"
-            >
-                <pre>{evidence}</pre>
-            </div>
-        }
-    });
-    view! {
-        <div class="fui-alert">
-            <p class="fui-alert-title" role="alert">{icon(Glyph::CIRCLE_ALERT, "16")} {lead}{title}</p>
-            {request}
-            {issues}
-            {evidence}
-        </div>
+pub fn refusal(locale: &Locale, refusal: &Refusal) -> Html {
+    RefusalView {
+        glyph: icon(Glyph::CIRCLE_ALERT, "16"),
+        lead: refusal_lead(locale, refusal),
+        title: refusal_title(locale, refusal),
+        request: refusal.request.as_deref(),
+        issues: if refusal.issues.is_empty() {
+            Html::empty()
+        } else {
+            issue_list(locale, &refusal.issues)
+        },
+        evidence: refusal.evidence.as_deref(),
+        evidence_label: tr(locale, Text::RefusalEvidence),
     }
+    .html()
+}
+
+#[derive(Template)]
+#[template(path = "refusal/refusal.html", block = "refusal")]
+struct RefusalView<'a> {
+    glyph: Html,
+    lead: Option<Word>,
+    title: Word,
+    request: Option<&'a str>,
+    issues: Html,
+    evidence: Option<&'a str>,
+    evidence_label: Word,
 }
 
 /// Returns the console's own fault `message` as an alert.
 #[must_use]
-pub fn fault(message: impl Into<String>) -> impl IntoView {
-    view! {
-        <div role="alert" class="fui-alert">
-            <p class="fui-alert-title">{icon(Glyph::TRIANGLE_ALERT, "16")} {message.into()}</p>
-        </div>
-    }
+pub fn fault(message: impl Into<String>) -> Html {
+    Html::raw(format!(
+        "<div role=\"alert\" class=\"fui-alert\"><p class=\"fui-alert-title\">{} {}</p></div>",
+        icon(Glyph::TRIANGLE_ALERT, "16"),
+        Html::text(message.into())
+    ))
 }
 
 #[cfg(test)]
 mod tests {
     use super::{Issue, Refusal, Severity, refusal_lead, refusal_title, shown_issues};
-    use crate::i18n::Word;
+    use crate::i18n::{Locale, Word};
 
     /// An issue of `severity`, carrying `text` when given.
     fn issue(severity: Severity, text: Option<&str>) -> Issue {
@@ -352,7 +339,7 @@ mod tests {
         };
         assert_eq!(
             "The terminology server did not answer.",
-            refusal_title(&none)
+            refusal_title(&Locale::english(), &none)
         );
         let answered = Refusal {
             status: Some(404),
@@ -360,7 +347,7 @@ mod tests {
         };
         assert_eq!(
             "404: The terminology server did not answer.",
-            refusal_title(&answered)
+            refusal_title(&Locale::english(), &answered)
         );
     }
 
@@ -372,13 +359,15 @@ mod tests {
         };
         assert_eq!(
             Some("No answer:"),
-            refusal_lead(&none).as_ref().map(Word::text)
+            refusal_lead(&Locale::english(), &none)
+                .as_ref()
+                .map(Word::text)
         );
         let answered = Refusal {
             status: Some(503),
             ..none
         };
-        assert_eq!(None, refusal_lead(&answered));
+        assert_eq!(None, refusal_lead(&Locale::english(), &answered));
     }
 
     #[test]

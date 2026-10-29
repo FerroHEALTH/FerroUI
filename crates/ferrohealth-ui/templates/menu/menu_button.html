@@ -1,0 +1,4 @@
+<details class="{{ anchor }}" name="fui-menu" data-fui="menu"{% if let Some(copied) = copied %} data-copied="{{ copied }}" data-copy-refused="{{ copy_refused }}"{% endif %}>
+<summary class="{{ trigger_class }}" aria-haspopup="{{ haspopup }}" aria-controls="{{ id }}" aria-label="{{ name }}"{% if let Some(title) = title %} title="{{ title }}"{% endif %}>{{ face }}</summary>
+<div class="{{ popup_class }}"><p class="fui-menu-sheet-title" aria-hidden="true">{{ label }}</p><div id="{{ id }}" role="{{ role }}" aria-label="{{ label }}" class="fui-menu-items">{{ entries }}</div><button type="button" class="fui-menu-cancel" hidden>{{ cancel }}</button></div>
+</details>

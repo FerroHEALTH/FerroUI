@@ -15,7 +15,7 @@
 //! the page header (R5).
 //!
 //! Every decision is a submit button of a `POST` form, the bar's own or the
-//! page's form it names, so the bar works with no WebAssembly. A disabled
+//! page's form it names, so the bar works with no script. A disabled
 //! decision says why as visible text in the bar, named by its
 //! `aria-describedby`, never only in a tooltip. A decision's shortcut is a
 //! quiet key cap after its label at wide widths, announced through
@@ -23,8 +23,9 @@
 //! control clear of the bar (WCAG 2.2 SC 2.4.11, the stylesheet's scroll
 //! padding). No specification governs the bar: our own design.
 
-use leptos::prelude::*;
+use askama::Template;
 
+use crate::html::{Html, Render as _};
 use crate::icon::{Glyph, icon};
 use crate::tone::Tone;
 use crate::view::button::Variant;
@@ -186,9 +187,55 @@ pub fn reason_id(id: &str, place: u32) -> String {
     format!("{id}-why-{place}")
 }
 
+struct FieldView {
+    id: String,
+    name: String,
+    label: String,
+    cap: Html,
+    value: String,
+    placeholder: String,
+    error: Option<String>,
+    error_id: String,
+    help: Option<String>,
+    help_id: String,
+    describe: Option<String>,
+    keys: Option<String>,
+    disabled: bool,
+    focus: bool,
+}
+
+struct DecisionView {
+    name: String,
+    value: String,
+    keys: Option<String>,
+    described: Option<String>,
+    busy: bool,
+    held: bool,
+    leaves: bool,
+    class: &'static str,
+    glyph: Html,
+    label: String,
+    cap: Html,
+}
+
+#[derive(Template)]
+#[template(path = "dock/bar.html", block = "bar")]
+struct BarView {
+    id: String,
+    label: String,
+    own: Option<String>,
+    form_id: String,
+    above: Html,
+    reason_lines: Html,
+    fields: Vec<FieldView>,
+    alert: Html,
+    in_row: Html,
+    decisions: Vec<DecisionView>,
+}
+
 /// Returns the docked decision bar `bar`.
 #[must_use]
-pub fn decision_bar(bar: DecisionBar) -> AnyView {
+pub fn decision_bar(bar: DecisionBar) -> Html {
     let DecisionBar {
         id,
         label,
@@ -201,9 +248,6 @@ pub fn decision_bar(bar: DecisionBar) -> AnyView {
         DockForm::Own(action) => (Some(action), format!("{id}-form")),
         DockForm::Page(form) => (None, form),
     };
-    let own = own.map(|action| {
-        view! { <form id=form_id.clone() method="post" action=action hidden></form> }
-    });
     let reasons: Vec<(String, String)> = decisions
         .iter()
         .zip(1_u32..)
@@ -215,13 +259,13 @@ pub fn decision_bar(bar: DecisionBar) -> AnyView {
     let bare = fields.is_empty();
     let (in_row, above) = match line {
         Some(DockLine::State { glyph, said }) if bare => {
-            (Some(state_line(glyph, said, None)), None)
+            (Some(state_line(glyph, &said, None)), None)
         }
         other => (None, other),
     };
     let reason_lines = reasons
         .into_iter()
-        .map(|(id, reason)| state_line(Some(Glyph::INFO), reason, Some(id)))
+        .map(|(id, reason)| state_line(Some(Glyph::INFO), &reason, Some(id)))
         .collect::<Vec<_>>();
     let (in_row, reason_lines) = match (in_row, bare) {
         (None, true) => {
@@ -230,86 +274,83 @@ pub fn decision_bar(bar: DecisionBar) -> AnyView {
         }
         (in_row, _) => (in_row, reason_lines),
     };
-    let above = above.map(line_view);
-    let fields = fields
-        .into_iter()
-        .map(|field| field_view(field, &form_id))
-        .collect_view();
+    let fields = fields.into_iter().map(field_view).collect();
     let decisions = decisions
         .into_iter()
         .zip(1_u32..)
-        .map(|(decision, place)| decision_view(decision, &form_id, reason_id(&id, place)))
-        .collect_view();
-    view! {
-        <div id=id class="fui-dock" role="region" aria-label=label>
-            {own}
-            {above}
-            {reason_lines}
-            <div class="fui-dock-row">
-                {fields}
-                {in_row}
-                <div class="fui-dock-actions">{decisions}</div>
-            </div>
-        </div>
+        .map(|(decision, place)| decision_view(decision, reason_id(&id, place)))
+        .collect();
+    BarView {
+        id,
+        label,
+        own,
+        form_id,
+        above: above.map(line_view).unwrap_or_default(),
+        reason_lines: Html::join(reason_lines),
+        fields,
+        alert: icon(Glyph::CIRCLE_ALERT, "14"),
+        in_row: in_row.unwrap_or_default(),
+        decisions,
     }
-    .into_any()
+    .html()
+}
+
+#[derive(Template)]
+#[template(path = "dock/bar.html", block = "state_line")]
+struct StateLine<'a> {
+    id: Option<String>,
+    glyph: Html,
+    said: &'a str,
 }
 
 /// Returns a line of the bar's state: `glyph` beside `said`, with the id
 /// `id` a disabled decision names.
-fn state_line(glyph: Option<Glyph>, said: String, id: Option<String>) -> AnyView {
-    view! {
-        <p id=id class="fui-dock-message">
-            {glyph.map(|glyph| icon(glyph, "16"))}
-            <span>{said}</span>
-        </p>
+fn state_line(glyph: Option<Glyph>, said: &str, id: Option<String>) -> Html {
+    StateLine {
+        id,
+        glyph: glyph.map(|glyph| icon(glyph, "16")).unwrap_or_default(),
+        said,
     }
-    .into_any()
+    .html()
+}
+
+#[derive(Template)]
+#[template(path = "dock/bar.html", block = "done")]
+struct DoneLine {
+    glyph: Html,
+    said: String,
+}
+
+#[derive(Template)]
+#[template(path = "dock/bar.html", block = "stale")]
+struct StaleLine {
+    said: String,
+    ways: Vec<DockLink>,
 }
 
 /// Returns `line` above the bar's row.
-fn line_view(line: DockLine) -> AnyView {
+fn line_view(line: DockLine) -> Html {
     match line {
-        DockLine::State { glyph, said } => state_line(glyph, said, None),
-        DockLine::Done(said) => view! {
-            <p class="fui-dock-message fui-dock-done" role="status">
-                {icon(Glyph::CIRCLE_CHECK, "16")}
-                <span>{said}</span>
-            </p>
+        DockLine::State { glyph, said } => state_line(glyph, &said, None),
+        DockLine::Done(said) => DoneLine {
+            glyph: icon(Glyph::CIRCLE_CHECK, "16"),
+            said,
         }
-        .into_any(),
-        DockLine::Stale { said, ways } => {
-            let ways = ways
-                .into_iter()
-                .map(|way| {
-                    view! {
-                        " "
-                        <a href=way.href class=way.variant.small()>
-                            {way.words}
-                        </a>
-                    }
-                })
-                .collect_view();
-            view! {
-                <div class="fui-dock-message">
-                    {notice(
-                        Tone::Warn,
-                        Announce::Alert,
-                        None,
-                        view! {
-                            {said}
-                            {ways}
-                        },
-                    )}
-                </div>
-            }
-            .into_any()
-        }
+        .html(),
+        DockLine::Stale { said, ways } => Html::raw(format!(
+            "<div class=\"fui-dock-message\">{}</div>",
+            notice(
+                Tone::Warn,
+                Announce::Alert,
+                None,
+                StaleLine { said, ways }.html()
+            )
+        )),
     }
 }
 
-/// Returns `field` joined to the form `form`.
-fn field_view(field: DockField, form: &str) -> impl IntoView {
+/// Returns `field` as the template writes it.
+fn field_view(field: DockField) -> FieldView {
     let DockField {
         id,
         name,
@@ -323,48 +364,27 @@ fn field_view(field: DockField, form: &str) -> impl IntoView {
         focus,
     } = field;
     let help = help.filter(|_| error.is_none());
-    let describe = described_by(&id, help.is_some(), error.is_some());
-    let keys = shortcut.as_deref().and_then(aria_keys);
-    let cap = shortcut.as_deref().map(kbd);
-    let error = error.map(|error| {
-        view! {
-            <p id=error_id(&id) class="fui-error">
-                {icon(Glyph::CIRCLE_ALERT, "14")}
-                {error}
-            </p>
-        }
-    });
-    let invalid = error.is_some().then_some("true");
-    let help = help.map(|help| view! { <p id=help_id(&id) class="fui-help">{help}</p> });
-    view! {
-        <div class="fui-dock-field">
-            <label for=id.clone() class="fui-label">
-                {label}
-                {cap}
-            </label>
-            <input
-                id=id
-                name=name
-                form=form.to_owned()
-                type="text"
-                class="fui-input"
-                value=value
-                placeholder=placeholder
-                aria-invalid=invalid
-                aria-describedby=describe
-                aria-keyshortcuts=keys
-                disabled=disabled
-                autofocus=focus
-            />
-            {error}
-            {help}
-        </div>
+    FieldView {
+        describe: described_by(&id, help.is_some(), error.is_some()),
+        keys: shortcut.as_deref().and_then(aria_keys),
+        cap: shortcut.as_deref().map(kbd).unwrap_or_default(),
+        error_id: error_id(&id),
+        help_id: help_id(&id),
+        id,
+        name,
+        label,
+        value,
+        placeholder,
+        error,
+        help,
+        disabled,
+        focus,
     }
 }
 
-/// Returns `decision` as a submit button of the form `form`, its reason
-/// line `why` when it is disabled for one.
-fn decision_view(decision: Decision, form: &str, why: String) -> impl IntoView {
+/// Returns `decision` as the template writes it, its reason line `why`
+/// when it is disabled for one.
+fn decision_view(decision: Decision, why: String) -> DecisionView {
     let Decision {
         name,
         value,
@@ -376,31 +396,21 @@ fn decision_view(decision: Decision, form: &str, why: String) -> impl IntoView {
         leaves,
     } = decision;
     let busy = state == DecisionState::Busy;
-    let keys = shortcut.as_deref().and_then(aria_keys);
-    let cap = shortcut.as_deref().filter(|_| !busy).map(kbd);
-    let described = matches!(state, DecisionState::Blocked(_)).then_some(why);
-    let held = state != DecisionState::Ready;
-    let lead = if busy {
-        Some(view! { <span class="fui-spinner-ring" aria-hidden="true"></span> }.into_any())
-    } else {
-        glyph.map(|glyph| icon(glyph, "16").into_any())
-    };
-    view! {
-        <button
-            type="submit"
-            form=form.to_owned()
-            name=name
-            value=value
-            class=variant.class()
-            aria-keyshortcuts=keys
-            aria-describedby=described
-            aria-busy=busy.then_some("true")
-            disabled=held
-            formnovalidate=leaves
-        >
-            {lead}
-            {label}
-            {cap}
-        </button>
+    DecisionView {
+        name,
+        value,
+        keys: shortcut.as_deref().and_then(aria_keys),
+        described: matches!(state, DecisionState::Blocked(_)).then_some(why),
+        busy,
+        held: state != DecisionState::Ready,
+        leaves,
+        class: variant.class(),
+        glyph: glyph.map(|glyph| icon(glyph, "16")).unwrap_or_default(),
+        label,
+        cap: shortcut
+            .as_deref()
+            .filter(|_| !busy)
+            .map(kbd)
+            .unwrap_or_default(),
     }
 }

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: BUSL-1.1
 [package]
 name = "ferrohealth-ui"
-description = "The shared UI components of the FerroHEALTH consoles: Leptos view functions and widgets, role tokens, a highlighter and one table model"
+description = "The shared UI components of the FerroHEALTH consoles: server-rendered Askama components, role tokens, plain script modules, a highlighter and one table model"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -12,114 +12,42 @@ homepage.workspace = true
 authors.workspace = true
 publish = true
 readme = "README.md"
-keywords = ["leptos", "ui", "components", "design-system", "accessibility"]
-categories = ["gui", "wasm", "web-programming"]
-# The stylesheet, the brand themes, the string catalogs and the vendored icon outlines travel with
-# the crate, so a console reads them from the registry checkout or from the
-# constants of `ferrohealth_ui::style`.
-include = ["src/**", "css/**", "themes/**", "locales/**", "vendor/**", "tests/**", "README.md"]
+keywords = ["askama", "ui", "components", "design-system", "accessibility"]
+categories = ["gui", "web-programming"]
+# The templates, the stylesheet, the brand themes, the script modules, the
+# string catalogs and the vendored icon outlines travel with the crate.
+include = [
+  "src/**",
+  "templates/**",
+  "css/**",
+  "themes/**",
+  "scripts/**",
+  "locales/**",
+  "vendor/**",
+  "tests/**",
+  "README.md",
+]
 
-# No render-mode feature: the library compiles under `csr`, `ssr` and
-# `hydrate` alike, whichever the console's own leptos dependency turns on
-# (features unify per build), and defines no server function. A console
-# hydrates the whole page and splits its code by route (`docs/consoles.md`).
+[features]
+default = ["axum"]
+# The asset router a console mounts (`serve`): the stylesheet, the themes
+# and the script modules under one versioned path.
+axum = ["dep:axum", "dep:http"]
+
 [dependencies]
-leptos.workspace = true
-leptos_router.workspace = true
+askama.workspace = true
 serde.workspace = true
+serde_json.workspace = true
 fluent-templates.workspace = true
 intl-memoizer.workspace = true
-
-# The server half of `widget::action`: `draw_answers` wraps a console's axum
-# router so a plain post draws its page with the action's answer. Every
-# console serves through axum already, so this adds nothing a console lacks.
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-axum.workspace = true
 form_urlencoded.workspace = true
-http.workspace = true
-tower = { workspace = true, features = ["util"] }
+axum = { workspace = true, optional = true }
+http = { workspace = true, optional = true }
 
-# The widgets' browser code, compiled for the browser alone. Each asks for
-# the lowest release leptos 0.8.22 resolves with (web-sys 0.3.85 pins
-# wasm-bindgen 0.2.108), not the workspace pin, so a console's own lock picks
-# its wasm-bindgen and its CLI; `scripts/checks/browser-floor.sh` builds the
-# library at these floors. The wasm-bindgen crate is reached through leptos.
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-# The browser entry (`widget::hydration::hydrate`) runs leptos's
-# `hydrate_from_async`, which the `hydrate` feature carries; every console
-# hydrates its page whole in the browser, so this adds nothing a console lacks.
-leptos = { workspace = true, features = ["hydrate"] }
-wasm-bindgen-futures = "0.4.58"
-web-sys = { version = "0.3.85", default-features = false, features = [
-  "Attr",
-  "Blob",
-  "BroadcastChannel",
-  "Clipboard",
-  "DataTransfer",
-  "DocumentFragment",
-  "DomRect",
-  "DomTokenList",
-  "DragEvent",
-  "Element",
-  "Event",
-  "EventTarget",
-  "File",
-  "FileList",
-  "FormData",
-  "FocusEvent",
-  "FocusOptions",
-  "Headers",
-  "History",
-  "HtmlAnchorElement",
-  "HtmlDetailsElement",
-  "HtmlDialogElement",
-  "HtmlElement",
-  "HtmlFormElement",
-  "HtmlInputElement",
-  "HtmlTextAreaElement",
-  "KeyboardEvent",
-  "Location",
-  "MediaQueryList",
-  "MessageEvent",
-  "MouseEvent",
-  "MutationObserver",
-  "MutationObserverInit",
-  "NamedNodeMap",
-  "NodeList",
-  "Navigator",
-  "Node",
-  "NodeList",
-  "Performance",
-  "Request",
-  "RequestCredentials",
-  "RequestInit",
-  "RequestRedirect",
-  "Response",
-  "ScrollIntoViewOptions",
-  "ScrollLogicalPosition",
-  "SubmitEvent",
-  "Url",
-  "UrlSearchParams",
-  "Window",
-] }
-
-# The tests render the views to HTML on the host, which the `ssr` feature
-# draws; a dev-dependency reaches the test build alone.
 [dev-dependencies]
-leptos = { workspace = true, features = ["ssr"] }
-leptos_router = { workspace = true, features = ["ssr"] }
-hydration_context.workspace = true
-# A day crosses to the browser as JSON; its unit tests read it back.
 serde_json.workspace = true
-
-# The tests of `widget::action::draw_answers` serve a router in-process.
-[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 tokio = { workspace = true, features = ["rt", "macros"] }
-# A server function of those tests redirects through `leptos_axum::redirect`.
-leptos_axum.workspace = true
-# A hydrated `<ActionForm>` reads its form with it; the secret marks' tests
-# read a form as it does.
-serde_qs.workspace = true
+tower = { workspace = true, features = ["util"] }
 
 [lints]
 workspace = true

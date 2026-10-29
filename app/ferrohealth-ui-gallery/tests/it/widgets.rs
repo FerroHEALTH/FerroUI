@@ -15,7 +15,7 @@ use crate::journeys_enabled;
 use crate::stack::Gallery;
 
 /// Presses the button `button` until `done` holds, which also waits for
-/// the page to hydrate.
+/// the page to be enhanced.
 async fn press_until(
     what: &str,
     button: &WebElement,
@@ -132,7 +132,7 @@ async fn the_picker_writes_a_choice_and_keeps_a_typed_value() -> Result<(), Box<
         browser.goto(&gallery.url("/ferroterm/layouts")).await?;
         let choice = browser.element(By::Id("run-value-set-choice")).await?;
         let input = browser.element(By::Id("run-value-set")).await?;
-        until("the picker hydrates and hides its input", async || {
+        until("the picker is enhanced and hides its input", async || {
             Ok(!input.is_displayed().await?)
         })
         .await?;
@@ -179,7 +179,7 @@ async fn the_pickers_select_follows_a_value_set_after_a_manual_choice() -> Resul
         browser.goto(&gallery.url("/ferroterm/layouts")).await?;
         let choice = browser.element(By::Id("run-value-set-choice")).await?;
         let input = browser.element(By::Id("run-value-set")).await?;
-        until("the picker hydrates and hides its input", async || {
+        until("the picker is enhanced and hides its input", async || {
             Ok(!input.is_displayed().await?)
         })
         .await?;
@@ -261,8 +261,8 @@ async fn the_pickers_select_follows_a_value_set_after_a_manual_choice() -> Resul
 /// The busy bridge on the charts page, which `browser` shows at a
 /// desktop's width: its folded callers lane holds a summary card, a link
 /// that unfolds the lane, after which the lane shows every caller and its
-/// fold link. It needs no WebAssembly: with it, the router unfolds the lane
-/// in the page (`in_page`), and without it the browser loads the page.
+/// fold link. It needs no script: the link loads the page with the lane
+/// open, followed by a click (`in_page`) or by a plain load.
 pub(crate) async fn busy_flow_unfolds(
     browser: &Browser,
     in_page: bool,
@@ -291,7 +291,7 @@ pub(crate) async fn busy_flow_unfolds(
         .await?;
     if in_page {
         browser
-            .click_in_page(&summary, "the summary card unfolds the lane", async || {
+            .click_through(&summary, "the summary card unfolds the lane", async || {
                 Ok(!browser.driver().find_all(By::Css(quiet)).await?.is_empty())
             })
             .await?;
@@ -333,7 +333,7 @@ async fn the_chart_legend_hides_and_shows_a_series_in_place() -> Result<(), Box<
         let chip = browser
             .element(By::Css(".fui-legend-chip[data-series='Writes']"))
             .await?;
-        until("the legend shows once the page hydrates", async || {
+        until("the legend shows once the page is enhanced", async || {
             chip.is_displayed().await.map_err(Into::into)
         })
         .await?;
@@ -402,11 +402,7 @@ async fn the_tree_walks_by_the_keyboard_and_reads_children_on_opening() -> Resul
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
         browser.goto(&gallery.url("/ferroehr/layouts")).await?;
-        let picked = browser.element(By::Id("run-value-set")).await?;
-        until("the page hydrates", async || {
-            Ok(!picked.is_displayed().await?)
-        })
-        .await?;
+        browser.hydrated().await?;
         let items = || {
             browser
                 .driver()
@@ -515,7 +511,7 @@ async fn the_search_box_submits_and_the_preferences_density_posts_on_change()
         let compact = density_card(browser, "compact").await?;
         let saved = gallery.url("/ferroterm/preferences?saved=density");
         browser
-            .click_in_page(
+            .click_through(
                 &compact,
                 "the density the post kept takes effect",
                 async || {
@@ -540,7 +536,7 @@ async fn the_search_box_submits_and_the_preferences_density_posts_on_change()
         .await?;
         let comfortable = density_card(browser, "comfortable").await?;
         browser
-            .click_in_page(&comfortable, "the density goes back", async || {
+            .click_through(&comfortable, "the density goes back", async || {
                 Ok(!browser
                     .driver()
                     .find_all(By::Css(r#"html[data-density="comfortable"]"#))
@@ -553,7 +549,7 @@ async fn the_search_box_submits_and_the_preferences_density_posts_on_change()
     .await
 }
 
-/// Waits until Your preferences has hydrated: every Save button has left,
+/// Waits until Your preferences has been enhanced: every Save button has left,
 /// since a change now posts by itself.
 async fn preferences_hydrated(browser: &Browser) -> Result<(), Box<dyn Error>> {
     until("the preferences post on change", async || {
@@ -718,7 +714,7 @@ async fn the_open_pager_steps_with_no_total() -> Result<(), Box<dyn Error>> {
                 .element(By::Css(format!("{pager} [data-page='{key}']")))
                 .await?;
             browser
-                .click_in_page(&control, &format!("{key} shows {shown}"), async || {
+                .click_through(&control, &format!("{key} shows {shown}"), async || {
                     Ok(range(pager).await? == shown)
                 })
                 .await
@@ -739,7 +735,7 @@ async fn the_combobox_filters_as_typed_and_the_keys_choose() -> Result<(), Box<d
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
         browser.goto(&gallery.url("/ferroterm/forms")).await?;
-        // Hydrated, the native select gives way to the combobox.
+        // Enhanced, the native select gives way to the combobox.
         let input = browser
             .element(By::Css("#choose-system[role='combobox']"))
             .await?;
@@ -800,21 +796,17 @@ async fn address(browser: &Browser) -> Result<String, Box<dyn Error>> {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn the_tree_keeps_its_open_items_in_the_address_across_a_reload() -> Result<(), Box<dyn Error>>
-{
+async fn the_tree_keeps_its_folds_across_a_reload_and_reads_a_level_by_its_link()
+-> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
         return Ok(());
     }
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
         browser.goto(&gallery.url("/ferroterm/layouts")).await?;
-        let picked = browser.element(By::Id("run-value-set")).await?;
-        until("the page hydrates", async || {
-            Ok(!picked.is_displayed().await?)
-        })
-        .await?;
+        browser.hydrated().await?;
         assert!(open_item(browser, "Synthetic finding").await?);
-        // Closing by the toggle removes the item from the address.
+        // Closing by the toggle folds the level in place, and the session keeps it.
         let toggle = browser
             .element(By::Css("#gallery-tree > li:first-child .fui-tree-toggle"))
             .await?;
@@ -822,58 +814,39 @@ async fn the_tree_keeps_its_open_items_in_the_address_across_a_reload() -> Resul
             Ok(!open_item(browser, "Synthetic finding").await?)
         })
         .await?;
-        until("the closed item leaves the address", async || {
-            let url = address(browser).await?;
-            Ok(url.contains("open=") && !url.contains("SYN-100"))
+        browser.driver().refresh().await?;
+        browser.hydrated().await?;
+        until("the reload keeps the item closed", async || {
+            Ok(!open_item(browser, "Synthetic finding").await?)
         })
         .await?;
-        let closed = address(browser).await?;
-        browser.goto(&closed).await?;
         assert!(
-            !open_item(browser, "Synthetic finding").await?,
-            "the reload opened the closed item again ({closed})"
-        );
-        assert!(
-            browser
-                .driver()
-                .find_all(By::XPath(
+            !browser
+                .element(By::XPath(
                     "//a[contains(., 'Synthetic finding of the arm')]"
                 ))
                 .await?
-                .is_empty(),
-            "a closed item's children show after the reload"
+                .is_displayed()
+                .await?,
+            "a closed item's children stay hidden after the reload"
         );
-        // Opening adds the item; the reload reads its children again.
-        let picked = browser.element(By::Id("run-value-set")).await?;
-        until("the page hydrates again", async || {
-            Ok(!picked.is_displayed().await?)
-        })
-        .await?;
+        // Opening a level not read yet follows its link, which reads it.
         let branch = browser
             .element(By::XPath(
                 "//ul[@id = 'gallery-tree']/li[2]//*[contains(@class, 'fui-tree-toggle')]",
             ))
             .await?;
-        press_until("the toggle opens the branch", &branch, async || {
-            open_item(browser, "Synthetic procedure").await
-        })
-        .await?;
+        browser.click_and_load(&branch).await?;
+        browser.hydrated().await?;
         until("the opened item joins the address", async || {
             Ok(address(browser).await?.contains("SYN-200"))
         })
         .await?;
-        let opened = address(browser).await?;
-        browser.goto(&opened).await?;
         assert!(open_item(browser, "Synthetic procedure").await?);
         browser
             .text("a", "Synthetic child, read on opening")
             .await?;
-        // Closing by the keyboard (Left) removes it again.
-        let picked = browser.element(By::Id("run-value-set")).await?;
-        until("the page hydrates a third time", async || {
-            Ok(!picked.is_displayed().await?)
-        })
-        .await?;
+        // Closing by the keyboard (Left) folds it in place, kept across a reload.
         let item = browser
             .element(By::XPath("//ul[@id = 'gallery-tree']/li[2]"))
             .await?;
@@ -886,11 +859,13 @@ async fn the_tree_keeps_its_open_items_in_the_address_across_a_reload() -> Resul
             Ok(!open_item(browser, "Synthetic procedure").await?)
         })
         .await?;
-        until("the branch leaves the address", async || {
-            Ok(!address(browser).await?.contains("SYN-200"))
+        browser.driver().refresh().await?;
+        browser.hydrated().await?;
+        until("the reload keeps the branch closed", async || {
+            Ok(!open_item(browser, "Synthetic procedure").await?)
         })
         .await?;
-        browser.console_clean("the tree's address").await
+        browser.console_clean("the tree's folds").await
     })
     .await
 }

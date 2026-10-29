@@ -7,15 +7,17 @@
 //! loads the signed-out page as a document.
 
 use ferrohealth_ui::style::STYLESHEET;
-use ferrohealth_ui::widget::session::{Left, WARN_FLOOR, WARNING_ID, Watch, session_watch};
-use ferrohealth_ui::widget::submit::RELOADS;
+use ferrohealth_ui::view::session::{
+    Left, WARN_FLOOR, WARNING_ID, Watch, session_ended, session_watch,
+};
 
 use crate::markup::{has, tags};
-use crate::render::html;
+use crate::render::{en, html};
 
 /// The watch of a console whose session route is `/session`.
 fn watch() -> Watch {
     Watch::new(
+        &en(),
         "/session",
         "/sign-in",
         "/sign-out",
@@ -28,7 +30,7 @@ fn watch() -> Watch {
 
 #[test]
 fn the_server_draws_the_warning_closed_as_a_named_and_described_alert_dialog() {
-    let drawn = html(|| session_watch(watch()));
+    let drawn = html(session_watch(&watch()));
     let dialogs = tags(&drawn, "dialog");
     assert_eq!(1, dialogs.len(), "{drawn}");
     let dialog = &dialogs[0];
@@ -54,7 +56,7 @@ fn the_server_draws_the_warning_closed_as_a_named_and_described_alert_dialog() {
 
 #[test]
 fn stay_signed_in_takes_the_focus_and_sign_out_posts_as_a_document() {
-    let drawn = html(|| session_watch(watch()));
+    let drawn = html(session_watch(&watch()));
     assert!(
         has(&drawn, "button", &[("type", "button"), ("autofocus", "")]),
         "the least destructive action takes the focus (APG alert dialog): {drawn}"
@@ -68,7 +70,6 @@ fn stay_signed_in_takes_the_focus_and_sign_out_posts_as_a_document() {
                 ("id", form.as_str()),
                 ("method", "post"),
                 ("action", "/sign-out"),
-                (RELOADS, ""),
             ]
         ),
         "{drawn}"
@@ -86,12 +87,10 @@ fn stay_signed_in_takes_the_focus_and_sign_out_posts_as_a_document() {
 
 #[test]
 fn the_warning_never_gives_fewer_than_twenty_seconds_and_writes_only_defined_classes() {
-    let drawn = html(|| {
-        session_watch(Watch {
-            warn_at: 5,
-            ..watch()
-        })
-    });
+    let drawn = html(session_watch(&Watch {
+        warn_at: 5,
+        ..watch()
+    }));
     assert!(
         drawn.contains(&format!("0:{WARN_FLOOR}")),
         "SC 2.2.1: at least 20 seconds to answer: {drawn}"
@@ -105,4 +104,41 @@ fn the_warning_never_gives_fewer_than_twenty_seconds_and_writes_only_defined_cla
         assert!(STYLESHEET.contains(&format!(".{class}")), "{class}");
     }
     assert!(!drawn.contains(" style=\""), "{drawn}");
+}
+
+#[test]
+fn the_signed_out_page_carries_the_mark_that_ends_every_tab_and_draws_nothing() {
+    let drawn = html(session_ended());
+    assert!(
+        has(
+            &drawn,
+            "span",
+            &[
+                ("data-fui", "session"),
+                ("data-fui-ended", ""),
+                ("hidden", "")
+            ]
+        ),
+        "{drawn}"
+    );
+}
+
+#[test]
+fn the_watch_carries_what_the_session_had_left_for_the_session_module() {
+    let drawn = html(session_watch(&watch()));
+    assert!(
+        has(
+            &drawn,
+            "dialog",
+            &[
+                ("data-fui", "session"),
+                ("data-fui-status", "/session"),
+                ("data-fui-sign-in", "/sign-in"),
+                ("data-fui-idle", "900"),
+                ("data-fui-absolute", "28800"),
+                ("data-fui-warn-at", "120"),
+            ]
+        ),
+        "{drawn}"
+    );
 }

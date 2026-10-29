@@ -4,7 +4,7 @@
 # Rust style: idiomatic library code
 
 Applies to every hand-written `.rs` file in the repository. **FerroUI is
-modern idiomatic Rust of our own design**, built on Leptos 0.8 and held to the
+modern idiomatic Rust of our own design**, built on Askama 0.16 and held to the
 specifications its components implement: WCAG 2.2, WAI-ARIA 1.2 and the
 WAI-ARIA Authoring Practices, the HTML Living Standard, and CSS
 (`spec-adherence.md`). The four FerroHEALTH consoles are prior art: read their
@@ -16,11 +16,11 @@ components for how a problem was solved, never port one blindly.
   dependency through the root `Cargo.toml [workspace.dependencies]` table
   (`dep.workspace = true`), and verify its version against crates.io or
   docs.rs the day it is added, never from memory. The library itself depends
-  on `leptos`, `leptos_router` and `serde` alone; a new library dependency
-  reaches every console's bundle, so it is justified against the bytes it
-  adds (`leptos-ui.md` §Bundle).
-- **Every crate you touch compiles, is clippy-clean on the host and on
-  `wasm32-unknown-unknown`, and is tested before you move on.**
+  on `askama`, `serde`, `fluent-templates` and, behind its `axum` feature,
+  `axum`; a new library dependency reaches every console, so it is
+  justified against what it adds.
+- **Every crate you touch compiles, is clippy-clean, and is tested before
+  you move on.**
 - **Read the governing specification first** for any accessible-name, role,
   keyboard or contrast behaviour (`spec-adherence.md`).
 

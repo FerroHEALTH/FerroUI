@@ -5,6 +5,7 @@
 //! select (M3), the value set clause (M4), the root matrix (M5), the
 //! mapping row (M6) and the repeatable rows (F7).
 
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::style::STYLESHEET;
 use ferrohealth_ui::table::view::{Body, DataTable, Sorting, data_table};
 use ferrohealth_ui::view::clause::{
@@ -15,13 +16,12 @@ use ferrohealth_ui::view::mapping::{
     MapElement, Mapping, Relationship, map_element, map_elements, mapping_columns, mapping_row,
     relation,
 };
+use ferrohealth_ui::view::repeat::{Fields, ROW, Repeat, RepeatAdd, RepeatRow, RowEnd, repeat};
 use ferrohealth_ui::view::root_matrix::{MatrixRoot, MatrixRow, RootMatrix, root_matrix};
-use ferrohealth_ui::widget::repeat::{Fields, ROW, Repeat, RepeatAdd, RepeatRow, RowEnd, repeat};
-use ferrohealth_ui::widget::version::{VersionRoot, VersionSelect, version_select};
-use leptos::prelude::*;
+use ferrohealth_ui::view::version::{VersionRoot, VersionSelect, version_select};
 
 use crate::markup::{has, tags};
-use crate::render::{html, page_html};
+use crate::render::{en, html};
 
 /// The text of `html` with its tags taken out.
 fn text(html: &str) -> String {
@@ -40,8 +40,9 @@ fn text(html: &str) -> String {
 
 #[test]
 fn a_coding_is_its_display_over_its_code_and_system() {
-    let stacked = html(|| {
+    let stacked = html({
         coding(
+            &en(),
             Coding::new("SF-1210", "Cough <dry>").system("Synthetic findings"),
             Layout::Stacked,
         )
@@ -55,12 +56,19 @@ fn a_coding_is_its_display_over_its_code_and_system() {
         "the code in the code face: {stacked}"
     );
     assert!(stacked.contains(">SF-1210</code>"), "{stacked}");
-    assert!(stacked.contains("Cough &lt;dry&gt;"), "escaped: {stacked}");
+    assert!(
+        stacked.contains("Cough &#60;dry&#62;"),
+        "escaped: {stacked}"
+    );
     assert!(
         has(&stacked, "span", &[("class", "fui-coding-system")]),
         "{stacked}"
     );
-    let inline = html(|| coding(Coding::new("SF-1210", "Cough"), Layout::Inline));
+    let inline = html(coding(
+        &en(),
+        Coding::new("SF-1210", "Cough"),
+        Layout::Inline,
+    ));
     assert!(
         has(
             &inline,
@@ -75,8 +83,9 @@ fn a_coding_is_its_display_over_its_code_and_system() {
 
 #[test]
 fn a_coding_with_no_display_says_so_and_a_linked_one_is_a_row_link() {
-    let bare = html(|| {
+    let bare = html({
         coding(
+            &en(),
             Coding {
                 display: None,
                 code: String::from("X-1"),
@@ -89,7 +98,11 @@ fn a_coding_with_no_display_says_so_and_a_linked_one_is_a_row_link() {
         )
     });
     assert!(bare.contains("no display"), "{bare}");
-    let linked = html(|| coding(Coding::new("X-1", "One").href("/c/x-1"), Layout::Stacked));
+    let linked = html(coding(
+        &en(),
+        Coding::new("X-1", "One").href("/c/x-1"),
+        Layout::Stacked,
+    ));
     assert!(
         has(
             &linked,
@@ -103,7 +116,11 @@ fn a_coding_with_no_display_says_so_and_a_linked_one_is_a_row_link() {
 #[test]
 fn an_inactive_coding_reads_as_the_word_inactive() {
     // NOTE: COMPONENTS.md family rule 12: a state is a shape, a colour and a word together.
-    let inactive = html(|| coding(Coding::new("SF-9", "Old").inactive(), Layout::Inline));
+    let inactive = html(coding(
+        &en(),
+        Coding::new("SF-9", "Old").inactive(),
+        Layout::Inline,
+    ));
     assert!(
         has(
             &inactive,
@@ -112,7 +129,7 @@ fn an_inactive_coding_reads_as_the_word_inactive() {
         ),
         "{inactive}"
     );
-    let mark = html(inactive_mark);
+    let mark = html(inactive_mark(&en()));
     assert_eq!(
         r#"<span class="fui-inactive-mark">Inactive</span>"#, mark,
         "the ring is the stylesheet's, with no text; the word is the mark's only text"
@@ -121,7 +138,7 @@ fn an_inactive_coding_reads_as_the_word_inactive() {
 
 #[test]
 fn a_canonical_breaks_only_after_a_slash() {
-    let shown = html(|| canonical("https://example.org/fhir/ValueSet/a-b"));
+    let shown = html(canonical("https://example.org/fhir/ValueSet/a-b"));
     assert!(
         has(&shown, "code", &[("class", "fui-canonical")]),
         "{shown}"
@@ -166,7 +183,7 @@ fn select(current: &str) -> VersionSelect {
 
 #[test]
 fn the_version_select_shows_the_version_alone_with_its_label_as_name_and_tooltip() {
-    let shown = page_html(|| version_select(select("R5")));
+    let shown = html(version_select(&en(), select("R5")));
     let name = "FHIR version: R5, FHIR 5.0.0";
     assert!(
         has(
@@ -198,7 +215,7 @@ fn the_version_select_shows_the_version_alone_with_its_label_as_name_and_tooltip
 
 #[test]
 fn the_version_menu_checks_the_root_in_view_and_marks_the_default() {
-    let shown = page_html(|| version_select(select("R5")));
+    let shown = html(version_select(&en(), select("R5")));
     let items = tags(&shown, "a");
     assert_eq!(3, items.len(), "one choice per root: {shown}");
     assert!(
@@ -252,11 +269,14 @@ fn the_version_choices_are_the_user_menus_group_below_40rem() {
         unknown.choices.first().is_some_and(|choice| choice.chosen),
         "an unknown root falls back to the first"
     );
-    let none = page_html(|| {
-        version_select(VersionSelect {
-            roots: Vec::new(),
-            ..select("R4")
-        })
+    let none = html({
+        version_select(
+            &en(),
+            VersionSelect {
+                roots: Vec::new(),
+                ..select("R4")
+            },
+        )
     });
     assert!(
         !none.contains("fui-version-select") && !none.contains("menuitemradio"),
@@ -266,29 +286,33 @@ fn the_version_choices_are_the_user_menus_group_below_40rem() {
 
 /// A clause of `kind`, broken when `broken`.
 fn a_clause(kind: ClauseKind, broken: bool) -> String {
-    html(move || {
-        clause(Clause {
-            kind,
-            title: view! { "From " <a href="/cs">"Findings"</a> }.into_any(),
-            source: String::from("From Findings <v3>"),
-            sentence: "Includes everything below SF-1200.".into_any(),
-            body: Some(clause_codes(
-                vec![ClauseCode {
-                    coding: Coding::new("SF-1310", "Fever"),
-                    remove: None,
-                }],
-                None,
-            )),
-            actions: None,
-            issues: if broken {
-                vec![ClauseIssue {
-                    key: String::from("vsd-3"),
-                    text: String::from("Cannot have both concept and filter."),
-                }]
-            } else {
-                Vec::new()
+    html({
+        clause(
+            &en(),
+            Clause {
+                kind,
+                title: Html::raw(String::from(r#"From <a href="/cs">Findings</a>"#)),
+                source: String::from("From Findings <v3>"),
+                sentence: Html::text("Includes everything below SF-1200."),
+                body: Some(clause_codes(
+                    &en(),
+                    vec![ClauseCode {
+                        coding: Coding::new("SF-1310", "Fever"),
+                        remove: None,
+                    }],
+                    None,
+                )),
+                actions: None,
+                issues: if broken {
+                    vec![ClauseIssue {
+                        key: String::from("vsd-3"),
+                        text: String::from("Cannot have both concept and filter."),
+                    }]
+                } else {
+                    Vec::new()
+                },
             },
-        })
+        )
     })
 }
 
@@ -301,7 +325,7 @@ fn a_clause_names_its_kind_in_words_beside_its_edge() {
             "section",
             &[
                 ("class", "fui-clause"),
-                ("aria-label", "Include: From Findings &lt;v3&gt;")
+                ("aria-label", "Include: From Findings &#60;v3&#62;")
             ]
         ),
         "{include}"
@@ -352,7 +376,7 @@ fn a_broken_invariant_is_named_by_its_number_inline() {
         broken.contains("<code>vsd-3</code>Cannot have both concept and filter."),
         "the number first, then the sentence: {broken}"
     );
-    let together = html(|| clauses(view! { <section></section> }));
+    let together = html(clauses(Html::raw(String::from("<section></section>"))));
     assert!(
         has(&together, "div", &[("class", "fui-clauses")]),
         "{together}"
@@ -362,25 +386,30 @@ fn a_broken_invariant_is_named_by_its_number_inline() {
 #[test]
 fn two_broken_invariants_are_a_list_of_issues_whose_numbers_never_break() {
     // NOTE: HL7 FHIR R4 (4.0.1), ValueSet vsd-2 and vsd-3 can fail on one clause together.
-    let broken = html(|| {
-        clause(Clause {
-            kind: ClauseKind::Include,
-            title: "No code system".into_any(),
-            source: String::from("No code system"),
-            sentence: "Lists codes and a filter.".into_any(),
-            body: None,
-            actions: None,
-            issues: vec![
-                ClauseIssue {
-                    key: String::from("vsd-2"),
-                    text: String::from("Choose the code system its codes and filter come from."),
-                },
-                ClauseIssue {
-                    key: String::from("vsd-3"),
-                    text: String::from("Split the codes and the filter into two clauses."),
-                },
-            ],
-        })
+    let broken = html({
+        clause(
+            &en(),
+            Clause {
+                kind: ClauseKind::Include,
+                title: Html::text("No code system"),
+                source: String::from("No code system"),
+                sentence: Html::text("Lists codes and a filter."),
+                body: None,
+                actions: None,
+                issues: vec![
+                    ClauseIssue {
+                        key: String::from("vsd-2"),
+                        text: String::from(
+                            "Choose the code system its codes and filter come from.",
+                        ),
+                    },
+                    ClauseIssue {
+                        key: String::from("vsd-3"),
+                        text: String::from("Split the codes and the filter into two clauses."),
+                    },
+                ],
+            },
+        )
     });
     assert!(
         has(&broken, "ul", &[("class", "fui-clause-issues")]),
@@ -412,13 +441,14 @@ fn two_broken_invariants_are_a_list_of_issues_whose_numbers_never_break() {
 
 #[test]
 fn a_clause_of_thousands_of_codes_ends_in_the_more_row() {
-    let codes = html(|| {
+    let codes = html({
         clause_codes(
+            &en(),
             vec![ClauseCode {
                 coding: Coding::new("SF-1310", "Fever"),
                 remove: None,
             }],
-            Some(MoreCodes::of_page(1, 4000, 25, "/value-set?codes=1")),
+            Some(MoreCodes::of(&en(), 1, 4000, 25, "/value-set?codes=1")),
         )
     });
     assert!(has(&codes, "li", &[("class", "fui-code-more")]), "{codes}");
@@ -430,19 +460,23 @@ fn a_clause_of_thousands_of_codes_ends_in_the_more_row() {
     assert!(codes.contains("Show the next 25"), "{codes}");
     assert_eq!(
         "Show the other 10",
-        MoreCodes::of_page(3990, 4000, 25, "/").link
+        MoreCodes::of(&en(), 3990, 4000, 25, "/").link
     );
     assert_eq!(
         "Show the other one",
-        MoreCodes::of_page(3999, 4000, 25, "/").link
+        MoreCodes::of(&en(), 3999, 4000, 25, "/").link
     );
-    assert_eq!(4000, MoreCodes::of_page(1, 4000, 25, "/").total);
+    assert_eq!(4000, MoreCodes::of(&en(), 1, 4000, 25, "/").total);
 }
 
 #[test]
 fn a_long_code_and_a_urn_canonical_break_between_their_pieces() {
     let uid = "8849182c-82ad-4088-a07f-48ead4180515::ferroehr.example.org::12";
-    let shown = html(move || coding(Coding::new(uid, "Encounter"), Layout::Stacked));
+    let shown = html(coding(
+        &en(),
+        Coding::new(uid, "Encounter"),
+        Layout::Stacked,
+    ));
     assert!(
         shown.contains("<span>8849182c-</span><wbr"),
         "a long code breaks after its hyphens: {shown}"
@@ -464,13 +498,17 @@ fn a_long_code_and_a_urn_canonical_break_between_their_pieces() {
         STYLESHEET.contains("  .fui-coding-code:has(> wbr) {\n    white-space: normal;\n  }"),
         "a long code's breaks are held back by nowrap"
     );
-    let short = html(|| coding(Coding::new("SF-1210", "Cough"), Layout::Inline));
+    let short = html(coding(
+        &en(),
+        Coding::new("SF-1210", "Cough"),
+        Layout::Inline,
+    ));
     assert!(
         !short.contains("<wbr"),
         "an ordinary code never breaks: {short}"
     );
     let urn = "urn:uuid:8849182c-82ad-4088-a07f-48ead4180515";
-    let canonical_urn = html(move || canonical(urn));
+    let canonical_urn = html(canonical(urn));
     assert_eq!(
         6,
         tags(&canonical_urn, "wbr").len(),
@@ -479,7 +517,7 @@ fn a_long_code_and_a_urn_canonical_break_between_their_pieces() {
     assert_eq!(urn, text(&canonical_urn));
     let oid = "urn:oid:2.16.840.1.113883.3.1937.777.63.10";
     assert!(
-        !tags(&html(move || canonical(oid)), "wbr").is_empty(),
+        !tags(&html(canonical(oid)), "wbr").is_empty(),
         "an OID breaks after its dots"
     );
 }
@@ -498,22 +536,25 @@ fn the_root_matrix_heads_each_column_with_its_root_release_and_state() {
             answered: false,
         },
     ];
-    let shown = html(move || {
-        root_matrix(RootMatrix {
-            caption: String::from("What each root declares"),
-            corner: String::from("Declaration"),
-            roots,
-            rows: vec![
-                MatrixRow {
-                    name: "Code systems".into_any(),
-                    cells: vec![Some("15".into_any()), Some("0".into_any())],
-                },
-                MatrixRow {
-                    name: "Purpose".into_any(),
-                    cells: vec![None, None],
-                },
-            ],
-        })
+    let shown = html({
+        root_matrix(
+            &en(),
+            RootMatrix {
+                caption: String::from("What each root declares"),
+                corner: String::from("Declaration"),
+                roots,
+                rows: vec![
+                    MatrixRow {
+                        name: Html::text("Code systems"),
+                        cells: vec![Some(Html::text("15")), Some(Html::text("0"))],
+                    },
+                    MatrixRow {
+                        name: Html::text("Purpose"),
+                        cells: vec![None, None],
+                    },
+                ],
+            },
+        )
     });
     assert!(
         has(&shown, "div", &[("class", "fui-root-matrix")]),
@@ -585,16 +626,16 @@ fn the_root_matrix_heads_each_column_with_its_root_release_and_state() {
 
 #[test]
 fn every_relationship_is_a_word_with_its_arrow() {
-    let narrower = html(|| relation(Relationship::Narrower));
+    let narrower = html(relation(&en(), Relationship::Narrower));
     assert!(
         has(&narrower, "span", &[("class", "fui-relation")]),
         "{narrower}"
     );
     assert!(narrower.contains("the target is narrower"), "{narrower}");
     assert_eq!(1, tags(&narrower, "svg").len(), "{narrower}");
-    let broader = html(|| relation(Relationship::SourceBroader));
+    let broader = html(relation(&en(), Relationship::SourceBroader));
     assert!(broader.contains("broader than the target"), "{broader}");
-    let nothing = html(|| relation(Relationship::Unmatched));
+    let nothing = html(relation(&en(), Relationship::Unmatched));
     assert!(
         has(&nothing, "span", &[("class", "fui-relation is-none")]),
         "{nothing}"
@@ -615,7 +656,7 @@ fn every_relationship_is_a_word_with_its_arrow() {
         Relationship::NotRelatedTo,
         Relationship::Unmatched,
     ] {
-        let words = Owner::new().with(|| each.words());
+        let words = each.words(&en());
         assert!(
             !words.is_empty()
                 && words
@@ -630,10 +671,11 @@ fn every_relationship_is_a_word_with_its_arrow() {
 
 #[test]
 fn a_mapping_row_reads_source_relationship_target_and_comment() {
-    let shown = html(|| {
-        let columns = mapping_columns(true);
-        let rows = view! {
-            {mapping_row(
+    let shown = html({
+        let columns = mapping_columns(&en(), true);
+        let rows = Html::join([
+            mapping_row(
+                &en(),
                 &columns,
                 Mapping {
                     source: Coding::new("LF-04", "Chest complaint"),
@@ -641,8 +683,9 @@ fn a_mapping_row_reads_source_relationship_target_and_comment() {
                     target: Some(Coding::new("SF-1220", "Wheeze")),
                     comment: Some(String::from("Only the wheeze part.")),
                 },
-            )}
-            {mapping_row(
+            ),
+            mapping_row(
+                &en(),
                 &columns,
                 Mapping {
                     source: Coding::new("LF-07", "Feeling unwell"),
@@ -650,16 +693,14 @@ fn a_mapping_row_reads_source_relationship_target_and_comment() {
                     target: None,
                     comment: None,
                 },
-            )}
-        }
-        .into_any();
+            ),
+        ]);
         data_table(DataTable {
             caption: "Every mapping",
             columns: &columns,
             sorting: Sorting::default(),
             body: Body::Rows(rows),
         })
-        .into_any()
     });
     let headers: Vec<String> = ["Source", "Relationship", "Target", "Comment"]
         .iter()
@@ -701,12 +742,12 @@ fn a_mapping_row_reads_source_relationship_target_and_comment() {
         ),
         "the target cell is a named dash, never empty: {shown}"
     );
-    let bare = mapping_columns(false);
+    let bare = mapping_columns(&en(), false);
     assert_eq!(3, bare.len(), "no comment column");
 }
 
 /// A row `key`, headed `heading` when given, around `inside`.
-fn shaped_row(key: &str, heading: Option<&str>, inside: AnyView) -> RepeatRow {
+fn shaped_row(key: &str, heading: Option<&str>, inside: Html) -> RepeatRow {
     RepeatRow {
         key: key.to_owned(),
         heading: heading.map(str::to_owned),
@@ -721,7 +762,7 @@ fn shaped_row(key: &str, heading: Option<&str>, inside: AnyView) -> RepeatRow {
 }
 
 /// A list `id` of `fields` rows, with no blank row and no Add.
-fn shaped(id: &str, fields: Fields, rows: Vec<RepeatRow>) -> AnyView {
+fn shaped(id: &str, fields: Fields, rows: Vec<RepeatRow>) -> Html {
     repeat(Repeat {
         id: id.to_owned(),
         label: String::from("Rows"),
@@ -738,14 +779,14 @@ fn shaped(id: &str, fields: Fields, rows: Vec<RepeatRow>) -> AnyView {
 
 #[test]
 fn a_one_field_row_keeps_its_field_and_its_remove_on_one_line() {
-    let shown = page_html(|| {
+    let shown = html({
         shaped(
             "profiles",
             Fields::One,
             vec![shaped_row(
                 "p1",
                 None,
-                view! { <input id="p1" name="p[p1]" /> }.into_any(),
+                Html::raw(String::from(r#"<input id="p1" name="p[p1]">"#)),
             )],
         )
     });
@@ -768,14 +809,14 @@ fn a_one_field_row_keeps_its_field_and_its_remove_on_one_line() {
 #[test]
 fn a_sub_card_row_is_a_group_named_by_its_heading_with_remove_beside_it() {
     // WAI-ARIA 1.2 `group`, `aria-labelledby`: the heading names the row's fields.
-    let shown = page_html(|| {
+    let shown = html({
         let nested = shaped(
             "ep-e1-profiles",
             Fields::One,
             vec![shaped_row(
                 "p1",
                 None,
-                view! { <input id="pr" /> }.into_any(),
+                Html::raw(String::from(r#"<input id="pr">"#)),
             )],
         );
         shaped(
@@ -784,7 +825,7 @@ fn a_sub_card_row_is_a_group_named_by_its_heading_with_remove_beside_it() {
             vec![shaped_row(
                 "e1",
                 Some("Query API endpoint node-c-pub"),
-                view! { <input id="e1-id" /> {nested} }.into_any(),
+                Html::raw(String::from(r#"<input id="e1-id">"#)).then(nested),
             )],
         )
     });
@@ -826,11 +867,11 @@ fn a_sub_card_row_is_a_group_named_by_its_heading_with_remove_beside_it() {
 /// A list of `rows` filter rows with a blank row and Add.
 fn filters(rows: &[&str]) -> String {
     let rows: Vec<String> = rows.iter().map(|row| (*row).to_owned()).collect();
-    page_html(move || {
+    html({
         let row = |key: &str| RepeatRow {
             key: key.to_owned(),
             heading: None,
-            fields: view! { <input id=format!("f-{key}") name=format!("f[{key}]") /> }.into_any(),
+            fields: Html::raw(format!(r#"<input id="f-{key}" name="f[{key}]">"#)),
             end: RowEnd::Remove {
                 label: format!("Remove the filter {key}"),
                 name: String::from("remove"),
@@ -858,8 +899,8 @@ fn filters(rows: &[&str]) -> String {
 }
 
 #[test]
-fn a_repeatable_row_ends_in_its_remove_which_posts_without_webassembly() {
-    // NOTE: leptos-ui.md §15.8: Remove and Add are submit buttons, so they post with no script.
+fn a_repeatable_row_ends_in_its_remove_which_posts_without_script() {
+    // NOTE: console-ui.md §1: Remove and Add are submit buttons, so they post with no script.
     let shown = filters(&["a", "b"]);
     assert!(
         has(
@@ -931,14 +972,14 @@ fn a_repeatable_row_ends_in_its_remove_which_posts_without_webassembly() {
     );
     assert!(
         shown.contains(&format!("data-row=\"{ROW}\"")),
-        "the blank row keeps the key the island replaces: {shown}"
+        "the blank row keeps the key the module replaces: {shown}"
     );
 }
 
 #[test]
-fn a_blank_row_names_the_key_token_the_island_replaces() {
+fn a_blank_row_names_the_key_token_the_module_replaces() {
     // A nested list names a token of its own, so the list around it rekeys only its own token.
-    let shown = page_html(|| {
+    let shown = html({
         repeat(Repeat {
             id: String::from("profiles"),
             label: String::from("Profiles"),
@@ -949,8 +990,9 @@ fn a_blank_row_names_the_key_token_the_island_replaces() {
             blank: Some(RepeatRow {
                 key: String::from("__profile__"),
                 heading: None,
-                fields: view! { <input id="p-__profile__" name="e[__row__][p][__profile__]" /> }
-                    .into_any(),
+                fields: Html::raw(String::from(
+                    r#"<input id="p-__profile__" name="e[__row__][p][__profile__]">"#,
+                )),
                 end: RowEnd::Remove {
                     label: String::from("Remove the profile"),
                     name: String::from("remove"),
@@ -992,7 +1034,7 @@ fn an_empty_list_says_so_and_a_kept_row_says_why() {
         !empty.contains(r#"data-repeat="empty" hidden"#) && empty.contains("No filters yet."),
         "{empty}"
     );
-    let kept = page_html(|| {
+    let kept = html({
         repeat(Repeat {
             id: String::from("properties"),
             label: String::from("Properties"),
@@ -1001,7 +1043,7 @@ fn an_empty_list_says_so_and_a_kept_row_says_why() {
             rows: vec![RepeatRow {
                 key: String::from("inactive"),
                 heading: None,
-                fields: view! { <input id="p-1" /> }.into_any(),
+                fields: Html::raw(String::from(r#"<input id="p-1">"#)),
                 end: RowEnd::Kept {
                     reason: String::from("The editor keeps this property"),
                 },
@@ -1056,13 +1098,18 @@ fn an_empty_list_says_so_and_a_kept_row_says_why() {
 
 #[test]
 fn a_map_element_is_its_source_over_its_target_rows() {
-    let shown = html(|| {
-        map_elements(map_element(MapElement {
-            source: Coding::new("LF-04", "Chest complaint"),
-            actions: Some(view! { <button type="button">"Remove"</button> }.into_any()),
-            targets: view! { <div class="fui-clause-filter"></div> }.into_any(),
-            after: None,
-        }))
+    let shown = html({
+        map_elements(map_element(
+            &en(),
+            MapElement {
+                source: Coding::new("LF-04", "Chest complaint"),
+                actions: Some(Html::raw(String::from(
+                    r#"<button type="button">Remove</button>"#,
+                ))),
+                targets: Html::raw(String::from(r#"<div class="fui-clause-filter"></div>"#)),
+                after: None,
+            },
+        ))
     });
     assert!(
         has(&shown, "ul", &[("class", "fui-map-elements")]),

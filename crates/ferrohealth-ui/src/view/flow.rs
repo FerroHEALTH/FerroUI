@@ -12,16 +12,15 @@
 //! layers of one size: the lanes and the edges, an image whose description
 //! names each problem edge (WCAG 2.2 SC 1.1.1), and over it the cards, each
 //! a link to its page. Hovering or focusing a card shows its path with the
-//! pulse; the stylesheet does it, so it needs no WebAssembly, changes paint
+//! pulse; the stylesheet does it, so it needs no script, changes paint
 //! only (family rule 3) and stills under reduced motion. No specification
 //! governs the drawing: our own design.
 
 use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet};
 
-use leptos::prelude::*;
-
-use crate::i18n::{Text, Word, tr, tr_with};
+use crate::html::Html;
+use crate::i18n::{Locale, Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::tone::Tone;
 use crate::view::button::{Variant, label};
@@ -47,14 +46,17 @@ pub enum FlowState {
 impl FlowState {
     /// The state's word in the page's locale.
     #[must_use]
-    pub fn word(self) -> Word {
-        tr(match self {
-            Self::Up => Text::FlowUp,
-            Self::Degraded => Text::FlowDegraded,
-            Self::Unreachable => Text::FlowUnreachable,
-            Self::NotChecked => Text::FlowNotChecked,
-            Self::Off => Text::FlowOff,
-        })
+    pub fn word(self, locale: &Locale) -> Word {
+        tr(
+            locale,
+            match self {
+                Self::Up => Text::FlowUp,
+                Self::Degraded => Text::FlowDegraded,
+                Self::Unreachable => Text::FlowUnreachable,
+                Self::NotChecked => Text::FlowNotChecked,
+                Self::Off => Text::FlowOff,
+            },
+        )
     }
 
     /// The key a state is sent and named by, such as `degraded`.
@@ -90,14 +92,17 @@ impl FlowState {
     /// How an edge in this state is drawn, such as "dashed, marked !", in
     /// the page's locale.
     #[must_use]
-    pub fn line(self) -> Word {
-        tr(match self {
-            Self::Up => Text::FlowStyleUp,
-            Self::Degraded => Text::FlowStyleDegraded,
-            Self::Unreachable => Text::FlowStyleUnreachable,
-            Self::NotChecked => Text::FlowStyleNotChecked,
-            Self::Off => Text::FlowStyleOff,
-        })
+    pub fn line(self, locale: &Locale) -> Word {
+        tr(
+            locale,
+            match self {
+                Self::Up => Text::FlowStyleUp,
+                Self::Degraded => Text::FlowStyleDegraded,
+                Self::Unreachable => Text::FlowStyleUnreachable,
+                Self::NotChecked => Text::FlowStyleNotChecked,
+                Self::Off => Text::FlowStyleOff,
+            },
+        )
     }
 
     /// The classes of an edge in this state.
@@ -113,13 +118,11 @@ impl FlowState {
 }
 
 /// A short sample of an edge's line in `state`, for a legend or a rule.
-pub(crate) fn line_sample(state: FlowState) -> AnyView {
-    view! {
-        <svg class="fui-line-sample" width="26" height="10" aria-hidden="true">
-            <path class=state.edge() d="M1 5 H25"></path>
-        </svg>
-    }
-    .into_any()
+pub(crate) fn line_sample(state: FlowState) -> Html {
+    Html::raw(format!(
+        "<svg width=\"26\" height=\"10\" aria-hidden=\"true\" class=\"fui-line-sample\"><path d=\"M1 5 H25\" class=\"{}\"></path></svg>",
+        state.edge()
+    ))
 }
 
 /// One state of an edge rule and what it means where the console draws
@@ -139,23 +142,22 @@ pub struct EdgeRule {
 /// The line sample is hidden from a reader, who reads the words; the same
 /// rule explains the flow (B9) and the topology (F9).
 #[must_use]
-pub fn edge_rule(rules: Vec<EdgeRule>) -> AnyView {
-    let items = rules
+pub fn edge_rule(locale: &Locale, rules: Vec<EdgeRule>) -> Html {
+    let items: Html = rules
         .into_iter()
         .map(|EdgeRule { state, meaning }| {
-            let rest = state.line().map(|line| format!(" · {line}: {meaning}"));
-            view! {
-                <li>
-                    {line_sample(state)}
-                    <span>
-                        <strong>{state.word()}</strong>
-                        {rest}
-                    </span>
-                </li>
-            }
+            let rest = state
+                .line(locale)
+                .map(|line| format!(" · {line}: {meaning}"));
+            Html::raw(format!(
+                "<li>{}<span><strong>{}</strong>{}</span></li>",
+                line_sample(state),
+                state.word(locale),
+                Html::text(rest.text())
+            ))
         })
-        .collect_view();
-    view! { <ul class="fui-topology-rule">{items}</ul> }.into_any()
+        .collect();
+    Html::raw(format!("<ul class=\"fui-topology-rule\">{items}</ul>"))
 }
 
 /// What a flow's "How the flow is drawn" dialog explains.
@@ -172,39 +174,34 @@ pub struct FlowRule {
 /// Returns "How the flow is drawn": the short informational dialog with
 /// the edge rule and its closing paragraph, and Close as its only action.
 #[must_use]
-pub fn rule_dialog(rule: FlowRule) -> AnyView {
+pub fn rule_dialog(locale: &Locale, rule: FlowRule) -> Html {
     let FlowRule { id, rules, note } = rule;
+    let body = edge_rule(locale, rules).then(Html::raw(format!(
+        "<p class=\"fui-small fui-muted\">{}</p>",
+        Html::text(note)
+    )));
     explain(
+        locale,
         Explanation {
             id,
-            title: tr(Text::FlowRuleTitle),
+            title: tr(locale, Text::FlowRuleTitle),
         },
-        view! {
-            {edge_rule(rules)}
-            <p class="fui-small fui-muted">{note}</p>
-        },
+        body,
         false,
     )
-    .into_any()
 }
 
 /// Returns "How it is drawn", the small ghost button of a flow's panel
 /// head that opens the dialog `dialog` ([`rule_dialog`]) with the
 /// `show-modal` command, so it opens with no script.
 #[must_use]
-pub fn rule_button(dialog: Cow<'static, str>) -> AnyView {
-    view! {
-        <button
-            type="button"
-            class=Variant::Ghost.small()
-            command="show-modal"
-            commandfor=dialog
-            aria-haspopup="dialog"
-        >
-            {label(Some(Glyph::INFO), tr(Text::FlowRuleButton))}
-        </button>
-    }
-    .into_any()
+pub fn rule_button(locale: &Locale, dialog: &str) -> Html {
+    Html::raw(format!(
+        "<button type=\"button\" command=\"show-modal\" commandfor=\"{}\" aria-haspopup=\"dialog\" class=\"{}\">{}</button>",
+        Html::text(dialog),
+        Variant::Ghost.small(),
+        label(Some(Glyph::INFO), tr(locale, Text::FlowRuleButton))
+    ))
 }
 
 /// One card of a flow.
@@ -322,6 +319,8 @@ pub(crate) fn units(count: usize) -> f64 {
 /// The summary of a lane's folded quiet cards.
 #[derive(Debug)]
 struct Folded<'a> {
+    /// The locale its words are drawn in.
+    locale: &'a Locale,
     /// Its id, which the folded cards' edges and paths name instead.
     id: String,
     /// The lane's title.
@@ -351,8 +350,12 @@ impl Folded<'_> {
             .iter()
             .map(|(state, count)| {
                 String::from(tr_with(
+                    self.locale,
                     Text::FlowFoldCount,
-                    &[("status", state.word().into()), ("count", (*count).into())],
+                    &[
+                        ("status", state.word(self.locale).into()),
+                        ("count", (*count).into()),
+                    ],
                 ))
             })
             .collect()
@@ -362,7 +365,7 @@ impl Folded<'_> {
     fn line(&self) -> String {
         self.parts()
             .into_iter()
-            .reduce(|first, next| joined(&first, &next))
+            .reduce(|first, next| joined(self.locale, &first, &next))
             .unwrap_or_default()
     }
 
@@ -371,7 +374,7 @@ impl Folded<'_> {
     fn lines(&self) -> Vec<String> {
         let mut lines: Vec<String> = Vec::new();
         for part in self.parts() {
-            let longer = lines.last().map(|last| joined(last, &part));
+            let longer = lines.last().map(|last| joined(self.locale, last, &part));
             match (lines.last_mut(), longer) {
                 (Some(last), Some(longer)) if longer.chars().count() <= LINE_MOST => *last = longer,
                 _ => lines.push(part),
@@ -388,8 +391,9 @@ impl Folded<'_> {
 }
 
 /// The counts `first` and `next` of a summary card's line, joined.
-fn joined(first: &str, next: &str) -> String {
+fn joined(locale: &Locale, first: &str, next: &str) -> String {
     tr_with(
+        locale,
         Text::FlowFoldJoin,
         &[("first", first.into()), ("last", next.into())],
     )
@@ -472,7 +476,7 @@ fn quietest(states: impl Iterator<Item = FlowState>) -> FlowState {
 
 /// The lanes of `flow` folded as their folds say, each fold's summary
 /// standing for the cards it holds.
-fn folded(flow: &Flow) -> (Vec<Planned<'_>>, BTreeMap<&str, String>) {
+fn folded<'a>(locale: &'a Locale, flow: &'a Flow) -> (Vec<Planned<'a>>, BTreeMap<&'a str, String>) {
     let troubled: BTreeSet<&str> = flow
         .edges
         .iter()
@@ -507,6 +511,7 @@ fn folded(flow: &Flow) -> (Vec<Planned<'_>>, BTreeMap<&str, String>) {
                         }
                     }
                     shown.push(Shown::Fold(Folded {
+                        locale,
                         id,
                         title: &lane.title,
                         counts: counts
@@ -807,8 +812,8 @@ fn transposed(lanes: &mut [Vec<&str>], pinned: &[bool], edges: &[(&str, &str)]) 
 
 /// `flow` as the drawing shows it: each lane folded as its fold says,
 /// then ordered to cross the fewest edges.
-fn plan(flow: &Flow) -> Plan<'_> {
-    let (mut lanes, alias) = folded(flow);
+fn plan<'a>(locale: &'a Locale, flow: &'a Flow) -> Plan<'a> {
+    let (mut lanes, alias) = folded(locale, flow);
     let edges = drawn(flow, &alias);
     let order = {
         let ids: Vec<Vec<&str>> = lanes
@@ -941,61 +946,46 @@ pub(crate) fn edge_line(
     (label, label_at): (Option<&str>, LabelAt),
     on_path: bool,
     marked: bool,
-) -> AnyView {
+) -> Html {
     let line = ends(from, to);
     let ((x1, y1), (x2, y2)) = line;
     let toward = if x2 >= x1 { 1.0 } else { -1.0 };
     let at = format!("translate({:.1} {y2:.1})", x2 - toward * 11.0);
     let mark = match (marked, state) {
-        (true, FlowState::Unreachable) => Some(
-            view! {
-                <g class="fui-edge-mark fui-edge-mark-bad" transform=at>
-                    <circle r="7"></circle>
-                    <path d="M-3 -3 L3 3 M3 -3 L-3 3"></path>
-                </g>
-            }
-            .into_any(),
+        (true, FlowState::Unreachable) => format!(
+            "<g transform=\"{at}\" class=\"fui-edge-mark fui-edge-mark-bad\"><circle r=\"7\"></circle><path d=\"M-3 -3 L3 3 M3 -3 L-3 3\"></path></g>"
         ),
-        (true, FlowState::Degraded) => Some(
-            view! {
-                <g class="fui-edge-mark fui-edge-mark-warn" transform=at>
-                    <circle r="7"></circle>
-                    <path d="M0 -3.5 V1 M0 3.4 V3.5"></path>
-                </g>
-            }
-            .into_any(),
+        (true, FlowState::Degraded) => format!(
+            "<g transform=\"{at}\" class=\"fui-edge-mark fui-edge-mark-warn\"><circle r=\"7\"></circle><path d=\"M0 -3.5 V1 M0 3.4 V3.5\"></path></g>"
         ),
-        _ => None,
+        _ => String::new(),
     };
-    let label = label.filter(|_| state.is_problem()).map(|label| {
-        let width = 8.0 + units(label.chars().count()) * 5.7;
-        let (left, y) = match (label_at, toward > 0.0) {
-            (LabelAt::Mark, true) => (x2 - 22.0 - width, y2),
-            (LabelAt::Mark, false) => (x2 + 22.0, y2),
-            (LabelAt::Start, true) => (x1 + 12.0, y1),
-            (LabelAt::Start, false) => (x1 - 12.0 - width, y1),
-        };
-        let place = format!("translate({left:.1} {:.1})", y - 9.0);
-        let wide = format!("{width:.1}");
-        let middle = format!("{:.1}", width / 2.0);
-        let label = label.to_owned();
-        view! {
-            <g class="fui-edge-label" transform=place>
-                <rect width=wide height="18" rx="9"></rect>
-                <text x=middle y="12.5" text-anchor="middle">
-                    {label}
-                </text>
-            </g>
-        }
-    });
-    view! {
-        <g>
-            <path class=state.edge() class:is-path=on_path d=curve(line)></path>
-            {mark}
-            {label}
-        </g>
-    }
-    .into_any()
+    let label = label
+        .filter(|_| state.is_problem())
+        .map_or_else(String::new, |label| {
+            let width = 8.0 + units(label.chars().count()) * 5.7;
+            let (left, y) = match (label_at, toward > 0.0) {
+                (LabelAt::Mark, true) => (x2 - 22.0 - width, y2),
+                (LabelAt::Mark, false) => (x2 + 22.0, y2),
+                (LabelAt::Start, true) => (x1 + 12.0, y1),
+                (LabelAt::Start, false) => (x1 - 12.0 - width, y1),
+            };
+            format!(
+                "<g transform=\"translate({left:.1} {:.1})\" class=\"fui-edge-label\"><rect width=\"{width:.1}\" height=\"18\" rx=\"9\"></rect><text x=\"{:.1}\" y=\"12.5\" text-anchor=\"middle\">{}</text></g>",
+                y - 9.0,
+                width / 2.0,
+                Html::text(label)
+            )
+        });
+    let class = if on_path {
+        format!("{} is-path", state.edge())
+    } else {
+        state.edge().to_owned()
+    };
+    Html::raw(format!(
+        "<g><path d=\"{}\" class=\"{class}\"></path>{mark}{label}</g>",
+        curve(line)
+    ))
 }
 
 /// The drawing of `edge` between `places`: its line, and on a problem edge
@@ -1006,7 +996,7 @@ fn edge_view(
     places: &BTreeMap<&str, Place>,
     crowded: &BTreeSet<&str>,
     on_path: bool,
-) -> Option<AnyView> {
+) -> Option<Html> {
     let from = places.get(edge.from.as_str())?;
     let to = places.get(edge.to.as_str())?;
     let label_at = if crowded.contains(edge.to.as_str()) {
@@ -1040,49 +1030,42 @@ fn crowded<'p>(plan: &'p Plan<'_>) -> BTreeSet<&'p str> {
 }
 
 /// The shape of a card's dot in `state`, centred on `(x, y)`.
-pub(crate) fn dot(state: FlowState, x: f64, y: f64) -> AnyView {
-    match state {
+pub(crate) fn dot(state: FlowState, x: f64, y: f64) -> Html {
+    Html::raw(match state {
         FlowState::Up => {
-            view! { <circle class="fui-tdot fui-tone-ok" cx=x cy=y r="4"></circle> }.into_any()
+            format!(
+                "<circle cx=\"{x}\" cy=\"{y}\" r=\"4\" class=\"fui-tdot fui-tone-ok\"></circle>"
+            )
         }
-        FlowState::Degraded => {
-            let turn = format!("rotate(45 {x} {y})");
-            view! {
-                <rect
-                    class="fui-tdot fui-tone-warn"
-                    x=x - 3.5
-                    y=y - 3.5
-                    width="7"
-                    height="7"
-                    transform=turn
-                ></rect>
-            }
-            .into_any()
-        }
-        FlowState::Unreachable => {
-            let cross = format!(
-                "M{:.1} {:.1} L{:.1} {:.1} M{:.1} {:.1} L{:.1} {:.1}",
-                x - 3.5,
-                y - 3.5,
-                x + 3.5,
-                y + 3.5,
-                x + 3.5,
-                y - 3.5,
-                x - 3.5,
-                y + 3.5
-            );
-            view! { <path class="fui-tdot fui-tdot-cross fui-tone-bad" d=cross></path> }.into_any()
-        }
+        FlowState::Degraded => format!(
+            "<rect x=\"{}\" y=\"{}\" width=\"7\" height=\"7\" transform=\"rotate(45 {x} {y})\" class=\"fui-tdot fui-tone-warn\"></rect>",
+            x - 3.5,
+            y - 3.5
+        ),
+        FlowState::Unreachable => format!(
+            "<path d=\"M{:.1} {:.1} L{:.1} {:.1} M{:.1} {:.1} L{:.1} {:.1}\" class=\"fui-tdot fui-tdot-cross fui-tone-bad\"></path>",
+            x - 3.5,
+            y - 3.5,
+            x + 3.5,
+            y + 3.5,
+            x + 3.5,
+            y - 3.5,
+            x - 3.5,
+            y + 3.5
+        ),
         FlowState::NotChecked | FlowState::Off => {
-            view! { <circle class="fui-tdot fui-tdot-ring" cx=x cy=y r="3.5"></circle> }.into_any()
+            format!(
+                "<circle cx=\"{x}\" cy=\"{y}\" r=\"3.5\" class=\"fui-tdot fui-tdot-ring\"></circle>"
+            )
         }
-    }
+    })
 }
 
 /// The accessible name of `card`.
-fn card_name(card: &FlowCard) -> String {
+fn card_name(locale: &Locale, card: &FlowCard) -> String {
     String::from(if card.hub {
         tr_with(
+            locale,
             Text::FlowHub,
             &[
                 ("title", card.name.clone().into()),
@@ -1091,11 +1074,12 @@ fn card_name(card: &FlowCard) -> String {
         )
     } else {
         tr_with(
+            locale,
             Text::FlowCard,
             &[
                 ("title", card.name.clone().into()),
                 ("note", card.line.clone().into()),
-                ("status", card.state.word().into()),
+                ("status", card.state.word(locale).into()),
             ],
         )
     })
@@ -1134,12 +1118,12 @@ pub(crate) struct CardDrawing {
     pub(crate) more: Vec<String>,
     /// Its controls beside the link, such as its quick look and its
     /// collapse button, drawn in the card's own units.
-    pub(crate) controls: Option<AnyView>,
+    pub(crate) controls: Option<Html>,
 }
 
 /// The drawing of a card: its link with the tone bar, the glyph, the name,
 /// the dot and the line, and beside the link its controls.
-pub(crate) fn card_drawing(card: CardDrawing) -> AnyView {
+pub(crate) fn card_drawing(card: CardDrawing) -> Html {
     let CardDrawing {
         kind,
         place,
@@ -1158,74 +1142,67 @@ pub(crate) fn card_drawing(card: CardDrawing) -> AnyView {
     } = card;
     let height = place.height;
     let base = height - LINE * units(more.len());
-    let muted = state == FlowState::Off;
-    let class = format!("fui-tnode {kind} {}", state.tone().class());
-    let shown_dot = (!hub).then(|| dot(state, 47.0, base / 2.0 + 10.0));
+    let mut class = format!("fui-tnode {kind} {}", state.tone().class());
+    if state == FlowState::Off {
+        class.push_str(" is-muted");
+    }
+    if selected {
+        class.push_str(" is-selected");
+    }
+    let shown_dot = if hub {
+        Html::empty()
+    } else {
+        dot(state, 47.0, base / 2.0 + 10.0)
+    };
     let line_x = if hub { 42.0 } else { 56.0 };
-    let more = more
+    let more: Html = more
         .into_iter()
         .enumerate()
         .map(|(index, text)| {
             let y = base / 2.0 + 14.0 + LINE * (units(index) + 1.0);
-            view! {
-                <text class="fui-tnode-line" x=line_x y=y>
-                    {fit(&text, line_most)}
-                </text>
-            }
+            Html::raw(format!(
+                "<text x=\"{line_x}\" y=\"{y}\" class=\"fui-tnode-line\">{}</text>",
+                Html::text(fit(&text, line_most))
+            ))
         })
-        .collect_view();
-    let tip = label.clone();
+        .collect();
     let name_class = if mono {
         "fui-tnode-name fui-tnode-mono"
     } else {
         "fui-tnode-name"
     };
-    view! {
-        <g
-            class=class
-            class:is-muted=muted
-            class:is-selected=selected
-            transform=format!("translate({:.1} {:.1})", place.x, place.y)
-        >
-            <a class="fui-tnode-link" href=href aria-label=label>
-                <title>{tip}</title>
-                <rect class="fui-tnode-box" width=place.width height=height rx="8"></rect>
-                <rect class="fui-tnode-bar" width="4" height=height - 16.0 x="0" y="8" rx="2"></rect>
-                <g class="fui-tnode-glyph" transform=format!("translate(14 {:.1})", base / 2.0 - 9.0)>
-                    {icon(glyph, "18")}
-                </g>
-                <text class=name_class x="42" y=base / 2.0 - 4.0>
-                    {fit(&name, name_most)}
-                </text>
-                {shown_dot}
-                <text class="fui-tnode-line" x=line_x y=base / 2.0 + 14.0>
-                    {fit(&line, line_most)}
-                </text>
-                {more}
-            </a>
-            {controls}
-        </g>
-    }
-    .into_any()
+    let label = Html::text(label);
+    Html::raw(format!(
+        "<g transform=\"translate({:.1} {:.1})\" class=\"{class}\"><a href=\"{}\" aria-label=\"{label}\" class=\"fui-tnode-link\"><title>{label}</title><rect width=\"{}\" height=\"{height}\" rx=\"8\" class=\"fui-tnode-box\"></rect><rect width=\"4\" height=\"{}\" x=\"0\" y=\"8\" rx=\"2\" class=\"fui-tnode-bar\"></rect><g transform=\"translate(14 {:.1})\" class=\"fui-tnode-glyph\">{}</g><text x=\"42\" y=\"{}\" class=\"{name_class}\">{}</text>{shown_dot}<text x=\"{line_x}\" y=\"{}\" class=\"fui-tnode-line\">{}</text>{more}</a>{}</g>",
+        place.x,
+        place.y,
+        Html::text(href),
+        place.width,
+        height - 16.0,
+        base / 2.0 - 9.0,
+        icon(glyph, "18"),
+        base / 2.0 - 4.0,
+        Html::text(fit(&name, name_most)),
+        base / 2.0 + 14.0,
+        Html::text(fit(&line, line_most)),
+        controls.unwrap_or_default()
+    ))
 }
 
 /// The path a hovered or focused card shows: `lines` raised, the glow and
 /// the pulse along `route`, hidden from assistive technology.
-pub(crate) fn path_drawing(lines: Vec<AnyView>, route: String) -> AnyView {
-    view! {
-        <g class="fui-pipeline-path" aria-hidden="true">
-            {lines}
-            <path class="fui-path-glow" d=route.clone()></path>
-            <path class="fui-path-pulse" d=route pathLength="100"></path>
-        </g>
-    }
-    .into_any()
+pub(crate) fn path_drawing(lines: Html, route: &str) -> Html {
+    let lines = String::from(lines);
+    Html::raw(format!(
+        "<g aria-hidden=\"true\" class=\"fui-pipeline-path\">{lines}<path d=\"{route}\" class=\"fui-path-glow\"></path><path d=\"{route}\" pathLength=\"100\" class=\"fui-path-pulse\"></path></g>"
+    ))
 }
 
 /// What every card of one drawing reads: the plan, the places and the
 /// crowded cards.
 #[derive(Debug, Clone, Copy)]
 struct Scene<'s, 'a> {
+    locale: &'s Locale,
     plan: &'s Plan<'a>,
     places: &'s BTreeMap<&'s str, Place>,
     crowded: &'s BTreeSet<&'s str>,
@@ -1234,8 +1211,9 @@ struct Scene<'s, 'a> {
 /// The drawing of `card` at `place`, a link to its page, after its path
 /// with the pulse, which shows while the card is hovered or focused; a
 /// folded card on the path is its summary.
-fn card_view(card: &FlowCard, place: Place, scene: Scene<'_, '_>) -> AnyView {
+fn card_view(card: &FlowCard, place: Place, scene: Scene<'_, '_>) -> Html {
     let Scene {
+        locale,
         plan,
         places,
         crowded,
@@ -1253,8 +1231,10 @@ fn card_view(card: &FlowCard, place: Place, scene: Scene<'_, '_>) -> AnyView {
             _ => None,
         })
         .collect();
-    let path = (!steps.is_empty()).then(|| {
-        let lines = steps
+    let path = if steps.is_empty() {
+        Html::empty()
+    } else {
+        let lines: Html = steps
             .iter()
             .filter_map(|edge| edge_view(edge, places, crowded, true))
             .collect();
@@ -1267,8 +1247,8 @@ fn card_view(card: &FlowCard, place: Place, scene: Scene<'_, '_>) -> AnyView {
             })
             .collect::<Vec<_>>()
             .join(" ");
-        path_drawing(lines, route)
-    });
+        path_drawing(lines, &route)
+    };
     let drawing = card_drawing(CardDrawing {
         kind: if card.hub {
             "fui-tnode-gateway"
@@ -1281,7 +1261,7 @@ fn card_view(card: &FlowCard, place: Place, scene: Scene<'_, '_>) -> AnyView {
         line: card.line.clone(),
         state: card.state,
         href: card.href.clone(),
-        label: card_name(card),
+        label: card_name(locale, card),
         hub: card.hub,
         mono: false,
         selected: false,
@@ -1289,17 +1269,13 @@ fn card_view(card: &FlowCard, place: Place, scene: Scene<'_, '_>) -> AnyView {
         more: Vec::new(),
         controls: None,
     });
-    view! {
-        <g class="fui-pipeline-card">
-            {path}
-            {drawing}
-        </g>
-    }
-    .into_any()
+    Html::raw(format!(
+        "<g class=\"fui-pipeline-card\">{path}{drawing}</g>"
+    ))
 }
 
 /// The summary card of a folded lane at `place`, a link that unfolds it.
-fn fold_view(folded: &Folded<'_>, place: Place) -> AnyView {
+fn fold_view(folded: &Folded<'_>, place: Place) -> Html {
     let mut lines = folded.lines().into_iter();
     let first = lines.next().unwrap_or_default();
     let more = lines.collect();
@@ -1307,7 +1283,12 @@ fn fold_view(folded: &Folded<'_>, place: Place) -> AnyView {
         kind: "fui-tnode-group",
         place,
         glyph: Glyph::ELLIPSIS,
-        name: tr_with(Text::FlowFoldName, &[("count", folded.count().into())]).into(),
+        name: tr_with(
+            folded.locale,
+            Text::FlowFoldName,
+            &[("count", folded.count().into())],
+        )
+        .into(),
         line: first,
         state: folded.state(),
         href: folded.href.to_owned(),
@@ -1319,12 +1300,13 @@ fn fold_view(folded: &Folded<'_>, place: Place) -> AnyView {
         more,
         controls: None,
     });
-    view! { <g class="fui-pipeline-card">{drawing}</g> }.into_any()
+    Html::raw(format!("<g class=\"fui-pipeline-card\">{drawing}</g>"))
 }
 
 /// The accessible name of a summary card, also its tooltip.
 fn fold_name(folded: &Folded<'_>) -> String {
     tr_with(
+        folded.locale,
         Text::FlowFoldCard,
         &[
             ("count", folded.count().into()),
@@ -1336,40 +1318,34 @@ fn fold_name(folded: &Folded<'_>) -> String {
 }
 
 /// The words of a lane's fold link: unfold while `folded`, else fold.
-fn toggle_words(folded: bool, title: &str) -> String {
+fn toggle_words(locale: &Locale, folded: bool, title: &str) -> String {
     let text = if folded {
         Text::FlowUnfold
     } else {
         Text::FlowFold
     };
-    tr_with(text, &[("title", title.into())]).into()
+    tr_with(locale, text, &[("title", title.into())]).into()
 }
 
 /// The fold link beside the title of the lane at `x`.
-fn lane_toggle(x: f64, title: &str, (folded, href): (bool, &str)) -> AnyView {
-    let name = toggle_words(folded, title);
-    let tip = name.clone();
+fn lane_toggle(locale: &Locale, x: f64, title: &str, (folded, href): (bool, &str)) -> Html {
+    let name = Html::text(toggle_words(locale, folded, title));
     let glyph = if folded {
         Glyph::CHEVRON_DOWN
     } else {
         Glyph::CHEVRON_UP
     };
-    let at = format!("translate({:.1} -1)", x + LANE - 16.0);
-    view! {
-        <g class="fui-tnode-toggle" transform=at>
-            <a href=href.to_owned() aria-label=name>
-                <title>{tip}</title>
-                <rect width="16" height="16" fill="transparent"></rect>
-                {icon(glyph, "16")}
-            </a>
-        </g>
-    }
-    .into_any()
+    Html::raw(format!(
+        "<g transform=\"translate({:.1} -1)\" class=\"fui-tnode-toggle\"><a href=\"{}\" aria-label=\"{name}\"><title>{name}</title><rect width=\"16\" height=\"16\" fill=\"transparent\"></rect>{}</a></g>",
+        x + LANE - 16.0,
+        Html::text(href),
+        icon(glyph, "16")
+    ))
 }
 
 /// The description of the drawing: each problem edge with its state and
 /// label, or that there is none.
-fn problems(flow: &Flow) -> String {
+fn problems(locale: &Locale, flow: &Flow) -> String {
     let named = |id: &str| {
         flow.lanes
             .iter()
@@ -1385,20 +1361,20 @@ fn problems(flow: &Flow) -> String {
             let mut args = vec![
                 ("from", named(&edge.from).into()),
                 ("to", named(&edge.to).into()),
-                ("status", edge.state.word().into()),
+                ("status", edge.state.word(locale).into()),
             ];
             match &edge.label {
                 Some(label) => {
                     args.push(("note", label.clone().into()));
-                    tr_with(Text::FlowEdgeNoted, &args)
+                    tr_with(locale, Text::FlowEdgeNoted, &args)
                 }
-                None => tr_with(Text::FlowEdge, &args),
+                None => tr_with(locale, Text::FlowEdge, &args),
             }
             .into()
         })
         .collect();
     if sentences.is_empty() {
-        tr(Text::FlowSteady).into()
+        tr(locale, Text::FlowSteady).into()
     } else {
         format!("{}.", sentences.join(". "))
     }
@@ -1406,67 +1382,74 @@ fn problems(flow: &Flow) -> String {
 
 /// One row of the phone's list: a link with its state as a dot and a
 /// word, its name and its line.
-fn list_row(href: String, state: FlowState, name: Word, line: String) -> AnyView {
-    let class = format!("fui-dot {}", state.tone().class());
-    let muted = state == FlowState::Off;
-    let word = state.word();
-    view! {
-        <li>
-            <a class="fui-row-link" href=href>
-                <span class=class class:is-muted=muted role="img" aria-label=word.clone() title=word></span>
-                <span class="fui-pipeline-name">{name}</span>
-                <span class="fui-pipeline-line">{line}</span>
-            </a>
-        </li>
-    }
-    .into_any()
+fn list_row(locale: &Locale, href: &str, state: FlowState, name: &Word, line: &str) -> Html {
+    let muted = if state == FlowState::Off {
+        " is-muted"
+    } else {
+        ""
+    };
+    let word = Html::text(state.word(locale).text());
+    Html::raw(format!(
+        "<li><a href=\"{}\" class=\"fui-row-link\"><span role=\"img\" aria-label=\"{word}\" title=\"{word}\" class=\"fui-dot {}{muted}\"></span><span class=\"fui-pipeline-name\">{name}</span><span class=\"fui-pipeline-line\">{}</span></a></li>",
+        Html::text(href),
+        state.tone().class(),
+        Html::text(line)
+    ))
 }
 
 /// The phone's form of `plan`: a heading per lane and a row per card, each
 /// a link to its page with its state as a dot and a word, folded as the
 /// drawing is, and an open lane's fold link last.
-fn list(plan: &Plan<'_>, label: &str) -> AnyView {
-    let lanes = plan
+fn list(locale: &Locale, plan: &Plan<'_>, label: &str) -> Html {
+    let lanes: Html = plan
         .lanes
         .iter()
         .map(|lane| {
-            let rows = lane
+            let rows: Html = lane
                 .shown
                 .iter()
                 .map(|shown| match shown {
                     Shown::Card(card) => list_row(
-                        card.href.clone(),
+                        locale,
+                        &card.href,
                         card.state,
-                        Word::new(card.name.clone()),
-                        card.line.clone(),
+                        &Word::new(card.name.clone()),
+                        &card.line,
                     ),
                     Shown::Fold(folded) => list_row(
-                        folded.href.to_owned(),
+                        locale,
+                        folded.href,
                         folded.state(),
-                        tr_with(Text::FlowFoldName, &[("count", folded.count().into())]),
-                        folded.line(),
+                        &tr_with(
+                            locale,
+                            Text::FlowFoldName,
+                            &[("count", folded.count().into())],
+                        ),
+                        &folded.line(),
                     ),
                 })
-                .collect_view();
-            let fold = lane.toggle.filter(|(folded, _)| !folded).map(|(_, href)| {
-                view! {
-                    <li>
-                        <a class="fui-row-link" href=href.to_owned()>
-                            {icon(Glyph::CHEVRON_UP, "16")}
-                            <span class="fui-pipeline-name">{toggle_words(false, lane.title)}</span>
-                        </a>
-                    </li>
-                }
-            });
-            view! {
-                <li>
-                    <p class="fui-pipeline-lane">{lane.title.to_owned()}</p>
-                    <ul>{rows} {fold}</ul>
-                </li>
-            }
+                .collect();
+            let fold = lane
+                .toggle
+                .filter(|(folded, _)| !folded)
+                .map_or_else(Html::empty, |(_, href)| {
+                    Html::raw(format!(
+                        "<li><a href=\"{}\" class=\"fui-row-link\">{}<span class=\"fui-pipeline-name\">{}</span></a></li>",
+                        Html::text(href),
+                        icon(Glyph::CHEVRON_UP, "16"),
+                        Html::text(toggle_words(locale, false, lane.title))
+                    ))
+                });
+            Html::raw(format!(
+                "<li><p class=\"fui-pipeline-lane\">{}</p><ul>{rows} {fold}</ul></li>",
+                Html::text(lane.title)
+            ))
         })
-        .collect_view();
-    view! { <ul class="fui-pipeline-list" aria-label=label.to_owned()>{lanes}</ul> }.into_any()
+        .collect();
+    Html::raw(format!(
+        "<ul aria-label=\"{}\" class=\"fui-pipeline-list\">{lanes}</ul>",
+        Html::text(label)
+    ))
 }
 
 /// Returns `flow`: the drawing, which a phone replaces with its list, and
@@ -1480,50 +1463,51 @@ fn list(plan: &Plan<'_>, label: &str) -> AnyView {
 /// quiet cards into one summary card, a link that unfolds it, and keeps
 /// every card in a problem state or on a problem edge.
 #[must_use]
-pub fn flow(flow: &Flow) -> AnyView {
-    let plan = plan(flow);
+pub fn flow(locale: &Locale, flow: &Flow) -> Html {
+    let plan = plan(locale, flow);
     let (places, width, height) = layout(&plan);
     let crowded = crowded(&plan);
     let scene = Scene {
+        locale,
         plan: &plan,
         places: &places,
         crowded: &crowded,
     };
     let view_box = format!("-8 -4 {:.0} {height:.0}", width + 16.0);
-    let lanes = plan
+    let lanes: Html = plan
         .lanes
         .iter()
         .enumerate()
         .map(|(column, lane)| {
             let x = units(column) * (LANE + GAP);
-            view! {
-                <text class="fui-topology-lane" x=x y="12">
-                    {lane.title.to_owned()}
-                </text>
-            }
+            Html::raw(format!(
+                "<text x=\"{x}\" y=\"12\" class=\"fui-topology-lane\">{}</text>",
+                Html::text(lane.title)
+            ))
         })
-        .collect_view();
-    let toggles = plan
+        .collect();
+    let toggles: Html = plan
         .lanes
         .iter()
         .enumerate()
         .filter_map(|(column, lane)| {
             let toggle = lane.toggle?;
             Some(lane_toggle(
+                locale,
                 units(column) * (LANE + GAP),
                 lane.title,
                 toggle,
             ))
         })
-        .collect_view();
-    let edges = plan
+        .collect();
+    let edges: Html = plan
         .edges
         .iter()
         .filter(|edge| !edge.state.is_problem())
         .chain(plan.edges.iter().filter(|edge| edge.state.is_problem()))
         .filter_map(|edge| edge_view(edge, &places, &crowded, false))
-        .collect_view();
-    let cards = plan
+        .collect();
+    let cards: Html = plan
         .lanes
         .iter()
         .flat_map(|lane| lane.shown.iter())
@@ -1534,41 +1518,16 @@ pub fn flow(flow: &Flow) -> AnyView {
                 Shown::Fold(folded) => fold_view(folded, place),
             })
         })
-        .collect_view();
-    let title = format!("{}-title", flow.id);
-    let desc = format!("{}-desc", flow.id);
-    let named_by = format!("{title} {desc}");
-    view! {
-        <div class="fui-pipeline">
-            <div class="fui-topology-canvas">
-                <div class="fui-pipeline-stage">
-                    <svg
-                        class="fui-topology-svg fui-pipeline-edges"
-                        viewBox=view_box.clone()
-                        role="img"
-                        aria-labelledby=named_by
-                    >
-                        <title id=title>{flow.label.clone()}</title>
-                        <desc id=desc>{problems(flow)}</desc>
-                        <g>{lanes}</g>
-                        <g>{edges}</g>
-                    </svg>
-                    <svg
-                        class="fui-topology-svg fui-pipeline-cards"
-                        viewBox=view_box
-                        role="group"
-                        aria-label=flow.list_label.clone()
-                    >
-                        {toggles}
-                        {cards}
-                    </svg>
-                </div>
-            </div>
-            {list(&plan, &flow.list_label)}
-            <p class="fui-pipeline-foot">{flow.foot.clone()}</p>
-        </div>
-    }
-    .into_any()
+        .collect();
+    let id = Html::text(&flow.id);
+    Html::raw(format!(
+        "<div class=\"fui-pipeline\"><div class=\"fui-topology-canvas\"><div class=\"fui-pipeline-stage\"><svg viewBox=\"{view_box}\" role=\"img\" aria-labelledby=\"{id}-title {id}-desc\" class=\"fui-topology-svg fui-pipeline-edges\"><title id=\"{id}-title\">{}</title><desc id=\"{id}-desc\">{}</desc><g>{lanes}</g><g>{edges}</g></svg><svg viewBox=\"{view_box}\" role=\"group\" aria-label=\"{}\" class=\"fui-topology-svg fui-pipeline-cards\">{toggles}{cards}</svg></div></div>{}<p class=\"fui-pipeline-foot\">{}</p></div>",
+        Html::text(&flow.label),
+        Html::text(problems(locale, flow)),
+        Html::text(&flow.list_label),
+        list(locale, &plan, &flow.list_label),
+        Html::text(&flow.foot)
+    ))
 }
 
 #[cfg(test)]
@@ -1576,6 +1535,7 @@ mod tests {
     use super::{
         FOLD_PAST, Flow, FlowCard, FlowEdge, FlowLane, FlowState, LaneFold, Shown, crossings, plan,
     };
+    use crate::i18n::Locale;
     use crate::icon::Glyph;
 
     fn card(id: String, state: FlowState) -> FlowCard {
@@ -1680,7 +1640,8 @@ mod tests {
             .iter()
             .map(|lane| lane.cards.iter().map(|card| card.id.as_str()).collect())
             .collect();
-        let planned = plan(&flow);
+        let en = Locale::english();
+        let planned = plan(&en, &flow);
         let drawn: Vec<Vec<&str>> = planned
             .lanes
             .iter()
@@ -1688,7 +1649,7 @@ mod tests {
             .collect();
         let (before, after) = (crossed(&flow, &console), crossed(&flow, &drawn));
         assert_eq!((657, 201), (before, after), "{drawn:?}");
-        let again = plan(&flow);
+        let again = plan(&en, &flow);
         let redrawn: Vec<Vec<&str>> = again
             .lanes
             .iter()
@@ -1709,7 +1670,8 @@ mod tests {
                 )
             })
             .collect();
-        let planned = plan(&flow);
+        let en = Locale::english();
+        let planned = plan(&en, &flow);
         for (lane, shown) in flow.lanes.iter().zip(&planned.lanes) {
             let ids: Vec<&str> = shown.lanes_ids();
             let console: Vec<&str> = lane.cards.iter().map(|card| card.id.as_str()).collect();
@@ -1723,7 +1685,8 @@ mod tests {
             open: false,
             toggle: String::from("?open=all"),
         }));
-        let planned = plan(&flow);
+        let en = Locale::english();
+        let planned = plan(&en, &flow);
         let callers = planned.lanes.first().expect("the callers lane");
         let ids = callers.lanes_ids();
         assert!(ids.contains(&"c04") && ids.contains(&"c11"), "{ids:?}");
@@ -1753,7 +1716,7 @@ mod tests {
             open: true,
             toggle: String::from("?"),
         }));
-        let open = plan(&unfolded);
+        let open = plan(&en, &unfolded);
         let callers = open.lanes.first().expect("the callers lane");
         assert_eq!(30, callers.shown.len());
         assert_eq!(Some((false, "?")), callers.toggle);

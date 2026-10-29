@@ -18,7 +18,7 @@
 //! No specification governs this: our own design.
 
 use crate::calendar::Weekday;
-use crate::i18n::{Text, Word, tr};
+use crate::i18n::{Locale, Text, Word, tr};
 
 /// A personal preference kept in a cookie of its own (family rule 9).
 pub trait Preference: Default + Sized {
@@ -86,12 +86,15 @@ impl Theme {
 
     /// The theme's name in the page's locale, as the switch shows it.
     #[must_use]
-    pub fn label(self) -> Word {
-        tr(match self {
-            Self::Light => Text::ThemeLight,
-            Self::Dark => Text::ThemeDark,
-            Self::System => Text::ThemeSystem,
-        })
+    pub fn label(self, locale: &Locale) -> Word {
+        tr(
+            locale,
+            match self {
+                Self::Light => Text::ThemeLight,
+                Self::Dark => Text::ThemeDark,
+                Self::System => Text::ThemeSystem,
+            },
+        )
     }
 
     /// The theme `key` names, or `None` for a key that names none.
@@ -143,11 +146,14 @@ impl Density {
 
     /// The density's name in the page's locale, as a reader sees it.
     #[must_use]
-    pub fn label(self) -> Word {
-        tr(match self {
-            Self::Comfortable => Text::DensityComfortable,
-            Self::Compact => Text::DensityCompact,
-        })
+    pub fn label(self, locale: &Locale) -> Word {
+        tr(
+            locale,
+            match self {
+                Self::Comfortable => Text::DensityComfortable,
+                Self::Compact => Text::DensityCompact,
+            },
+        )
     }
 
     /// The density's key, as `data-density` carries it.
@@ -228,11 +234,14 @@ impl Motion {
     /// The choice's words in the page's locale, as the preference offers
     /// it.
     #[must_use]
-    pub fn label(self) -> Word {
-        tr(match self {
-            Self::System => Text::MotionSystem,
-            Self::Reduce => Text::MotionReduce,
-        })
+    pub fn label(self, locale: &Locale) -> Word {
+        tr(
+            locale,
+            match self {
+                Self::System => Text::MotionSystem,
+                Self::Reduce => Text::MotionReduce,
+            },
+        )
     }
 }
 
@@ -321,12 +330,15 @@ impl Hints {
     /// The choice's words in the page's locale, as the preference offers
     /// it.
     #[must_use]
-    pub fn label(self) -> Word {
-        tr(match self {
-            Self::Wide => Text::HintsWide,
-            Self::Always => Text::HintsAlways,
-            Self::Never => Text::HintsNever,
-        })
+    pub fn label(self, locale: &Locale) -> Word {
+        tr(
+            locale,
+            match self {
+                Self::Wide => Text::HintsWide,
+                Self::Always => Text::HintsAlways,
+                Self::Never => Text::HintsNever,
+            },
+        )
     }
 }
 

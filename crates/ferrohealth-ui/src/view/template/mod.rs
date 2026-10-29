@@ -13,9 +13,8 @@
 //! Next start marker. The rhythm is fixed: 24 px under the page header
 //! (its own margin), then 16 px between the parts.
 //!
-//! Each template is a server view that takes plain values and erased
-//! parts, so it ships no WebAssembly; the parts a console brings (a table,
-//! a form, binder tabs, an action group) arrive as [`leptos::prelude::AnyView`].
+//! Each template takes plain values and the parts a console brings (a
+//! table, a form, binder tabs, an action group) as [`crate::html::Html`].
 //! No specification governs the templates: our own design.
 
 pub mod about;

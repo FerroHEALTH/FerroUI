@@ -12,9 +12,8 @@
 //! editor opens with [`crate::view::surface::editor_heading`] instead,
 //! whose trail ends with the thing it edits.
 
-use leptos::prelude::*;
-
-use crate::i18n::{Text, Word, tr, tr_with};
+use crate::html::Html;
+use crate::i18n::{Locale, Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::view::action::ActionGroup;
 use crate::view::button::Variant;
@@ -35,13 +34,13 @@ pub struct DetailPage {
     pub tabs: Option<TabRow>,
     /// The section in view: the tab's panel, or the whole page under the
     /// header when there are no tabs.
-    pub body: AnyView,
+    pub body: Html,
 }
 
 /// Returns a detail page (T2): its header, then the section in view, under
 /// binder tabs when it has them.
 #[must_use]
-pub fn detail_page(page: DetailPage) -> AnyView {
+pub fn detail_page(locale: &Locale, page: DetailPage) -> Html {
     let DetailPage {
         header,
         actions,
@@ -50,18 +49,14 @@ pub fn detail_page(page: DetailPage) -> AnyView {
         body,
     } = page;
     let heading = match steps {
-        Some(steps) => stepped_heading(header, stepper(steps)),
-        None => page_heading(header, actions).into_any(),
+        Some(steps) => stepped_heading(locale, header, stepper(locale, steps)),
+        None => page_heading(locale, header, actions),
     };
     let section = match tabs {
-        Some(tabs) => joined(tabs, body, None),
+        Some(tabs) => joined(locale, tabs, body, None),
         None => body,
     };
-    view! {
-        {heading}
-        <div class="fui-stack">{section}</div>
-    }
-    .into_any()
+    Html::raw(format!("{heading}<div class=\"fui-stack\">{section}</div>"))
 }
 
 /// The previous and next items of a queue, from the page of one of them.
@@ -82,40 +77,25 @@ pub struct Stepper {
 /// Returns one step of a [`stepper`]: a link to `href`, or, at the end of
 /// the queue, a link with no address marked unavailable (WAI-ARIA 1.2,
 /// `aria-disabled`).
-fn step(href: Option<String>, words: Word, name: Word, glyph: Glyph, last: bool) -> AnyView {
-    let words = view! { <span class="fui-step-words">{words}</span> }.into_any();
+fn step(href: Option<String>, words: &Word, name: &Word, glyph: Glyph, last: bool) -> Html {
+    let words = format!("<span class=\"fui-step-words\">{words}</span>");
+    let glyph = icon(glyph, "16");
     let inner = if last {
-        view! {
-            {words}
-            {icon(glyph, "16")}
-        }
-        .into_any()
+        format!("{words}{glyph}")
     } else {
-        view! {
-            {icon(glyph, "16")}
-            {words}
-        }
-        .into_any()
+        format!("{glyph}{words}")
     };
-    match href {
-        Some(href) => view! {
-            <a href=href class=Variant::Secondary.small() aria-label=name>
-                {inner}
-            </a>
-        }
-        .into_any(),
-        None => view! {
-            <a
-                class=Variant::Secondary.small()
-                role="link"
-                aria-label=name
-                aria-disabled="true"
-            >
-                {inner}
-            </a>
-        }
-        .into_any(),
-    }
+    let name = Html::text(name.text());
+    let class = Variant::Secondary.small();
+    Html::raw(match href {
+        Some(href) => format!(
+            "<a href=\"{}\" aria-label=\"{name}\" class=\"{class}\">{inner}</a>",
+            Html::text(href)
+        ),
+        None => format!(
+            "<a role=\"link\" aria-label=\"{name}\" aria-disabled=\"true\" class=\"{class}\">{inner}</a>"
+        ),
+    })
 }
 
 /// Returns the previous and next steps through a queue, with where this
@@ -125,7 +105,7 @@ fn step(href: Option<String>, words: Word, name: Word, glyph: Glyph, last: bool)
 /// the step stays in place, marked unavailable. Below 40 rem the steps keep
 /// their arrows and their words become their accessible names alone.
 #[must_use]
-pub fn stepper(stepper: Stepper) -> AnyView {
+pub fn stepper(locale: &Locale, stepper: Stepper) -> Html {
     let Stepper {
         label,
         position,
@@ -133,28 +113,29 @@ pub fn stepper(stepper: Stepper) -> AnyView {
         previous,
         next,
     } = stepper;
-    let previous_name = tr_with(Text::StepperPrevious, &[("what", what.clone().into())]);
-    let next_name = tr_with(Text::StepperNext, &[("what", what.into())]);
+    let previous_name = tr_with(
+        locale,
+        Text::StepperPrevious,
+        &[("what", what.clone().into())],
+    );
+    let next_name = tr_with(locale, Text::StepperNext, &[("what", what.into())]);
     let previous = step(
         previous,
-        tr(Text::StepPrevious),
-        previous_name,
+        &tr(locale, Text::StepPrevious),
+        &previous_name,
         Glyph::ARROW_LEFT,
         false,
     );
     let next = step(
         next,
-        tr(Text::StepNext),
-        next_name,
+        &tr(locale, Text::StepNext),
+        &next_name,
         Glyph::ARROW_RIGHT,
         true,
     );
-    view! {
-        <nav class="fui-stepper" aria-label=label>
-            {previous}
-            <span class="fui-stepper-position">{position}</span>
-            {next}
-        </nav>
-    }
-    .into_any()
+    Html::raw(format!(
+        "<nav aria-label=\"{}\" class=\"fui-stepper\">{previous}<span class=\"fui-stepper-position\">{}</span>{next}</nav>",
+        Html::text(label),
+        Html::text(position)
+    ))
 }

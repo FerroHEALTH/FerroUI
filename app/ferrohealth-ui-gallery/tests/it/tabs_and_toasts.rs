@@ -189,7 +189,7 @@ async fn a_toast_with_an_action_waits_and_the_bad_tone_is_an_alert() -> Result<(
         hydrated_toasts(browser).await?;
         dismiss_all(browser).await?;
         browser
-            .element(By::Css("button[data-toast='ok']"))
+            .element(By::Css("a[data-toast='ok']"))
             .await?
             .click()
             .await?;
@@ -202,7 +202,7 @@ async fn a_toast_with_an_action_waits_and_the_bad_tone_is_an_alert() -> Result<(
             "the action leads to the tables page"
         );
         browser
-            .element(By::Css("button[data-toast='info']"))
+            .element(By::Css("a[data-toast='info']"))
             .await?
             .click()
             .await?;
@@ -247,13 +247,13 @@ async fn a_toast_with_an_action_waits_and_the_bad_tone_is_an_alert() -> Result<(
         dismiss_all(browser).await?;
         // WAI-ARIA 1.2, the alert role.
         browser
-            .element(By::Css("button[data-toast='bad']"))
+            .element(By::Css("a[data-toast='bad']"))
             .await?
             .click()
             .await?;
         let alert = browser.element(By::Css(".fui-toast[role='alert']")).await?;
         alert
-            .find(By::XPath(".//button[normalize-space(.) = 'Try again']"))
+            .find(By::XPath(".//a[normalize-space(.) = 'Try again']"))
             .await?
             .click()
             .await?;
@@ -373,9 +373,7 @@ async fn the_toasts_wait_under_the_pointer_show_a_few_and_stay_above_the_decisio
         browser.goto(&gallery.url("/ferrobridge/overlays")).await?;
         hydrated_toasts(browser).await?;
         dismiss_all(browser).await?;
-        let info = browser
-            .element(By::Css("button[data-toast='info']"))
-            .await?;
+        let info = browser.element(By::Css("a[data-toast='info']")).await?;
         info.click().await?;
         let toast = browser.element(By::Css(".fui-toast.fui-tone-info")).await?;
         browser
@@ -385,7 +383,7 @@ async fn the_toasts_wait_under_the_pointer_show_a_few_and_stay_above_the_decisio
             .perform()
             .await?;
         tokio::time::sleep(std::time::Duration::from_millis(
-            ferrohealth_ui::widget::toast::DWELL_MS + 1500,
+            ferrohealth_ui::view::toast::DWELL_MS + 1500,
         ))
         .await;
         assert!(
@@ -415,7 +413,7 @@ async fn the_toasts_wait_under_the_pointer_show_a_few_and_stay_above_the_decisio
             .await?
             .len();
         assert_eq!(
-            ferrohealth_ui::widget::toast::SHOWN_MAX,
+            ferrohealth_ui::view::toast::SHOWN_MAX,
             shown,
             "the region shows a few toasts at once"
         );
@@ -425,7 +423,7 @@ async fn the_toasts_wait_under_the_pointer_show_a_few_and_stay_above_the_decisio
         browser
             .goto(&gallery.url("/ferrobridge/forms?dock=idle"))
             .await?;
-        // The script below adds toasts, so it waits for the page to hydrate first.
+        // The script below adds toasts, so it waits for the page to be enhanced first.
         browser.hydrated().await?;
         let dock = browser.element(By::Css(".fui-dock")).await?;
         browser

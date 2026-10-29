@@ -30,7 +30,7 @@ later.
 
 | File | Subject | Authored |
 |---|---|---|
-| `rust-advisories.openvex.json` | The Rust dependency advisories the advisory gate accepts. Each statement carries a `ferroui:reachability` block (our own extension; OpenVEX defines none) naming the crates the affected package is reached through. | **generated** |
+| `rust-advisories.openvex.json` | The Rust dependency advisories the advisory gate accepts. Each statement carries a `ferroui:reachability` block (our own extension; OpenVEX defines none) naming the crates the affected package is reached through. While the gate accepts none, it holds no statement, which says so. | **generated** |
 
 FerroUI publishes no container image, so there is no document for an image's
 packages and no image scan.

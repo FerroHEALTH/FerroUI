@@ -5,11 +5,13 @@
 //! version history with At a time (E2), the clinical reading (E3), the
 //! condition groups (E6), the results pane (E7) and the scope grant (E8).
 
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::style::STYLESHEET;
 use ferrohealth_ui::view::conditions::{
     ADD_CONDITION, ADD_GROUP, Choice, Condition, ConditionGroup, Match, Operand, REMOVE,
     REMOVE_GROUP, condition_groups,
 };
+use ferrohealth_ui::view::identifier::{Domain, Masked, identifier_static};
 use ferrohealth_ui::view::reading::{Element, INDENTED, Level, Reading, Section, Value, reading};
 use ferrohealth_ui::view::results::{Export, ResultsPane, SHOWN, Shown, Switch, results_pane};
 use ferrohealth_ui::view::scope::{
@@ -19,25 +21,27 @@ use ferrohealth_ui::view::subject::{Subject, SubjectLine, subject_line};
 use ferrohealth_ui::view::versions::{
     AtTime, Standing, Version, VersionHistory, older_version, version_cell, version_history,
 };
-use ferrohealth_ui::widget::identifier::{Domain, Masked, identifier_static};
-use leptos::prelude::*;
 
 use crate::markup::{has, tags};
-use crate::render::{html, page_html};
+use crate::render::{en, html};
 
 // ---- E1 ----
 
 #[test]
 fn a_subject_line_draws_the_identifier_and_both_states() {
-    let line = html(|| {
-        subject_line(SubjectLine {
-            subject: Subject::External(identifier_static(
-                &Masked::new(Domain::new("demo.hospital.mrn"), "P-20481-537", 3),
-                true,
-            )),
-            queryable: true,
-            modifiable: true,
-        })
+    let line = html({
+        subject_line(
+            &en(),
+            SubjectLine {
+                subject: Subject::External(identifier_static(
+                    &en(),
+                    &Masked::new(Domain::new("demo.hospital.mrn"), "P-20481-537", 3),
+                    true,
+                )),
+                queryable: true,
+                modifiable: true,
+            },
+        )
     });
     assert!(has(&line, "div", &[("class", "fui-subject")]), "{line}");
     assert!(line.contains(">Subject</span>"), "the label: {line}");
@@ -61,12 +65,15 @@ fn a_subject_line_draws_the_identifier_and_both_states() {
 #[test]
 fn a_cleared_state_is_the_hollow_ring_and_its_negation() {
     // NOTE: design/COMPONENTS.md family rule 12: a state is a shape, a colour and a word.
-    let line = html(|| {
-        subject_line(SubjectLine {
-            subject: Subject::None,
-            queryable: false,
-            modifiable: true,
-        })
+    let line = html({
+        subject_line(
+            &en(),
+            SubjectLine {
+                subject: Subject::None,
+                queryable: false,
+                modifiable: true,
+            },
+        )
     });
     assert!(line.contains("No external subject"), "{line}");
     assert!(line.contains("Not queryable"), "{line}");
@@ -98,24 +105,29 @@ fn version(number: &str, standing: Standing, read: bool) -> Version {
         href: (standing != Standing::Deleted).then(|| format!("/versions/{number}")),
         change: String::from("Modification"),
         committer: String::from("Demo Nurse <b>"),
-        when: "5 min ago".into_any(),
-        contribution: view! { <a href="/contributions/1">"0199f1d0…4f16"</a> }.into_any(),
+        when: Html::text("5 min ago"),
+        contribution: Html::raw(String::from(
+            r#"<a href="/contributions/1">0199f1d0…4f16</a>"#,
+        )),
         read,
     }
 }
 
 #[test]
 fn a_version_history_marks_current_deleted_and_the_version_read() {
-    let table = html(|| {
-        version_history(VersionHistory {
-            caption: String::from("Versions"),
-            versions: vec![
-                version("4", Standing::Deleted, false),
-                version("3", Standing::Current, false),
-                version("2", Standing::Older, true),
-            ],
-            at_time: None,
-        })
+    let table = html({
+        version_history(
+            &en(),
+            VersionHistory {
+                caption: String::from("Versions"),
+                versions: vec![
+                    version("4", Standing::Deleted, false),
+                    version("3", Standing::Current, false),
+                    version("2", Standing::Older, true),
+                ],
+                at_time: None,
+            },
+        )
     });
     assert!(table.contains("Version 3"), "{table}");
     assert!(
@@ -142,12 +154,12 @@ fn a_version_history_marks_current_deleted_and_the_version_read() {
             "{header}: {table}"
         );
     }
-    assert!(table.contains("Demo Nurse &lt;b&gt;"), "escaped: {table}");
+    assert!(table.contains("Demo Nurse &#60;b&#62;"), "escaped: {table}");
 }
 
 #[test]
 fn a_version_cell_keeps_its_mark_beside_its_number() {
-    let cell = html(|| version_cell("1.1.0", Standing::Current));
+    let cell = html(version_cell(&en(), "1.1.0", Standing::Current));
     assert!(
         has(&cell, "span", &[("class", "fui-version-cell")]),
         "{cell}"
@@ -157,16 +169,19 @@ fn a_version_cell_keeps_its_mark_beside_its_number() {
 
 #[test]
 fn at_a_time_is_a_get_form_with_its_field_open_and_quiet_line() {
-    let table = html(|| {
-        version_history(VersionHistory {
-            caption: String::from("Versions"),
-            versions: vec![version("1", Standing::Current, false)],
-            at_time: Some(AtTime {
-                action: String::from("/compositions/c1"),
-                field: view! { <div class="fui-field">"field"</div> }.into_any(),
-                opens: String::from("Opens the version current then."),
-            }),
-        })
+    let table = html({
+        version_history(
+            &en(),
+            VersionHistory {
+                caption: String::from("Versions"),
+                versions: vec![version("1", Standing::Current, false)],
+                at_time: Some(AtTime {
+                    action: String::from("/compositions/c1"),
+                    field: Html::raw(String::from(r#"<div class="fui-field">field</div>"#)),
+                    opens: String::from("Opens the version current then."),
+                }),
+            },
+        )
     });
     assert!(
         has(
@@ -193,12 +208,15 @@ fn at_a_time_is_a_get_form_with_its_field_open_and_quiet_line() {
 
 #[test]
 fn a_version_history_with_no_version_says_so_in_its_table() {
-    let table = html(|| {
-        version_history(VersionHistory {
-            caption: String::from("Versions"),
-            versions: vec![],
-            at_time: None,
-        })
+    let table = html({
+        version_history(
+            &en(),
+            VersionHistory {
+                caption: String::from("Versions"),
+                versions: vec![],
+                at_time: None,
+            },
+        )
     });
     assert!(
         has(&table, "td", &[("colspan", "5")]),
@@ -212,7 +230,7 @@ fn a_version_history_with_no_version_says_so_in_its_table() {
 
 #[test]
 fn an_older_version_says_so_once_with_the_way_to_the_latest() {
-    let shown = html(|| older_version("2", 3, "/compositions/c1"));
+    let shown = html(older_version(&en(), "2", 3, "/compositions/c1"));
     assert!(shown.contains("You are reading version 2 of 3."), "{shown}");
     assert!(has(&shown, "a", &[("href", "/compositions/c1")]), "{shown}");
     assert!(shown.contains("Read the latest"), "{shown}");
@@ -241,7 +259,9 @@ fn composition() -> Reading {
                 },
                 Element {
                     label: String::from("Position"),
-                    value: Value::Coded(view! { <span class="coded">"Sitting"</span> }.into_any()),
+                    value: Value::Coded(Html::raw(String::from(
+                        r#"<span class="coded">Sitting</span>"#,
+                    ))),
                 },
                 Element {
                     label: String::from("Cuff size"),
@@ -264,13 +284,13 @@ fn composition() -> Reading {
             }],
         }],
         level: Level::Three,
-        folded: Some("The uids are folded away.".into_any()),
+        folded: Some(Html::text("The uids are folded away.")),
     }
 }
 
 #[test]
 fn a_reading_draws_its_elements_with_their_units_codes_and_null_flavours() {
-    let shown = html(|| reading(composition()));
+    let shown = html(reading(&en(), composition()));
     assert!(has(&shown, "div", &[("class", "fui-reading")]), "{shown}");
     assert!(
         has(&shown, "dl", &[("class", "fui-reading-rows")]),
@@ -295,7 +315,7 @@ fn a_reading_draws_its_elements_with_their_units_codes_and_null_flavours() {
         "the null flavour: {shown}"
     );
     assert!(
-        shown.contains("Upper-arm cuff &lt;i&gt;"),
+        shown.contains("Upper-arm cuff &#60;i&#62;"),
         "escaped: {shown}"
     );
     assert!(shown.contains("The uids are folded away."), "{shown}");
@@ -304,7 +324,7 @@ fn a_reading_draws_its_elements_with_their_units_codes_and_null_flavours() {
 #[test]
 fn a_reading_nests_its_headings_as_the_document_nests() {
     // NOTE: WCAG 2.2 SC 1.3.1: the outline follows the document's nesting.
-    let shown = html(|| reading(composition()));
+    let shown = html(reading(&en(), composition()));
     let blood = shown.find("<h3").unwrap();
     let device = shown.find("<h4").unwrap();
     let calibration = shown.find("<h5").unwrap();
@@ -352,12 +372,15 @@ fn nested(depth: usize) -> Section {
 #[test]
 fn a_cluster_past_four_levels_indents_no_further() {
     // NOTE: WCAG 2.2 SC 1.4.10: a cluster nested twelve deep stays inside a phone's width.
-    let shown = html(|| {
-        reading(Reading {
-            sections: vec![nested(12)],
-            level: Level::Three,
-            folded: None,
-        })
+    let shown = html({
+        reading(
+            &en(),
+            Reading {
+                sections: vec![nested(12)],
+                level: Level::Three,
+                folded: None,
+            },
+        )
     });
     let sections = tags(&shown, "section");
     assert_eq!(13, sections.len(), "{shown}");
@@ -388,7 +411,7 @@ fn a_cluster_past_four_levels_indents_no_further() {
 
 #[test]
 fn a_reader_hears_a_heading_and_its_node_apart_and_the_ucum_code() {
-    let shown = html(|| reading(composition()));
+    let shown = html(reading(&en(), composition()));
     assert!(
         shown.contains(r#"Blood pressure<span class="fui-sr-only">, </span><code"#),
         "a hidden comma between the title and its node: {shown}"
@@ -460,7 +483,7 @@ fn query() -> ConditionGroup {
 
 #[test]
 fn the_groups_draw_all_any_negated_and_nested_with_their_conditions() {
-    let shown = html(|| condition_groups(query()));
+    let shown = html(condition_groups(&en(), query()));
     assert!(
         has(&shown, "div", &[("class", "fui-cond-group")]),
         "{shown}"
@@ -559,7 +582,7 @@ fn the_groups_draw_all_any_negated_and_nested_with_their_conditions() {
 fn a_group_head_reads_as_one_phrase() {
     // NOTE: WAI-ARIA 1.2, `radiogroup` named by `aria-labelledby`: the head's
     // visible words are said once, as the choice's name.
-    let shown = html(|| condition_groups(query()));
+    let shown = html(condition_groups(&en(), query()));
     assert!(
         has(
             &shown,
@@ -595,7 +618,7 @@ fn a_chosen_value_its_select_does_not_list_stays_chosen() {
     if let Some(first) = group.conditions.first_mut() {
         first.operator = choice(&["=", ">"], "matches");
     }
-    let shown = html(move || condition_groups(group));
+    let shown = html(condition_groups(&en(), group));
     let select = shown
         .split(r#"<select id="c1-op""#)
         .nth(1)
@@ -644,18 +667,21 @@ fn a_condition_row_stacks_in_a_group_too_narrow_for_its_fields() {
 
 /// A pane showing `shown`, its switch `switch`.
 fn pane(shown: Shown, switch: Switch) -> String {
-    page_html(move || {
-        results_pane(ResultsPane {
-            title: String::from("Results"),
-            count: 6,
-            numeric: true,
-            shown,
-            switch,
-            csv: Export::Link(String::from("/answer.csv")),
-            json: Export::Link(String::from("/answer.json")),
-            window: String::from("Rows 1 to 6 of 6, inside the query's own LIMIT 50."),
-            body: view! { <div class="fui-table-scroll">"table"</div> }.into_any(),
-        })
+    html({
+        results_pane(
+            &en(),
+            ResultsPane {
+                title: String::from("Results"),
+                count: 6,
+                numeric: true,
+                shown,
+                switch,
+                csv: Export::Link(String::from("/answer.csv")),
+                json: Export::Link(String::from("/answer.json")),
+                window: String::from("Rows 1 to 6 of 6, inside the query's own LIMIT 50."),
+                body: Html::raw(String::from(r#"<div class="fui-table-scroll">table</div>"#)),
+            },
+        )
     })
 }
 
@@ -757,26 +783,29 @@ fn a_session_switch_posts_and_a_chart_keeps_its_inset() {
 
 #[test]
 fn a_pane_rides_the_consoles_form_with_no_form_of_its_own() {
-    let shown = page_html(|| {
-        results_pane(ResultsPane {
-            title: String::from("Results"),
-            count: 6,
-            numeric: true,
-            shown: Shown::Chart,
-            switch: Switch::Form {
-                form: Some(String::from("query")),
+    let shown = html({
+        results_pane(
+            &en(),
+            ResultsPane {
+                title: String::from("Results"),
+                count: 6,
+                numeric: true,
+                shown: Shown::Chart,
+                switch: Switch::Form {
+                    form: Some(String::from("query")),
+                },
+                csv: Export::Submit {
+                    action: String::from("/query/answer.csv"),
+                    form: Some(String::from("query")),
+                },
+                json: Export::Submit {
+                    action: String::from("/query/answer.json"),
+                    form: Some(String::from("query")),
+                },
+                window: String::from("Rows 1 to 6 of 6."),
+                body: Html::raw(String::from(r#"<div class="fui-table-scroll">chart</div>"#)),
             },
-            csv: Export::Submit {
-                action: String::from("/query/answer.csv"),
-                form: Some(String::from("query")),
-            },
-            json: Export::Submit {
-                action: String::from("/query/answer.json"),
-                form: Some(String::from("query")),
-            },
-            window: String::from("Rows 1 to 6 of 6."),
-            body: view! { <div class="fui-table-scroll">"chart"</div> }.into_any(),
-        })
+        )
     });
     assert!(
         tags(&shown, "form").is_empty(),
@@ -841,21 +870,24 @@ fn a_pane_rides_the_consoles_form_with_no_form_of_its_own() {
 
 /// A table pane over `count` rows, with or without a numeric column.
 fn answered(count: u64, numeric: bool) -> String {
-    page_html(move || {
-        results_pane(ResultsPane {
-            title: String::from("Results"),
-            count,
-            numeric,
-            shown: Shown::Chart,
-            switch: Switch::Url {
-                table: String::from("?shown=table"),
-                chart: String::from("?shown=chart"),
+    html({
+        results_pane(
+            &en(),
+            ResultsPane {
+                title: String::from("Results"),
+                count,
+                numeric,
+                shown: Shown::Chart,
+                switch: Switch::Url {
+                    table: String::from("?shown=table"),
+                    chart: String::from("?shown=chart"),
+                },
+                csv: Export::Link(String::from("/answer.csv")),
+                json: Export::Link(String::from("/answer.json")),
+                window: String::from("No rows."),
+                body: Html::raw(String::from(r#"<div class="fui-table-scroll">table</div>"#)),
             },
-            csv: Export::Link(String::from("/answer.csv")),
-            json: Export::Link(String::from("/answer.json")),
-            window: String::from("No rows."),
-            body: view! { <div class="fui-table-scroll">"table"</div> }.into_any(),
-        })
+        )
     })
 }
 
@@ -966,8 +998,9 @@ fn a_scope_a_console_parsed_itself_draws_as_the_parsed_one() {
     };
     assert_eq!(Scope::parse("patient/composition-*.rs").unwrap(), built);
     let draw = |scope: Scope| {
-        html(move || {
+        html({
             scope_grants(
+                &en(),
                 "Scopes",
                 vec![ScopeGrant {
                     raw: String::from("patient/composition-*.rs"),
@@ -991,8 +1024,9 @@ fn a_scope_a_console_parsed_itself_draws_as_the_parsed_one() {
 fn a_grant_strikes_an_absent_operation_and_marks_a_broad_one() {
     let narrow = Scope::parse("patient/composition-*.rs").unwrap();
     let broad = Scope::parse("system/aql-*.rs").unwrap();
-    let shown = html(move || {
+    let shown = html({
         scope_grants(
+            &en(),
             "Scopes",
             vec![
                 ScopeGrant {
@@ -1013,7 +1047,7 @@ fn a_grant_strikes_an_absent_operation_and_marks_a_broad_one() {
                 },
                 ScopeGrant {
                     raw: String::from("doctor/x.rs"),
-                    grant: Grant::Refused(ScopeError::Compartment.expected()),
+                    grant: Grant::Refused(ScopeError::Compartment.expected(&en())),
                 },
             ],
         )
@@ -1089,8 +1123,9 @@ fn a_scope_that_asks_for_no_resource_reads_as_what_it_asks_for() {
     for raw in ["launch/", "launch/patient?x=1", "patient/Observation.rs"] {
         assert_eq!(None, Request::parse(raw), "{raw}");
     }
-    let shown = html(|| {
+    let shown = html({
         scope_grants(
+            &en(),
             "Scopes",
             [
                 "openid",
@@ -1100,7 +1135,7 @@ fn a_scope_that_asks_for_no_resource_reads_as_what_it_asks_for() {
                 "offline_access",
             ]
             .into_iter()
-            .map(|raw| ScopeGrant::read(raw, |_| (String::new(), false)))
+            .map(|raw| ScopeGrant::read(&en(), raw, |_| (String::new(), false)))
             .collect(),
         )
     });
@@ -1123,10 +1158,11 @@ fn a_scope_that_asks_for_no_resource_reads_as_what_it_asks_for() {
 #[test]
 fn a_constrained_grant_shows_its_constraint_and_its_raw_scope_breaks() {
     let raw = "patient/Observation.rs?category=http://terminology.hl7.org/CodeSystem/observation-category|laboratory";
-    let shown = html(move || {
+    let shown = html({
         scope_grants(
+            &en(),
             "Scopes",
-            vec![ScopeGrant::read(raw, |_| {
+            vec![ScopeGrant::read(&en(), raw, |_| {
                 (String::from("Observations"), false)
             })],
         )

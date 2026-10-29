@@ -59,8 +59,8 @@
 id = "https://github.com/FerroHEALTH/FerroUI/blob/main/security/vex/rust-advisories.openvex.json"
 author = "Cadasto B.V."
 role = "vendor"
-timestamp = "2026-10-23T00:00:00Z"
-version = 1
+timestamp = "2026-10-29T00:00:00Z"
+version = 2
 
 # What the statements are about: the one crate this repository publishes,
 # `ferrohealth-ui` on crates.io. The gallery is a workspace member that is
@@ -73,33 +73,8 @@ products = [
 # `[advisories].ignore`, and every id there MUST appear here. The generator
 # enforces both directions.
 
-[[accepted]]
-id = "RUSTSEC-2024-0436"
-crate = "paste"
-version = "1.0.15"
-carriers = [
-  "either_of",
-  "leptos",
-  "reactive_graph",
-  "reactive_stores",
-  "tachys",
-]
-workspace_roots = [
-  "ferrohealth-ui",
-  "ferrohealth-ui-gallery",
-]
-status = "not_affected"
-justification = "vulnerable_code_not_present"
-impact = """
-An UNMAINTAINED-crate advisory, not a vulnerability: the author archived the \
-repository and RustSec records no flaw and no patched version. `paste` is a \
-procedural macro that pastes tokens at compile time, reached only through five \
-crates of the Leptos 0.8 family the library builds on \
-(`cargo tree -i paste@1.0.15`). Like every proc-macro it runs inside the \
-compiler and links into nothing a console ships, so no code of it is present \
-in what a build of `ferrohealth-ui` produces. Re-evaluate on the next Leptos \
-release.\
-"""
+# None today: the framework that carried `paste` (RUSTSEC-2024-0436) left
+# the workspace with FerroUI 0.6.0 (#510).
 
 # Lock-file-only advisories: findings cargo-deny never raises, because it
 # resolves cargo features, but which a scanner reading `Cargo.lock` alone

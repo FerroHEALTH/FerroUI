@@ -12,19 +12,17 @@
 //! and Download, capped at 24 rem with its own scroll. The page has no
 //! tabs, no sub-navigation and no side panel.
 
-use leptos::prelude::*;
-
 use crate::highlight::Language;
-use crate::i18n::{Text, Word, tr};
+use crate::html::Html;
+use crate::i18n::{Locale, Text, Word, tr};
 use crate::icon::{Glyph, icon};
-use crate::island::CopyButton;
 use crate::view::action::ActionGroup;
 use crate::view::button::Variant;
 use crate::view::code::self_description;
+use crate::view::copy::{CopySource, CopyWords, copy_from};
 use crate::view::replica::{Replica, replica_line};
 use crate::view::shell::MAKER;
 use crate::view::surface::{Header, card, definitions, page_heading};
-use crate::widget::copy::{CopySource, CopyWords};
 
 /// A fact's link: its words and where it leads.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -72,12 +70,12 @@ pub struct AboutPage {
     pub release: String,
     /// The Versions card's further rows: the server, the build, the
     /// specifications, the library.
-    pub versions: Vec<(String, AnyView)>,
+    pub versions: Vec<(String, Html)>,
     /// The Manufacturer card.
     pub manufacturer: Manufacturer,
     /// Full-width cards a product adds under the two, such as the
     /// console's own settings.
-    pub cards: Vec<AnyView>,
+    pub cards: Vec<Html>,
     /// The product's self-description, when it has one.
     pub self_description: Option<SelfDescription>,
     /// The replica that answered, for a replicated product (F6), drawn as
@@ -86,13 +84,17 @@ pub struct AboutPage {
 }
 
 /// Returns `link` as a fact's value.
-fn linked(link: Link) -> AnyView {
-    view! { <a href=link.href>{link.label}</a> }.into_any()
+fn linked(link: Link) -> Html {
+    Html::raw(format!(
+        "<a href=\"{}\">{}</a>",
+        Html::text(link.href),
+        Html::text(link.label)
+    ))
 }
 
 /// Returns the self-description card: its title with Copy and Download in
 /// the card's head, its line, and the document in its capped box.
-fn self_description_card(document: SelfDescription) -> AnyView {
+fn self_description_card(locale: &Locale, document: SelfDescription) -> Html {
     let SelfDescription {
         title,
         line,
@@ -101,35 +103,28 @@ fn self_description_card(document: SelfDescription) -> AnyView {
         copy_id,
         download,
     } = document;
-    let panel = self_description(&title, language, &text).into_any();
-    let copy = view! {
-        <CopyButton id=copy_id label=tr(Text::DocumentCopy) source=CopySource::Text(text) words=CopyWords::of_page() />
-    }
-    .into_any();
-    view! {
-        <section class="fui-card fui-panel">
-            <div class="fui-panel-head">
-                <h2 class="fui-card-title">{title}</h2>
-                <div class="fui-actions">
-                    {copy} <a href=download download="" class=Variant::Secondary.small()>
-                        {icon(Glyph::DOWNLOAD, "14")}
-                        {tr(Text::Download)}
-                    </a>
-                </div>
-            </div>
-            <div class="fui-panel-body fui-stack">
-                <p class="fui-small fui-muted">{line}</p>
-                {panel}
-            </div>
-        </section>
-    }
-    .into_any()
+    let panel = self_description(&title, language, &text);
+    let copy = copy_from(
+        copy_id,
+        tr(locale, Text::DocumentCopy),
+        CopySource::Text(text),
+        CopyWords::of(locale),
+    );
+    Html::raw(format!(
+        "<section class=\"fui-card fui-panel\"><div class=\"fui-panel-head\"><h2 class=\"fui-card-title\">{}</h2><div class=\"fui-actions\">{copy}<a href=\"{}\" download=\"\" class=\"{}\">{}{}</a></div></div><div class=\"fui-panel-body fui-stack\"><p class=\"fui-small fui-muted\">{}</p>{panel}</div></section>",
+        Html::text(&title),
+        Html::text(download),
+        Variant::Secondary.small(),
+        icon(Glyph::DOWNLOAD, "14"),
+        tr(locale, Text::Download),
+        Html::text(line)
+    ))
 }
 
 /// Returns the About page: its header, the Versions and Manufacturer cards
 /// side by side, the product's further cards, and its self-description.
 #[must_use]
-pub fn about_page(page: AboutPage) -> AnyView {
+pub fn about_page(locale: &Locale, page: AboutPage) -> Html {
     let AboutPage {
         header,
         release,
@@ -139,38 +134,36 @@ pub fn about_page(page: AboutPage) -> AnyView {
         self_description,
         replica,
     } = page;
-    let heading = page_heading(header, ActionGroup::none()).into_any();
-    let replica = replica.map(replica_line);
-    let mut rows = vec![(tr(Text::AboutConsole), release.into_any())];
+    let heading = page_heading(locale, header, ActionGroup::none());
+    let replica = replica
+        .map(|replica| replica_line(locale, replica))
+        .unwrap_or_default();
+    let mut rows = vec![(tr(locale, Text::AboutConsole), Html::text(release))];
     rows.extend(
         versions
             .into_iter()
             .map(|(label, value)| (Word::from(label), value)),
     );
-    let versions = card(tr(Text::AboutVersions), definitions(rows)).into_any();
+    let versions = card(tr(locale, Text::AboutVersions), definitions(rows));
     let Manufacturer {
         licence,
         support,
         documentation,
     } = manufacturer;
     let mut facts = vec![
-        (tr(Text::AboutMadeBy), MAKER.into_any()),
-        (tr(Text::AboutLicence), licence.into_any()),
-        (tr(Text::AboutSupport), linked(support)),
+        (tr(locale, Text::AboutMadeBy), Html::text(MAKER)),
+        (tr(locale, Text::AboutLicence), Html::text(licence)),
+        (tr(locale, Text::AboutSupport), linked(support)),
     ];
     if let Some(documentation) = documentation {
-        facts.push((tr(Text::AboutDocumentation), linked(documentation)));
+        facts.push((tr(locale, Text::AboutDocumentation), linked(documentation)));
     }
-    let maker = card(tr(Text::AboutManufacturer), definitions(facts)).into_any();
-    let document = self_description.map(self_description_card);
-    view! {
-        {heading}
-        {replica}
-        <div class="fui-stack">
-            <div class="fui-grid fui-grid-start">{versions} {maker}</div>
-            {cards}
-            {document}
-        </div>
-    }
-    .into_any()
+    let maker = card(tr(locale, Text::AboutManufacturer), definitions(facts));
+    let document = self_description
+        .map(|document| self_description_card(locale, document))
+        .unwrap_or_default();
+    Html::raw(format!(
+        "{heading}{replica}<div class=\"fui-stack\"><div class=\"fui-grid fui-grid-start\">{versions}{maker}</div>{}{document}</div>",
+        Html::join(cards)
+    ))
 }

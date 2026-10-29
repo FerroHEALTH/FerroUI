@@ -4,7 +4,7 @@
 //! The code editor beside its diagnostics, with its draft at rest and with
 //! a diagnostic followed; the empty editor of a new file; and the
 //! diagnostics list by file: each at 1440 and 390 px. Then the code editor
-//! with no WebAssembly, its static text over the gutter.
+//! with no script, its static text over the gutter.
 
 use std::error::Error;
 
@@ -29,13 +29,13 @@ pub(super) const STATES: &[&str] = &[
     "code-editor-no-wasm",
 ];
 
-/// Opens the forms page afresh and waits for the code editor to hydrate.
+/// Opens the forms page afresh and waits for the code editor to be enhanced.
 async fn forms(browser: &Browser, gallery: &Gallery, brand: Brand) -> Result<(), Box<dyn Error>> {
     browser
         .goto(&gallery.url(&format!("/{}/forms", brand.key())))
         .await?;
     let draft = browser.element(By::Id("gallery-mapping")).await?;
-    until("the code editor hydrates", async || {
+    until("the code editor is enhanced", async || {
         browser.editor_live(&draft).await
     })
     .await
@@ -109,12 +109,12 @@ pub(super) async fn editor(
     forms(browser, gallery, brand).await?;
     at_rest(browser, brand, theme, "-390").await?;
     window(browser, WIDTH, HEIGHT).await?;
-    no_wasm(browser, gallery, brand, theme).await
+    no_script(browser, gallery, brand, theme).await
 }
 
-/// The code editor with its WebAssembly withheld: the text area editable
-/// from the first paint, its own text drawn over the layer's gutter.
-async fn no_wasm(
+/// The code editor with its modules refused: the text area editable from
+/// the first paint, its own text drawn over the layer's gutter.
+async fn no_script(
     browser: &Browser,
     gallery: &Gallery,
     brand: Brand,
@@ -122,8 +122,11 @@ async fn no_wasm(
 ) -> Result<(), Box<dyn Error>> {
     let cdp = browser.driver().cdp();
     cdp.send_raw("Network.enable", json!({})).await?;
-    cdp.send_raw("Network.setBlockedURLs", json!({ "urls": ["*/pkg/*"] }))
-        .await?;
+    cdp.send_raw(
+        "Network.setBlockedURLs",
+        json!({ "urls": ["*/ferrohealth-ui/*/scripts/*"] }),
+    )
+    .await?;
     browser
         .goto(&gallery.url(&format!("/{}/forms", brand.key())))
         .await?;
@@ -139,18 +142,18 @@ async fn no_wasm(
     cdp.send_raw("Network.setBlockedURLs", json!({ "urls": [] }))
         .await?;
     shot?;
-    // The island loader logs the withheld bundle once the page is left; no
+    // The loader logs the withheld module once the page is left; no
     // other error may come with it.
     browser.goto("about:blank").await?;
     let others: Vec<String> = browser
         .console_errors()
         .await?
         .into_iter()
-        .filter(|entry| !entry.contains("/pkg/"))
+        .filter(|entry| !entry.contains("/scripts/"))
         .collect();
     if others.is_empty() {
         Ok(())
     } else {
-        Err(format!("the editor with no WebAssembly logged: {others:?}").into())
+        Err(format!("the editor with no script logged: {others:?}").into())
     }
 }

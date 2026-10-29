@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Your preferences: exactly three tabs, each preference a plain form post
-//! that works with no WebAssembly, Saved in its slot, and Reset to defaults
+//! that works with no script, Saved in its slot, and Reset to defaults
 //! behind its confirmation.
 
 use ferrohealth_ui::calendar::Weekday;
@@ -13,10 +13,9 @@ use ferrohealth_ui::view::preferences::{
     Post, PreferenceRow, PreferencesPage, RESET_DIALOG, Section, SectionRoutes, SelectPreference,
     SwitchPreference, preference_row, preferences_page, select_preference, switch_preference,
 };
-use leptos::prelude::*;
 
 use crate::markup::{has, tags};
-use crate::render::page_html;
+use crate::render::{en, html};
 
 /// The routes of the three tabs.
 fn routes() -> SectionRoutes {
@@ -49,7 +48,7 @@ fn page(section: Section, preferences: Preferences, saved: Option<&str>) -> Pref
 
 /// The HTML of `page`.
 fn drawn(page: PreferencesPage) -> String {
-    page_html(|| preferences_page(page))
+    html(preferences_page(&en(), page))
 }
 
 #[test]
@@ -150,7 +149,7 @@ fn appearance_draws_the_theme_and_density_as_radio_cards_marked_by_more_than_col
 }
 
 #[test]
-fn every_preference_is_a_plain_form_post_with_a_save_button_before_hydration() {
+fn every_preference_is_a_plain_form_post_with_a_save_button_before_its_module_runs() {
     let shown = drawn(page(Section::Appearance, Preferences::default(), None));
     let forms = tags(&shown, "form")
         .into_iter()
@@ -184,7 +183,7 @@ fn every_preference_is_a_plain_form_post_with_a_save_button_before_hydration() {
         .count();
     assert!(
         saves >= 3,
-        "a Save button posts each before the page hydrates: {shown}"
+        "a Save button posts each before its module runs: {shown}"
     );
     assert!(!shown.contains("style="), "{shown}");
 }
@@ -292,33 +291,42 @@ fn a_console_s_own_rows_follow_the_library_s_in_their_tab() {
         action: String::from("/preference"),
         back: String::from("/preferences/appearance"),
     };
-    let shown = page_html(|| {
-        let reveal = select_preference(SelectPreference {
-            name: String::from("reveal"),
-            choices: vec![
-                (String::from("10"), Word::from("10 seconds")),
-                (String::from("15"), Word::from("15 seconds")),
-            ],
-            current: String::from("15"),
-            post,
-            saved: false,
-        });
-        let own = preference_row(PreferenceRow {
-            label: Word::from("Revealed identifiers stay for <b>"),
-            description: Word::from("The server caps every reveal."),
-            control_id: Some(String::from("reveal")),
-            control: reveal,
-            saved: false,
-        });
-        preferences_page(PreferencesPage {
-            own: vec![own],
-            ..page(Section::Appearance, Preferences::default(), None)
-        })
+    let shown = html({
+        let reveal = select_preference(
+            &en(),
+            SelectPreference {
+                name: String::from("reveal"),
+                choices: vec![
+                    (String::from("10"), Word::from("10 seconds")),
+                    (String::from("15"), Word::from("15 seconds")),
+                ],
+                current: String::from("15"),
+                post,
+                saved: false,
+            },
+        );
+        let own = preference_row(
+            &en(),
+            PreferenceRow {
+                label: Word::from("Revealed identifiers stay for <b>"),
+                description: Word::from("The server caps every reveal."),
+                control_id: Some(String::from("reveal")),
+                control: reveal,
+                saved: false,
+            },
+        );
+        preferences_page(
+            &en(),
+            PreferencesPage {
+                own: vec![own],
+                ..page(Section::Appearance, Preferences::default(), None)
+            },
+        )
     });
     let motion = shown.find("Reduce motion").unwrap();
     let reveal = shown.find("Revealed identifiers stay for").unwrap();
     assert!(motion < reveal, "{shown}");
-    assert!(shown.contains("stay for &lt;b&gt;"), "escaped: {shown}");
+    assert!(shown.contains("stay for &#60;b&#62;"), "escaped: {shown}");
     assert!(
         has(&shown, "option", &[("value", "15"), ("selected", "")]),
         "{shown}"
@@ -374,24 +382,26 @@ fn the_accent_the_cards_name_is_escaped() {
         accent: String::from("<script>"),
         ..page(Section::Appearance, Preferences::default(), None)
     });
-    assert!(shown.contains("&lt;script&gt; on white"), "{shown}");
+    assert!(shown.contains("&#60;script&#62; on white"), "{shown}");
     assert!(!shown.contains("<script>"), "{shown}");
 }
 
 #[test]
 fn a_select_preference_alone_posts_its_name_and_value() {
-    let shown = page_html(|| {
-        select_preference(SelectPreference {
-            name: String::from("hide"),
-            choices: vec![(String::from("on"), Word::from("On"))],
-            current: String::from("on"),
-            post: Post {
-                action: String::from("/preference"),
-                back: String::from("/preferences/appearance"),
+    let shown = html({
+        select_preference(
+            &en(),
+            SelectPreference {
+                name: String::from("hide"),
+                choices: vec![(String::from("on"), Word::from("On"))],
+                current: String::from("on"),
+                post: Post {
+                    action: String::from("/preference"),
+                    back: String::from("/preferences/appearance"),
+                },
+                saved: true,
             },
-            saved: true,
-        })
-        .into_any()
+        )
     });
     assert!(
         has(
@@ -409,17 +419,20 @@ fn a_select_preference_alone_posts_its_name_and_value() {
 
 #[test]
 fn a_switch_preference_posts_off_unless_it_is_on() {
-    let shown = page_html(|| {
-        switch_preference(SwitchPreference {
-            name: String::from("hide"),
-            label: String::from("Hide revealed identifiers when I leave the page"),
-            on: true,
-            post: Post {
-                action: String::from("/preference"),
-                back: String::from("/preferences/appearance"),
+    let shown = html({
+        switch_preference(
+            &en(),
+            SwitchPreference {
+                name: String::from("hide"),
+                label: String::from("Hide revealed identifiers when I leave the page"),
+                on: true,
+                post: Post {
+                    action: String::from("/preference"),
+                    back: String::from("/preferences/appearance"),
+                },
+                saved: false,
             },
-            saved: false,
-        })
+        )
     });
     let hide = tags(&shown, "input")
         .into_iter()

@@ -17,15 +17,14 @@
 //! which says how many it shows and links to the older ones. No
 //! specification governs the component: our own design.
 
-use leptos::prelude::*;
-
 use std::cmp::Ordering;
 
-use crate::i18n::{Text, tr, tr_with};
+use crate::html::Html;
+use crate::i18n::{Locale, Text, tr, tr_with};
 use crate::tone::Tone;
+use crate::view::identifier::{Masked, identifier_static};
 use crate::view::surface::disclosure;
 use crate::view::time::{moment, timestamp};
-use crate::widget::identifier::{Masked, identifier_static};
 
 /// One event of a timeline.
 #[derive(Clone)]
@@ -51,7 +50,7 @@ pub struct Event {
     /// The reason the actor gave, when there is one.
     pub reason: Option<String>,
     /// The details that open under the event, such as a version's diff.
-    pub body: Option<ViewFn>,
+    pub body: Option<Html>,
 }
 
 impl std::fmt::Debug for Event {
@@ -92,82 +91,82 @@ fn newest_first(events: &[Event]) -> Vec<&Event> {
 }
 
 /// Returns one event of the timeline.
-fn event(event: &Event) -> AnyView {
-    let class = format!("fui-timeline-event {}", event.tone.class());
-    let kind = capitalised(&event.kind);
+fn event(locale: &Locale, event: &Event) -> String {
     let code = event
         .code
-        .clone()
-        .map(|code| view! { <span class="fui-timeline-code">{code}</span> });
+        .as_ref()
+        .map(|code| {
+            format!(
+                "<span class=\"fui-timeline-code\">{}</span>",
+                Html::text(code)
+            )
+        })
+        .unwrap_or_default();
     let actor = event
         .actor
-        .clone()
-        .map(|actor| view! { <span class="fui-timeline-meta">{actor}</span> });
-    let identifiers = (!event.identifiers.is_empty()).then(|| {
-        let items = event
+        .as_ref()
+        .map(|actor| {
+            format!(
+                "<span class=\"fui-timeline-meta\">{}</span>",
+                Html::text(actor)
+            )
+        })
+        .unwrap_or_default();
+    let identifiers = if event.identifiers.is_empty() {
+        String::new()
+    } else {
+        let items: Html = event
             .identifiers
             .iter()
-            .map(|masked| identifier_static(masked, true))
-            .collect_view()
-            .into_any();
-        view! { <div class="fui-timeline-identifiers">{items}</div> }
-    });
-    let reason = event.reason.clone().map(|reason| {
-        view! {
-            <p class="fui-timeline-reason">
-                <span class="fui-timeline-reason-label">{tr(Text::TimelineReason)}</span>
-                " "
-                {reason}
-            </p>
-        }
-    });
+            .map(|masked| identifier_static(locale, masked, true))
+            .collect();
+        format!("<div class=\"fui-timeline-identifiers\">{items}</div>")
+    };
+    let reason = event
+        .reason
+        .as_ref()
+        .map(|reason| {
+            format!(
+                "<p class=\"fui-timeline-reason\"><span class=\"fui-timeline-reason-label\">{}</span> {}</p>",
+                tr(locale, Text::TimelineReason),
+                Html::text(reason)
+            )
+        })
+        .unwrap_or_default();
     let details = event
         .body
-        .as_ref()
-        .map(|body| disclosure(tr(Text::TimelineDetails), body.run()));
-    let body = (reason.is_some() || details.is_some()).then(|| {
-        view! {
-            <div class="fui-timeline-body">
-                {reason}
-                {details}
-            </div>
-        }
-    });
-    view! {
-        <li class=class data-key=event.key.clone()>
-            <span class="fui-timeline-dot" aria-hidden="true"></span>
-            <div>
-                <div class="fui-timeline-head">
-                    <span class=event.tone.badge()>{kind}</span>
-                    {code}
-                    <span class="fui-timeline-title">{event.title.clone()}</span>
-                    <span class="fui-timeline-meta">{timestamp(&event.at)}</span>
-                    {actor}
-                </div>
-                {identifiers}
-                {body}
-            </div>
-        </li>
-    }
-    .into_any()
+        .clone()
+        .map(|body| String::from(disclosure(tr(locale, Text::TimelineDetails), body)))
+        .unwrap_or_default();
+    let body = if reason.is_empty() && details.is_empty() {
+        String::new()
+    } else {
+        format!("<div class=\"fui-timeline-body\">{reason}{details}</div>")
+    };
+    format!(
+        "<li data-key=\"{}\" class=\"fui-timeline-event {}\"><span aria-hidden=\"true\" class=\"fui-timeline-dot\"></span><div><div class=\"fui-timeline-head\"><span class=\"{}\">{}</span>{code}<span class=\"fui-timeline-title\">{}</span><span class=\"fui-timeline-meta\">{}</span>{actor}</div>{identifiers}{body}</div></li>",
+        Html::text(&event.key),
+        event.tone.class(),
+        event.tone.badge(),
+        Html::text(capitalised(&event.kind)),
+        Html::text(&event.title),
+        timestamp(locale, &event.at)
+    )
 }
 
 /// Returns the timeline named `label` of `events`, newest first, every
 /// event drawn.
 #[must_use]
-pub fn timeline(label: impl Into<String>, events: &[Event]) -> AnyView {
-    let label = label.into();
-    let items = newest_first(events)
+pub fn timeline(locale: &Locale, label: impl Into<String>, events: &[Event]) -> Html {
+    let items: String = newest_first(events)
         .into_iter()
-        .map(event)
-        .collect_view()
-        .into_any();
-    view! {
-        <ol class="fui-timeline" aria-label=label>
-            {items}
-        </ol>
-    }
-    .into_any()
+        .map(|each| event(locale, each))
+        .collect::<Vec<_>>()
+        .concat();
+    Html::raw(format!(
+        "<ol aria-label=\"{}\" class=\"fui-timeline\">{items}</ol>",
+        Html::text(label.into())
+    ))
 }
 
 /// How much of a long timeline shows.
@@ -187,36 +186,39 @@ pub struct Window<'a> {
 /// `events`, and, when the history holds more, a foot saying how many show
 /// of how many with a link to the older ones.
 #[must_use]
-pub fn timeline_window(label: impl Into<String>, events: &[Event], window: Window<'_>) -> AnyView {
-    let label = label.into();
+pub fn timeline_window(
+    locale: &Locale,
+    label: impl Into<String>,
+    events: &[Event],
+    window: Window<'_>,
+) -> Html {
     let sorted = newest_first(events);
     let shown = sorted.len().min(window.limit);
     let total = window.total.unwrap_or(sorted.len()).max(sorted.len());
-    let items = sorted
+    let items: String = sorted
         .into_iter()
         .take(shown)
-        .map(event)
-        .collect_view()
-        .into_any();
-    let more = (total > shown).then(|| {
+        .map(|each| event(locale, each))
+        .collect::<Vec<_>>()
+        .concat();
+    let more = if total > shown {
         let said = tr_with(
+            locale,
             Text::TimelineShown,
             &[("shown", shown.into()), ("total", total.into())],
         );
-        view! {
-            <p class="fui-timeline-more">
-                <span class="fui-small fui-muted">{said}</span>
-                <a href=window.older.to_owned()>{tr(Text::TimelineOlder)}</a>
-            </p>
-        }
-    });
-    view! {
-        <ol class="fui-timeline" aria-label=label>
-            {items}
-        </ol>
-        {more}
-    }
-    .into_any()
+        format!(
+            "<p class=\"fui-timeline-more\"><span class=\"fui-small fui-muted\">{said}</span><a href=\"{}\">{}</a></p>",
+            Html::text(window.older),
+            tr(locale, Text::TimelineOlder)
+        )
+    } else {
+        String::new()
+    };
+    Html::raw(format!(
+        "<ol aria-label=\"{}\" class=\"fui-timeline\">{items}</ol>{more}",
+        Html::text(label.into())
+    ))
 }
 
 #[cfg(test)]

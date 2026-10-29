@@ -3,7 +3,7 @@
 
 //! The field shapes with their error lines, the pick-or-type fields
 //! switched to their typed inputs, and the masked identifier at rest, held
-//! and with no WebAssembly.
+//! and with no script.
 
 use std::error::Error;
 
@@ -86,7 +86,7 @@ fn masked_field() -> By {
 }
 
 /// The masked identifier with a value typed: at rest, held by the pointer,
-/// and with the page's WebAssembly withheld, its eye disabled.
+/// and with the page's scripts withheld, its eye disabled.
 async fn masked_states(
     browser: &Browser,
     gallery: &Gallery,
@@ -119,12 +119,15 @@ async fn masked_states(
     browser.driver().action_chain().release().perform().await?;
     let cdp = browser.driver().cdp();
     cdp.send_raw("Network.enable", json!({})).await?;
-    cdp.send_raw("Network.setBlockedURLs", json!({ "urls": ["*/pkg/*"] }))
-        .await?;
+    cdp.send_raw(
+        "Network.setBlockedURLs",
+        json!({ "urls": ["*/ferrohealth-ui/*/scripts/*"] }),
+    )
+    .await?;
     browser
         .goto(&gallery.url(&format!("/{}/forms", brand.key())))
         .await?;
-    // The combobox's native select stands until its island hydrates.
+    // The combobox's native select stands until its module runs.
     browser.element(By::Css("select#choose-system")).await?;
     browser
         .element(By::Id("edge-identifier"))
@@ -136,18 +139,18 @@ async fn masked_states(
     cdp.send_raw("Network.setBlockedURLs", json!({ "urls": [] }))
         .await?;
     shot?;
-    // The island loader logs the withheld bundle once the page is left; no
+    // The loader logs the withheld module once the page is left; no
     // other error may come with it.
     browser.goto("about:blank").await?;
     let others: Vec<String> = browser
         .console_errors()
         .await?
         .into_iter()
-        .filter(|entry| !entry.contains("/pkg/"))
+        .filter(|entry| !entry.contains("/scripts/"))
         .collect();
     if others.is_empty() {
         Ok(())
     } else {
-        Err(format!("the page with no WebAssembly logged: {others:?}").into())
+        Err(format!("the page with no script logged: {others:?}").into())
     }
 }

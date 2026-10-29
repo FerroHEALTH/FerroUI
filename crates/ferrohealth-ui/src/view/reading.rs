@@ -21,9 +21,8 @@
 //! folded away and says so once in a foot. No specification governs the
 //! look: our own design.
 
-use leptos::prelude::*;
-
-use crate::i18n::{Arg, Text, tr_with};
+use crate::html::Html;
+use crate::i18n::{Arg, Locale, Text, tr_with};
 
 /// The value of one element.
 #[derive(Debug)]
@@ -42,12 +41,12 @@ pub enum Value {
         ucum: String,
     },
     /// A coded value: the M2 coding the console draws, inline.
-    Coded(AnyView),
+    Coded(Html),
     /// No value, and why: the null flavour in words, such as "No
     /// information: unknown".
     Null(String),
     /// Any other value the console draws, such as a timestamp.
-    Other(AnyView),
+    Other(Html),
 }
 
 /// One element: its label and its value.
@@ -113,7 +112,7 @@ pub struct Reading {
     pub level: Level,
     /// The one foot that says what is folded away, such as the uids and the
     /// language, with its way to the full document.
-    pub folded: Option<AnyView>,
+    pub folded: Option<Html>,
 }
 
 /// How many levels of nested clusters indent; a deeper cluster sits at the
@@ -123,129 +122,122 @@ pub const INDENTED: usize = 4;
 /// Returns the archetype node id `id`, an archetype id or an ADL 2 HRID,
 /// in mono as the quiet hint after a heading: it breaks only after a dot,
 /// never inside a segment, and the whole id is its tooltip.
-fn archetype(id: String) -> AnyView {
-    let segments = id.split('.').map(str::to_owned).collect::<Vec<_>>();
-    let last = segments.len().saturating_sub(1);
-    let parts = segments
-        .into_iter()
-        .enumerate()
-        .map(|(index, segment)| {
-            let dot = (index < last).then(|| view! { "." <wbr /> });
-            view! {
-                <span>{segment}</span>
-                {dot}
-            }
-        })
-        .collect_view();
-    view! {
-        <code class="fui-archetype fui-reading-node" title=id>
-            {parts}
-        </code>
-    }
-    .into_any()
+fn archetype(id: &str) -> String {
+    let parts: Vec<String> = id
+        .split('.')
+        .map(|segment| format!("<span>{}</span>", Html::text(segment)))
+        .collect();
+    format!(
+        "<code title=\"{}\" class=\"fui-archetype fui-reading-node\">{}</code>",
+        Html::text(id),
+        parts.join(".<wbr>")
+    )
 }
 
 /// Returns the value `value` of one element.
-fn value_view(value: Value) -> AnyView {
+fn value_view(locale: &Locale, value: Value) -> String {
     match value {
-        Value::Text(words) => words.into_any(),
+        Value::Text(words) => String::from(Html::text(words)),
         Value::Quantity {
             magnitude,
             unit,
             ucum,
         } => {
-            let tooltip = tr_with(Text::ReadingUcum, &[("code", Arg::from(ucum))]);
-            let said = tooltip.clone().map(|tooltip| format!(", {tooltip}"));
-            view! {
-                <span class="fui-reading-value">{magnitude}</span>
-                " "
-                <span class="fui-reading-unit" title=tooltip>
-                    {unit}
-                </span>
-                <span class="fui-sr-only">{said}</span>
-            }
-            .into_any()
+            let tooltip = tr_with(locale, Text::ReadingUcum, &[("code", Arg::from(ucum))]);
+            format!(
+                "<span class=\"fui-reading-value\">{}</span> <span title=\"{}\" class=\"fui-reading-unit\">{}</span><span class=\"fui-sr-only\">, {}</span>",
+                Html::text(magnitude),
+                Html::text(tooltip.text()),
+                Html::text(unit),
+                Html::text(tooltip.text())
+            )
         }
-        Value::Null(words) => view! { <span class="fui-reading-null">{words}</span> }.into_any(),
-        Value::Coded(view) | Value::Other(view) => view,
+        Value::Null(words) => format!(
+            "<span class=\"fui-reading-null\">{}</span>",
+            Html::text(words)
+        ),
+        Value::Coded(view) | Value::Other(view) => String::from(view),
     }
 }
 
 /// Returns the heading `title` at `level`, its node hint after it, a
 /// hidden comma between the two so a reader hears two phrases.
-fn heading(level: Level, title: String, node: Option<AnyView>) -> AnyView {
-    let node = node.map(|node| {
-        view! {
-            <span class="fui-sr-only">", "</span>
-            {node}
-        }
-    });
-    match level {
-        Level::Two => view! { <h2 class="fui-reading-title">{title}{node}</h2> }.into_any(),
-        Level::Three => view! { <h3 class="fui-reading-title">{title}{node}</h3> }.into_any(),
-        Level::Four => view! { <h4 class="fui-reading-title">{title}{node}</h4> }.into_any(),
-        Level::Five => view! { <h5 class="fui-reading-title">{title}{node}</h5> }.into_any(),
-        Level::Six => view! { <h6 class="fui-reading-title">{title}{node}</h6> }.into_any(),
-    }
+fn heading(level: Level, title: &str, node: Option<String>) -> String {
+    let tag = match level {
+        Level::Two => "h2",
+        Level::Three => "h3",
+        Level::Four => "h4",
+        Level::Five => "h5",
+        Level::Six => "h6",
+    };
+    let node = node
+        .map(|node| format!("<span class=\"fui-sr-only\">, </span>{node}"))
+        .unwrap_or_default();
+    format!(
+        "<{tag} class=\"fui-reading-title\">{}{node}</{tag}>",
+        Html::text(title)
+    )
 }
 
 /// Returns the section `section` with its heading at `level`, nested
 /// `depth` clusters deep.
-fn section_view(section: Section, level: Level, depth: usize) -> AnyView {
+fn section_view(locale: &Locale, section: Section, level: Level, depth: usize) -> String {
     let Section {
         title,
         node,
         elements,
         sections,
     } = section;
-    let rows = (!elements.is_empty()).then(|| {
-        let rows = elements
+    let rows = if elements.is_empty() {
+        String::new()
+    } else {
+        let rows: String = elements
             .into_iter()
             .map(|Element { label, value }| {
-                view! {
-                    <div>
-                        <dt>{label}</dt>
-                        <dd>{value_view(value)}</dd>
-                    </div>
-                }
+                format!(
+                    "<div><dt>{}</dt><dd>{}</dd></div>",
+                    Html::text(label),
+                    value_view(locale, value)
+                )
             })
-            .collect_view();
-        view! { <dl class="fui-reading-rows">{rows}</dl> }
-    });
-    let nested = sections
+            .collect::<Vec<_>>()
+            .concat();
+        format!("<dl class=\"fui-reading-rows\">{rows}</dl>")
+    };
+    let nested: String = sections
         .into_iter()
-        .map(|inner| section_view(inner, level.deeper(), depth.saturating_add(1)))
-        .collect_view();
-    let deep = depth > INDENTED;
-    view! {
-        <section class="fui-reading-section" class:is-deep=deep>
-            {heading(level, title, node.map(archetype))}
-            {rows}
-            {nested}
-        </section>
-    }
-    .into_any()
+        .map(|inner| section_view(locale, inner, level.deeper(), depth.saturating_add(1)))
+        .collect::<Vec<_>>()
+        .concat();
+    let deep = if depth > INDENTED { " is-deep" } else { "" };
+    format!(
+        "<section class=\"fui-reading-section{deep}\">{}{rows}{nested}</section>",
+        heading(level, &title, node.as_deref().map(archetype))
+    )
 }
 
 /// Returns the clinical reading `reading`. In a tab panel it is a part of
 /// its own, its sections split by hairlines.
 #[must_use]
-pub fn reading(reading: Reading) -> AnyView {
+pub fn reading(locale: &Locale, reading: Reading) -> Html {
     let Reading {
         sections,
         level,
         folded,
     } = reading;
-    let sections = sections
+    let sections: String = sections
         .into_iter()
-        .map(|section| section_view(section, level, 0))
-        .collect_view();
-    let folded = folded.map(|folded| {
-        view! {
-            <div class="fui-reading-section">
-                <p class="fui-small fui-muted">{folded}</p>
-            </div>
-        }
-    });
-    view! { <div class="fui-reading">{sections}{folded}</div> }.into_any()
+        .map(|section| section_view(locale, section, level, 0))
+        .collect::<Vec<_>>()
+        .concat();
+    let folded = folded
+        .map(|folded| {
+            format!(
+                "<div class=\"fui-reading-section\"><p class=\"fui-small fui-muted\">{folded}</p></div>"
+            )
+        })
+        .unwrap_or_default();
+    Html::raw(format!(
+        "<div class=\"fui-reading\">{sections}{folded}</div>"
+    ))
 }

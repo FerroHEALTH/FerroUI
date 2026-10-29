@@ -14,11 +14,11 @@
 //! a credential. No specification governs the gallery's session: our own
 //! design.
 
-use ferrohealth_ui::island::SessionWatch;
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::style::Brand;
-use ferrohealth_ui::widget::session::{Left, WARN_FLOOR, Watch};
-use leptos::prelude::*;
-use leptos_router::hooks::use_location;
+use ferrohealth_ui::view::session::{Left, WARN_FLOOR, Watch, session_watch};
+
+use crate::visit::Visit;
 
 /// The cookie the session is kept in.
 pub const SESSION_COOKIE: &str = "gallery-session";
@@ -103,8 +103,7 @@ impl Kept {
     }
 }
 
-/// The milliseconds since the Unix epoch now, on the server.
-#[cfg(not(target_arch = "wasm32"))]
+/// The milliseconds since the Unix epoch now.
 #[must_use]
 pub fn now() -> u64 {
     std::time::SystemTime::now()
@@ -114,49 +113,30 @@ pub fn now() -> u64 {
         })
 }
 
-/// What the session of the request has left as the server draws the page;
-/// in the browser, which reads the value the server serialized, none.
-fn left_requested() -> Option<Left> {
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        Kept::read(&crate::cookies::server_cookies()).and_then(|kept| kept.left(now()))
-    }
-    #[cfg(target_arch = "wasm32")]
-    {
-        None
-    }
-}
-
 /// The library's watch over the gallery's session, on a brand's page while
 /// a journey's session lasts.
-#[component]
-pub fn GallerySession() -> impl IntoView {
-    // NOTE: the Leptos book, `ssr/22_life_cycle`: what the session had left reaches the
-    // hydrating page serialized, so both halves draw the same watch.
-    let left = *SharedValue::new(left_requested);
-    let brand = use_location()
-        .pathname
-        .with_untracked(|path| path.split('/').nth(1).and_then(Brand::parse));
-    let (Some(left), Some(brand)) = (left, brand) else {
-        return ().into_any();
-    };
+#[must_use]
+pub fn watch(visit: &Visit) -> Option<Html> {
+    let left = Kept::read(&visit.cookies).and_then(|kept| kept.left(now()))?;
+    let brand = visit.segment(0).and_then(Brand::parse)?;
     // The shortest warning the library gives (SC 2.2.1), so a journey's session can be short.
     let watch = Watch {
         warn_at: WARN_FLOOR,
         ..Watch::new(
+            &visit.locale,
             SESSION_ROUTE,
             format!("/sign-in/{}/expired", brand.key()),
             format!("{}/{}", crate::app::SIGN_OUT_ROUTE, brand.key()),
             left,
         )
     };
-    view! { <SessionWatch watch /> }.into_any()
+    Some(session_watch(&watch))
 }
 
 #[cfg(test)]
 mod tests {
     use super::{Kept, SESSION_COOKIE};
-    use ferrohealth_ui::widget::session::Left;
+    use ferrohealth_ui::view::session::Left;
 
     #[test]
     fn a_session_reads_back_from_its_cookie_and_anything_else_is_none() {

@@ -3,7 +3,7 @@
 
 //! The integration tests of the library, one binary: the contrast of every
 //! role pairing in every brand's themes, the stylesheet's own rules, and
-//! every view rendered to HTML on the host.
+//! every component rendered to HTML on the host.
 #![cfg(not(target_arch = "wasm32"))]
 // NOTE: The Rust Reference, "Limits", `recursion_limit`: every view rendered here stays
 // 48 levels under rustc's default 128, which a console's own nesting spends (FerroUI #450).

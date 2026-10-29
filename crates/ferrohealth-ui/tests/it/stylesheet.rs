@@ -10,29 +10,36 @@ use std::path::Path;
 
 use ferrohealth_ui::style::{STYLESHEET, TAILWIND_THEME};
 
-/// Every `fui-` class name in `text`.
+/// Every `fui-` class name in `text`; a `data-fui-` attribute name is no
+/// class.
 fn classes(text: &str) -> BTreeSet<String> {
     let mut found = BTreeSet::new();
     let mut rest = text;
     while let Some(at) = rest.find("fui-") {
+        let attribute = rest[..at].ends_with("data-");
         let tail = &rest[at..];
         let end = tail
             .find(|c: char| !(c.is_ascii_alphanumeric() || c == '-'))
             .unwrap_or(tail.len());
-        found.insert(tail[..end].trim_end_matches('-').to_owned());
+        if !attribute {
+            found.insert(tail[..end].trim_end_matches('-').to_owned());
+        }
         rest = &tail[end..];
     }
     found
 }
 
-/// The text of every Rust source file under `dir`.
+/// The text of every Rust source file and Askama template under `dir`.
 fn sources(dir: &Path) -> String {
     let mut text = String::new();
     for entry in std::fs::read_dir(dir).expect("a source folder") {
         let path = entry.expect("an entry").path();
         if path.is_dir() {
             text.push_str(&sources(&path));
-        } else if path.extension().is_some_and(|extension| extension == "rs") {
+        } else if path
+            .extension()
+            .is_some_and(|extension| extension == "rs" || extension == "html")
+        {
             text.push_str(&std::fs::read_to_string(&path).expect("a source file"));
         }
     }
@@ -41,8 +48,9 @@ fn sources(dir: &Path) -> String {
 
 #[test]
 fn every_class_a_component_writes_is_defined_in_the_stylesheet() {
-    let src = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
-    let written = classes(&sources(&src));
+    let crate_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let mut written = classes(&sources(&crate_dir.join("src")));
+    written.extend(classes(&sources(&crate_dir.join("templates"))));
     let defined: BTreeSet<String> = classes(STYLESHEET)
         .into_iter()
         .filter(|class| STYLESHEET.contains(&format!(".{class}")))
@@ -230,10 +238,10 @@ fn a_forms_help_lines_show_by_its_switch_with_no_script() {
 }
 
 #[test]
-fn an_island_wrapper_draws_no_box_of_its_own() {
+fn the_stylesheet_styles_no_wrapper_the_markup_never_draws() {
     assert!(
-        STYLESHEET.contains("  leptos-island,\n  leptos-children {\n    display: contents;"),
-        "an island's wrapper would break the flex or grid it sits in"
+        !STYLESHEET.contains("island"),
+        "a selector through the old island wrapper matches nothing the server draws"
     );
 }
 
@@ -250,12 +258,10 @@ fn a_sort_form_and_a_pager_form_add_no_box() {
 }
 
 #[test]
-fn a_cards_rhythm_reaches_through_an_islands_wrapper() {
+fn a_cards_rhythm_spaces_its_children() {
     assert!(
-        STYLESHEET.contains(
-            "  .fui-card > * + *,\n  .fui-card > :where(leptos-island, leptos-children) > * + *,\n  .fui-card > * + :where(leptos-island, leptos-children) > :where(:first-child) {"
-        ),
-        "the parts an island draws in a card would lose the space between them"
+        STYLESHEET.contains("  .fui-card > * + * {"),
+        "the parts of a card would lose the space between them"
     );
 }
 
@@ -277,10 +283,10 @@ fn a_phone_row_keeps_its_checkbox_on_its_first_line() {
 }
 
 #[test]
-fn a_binder_panel_inside_an_island_is_the_sheet_its_tabs_open_into() {
+fn a_keyboard_tabs_panel_is_the_sheet_its_tabs_open_into() {
     assert!(
         STYLESHEET.contains(
-            "  .fui-tabbed > .fui-tab-panel,\n  .fui-tabbed > leptos-children > .fui-tab-panel {\n    min-width: 0;\n    border: 1px solid var(--edge-strong);"
+            "  .fui-tabbed > .fui-tab-panel {\n    min-width: 0;\n    border: 1px solid var(--edge-strong);"
         ),
         "the keyboard tabs' panels would lose the binder sheet"
     );
@@ -288,7 +294,7 @@ fn a_binder_panel_inside_an_island_is_the_sheet_its_tabs_open_into() {
 
 #[test]
 fn the_phone_tab_select_replaces_the_row_only_once_it_works() {
-    // NOTE: leptos-ui.md §15.8: with no WebAssembly the row of links is the floor.
+    // NOTE: console-ui.md, the no-script floor: with no script the row of links is the floor.
     assert!(
         STYLESHEET.contains(
             "    .fui-tabbed-many:has(.fui-tabs-select select:enabled) > .fui-tabs {\n      display: none;"
@@ -302,12 +308,12 @@ fn the_phone_tab_select_replaces_the_row_only_once_it_works() {
 }
 
 #[test]
-fn a_document_view_a_link_targets_shows_until_the_island_takes_over() {
+fn a_document_view_a_link_targets_shows_until_the_module_takes_over() {
     assert!(
         STYLESHEET.contains(
             "  .fui-document-views:not(.is-live):has(.fui-document-view:target) .fui-document-view:not(:target) {\n    display: none;"
         ),
-        "with no WebAssembly the view a link targets replaces the chosen one"
+        "with no script the view a link targets replaces the chosen one"
     );
     assert!(
         STYLESHEET.contains(
@@ -677,7 +683,7 @@ fn the_toast_region_stays_above_the_decision_bar_and_scrolls() {
     assert!(
         STYLESHEET
             .contains("  .fui-toast:has(> .fui-toast-close:not([open])) {\n    display: none;"),
-        "a toast closed with no WebAssembly hides"
+        "a toast closed with no script hides"
     );
     assert!(
         rule("  .fui-toast code").contains("overflow-wrap: anywhere;"),
@@ -821,7 +827,7 @@ fn a_menu_segment_keeps_its_word_on_one_line() {
 
 #[test]
 fn a_confirmation_with_fields_keeps_the_dialogs_rhythm_inside_its_form() {
-    let rhythm = "  .fui-dialog > * + *,\n  .fui-dialog > .fui-dialog-form > * + *,";
+    let rhythm = "  .fui-dialog > * + *,\n  .fui-dialog > .fui-dialog-form > * + * {";
     assert!(
         STYLESHEET.contains(rhythm),
         "the question, the sentence, the fields and the actions keep their spacing inside the form"

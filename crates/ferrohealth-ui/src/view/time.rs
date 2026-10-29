@@ -15,13 +15,12 @@
 //! A list says when something happened relative to now, with the full
 //! timestamp as its title (family rule 11): [`relative`] reads `13 s ago`,
 //! `30 min ago`, `2 h ago` the same day, `yesterday`, then days, weeks,
-//! months and years, against the now the console hands it, so the server
-//! and the hydrated page draw the same words. The rounding is our own
+//! months and years, against the now the console hands it, so every page
+//! the server draws says the same words. The rounding is our own
 //! design, the one every console mockup draws.
 
-use leptos::prelude::*;
-
-use crate::i18n::{Phrase, Text, Word, tr, tr_with};
+use crate::html::Html;
+use crate::i18n::{Locale, Phrase, Text, Word, tr, tr_with};
 
 /// A date, `YYYY-MM-DD`, its parts checked against the calendar.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -327,7 +326,7 @@ fn day_number(date: Date) -> i64 {
 
 /// What `then` reads as seen at `now`: the words of [`relative`], or
 /// `None` for a moment after `now`.
-fn ago(then: &Parsed, now: &Parsed) -> Option<Word> {
+fn ago(locale: &Locale, then: &Parsed, now: &Parsed) -> Option<Word> {
     let (then_day, then_second) = then.day_and_second();
     let (now_day, now_second) = now.day_and_second();
     let days = day_number(now_day) - day_number(then_day);
@@ -337,12 +336,12 @@ fn ago(then: &Parsed, now: &Parsed) -> Option<Word> {
     let (Ok(days), Ok(seconds)) = (u64::try_from(days), u64::try_from(seconds)) else {
         return None;
     };
-    let count = |text: Text, value: u64| tr_with(text, &[("count", value.into())]);
+    let count = |text: Text, value: u64| tr_with(locale, text, &[("count", value.into())]);
     Some(match (days, seconds) {
         (_, 0..60) => count(Text::TimeAgoSeconds, seconds),
         (_, 60..3600) => count(Text::TimeAgoMinutes, seconds.div_euclid(60)),
         (0, _) => count(Text::TimeAgoHours, seconds.div_euclid(3600)),
-        (1, _) => tr(Text::TimeYesterday),
+        (1, _) => tr(locale, Text::TimeYesterday),
         (2..14, _) => count(Text::TimeAgoDays, days),
         (14..60, _) => count(Text::TimeAgoWeeks, days.div_euclid(7)),
         (60..365, _) => count(Text::TimeAgoMonths, days.div_euclid(30)),
@@ -357,20 +356,21 @@ fn ago(then: &Parsed, now: &Parsed) -> Option<Word> {
 /// # Examples
 ///
 /// ```
+/// use ferrohealth_ui::i18n::Locale;
 /// use ferrohealth_ui::view::time::relative_reading;
 ///
-/// let now = "2026-10-21T09:42:11Z";
-/// assert_eq!("13 s ago", relative_reading("2026-10-21T09:41:58Z", now));
-/// assert_eq!("yesterday", relative_reading("2026-10-20T23:30:00Z", now));
+/// let (en, now) = (Locale::english(), "2026-10-21T09:42:11Z");
+/// assert_eq!("13 s ago", relative_reading(&en, "2026-10-21T09:41:58Z", now));
+/// assert_eq!("yesterday", relative_reading(&en, "2026-10-20T23:30:00Z", now));
 /// ```
 #[must_use]
-pub fn relative_reading(raw: &str, now: &str) -> String {
+pub fn relative_reading(locale: &Locale, raw: &str, now: &str) -> String {
     let Some(then) = Parsed::parse(raw) else {
         return raw.to_owned();
     };
     Parsed::parse(now)
-        .and_then(|now| ago(&then, &now))
-        .map_or_else(|| reading(raw), String::from)
+        .and_then(|now| ago(locale, &then, &now))
+        .map_or_else(|| reading(locale, raw), String::from)
 }
 
 /// Returns `raw` relative to `now` on one line, never broken (family rule
@@ -383,16 +383,16 @@ pub fn relative_reading(raw: &str, now: &str) -> String {
 /// instant such as `2026-10-21T09:42:11Z`; an instant is compared in
 /// UTC, and a date-time with no offset as it stands.
 #[must_use]
-pub fn relative(raw: &str, now: &str) -> impl IntoView + use<> {
-    match Parsed::parse(raw) {
-        Some(parsed) => view! {
-            <time class="fui-time" datetime=parsed.machine() title=reading(raw)>
-                {relative_reading(raw, now)}
-            </time>
-        }
-        .into_any(),
-        None => view! { <span class="fui-time">{raw.to_owned()}</span> }.into_any(),
-    }
+pub fn relative(locale: &Locale, raw: &str, now: &str) -> Html {
+    Html::raw(match Parsed::parse(raw) {
+        Some(parsed) => format!(
+            "<time datetime=\"{}\" title=\"{}\" class=\"fui-time\">{}</time>",
+            parsed.machine(),
+            Html::text(reading(locale, raw)),
+            Html::text(relative_reading(locale, raw, now))
+        ),
+        None => format!("<span class=\"fui-time\">{}</span>", Html::text(raw)),
+    })
 }
 
 /// `YYYY-MM-DD`.
@@ -410,8 +410,7 @@ fn time(clock: &Clock, fraction: bool) -> String {
     }
 }
 
-/// The words of a timestamp, resolved on the server in the page's locale,
-/// so an island that draws one carries no catalog.
+/// The words of a timestamp, in the page's locale.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct TimeWords {
     /// An instant in UTC, around the open `date` and `time`.
@@ -419,11 +418,12 @@ pub struct TimeWords {
 }
 
 impl TimeWords {
-    /// The timestamp's words in the locale of the page being drawn.
+    /// The timestamp's words in `locale`.
     #[must_use]
-    pub fn of_page() -> Self {
+    pub fn of(locale: &Locale) -> Self {
         Self {
             utc: Phrase::new(tr_with(
+                locale,
                 Text::TimestampUtc,
                 &[
                     ("date", Phrase::open("date")),
@@ -466,8 +466,8 @@ pub(crate) fn moment(raw: &str) -> Option<(u32, u32, u32, u32, u32, u32)> {
 /// `2026-10-18T23:18:37.039437+00:00`, a date-time with no offset as it
 /// stands, and anything that is no date-time verbatim.
 #[must_use]
-pub fn reading(raw: &str) -> String {
-    reading_in(raw, &TimeWords::of_page())
+pub fn reading(locale: &Locale, raw: &str) -> String {
+    reading_in(raw, &TimeWords::of(locale))
 }
 
 /// [`reading`] in `words`.
@@ -482,29 +482,38 @@ pub fn reading_in(raw: &str, words: &TimeWords) -> String {
 /// whose `datetime` is the same moment in HTML's machine form, and whose
 /// `title` is `raw` exactly as it came; anything else is `raw` verbatim.
 #[must_use]
-pub fn timestamp(raw: &str) -> impl IntoView + use<> {
-    timestamp_in(raw, &TimeWords::of_page())
+pub fn timestamp(locale: &Locale, raw: &str) -> Html {
+    timestamp_in(raw, &TimeWords::of(locale))
 }
 
-/// [`timestamp`] in `words`, for an island.
+/// [`timestamp`] in `words`.
 #[must_use]
-pub fn timestamp_in(raw: &str, words: &TimeWords) -> impl IntoView + use<> {
+pub fn timestamp_in(raw: &str, words: &TimeWords) -> Html {
     // NOTE: HTML Living Standard §4.5.14 and §2.3.5 allow at most three digits of a second's
     // fraction in `datetime`, so the attribute carries the UTC form and the title the raw value.
-    match Parsed::parse(raw) {
-        Some(parsed) => view! {
-            <time class="fui-time" datetime=parsed.machine() title=raw.to_owned()>
-                {parsed.reading(words)}
-            </time>
-        }
-        .into_any(),
-        None => view! { <span class="fui-time">{raw.to_owned()}</span> }.into_any(),
-    }
+    Html::raw(match Parsed::parse(raw) {
+        Some(parsed) => format!(
+            "<time datetime=\"{}\" title=\"{}\" class=\"fui-time\">{}</time>",
+            parsed.machine(),
+            Html::text(raw),
+            parsed.reading(words)
+        ),
+        None => format!("<span class=\"fui-time\">{}</span>", Html::text(raw)),
+    })
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Parsed, reading, relative_reading};
+    use super::Parsed;
+    use crate::i18n::Locale;
+
+    fn reading(raw: &str) -> String {
+        super::reading(&Locale::english(), raw)
+    }
+
+    fn relative_reading(raw: &str, now: &str) -> String {
+        super::relative_reading(&Locale::english(), raw, now)
+    }
 
     /// The console's clock in the tests: the mockups' now.
     const NOW: &str = "2026-10-21T09:42:11Z";

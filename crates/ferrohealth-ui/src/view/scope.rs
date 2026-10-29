@@ -35,9 +35,8 @@
 //! either way. Which resources a server knows and which grants are broad
 //! are the console's. The look is our own design.
 
-use leptos::prelude::*;
-
-use crate::i18n::{Text, Word, tr, tr_with};
+use crate::html::Html;
+use crate::i18n::{Locale, Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::tone::Tone;
 
@@ -63,14 +62,17 @@ impl Compartment {
         }
     }
 
-    /// The compartment in words, in the page's locale.
+    /// The compartment in words, in `locale`.
     #[must_use]
-    pub fn words(self) -> Word {
-        tr(match self {
-            Self::Patient => Text::ScopePatient,
-            Self::User => Text::ScopeUser,
-            Self::System => Text::ScopeSystem,
-        })
+    pub fn words(self, locale: &Locale) -> Word {
+        tr(
+            locale,
+            match self {
+                Self::Patient => Text::ScopePatient,
+                Self::User => Text::ScopeUser,
+                Self::System => Text::ScopeSystem,
+            },
+        )
     }
 }
 
@@ -111,16 +113,19 @@ impl Operation {
         }
     }
 
-    /// The operation in words, in the page's locale.
+    /// The operation in words, in `locale`.
     #[must_use]
-    pub fn words(self) -> Word {
-        tr(match self {
-            Self::Create => Text::ScopeCreate,
-            Self::Read => Text::ScopeRead,
-            Self::Update => Text::ScopeUpdate,
-            Self::Delete => Text::ScopeDelete,
-            Self::Search => Text::ScopeSearch,
-        })
+    pub fn words(self, locale: &Locale) -> Word {
+        tr(
+            locale,
+            match self {
+                Self::Create => Text::ScopeCreate,
+                Self::Read => Text::ScopeRead,
+                Self::Update => Text::ScopeUpdate,
+                Self::Delete => Text::ScopeDelete,
+                Self::Search => Text::ScopeSearch,
+            },
+        )
     }
 }
 
@@ -211,14 +216,17 @@ pub enum ScopeError {
 }
 
 impl ScopeError {
-    /// What the grammar expected, in the page's locale.
+    /// What the grammar expected, in `locale`.
     #[must_use]
-    pub fn expected(self) -> Word {
-        tr(match self {
-            Self::Compartment => Text::ScopeExpectedCompartment,
-            Self::Resource => Text::ScopeExpectedResource,
-            Self::Permissions => Text::ScopeExpectedPermissions,
-        })
+    pub fn expected(self, locale: &Locale) -> Word {
+        tr(
+            locale,
+            match self {
+                Self::Compartment => Text::ScopeExpectedCompartment,
+                Self::Resource => Text::ScopeExpectedResource,
+                Self::Permissions => Text::ScopeExpectedPermissions,
+            },
+        )
     }
 }
 
@@ -361,18 +369,19 @@ impl Request {
         })
     }
 
-    /// What the scope asks for, in the page's locale.
+    /// What the scope asks for, in `locale`.
     #[must_use]
-    pub fn words(&self) -> Word {
+    pub fn words(&self, locale: &Locale) -> Word {
         match self {
-            Self::OpenId => tr(Text::ScopeOpenid),
-            Self::Profile => tr(Text::ScopeProfile),
-            Self::FhirUser => tr(Text::ScopeFhirUser),
-            Self::Launch => tr(Text::ScopeLaunch),
+            Self::OpenId => tr(locale, Text::ScopeOpenid),
+            Self::Profile => tr(locale, Text::ScopeProfile),
+            Self::FhirUser => tr(locale, Text::ScopeFhirUser),
+            Self::Launch => tr(locale, Text::ScopeLaunch),
             Self::LaunchContext {
                 resource,
                 role: None,
             } => tr_with(
+                locale,
                 Text::ScopeLaunchContext,
                 &[("what", resource.clone().into())],
             ),
@@ -380,14 +389,15 @@ impl Request {
                 resource,
                 role: Some(role),
             } => tr_with(
+                locale,
                 Text::ScopeLaunchRole,
                 &[
                     ("what", resource.clone().into()),
                     ("label", role.clone().into()),
                 ],
             ),
-            Self::OnlineAccess => tr(Text::ScopeOnlineAccess),
-            Self::OfflineAccess => tr(Text::ScopeOfflineAccess),
+            Self::OnlineAccess => tr(locale, Text::ScopeOnlineAccess),
+            Self::OfflineAccess => tr(locale, Text::ScopeOfflineAccess),
         }
     }
 }
@@ -425,20 +435,26 @@ impl ScopeGrant {
     /// Reads the scope `raw`: a [`Request`] as itself, a clinical data
     /// scope as granted with the resource words and the breadth
     /// `describe` gives it, and anything else as refused with what the
-    /// grammar expected.
+    /// grammar expected, in `locale`.
     ///
     /// # Examples
     ///
     /// ```
+    /// use ferrohealth_ui::i18n::Locale;
     /// use ferrohealth_ui::view::scope::{Grant, ScopeGrant};
     ///
-    /// let read = ScopeGrant::read("fhirUser", |_| (String::new(), false));
+    /// let en = Locale::english();
+    /// let read = ScopeGrant::read(&en, "fhirUser", |_| (String::new(), false));
     /// assert!(matches!(read.grant, Grant::Request(_)));
-    /// let read = ScopeGrant::read("patient/Observation.rs", |_| ("Observations".into(), false));
+    /// let read = ScopeGrant::read(&en, "patient/Observation.rs", |_| ("Observations".into(), false));
     /// assert!(matches!(read.grant, Grant::Granted { .. }));
     /// ```
     #[must_use]
-    pub fn read(raw: impl Into<String>, describe: impl FnOnce(&Scope) -> (String, bool)) -> Self {
+    pub fn read(
+        locale: &Locale,
+        raw: impl Into<String>,
+        describe: impl FnOnce(&Scope) -> (String, bool),
+    ) -> Self {
         let raw = raw.into();
         let grant = match Request::parse(&raw) {
             Some(request) => Grant::Request(request),
@@ -451,7 +467,7 @@ impl ScopeGrant {
                         broad,
                     }
                 }
-                Err(error) => Grant::Refused(error.expected()),
+                Err(error) => Grant::Refused(error.expected(locale)),
             },
         };
         Self { raw, grant }
@@ -460,118 +476,98 @@ impl ScopeGrant {
 
 /// Returns `text` with a break opportunity after each slash, dot, question
 /// mark, ampersand, equals sign and bar, so a long scope breaks there.
-fn breakable(text: &str) -> AnyView {
-    let mut out = Vec::new();
-    let mut part = String::new();
+fn breakable(text: &str) -> String {
+    let mut out = String::new();
     for c in text.chars() {
-        part.push(c);
+        let mut one = [0_u8; 4];
+        out.push_str(&Html::text(c.encode_utf8(&mut one)).to_string());
         if matches!(c, '/' | '.' | '?' | '&' | '=' | '|') {
-            let done = std::mem::take(&mut part);
-            out.push(view! { {done}<wbr /> }.into_any());
+            out.push_str("<wbr>");
         }
     }
-    if !part.is_empty() {
-        out.push(part.into_any());
-    }
-    out.collect_view().into_any()
+    out
 }
 
 /// Returns the raw scope `raw` in the code face, breakable.
-fn raw_view(raw: &str) -> AnyView {
-    view! { <code class="fui-scope-raw">{breakable(raw)}</code> }.into_any()
+fn raw_view(raw: &str) -> String {
+    format!("<code class=\"fui-scope-raw\">{}</code>", breakable(raw))
 }
 
-/// Returns one operation mark: ticked when permitted, struck through as
-/// `<del>` with the hidden words "not permitted" when not.
-fn operation(operation: Operation, permitted: bool) -> AnyView {
-    let words = operation.words();
+/// Returns one operation mark in `locale`: ticked when permitted, struck
+/// through as `<del>` with the hidden words "not permitted" when not.
+fn operation(locale: &Locale, operation: Operation, permitted: bool) -> String {
+    let words = operation.words(locale);
     if permitted {
-        view! { <span class="fui-scope-op is-on">{words}</span> }.into_any()
+        format!("<span class=\"fui-scope-op is-on\">{words}</span>")
     } else {
-        view! {
-            <del class="fui-scope-op">
-                {words}
-                <span class="fui-sr-only">{tr(Text::ScopeNotPermitted).map(|words| format!(", {words}"))}</span>
-            </del>
-        }
-        .into_any()
+        format!(
+            "<del class=\"fui-scope-op\">{words}<span class=\"fui-sr-only\">{}</span></del>",
+            tr(locale, Text::ScopeNotPermitted).map(|words| format!(", {words}"))
+        )
     }
 }
 
-/// Returns one scope of the list.
-fn grant_view(grant: ScopeGrant) -> AnyView {
-    let ScopeGrant { raw, grant } = grant;
-    match grant {
+/// Returns one scope of the list, in `locale`.
+fn grant_view(locale: &Locale, grant: &ScopeGrant) -> String {
+    let raw = raw_view(&grant.raw);
+    match &grant.grant {
         Grant::Granted {
             scope,
             resource,
             broad,
         } => {
-            let marks = Operation::ALL
+            let marks: String = Operation::ALL
                 .into_iter()
-                .map(|each| operation(each, scope.operations.permits(each)))
-                .collect_view();
+                .map(|each| operation(locale, each, scope.operations.permits(each)))
+                .collect();
             let reads = scope
                 .compartment
-                .words()
+                .words(locale)
                 .map(|words| format!("{words} · {resource}"));
-            let constraint = scope.constraint.map(|constraint| {
-                view! {
-                    <span class="fui-scope-constraint">
-                        {tr(Text::ScopeOnlyWhere)}
-                        " "
-                        <code>{breakable(&constraint)}</code>
-                    </span>
-                }
-            });
-            let badge = broad
-                .then(|| view! { <span class=Tone::Warn.badge()>{tr(Text::ScopeBroad)}</span> });
-            view! {
-                <li class="fui-scope">
-                    {raw_view(&raw)}
-                    <span class="fui-scope-reads">
-                        <span>{reads}</span>
-                        <span class="fui-scope-ops">{marks}</span>
-                        {constraint}
-                        {badge}
-                    </span>
-                </li>
-            }
-            .into_any()
+            let constraint = scope
+                .constraint
+                .as_deref()
+                .map_or_else(String::new, |constraint| {
+                    format!(
+                        "<span class=\"fui-scope-constraint\">{} <code>{}</code></span>",
+                        tr(locale, Text::ScopeOnlyWhere),
+                        breakable(constraint)
+                    )
+                });
+            let badge = if *broad {
+                format!(
+                    "<span class=\"{}\">{}</span>",
+                    Tone::Warn.badge(),
+                    tr(locale, Text::ScopeBroad)
+                )
+            } else {
+                String::new()
+            };
+            format!(
+                "<li class=\"fui-scope\">{raw}<span class=\"fui-scope-reads\"><span>{reads}</span><span class=\"fui-scope-ops\">{marks}</span>{constraint}{badge}</span></li>"
+            )
         }
-        Grant::Request(request) => view! {
-            <li class="fui-scope">
-                {raw_view(&raw)}
-                <span class="fui-scope-reads">
-                    <span>{request.words()}</span>
-                </span>
-            </li>
-        }
-        .into_any(),
-        Grant::Refused(why) => view! {
-            <li class="fui-scope is-refused">
-                {raw_view(&raw)}
-                <span class="fui-scope-reads">
-                    <span class="fui-small fui-tone-bad">{icon(Glyph::CIRCLE_X, "14")}
-                        " "
-                        {why}</span>
-                </span>
-            </li>
-        }
-        .into_any(),
+        Grant::Request(request) => format!(
+            "<li class=\"fui-scope\">{raw}<span class=\"fui-scope-reads\"><span>{}</span></span></li>",
+            request.words(locale)
+        ),
+        Grant::Refused(why) => format!(
+            "<li class=\"fui-scope is-refused\">{raw}<span class=\"fui-scope-reads\"><span class=\"fui-small fui-tone-bad\">{} {why}</span></span></li>",
+            icon(Glyph::CIRCLE_X, "14")
+        ),
     }
 }
 
 /// Returns the scopes `grants` as one list named `label`, such as "Scopes
-/// the CDR supports".
+/// the CDR supports", in `locale`.
 #[must_use]
-pub fn scope_grants(label: impl Into<String>, grants: Vec<ScopeGrant>) -> AnyView {
-    let label = label.into();
-    let items = grants.into_iter().map(grant_view).collect_view();
-    view! {
-        <ul class="fui-scopes" aria-label=label>
-            {items}
-        </ul>
-    }
-    .into_any()
+pub fn scope_grants(locale: &Locale, label: &str, grants: Vec<ScopeGrant>) -> Html {
+    let items: String = grants
+        .into_iter()
+        .map(|grant| grant_view(locale, &grant))
+        .collect();
+    Html::raw(format!(
+        "<ul aria-label=\"{}\" class=\"fui-scopes\">{items}</ul>",
+        Html::text(label)
+    ))
 }

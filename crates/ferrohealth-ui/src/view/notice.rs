@@ -10,8 +10,9 @@
 //! 1.2, the `status` and `alert` roles). Line breaks in the words are kept,
 //! since an upstream diagnostic carries one violation per line.
 
-use leptos::prelude::*;
+use askama::Template;
 
+use crate::html::{Html, Render as _};
 use crate::icon::{Glyph, icon};
 use crate::tone::Tone;
 
@@ -47,21 +48,36 @@ pub const fn glyph(tone: Tone) -> Glyph {
     }
 }
 
+#[derive(Template)]
+#[template(
+    source = r#"<div role="{{ role }}"{% if let Some(id) = id %} id="{{ id }}"{% endif %} class="fui-notice {{ tone }}">{{ glyph }}<div>{{ body }}</div></div>"#,
+    ext = "html"
+)]
+struct Notice {
+    role: &'static str,
+    id: Option<&'static str>,
+    tone: &'static str,
+    glyph: Html,
+    body: Html,
+}
+
 /// Returns a notice in `tone`, announced as `announce`, holding `body`
 /// (words, and a link when there is a way forward), with the stable `id`
 /// when one is given.
 #[must_use]
-pub fn notice(
-    tone: Tone,
-    announce: Announce,
-    id: Option<&'static str>,
-    body: impl IntoView,
-) -> impl IntoView {
-    let class = format!("fui-notice {}", tone.class());
-    view! {
-        <div role=announce.role() id=id class=class>
-            {icon(glyph(tone), "16")}
-            <div>{body}</div>
-        </div>
+pub fn notice(tone: Tone, announce: Announce, id: Option<&'static str>, body: Html) -> Html {
+    Notice {
+        role: announce.role(),
+        id,
+        tone: tone.class(),
+        glyph: icon(glyph(tone), "16"),
+        body,
     }
+    .html()
+}
+
+/// Returns [`notice`] holding the plain `words`.
+#[must_use]
+pub fn notice_text(tone: Tone, announce: Announce, words: impl AsRef<str>) -> Html {
+    notice(tone, announce, None, Html::text(words))
 }

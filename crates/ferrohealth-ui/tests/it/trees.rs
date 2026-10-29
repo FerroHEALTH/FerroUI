@@ -6,7 +6,7 @@
 
 use std::collections::BTreeSet;
 
-use ferrohealth_ui::island::TreeView;
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::style::STYLESHEET;
 use ferrohealth_ui::table::filter::Find;
 use ferrohealth_ui::table::model::StateSource;
@@ -15,13 +15,12 @@ use ferrohealth_ui::view::browser::{
 };
 use ferrohealth_ui::view::coding::{Coding, Layout, MoreCodes, coding};
 use ferrohealth_ui::view::path::{archetype, path};
-use ferrohealth_ui::widget::tree::{
-    Edit, Mark, More, Tree, TreeData, TreeKind, TreeNode, TreeWords, path_key, tree_view,
+use ferrohealth_ui::view::tree::{
+    Edit, Mark, More, Tree, TreeKind, TreeNode, TreeWords, path_key, tree_view,
 };
-use leptos::prelude::*;
 
 use crate::markup::{has, tags};
-use crate::render::{html, page_html};
+use crate::render::{en, html};
 
 /// The tree `nodes` drawn as `kind`, with `open` open and `selected`
 /// selected.
@@ -34,19 +33,17 @@ fn drawn(
 ) -> String {
     let open: BTreeSet<String> = open.iter().map(|key| (*key).to_owned()).collect();
     let selected = selected.map(str::to_owned);
-    html(move || {
-        tree_view(Tree {
-            id: String::from("browse"),
-            label: String::from("Concepts"),
-            kind,
-            editing,
-            nodes: Signal::stored(nodes),
-            expanded: RwSignal::new(open),
-            selected: Signal::stored(selected),
-            open_field: Some(String::from("open")),
-            words: TreeWords::of_page(),
-        })
-    })
+    html(tree_view(&Tree {
+        id: String::from("browse"),
+        label: String::from("Concepts"),
+        kind,
+        editing,
+        nodes,
+        open,
+        selected,
+        open_field: Some(String::from("open")),
+        words: TreeWords::of(&en()),
+    }))
 }
 
 /// A concept hierarchy: a paged level, an unread level, an inactive leaf.
@@ -66,7 +63,7 @@ fn concepts() -> Vec<TreeNode> {
                                 .code("SF-1210")
                                 .href("/c/cough"),
                         ],
-                        More::of_page(25, 40, 25, "/browse?more=chest"),
+                        More::of(&en(), 25, 40, 25, "/browse?more=chest"),
                     ),
                 TreeNode::new("general", "General finding")
                     .code("SF-1300")
@@ -192,7 +189,7 @@ fn a_toggle_is_a_link_where_the_console_gives_one_and_names_its_item() {
         ),
         "{tree}"
     );
-    // A toggle with no link waits for the page to hydrate.
+    // A toggle with no link waits for the module to run.
     let bare = drawn(
         TreeKind::Concept,
         false,
@@ -272,9 +269,13 @@ fn a_concept_under_two_parents_draws_two_items_with_distinct_ids_and_one_selecti
         .filter_map(|item| item.get("id").map(String::as_str))
         .collect();
     assert_eq!(items.len(), ids.len(), "every item has its own id: {tree}");
+    let hidden = tree
+        .split("<ul role=\"group\" hidden class=\"fui-tree-group\">")
+        .skip(1)
+        .collect::<String>();
     assert_eq!(
         1,
-        tree.matches("Viral pneumonia").count(),
+        tree.matches("Viral pneumonia").count() - hidden.matches("Viral pneumonia").count(),
         "only the copy under the lung is open: {tree}"
     );
     let selected: Vec<_> = items
@@ -299,6 +300,73 @@ fn a_concept_under_two_parents_draws_two_items_with_distinct_ids_and_one_selecti
             .filter(|item| item.get("tabindex").is_some_and(|stop| stop == "0"))
             .count(),
         "one tab stop: {tree}"
+    );
+}
+
+#[test]
+fn a_closed_level_the_server_read_is_drawn_hidden_and_an_unread_one_is_not_drawn() {
+    let tree = drawn(TreeKind::Concept, false, concepts(), &["root"], None);
+    let groups: Vec<_> = tags(&tree, "ul")
+        .into_iter()
+        .filter(|group| group.get("role").is_some_and(|role| role == "group"))
+        .collect();
+    assert_eq!(
+        2,
+        groups.len(),
+        "the open root and the closed chest: {tree}"
+    );
+    assert!(
+        groups
+            .first()
+            .is_some_and(|group| !group.contains_key("hidden")),
+        "the open level is shown: {tree}"
+    );
+    assert!(
+        groups
+            .get(1)
+            .is_some_and(|group| group.contains_key("hidden")),
+        "the closed level the server read is hidden: {tree}"
+    );
+    assert!(
+        tree.contains("Cough"),
+        "the closed level holds its children, for the module to open in place: {tree}"
+    );
+    assert!(
+        !tree.contains("fui-tree-loading"),
+        "a closed unread level draws no group and opens by its link: {tree}"
+    );
+    let chest = tags(&tree, "li")
+        .into_iter()
+        .find(|item| item.get("data-key").is_some_and(|key| key == "root/chest"))
+        .unwrap_or_default();
+    assert_eq!("false", chest["aria-expanded"], "{tree}");
+    let fields: Vec<_> = tags(&tree, "input")
+        .into_iter()
+        .filter(|field| field.get("name").is_some_and(|name| name == "open"))
+        .collect();
+    assert_eq!(1, fields.len(), "only the open level posts: {tree}");
+}
+
+#[test]
+fn a_selection_in_a_closed_level_leaves_the_tab_stop_on_the_first_item() {
+    let tree = drawn(
+        TreeKind::Concept,
+        false,
+        concepts(),
+        &["root"],
+        Some("root/chest/cough"),
+    );
+    let stops: Vec<_> = tags(&tree, "li")
+        .into_iter()
+        .filter(|item| item.get("tabindex").is_some_and(|stop| stop == "0"))
+        .collect();
+    assert_eq!(1, stops.len(), "one tab stop: {tree}");
+    assert!(
+        stops
+            .first()
+            .and_then(|item| item.get("data-key"))
+            .is_some_and(|key| key == "root"),
+        "the hidden selection is no tab stop: {tree}"
     );
 }
 
@@ -455,24 +523,17 @@ fn the_path_tree_tags_each_row_with_its_rm_type() {
 
 #[test]
 fn the_tree_view_draws_its_props_on_the_server() {
-    let page = page_html(|| {
-        view! {
-            <TreeView
-                tree=TreeData {
-                    id: String::from("isle"),
-                    label: String::from("Paths"),
-                    kind: TreeKind::Path,
-                    editing: false,
-                    nodes: vec![TreeNode::new("a", "A").children(vec![TreeNode::new("b", "B")])],
-                    open: BTreeSet::from([String::from("a")]),
-                    selected: Some(String::from("a/b")),
-                    open_field: None,
-                }
-                words=TreeWords::of_page()
-            />
-        }
-        .into_any()
-    });
+    let page = html(tree_view(&Tree {
+        id: String::from("isle"),
+        label: String::from("Paths"),
+        kind: TreeKind::Path,
+        editing: false,
+        nodes: vec![TreeNode::new("a", "A").children(vec![TreeNode::new("b", "B")])],
+        open: BTreeSet::from([String::from("a")]),
+        selected: Some(String::from("a/b")),
+        open_field: None,
+        words: TreeWords::of(&en()),
+    }));
     assert!(
         has(&page, "ul", &[("id", "isle"), ("role", "tree")]),
         "{page}"
@@ -482,7 +543,7 @@ fn the_tree_view_draws_its_props_on_the_server() {
 
 #[test]
 fn an_archetype_id_breaks_after_dots_and_a_path_after_slashes_dots_and_brackets() {
-    let id = html(|| archetype("openEHR-EHR-OBSERVATION.blood_pressure.v2"));
+    let id = html(archetype("openEHR-EHR-OBSERVATION.blood_pressure.v2"));
     assert!(
         has(
             &id,
@@ -499,41 +560,42 @@ fn an_archetype_id_breaks_after_dots_and_a_path_after_slashes_dots_and_brackets(
         "{id}"
     );
     assert_eq!(3, tags(&id, "wbr").len(), "{id}");
-    let at = html(|| path("/content[id0.1]/value"));
+    let at = html(path("/content[id0.1]/value"));
     assert!(has(&at, "span", &[("class", "fui-path")]), "{at}");
     assert!(at.contains("<span>content[</span><wbr"), "{at}");
     assert!(at.contains("<span>id0.</span><wbr"), "{at}");
-    let tricky = html(|| path("/a<b>"));
-    assert!(tricky.contains("a&lt;b&gt;"), "a path is escaped: {tricky}");
+    let tricky = html(path("/a<b>"));
+    assert!(
+        tricky.contains("a&#60;b&#62;"),
+        "a path is escaped: {tricky}"
+    );
 }
 
 #[test]
 fn the_browser_lays_out_its_panes_and_the_inspector_reads_a_coded_node() {
-    let three = html(|| {
+    let three = html({
         browser(
             Panes::Three,
             Heading::Two,
             vec![
                 BrowserPane::new(
                     "Search",
-                    view! {
-                        {pane_body(browser_find(Find {
-                            id: "b-q",
-                            name: "q",
-                            label: "Search the designations",
-                            value: "cough",
-                            source: StateSource::Url,
-                            action: None,
-                            fields: &[],
-                        }))}
-                        {match_list(
-                            "Concepts the search matched",
-                            vec!["Cough".into_any()],
-                        )}
-                    },
+                    pane_body(browser_find(Find {
+                        id: "b-q",
+                        name: "q",
+                        label: "Search the designations",
+                        value: "cough",
+                        source: StateSource::Url,
+                        action: None,
+                        fields: &[],
+                    }))
+                    .then(match_list(
+                        "Concepts the search matched",
+                        vec![Html::text("Cough")],
+                    )),
                 ),
-                BrowserPane::new("Hierarchy", ()),
-                BrowserPane::new("The concept", ()),
+                BrowserPane::new("Hierarchy", Html::default()),
+                BrowserPane::new("The concept", Html::default()),
             ],
         )
     });
@@ -563,28 +625,31 @@ fn the_browser_lays_out_its_panes_and_the_inspector_reads_a_coded_node() {
         ),
         "{three}"
     );
-    let flat = html(|| browser(Panes::Flat, Heading::Two, vec![]));
+    let flat = html(browser(Panes::Flat, Heading::Two, vec![]));
     assert!(
         has(&flat, "div", &[("class", "fui-browser is-two-pane")]),
         "{flat}"
     );
-    let two = html(|| {
+    let two = html({
         browser(
             Panes::Two,
             Heading::Three,
             vec![
-                BrowserPane::new("Paths", ()),
-                path_node(PathNode {
-                    name: String::from("Position"),
-                    path: String::from("/content[id0.1]/data[id2]/value"),
-                    rm_type: String::from("DV_CODED_TEXT"),
-                    occurrences: String::from("0..1"),
-                    units: None,
-                    flat_path: Some(String::from("vital_signs/blood_pressure/position")),
-                    codes: vec!["Standing".into_any(), "Sitting".into_any()],
-                    more: None,
-                    query: Some(String::from("/query?path=position")),
-                }),
+                BrowserPane::new("Paths", Html::default()),
+                path_node(
+                    &en(),
+                    PathNode {
+                        name: String::from("Position"),
+                        path: String::from("/content[id0.1]/data[id2]/value"),
+                        rm_type: String::from("DV_CODED_TEXT"),
+                        occurrences: String::from("0..1"),
+                        units: None,
+                        flat_path: Some(String::from("vital_signs/blood_pressure/position")),
+                        codes: vec![Html::text("Standing"), Html::text("Sitting")],
+                        more: None,
+                        query: Some(String::from("/query?path=position")),
+                    },
+                ),
             ],
         )
     });
@@ -610,23 +675,26 @@ fn the_browser_lays_out_its_panes_and_the_inspector_reads_a_coded_node() {
 
 #[test]
 fn a_path_node_with_no_query_draws_no_build_a_query() {
-    let node = html(|| {
+    let node = html({
         browser(
             Panes::Two,
             Heading::Three,
-            vec![path_node(PathNode {
-                name: String::from("Name"),
-                path: String::from(
-                    "/identities[openEHR-DEMOGRAPHIC-PARTY_IDENTITY.person_name.v1]",
-                ),
-                rm_type: String::from("PARTY_IDENTITY"),
-                occurrences: String::from("1..*"),
-                units: None,
-                flat_path: None,
-                codes: Vec::new(),
-                more: None,
-                query: None,
-            })],
+            vec![path_node(
+                &en(),
+                PathNode {
+                    name: String::from("Name"),
+                    path: String::from(
+                        "/identities[openEHR-DEMOGRAPHIC-PARTY_IDENTITY.person_name.v1]",
+                    ),
+                    rm_type: String::from("PARTY_IDENTITY"),
+                    occurrences: String::from("1..*"),
+                    units: None,
+                    flat_path: None,
+                    codes: Vec::new(),
+                    more: None,
+                    query: None,
+                },
+            )],
         )
     });
     assert!(
@@ -642,21 +710,24 @@ fn a_path_node_with_no_query_draws_no_build_a_query() {
 
 #[test]
 fn a_large_value_set_on_a_path_node_ends_in_the_more_row_and_counts_its_total() {
-    let node = html(|| {
+    let node = html({
         browser(
             Panes::Two,
             Heading::Three,
-            vec![path_node(PathNode {
-                name: String::from("Finding"),
-                path: String::from("/content[id0.1]/data[id2]/value"),
-                rm_type: String::from("DV_CODED_TEXT"),
-                occurrences: String::from("0..1"),
-                units: None,
-                flat_path: None,
-                codes: vec!["Cough".into_any(), "Fever".into_any()],
-                more: Some(MoreCodes::of_page(2, 4000, 25, "/node?codes=2")),
-                query: Some(String::from("/query")),
-            })],
+            vec![path_node(
+                &en(),
+                PathNode {
+                    name: String::from("Finding"),
+                    path: String::from("/content[id0.1]/data[id2]/value"),
+                    rm_type: String::from("DV_CODED_TEXT"),
+                    occurrences: String::from("0..1"),
+                    units: None,
+                    flat_path: None,
+                    codes: vec![Html::text("Cough"), Html::text("Fever")],
+                    more: Some(MoreCodes::of(&en(), 2, 4000, 25, "/node?codes=2")),
+                    query: Some(String::from("/query")),
+                },
+            )],
         )
     });
     assert!(node.contains("Value set · 4,000 codes"), "{node}");
@@ -684,17 +755,19 @@ fn every_tree_keeps_the_width_of_a_name_its_code_and_its_count() {
 
 #[test]
 fn the_match_in_view_is_current_on_its_link_and_no_row_is_selected() {
-    let three = html(|| {
+    let three = html({
         match_list(
             "Concepts the search matched",
             vec![
                 coding(
+                    &en(),
                     Coding::new("SF-1210", "Cough")
                         .href("/c/cough")
                         .current(true),
                     Layout::Inline,
                 ),
                 coding(
+                    &en(),
                     Coding::new("SF-1211", "Dry cough").href("/c/dry"),
                     Layout::Inline,
                 ),

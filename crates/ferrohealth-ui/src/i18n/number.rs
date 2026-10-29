@@ -21,7 +21,7 @@ use fluent_templates::fluent_bundle::FluentValue;
 use fluent_templates::fluent_bundle::memoizer::MemoizerKind;
 use intl_memoizer::Memoizable;
 
-use super::{Locale, Text, locale};
+use super::{Locale, Text};
 
 /// The marks a language writes a number with.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -73,16 +73,16 @@ impl Marks {
 /// after a title or on a tab; a number inside a message is written by the
 /// catalog's formatter.
 #[must_use]
-pub fn grouped(count: u64) -> String {
-    Marks::of(&locale()).write(&count.to_string(), true)
+pub fn grouped(locale: &Locale, count: u64) -> String {
+    Marks::of(locale).write(&count.to_string(), true)
 }
 
 /// The mark the page's language groups the digits of a count by, resolved
-/// on the server, so an island writes a count it learns in the browser as
-/// the server writes one.
+/// on the server, so a script module writes a count it learns in the
+/// browser as the server writes one.
 ///
-/// An island carries no catalog (`leptos-ui.md` §15.4), so a widget whose
-/// island counts takes this as part of its words.
+/// A module carries no catalog, so a component whose module counts takes
+/// this as part of its words.
 ///
 /// # Examples
 ///
@@ -107,9 +107,9 @@ impl Default for Grouping {
 impl Grouping {
     /// The grouping of the page being drawn.
     #[must_use]
-    pub fn of_page() -> Self {
+    pub fn of(locale: &Locale) -> Self {
         Self {
-            group: locale().text(Text::NumberGroup),
+            group: locale.text(Text::NumberGroup),
         }
     }
 
@@ -170,13 +170,11 @@ pub fn format_number<M: MemoizerKind>(value: &FluentValue<'_>, memoizer: &M) -> 
     let language = memoizer
         .with_try_get_threadsafe::<Language, _, _>((), |language| language.0.clone())
         .ok()?;
-    // NOTE: no specification governs this: our own design; the page's locale, with a
-    // console's catalog of its language, gives the marks when the languages agree.
-    let page = locale();
-    let marks = if page.language == language {
-        Marks::of(&page)
-    } else {
-        Marks::of(&Locale::of(language))
+    // NOTE: no specification governs this: our own design; the locale being formatted,
+    // with a console's catalog of its language, gives the marks when the languages agree.
+    let marks = match super::formatting() {
+        Some(page) if page.language == language => Marks::of(&page),
+        _ => Marks::of(&Locale::of(language)),
     };
     Some(marks.write(&number.as_string(), number.options.use_grouping))
 }

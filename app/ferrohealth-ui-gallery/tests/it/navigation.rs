@@ -1,21 +1,20 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The journeys of navigation in the page (FerroUI #410): a link keeps the
-//! document and the router draws the next page, back and forward restore
-//! the pages, the new page takes the focus and is announced, hovering a
-//! link loads its route's code before the click, and a click while the
-//! route still hydrates loads the next page as a document (#448).
+//! The journeys of navigation in the server-rendered gallery (FerroUI
+//! #510): a link loads its page as one document and back and forward
+//! restore the pages; a tab switch inside a page loads no document, draws
+//! no fallback and moves no layout; a tree's level opens and closes in
+//! place and its folds survive a reload; and a same-path navigation keeps
+//! its scroll.
 
 use std::error::Error;
 
-use serde_json::json;
 use thirtyfour::prelude::*;
 
 use crate::browser::{Browser, until, with_browser};
 use crate::journeys::window;
 use crate::journeys_enabled;
-use crate::keys::typed;
 use crate::stack::Gallery;
 
 /// The text of the page's heading.
@@ -23,13 +22,23 @@ async fn heading(browser: &Browser) -> Result<String, Box<dyn Error>> {
     Ok(browser.element(By::Css("main h1")).await?.text().await?)
 }
 
-/// Whether the marker the journey set on the window survives.
+/// Whether the marker the journey set on the window survives, which it
+/// does only while no new document loads.
 async fn marked(browser: &Browser) -> Result<bool, Box<dyn Error>> {
     Ok(browser
         .driver()
         .execute("return window.fuiKept === true;", vec![])
         .await?
         .convert()?)
+}
+
+/// Sets the marker [`marked`] reads.
+async fn mark(browser: &Browser) -> Result<(), Box<dyn Error>> {
+    browser
+        .driver()
+        .execute("window.fuiKept = true;", vec![])
+        .await?;
+    Ok(())
 }
 
 /// Follows the sidebar's link to `path` and waits for the page titled
@@ -40,15 +49,15 @@ async fn follow(browser: &Browser, path: &str, title: &str) -> Result<(), Box<dy
         .await?
         .click()
         .await?;
-    until(&format!("the router draws {title}"), async || {
+    until(&format!("the link loads {title}"), async || {
         Ok(heading(browser).await? == title)
     })
     .await
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn a_link_keeps_the_document_and_back_and_forward_restore_the_pages()
--> Result<(), Box<dyn Error>> {
+async fn a_link_loads_its_page_and_back_and_forward_restore_the_pages() -> Result<(), Box<dyn Error>>
+{
     if !journeys_enabled() {
         return Ok(());
     }
@@ -58,37 +67,12 @@ async fn a_link_keeps_the_document_and_back_and_forward_restore_the_pages()
         browser.goto(&gallery.url("/ferrobridge/tables")).await?;
         browser.hydrated().await?;
         let document = browser.loader().await?;
-        browser
-            .driver()
-            .execute("window.fuiKept = true;", vec![])
-            .await?;
         follow(browser, "/ferrobridge/charts", "Charts").await?;
-        assert!(marked(browser).await?, "the link loaded no new document");
-        // WCAG 2.2 SC 2.4.3 and SC 4.1.3: the new page takes the focus and is said.
-        until("the new page's heading takes the focus", async || {
-            Ok(browser
-                .driver()
-                .execute(
-                    "return document.activeElement === document.querySelector('main h1');",
-                    vec![],
-                )
-                .await?
-                .convert::<bool>()?)
-        })
-        .await?;
-        until("the region says the new page's title", async || {
-            let said: String = browser
-                .driver()
-                .execute(
-                    "return document.querySelector(\"[data-ferroui-announcer][role='status']\").textContent;",
-                    vec![],
-                )
-                .await?
-                .convert()?;
-            Ok(said.starts_with("Charts"))
-        })
-        .await?;
-        assert_eq!(document, browser.loader().await?);
+        assert_ne!(
+            document,
+            browser.loader().await?,
+            "a link is one document the browser paints whole"
+        );
         browser.at(&gallery.url("/ferrobridge/charts")).await?;
         browser
             .element(By::Css(
@@ -106,18 +90,20 @@ async fn a_link_keeps_the_document_and_back_and_forward_restore_the_pages()
             Ok(heading(browser).await? == "Forms and editor")
         })
         .await?;
-        assert!(marked(browser).await?, "back and forward load no document");
-        browser.console_clean("navigation in the page").await
+        browser.console_clean("a link and the history").await
     })
     .await
 }
 
-/// The split chunk of the group the tables page is in, which the journey
-/// holds back so the page stays mid-hydration.
-const CORE_CHUNK: &str = "split___l_core_view_";
+/// Starts counting the layout shifts the page makes from now (Layout
+/// Instability API, `layout-shift` entries with no recent input).
+const WATCH_SHIFTS: &str = "window.fuiShift = 0;
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) if (!entry.hadRecentInput) window.fuiShift += entry.value;
+    }).observe({ type: 'layout-shift' });";
 
 #[tokio::test(flavor = "multi_thread")]
-async fn a_click_while_the_route_still_hydrates_loads_the_page_and_nothing_panics()
+async fn a_tab_switch_inside_a_page_loads_no_document_draws_no_fallback_and_moves_no_layout()
 -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
         return Ok(());
@@ -125,340 +111,186 @@ async fn a_click_while_the_route_still_hydrates_loads_the_page_and_nothing_panic
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
         window(browser, 1440, 900).await?;
-        // The tables page's own chunk is held at the request stage and never
-        // continued, so its lazy route stays hydrating after the shell has
-        // hydrated and the router listens: the window of #448, held open.
-        let cdp = browser.driver().cdp();
-        cdp.send_raw(
-            "Fetch.enable",
-            json!({ "patterns": [{ "urlPattern": format!("*{CORE_CHUNK}*"), "requestStage": "Request" }] }),
-        )
-        .await?;
-        browser.goto(&gallery.url("/ferrobridge/tables")).await?;
-        browser
-            .element(By::Css(format!(
-                "html[{}]",
-                ferrohealth_ui::widget::hydration::HYDRATING
-            )))
-            .await?;
+        browser.goto(&gallery.url("/ferrobridge")).await?;
+        browser.hydrated().await?;
         let document = browser.loader().await?;
-        browser
-            .element(By::Css("#sidebar a[href='/ferrobridge/charts']"))
-            .await?
-            .click()
-            .await?;
-        until("the click loads the charts", async || {
-            Ok(heading(browser).await? == "Charts")
-        })
-        .await?;
-        assert_ne!(
-            document,
-            browser.loader().await?,
-            "a click before the page hydrated is the browser's own"
-        );
-        browser.at(&gallery.url("/ferrobridge/charts")).await?;
-        cdp.send_raw("Fetch.disable", json!({})).await?;
-        browser.hydrated().await?;
-        let others: Vec<String> = browser
-            .console_errors()
-            .await?
-            .into_iter()
-            .filter(|entry| !entry.contains(CORE_CHUNK))
-            .collect();
-        assert!(
-            others.is_empty(),
-            "the browser logged more than the withheld chunk: {others:#?}"
-        );
-        Ok(())
-    })
-    .await
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn hovering_a_link_loads_its_routes_code_before_the_click() -> Result<(), Box<dyn Error>> {
-    if !journeys_enabled() {
-        return Ok(());
-    }
-    let gallery = Gallery::start().await?;
-    with_browser(async |browser| {
-        window(browser, 1440, 900).await?;
-        browser.goto(&gallery.url("/ferroterm/tables")).await?;
-        // The browser's resource timeline keeps 250 entries by default, fewer than the
-        // chunks the idle prefetch loads.
-        browser
+        let navigations: i64 = browser
             .driver()
-            .execute("performance.setResourceTimingBufferSize(10000);", vec![])
-            .await?;
-        browser.hydrated().await?;
-        let list = browser
-            .element(By::Css("#sidebar a[href='/ferroterm/templates/list']"))
-            .await?;
-        // NOTE: the templates' route is in the group of pages aside, which the idle prefetch
-        // leaves, so only the hover loads the chunks it alone needs; the split manifest
-        // names them.
-        let waiting: u64 = browser
-            .driver()
-            .execute_async(
-                r"const done = arguments[arguments.length - 1];
-                fetch('/pkg/__wasm_split_manifest.json').then((answer) => answer.json()).then((manifest) => {
-                  const key = Object.keys(manifest).find((name) => name.includes('l_aside'));
-                  const loaded = performance.getEntriesByType('resource').map((entry) => entry.name);
-                  window.fuiWaiting = manifest[key].filter((chunk) => !loaded.some((name) => name.endsWith('/' + chunk + '.wasm')));
-                  performance.clearResourceTimings();
-                  done(window.fuiWaiting.length);
-                });",
+            .execute(
+                "return performance.getEntriesByType('navigation').length;",
                 vec![],
             )
             .await?
             .convert()?;
-        assert!(waiting > 0, "the template page's own chunks wait for a reason to load");
+        mark(browser).await?;
+        browser.driver().execute(WATCH_SHIFTS, vec![]).await?;
         browser
-            .driver()
-            .action_chain()
-            .move_to_element_center(&list)
-            .perform()
+            .element(By::Id("answer-tab-1"))
+            .await?
+            .click()
             .await?;
-        until("the hover loads the template page's chunks", async || {
-            Ok(browser
-                .driver()
-                .execute(
-                    r"const loaded = performance.getEntriesByType('resource').map((entry) => entry.name);
-                    return window.fuiWaiting.every((chunk) => loaded.some((name) => name.endsWith('/' + chunk + '.wasm')));",
-                    vec![],
-                )
+        until("the second panel shows", async || {
+            browser
+                .element(By::Id("answer-panel-1"))
                 .await?
-                .convert::<bool>()?)
+                .is_displayed()
+                .await
+                .map_err(Into::into)
         })
         .await?;
-        browser.console_clean("the prefetch").await
-    })
-    .await
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn a_get_form_and_a_post_that_redirects_keep_the_document() -> Result<(), Box<dyn Error>> {
-    if !journeys_enabled() {
-        return Ok(());
-    }
-    let gallery = Gallery::start().await?;
-    with_browser(async |browser| {
-        window(browser, 1440, 900).await?;
-        browser.goto(&gallery.url("/ferropix/forms")).await?;
-        browser.hydrated().await?;
-        let document = browser.loader().await?;
-        browser
-            .driver()
-            .execute("window.fuiKept = true;", vec![])
+        let text = browser
+            .element(By::Id("answer-panel-1"))
+            .await?
+            .text()
             .await?;
-        // A GET form: the search's submit draws the find page in the page.
-        let search = browser.element(By::Id("gallery-search")).await?;
-        search.send_keys("synthetic-00").await?;
-        search.send_keys(Key::Enter).await?;
-        browser
-            .at(&gallery.url("/ferropix/find?q=synthetic-00"))
-            .await?;
-        until("the router draws the find page", async || {
-            Ok(heading(browser).await? == "Find")
-        })
-        .await?;
         assert!(
-            marked(browser).await?,
-            "the GET form loaded no new document"
+            !text.trim().is_empty(),
+            "the panel shows its words, no fallback"
         );
-        // A POST whose route redirects: the user menu's theme.
-        browser
-            .element(By::Css("button[popovertarget='user-menu']"))
-            .await?
-            .click()
-            .await?;
-        browser
-            .element(By::Css("#user-menu button[name='theme'][value='dark']"))
-            .await?
-            .click()
-            .await?;
-        until("the theme the post kept takes effect", async || {
-            Ok(!browser
-                .driver()
-                .find_all(By::Css("html[data-theme='dark']"))
+        assert!(
+            !browser
+                .element(By::Id("answer-panel-0"))
                 .await?
-                .is_empty())
-        })
-        .await?;
-        assert!(marked(browser).await?, "the post loaded no new document");
+                .is_displayed()
+                .await?,
+            "the first panel hides"
+        );
+        assert!(marked(browser).await?, "the switch loaded no document");
         assert_eq!(document, browser.loader().await?);
-        browser.console_clean("forms in the page").await
-    })
-    .await
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn the_shell_and_its_state_survive_a_link_to_another_page() -> Result<(), Box<dyn Error>> {
-    // FerroUI #437: the top bar, the navigation and the words in the search stay as they
-    // were; only the page under them changes, and the navigation marks the new page.
-    if !journeys_enabled() {
-        return Ok(());
-    }
-    let gallery = Gallery::start().await?;
-    with_browser(async |browser| {
-        window(browser, 1440, 900).await?;
-        browser.goto(&gallery.url("/ferrobridge/tables")).await?;
-        browser.hydrated().await?;
-        let search = browser
-            .element(By::Css("#gallery-search[role='combobox']"))
-            .await?;
-        search.send_keys("synthetic").await?;
-        browser
+        let after: i64 = browser
             .driver()
             .execute(
-                "window.fuiShell = [document.querySelector('header'), document.getElementById('sidebar')];",
-                vec![],
-            )
-            .await?;
-        browser
-            .driver()
-            .execute(
-                "document.querySelector(\"#sidebar a[href='/ferrobridge/forms']\").click();",
-                vec![],
-            )
-            .await?;
-        until("the router draws the forms page", async || {
-            Ok(browser.driver().current_url().await?.path() == "/ferrobridge/forms")
-        })
-        .await?;
-        browser.element(By::Css("main h1")).await?;
-        let kept: bool = browser
-            .driver()
-            .execute(
-                "return window.fuiShell[0] === document.querySelector('header')
-                    && window.fuiShell[1] === document.getElementById('sidebar');",
+                "return performance.getEntriesByType('navigation').length;",
                 vec![],
             )
             .await?
             .convert()?;
-        assert!(kept, "the top bar and the navigation are the same elements");
-        assert_eq!(
-            Some(String::from("1")),
-            browser
-                .driver()
-                .find(By::Css("html"))
-                .await?
-                .attr("data-gallery-shells")
-                .await?,
-            "the browser drew the shell once: the link drew the page alone"
-        );
-        assert_eq!(
-            Some(String::from("synthetic")),
-            browser
-                .element(By::Id("gallery-search"))
-                .await?
-                .prop("value")
-                .await?,
-            "the words in the search stay"
-        );
-        browser
-            .element(By::Css(
-                "#sidebar a[href='/ferrobridge/forms'][aria-current='page']",
-            ))
-            .await?;
-        assert!(
-            browser
-                .driver()
-                .find_all(By::Css(
-                    "#sidebar a[href='/ferrobridge/tables'][aria-current='page']"
-                ))
-                .await?
-                .is_empty(),
-            "the old page is no longer marked"
-        );
-        browser.console_clean("the shell across a link").await
+        assert_eq!(navigations, after, "no navigation entry was added");
+        let shift: f64 = browser
+            .driver()
+            .execute("return window.fuiShift;", vec![])
+            .await?
+            .convert()?;
+        assert!(shift <= 0.0, "the switch moved no layout: {shift}");
+        browser.console_clean("a tab switch in place").await
     })
     .await
 }
 
-/// Holds every animation frame the page asks for until `window.fuiRelease()`
-/// runs them, each in a task of its own so a panic in one reaches the log.
-const HOLD_FRAMES: &str = r"const ask = window.requestAnimationFrame.bind(window);
-    const drop = window.cancelAnimationFrame.bind(window);
-    window.fuiHeld = new Map();
-    let next = -1;
-    window.requestAnimationFrame = (frame) => { const id = next--; window.fuiHeld.set(id, frame); return id; };
-    window.cancelAnimationFrame = (id) => { if (!window.fuiHeld.delete(id)) drop(id); };
-    window.fuiRelease = () => {
-      window.requestAnimationFrame = ask;
-      window.cancelAnimationFrame = drop;
-      const held = [...window.fuiHeld.values()];
-      window.fuiHeld.clear();
-      held.forEach((frame) => setTimeout(() => frame(performance.now()), 0));
-      return held.length;
-    };";
+/// Whether the tree item at the path key `key` of the tree `tree` is open.
+async fn open(browser: &Browser, tree: &str, key: &str) -> Result<bool, Box<dyn Error>> {
+    Ok(browser
+        .element(By::Css(format!(
+            "#{tree} li[role='treeitem'][data-key='{key}']"
+        )))
+        .await?
+        .attr("aria-expanded")
+        .await?
+        .as_deref()
+        == Some("true"))
+}
+
+/// Clicks the toggle of the tree item at the path key `key` of the tree
+/// `tree`.
+async fn toggle(browser: &Browser, tree: &str, key: &str) -> Result<(), Box<dyn Error>> {
+    browser
+        .element(By::Css(format!(
+            "#{tree} li[role='treeitem'][data-key='{key}'] > .fui-tree-row > .fui-tree-toggle"
+        )))
+        .await?
+        .click()
+        .await?;
+    Ok(())
+}
 
 #[tokio::test(flavor = "multi_thread")]
-async fn a_navigation_before_the_panels_frame_keeps_the_page_working() -> Result<(), Box<dyn Error>>
+async fn a_tree_level_folds_in_place_and_its_folds_survive_a_reload() -> Result<(), Box<dyn Error>>
 {
-    // FerroUI #462: the brand switch draws the shell again, which disposes the search while
-    // the panel's placement still waits for its frame; the frame comes after, and the page
-    // works on.
     if !journeys_enabled() {
         return Ok(());
     }
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
         window(browser, 1440, 900).await?;
-        browser.goto(&gallery.url("/ferropix/forms")).await?;
+        browser.goto(&gallery.url("/ferroterm/trees")).await?;
         browser.hydrated().await?;
+        // The long browser's chest level is read and open as the server draws it.
+        let tree = "trees-long";
+        let chest = "NF-100/NF-200";
         let document = browser.loader().await?;
-        browser
-            .driver()
-            .execute(
-                "window.fuiKept = true; window.fuiShells = document.documentElement.dataset.galleryShells;",
-                vec![],
-            )
-            .await?;
-        browser.driver().execute(HOLD_FRAMES, vec![]).await?;
-        typed(browser, "synthetic-00").await?;
-        let held: i64 = browser
-            .driver()
-            .execute("return window.fuiHeld.size;", vec![])
-            .await?
-            .convert()?;
-        assert!(held >= 1, "the panel's placement waits for a frame");
-        browser
-            .driver()
-            .execute(
-                "document.querySelector(\"header a[href='/ferrobridge/forms']\").click();",
-                vec![],
-            )
-            .await?;
-        browser.at(&gallery.url("/ferrobridge/forms")).await?;
-        until("the shell is drawn again", async || {
-            Ok(browser
-                .driver()
-                .execute(
-                    "return document.documentElement.dataset.galleryShells !== window.fuiShells;",
-                    vec![],
-                )
-                .await?
-                .convert()?)
+        mark(browser).await?;
+        assert!(open(browser, tree, chest).await?, "the level arrives open");
+        toggle(browser, tree, chest).await?;
+        until("the level closes", async || {
+            Ok(!open(browser, tree, chest).await?)
         })
         .await?;
-        browser
-            .driver()
-            .execute("return window.fuiRelease();", vec![])
-            .await?;
-        browser
-            .driver()
-            .execute_async(
-                "const done = arguments[0]; setTimeout(() => requestAnimationFrame(() => done()), 50);",
-                vec![],
-            )
-            .await?;
-        browser
-            .console_clean("the held frame after the navigation")
-            .await?;
-        assert!(marked(browser).await?, "the page kept its document");
+        assert!(marked(browser).await?, "the fold loaded no document");
         assert_eq!(document, browser.loader().await?);
-        typed(browser, "synthetic").await?;
-        browser.console_clean("the search on the new page").await
+        browser.driver().refresh().await?;
+        browser.hydrated().await?;
+        until("the reload keeps the level closed", async || {
+            Ok(!open(browser, tree, chest).await?)
+        })
+        .await?;
+        // The server drew the level, so it opens again in place.
+        mark(browser).await?;
+        toggle(browser, tree, chest).await?;
+        until("the level opens in place", async || {
+            open(browser, tree, chest).await
+        })
+        .await?;
+        assert!(
+            browser
+                .element(By::Css(format!(
+                    "#{tree} li[data-key='{chest}'] > ul[role='group']"
+                )))
+                .await?
+                .is_displayed()
+                .await?,
+            "its children show"
+        );
+        assert!(marked(browser).await?, "the open loaded no document");
+        browser.console_clean("a tree's folds").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_same_path_navigation_keeps_its_scroll() -> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        window(browser, 1440, 900).await?;
+        browser.goto(&gallery.url("/ferrobridge/overlays")).await?;
+        browser.hydrated().await?;
+        let link = browser
+            .element(By::Css("a[data-delete='synthetic-007.model.yml']"))
+            .await?;
+        link.scroll_into_view().await?;
+        let before: f64 = browser
+            .driver()
+            .execute("return window.scrollY;", vec![])
+            .await?
+            .convert()?;
+        assert!(before > 0.0, "the link sits below the fold");
+        link.click().await?;
+        browser
+            .at(&gallery.url("/ferrobridge/overlays?delete=synthetic-007.model.yml"))
+            .await?;
+        browser.hydrated().await?;
+        until("the page opens where it was", async || {
+            let after: f64 = browser
+                .driver()
+                .execute("return window.scrollY;", vec![])
+                .await?
+                .convert()?;
+            Ok((after - before).abs() < 2.0)
+        })
+        .await?;
+        browser.console_clean("the scroll kept").await
     })
     .await
 }

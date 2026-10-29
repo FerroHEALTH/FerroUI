@@ -5,8 +5,11 @@
 //! its pending card (F1), the commit-confirm countdown (F2), the write-only
 //! secret field (F3) and the provenance tag (F4).
 
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::tone::Tone;
+use ferrohealth_ui::view::action_menu::{Act, Action};
+use ferrohealth_ui::view::countdown::Countdown;
 use ferrohealth_ui::view::lifecycle::{
     Lifecycle, PendingCard, Step, StepState, lifecycle, pending_card, trial_actions,
 };
@@ -14,12 +17,9 @@ use ferrohealth_ui::view::secret::{
     SecretChoice, SecretField, SecretState, secret_field, secret_state,
 };
 use ferrohealth_ui::view::tag::Tag;
-use ferrohealth_ui::widget::action_menu::{Act, Action};
-use ferrohealth_ui::widget::countdown::Countdown;
-use leptos::prelude::*;
 
 use crate::markup::{has, tags};
-use crate::render::{html, page_html};
+use crate::render::{en, html};
 
 /// A secret that is set, read from a file.
 const SET: &str = "/run/secrets/node-b.secret";
@@ -39,17 +39,20 @@ fn on_trial() -> Lifecycle {
 
 #[test]
 fn a_lifecycle_draws_every_step_state_in_glyph_class_and_word() {
-    let drawn = html(|| {
-        lifecycle(Lifecycle {
-            label: String::from("Where this revision stands"),
-            steps: vec![
-                Step::new(StepState::Done, "Saved", "by you, 10:02"),
-                Step::new(StepState::Current, "Approval", "another operator"),
-                Step::new(StepState::Waiting, "Apply", "after the approval"),
-                Step::new(StepState::Skipped, "Confirm", "not needed"),
-                Step::new(StepState::Failed, "Not confirmed", "deadline 10:14:42"),
-            ],
-        })
+    let drawn = html({
+        lifecycle(
+            &en(),
+            Lifecycle {
+                label: String::from("Where this revision stands"),
+                steps: vec![
+                    Step::new(StepState::Done, "Saved", "by you, 10:02"),
+                    Step::new(StepState::Current, "Approval", "another operator"),
+                    Step::new(StepState::Waiting, "Apply", "after the approval"),
+                    Step::new(StepState::Skipped, "Confirm", "not needed"),
+                    Step::new(StepState::Failed, "Not confirmed", "deadline 10:14:42"),
+                ],
+            },
+        )
     });
     assert!(
         has(
@@ -106,7 +109,7 @@ fn a_lifecycle_draws_every_step_state_in_glyph_class_and_word() {
 
 #[test]
 fn only_the_current_step_is_aria_current_step() {
-    let drawn = html(|| lifecycle(on_trial()));
+    let drawn = html(lifecycle(&en(), on_trial()));
     let current: Vec<_> = tags(&drawn, "li")
         .into_iter()
         .filter(|item| item.contains_key("aria-current"))
@@ -125,16 +128,19 @@ fn only_the_current_step_is_aria_current_step() {
 
 #[test]
 fn a_revision_that_skips_approval_draws_the_step_as_not_needed() {
-    let drawn = html(|| {
-        lifecycle(Lifecycle {
-            label: String::from("Where this revision stands"),
-            steps: vec![
-                Step::new(StepState::Done, "Saved", "by you, 09:51"),
-                Step::new(StepState::Skipped, "Approval", "not needed"),
-                Step::new(StepState::Current, "Apply", "yours, or any operator's"),
-                Step::new(StepState::Skipped, "Confirm", "not needed"),
-            ],
-        })
+    let drawn = html({
+        lifecycle(
+            &en(),
+            Lifecycle {
+                label: String::from("Where this revision stands"),
+                steps: vec![
+                    Step::new(StepState::Done, "Saved", "by you, 09:51"),
+                    Step::new(StepState::Skipped, "Approval", "not needed"),
+                    Step::new(StepState::Current, "Apply", "yours, or any operator's"),
+                    Step::new(StepState::Skipped, "Confirm", "not needed"),
+                ],
+            },
+        )
     });
     assert_eq!(4, tags(&drawn, "li").len(), "never left out: {drawn}");
     assert!(has(&drawn, "li", &[("class", "is-skipped")]), "{drawn}");
@@ -143,8 +149,9 @@ fn a_revision_that_skips_approval_draws_the_step_as_not_needed() {
 
 #[test]
 fn a_pending_card_names_itself_and_holds_its_actions_lifecycle_and_body() {
-    let drawn = html(|| {
+    let drawn = html({
         pending_card(
+            &en(),
             PendingCard {
                 title: String::from("Revision 9 is saved, not applied"),
                 line: String::from("It changes 2 settings, both at the next start."),
@@ -152,8 +159,12 @@ fn a_pending_card_names_itself_and_holds_its_actions_lifecycle_and_body() {
                 tone: None,
                 lifecycle: on_trial(),
             },
-            Some(view! { <a href="/apply">"Apply revision 9"</a> }.into_any()),
-            Some(view! { <p class="fui-small">"Check it first."</p> }.into_any()),
+            Some(Html::raw(String::from(
+                r#"<a href="/apply">Apply revision 9</a>"#,
+            ))),
+            Some(Html::raw(String::from(
+                r#"<p class="fui-small">Check it first.</p>"#,
+            ))),
         )
     });
     assert!(
@@ -174,8 +185,9 @@ fn a_pending_card_names_itself_and_holds_its_actions_lifecycle_and_body() {
     assert!(has(&drawn, "div", &[("class", "fui-actions")]), "{drawn}");
     assert!(has(&drawn, "ol", &[("class", "fui-lifecycle")]), "{drawn}");
     assert!(drawn.contains("Check it first."), "{drawn}");
-    let bare = html(|| {
+    let bare = html({
         pending_card(
+            &en(),
             PendingCard {
                 title: String::from("Revision 10 was rolled back"),
                 line: String::from("No one confirmed it in time."),
@@ -203,9 +215,10 @@ fn a_pending_card_names_itself_and_holds_its_actions_lifecycle_and_body() {
 
 /// The actions of a revision on trial with `left` of 120 seconds left.
 fn trial(left: u32) -> String {
-    page_html(move || {
+    html({
         trial_actions(
-            Countdown::new("trial", left, 120, "10:14:42"),
+            &en(),
+            Countdown::new(&en(), "trial", left, 120, "10:14:42"),
             Action::new(
                 Some(Glyph::ROTATE_CCW),
                 "Roll back now",
@@ -261,7 +274,7 @@ fn the_server_draws_the_time_left_with_the_ring_and_both_actions() {
             "form",
             &[("method", "post"), ("action", "/confirm")]
         ),
-        "Confirm posts with no WebAssembly: {drawn}"
+        "Confirm posts with no script: {drawn}"
     );
     assert!(has(&drawn, "a", &[("href", "/rolled-back")]), "{drawn}");
 }
@@ -296,9 +309,10 @@ fn the_time_left_is_a_timer_and_a_polite_region_says_the_set_points() {
 
 #[test]
 fn a_set_secret_offers_four_choices_and_shows_only_its_reference() {
-    let drawn = html(|| {
+    let drawn = html({
         secret_field(
-            SecretField::new("password", "Password", SecretState::Set(SET.into())),
+            &en(),
+            &SecretField::new("password", "Password", SecretState::Set(SET.into())),
             None,
         )
     });
@@ -353,9 +367,10 @@ fn no_state_puts_a_value_in_the_markup_and_the_value_field_is_never_filled() {
         SecretChoice::File,
         SecretChoice::Clear,
     ] {
-        let drawn = html(move || {
+        let drawn = html({
             secret_field(
-                SecretField::new("password", "Password", SecretState::Set(SET.into()))
+                &en(),
+                &SecretField::new("password", "Password", SecretState::Set(SET.into()))
                     .choose(choice),
                 None,
             )
@@ -393,9 +408,11 @@ fn no_state_puts_a_value_in_the_markup_and_the_value_field_is_never_filled() {
 
 #[test]
 fn every_id_of_a_secret_field_is_unique_and_each_label_names_one_control() {
-    let drawn = html(|| {
+    let drawn = html({
         secret_field(
-            SecretField::new("password", "Password", SecretState::Set(SET.into())).refuse_value(),
+            &en(),
+            &SecretField::new("password", "Password", SecretState::Set(SET.into()))
+                .refuse_value(&en()),
             None,
         )
     });
@@ -421,9 +438,10 @@ fn every_id_of_a_secret_field_is_unique_and_each_label_names_one_control() {
 
 #[test]
 fn an_unset_secret_offers_leave_unset_and_no_clear() {
-    let drawn = html(|| {
+    let drawn = html({
         secret_field(
-            SecretField::new("client-secret", "Client secret", SecretState::Unset),
+            &en(),
+            &SecretField::new("client-secret", "Client secret", SecretState::Unset),
             None,
         )
     });
@@ -444,9 +462,10 @@ fn an_unset_secret_offers_leave_unset_and_no_clear() {
 /// what was typed into it back to the browser (#499).
 #[test]
 fn a_secret_value_input_carries_its_secret_mark() {
-    let drawn = html(|| {
+    let drawn = html({
         secret_field(
-            SecretField::new("client-secret", "Client secret", SecretState::Unset),
+            &en(),
+            &SecretField::new("client-secret", "Client secret", SecretState::Unset),
             None,
         )
     });
@@ -469,9 +488,10 @@ fn a_secret_value_input_carries_its_secret_mark() {
 
 #[test]
 fn a_file_choice_holds_its_path_and_clear_warns() {
-    let file = html(|| {
+    let file = html({
         secret_field(
-            SecretField::new("key", "Private key", SecretState::Set(SET.into()))
+            &en(),
+            &SecretField::new("key", "Private key", SecretState::Set(SET.into()))
                 .choose(SecretChoice::File)
                 .path("/run/secrets/node-a-2026-11.pem"),
             None,
@@ -489,9 +509,10 @@ fn a_file_choice_holds_its_path_and_clear_warns() {
         ),
         "{file}"
     );
-    let clear = html(|| {
+    let clear = html({
         secret_field(
-            SecretField::new("password", "Password", SecretState::Set(SET.into()))
+            &en(),
+            &SecretField::new("password", "Password", SecretState::Set(SET.into()))
                 .choose(SecretChoice::Clear),
             None,
         )
@@ -504,9 +525,10 @@ fn a_file_choice_holds_its_path_and_clear_warns() {
 
 #[test]
 fn an_unreadable_secret_says_so_in_the_tone_of_a_fault() {
-    let drawn = html(|| {
+    let drawn = html({
         secret_field(
-            SecretField::new("key", "Private key", SecretState::Unreadable(SET.into())),
+            &en(),
+            &SecretField::new("key", "Private key", SecretState::Unreadable(SET.into())),
             None,
         )
     });
@@ -522,9 +544,11 @@ fn an_unreadable_secret_says_so_in_the_tone_of_a_fault() {
 
 #[test]
 fn a_value_is_refused_where_no_secrets_directory_is_set() {
-    let drawn = html(|| {
+    let drawn = html({
         secret_field(
-            SecretField::new("password", "Password", SecretState::Set(SET.into())).refuse_value(),
+            &en(),
+            &SecretField::new("password", "Password", SecretState::Set(SET.into()))
+                .refuse_value(&en()),
             None,
         )
     });
@@ -575,22 +599,28 @@ fn a_value_is_refused_where_no_secrets_directory_is_set() {
 
 #[test]
 fn the_read_only_state_names_the_reference_alone() {
-    let set = html(|| secret_state(&SecretState::Set(String::from("/run/secrets/db-url"))));
+    let set = html(secret_state(
+        &en(),
+        &SecretState::Set(String::from("/run/secrets/db-url")),
+    ));
     assert!(has(&set, "span", &[("class", "fui-secret-now")]), "{set}");
     assert!(
         set.contains("set, read from <code>/run/secrets/db-url</code>"),
         "{set}"
     );
-    let redacted = html(|| secret_state(&SecretState::Redacted));
+    let redacted = html(secret_state(&en(), &SecretState::Redacted));
     assert!(redacted.contains("set, not shown"), "{redacted}");
     assert!(!redacted.contains("<code>"), "{redacted}");
-    let escaped = html(|| secret_state(&SecretState::Set(String::from("/a<b>"))));
-    assert!(escaped.contains("<code>/a&lt;b&gt;</code>"), "{escaped}");
+    let escaped = html(secret_state(
+        &en(),
+        &SecretState::Set(String::from("/a<b>")),
+    ));
+    assert!(escaped.contains("<code>/a&#60;b&#62;</code>"), "{escaped}");
 }
 
 #[test]
 fn the_lock_tag_names_its_owner_in_its_tooltip_and_accessible_name() {
-    let drawn = html(|| {
+    let drawn = html({
         Tag::new("Provisioned")
             .locked("Provisioned from mappings/observation.yml")
             .view()

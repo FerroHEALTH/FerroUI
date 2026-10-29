@@ -4,8 +4,7 @@
 //! The charts, drawn as SVG on the server: one or more lines over a time or
 //! an order axis, and the small activity line of a dashboard.
 //!
-//! The drawing measures nothing in the browser, so the server pass and
-//! hydration draw the same. The outer SVG has a fixed height and its card's
+//! The drawing measures nothing in the browser: the server draws it whole. The outer SVG has a fixed height and its card's
 //! width with no `viewBox`, so its labels keep the type scale at every
 //! width: the Y labels sit above their grid lines at the left edge and the
 //! X labels at percentages of the width. The lines are drawn in an inner SVG
@@ -19,13 +18,20 @@
 //! queries, chosen on the server from each label's length. Every chart carries its name and a summary as its `title` and
 //! `desc`, and the line chart its figures as a table for assistive
 //! technology, so no figure is shown in the picture alone (WCAG 2.2 SC
-//! 1.1.1). The interactive legend is [`crate::widget::chart`]. No
+//! 1.1.1). The line chart's legend ([`legend`]) is a static key with no
+//! script, each series' swatch beside its name; once the `chart` module
+//! runs each entry is a `<button aria-pressed>`, and a press sets the
+//! `hidden` attribute of that series' groups alone, so the browser parses
+//! no SVG again; hiding one series recolours none, since each keeps its
+//! palette index, and the last series shown cannot be hidden. No
 //! specification governs the drawing: our own design.
 
-use leptos::prelude::*;
+use askama::Template;
+use serde::{Deserialize, Serialize};
 
 use crate::highlight::escape;
-use crate::i18n::{Phrase, Text, Word, tr, tr_with};
+use crate::html::{Html, Render as _};
+use crate::i18n::{Locale, Phrase, Text, Word, tr, tr_with};
 
 /// The number of colours a series can take: the role tones below, so a
 /// colour means what it means elsewhere and follows the brand's accent.
@@ -805,8 +811,7 @@ pub(crate) fn line_svg_grouped(chart: &LineChart, shown: &[bool]) -> String {
     )
 }
 
-/// The words of a chart's figures table, resolved on the server in the
-/// page's locale, so an island that draws it carries no catalog.
+/// The words of a chart's figures table, in the page's locale.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct FiguresWords {
     /// A cell with no value.
@@ -818,13 +823,14 @@ pub struct FiguresWords {
 }
 
 impl FiguresWords {
-    /// The table's words in the locale of the page being drawn.
+    /// The table's words in `locale`.
     #[must_use]
-    pub fn of_page() -> Self {
+    pub fn of(locale: &Locale) -> Self {
         Self {
-            no_value: tr(Text::ChartNoValueCell),
-            x: tr(Text::ChartX),
+            no_value: tr(locale, Text::ChartNoValueCell),
+            x: tr(locale, Text::ChartX),
             caption: Phrase::new(tr_with(
+                locale,
                 Text::ChartAsTable,
                 &[("chart", Phrase::open("chart"))],
             )),
@@ -835,7 +841,7 @@ impl FiguresWords {
 /// The figures of `chart` as a table for assistive technology, in `words`:
 /// a row per X value and a column per series.
 #[must_use]
-pub fn figures(chart: &LineChart, words: FiguresWords) -> impl IntoView + use<> {
+pub fn figures(chart: &LineChart, words: FiguresWords) -> Html {
     let mut xs: Vec<f64> = chart
         .series
         .iter()
@@ -849,11 +855,6 @@ pub fn figures(chart: &LineChart, words: FiguresWords) -> impl IntoView + use<> 
         x,
         caption,
     } = words;
-    let heads = chart
-        .series
-        .iter()
-        .map(|series| view! { <th scope="col">{series.name.clone()}</th> })
-        .collect_view();
     // Each series and the ticks sorted by X once, so a row finds its cells
     // by a binary search.
     let mut ticks: Vec<&(f64, String)> = chart.x_ticks.iter().collect();
@@ -890,38 +891,37 @@ pub fn figures(chart: &LineChart, words: FiguresWords) -> impl IntoView + use<> 
             let cells = columns
                 .iter()
                 .map(|points| {
-                    let value = points
+                    points
                         .get(points.partition_point(|point| point.0 < at - 1e-9))
                         .filter(|point| near(point.0))
-                        .map_or_else(|| no_value.clone(), |point| value_label(point.1).into());
-                    view! { <td>{value}</td> }
+                        .map_or_else(|| no_value.clone(), |point| value_label(point.1).into())
                 })
-                .collect_view();
-            view! {
-                <tr>
-                    <th scope="row">{label}</th>
-                    {cells}
-                </tr>
-            }
+                .collect();
+            (label, cells)
         })
-        .collect_view();
-    let caption = caption.fill(&[("chart", &chart.label)]);
+        .collect();
     // NOTE: CSS 2.1 § 17.5.2: a table ignores its 1 px width, so the box that hides it
     // is a block around it, which keeps it out of the page's scroll width.
-    view! {
-        <div class="fui-sr-only">
-            <table>
-                <caption>{caption}</caption>
-                <thead>
-                    <tr>
-                        <th scope="col">{x}</th>
-                        {heads}
-                    </tr>
-                </thead>
-                <tbody>{rows}</tbody>
-            </table>
-        </div>
+    FiguresView {
+        caption: caption.fill(&[("chart", &chart.label)]),
+        x,
+        heads: chart
+            .series
+            .iter()
+            .map(|series| series.name.clone())
+            .collect(),
+        rows,
     }
+    .html()
+}
+
+#[derive(Template)]
+#[template(path = "chart/chart.html", block = "figures")]
+struct FiguresView {
+    caption: Word,
+    x: Word,
+    heads: Vec<String>,
+    rows: Vec<(String, Vec<Word>)>,
 }
 
 /// What an activity chart shows: events per day.
@@ -944,7 +944,7 @@ pub struct ActivityChart {
 /// Returns the activity chart `chart`: one line in the accent over a fixed
 /// height, the days its ticks name labelled.
 #[must_use]
-pub fn activity_chart(chart: &ActivityChart) -> impl IntoView + use<> {
+pub fn activity_chart(chart: &ActivityChart) -> Html {
     const HEIGHT: f64 = 132.0;
     let line = LineChart {
         id: chart.name,
@@ -1000,7 +1000,10 @@ pub fn activity_chart(chart: &ActivityChart) -> impl IntoView + use<> {
         &lines,
         &marks,
     );
-    view! { <figure class="fui-chart fui-chart-activity" data-activity-chart=chart.name inner_html=svg></figure> }
+    Html::raw(format!(
+        "<figure data-activity-chart=\"{}\" class=\"fui-chart fui-chart-activity\">{svg}</figure>",
+        Html::text(chart.name)
+    ))
 }
 
 /// Returns a thin bar whose length is `percent` (clamped to 100) of its
@@ -1011,25 +1014,131 @@ pub fn activity_chart(chart: &ActivityChart) -> impl IntoView + use<> {
 /// assistive technology; with one it stands alone as an image of that name.
 /// It never carries the number by itself (WCAG 2.2 SC 1.4.1).
 #[must_use]
-pub fn proportion(percent: u8, label: Option<String>) -> AnyView {
-    let width = percent.min(100).to_string();
-    let hidden = label.is_none().then_some("true");
-    let role = label.is_some().then_some("img");
-    view! {
-        <svg
-            class="fui-proportion"
-            viewBox="0 0 100 6"
-            preserveAspectRatio="none"
-            focusable="false"
-            role=role
-            aria-label=label
-            aria-hidden=hidden
-        >
-            <rect class="fui-proportion-ground" width="100" height="6" rx="3"></rect>
-            <rect class="fui-proportion-fill" width=width height="6" rx="3"></rect>
-        </svg>
+pub fn proportion(percent: u8, label: Option<String>) -> Html {
+    let width = percent.min(100);
+    let named = label.map_or_else(
+        || String::from(" aria-hidden=\"true\""),
+        |label| format!(" role=\"img\" aria-label=\"{}\"", Html::text(label)),
+    );
+    Html::raw(format!(
+        "<svg viewBox=\"0 0 100 6\" preserveAspectRatio=\"none\" focusable=\"false\"{named} class=\"fui-proportion\"><rect width=\"100\" height=\"6\" rx=\"3\" class=\"fui-proportion-ground\"></rect><rect width=\"{width}\" height=\"6\" rx=\"3\" class=\"fui-proportion-fill\"></rect></svg>"
+    ))
+}
+
+/// The words a line chart draws itself, in the page's locale.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ChartWords {
+    /// The legend's note on a gap in a line.
+    pub no_value: Word,
+    /// The legend's name.
+    pub series: Word,
+    /// The figures table's words.
+    pub figures: FiguresWords,
+}
+
+impl ChartWords {
+    /// The chart's words in `locale`.
+    #[must_use]
+    pub fn of(locale: &Locale) -> Self {
+        Self {
+            no_value: tr(locale, Text::ChartNoValue),
+            series: tr(locale, Text::ChartSeries),
+            figures: FiguresWords::of(locale),
+        }
     }
-    .into_any()
+}
+
+/// One entry of a chart's legend: a series' name and its colour.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LegendEntry {
+    /// The series' name, as the table shows it.
+    pub name: String,
+    /// The series' palette index, which pins its colour.
+    pub palette: u8,
+}
+
+/// The id of the plot of the chart `id`, which the legend shows and hides
+/// series in.
+fn plot_id(id: &str) -> String {
+    format!("{id}-plot")
+}
+
+#[derive(Template)]
+#[template(path = "chart/chart.html", block = "line_chart")]
+struct LineChartView {
+    plot: String,
+    drawn: Html,
+    legend: Html,
+    table: Html,
+}
+
+/// Returns the line chart `chart` in `words`: its drawing, its legend and
+/// its figures table.
+#[must_use]
+pub fn line_chart(chart: &LineChart, words: ChartWords) -> Html {
+    let ChartWords {
+        no_value,
+        series: label,
+        figures: figure_words,
+    } = words;
+    let entries = chart
+        .series
+        .iter()
+        .map(|series| LegendEntry {
+            name: series.name.clone(),
+            palette: series.palette,
+        })
+        .collect::<Vec<_>>();
+    let gap = has_gaps(chart).then_some(no_value);
+    let plot = plot_id(chart.id);
+    LineChartView {
+        legend: legend(&plot, label.into(), entries, gap),
+        drawn: Html::raw(line_svg_grouped(chart, &[])),
+        table: figures(chart, figure_words),
+        plot,
+    }
+    .html()
+}
+
+/// Returns a series' swatch: its point mark `shape` in the colour `class`
+/// names, as the plot draws it.
+fn swatch_of(class: &str, shape: &str) -> Html {
+    Html::raw(format!(
+        "<svg viewBox=\"-5 -5 10 10\" focusable=\"false\" aria-hidden=\"true\" class=\"{class}\"><path d=\"{shape}\"></path></svg>"
+    ))
+}
+
+#[derive(Template)]
+#[template(path = "chart/chart.html", block = "legend")]
+struct LegendView<'a> {
+    label: String,
+    plot: &'a str,
+    entries: Vec<(String, Html)>,
+    gap: Option<Word>,
+}
+
+/// Returns the legend of the plot `plot`, named `label`, one entry per
+/// series in `entries`.
+///
+/// `gap` says what a break in a line means when the chart has one. It is
+/// a static key the `chart` module turns into toggles; a console draws it
+/// through [`line_chart`].
+#[must_use]
+pub fn legend(plot: &str, label: String, entries: Vec<LegendEntry>, gap: Option<Word>) -> Html {
+    LegendView {
+        label,
+        plot,
+        entries: entries
+            .into_iter()
+            .map(|entry| {
+                let (tone, mark) = series_look(entry.palette);
+                let swatch = swatch_of(&format!("fui-swatch fui-series-{tone}"), mark_path(mark));
+                (entry.name, swatch)
+            })
+            .collect(),
+        gap,
+    }
+    .html()
 }
 
 #[cfg(test)]
@@ -1126,11 +1235,7 @@ mod tests {
             points: vec![(0, 5)],
             ticks: vec![(0, String::from("2026-10-18"))],
         };
-        let owner = leptos::prelude::Owner::new();
-        let html = owner.with(|| {
-            use leptos::prelude::*;
-            super::activity_chart(&chart).to_html()
-        });
+        let html = String::from(super::activity_chart(&chart));
         assert!(html.contains("fui-chart-point fui-chart-accent"), "{html}");
     }
 

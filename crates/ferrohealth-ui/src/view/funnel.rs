@@ -13,8 +13,7 @@
 //! 2.2 SC 1.1.1, SC 1.4.1). No specification governs the drawing: our own
 //! design.
 
-use leptos::prelude::*;
-
+use crate::html::Html;
 use crate::tone::Tone;
 
 /// One part of a stacked bar, such as the inputs written.
@@ -106,81 +105,55 @@ fn widths(counts: &[u64]) -> Vec<f64> {
 /// takes at least 1.5 % of the bar and a stroke of its colour around it,
 /// so it never vanishes.
 #[must_use]
-pub fn funnel(funnel: &Funnel) -> AnyView {
+pub fn funnel(funnel: &Funnel) -> Html {
     let counts: Vec<u64> = funnel.parts.iter().map(|part| part.count).collect();
     let whole = counts.iter().sum::<u64>();
     let mut start = 0.0;
-    let mut segments = Vec::new();
+    let mut drawn = Vec::new();
+    let mut index = 0_usize;
     for (part, width) in funnel.parts.iter().zip(widths(&counts)) {
         if width > 0.0 {
-            segments.push((start, width, part, share(part.count, whole) < LEAST));
-        }
-        start += width;
-    }
-    let drawn = segments
-        .iter()
-        .enumerate()
-        .map(|(index, (start, width, part, least))| {
-            let base = if *least {
+            let base = if share(part.count, whole) < LEAST {
                 "fui-funnel-part fui-funnel-least"
             } else {
                 "fui-funnel-part"
             };
-            let class = tone_class(base, part.tone);
             let x = format!("{start:.2}%");
-            let cut = (index > 0).then(|| {
-                let at = x.clone();
-                view! {
-                    <line class="fui-funnel-cut" x1=at.clone() x2=at y1="0" y2="100%"></line>
-                }
-            });
-            let width = format!("{width:.2}%");
-            let tip = format!("{}: {}", part.label, part.figure);
-            view! {
-                <rect class=class x=x y="0" width=width height="100%">
-                    <title>{tip}</title>
-                </rect>
-                {cut}
+            drawn.push(format!(
+                "<rect x=\"{x}\" y=\"0\" width=\"{width:.2}%\" height=\"100%\" class=\"{class}\"><title>{label}: {figure}</title></rect>",
+                class = tone_class(base, part.tone),
+                label = Html::text(&part.label),
+                figure = Html::text(&part.figure),
+            ));
+            if index > 0 {
+                drawn.push(format!(
+                    "<line x1=\"{x}\" x2=\"{x}\" y1=\"0\" y2=\"100%\" class=\"fui-funnel-cut\"></line>"
+                ));
             }
-        })
-        .collect_view();
-    let legend = funnel
+            index += 1;
+        }
+        start += width;
+    }
+    let legend: Vec<String> = funnel
         .parts
         .iter()
         .map(|part| {
-            let swatch = tone_class("fui-funnel-swatch", part.tone);
-            view! {
-                <div>
-                    <dt>
-                        <span class=swatch aria-hidden="true"></span>
-                        {part.label.clone()}
-                    </dt>
-                    <dd>{part.figure.clone()}</dd>
-                </div>
-            }
+            format!(
+                "<div><dt><span aria-hidden=\"true\" class=\"{swatch}\"></span>{label}</dt><dd>{figure}</dd></div>",
+                swatch = tone_class("fui-funnel-swatch", part.tone),
+                label = Html::text(&part.label),
+                figure = Html::text(&part.figure),
+            )
         })
-        .collect_view();
-    view! {
-        <div class="fui-funnel">
-            <p>
-                <strong class="fui-num">{funnel.figure.clone()}</strong>
-                " "
-                {funnel.words.clone()}
-            </p>
-            <svg
-                class="fui-funnel-bar"
-                width="100%"
-                height="12"
-                focusable="false"
-                role="img"
-                aria-label=funnel.label.clone()
-            >
-                {drawn}
-            </svg>
-            <dl class="fui-funnel-legend">{legend}</dl>
-        </div>
-    }
-    .into_any()
+        .collect();
+    let legend = legend.concat();
+    Html::raw(format!(
+        "<div class=\"fui-funnel\"><p><strong class=\"fui-num\">{figure}</strong> {words}</p><svg width=\"100%\" height=\"12\" focusable=\"false\" role=\"img\" aria-label=\"{label}\" class=\"fui-funnel-bar\">{drawn}</svg><dl class=\"fui-funnel-legend\">{legend}</dl></div>",
+        figure = Html::text(&funnel.figure),
+        words = Html::text(&funnel.words),
+        label = Html::text(&funnel.label),
+        drawn = drawn.concat(),
+    ))
 }
 
 /// Returns the bar list of `bars`, named `label`: per row the name, a bar
@@ -189,36 +162,28 @@ pub fn funnel(funnel: &Funnel) -> AnyView {
 ///
 /// On a phone the bar takes its own line under the name.
 #[must_use]
-pub fn bar_list(label: &str, bars: &[Bar]) -> AnyView {
+pub fn bar_list(label: &str, bars: &[Bar]) -> Html {
     let largest = bars.iter().map(|bar| bar.count).max().unwrap_or(0);
-    let rows = bars
+    let rows: Vec<String> = bars
         .iter()
         .map(|bar| {
-            let width = format!("{:.1}%", share(bar.count, largest));
-            view! {
-                <li>
-                    <span class="fui-barlist-name">{bar.name.clone()}</span>
-                    <svg
-                        class="fui-barlist-track"
-                        width="100%"
-                        height="8"
-                        focusable="false"
-                        aria-hidden="true"
-                    >
-                        <rect class="fui-barlist-fill" width=width height="8" rx="4"></rect>
-                    </svg>
-                    <span class="fui-barlist-num fui-num">{bar.figure.clone()}</span>
-                </li>
-            }
+            format!(
+                "<li><span class=\"fui-barlist-name\">{name}</span><svg width=\"100%\" height=\"8\" focusable=\"false\" aria-hidden=\"true\" class=\"fui-barlist-track\"><rect width=\"{width:.1}%\" height=\"8\" rx=\"4\" class=\"fui-barlist-fill\"></rect></svg><span class=\"fui-barlist-num fui-num\">{figure}</span></li>",
+                name = Html::text(&bar.name),
+                width = share(bar.count, largest),
+                figure = Html::text(&bar.figure),
+            )
         })
-        .collect_view();
-    view! { <ul class="fui-barlist" aria-label=label.to_owned()>{rows}</ul> }.into_any()
+        .collect();
+    let rows = rows.concat();
+    Html::raw(format!(
+        "<ul aria-label=\"{}\" class=\"fui-barlist\">{rows}</ul>",
+        Html::text(label)
+    ))
 }
 
 #[cfg(test)]
 mod tests {
-    use leptos::prelude::*;
-
     use super::{Funnel, FunnelPart, LEAST, funnel, share, widths};
     use crate::tone::Tone;
 
@@ -251,18 +216,16 @@ mod tests {
             figure: count.to_string(),
             tone,
         };
-        let shown = Owner::new().with(|| {
-            funnel(&Funnel {
-                figure: String::from("2,000,003"),
-                words: String::from("read"),
-                label: String::from("Of 2,000,003 read: 3 refused"),
-                parts: vec![
-                    part("Written", 2_000_000, Tone::Ok),
-                    part("Refused", 3, Tone::Bad),
-                ],
-            })
-            .to_html()
-        });
+        let shown = funnel(&Funnel {
+            figure: String::from("2,000,003"),
+            words: String::from("read"),
+            label: String::from("Of 2,000,003 read: 3 refused"),
+            parts: vec![
+                part("Written", 2_000_000, Tone::Ok),
+                part("Refused", 3, Tone::Bad),
+            ],
+        })
+        .to_string();
         assert!(
             shown.contains(r#"<rect x="98.50%" y="0" width="1.50%" height="100%" class="fui-funnel-part fui-funnel-least fui-tone-bad">"#),
             "{shown}"

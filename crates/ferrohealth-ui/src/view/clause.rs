@@ -6,7 +6,7 @@
 //!
 //! A clause is its mark, its source as the title, a plain sentence of what
 //! it selects, then its body: the filter rows (F7 rows of
-//! [`crate::widget::repeat`]) and its codes, each an M2 coding. Include is a
+//! [`crate::view::repeat`]) and its codes, each an M2 coding. Include is a
 //! solid accent edge and Exclude a dashed warn edge, with the word beside,
 //! so the kind never rests on colour (WCAG 2.2 SC 1.4.1). Each invariant
 //! the clause breaks is named by its own number inline, two or more as a
@@ -16,9 +16,8 @@
 //! the fields; clauses run edge to edge in their section (B10). No
 //! specification governs the layout: our own design.
 
-use leptos::prelude::*;
-
-use crate::i18n::{Arg, Text, Word, tr, tr_with};
+use crate::html::Html;
+use crate::i18n::{Arg, Locale, Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::tone::Tone;
 use crate::view::coding::{Coding, Layout, MoreCodes, coding, more_codes};
@@ -35,11 +34,14 @@ pub enum ClauseKind {
 
 impl ClauseKind {
     /// The mark's word in the page's locale.
-    fn word(self) -> Word {
-        tr(match self {
-            Self::Include => Text::ClauseInclude,
-            Self::Exclude => Text::ClauseExclude,
-        })
+    fn word(self, locale: &Locale) -> Word {
+        tr(
+            locale,
+            match self {
+                Self::Include => Text::ClauseInclude,
+                Self::Exclude => Text::ClauseExclude,
+            },
+        )
     }
 
     /// The tone of the mark: the accent for an include, warn for an
@@ -67,17 +69,17 @@ pub struct Clause {
     /// Whether it includes or excludes.
     pub kind: ClauseKind,
     /// Its source as the title, which may hold a link to the code system.
-    pub title: AnyView,
+    pub title: Html,
     /// The source in plain words, for the clause's accessible name.
     pub source: String,
     /// The plain sentence of what it selects, which may hold a code or a
     /// coding.
-    pub sentence: AnyView,
+    pub sentence: Html,
     /// The filter rows, the codes and, in a composer, the fields; `None`
     /// for a clause the sentence says whole.
-    pub body: Option<AnyView>,
+    pub body: Option<Html>,
     /// The actions at the end of its head, such as "Remove this clause".
-    pub actions: Option<AnyView>,
+    pub actions: Option<Html>,
     /// The invariants it breaks, in the order the console checks them.
     pub issues: Vec<ClauseIssue>,
 }
@@ -88,12 +90,12 @@ pub struct ClauseCode {
     /// The code.
     pub coding: Coding,
     /// The button that removes it, in a composer.
-    pub remove: Option<AnyView>,
+    pub remove: Option<Html>,
 }
 
 /// Returns the clause `clause`.
 #[must_use]
-pub fn clause(clause: Clause) -> AnyView {
+pub fn clause(locale: &Locale, clause: Clause) -> Html {
     let Clause {
         kind,
         title,
@@ -104,96 +106,107 @@ pub fn clause(clause: Clause) -> AnyView {
         issues,
     } = clause;
     let label = tr_with(
+        locale,
         match kind {
             ClauseKind::Include => Text::ClauseIncludeLabel,
             ClauseKind::Exclude => Text::ClauseExcludeLabel,
         },
         &[("title", Arg::from(source))],
     );
-    let word = kind.word();
-    let mark = badge(kind.tone(), &word);
-    let actions = actions.map(|actions| view! { <div class="fui-actions">{actions}</div> });
-    let issue = clause_issues(issues);
-    view! {
-        <section class="fui-clause" class:is-exclude=kind == ClauseKind::Exclude aria-label=label>
-            <div class="fui-clause-head">
-                {mark} <h3 class="fui-clause-title">{title}</h3> {actions}
-            </div>
-            <p class="fui-clause-sentence">{sentence}</p>
-            {body}
-            {issue}
-        </section>
-    }
-    .into_any()
+    let mark = badge(kind.tone(), kind.word(locale));
+    let actions = actions
+        .map(|actions| format!("<div class=\"fui-actions\">{actions}</div>"))
+        .unwrap_or_default();
+    let exclude = if kind == ClauseKind::Exclude {
+        " is-exclude"
+    } else {
+        ""
+    };
+    Html::raw(format!(
+        "<section aria-label=\"{}\" class=\"fui-clause{exclude}\"><div class=\"fui-clause-head\">{mark}<h3 class=\"fui-clause-title\">{title}</h3>{actions}</div><p class=\"fui-clause-sentence\">{sentence}</p>{}{}</section>",
+        Html::text(label.text()),
+        body.unwrap_or_default(),
+        clause_issues(issues)
+    ))
 }
 
 /// Returns the invariants `issues` a clause breaks: one as a note, two or
 /// more as a list of them, or nothing.
-fn clause_issues(issues: Vec<ClauseIssue>) -> Option<AnyView> {
+fn clause_issues(issues: Vec<ClauseIssue>) -> String {
     let said = |ClauseIssue { key, text }: ClauseIssue| {
-        view! {
-            {icon(Glyph::CIRCLE_X, "14")}
-            <span>
-                <code>{key}</code>
-                {text}
-            </span>
-        }
+        format!(
+            "{}<span><code>{}</code>{}</span>",
+            icon(Glyph::CIRCLE_X, "14"),
+            Html::text(key),
+            Html::text(text)
+        )
     };
     let mut issues = issues.into_iter();
-    let first = issues.next()?;
+    let Some(first) = issues.next() else {
+        return String::new();
+    };
     let Some(second) = issues.next() else {
-        return Some(
-            view! { <p class="fui-clause-issue" role="note">{said(first)}</p> }.into_any(),
+        return format!(
+            "<p role=\"note\" class=\"fui-clause-issue\">{}</p>",
+            said(first)
         );
     };
-    let items = [first, second]
+    let items: String = [first, second]
         .into_iter()
         .chain(issues)
-        .map(|issue| view! { <li class="fui-clause-issue">{said(issue)}</li> })
-        .collect_view();
-    Some(view! { <ul class="fui-clause-issues">{items}</ul> }.into_any())
+        .map(|issue| format!("<li class=\"fui-clause-issue\">{}</li>", said(issue)))
+        .collect::<Vec<_>>()
+        .concat();
+    format!("<ul class=\"fui-clause-issues\">{items}</ul>")
 }
 
 /// Returns the clauses of a value set, edge to edge in their section with
 /// a hairline between them.
 #[must_use]
-pub fn clauses(clauses: impl IntoView + 'static) -> AnyView {
-    let clauses = clauses.into_any();
-    view! { <div class="fui-clauses">{clauses}</div> }.into_any()
+pub fn clauses(clauses: Html) -> Html {
+    let clauses = String::from(clauses);
+    Html::raw(format!("<div class=\"fui-clauses\">{clauses}</div>"))
 }
 
 /// Returns the small heading over a part of a clause's body, such as
 /// "Filters" or "Codes".
 #[must_use]
-pub fn clause_part(heading: impl Into<String>) -> AnyView {
-    view! { <p class="fui-clause-sub">{heading.into()}</p> }.into_any()
+pub fn clause_part(heading: impl Into<String>) -> Html {
+    Html::raw(format!(
+        "<p class=\"fui-clause-sub\">{}</p>",
+        Html::text(heading.into())
+    ))
 }
 
 /// Returns two fields of a clause side by side, such as its code system
 /// and version, stacked on a phone.
 #[must_use]
-pub fn clause_fields(fields: impl IntoView + 'static) -> AnyView {
-    let fields = fields.into_any();
-    view! { <div class="fui-clause-grid">{fields}</div> }.into_any()
+pub fn clause_fields(fields: Html) -> Html {
+    let fields = String::from(fields);
+    Html::raw(format!("<div class=\"fui-clause-grid\">{fields}</div>"))
 }
 
 /// Returns the codes of a clause, one per line, each an inline M2 coding
 /// with its Remove at the end in a composer, ending in the more row `more`
 /// when the console's server pages them.
 #[must_use]
-pub fn clause_codes(codes: Vec<ClauseCode>, more: Option<MoreCodes>) -> AnyView {
-    let items = codes
+pub fn clause_codes(locale: &Locale, codes: Vec<ClauseCode>, more: Option<MoreCodes>) -> Html {
+    let items: String = codes
         .into_iter()
         .map(
             |ClauseCode {
                  coding: each,
                  remove,
              }| {
-                let shown = coding(each, Layout::Inline);
-                view! { <li>{shown} {remove}</li> }
+                format!(
+                    "<li>{}{}</li>",
+                    coding(locale, each, Layout::Inline),
+                    remove.unwrap_or_default()
+                )
             },
         )
-        .collect_view();
-    let more = more.map(more_codes);
-    view! { <ul class="fui-clause-codes">{items} {more}</ul> }.into_any()
+        .collect::<Vec<_>>()
+        .concat();
+    let more = more.map(more_codes).unwrap_or_default();
+    Html::raw(format!("<ul class=\"fui-clause-codes\">{items}{more}</ul>"))
 }

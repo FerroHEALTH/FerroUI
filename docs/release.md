@@ -48,8 +48,8 @@ is the signed tag `vX.Y.Z` on the merge commit of the release pull request on
    A label added later re-runs that run's `detect` job and every job after
    it once the run completes (`pr-guards.yml`).
 
-   A capture on your own machine (`scripts/release/gallery-site.sh
-   --release`, then `FERROUI_SCREENSHOTS=1 cargo nextest run --locked -p
+   A capture on your own machine (`FERROUI_SCREENSHOTS=1
+   scripts/chrome-lock.sh cargo nextest run --locked -p
    ferrohealth-ui-gallery -E 'test(every_page_is_captured) |
    test(every_state_is_captured)'`) is for looking at a change before you
    push it; it is never committed.
@@ -79,7 +79,7 @@ On the branch `release/vX.Y.Z`:
    (`changelog.d/README.md`, Security entries); reread that reason now.
 3. **Say what was looked at.** The pull request body says, per screen and
    per state, what was checked and what was fixed
-   (`.claude/rules/leptos-ui.md` §11).
+   (`.claude/rules/console-ui.md` §11).
 4. **The gates pass.** CI runs the screenshot guard on every `release/`
    branch, so a release pull request cannot merge while a listed page or
    state lacks its images. The crate-version guard checks the version, the

@@ -11,19 +11,18 @@
 //! Every state is a typed [`State`]: each names its cause in the console's
 //! words and the way on, in its tone, as a status or, for a refusal, an
 //! alert. The page keeps nothing (family rule 9): the provider's action is
-//! a plain link to the console's route, marked `rel="external"` so a router
-//! leaves it to the server, and the basic form is a plain `POST` with plain,
+//! a plain link to the console's route, and the basic form is a plain `POST` with plain,
 //! uncontrolled inputs and the autocomplete tokens a password manager reads
 //! (HTML, `autocomplete`, `username` and `current-password`), so the page
-//! works with no script and hydration never wipes what was typed. No
+//! works with no script. No
 //! placeholder repeats a label, and no password field is drawn unless the
 //! console passes a [`Basic`] form.
 
-use leptos::either::Either;
-use leptos::prelude::*;
+use askama::Template;
 use serde::{Deserialize, Serialize};
 
-use crate::i18n::{Text, Word, tr};
+use crate::html::{Html, Render as _};
+use crate::i18n::{Locale, Text, Word, tr};
 use crate::icon::{Glyph, icon};
 use crate::tone::Tone;
 use crate::view::button::Variant;
@@ -68,8 +67,8 @@ impl Notice {
 
 /// The state the sign-in is in, each with its notice.
 ///
-/// It crosses to the browser as JSON, so a console draws a state its server
-/// chose, such as a refused callback, the same in both halves.
+/// It serializes, so a console can carry a state its server chose, such as
+/// a refused callback, across a redirect.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum State {
     /// Nothing to say: the card offers its methods.
@@ -193,7 +192,7 @@ pub struct Basic {
 pub struct SignIn {
     /// The product's lockup, plain text while signed out, from
     /// [`crate::view::shell::lockup_plain`].
-    pub lockup: AnyView,
+    pub lockup: Html,
     /// The page's heading, such as "Sign in to the console".
     pub title: Option<String>,
     /// The state the sign-in is in.
@@ -204,205 +203,139 @@ pub struct SignIn {
     pub basic: Option<Basic>,
     /// A line of the console's own under the methods, such as a link to
     /// read without signing in.
-    pub line: Option<AnyView>,
+    pub line: Option<Html>,
     /// How sign-in works, muted, such as "You sign in at your
     /// organisation's identity provider; the console never sees your
     /// password.".
     pub note: Option<String>,
     /// The deployment's links, such as Documentation and Privacy notice, as
-    /// words and href; each leaves the console's router alone.
+    /// words and href.
     pub links: Vec<(String, String)>,
     /// The caption under the card, kept to its width.
     pub caption: Option<String>,
 }
 
-/// Returns the notice of `state`, if it has one.
-fn notice(state: &State) -> Option<AnyView> {
-    let words = state.notice()?.clone();
-    let role = if state.alerts() { "alert" } else { "status" };
-    let class = format!("fui-sign-in-notice {}", state.tone().class());
-    let detail = words.detail.map(|detail| {
-        view! {
-            " "
-            <span class="fui-small fui-muted">{detail}</span>
-        }
-    });
-    let retry = words.retry.map(|retry| {
-        view! {
-            " "
-            <a href=retry.href rel="external" class=Variant::Secondary.small()>
-                {icon(Glyph::REFRESH_CW, "16")}
-                {retry.label}
-            </a>
-        }
-    });
-    Some(
-        view! {
-            <div role=role id=NOTICE_ID class=class>
-                {words.text}
-                {detail}
-                {retry}
-            </div>
-        }
-        .into_any(),
-    )
+struct NoticeView {
+    role: &'static str,
+    tone: &'static str,
+    text: String,
+    detail: Option<String>,
+    retry: Option<Retry>,
 }
 
-/// Returns the provider's action in `state`: a link, a busy button while
-/// redirecting, a disabled button while sign-in is unavailable.
-fn provider_action(provider: Provider, state: &State) -> AnyView {
-    let class = Variant::Primary.class();
-    match state {
-        State::Redirecting(_) => Either::Left(Either::Left(view! {
-            <button type="button" class=class aria-busy="true" disabled>
-                <span class="fui-spinner-ring" aria-hidden="true"></span>
-                {provider.busy}
-            </button>
-        })),
-        State::Unavailable(_) => Either::Left(Either::Right(view! {
-            <button type="button" class=class disabled>
-                {icon(provider.glyph, "16")}
-                {provider.label}
-            </button>
-        })),
-        _ => Either::Right(view! {
-            <a href=provider.href rel="external" class=class>
-                {icon(provider.glyph, "16")}
-                {provider.label}
-            </a>
-        }),
-    }
-    .into_any()
+/// How the provider's action is drawn in the state the sign-in is in.
+enum ProviderView {
+    /// A busy, disabled button while the browser is on its way.
+    Busy(String),
+    /// A disabled button while sign-in is unavailable.
+    Off(Html, String),
+    /// The link that starts the sign-in.
+    Link(String, Html, String),
 }
 
-/// Returns the basic form, its divider first when it follows the
-/// provider's action, disabled while `disabled`.
-fn basic_form(basic: Basic, after_provider: bool, disabled: bool) -> AnyView {
-    let divider = after_provider.then(|| {
-        let words = basic.divider.map_or_else(|| tr(Text::SignInOr), Word::from);
-        view! { <div class="fui-divider">{words}</div> }
-    });
-    let submit = basic
-        .submit
-        .map_or_else(|| tr(Text::SignInSubmit), Word::from);
-    let invalid = basic.error.is_some().then_some("true");
-    let described = basic.error.is_some().then_some("sign-in-password-error");
-    let error = basic.error.map(|error| {
-        view! {
-            <p id="sign-in-password-error" class=ERROR>
-                {icon(Glyph::CIRCLE_ALERT, "14")}
-                " "
-                {error}
-            </p>
-        }
-    });
-    view! {
-        {divider}
-        <form method="post" action=basic.action class="fui-form">
-            <div class="fui-field">
-                <label for="sign-in-username" class="fui-label">
-                    {tr(Text::SignInUsername)}
-                </label>
-                <input
-                    id="sign-in-username"
-                    name="username"
-                    class=INPUT
-                    value=basic.username
-                    autocomplete="username"
-                    autocapitalize="off"
-                    spellcheck="false"
-                    disabled=disabled
-                />
-            </div>
-            <div class="fui-field">
-                <label for="sign-in-password" class="fui-label">
-                    {tr(Text::SignInPassword)}
-                </label>
-                <input
-                    id="sign-in-password"
-                    name="password"
-                    type="password"
-                    class=INPUT
-                    autocomplete="current-password"
-                    aria-invalid=invalid
-                    aria-describedby=described
-                    disabled=disabled
-                />
-                {error}
-            </div>
-            <input type="hidden" name="next" value=basic.next />
-            <button type="submit" class=Variant::Secondary.class() disabled=disabled>
-                {icon(Glyph::LOG_IN, "16")}
-                {submit}
-            </button>
-        </form>
-    }
-    .into_any()
+struct BasicView {
+    divider: Option<Word>,
+    action: String,
+    username_label: Word,
+    username: String,
+    password_label: Word,
+    error: Option<String>,
+    next: String,
+    disabled: bool,
+    submit: Word,
+    login: Html,
+    alert: Html,
+}
+
+#[derive(Template)]
+#[template(path = "sign_in/card.html")]
+struct Card {
+    input: &'static str,
+    error_class: &'static str,
+    primary: &'static str,
+    secondary: &'static str,
+    small: &'static str,
+    notice_id: &'static str,
+    refresh: Html,
+    lockup: Html,
+    title: Option<String>,
+    notice: Option<NoticeView>,
+    unavailable: Option<Word>,
+    provider: Option<ProviderView>,
+    basic: Option<BasicView>,
+    line: Option<Html>,
+    note: Option<String>,
+    links: Vec<(String, String)>,
+    caption: Option<String>,
 }
 
 /// Returns the sign-in page's card and caption, `sign_in`, centred by the
 /// page around it ([`crate::view::shell::centred`]).
 #[must_use]
-pub fn sign_in(sign_in: SignIn) -> impl IntoView {
-    let state = sign_in.state;
-    let no_method = sign_in.provider.is_none() && sign_in.basic.is_none();
-    let title = sign_in
-        .title
-        .map(|title| view! { <h1 class="fui-sign-in-title">{title}</h1> });
-    let notice = notice(&state);
-    let after_provider = sign_in.provider.is_some();
-    let provider = sign_in
-        .provider
-        .map(|provider| provider_action(provider, &state));
-    let locked = matches!(state, State::Redirecting(_) | State::Locked(_));
-    let basic = sign_in
-        .basic
-        .map(|basic| basic_form(basic, after_provider, locked));
-    let unavailable = (no_method && state == State::Ready).then(|| {
-        view! {
-            <div role="alert" class="fui-sign-in-notice fui-tone-warn">
-                {tr(Text::SignInNone)}
-            </div>
-        }
+pub fn sign_in(locale: &Locale, sign_in: SignIn) -> Html {
+    let SignIn {
+        lockup,
+        title,
+        state,
+        provider,
+        basic,
+        line,
+        note,
+        links,
+        caption,
+    } = sign_in;
+    let no_method = provider.is_none() && basic.is_none();
+    let notice = state.notice().cloned().map(|words| NoticeView {
+        role: if state.alerts() { "alert" } else { "status" },
+        tone: state.tone().class(),
+        text: words.text,
+        detail: words.detail,
+        retry: words.retry,
     });
-    let note = sign_in
-        .note
-        .map(|note| view! { <p class="fui-small fui-muted fui-sign-in-line">{note}</p> });
-    let links = (!sign_in.links.is_empty()).then(|| {
-        let links = sign_in
-            .links
-            .into_iter()
-            .map(|(label, href)| {
-                view! {
-                    <a href=href rel="external noopener">
-                        {label}
-                    </a>
-                }
-            })
-            .collect_view();
-        view! { <div class="fui-sign-in-links">{links}</div> }
+    let after_provider = provider.is_some();
+    let provider = provider.map(|provider| match state {
+        State::Redirecting(_) => ProviderView::Busy(provider.busy),
+        State::Unavailable(_) => ProviderView::Off(icon(provider.glyph, "16"), provider.label),
+        _ => ProviderView::Link(provider.href, icon(provider.glyph, "16"), provider.label),
     });
-    let caption = sign_in
-        .caption
-        .map(|caption| view! { <p class="fui-sign-in-caption">{caption}</p> });
-    let card = view! {
-        <div class="fui-card fui-sign-in">
-            <div class="fui-sign-in-lockup">{sign_in.lockup}</div>
-            {title}
-            {notice}
-            {unavailable}
-            {provider}
-            {basic}
-            {sign_in.line}
-            {note}
-            {links}
-        </div>
+    let disabled = matches!(state, State::Redirecting(_) | State::Locked(_));
+    let basic = basic.map(|basic| BasicView {
+        divider: after_provider.then(|| {
+            basic
+                .divider
+                .map_or_else(|| tr(locale, Text::SignInOr), Word::from)
+        }),
+        action: basic.action,
+        username_label: tr(locale, Text::SignInUsername),
+        username: basic.username,
+        password_label: tr(locale, Text::SignInPassword),
+        error: basic.error,
+        next: basic.next,
+        disabled,
+        submit: basic
+            .submit
+            .map_or_else(|| tr(locale, Text::SignInSubmit), Word::from),
+        login: icon(Glyph::LOG_IN, "16"),
+        alert: icon(Glyph::CIRCLE_ALERT, "14"),
+    });
+    Card {
+        input: INPUT,
+        error_class: ERROR,
+        primary: Variant::Primary.class(),
+        secondary: Variant::Secondary.class(),
+        small: Variant::Secondary.small(),
+        notice_id: NOTICE_ID,
+        refresh: icon(Glyph::REFRESH_CW, "16"),
+        lockup,
+        title,
+        notice,
+        unavailable: (no_method && state == State::Ready).then(|| tr(locale, Text::SignInNone)),
+        provider,
+        basic,
+        line,
+        note,
+        links,
+        caption,
     }
-    .into_any();
-    view! {
-        <div class="fui-stack fui-sign-in-stack">
-            {card}
-            {caption}
-        </div>
-    }
+    .html()
 }

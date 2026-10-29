@@ -18,8 +18,9 @@
 
 use std::borrow::Cow;
 
-use leptos::prelude::*;
+use askama::Template;
 
+use crate::html::{Html, Render as _};
 use crate::icon::{Glyph, icon};
 use crate::view::button::Variant;
 
@@ -39,12 +40,23 @@ pub struct PopoverForm {
     /// The popover's title.
     pub title: Cow<'static, str>,
     /// The form: the console's own, with its fields and its submit.
-    pub body: AnyView,
+    pub body: Html,
+}
+
+#[derive(Template)]
+#[template(path = "popover/form.html")]
+struct PopoverView {
+    id: Cow<'static, str>,
+    class: &'static str,
+    glyph: Html,
+    label: Cow<'static, str>,
+    title: Cow<'static, str>,
+    body: Html,
 }
 
 /// Returns the popover form `form` with its trigger, in one anchor.
 #[must_use]
-pub fn popover_form(form: PopoverForm) -> AnyView {
+pub fn popover_form(form: PopoverForm) -> Html {
     let PopoverForm {
         id,
         variant,
@@ -53,28 +65,13 @@ pub fn popover_form(form: PopoverForm) -> AnyView {
         title,
         body,
     } = form;
-    let title_id = format!("{id}-title");
-    let labelled_by = title_id.clone();
-    view! {
-        <span class="fui-anchor">
-            <button
-                type="button"
-                class=variant.class()
-                command="show-modal"
-                commandfor=id.clone()
-                aria-controls=id.clone()
-                aria-haspopup="dialog"
-            >
-                {icon(glyph, "16")}
-                {label}
-            </button>
-            <dialog id=id closedby="any" class="fui-popover" aria-labelledby=labelled_by>
-                <p id=title_id class="fui-popover-title">
-                    {title}
-                </p>
-                {body}
-            </dialog>
-        </span>
+    PopoverView {
+        id,
+        class: variant.class(),
+        glyph: icon(glyph, "16"),
+        label,
+        title,
+        body,
     }
-    .into_any()
+    .html()
 }

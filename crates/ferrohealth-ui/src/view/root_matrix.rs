@@ -13,9 +13,8 @@
 //! says "no answer", so no cell is ever blank. No specification governs the
 //! layout: our own design.
 
-use leptos::prelude::*;
-
-use crate::i18n::{Text, tr};
+use crate::html::Html;
+use crate::i18n::{Locale, Text, tr};
 use crate::tone::Tone;
 
 /// One root of the server: a column of the matrix.
@@ -33,11 +32,11 @@ pub struct MatrixRoot {
 #[derive(Debug)]
 pub struct MatrixRow {
     /// The declaration's name, which heads the row and stays in view.
-    pub name: AnyView,
+    pub name: Html,
     /// What each root declares, in the order of the roots: `None` for a
     /// root that does not declare it. A root that did not answer shows "no
     /// answer" whatever its cell holds.
-    pub cells: Vec<Option<AnyView>>,
+    pub cells: Vec<Option<Html>>,
 }
 
 /// What a root matrix shows.
@@ -55,97 +54,70 @@ pub struct RootMatrix {
 
 /// Returns the head of the column of `root`: its name, its release and
 /// whether it answered.
-fn root_head(root: &MatrixRoot) -> AnyView {
+fn root_head(locale: &Locale, root: &MatrixRoot) -> String {
     let (tone, word) = if root.answered {
-        (Tone::Ok, tr(Text::RootAnswered))
+        (Tone::Ok, tr(locale, Text::RootAnswered))
     } else {
-        (Tone::Bad, tr(Text::RootNoAnswer))
+        (Tone::Bad, tr(locale, Text::RootNoAnswer))
     };
-    let state = format!("fui-state {}", tone.class());
-    let dot = format!("fui-dot {}", tone.class());
-    let name = root.name.clone();
-    let release = root.release.clone();
-    view! {
-        <th scope="col">
-            <span class="fui-root-head">
-                <strong>{name}</strong>
-                <span class="fui-muted">{release}</span>
-                <span class=state>
-                    <span class=dot aria-hidden="true"></span>
-                    {word}
-                </span>
-            </span>
-        </th>
-    }
-    .into_any()
+    format!(
+        "<th scope=\"col\"><span class=\"fui-root-head\"><strong>{}</strong><span class=\"fui-muted\">{}</span><span class=\"fui-state {tone}\"><span aria-hidden=\"true\" class=\"fui-dot {tone}\"></span>{word}</span></span></th>",
+        Html::text(&root.name),
+        Html::text(&root.release),
+        tone = tone.class()
+    )
 }
 
 /// Returns the row `row` under the columns of `roots`.
-fn matrix_row(roots: &[MatrixRoot], row: MatrixRow) -> AnyView {
+fn matrix_row(locale: &Locale, roots: &[MatrixRoot], row: MatrixRow) -> String {
     let mut cells = row.cells.into_iter();
-    let drawn = roots
+    let drawn: String = roots
         .iter()
         .map(|root| {
             let value = cells.next().flatten();
-            let label = root.name.clone();
+            let label = Html::text(&root.name);
             match (root.answered, value) {
-                (false, _) => view! {
-                    <td data-label=label class="is-none">
-                        {tr(Text::RootCellNoAnswer)}
-                    </td>
-                }
-                .into_any(),
-                (true, None) => view! {
-                    <td data-label=label class="is-none">
-                        {tr(Text::RootNotDeclared)}
-                    </td>
-                }
-                .into_any(),
-                (true, Some(value)) => view! { <td data-label=label>{value}</td> }.into_any(),
+                (false, _) => format!(
+                    "<td data-label=\"{label}\" class=\"is-none\">{}</td>",
+                    tr(locale, Text::RootCellNoAnswer)
+                ),
+                (true, None) => format!(
+                    "<td data-label=\"{label}\" class=\"is-none\">{}</td>",
+                    tr(locale, Text::RootNotDeclared)
+                ),
+                (true, Some(value)) => format!("<td data-label=\"{label}\">{value}</td>"),
             }
         })
-        .collect_view();
-    view! {
-        <tr>
-            <th scope="row" data-role="title">
-                {row.name}
-            </th>
-            {drawn}
-        </tr>
-    }
-    .into_any()
+        .collect::<Vec<_>>()
+        .concat();
+    format!(
+        "<tr><th scope=\"row\" data-role=\"title\">{}</th>{drawn}</tr>",
+        row.name
+    )
 }
 
 /// Returns the root matrix `matrix`.
 #[must_use]
-pub fn root_matrix(matrix: RootMatrix) -> AnyView {
+pub fn root_matrix(locale: &Locale, matrix: RootMatrix) -> Html {
     let RootMatrix {
         caption,
         corner,
         roots,
         rows,
     } = matrix;
-    let heads = roots.iter().map(root_head).collect_view();
-    let body = rows
+    let heads: String = roots
+        .iter()
+        .map(|root| root_head(locale, root))
+        .collect::<Vec<_>>()
+        .concat();
+    let body: String = rows
         .into_iter()
-        .map(|row| matrix_row(&roots, row))
-        .collect_view();
-    let label = caption.clone();
-    view! {
-        <div class="fui-root-matrix">
-            <div class="fui-table-scroll" role="region" aria-label=label tabindex="0">
-                <table class="fui-table">
-                    <caption class="fui-sr-only">{caption}</caption>
-                    <thead>
-                        <tr>
-                            <th scope="col">{corner}</th>
-                            {heads}
-                        </tr>
-                    </thead>
-                    <tbody>{body}</tbody>
-                </table>
-            </div>
-        </div>
-    }
-    .into_any()
+        .map(|row| matrix_row(locale, &roots, row))
+        .collect::<Vec<_>>()
+        .concat();
+    let caption = Html::text(caption);
+    Html::raw(format!(
+        "<div class=\"fui-root-matrix\"><div role=\"region\" aria-label=\"{caption}\" tabindex=\"0\" class=\"fui-table-scroll\"><table class=\"fui-table\"><caption class=\"fui-sr-only\">{caption}</caption><thead><tr><th scope=\"col\">{}</th>{heads}</tr></thead><tbody>{body}</tbody></table></div></div>",
+        Html::text(corner)
+    ))
 }

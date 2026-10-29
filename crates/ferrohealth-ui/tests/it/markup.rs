@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The start tags of rendered HTML read by attribute name, so a render test
-//! asserts what an element carries and never the order Leptos writes it in
-//! (Leptos writes `class` last). Enough of the HTML Living Standard's
+//! asserts what an element carries and never the order a template writes
+//! it in. Enough of the HTML Living Standard's
 //! tokenizer for the library's own output: quoted values and bare names.
 
 use std::collections::BTreeMap;

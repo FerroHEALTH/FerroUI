@@ -6,25 +6,65 @@
 //!
 //! The formats are links the console answers with the document in that
 //! format, the one in force marked current, and Copy puts the document in
-//! that format on the clipboard ([`crate::island::CopyButton`]), read from
-//! the raw view the page draws, so the document is no island data and the
-//! page carries it twice, never three times. The views are drawn on the
-//! server, every one of them: the highlighted view is the code viewer
-//! (B1), the raw view the text as it stands, and the rendered view the
-//! console's own drawing, when it has one. The view switch is the island
-//! [`crate::island::DocumentViews`] over them, so a reader reaches every
-//! view with no WebAssembly through its link, and the island switches them
-//! in place once it has hydrated (`crate::widget::document`).
+//! that format on the clipboard ([`crate::view::copy`]), read from the raw
+//! view the page draws, so the page carries it twice, never three times.
+//! The views are drawn on the server, every one of them: the highlighted
+//! view is the code viewer (B1), the raw view the text as it stands, and
+//! the rendered view the console's own drawing, when it has one. Each
+//! switch segment is a link to its view: with no script the link targets
+//! the view and the stylesheet shows the view targeted (`:target`); once
+//! the `document` module runs, a press shows the view in place, with no
+//! jump and no history entry, and marks its segment current. No
+//! specification governs the switch: our own design.
 
-use leptos::prelude::*;
+use askama::Template;
+use serde::{Deserialize, Serialize};
 
 use crate::highlight::Language;
-use crate::i18n::{Text, tr, tr_with};
-use crate::island::{CopyButton, DocumentViews};
+use crate::html::{Html, Render as _};
+use crate::i18n::{Locale, Text, Word, tr, tr_with};
 use crate::view::code::{Code, code_viewer};
+use crate::view::copy::{CopySource, CopyWords, copy_from};
 use crate::view::segmented::segmented_links;
-use crate::widget::copy::{CopySource, CopyWords};
-use crate::widget::document::{DocumentView, ViewChoice};
+
+/// One view of a document.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum DocumentView {
+    /// The text highlighted in the code viewer, its lines numbered.
+    Highlighted,
+    /// The text as it stands.
+    Raw,
+    /// The console's own drawing of the document.
+    Rendered,
+}
+
+impl DocumentView {
+    /// The view's key, which its element and its segment carry as
+    /// `data-view` and its id ends with.
+    #[must_use]
+    pub const fn key(self) -> &'static str {
+        match self {
+            Self::Highlighted => "highlighted",
+            Self::Raw => "raw",
+            Self::Rendered => "rendered",
+        }
+    }
+
+    /// The id of this view of the pane `id`.
+    #[must_use]
+    pub fn id(self, pane: &str) -> String {
+        format!("{pane}-{}", self.key())
+    }
+}
+
+/// One segment of the switch: a view and its words in the page's locale.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ViewChoice {
+    /// The view it shows.
+    pub view: DocumentView,
+    /// Its words.
+    pub words: Word,
+}
 
 /// What a document pane shows.
 #[derive(Debug)]
@@ -48,17 +88,7 @@ pub struct Document {
     /// pane does not have opens the highlighted one.
     pub opening: DocumentView,
     /// The console's own drawing of the document, when it has one.
-    pub rendered: Option<AnyView>,
-}
-
-/// Returns the view `view` of the pane `id`, holding `body`.
-fn view_of(id: &str, view: DocumentView, body: AnyView) -> AnyView {
-    view! {
-        <div class="fui-document-view" id=view.id(id) data-view=view.key()>
-            {body}
-        </div>
-    }
-    .into_any()
+    pub rendered: Option<Html>,
 }
 
 /// The text of the raw view's `<pre>` as the server writes it: one more
@@ -73,10 +103,26 @@ fn raw_text(text: String) -> String {
     }
 }
 
+#[derive(Template)]
+#[template(path = "document/pane.html")]
+struct PaneView {
+    id: String,
+    label: String,
+    choice: Html,
+    switch_label: Word,
+    views: Vec<ViewChoice>,
+    opening: DocumentView,
+    highlighted: Html,
+    raw_label: Word,
+    raw: String,
+    rendered: Option<Html>,
+    copy: Html,
+}
+
 /// Returns the document pane `document`: its format links, its view switch
 /// and its views.
 #[must_use]
-pub fn document_pane(document: Document) -> AnyView {
+pub fn document_pane(locale: &Locale, document: Document) -> Html {
     let Document {
         id,
         label,
@@ -87,8 +133,11 @@ pub fn document_pane(document: Document) -> AnyView {
         opening,
         rendered,
     } = document;
-    let choice =
-        (formats.len() > 1).then(|| segmented_links(tr(Text::DocumentFormat), formats, format));
+    let choice = if formats.len() > 1 {
+        segmented_links(tr(locale, Text::DocumentFormat), formats, format)
+    } else {
+        Html::empty()
+    };
     let opening = match (opening, rendered.is_some()) {
         (DocumentView::Rendered, false) => DocumentView::Highlighted,
         (view, _) => view,
@@ -96,23 +145,25 @@ pub fn document_pane(document: Document) -> AnyView {
     let mut views = vec![
         ViewChoice {
             view: DocumentView::Highlighted,
-            words: tr(Text::DocumentHighlighted),
+            words: tr(locale, Text::DocumentHighlighted),
         },
         ViewChoice {
             view: DocumentView::Raw,
-            words: tr(Text::DocumentRaw),
+            words: tr(locale, Text::DocumentRaw),
         },
     ];
     if rendered.is_some() {
         views.push(ViewChoice {
             view: DocumentView::Rendered,
-            words: tr(Text::DocumentRendered),
+            words: tr(locale, Text::DocumentRendered),
         });
     }
     let highlighted = code_viewer(
+        locale,
         None,
         &Code {
             label: tr_with(
+                locale,
                 Text::DocumentHighlightedRegion,
                 &[("document", label.clone().into())],
             )
@@ -124,46 +175,28 @@ pub fn document_pane(document: Document) -> AnyView {
             diagnostics: Vec::new(),
         },
     );
-    let raw_label = tr_with(
-        Text::DocumentRawRegion,
-        &[("document", label.clone().into())],
+    let copy = copy_from(
+        format!("{id}-copy"),
+        tr(locale, Text::DocumentCopy),
+        CopySource::Element(format!("{id}-text")),
+        CopyWords::of(locale),
     );
-    let text_id = format!("{id}-text");
-    let copied = CopySource::Element(text_id.clone());
-    let raw = view! {
-        <div class="fui-code-panel fui-scroll-cue" role="region" aria-label=raw_label tabindex="0">
-            <pre id=text_id>{raw_text(text)}</pre>
-        </div>
+    PaneView {
+        raw_label: tr_with(
+            locale,
+            Text::DocumentRawRegion,
+            &[("document", label.clone().into())],
+        ),
+        id,
+        label,
+        choice,
+        switch_label: tr(locale, Text::DocumentView),
+        views,
+        opening,
+        highlighted,
+        raw: raw_text(text),
+        rendered,
+        copy,
     }
-    .into_any();
-    let drawn = view! {
-        {view_of(&id, DocumentView::Highlighted, highlighted)}
-        {view_of(&id, DocumentView::Raw, raw)}
-        {rendered.map(|body| {
-            view_of(
-                &id,
-                DocumentView::Rendered,
-                view! { <div class="fui-document-rendered">{body}</div> }.into_any(),
-            )
-        })}
-    }
-    .into_any();
-    let switch_label = String::from(tr(Text::DocumentView));
-    let pane_id = id.clone();
-    let copy_id = format!("{id}-copy");
-    view! {
-        <section class="fui-document" id=pane_id aria-label=label>
-            {choice}
-            <DocumentViews id=id label=switch_label views=views opening=opening>
-                {drawn}
-            </DocumentViews>
-            <CopyButton
-                id=copy_id
-                label=tr(Text::DocumentCopy)
-                source=copied
-                words=CopyWords::of_page()
-            />
-        </section>
-    }
-    .into_any()
+    .html()
 }

@@ -10,9 +10,8 @@
 //! through its own `replica` field, so no other page can. No specification
 //! governs the line: our own design.
 
-use leptos::prelude::*;
-
-use crate::i18n::{Text, tr};
+use crate::html::Html;
+use crate::i18n::{Locale, Text, tr};
 use crate::icon::{Glyph, icon};
 
 /// The replica that answered a reference page.
@@ -26,14 +25,14 @@ pub struct Replica {
 
 /// Returns the replica line of `replica`: the server glyph, "Answered by
 /// replica" and its name, then the time it answered when it is known.
-pub(crate) fn replica_line(replica: Replica) -> AnyView {
+pub(crate) fn replica_line(locale: &Locale, replica: Replica) -> Html {
     let Replica { name, at } = replica;
-    let at = at.map(|at| format!(" · {at}"));
-    view! {
-        <p class="fui-replica-line">
-            {icon(Glyph::SERVER, "12")}
-            <span>{tr(Text::ReplicaAnswered)} " " <code>{name}</code> {at}</span>
-        </p>
-    }
-    .into_any()
+    let at = at.map(|at| format!(" · {at}")).unwrap_or_default();
+    Html::raw(format!(
+        "<p class=\"fui-replica-line\">{}<span>{} <code>{}</code>{}</span></p>",
+        icon(Glyph::SERVER, "12"),
+        tr(locale, Text::ReplicaAnswered),
+        Html::text(name),
+        Html::text(at)
+    ))
 }

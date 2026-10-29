@@ -11,18 +11,20 @@
 //! its destructive ones last after a separator in the danger tone, so no
 //! danger button ever sits beside the primary (family rule 7). Every action
 //! is a link, a plain form post, a submit of a form on the page or a button
-//! that opens a confirmation dialog, so the group works with no
-//! WebAssembly; the menus are [`crate::widget::menu`]'s. No specification
-//! governs the layout: our own design.
+//! that opens a confirmation dialog, so the group works with no script; the
+//! menus are [`crate::view::action_menu`]'s. No specification governs the
+//! layout: our own design.
 
 use std::hash::{DefaultHasher, Hash as _, Hasher as _};
 
-use leptos::prelude::*;
+use askama::Template;
 
+use crate::html::{Html, Render as _};
+use crate::i18n::Locale;
+use crate::view::action_menu::{Act, Action, Menu, more_menu, variants_menu};
 use crate::view::button::{Variant, label};
+use crate::view::copy::{CopySource, CopyWords, copy_from};
 use crate::view::popover::{PopoverForm, popover_form};
-use crate::widget::action_menu::{Act, Action, Menu, more_menu, variants_menu};
-use crate::widget::copy::{CopySource, CopyWords};
 
 /// What a title row offers.
 #[derive(Debug, Default)]
@@ -106,101 +108,65 @@ impl ActionGroup {
 /// form's submit, a submit of the form it names, or the button that opens
 /// its confirmation.
 #[must_use]
-pub fn action_button(action: Action, variant: Variant) -> AnyView {
-    button_of(action, variant.class())
+pub fn action_button(locale: &Locale, action: Action, variant: Variant) -> Html {
+    button_of(locale, action, variant.class())
 }
 
 /// Returns the action `action` as [`action_button`] draws it, as a small
 /// button of `variant`, for a card's header row.
 #[must_use]
-pub fn small_action_button(action: Action, variant: Variant) -> AnyView {
-    button_of(action, variant.small())
+pub fn small_action_button(locale: &Locale, action: Action, variant: Variant) -> Html {
+    button_of(locale, action, variant.small())
+}
+
+#[derive(Template)]
+#[template(path = "action/group.html", block = "button")]
+struct ButtonView {
+    act: Act,
+    class: &'static str,
+    inside: Html,
 }
 
 /// The button [`action_button`] and [`small_action_button`] draw, with the
 /// classes `class`; a copy is the copy button
-/// ([`crate::island::CopyButton`]), hidden until it hydrates.
-fn button_of(action: Action, class: &'static str) -> AnyView {
+/// ([`crate::view::copy::copy_from`]), hidden until its module runs.
+fn button_of(locale: &Locale, action: Action, class: &'static str) -> Html {
     if let Act::Copy(text) = action.act {
         let mut hasher = DefaultHasher::new();
         (&action.label, &text).hash(&mut hasher);
         let id = format!("fui-copy-{:x}", hasher.finish());
-        return view! {
-            <crate::island::CopyButton
-                id
-                label=action.label
-                source=CopySource::Text(text)
-                words=CopyWords::of_page()
-            />
-        }
-        .into_any();
+        return copy_from(
+            id,
+            action.label,
+            CopySource::Text(text),
+            CopyWords::of(locale),
+        );
     }
     let words = action.words();
-    let inside = label(action.glyph, words);
-    match action.act {
-        Act::Link(href) => view! {
-            <a href=href class=class>
-                {inside}
-            </a>
-        }
-        .into_any(),
-        Act::Download(href) => view! {
-            <a href=href rel="external" download="" class=class>
-                {inside}
-            </a>
-        }
-        .into_any(),
-        Act::Post { action, fields } => {
-            let fields = fields
-                .into_iter()
-                .map(|(name, value)| view! { <input type="hidden" name=name value=value /> })
-                .collect_view();
-            view! {
-                <form method="post" action=action class="fui-action-form">
-                    {fields}
-                    <button type="submit" class=class>
-                        {inside}
-                    </button>
-                </form>
-            }
-            .into_any()
-        }
-        Act::Submit(form) => view! {
-            <button type="submit" form=form class=class>
-                {inside}
-            </button>
-        }
-        .into_any(),
-        Act::SubmitTo { action, form } => view! {
-            <button type="submit" form=form formaction=action data-ferroui-reloads="" class=class>
-                {inside}
-            </button>
-        }
-        .into_any(),
-        Act::Dialog(target) => view! {
-            <button
-                type="button"
-                class=class
-                command="show-modal"
-                commandfor=target.clone()
-                aria-controls=target
-                aria-haspopup="dialog"
-            >
-                {inside}
-            </button>
-        }
-        .into_any(),
-        Act::Copy(_) => ().into_any(),
+    ButtonView {
+        inside: label(action.glyph, words),
+        act: action.act,
+        class,
     }
+    .html()
+}
+
+#[derive(Template)]
+#[template(path = "action/group.html", block = "group")]
+struct GroupView {
+    primary: Option<Html>,
+    variants: Option<Html>,
+    popover: Html,
+    more: Html,
 }
 
 /// Returns the action group `group`: its primary, split when it has
 /// variants, its popover form, then its More menu; nothing for a group
 /// with no action.
 #[must_use]
-pub fn action_group(group: ActionGroup) -> AnyView {
+pub fn action_group(locale: &Locale, group: ActionGroup) -> Html {
     if group.is_empty() {
-        return ().into_any();
+        return Html::empty();
     }
     let ActionGroup {
         primary,
@@ -208,24 +174,17 @@ pub fn action_group(group: ActionGroup) -> AnyView {
         popover,
         more,
     } = group;
-    let primary = primary.map(|primary| {
-        let variants = variants.filter(|menu| !menu.is_empty());
-        match variants {
-            Some(menu) => {
-                let name = primary.label.clone();
-                let button = action_button(primary, Variant::Primary);
-                view! { <span class="fui-split-button">{button} {variants_menu(&name, menu)}</span> }
-                    .into_any()
-            }
-            None => action_button(primary, Variant::Primary),
-        }
-    });
-    view! {
-        <div class="fui-action-group">
-            {primary}
-            {popover.map(popover_form)}
-            {more.map(more_menu)}
-        </div>
+    let variants = variants
+        .filter(|menu| !menu.is_empty())
+        .zip(primary.as_ref())
+        .map(|(menu, primary)| variants_menu(locale, &primary.label, &menu));
+    GroupView {
+        primary: primary.map(|primary| action_button(locale, primary, Variant::Primary)),
+        variants,
+        popover: popover.map(popover_form).unwrap_or_default(),
+        more: more
+            .map(|menu| more_menu(locale, &menu))
+            .unwrap_or_default(),
     }
-    .into_any()
+    .html()
 }

@@ -6,6 +6,7 @@
 //! forms that work with no script, a listing that keeps its position out of
 //! the URL posts it, and every text they are given is escaped.
 
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::i18n::Message;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::table::filter::{
@@ -20,9 +21,9 @@ use ferrohealth_ui::table::view::{
     data_table, data_table_unstacked, data_table_wide, group_row, menu_cell, title_cell,
 };
 use ferrohealth_ui::view::template::list::{HeadingCount, ListCard, list_card};
-use leptos::prelude::*;
 
 use crate::markup::{has, tags};
+use crate::render::{en, html};
 
 fluent_templates::static_loader! {
     static CONSOLE = {
@@ -30,13 +31,6 @@ fluent_templates::static_loader! {
         fallback_language: "en",
         customise: |bundle| bundle.set_use_isolating(false),
     };
-}
-
-/// The HTML `view` renders to, under a reactive owner as a server render
-/// runs.
-fn html(view: impl FnOnce() -> AnyView) -> String {
-    let owner = Owner::new();
-    owner.with(|| view().to_html())
 }
 
 /// The fields of a listing's query: its filter, its size, its sort and its
@@ -61,7 +55,7 @@ fn the_data_table_marks_its_sort_and_the_pager_names_an_unavailable_step() {
         Column::text("rows", "Rows").numeric(),
     ];
     let sort = Sort::read(Some("name"), Some("asc"), &["name"]);
-    let table = html(|| {
+    let table = html({
         data_table(DataTable {
             caption: "Mapping files",
             columns: &columns,
@@ -69,11 +63,10 @@ fn the_data_table_marks_its_sort_and_the_pager_names_an_unavailable_step() {
                 sort: sort.as_ref(),
                 ..Sorting::default()
             },
-            body: Body::Rows(
-                view! { <tr><td>"a"</td><td class="fui-num">"1"</td></tr> }.into_any(),
-            ),
+            body: Body::Rows(Html::raw(String::from(
+                r#"<tr><td>a</td><td class="fui-num">1</td></tr>"#,
+            ))),
         })
-        .into_any()
     });
     assert!(table.contains(r#"aria-sort="ascending""#), "{table}");
     assert!(table.contains("<tbody>"), "{table}");
@@ -82,24 +75,22 @@ fn the_data_table_marks_its_sort_and_the_pager_names_an_unavailable_step() {
         "{table}"
     );
     let window = Window::over(30, Paging::default());
-    let pager = html(|| {
-        link_pager("Pages", window, &|paging: Paging| {
+    let pager = html({
+        link_pager(&en(), "Pages", window, &|paging: Paging| {
             format!("/files?page={}", paging.page)
         })
-        .into_any()
     });
     assert!(pager.contains("1-25 of 30"), "{pager}");
     assert_eq!(2, pager.matches("(unavailable)").count(), "{pager}");
     assert!(pager.contains(r#"href="/files?page=2""#), "{pager}");
     assert!(pager.contains("Page 1 of 2"), "{pager}");
-    let loading = html(|| {
+    let loading = html({
         data_table(DataTable {
             caption: "Loading",
             columns: &columns,
             sorting: Sorting::default(),
             body: Body::Loading(2),
         })
-        .into_any()
     });
     assert!(loading.contains(r#"aria-busy="true""#), "{loading}");
 }
@@ -107,11 +98,10 @@ fn the_data_table_marks_its_sort_and_the_pager_names_an_unavailable_step() {
 #[test]
 fn a_pager_over_one_page_draws_the_range_and_the_sizes_alone() {
     let window = Window::over(2, Paging::default());
-    let pager = html(|| {
-        link_pager("Pages", window, &|paging: Paging| {
+    let pager = html({
+        link_pager(&en(), "Pages", window, &|paging: Paging| {
             format!("/files?page={}", paging.page)
         })
-        .into_any()
     });
     assert!(pager.contains("1-2 of 2"), "{pager}");
     assert!(pager.contains("Rows per page"), "{pager}");
@@ -122,11 +112,10 @@ fn a_pager_over_one_page_draws_the_range_and_the_sizes_alone() {
 #[test]
 fn an_unavailable_step_reads_its_words_and_the_suffix_apart() {
     let window = Window::over(30, Paging::default());
-    let pager = html(|| {
-        link_pager("Pages", window, &|paging: Paging| {
+    let pager = html({
+        link_pager(&en(), "Pages", window, &|paging: Paging| {
             format!("/files?page={}", paging.page)
         })
-        .into_any()
     });
     assert!(
         pager.contains(r#"First</span><span class="fui-sr-only"> (unavailable)</span>"#),
@@ -137,28 +126,30 @@ fn an_unavailable_step_reads_its_words_and_the_suffix_apart() {
 #[test]
 fn a_data_table_stacks_on_a_phone_unless_it_opts_out() {
     let columns = [Column::text("name", "Name"), Column::text("kind", "Kind")];
-    let rows = || view! { <tr><td>"a"</td><td data-label="Kind">"model"</td></tr> }.into_any();
-    let table = html(|| {
+    let rows = || {
+        Html::raw(String::from(
+            r#"<tr><td>a</td><td data-label="Kind">model</td></tr>"#,
+        ))
+    };
+    let table = html({
         data_table(DataTable {
             caption: "Files",
             columns: &columns,
             sorting: Sorting::default(),
             body: Body::Rows(rows()),
         })
-        .into_any()
     });
     assert!(
         table.contains(r#"class="fui-table-scroll fui-table-stack""#),
         "{table}"
     );
-    let fitting = html(|| {
+    let fitting = html({
         data_table_unstacked(DataTable {
             caption: "Files",
             columns: &columns,
             sorting: Sorting::default(),
             body: Body::Rows(rows()),
         })
-        .into_any()
     });
     assert!(fitting.contains(r#"class="fui-table-scroll""#), "{fitting}");
     assert!(!fitting.contains("fui-table-stack"), "{fitting}");
@@ -167,20 +158,15 @@ fn a_data_table_stacks_on_a_phone_unless_it_opts_out() {
 #[test]
 fn a_table_of_several_bodies_writes_them_as_they_are_under_its_header() {
     let columns = [Column::text("uid", "Uid"), Column::text("rate", "Rate")];
-    let table = html(|| {
+    let table = html({
         data_table(DataTable {
             caption: "Pages",
             columns: &columns,
             sorting: Sorting::default(),
-            body: Body::Bodies(
-                view! {
-                    <tbody data-page="1"><tr><td>"a"</td><td data-label="Rate">"1"</td></tr></tbody>
-                    <tbody data-page="2"><tr><td>"b"</td><td data-label="Rate">"2"</td></tr></tbody>
-                }
-                .into_any(),
-            ),
+            body: Body::Bodies(Html::raw(String::from(
+                r#"<tbody data-page="1"><tr><td>a</td><td data-label="Rate">1</td></tr></tbody><tbody data-page="2"><tr><td>b</td><td data-label="Rate">2</td></tr></tbody>"#,
+            ))),
         })
-        .into_any()
     });
     assert_eq!(table.matches("<tbody").count(), 2, "{table}");
     assert!(
@@ -201,14 +187,15 @@ fn a_header_title_rides_its_header_alone_sortable_or_not() {
             .titled(String::from("c/uid/value")),
         Column::text("rate", "Rate"),
     ];
-    let table = html(|| {
+    let table = html({
         data_table(DataTable {
             caption: "Results",
             columns: &columns,
             sorting: Sorting::default(),
-            body: Body::Rows(view! { <tr><td>"a"</td><td>"b"</td><td>"1"</td></tr> }.into_any()),
+            body: Body::Rows(Html::raw(String::from(
+                "<tr><td>a</td><td>b</td><td>1</td></tr>",
+            ))),
         })
-        .into_any()
     });
     assert!(
         has(
@@ -247,7 +234,7 @@ fn a_plain_header_writes_no_class_and_a_sortable_one_carries_its_sort_beside_the
             .titled("rows read"),
     ];
     let sort = Sort::read(Some("rows"), Some("desc"), &["rows"]);
-    let table = html(|| {
+    let table = html({
         data_table(DataTable {
             caption: "Files",
             columns: &columns,
@@ -255,9 +242,8 @@ fn a_plain_header_writes_no_class_and_a_sortable_one_carries_its_sort_beside_the
                 sort: sort.as_ref(),
                 ..Sorting::default()
             },
-            body: Body::Rows(view! { <tr><td>"a"</td><td>"1"</td></tr> }.into_any()),
+            body: Body::Rows(Html::raw(String::from("<tr><td>a</td><td>1</td></tr>"))),
         })
-        .into_any()
     });
     let headers = tags(&table, "th");
     assert_eq!(2, headers.len(), "{table}");
@@ -290,7 +276,7 @@ fn a_sortable_header_is_a_button_in_a_get_form_that_carries_the_rest_of_the_quer
     ];
     let sort = Sort::read(Some("name"), Some("asc"), &["name"]);
     let fields = query();
-    let table = html(|| {
+    let table = html({
         data_table(DataTable {
             caption: "Files",
             columns: &columns,
@@ -299,9 +285,8 @@ fn a_sortable_header_is_a_button_in_a_get_form_that_carries_the_rest_of_the_quer
                 fields: &fields,
                 ..Sorting::default()
             },
-            body: Body::Rows(view! { <tr><td>"a"</td><td>"1"</td></tr> }.into_any()),
+            body: Body::Rows(Html::raw(String::from("<tr><td>a</td><td>1</td></tr>"))),
         })
-        .into_any()
     });
     // design/COMPONENTS.md, § The table: a sort is a button, never a link.
     assert!(!table.contains("<a "), "no link sorts: {table}");
@@ -362,7 +347,7 @@ fn a_sortable_header_is_a_button_in_a_get_form_that_carries_the_rest_of_the_quer
 #[test]
 fn a_session_listing_posts_its_sort_to_the_consoles_action() {
     let columns = [Column::text("name", "Name").sortable()];
-    let table = html(|| {
+    let table = html({
         data_table(DataTable {
             caption: "Patients",
             columns: &columns,
@@ -371,9 +356,8 @@ fn a_session_listing_posts_its_sort_to_the_consoles_action() {
                 action: Some("/listing/sort"),
                 ..Sorting::default()
             },
-            body: Body::Rows(view! { <tr><td>"a"</td></tr> }.into_any()),
+            body: Body::Rows(Html::raw(String::from("<tr><td>a</td></tr>"))),
         })
-        .into_any()
     });
     assert!(
         has(
@@ -400,7 +384,7 @@ fn a_stated_order_rides_the_header_of_the_column_that_leads_it() {
         column: String::from("grade"),
         direction: Direction::Descending,
     };
-    let table = html(|| {
+    let table = html({
         data_table(DataTable {
             caption: "Candidates",
             columns: &columns,
@@ -409,9 +393,8 @@ fn a_stated_order_rides_the_header_of_the_column_that_leads_it() {
                 stated: Some("Sorted by grade, then score"),
                 ..Sorting::default()
             },
-            body: Body::Rows(view! { <tr><td>"a"</td><td>"b"</td></tr> }.into_any()),
+            body: Body::Rows(Html::raw(String::from("<tr><td>a</td><td>b</td></tr>"))),
         })
-        .into_any()
     });
     assert!(
         has(
@@ -437,14 +420,13 @@ fn a_row_menu_or_checkbox_header_names_its_column_for_assistive_technology_alone
         Column::text("select", "Selected").role(Role::Check),
         Column::text("actions", "Actions").role(Role::Menu),
     ];
-    let table = html(|| {
+    let table = html({
         data_table(DataTable {
             caption: "Files",
             columns: &columns,
             sorting: Sorting::default(),
-            body: Body::Rows(().into_any()),
+            body: Body::Rows(Html::empty()),
         })
-        .into_any()
     });
     assert!(has(&table, "th", &[("class", "fui-row-check")]), "{table}");
     assert!(
@@ -462,32 +444,34 @@ fn the_cells_write_their_label_and_role_and_the_name_is_the_rows_target() {
     let kind = Column::text("kind", "Kind <b>");
     let lines = Column::text("lines", "Lines").numeric().role(Role::Quiet);
     let wide = Column::text("changed", "Changed").role(Role::Wide);
-    let rows = html(|| {
-        view! {
-            <tr class=EXCLUDED>
-                {title_cell(
-                    Some("/files/a?b=<c>"),
-                    "synthetic <a>",
-                    Some(view! { "quiet" }.into_any()),
-                )}
-                {cell(&kind, "model <i>")}
-                {count_cell(&lines, 3, Noun::ROWS)}
-                {cell(&wide, "yesterday")}
-                {menu_cell(view! { <button type="button">"⋯"</button> })}
-            </tr>
-        }
-        .into_any()
-    });
+    let rows = html(
+        Html::raw(format!("<tr class=\"{EXCLUDED}\">"))
+            .then(title_cell(
+                Some("/files/a?b=<c>"),
+                Html::text("synthetic <a>"),
+                Some(Html::text("quiet")),
+            ))
+            .then(cell(&kind, Html::text("model <i>")))
+            .then(count_cell(&en(), &lines, 3, Noun::ROWS))
+            .then(cell(&wide, Html::text("yesterday")))
+            .then(menu_cell(Html::raw(String::from(
+                r#"<button type="button">⋯</button>"#,
+            ))))
+            .then(Html::raw(String::from("</tr>"))),
+    );
     // Family rule 4: the name is a row link, the whole row its target.
     assert!(
         has(
             &rows,
             "a",
-            &[("class", "fui-row-link"), ("href", "/files/a?b=&lt;c&gt;")]
+            &[
+                ("class", "fui-row-link"),
+                ("href", "/files/a?b=&#60;c&#62;")
+            ]
         ),
         "{rows}"
     );
-    assert!(rows.contains("synthetic &lt;a&gt;"), "{rows}");
+    assert!(rows.contains("synthetic &#60;a&#62;"), "{rows}");
     assert!(
         has(&rows, "th", &[("scope", "row"), ("data-role", "title")]),
         "{rows}"
@@ -500,11 +484,11 @@ fn the_cells_write_their_label_and_role_and_the_name_is_the_rows_target() {
         has(
             &rows,
             "td",
-            &[("data-label", "Kind &lt;b&gt;"), ("data-role", "meta")]
+            &[("data-label", "Kind &#60;b&#62;"), ("data-role", "meta")]
         ),
         "{rows}"
     );
-    assert!(rows.contains("<span>model &lt;i&gt;</span>"), "{rows}");
+    assert!(rows.contains("<span>model &#60;i&#62;</span>"), "{rows}");
     assert!(
         has(
             &rows,
@@ -533,15 +517,15 @@ fn the_cells_write_their_label_and_role_and_the_name_is_the_rows_target() {
 fn a_count_cell_takes_its_noun_from_the_consoles_catalog_by_count() {
     let profiles = Noun::new(Message::new(&*CONSOLE, "value-sets"));
     let column = Column::text("sets", "Sets").numeric();
-    let one = html(|| count_cell(&column, 1, profiles));
-    let many = html(|| count_cell(&column, 3, profiles));
+    let one = html(count_cell(&en(), &column, 1, profiles));
+    let many = html(count_cell(&en(), &column, 3, profiles));
     assert!(has(&one, "td", &[("data-unit", "value set")]), "{one}");
     assert!(has(&many, "td", &[("data-unit", "value sets")]), "{many}");
 }
 
 #[test]
 fn a_row_checkbox_is_native_labelled_and_names_the_row_by_its_id() {
-    let check = html(|| {
+    let check = html({
         check_cell(RowCheck {
             id: "pick-a",
             name: "files",
@@ -583,7 +567,7 @@ fn a_row_checkbox_is_native_labelled_and_names_the_row_by_its_id() {
         ),
         "{check}"
     );
-    assert!(check.contains("Select &lt;a&gt;"), "{check}");
+    assert!(check.contains("Select &#60;a&#62;"), "{check}");
 }
 
 #[test]
@@ -593,34 +577,37 @@ fn a_group_row_spans_every_column_and_heads_its_body() {
         Column::text("b", "B"),
         Column::text("c", "C"),
     ];
-    let row = html(|| group_row(&columns, "models <x>"));
+    let row = html(group_row(&columns, Html::text("models <x>")));
     assert!(has(&row, "tr", &[("class", "fui-group-row")]), "{row}");
     assert!(
         has(&row, "th", &[("scope", "rowgroup"), ("colspan", "3")]),
         "{row}"
     );
-    assert!(row.contains("models &lt;x&gt;"), "{row}");
+    assert!(row.contains("models &#60;x&#62;"), "{row}");
 }
 
 #[test]
 fn the_list_card_states_an_order_of_several_keys_beside_its_count() {
     let card = |order: Option<&str>| {
-        html(|| {
-            list_card(ListCard {
-                title: String::from("Candidates"),
-                count: Some(HeadingCount::All(38)),
-                order: order.map(str::to_owned),
-                tabs: None,
-                actions: None,
-                body: view! { <p>"table"</p> }.into_any(),
-                pager: None,
-            })
+        html({
+            list_card(
+                &en(),
+                ListCard {
+                    title: String::from("Candidates"),
+                    count: Some(HeadingCount::All(38)),
+                    order: order.map(str::to_owned),
+                    tabs: None,
+                    actions: None,
+                    body: Html::raw(String::from("<p>table</p>")),
+                    pager: None,
+                },
+            )
         })
     };
     // design/COMPONENTS.md, T1: the documented exception, a stated multi-key sort.
     let stated = card(Some("Sorted by grade, then score <s>"));
     assert!(
-        stated.contains(r#"<p class="fui-sort-note">Sorted by grade, then score &lt;s&gt;</p>"#),
+        stated.contains(r#"<p class="fui-sort-note">Sorted by grade, then score &#60;s&#62;</p>"#),
         "{stated}"
     );
     let head = stated.find("fui-list-head").unwrap_or_default();
@@ -717,8 +704,9 @@ fn a_session_pager_posts_the_page_and_the_size_and_names_no_url() {
 /// The session pager of 137 rows on its second page of 25.
 fn second_page() -> String {
     let fields = posted();
-    html(|| {
+    html({
         post_pager(
+            &en(),
             "Pages",
             Window::over(137, Paging { page: 2, size: 25 }),
             PostTo {
@@ -753,7 +741,7 @@ fn a_session_pager_carries_the_size_or_the_first_page_and_the_consoles_fields() 
         has(
             &pager,
             "input",
-            &[("name", "back"), ("value", "/a?&lt;b&gt;")]
+            &[("name", "back"), ("value", "/a?&#60;b&#62;")]
         ),
         "{pager}"
     );
@@ -769,8 +757,9 @@ fn a_session_pager_carries_the_size_or_the_first_page_and_the_consoles_fields() 
 
 #[test]
 fn a_session_pager_step_that_cannot_be_taken_is_disabled_and_says_so() {
-    let pager = html(|| {
+    let pager = html({
         post_pager(
+            &en(),
             "Pages",
             Window::over(30, Paging::default()),
             PostTo {
@@ -790,8 +779,9 @@ fn a_session_pager_step_that_cannot_be_taken_is_disabled_and_says_so() {
 
 #[test]
 fn an_open_session_pager_posts_previous_and_next() {
-    let pager = html(|| {
+    let pager = html({
         post_open_pager(
+            &en(),
             "Pages",
             OpenWindow::of(Paging { page: 2, size: 25 }, 25),
             PostTo {
@@ -823,7 +813,7 @@ fn an_open_session_pager_posts_previous_and_next() {
 #[test]
 fn the_find_field_is_a_get_form_the_server_answers() {
     let fields = query();
-    let found = html(|| {
+    let found = html({
         find_form(
             Find {
                 id: "find",
@@ -834,7 +824,7 @@ fn the_find_field_is_a_get_form_the_server_answers() {
                 action: None,
                 fields: &fields,
             },
-            (),
+            Html::empty(),
         )
     });
     assert!(
@@ -858,13 +848,13 @@ fn the_find_field_is_a_get_form_the_server_answers() {
                 ("id", "find"),
                 ("name", "q"),
                 ("type", "search"),
-                ("value", "obs &quot;x&quot;")
+                ("value", "obs &#34;x&#34;")
             ]
         ),
         "{found}"
     );
     assert!(has(&found, "label", &[("for", "find")]), "{found}");
-    assert!(found.contains("Find a file &lt;f&gt;"), "{found}");
+    assert!(found.contains("Find a file &#60;f&#62;"), "{found}");
     let hidden: Vec<String> = tags(&found, "input")
         .iter()
         .filter(|input| input.get("type").map(String::as_str) == Some("hidden"))
@@ -879,7 +869,7 @@ fn the_find_field_is_a_get_form_the_server_answers() {
 
 #[test]
 fn a_find_field_whose_words_can_be_clinical_posts() {
-    let found = html(|| {
+    let found = html({
         find_form(
             Find {
                 id: "find",
@@ -890,10 +880,10 @@ fn a_find_field_whose_words_can_be_clinical_posts() {
                 action: Some("/patients/find"),
                 fields: &[],
             },
-            (),
+            Html::empty(),
         )
     });
-    // .claude/rules/leptos-ui.md §5: a clinical field is never a GET form.
+    // .claude/rules/console-ui.md §5: a clinical field is never a GET form.
     assert!(
         has(
             &found,
@@ -906,8 +896,9 @@ fn a_find_field_whose_words_can_be_clinical_posts() {
 
 #[test]
 fn the_link_pager_still_pages_by_links() {
-    let pager = html(|| {
+    let pager = html({
         link_pager(
+            &en(),
             Listing::new("Pages"),
             Window::over(30, Paging::default()),
             &|paging| format!("/files?page={}", paging.page),
@@ -920,14 +911,13 @@ fn the_link_pager_still_pages_by_links() {
 #[test]
 fn an_unstacked_table_keeps_its_sort_form() {
     let columns = [Column::text("name", "Name").sortable()];
-    let table = html(|| {
+    let table = html({
         data_table_unstacked(DataTable {
             caption: "Files",
             columns: &columns,
             sorting: Sorting::default(),
-            body: Body::Rows(().into_any()),
+            body: Body::Rows(Html::empty()),
         })
-        .into_any()
     });
     assert!(table.contains("fui-sort-form"), "{table}");
 }
@@ -935,28 +925,30 @@ fn an_unstacked_table_keeps_its_sort_form() {
 #[test]
 fn a_table_no_console_bounds_keeps_its_scroll_box_at_every_width() {
     let columns = [Column::text("name", "Name"), Column::text("kind", "Kind")];
-    let rows = || view! { <tr><td>"a"</td><td data-label="Kind">"model"</td></tr> }.into_any();
-    let wide = html(|| {
+    let rows = || {
+        Html::raw(String::from(
+            r#"<tr><td>a</td><td data-label="Kind">model</td></tr>"#,
+        ))
+    };
+    let wide = html({
         data_table_wide(DataTable {
             caption: "Result",
             columns: &columns,
             sorting: Sorting::default(),
             body: Body::Rows(rows()),
         })
-        .into_any()
     });
     assert!(
         wide.contains(r#"class="fui-table-scroll fui-table-stack fui-table-wide""#),
         "WCAG 2.2 SC 1.4.10: the table scrolls in its box, never the page: {wide}"
     );
-    let plain = html(|| {
+    let plain = html({
         data_table(DataTable {
             caption: "Files",
             columns: &columns,
             sorting: Sorting::default(),
             body: Body::Rows(rows()),
         })
-        .into_any()
     });
     assert!(!plain.contains("fui-table-wide"), "{plain}");
 }
@@ -968,14 +960,13 @@ fn a_query_column_makes_a_wide_table_and_its_header_breaks_like_a_path() {
         "/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude",
     )
     .mono()];
-    let table = html(|| {
+    let table = html({
         data_table(DataTable {
             caption: "Result",
             columns: &columns,
             sorting: Sorting::default(),
-            body: Body::Rows(view! { <tr><td>"120"</td></tr> }.into_any()),
+            body: Body::Rows(Html::raw(String::from("<tr><td>120</td></tr>"))),
         })
-        .into_any()
     });
     assert!(table.contains("fui-table-wide"), "{table}");
     assert!(
@@ -987,7 +978,7 @@ fn a_query_column_makes_a_wide_table_and_its_header_breaks_like_a_path() {
 #[test]
 fn a_count_cell_groups_its_digits_and_keeps_them_on_one_line() {
     let column = Column::text("rows", "Rows").numeric();
-    let cell = html(|| count_cell(&column, 4_000_000_000, Noun::ROWS));
+    let cell = html(count_cell(&en(), &column, 4_000_000_000, Noun::ROWS));
     assert!(cell.contains("<span>4,000,000,000</span>"), "{cell}");
     assert!(has(&cell, "td", &[("class", "fui-num")]), "{cell}");
 }
@@ -995,32 +986,35 @@ fn a_count_cell_groups_its_digits_and_keeps_them_on_one_line() {
 #[test]
 fn a_range_past_a_thousand_groups_its_digits() {
     let window = Window::over(312_000, Paging::read(Some("2"), Some("25")));
-    let label = html(|| window.range_of(Noun::ROWS).into_render());
+    let label = html(window.range_of(&en(), Noun::ROWS).into());
     assert_eq!("26-50 of 312,000 rows", label);
-    let past = html(|| {
+    let past = html({
         OpenWindow::of(Paging::read(Some("1200"), Some("25")), 0)
-            .range_of(Noun::ROWS)
-            .into_render()
+            .range_of(&en(), Noun::ROWS)
+            .into()
     });
     assert_eq!("Page 1,200 is past the last row.", past);
 }
 
 /// The filter menu of a listing's sources, two of them, `form` around it.
 fn sources(form: MenuForm<'_>) -> String {
-    html(|| {
-        filter_menu(FilterMenu {
-            id: "cs-source",
-            name: "source",
-            glyph: Glyph::LIST_FILTER,
-            label: "Source".into(),
-            title: String::from("Show sources"),
-            choices: vec![
-                FilterChoice::new("loinc", "LOINC", 1_200, true),
-                FilterChoice::new("local", "Local <codes>", 3, false),
-            ],
-            note: None,
-            form,
-        })
+    html({
+        filter_menu(
+            &en(),
+            FilterMenu {
+                id: "cs-source",
+                name: "source",
+                glyph: Glyph::LIST_FILTER,
+                label: "Source".into(),
+                title: String::from("Show sources"),
+                choices: vec![
+                    FilterChoice::new("loinc", "LOINC", 1_200, true),
+                    FilterChoice::new("local", "Local <codes>", 3, false),
+                ],
+                note: None,
+                form,
+            },
+        )
     })
 }
 
@@ -1036,7 +1030,7 @@ fn a_filter_menu_keeps_several_choices_in_a_get_form_of_its_own() {
         fields: &fields,
     });
     assert!(
-        menu.starts_with(r#"<details class="fui-anchor">"#),
+        menu.starts_with(r#"<details data-fui="menu" class="fui-anchor">"#),
         "{menu}"
     );
     assert!(
@@ -1082,7 +1076,7 @@ fn a_filter_menu_keeps_several_choices_in_a_get_form_of_its_own() {
         "{menu}"
     );
     assert!(has(&menu, "label", &[("for", "cs-source-local")]), "{menu}");
-    assert!(menu.contains("Local &lt;codes&gt;"), "{menu}");
+    assert!(menu.contains("Local &#60;codes&#62;"), "{menu}");
     assert!(
         menu.contains(r#"<span class="fui-menu-count">1,200</span>"#),
         "{menu}"

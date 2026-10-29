@@ -1,24 +1,25 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The gallery's HTTP service: the pages, the library's stylesheet and the
-//! brand themes, the theme choice and the site bundle, under the browser
+//! The gallery's HTTP service: the pages, the library's assets, the
+//! preference and paging posts and the answer routes, under the browser
 //! security headers a FerroHEALTH console sends.
 //!
-//! Every response carries a Content-Security-Policy whose script source is
-//! a nonce minted for that response alone and whose style source is the
-//! gallery itself, `nosniff`, `DENY` framing and no referrer, and every page
-//! is `no-store`. The stylesheet and the themes are served from the
-//! library's constants, as a console serves them. No specification governs
-//! the gallery's HTTP surface: our own design.
+//! Every response carries a Content-Security-Policy whose script and style
+//! sources are the gallery itself, `nosniff`, `DENY` framing and no
+//! referrer, and every page is `no-store`. The stylesheet, the themes and
+//! the script modules are served by the library's asset router, as a
+//! console mounts it. No specification governs the gallery's HTTP surface:
+//! our own design.
 
 use std::process::ExitCode;
 
+use axum::body::Body;
 use axum::extract::{Form, Path, Query, Request};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
-use ferrohealth_ui::style::{Brand, STYLESHEET};
+use ferrohealth_ui::style::Brand;
 use ferrohealth_ui::table::model::Paging;
 use ferrohealth_ui::theme::{
     Density, Hints, Language, Motion, Preference, Preferences, Theme, WeekStart,
@@ -27,42 +28,25 @@ use http::header::{
     CACHE_CONTROL, CONTENT_SECURITY_POLICY, CONTENT_TYPE, REFERRER_POLICY, SET_COOKIE,
     X_CONTENT_TYPE_OPTIONS, X_FRAME_OPTIONS,
 };
-use http::{HeaderValue, StatusCode};
-use leptos::config::LeptosOptions;
-use leptos::nonce::Nonce;
-use leptos_axum::LeptosRoutes as _;
+use http::{HeaderValue, Method, StatusCode};
 use tower_http::set_header::SetResponseHeaderLayer;
 
 use crate::app::{
     COOKIE_PREFIX, DRAFT_ROUTE, EXPORT_ROUTE, OWN_PREFERENCES, PAGED_LISTINGS, PAGING_COOKIE,
     PAGING_ROUTE, PREFERENCE_ROUTE, PROBE_ROUTE, REMOVE_ROUTE, RESET_ROUTE, SIDEBAR_COOKIE,
-    SIDEBAR_ROUTE, SIGN_OUT_ROUTE, STYLESHEET as STYLESHEET_PATH,
+    SIDEBAR_ROUTE, SIGN_OUT_ROUTE,
 };
+use crate::visit::Visit;
 
-/// The name cargo-leptos gives the site bundle's files under `pkg/`.
-pub const OUTPUT_NAME: &str = "ferrohealth-ui-gallery";
-
-/// The Leptos options the gallery renders with: its site bundle under
-/// `site_root`.
-#[must_use]
-pub fn leptos_options(site_root: &str, addr: std::net::SocketAddr) -> LeptosOptions {
-    LeptosOptions::builder()
-        .output_name(OUTPUT_NAME)
-        .site_root(site_root)
-        .site_pkg_dir("pkg")
-        .site_addr(addr)
-        .build()
-}
-
-/// Builds the gallery's whole HTTP service, its site bundle under
-/// `options`' site root.
-pub fn router(options: LeptosOptions) -> axum::Router {
-    let routes = leptos_axum::generate_route_list(crate::app::App);
+/// Builds the gallery's whole HTTP service.
+pub fn router() -> axum::Router {
     let pages = axum::Router::new()
-        .route(STYLESHEET_PATH, get(stylesheet))
+        .nest(
+            ferrohealth_ui::serve::PREFIX,
+            ferrohealth_ui::serve::axum_router::router(),
+        )
         .route("/favicon.svg", get(favicon))
         .route("/favicon.ico", get(favicon))
-        .route("/themes/{file}", get(theme_file))
         .route(PREFERENCE_ROUTE, post(choose_preference))
         .route(PROBE_ROUTE, post(probe))
         .route(REMOVE_ROUTE, post(remove_member))
@@ -84,31 +68,37 @@ pub fn router(options: LeptosOptions) -> axum::Router {
             &format!("{}/{{brand}}", crate::search::SUGGEST_ROUTE),
             get(suggest),
         )
-        .route("/api/{*name}", post(leptos_axum::handle_server_fns))
-        .leptos_routes_with_context(&options, routes, provide_request_nonce, {
-            let options = options.clone();
-            move || crate::app::document(options.clone())
-        })
-        .fallback(leptos_axum::file_and_error_handler_with_context(
-            provide_request_nonce,
-            crate::app::document,
-        ));
-    // A plain post of an answer form draws its page with the action's answer (#485).
-    ferrohealth_ui::widget::action::draw_answers(with_security_headers(pages).with_state(options))
+        .fallback(page);
+    with_security_headers(pages)
 }
 
-/// Serves the library's stylesheet.
-async fn stylesheet() -> Response {
-    css(STYLESHEET)
+/// Draws the page the request names: a `GET` reads it, and a `POST` to a
+/// page that takes one draws it with the post's answer.
+async fn page(request: Request) -> Response {
+    let (parts, body) = request.into_parts();
+    let visit = Visit::of(&parts);
+    let drawn = match parts.method {
+        Method::GET | Method::HEAD => crate::routes::draw(&visit),
+        Method::POST => {
+            let Ok(bytes) = axum::body::to_bytes(body, POST_MAX).await else {
+                return StatusCode::PAYLOAD_TOO_LARGE.into_response();
+            };
+            match crate::routes::posted(&visit, &String::from_utf8_lossy(&bytes)) {
+                Some(drawn) => drawn,
+                None => return StatusCode::METHOD_NOT_ALLOWED.into_response(),
+            }
+        }
+        _ => return StatusCode::METHOD_NOT_ALLOWED.into_response(),
+    };
+    let status = drawn.status;
+    let html = crate::app::render(&visit, drawn);
+    let mut response = axum::response::Html(html.as_str().to_owned()).into_response();
+    *response.status_mut() = status;
+    response
 }
 
-/// Serves the theme file `file` names, `<brand>.css`, or `404`.
-async fn theme_file(Path(file): Path<String>) -> Response {
-    match file.strip_suffix(".css").and_then(Brand::parse) {
-        Some(brand) => css(brand.theme()),
-        None => StatusCode::NOT_FOUND.into_response(),
-    }
-}
+/// The largest form body a page takes, 64 KiB.
+const POST_MAX: usize = 64 * 1024;
 
 /// Serves the gallery's favicon: the Lucide layers outline in the
 /// FerroHEALTH steel, which a browser asks for on every first page.
@@ -122,18 +112,6 @@ async fn favicon() -> Response {
     (
         [(CONTENT_TYPE, HeaderValue::from_static("image/svg+xml"))],
         svg,
-    )
-        .into_response()
-}
-
-/// A stylesheet response.
-fn css(text: &'static str) -> Response {
-    (
-        [(
-            CONTENT_TYPE,
-            HeaderValue::from_static("text/css; charset=utf-8"),
-        )],
-        text,
     )
         .into_response()
 }
@@ -361,18 +339,27 @@ struct Asked {
 /// `503` for [`crate::search::FAILING`], so its error row shows, and with
 /// `401` for [`crate::search::SIGNED_OUT`], so the page loads the brand's
 /// signed-out sign-in.
-async fn suggest(Path(brand): Path<String>, Query(asked): Query<Asked>) -> Response {
+async fn suggest(
+    Path(brand): Path<String>,
+    Query(asked): Query<Asked>,
+    headers: http::HeaderMap,
+) -> Response {
     let Some(brand) = Brand::parse(&brand) else {
         return StatusCode::NOT_FOUND.into_response();
     };
+    let cookies = headers
+        .get(http::header::COOKIE)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or_default();
+    let locale = Visit::new("/", "", cookies).locale;
     match asked.q.trim() {
         crate::search::FAILING => StatusCode::SERVICE_UNAVAILABLE.into_response(),
         crate::search::SIGNED_OUT => StatusCode::UNAUTHORIZED.into_response(),
         crate::search::SLOW => {
             tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
-            axum::Json(crate::search::answer(brand, &asked.q)).into_response()
+            axum::Json(crate::search::answer(&locale, brand, &asked.q)).into_response()
         }
-        _ => axum::Json(crate::search::answer(brand, &asked.q)).into_response(),
+        _ => axum::Json(crate::search::answer(&locale, brand, &asked.q)).into_response(),
     }
 }
 
@@ -541,7 +528,7 @@ async fn receive_draft(Form(post): Form<DraftPost>) -> Response {
 }
 
 /// Wraps `router` in the browser security headers every response carries.
-fn with_security_headers(router: axum::Router<LeptosOptions>) -> axum::Router<LeptosOptions> {
+fn with_security_headers(router: axum::Router) -> axum::Router {
     router
         .layer(axum::middleware::from_fn(content_security_policy))
         .layer(axum::middleware::from_fn(cache_control))
@@ -559,61 +546,33 @@ fn with_security_headers(router: axum::Router<LeptosOptions>) -> axum::Router<Le
         ))
 }
 
-/// Mints this response's script nonce, hands it to the renderer through the
-/// request, and answers with the policy that names it.
-async fn content_security_policy(mut request: Request, next: Next) -> Response {
-    let nonce = Nonce::new();
-    let policy = HeaderValue::from_str(&policy(&nonce));
-    request.extensions_mut().insert(nonce);
+/// Answers with the Content-Security-Policy every response carries.
+async fn content_security_policy(request: Request, next: Next) -> Response {
     let mut response = next.run(request).await;
-    match policy {
-        Ok(policy) => {
-            response
-                .headers_mut()
-                .insert(CONTENT_SECURITY_POLICY, policy);
-            response
-        }
-        Err(_invalid) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-    }
+    response
+        .headers_mut()
+        .insert(CONTENT_SECURITY_POLICY, HeaderValue::from_static(POLICY));
+    response
 }
 
-/// Re-provides the request's nonce into the render, so the bootstrap script
-/// carries the nonce the response header authorizes.
-fn provide_request_nonce() {
-    let Some(parts) = leptos::context::use_context::<http::request::Parts>() else {
-        return;
-    };
-    if let Some(nonce) = parts.extensions.get::<Nonce>() {
-        leptos::context::provide_context(nonce.clone());
-    }
-}
+/// The Content-Security-Policy of every response: scripts and styles from
+/// the gallery alone, no inline script or style and no `eval` (Content
+/// Security Policy Level 3).
+pub const POLICY: &str = "default-src 'self'; \
+     script-src 'self'; \
+     style-src 'self'; \
+     img-src 'self' data:; \
+     connect-src 'self'; \
+     object-src 'none'; \
+     base-uri 'self'; \
+     form-action 'self'; \
+     frame-ancestors 'none'";
 
-/// Returns the Content-Security-Policy of one response.
-///
-/// Scripts run by nonce alone, the WebAssembly compiles under
-/// `'wasm-unsafe-eval'`, which admits no JavaScript `eval`, and styles come
-/// from the gallery alone (Content Security Policy Level 3).
-#[must_use]
-pub fn policy(nonce: &Nonce) -> String {
-    format!(
-        "default-src 'self'; \
-         script-src 'self' 'wasm-unsafe-eval' 'nonce-{nonce}'; \
-         style-src 'self'; \
-         img-src 'self' data:; \
-         connect-src 'self'; \
-         object-src 'none'; \
-         base-uri 'self'; \
-         form-action 'self'; \
-         frame-ancestors 'none'"
-    )
-}
-
-/// Marks every page `no-store`, and the site bundle and the stylesheets
-/// `no-cache`, so a rebuilt one is fetched again (RFC 9111 §5.2.2).
-async fn cache_control(request: Request, next: Next) -> Response {
+/// Marks every page `no-store`, and the library's assets `no-cache`, so a
+/// rebuilt one is fetched again (RFC 9111 §5.2.2).
+async fn cache_control(request: Request<Body>, next: Next) -> Response {
     let path = request.uri().path();
-    let asset =
-        path.starts_with("/pkg/") || path == STYLESHEET_PATH || path.starts_with("/themes/");
+    let asset = path.starts_with(ferrohealth_ui::serve::PREFIX) || path == "/favicon.svg";
     let mut response = next.run(request).await;
     let value = if asset && response.status().is_success() {
         "no-cache"
@@ -640,8 +599,6 @@ pub async fn main() -> ExitCode {
         tracing::error!(%addr, "GALLERY_ADDR is no socket address");
         return ExitCode::FAILURE;
     };
-    let site_root =
-        std::env::var("GALLERY_SITE_ROOT").unwrap_or_else(|_absent| String::from("target/site"));
     let listener = match tokio::net::TcpListener::bind(addr).await {
         Ok(listener) => listener,
         Err(error) => {
@@ -650,7 +607,7 @@ pub async fn main() -> ExitCode {
         }
     };
     tracing::info!(%addr, "the gallery serves");
-    let router = router(leptos_options(&site_root, addr));
+    let router = router();
     let shutdown = async {
         if tokio::signal::ctrl_c().await.is_err() {
             tracing::warn!("the gallery cannot wait for a stop signal");
@@ -670,18 +627,16 @@ pub async fn main() -> ExitCode {
 
 #[cfg(test)]
 mod tests {
-    use leptos::nonce::Nonce;
-
-    use super::{policy, preference_return, preference_value, return_path};
+    use super::{POLICY, preference_return, preference_value, return_path};
 
     #[test]
-    fn the_policy_allows_scripts_by_nonce_and_styles_from_the_gallery() {
-        let nonce = Nonce::new();
-        let policy = policy(&nonce);
-        assert!(policy.contains(&format!("'nonce-{nonce}'")), "{policy}");
+    fn the_policy_allows_scripts_and_styles_from_the_gallery_alone() {
+        let policy = POLICY;
+        assert!(policy.contains("script-src 'self';"), "{policy}");
         assert!(policy.contains("style-src 'self';"), "{policy}");
         assert!(!policy.contains("unsafe-inline"), "{policy}");
-        assert!(!policy.contains("'unsafe-eval'"), "{policy}");
+        assert!(!policy.contains("unsafe-eval"), "{policy}");
+        assert!(!policy.contains("nonce-"), "{policy}");
     }
 
     #[test]

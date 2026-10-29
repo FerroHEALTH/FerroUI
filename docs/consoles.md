@@ -22,210 +22,102 @@ this page before you write or review UI code there.
 
 The library decides these, and a console takes them as they are:
 
-- **The components:** every view function, ready component and widget the
-  design names, with its markup, roles and keyboard paths. The ready
-  components are
-  listed in [`crates/ferrohealth-ui/CLAUDE.md`](../crates/ferrohealth-ui/CLAUDE.md).
+- **The components:** every view function the design names, with its
+  markup, roles and keyboard paths, each over an Askama template compiled
+  into the crate and returning `html::Html`.
+- **The script modules:** one plain ES module per behaviour under
+  `scripts/`, the loader `fui.js` that imports them for each element marked
+  `data-fui="<job>"`, and the asset router that serves them
+  (`serve::axum_router::router()` at `serve::PREFIX`).
 - **The stylesheet and the tokens:** `ferrohealth_ui::style::STYLESHEET`
   with every `fui-` class and the family rules as CSS, the role layer, the
   type and space steps, and one theme file per brand.
 - **The interaction contract and the mode:** native elements first,
-  behaviour in Rust compiled to WebAssembly, the whole page hydrated and
-  split by route so no interaction reloads the document, every page
-  working without the WebAssembly as the fallback, and no hand-written
-  JavaScript.
+  every page complete with no script, behaviour in small modules over
+  what the server drew, and a navigation as one document
+  ([`crates/ferrohealth-ui/CLAUDE.md`](../crates/ferrohealth-ui/CLAUDE.md)).
 - **The words machinery and the library's words:** the Fluent catalogs a
-  component draws from, the `*Words` structs each widget takes as props,
-  `i18n::Locale` and its negotiation, and the stray-literal check.
+  component draws from, `i18n::Locale` and its negotiation, and the
+  stray-literal check.
 - **The accessibility of each part:** WCAG 2.2 AA contrast for every role
   pairing in every brand, light and dark, the focus ring, the Authoring
   Practices patterns, and reflow at 320 px.
-- **The bundle rules:** which dependencies may reach the browser, what an
-  route's code loads, and the gallery's own budget.
+- **The script budget:** 16 KiB a module and 160 KiB for all of them
+  (`scripts/checks/script-budget.sh`).
 
 ## What the console owns
 
 Your console decides these, in its own repository:
 
-- its routes and pages, built from the library's templates and components;
-- its server boundary: server functions, actions, the session and the
-  backend client;
+- its routes, its handlers and its pages, built from the library's
+  templates and components in its own Askama templates;
+- its post routes, its session and its backend client;
 - its configuration and its security headers, the strict CSP included;
-- its own bundle budget, measured over its own WebAssembly and kept in its
-  own `leptos-ui.md`;
+- where a flash toast travels across a redirect (a query parameter or a
+  short-lived cookie of its own);
 - its browser journeys and screenshots;
 - the words of its own pages, in its own Fluent catalog.
 
-A console may write a component of its own where a library widget shares state
-with the console's code, such as an editor and the check that runs as you
-type (`.claude/rules/leptos-ui.md` §1). It still draws with the library's
-widgets and classes.
+A console writes no script and no component of its own. A behaviour the
+library lacks is a FerroUI issue (§ Asking for a component).
 
 ## How a console builds
 
-A console hydrates the whole page and draws every page after the first in
-the browser, so a link or a form never reloads the document (FerroUI #410;
-`.claude/rules/leptos-ui.md` §15):
+Every page is one document your server draws whole (FerroUI #510;
+`.claude/rules/console-ui.md` §1). Moving from 0.5 is
+[`docs/migration-0.6.md`](migration-0.6.md).
 
-1. **No `islands` feature.** Turn on `hydrate` in the browser half and
-   `ssr` in the server half, chosen by target, and never the `leptos`
-   feature `islands`.
-2. **Pages in a few lazy routes.** Group your pages into a few
-   `leptos_router` `LazyRoute`s (`#[lazy_route]`), one for each part of your
-   navigation read together, each drawing the page its path names, as the
-   gallery's `app/ferrohealth-ui-gallery/src/routes.rs` does: one lazy route
-   a page splits the code into hundreds of chunks, more than a browser
-   fetches at once. Hydrate with
-   `widget::hydration::hydrate(App)` (step 9), write `<HydrationScripts options/>`,
-   and build with `cargo leptos build --split`. A build with lazy code and
-   no `--split` imports `__wasm_split_placeholder__`, which no browser
-   resolves, and nothing hydrates; check your glue for it, as the gallery's
-   `scripts/release/gallery-site.sh` does.
-3. **Prefetch.** Call `widget::prefetch::routes` once from your root
-   component with every route's path and its `LazyRoute::preload`, marking
-   your main navigation's routes `idle`.
-4. **State the server read reaches the browser.** No component reads a
-   cookie, the session or the request on the server alone: carry it with a
-   `SharedValue` or a resource while the page hydrates, and read it again
-   with a server function after a navigation (the gallery's
-   `app/ferrohealth-ui-gallery/src/cookies.rs`).
-5. **Actions are server functions.** A mutation is a server function behind
-   `<ActionForm>`, which runs in the page and posts with no WebAssembly as
-   the fallback; a link is a plain `<a>`, which the router follows. Your
-   `no-referrer` policy withholds the `Referer` the fallback returns to, so
-   draw `widget::action::return_field()` in the form, take an argument named
-   `widget::action::RETURN`, and on a plain post call `leptos_axum::redirect`
-   with `widget::action::plain_return`, or `with_error` when the function
-   fails, so the page drawn again shows the error in the action's value (the
-   gallery's `app/ferrohealth-ui-gallery/src/acknowledge.rs`). That is the
-   redirect mode, right for an action whose outcome is the next page, such
-   as a sign-out. An action whose answer is the point takes the answer mode
-   below. A danger confirmation with fields, such as a removal that asks
-   for a Reason, is `view::dialog::danger_action_dialog(confirmation,
-   fields, form, done, confirm)`: `form` draws your `<ActionForm
-   action=… attr:class=view::dialog::DIALOG_FORM>` around the dialog's
-   parts, so once the page has hydrated the confirm runs the action in the
-   page, and the dialog closes when `done` turns true (for example
-   `Signal::derive(move || action.value().with(|v| matches!(v, Some(Ok(_)))))`).
-   With no WebAssembly the form posts to the server function's address as
-   a plain form (FerroUI #500; the gallery's overlays page and its
-   `remove_member`). Its fields carry `return_field()` or `answer_field()`
-   for that post, or the function redirects itself. `danger_form_dialog`
-   stays for a confirmation that posts to a plain route.
+1. **The assets.** Mount `serve::axum_router::router()` at `serve::PREFIX`.
+   It serves the stylesheet, the brand themes and the modules under
+   `/ferrohealth-ui/<version>/` with a one-year immutable cache, so a new pin
+   is a new path. Without axum, serve `style::STYLESHEET`,
+   `style::Brand::theme` and `script::MODULES` at the paths
+   `serve::Assets` names.
+2. **The document.** Every handler returns `view::shell::document`, which
+   writes `<html lang>`, the preference attributes (`data-theme`,
+   `data-density`, `data-motion`, `data-hints`), the stylesheet, the theme
+   and the loader. A signed-in page puts `view::shell::shell` in its body,
+   with the top bar, the sidebar, the page and the toast region; a sign-in
+   or error page puts `view::shell::centred` there.
+3. **The request's state.** Read the locale (`Locale::negotiate` over
+   `Accept-Language`, or your configuration) and the preferences
+   (`theme::Preferences::read` over the `Cookie` header) once per request,
+   and pass the `&Locale` to every component.
+4. **The page's state is in the HTML.** Draw what the request says: the
+   open tree levels, the selected tab, the listing's page and sort. A
+   module reads what the server drew and keeps nothing a reload would lose
+   that the server could have drawn.
+5. **Actions are posts.** A mutation is a `<form method="post">` to a route
+   of yours. A route whose outcome is the next page redirects with
+   `303 See Other` and names the outcome, and the next page draws it as a
+   `view::toast::Flash` in `view::toast::toast_region`. A danger
+   confirmation with fields is `view::dialog::danger_form_dialog(locale,
+   confirmation, ConfirmForm { action, fields }, confirm)`, a `<dialog>`
+   whose form posts to `action`.
+6. **The policy.** `default-src 'self'; script-src 'self'; style-src
+   'self'`. The loader takes a nonce (`Document::nonce`) only when your own
+   policy needs one.
 
 ## An action that answers on its page
 
 A check, a run or a load report is worth only its answer, and a redirect
 draws the page fresh, without the answer and without what the user typed.
-In the answer mode a plain post with no WebAssembly draws the page the form
-was on, with the function's answer as the action's value and the posted
-fields in the form (FerroUI #485). With WebAssembly the action runs in the
-page through its server function, as in the redirect mode. No
-specification governs this: our own design, the progressive-enhancement
-answer to a form whose result is the point.
+Such a form posts to a route that draws the page itself, with the answer and
+the posted fields, and answers `200` (FerroUI #485, kept as a plain post in
+0.6). No specification governs this: our own design.
 
-1. **The router:** wrap your whole router, its routes and layers, in
-   `widget::action::draw_answers` once. Keep your same-origin check for
-   state-changing requests where it is: the post the wrapper forwards
-   keeps the browser's headers, so the check sees it as sent.
-2. **The form:** draw `widget::action::answer_field()` in the
-   `<ActionForm>` in place of `return_field()`. It names the page in view,
-   so it needs `widget::nav::follow_path()` above it (step 10).
-3. **The action:** right after `ServerAction::new()`, call
-   `widget::action::answered(&action)` on both halves. It fills the
-   action's value with the answer the page was drawn with and returns the
-   posted fields (`Posted`); draw each field's value from
-   `posted.field(name)`, which is empty on every other request.
-4. **A secret field:** draw `widget::action::secret_mark(name)` beside
-   every input whose value the page must never show again, a password or
-   a key (`view::form::masked_input` among them; `view::secret::secret_field`
-   draws its own). Mark each secret field once, as many as the form
-   holds: each mark is named after the field it marks
-   (`ferroui_secret_` and the name's bytes in hexadecimal), so a hydrated
-   `<ActionForm>` posts no name twice (FerroUI #503). The function reads
-   the field as before, and the page drawn with the answer leaves it out
-   of `Posted`, so its value is in neither the markup nor the hydration
-   data (FerroUI #499).
-5. **The function:** write it as for its own client. It takes no
-   `ferroui_return` and calls no redirect; one that calls
-   `leptos_axum::redirect` anyway, such as on a session that is over, is
-   followed: the browser gets a `303 See Other` to the address it named.
-
-```rust
-let check = ServerAction::<CheckDraft>::new();
-let posted = widget::action::answered(&check);
-let draft = posted.field("draft").unwrap_or_default().to_owned();
-view! {
-    <ActionForm action=check>
-        {widget::action::answer_field()}
-        <textarea name="draft">{draft}</textarea>
-        <button type="submit">{words.check}</button>
-    </ActionForm>
-    <div aria-live="polite">{move || check.value().get().map(draw_answer)}</div>
-}
-```
-
-What a plain post of an answer form gets, with no WebAssembly:
-
-| | |
-|---|---|
-| Recognised by | `POST` with `Content-Type: application/x-www-form-urlencoded`, an `Accept` that names `text/html`, and a `ferroui_answer` field that is a path on your own origin; every other request passes to your router untouched, the page's own calls among them |
-| The function's call | The same post, its headers kept, without the `ferroui_answer` field and the `ferroui_secret_…` marks and with `Accept: */*`, so it answers as to its own client and redirects nowhere |
-| The function redirects | A 3xx it answers is the answer. A call of `leptos_axum::redirect`, which under `Accept: */*` answers `200` with `Location` and the `serverfnredirect` header (leptos_axum 0.8.10 `redirect`), answers `303 See Other` to that `Location` with the cookies the function set and `Cache-Control: no-store` (RFC 9110 §15.4.4) |
-| The page | A `GET` of the field's address with the post's headers, drawn by your router with the answer as the action's value, an error as the error, and the posted fields in `Posted`, every field a mark names left out |
-| Status | The page's own, as for the page a failed redirect-mode post returns to: the function's failure is the action's value |
-| Headers | The page's, the cookies the function set, and `Cache-Control: no-store` |
-| Limits | The post and the answer are read whole up to `widget::action::ANSWER_LIMIT` (16 MiB): a larger post answers `413`, a larger answer, or one that is not UTF-8 text, `500` |
-
-The browser stays at the function's address, and a reload asks to post
-again, as for any form that answers its own post. When the WebAssembly loads
-on such a page, `widget::hydration::hydrate` first puts the page's own
-address in the history, so the router hydrates the page the server drew.
-6. **The page announced.** Draw `island::PageAnnouncer` once at your root,
-   beside the toast region: after a navigation in the page it moves the
-   focus to the new page's heading and says its title (WCAG 2.2 SC 2.4.3,
-   SC 4.1.3).
-7. **Forms in the page.** Draw `island::FormNavigator` once inside your
-   `Router`: a `GET` form navigates in the page, and a `POST` form marked
-   `widget::submit::NAVIGATES` whose route redirects is posted in the
-   background and the router draws the page it names. Mark a form or a
-   submit that must load a new document (an export, a download)
-   `widget::submit::RELOADS`; with no WebAssembly every form submits as the
-   browser does. A post your own server function draws in the page, at an
-   address that does not change, calls `widget::submit::drawn()` once its
-   answer is drawn, so what reads `widget::submit::posts()` reads again and
-   the search box leaves its busy state.
-8. **The locale both halves.** Provide the same `i18n::Locale` at your root
-   on the server and in the browser (a `SharedValue` of its tag); the
-   browser carries the library's catalog.
-9. **Nothing changes the page before it hydrates.** Your browser entry
-   sets its panic hook, calls `widget::hydration::explain()`, and hydrates
-   with `widget::hydration::hydrate(App)`, which runs leptos's
-   `hydrate_lazy` path and writes `data-ferroui-hydrated` on the root
-   element once the page and its lazy route have hydrated. Until then a
-   click or a submit is left to the browser, which loads the link or posts
-   the form as with no WebAssembly, so the router never draws a page while
-   the lazy route still hydrates. `widget::hydration::mark()` is
-   deprecated: its effect can run before a lazy route has hydrated. No
-   code, script or test of yours adds, removes or rewrites a node the server
-   drew before then, or the hydration walk stops on a node it did not expect
-   with an internal error. In a debug build, `explain` says so beside such a
-   panic. Code that must touch the DOM runs in an `Effect`, which runs after
-   hydration; a test waits for the mark.
-10. **The shell drawn once.** Draw your shell in one component inside your
-    `Router` that calls `widget::nav::follow_path()` first, and draw it
-    again only for what changes the whole shell (another product, another
-    signed-in operator), never for the path: the navigation marks the page
-    in view and the rail's and the theme choice's `back` name it by
-    themselves, so the search's words, the navigation's scroll and every
-    widget in the shell survive a navigation in the page. A part of the top
-    bar that names the page in view (a version select) follows the router
-    in a closure of its own.
+- Write each posted field back into the form, escaped by the template, so
+  the user sees what they sent beside the answer.
+- Never write back a secret field (a password, a key,
+  `view::form::masked_input`, `view::secret::secret_field`): draw it empty.
+- Draw the answer in a live region (`aria-live="polite"`) or as the page's
+  first heading after the form, so a screen reader hears it.
+- A reload asks to post again, as for any form that answers its own post.
 
 ## The top bar's search
 
 The search box (`view::search::search_box`) is a form that submits to your
-find page, and once the page has hydrated it is a typeahead: the panel
+find page, and with its `search` module it is a typeahead: the panel
 anchored under the field asks your answer route as the words are typed.
 Your console provides three parts, and the library draws everything else.
 
@@ -239,7 +131,7 @@ Your console provides three parts, and the library draws everything else.
 3. **The find page:** the form's `action`. It reads the same words and
    draws `view::search::find_results(answer)` under its page heading, every
    hit of each kind in a list card of its own, in the page. It is what a
-   search shows with no WebAssembly, and where "See all results" leads.
+   search shows with no script, and where "See all results" leads.
    When the submit runs another search than the panel's, such as a
    patient search the panel never runs because each one is audited, name
    that option in `SearchBox::all` ("Search patients for “{query}”").
@@ -252,8 +144,8 @@ The wire of the answer route:
 | Request, `SearchBox::post` on | `POST {suggest}`, `Content-Type: application/x-www-form-urlencoded`, body `{name}={words}`, so a search that can carry clinical content keeps its words out of the URL |
 | Credentials | Same origin: the page's own cookies go with it |
 | Answer | `200` with `application/json`, the `SearchAnswer` serialized by serde, as `serde_json` writes it |
-| `401` with `SearchBox::signed_out` set | The page loads that address, your signed-out page, as any other request of the page would on a session that is over, and every other tab of your console leaves for sign-in (`widget::session::gone`) |
-| `401` with no `SearchBox::signed_out` | The panel shows "The search did not answer (401)" as a row, and every tab, this one included, leaves for sign-in (`widget::session::gone`) |
+| `401` with `SearchBox::signed_out` set | The page loads that address, your signed-out page, as any other request of the page would on a session that is over, and every other tab of your console leaves for sign-in |
+| `401` with no `SearchBox::signed_out` | The panel shows "The search did not answer (401)" as a row, and every tab with a session watch, this one included, leaves for sign-in |
 | Any other status | The panel shows "The search did not answer (status)" as a row |
 | A body that is no `SearchAnswer` | The panel shows that it could not read the answer |
 
@@ -296,27 +188,27 @@ A hit's `mark` is `{ "Glyph": "<lucide name>" }` or `{ "Dot": "Ok" }`
 A signed-in page leaves for your sign-in page the moment its session ends,
 warns before an idle timeout, and ends with every other tab of your console
 (FerroUI #444; WCAG 2.2 SC 2.2.1 and SC 2.2.5; the OWASP Session Management
-Cheat Sheet). The library draws and times everything; your console provides
-four parts.
+Cheat Sheet). The library draws the warning and the `session` module times
+everything; your console provides four parts.
 
-1. **The watch:** draw `island::SessionWatch` once in the shell of a
-   signed-in page, with `widget::session::Watch::new(status, sign_in,
-   sign_out, left)`: your session route, your sign-in page, your sign-out
-   route, and what the session had left as your server drew the page,
-   carried to the browser in a `SharedValue` (How a console builds, step 4). Never draw it
-   on the sign-in or signed-out page.
+1. **The watch:** draw `view::session::session_watch(&watch)` once in the
+   shell of a signed-in page, with `view::session::Watch::new(locale,
+   status, sign_in, sign_out, left)`: your session route, your sign-in
+   page, your sign-out route, and what the session had left as your
+   handler drew the page. Never draw it on the sign-in or signed-out page.
 2. **The session route:** the wire below. Check the session on it as on any
    other route.
-3. **The signed-out page:** draw `island::SessionEnded` on it, which tells
-   every other tab that the session has ended.
-4. **A `401` your own code meets:** call `widget::session::gone()`, as a
-   server function whose session is gone does, and every tab leaves.
+3. **The signed-out page:** draw `view::session::session_ended()` on it,
+   which tells every other tab that the session has ended.
+4. **A `401` your own handler meets:** redirect to your sign-in page with
+   `view::session::sign_in_address(sign_in, here)`, so the user comes back
+   to the page.
 
 | | |
 |---|---|
 | Read | `GET {status}`, `Accept: application/json`, the page's own cookies. A read never extends the session: answer it without touching the idle timeout. |
 | Extend | `POST {status}` with no body. It is the user's own activity (Stay signed in, or their input once a minute): start the idle timeout again, never past the absolute lifetime. |
-| Answer | `200` with `application/json`: `{"idle": 840, "absolute": 27000}`, the whole seconds left until the idle timeout and until the absolute lifetime ends (`widget::session::Left`) |
+| Answer | `200` with `application/json`: `{"idle": 840, "absolute": 27000}`, the whole seconds left until the idle timeout and until the absolute lifetime ends (`view::session::Left`) |
 | Gone | `401`: the page loads `{sign_in}?return={path and query}`, and every tab leaves |
 | Any other status, or no answer | The page keeps its own count, and leaves once that has run out |
 
@@ -335,37 +227,33 @@ the session on your server, or an open tab never idles out: only the
 user's requests count as activity. Your sign-in page reads `return`, keeps
 it to a path of your own, and leads back to it after sign-in. Keeping a
 draft the user was typing through sign-in is yours, where your console has
-drafts. With no WebAssembly nothing changes: your server redirects the next
-request to sign-in, as before.
+drafts. With no script nothing changes: your server redirects the next
+request to sign-in.
 
 ## Which document governs what
 
 | Question | Document |
 |---|---|
-| The interaction contract, the mode, the ready components, the bundle measurements | [`crates/ferrohealth-ui/CLAUDE.md`](../crates/ferrohealth-ui/CLAUDE.md) |
-| The component rules every console follows | [`.claude/rules/leptos-ui.md`](../.claude/rules/leptos-ui.md) |
+| The interaction contract, the mode, the crate's layout, the session's end | [`crates/ferrohealth-ui/CLAUDE.md`](../crates/ferrohealth-ui/CLAUDE.md) |
+| The component rules every console follows | [`.claude/rules/console-ui.md`](../.claude/rules/console-ui.md) |
 | The design library, the order of a change and the 13 family rules | [`.claude/rules/console-design.md`](../.claude/rules/console-design.md) |
 | How the design is rendered and checked | [`design/README.md`](../design/README.md) |
 | Every component, by its ID (B2, R28, F9 and so on), and the templates T1 to T3 | [`design/COMPONENTS.md`](../design/COMPONENTS.md) |
 | Your console's pages as designed | [`design/consoles/<console>/`](../design/consoles/) |
-| Integration: the stylesheet, a theme, hydration and routes, locales, Your preferences | [`crates/ferrohealth-ui/README.md`](../crates/ferrohealth-ui/README.md) |
+| Integration: the assets, the document, a theme, locales, Your preferences | [`crates/ferrohealth-ui/README.md`](../crates/ferrohealth-ui/README.md) |
+| Moving a console from 0.5 | [`docs/migration-0.6.md`](migration-0.6.md) |
 
-The sections of `.claude/rules/leptos-ui.md` a console reads most:
+The sections of `.claude/rules/console-ui.md` a console reads most:
 
-- §0 The mandates: Rust only, no inline style, no server function in the
-  library, no patient identifier in a URL, no string outside the catalogs.
-- §1 The interaction contract and the three parts (`view`, `island`,
-  `widget`).
+- §0 The mandates: server-rendered HTML with a little plain JavaScript, no
+  inline style, no route or state in the library, no patient identifier in
+  a URL, no string outside the catalogs.
+- §1 The interaction contract and the two parts (`view` and `scripts`).
+- §2 Templates and markup, and §3 Modules.
 - §5 Forms and §6 Tables and paging.
 - §7 Accessibility.
 - §8 Tokens, themes, type.
-- §12 Bundle, with the rule that a console keeps its own budget.
 - §13 Strings and locales.
-- §14 Leptos the book's way, with §14.5 and §14.6 written for a console's
-  side.
-- §15 Hydration and navigation: routes and their code, navigation in the
-  page, state both halves read alike, words, server functions, and the
-  no-WebAssembly floor.
 
 The FerroUI repository's `design/` is the only design source. A design
 folder anywhere else, in a download or in a console repository, is stale
@@ -374,29 +262,30 @@ for a console: a console never builds from it or syncs from it.
 ## Which version to read
 
 Read FerroUI's documents at the git tag that matches your `ferrohealth-ui`
-pin: with `=0.2.0`, read the tag `v0.2.0`; with `=0.4.0`, read `v0.4.0`.
+pin: with `=0.5.8`, read the tag `v0.5.8`; with `=0.6.0`, read `v0.6.0`.
 Read `main` only when you are moving your console to the next release. The
 rules on `main` describe components your pinned version may not have.
 
 The design library, `console-design.md` and this page first appear in
 0.3.0, so a console still on 0.2.0 has none of them at its tag. Start new UI
-work after your console moves to 0.3.x.
+work after your console moves to 0.3.x. The server-rendered mode
+first appears in 0.6.0; at an earlier tag the documents describe the
+hydrated mode.
 
 ## Moving to a new release
 
-The consoles move together. FerroUI 0.3.0, 0.3.1 and 0.3.2 rebuild the
-library on the reviewed design, and no console moves before 0.3.2 ships.
-Then the rollout, [FerroUI #161](https://github.com/FerroHEALTH/FerroUI/issues/161)
-in milestone v0.4.0, moves every console in one go. For each console it:
+The consoles move together, each under a migration issue in its own
+repository. For each console a move:
 
-1. bumps the pin and takes the stylesheet and the theme file from the
-   release;
+1. bumps the pin and takes the stylesheet, the themes and the modules from
+   the release (the asset router serves them at the new version's path);
 2. applies every breaking change named under Changed and Removed in the
    changelogs, and deletes the console's local markup for those parts;
 3. refreshes and looks at the console's screenshots and journeys.
 
-Each console's own migration issue is filed in its own repository when the
-rollout starts.
+The move to 0.6.0 replaces the console's whole UI layer, in the order
+[`docs/migration-0.6.md`](migration-0.6.md) gives: FerroEHR, FerroBRIDGE,
+FerroFED, FerroTERM, FerroPIX.
 
 ## Asking for a component
 
@@ -419,10 +308,9 @@ move.
    component it draws in `design/COMPONENTS.md`.
 3. Check that the library at your pin has each component. If one is missing
    or wrong, file the FerroUI issue and stop that part.
-4. Keep your own work to the console's side: routes, server boundary,
-   backend client, configuration and headers, budget, journeys and words.
-5. Check the page without WebAssembly: every important action is a link or
-   a form.
+4. Keep your own work to the console's side: routes and handlers, post
+   routes, backend client, configuration and headers, journeys and words.
+5. Check the page with the scripts refused: every important action is a
+   link or a form.
 6. Put every word in your console's catalog and run the stray-literal
    check.
-7. Measure your bundle against your own budget.

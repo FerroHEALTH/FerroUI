@@ -65,14 +65,14 @@ async fn overlay(
 async fn raised_toasts(browser: &Browser, brand: Brand, theme: &str) -> Result<(), Box<dyn Error>> {
     for tone in ["ok", "info", "warn", "bad"] {
         let raise = browser
-            .element(By::Css(format!("button[data-toast='{tone}']")))
+            .element(By::Css(format!("a[data-toast='{tone}']")))
             .await?;
         press(browser, &raise).await?;
     }
     let region = browser.element(By::Css(".fui-toasts")).await?;
     until("the region shows as many toasts as it holds", async || {
         Ok(region.find_all(By::Css(".fui-toast")).await?.len()
-            >= ferrohealth_ui::widget::toast::SHOWN_MAX)
+            >= ferrohealth_ui::view::toast::SHOWN_MAX)
     })
     .await?;
     shot_of(browser, brand, theme, "toasts", &region).await?;

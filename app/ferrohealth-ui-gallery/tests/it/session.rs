@@ -10,7 +10,7 @@
 
 use std::error::Error;
 
-use ferrohealth_ui::widget::session::WARNING_ID;
+use ferrohealth_ui::view::session::WARNING_ID;
 use thirtyfour::prelude::*;
 
 use crate::browser::{Browser, until, with_browser};
@@ -19,7 +19,7 @@ use crate::journeys_enabled;
 use crate::stack::Gallery;
 
 /// Starts a session of `idle` and `absolute` seconds and waits for the
-/// brand's overview to hydrate.
+/// brand's overview to be enhanced.
 async fn start(
     browser: &Browser,
     gallery: &Gallery,

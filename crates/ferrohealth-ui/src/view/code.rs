@@ -24,15 +24,15 @@
 
 use std::collections::BTreeMap;
 
-use leptos::prelude::*;
+use askama::Template;
 use serde::{Deserialize, Serialize};
 
 use crate::highlight::{self, Language};
-use crate::i18n::{Text, tr, tr_with};
+use crate::html::{Html, Render as _};
+use crate::i18n::{Locale, Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
-use crate::island::CopyButton;
+use crate::view::copy::{CopySource, CopyWords, copy_from};
 use crate::view::surface::{SectionHead, panel_section};
-use crate::widget::copy::{CopySource, CopyWords};
 
 /// How grave a finding on a line is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -97,7 +97,7 @@ pub struct CodeHead {
     /// draws none.
     pub copy: Option<String>,
     /// The actions at the head's end, after Copy, such as Download.
-    pub actions: Option<AnyView>,
+    pub actions: Option<Html>,
 }
 
 /// The class of line `line` of `code`: the gravest finding on it marks
@@ -133,7 +133,7 @@ fn by_line(diagnostics: &[LineDiagnostic], last: u32) -> BTreeMap<u32, Vec<&Line
 
 /// Returns the finding `found`, drawn under its line: the gravity's glyph
 /// and word (the word for assistive technology), the code and the message.
-fn diagnostic(found: &LineDiagnostic) -> AnyView {
+fn diagnostic(locale: &Locale, found: &LineDiagnostic) -> Html {
     let (tone, glyph, word) = match found.gravity {
         Gravity::Error => (
             "fui-code-diag fui-tone-bad",
@@ -146,46 +146,61 @@ fn diagnostic(found: &LineDiagnostic) -> AnyView {
             Text::CodeWarning,
         ),
     };
-    view! {
-        <span class=tone role="note">
-            {icon(glyph, "14")}
-            <span class="fui-code-diag-text">
-                <span class="fui-sr-only">{tr(word)} " "</span>
-                <span class="fui-code-diag-code">{found.code.clone()}</span>
-                <span class="fui-sr-only">" "</span>
-                {found.message.clone()}
-            </span>
-        </span>
+    DiagnosticView {
+        tone,
+        glyph: icon(glyph, "14"),
+        word: tr(locale, word),
+        code: &found.code,
+        message: &found.message,
     }
-    .into_any()
+    .html()
+}
+
+#[derive(Template)]
+#[template(path = "code/code.html", block = "diagnostic")]
+struct DiagnosticView<'a> {
+    tone: &'static str,
+    glyph: Html,
+    word: Word,
+    code: &'a str,
+    message: &'a str,
 }
 
 /// Returns the numbered lines of `code`, each finding under its line, a
 /// finding on line 0 above the first and one past the last under the last.
-fn numbered_lines(code: &Code) -> AnyView {
+fn numbered_lines(locale: &Locale, code: &Code) -> Html {
     let text = code.text.strip_suffix('\n').unwrap_or(&code.text);
     let lines = highlight::lines(code.language, text);
     let last = u32::try_from(lines.len()).unwrap_or(u32::MAX);
     let found = by_line(&code.diagnostics, last);
-    let drawn = |line: u32| {
+    let drawn = |line: u32| -> Html {
         found
             .get(&line)
-            .map(|found| found.iter().copied().map(diagnostic).collect_view())
+            .map(|found| {
+                found
+                    .iter()
+                    .map(|found| diagnostic(locale, found))
+                    .collect()
+            })
+            .unwrap_or_default()
     };
-    let before = drawn(0);
-    let after = drawn(last.saturating_add(1));
-    let lines = (1_u32..)
-        .zip(lines)
-        .map(|(line, tokens)| {
-            let id = code.ids.as_ref().map(|prefix| format!("{prefix}{line}"));
-            let class = class_of(found.get(&line).into_iter().flatten().copied());
-            let current = code.current == Some(line);
-            let html = highlight::line_html(&tokens);
-            let under = drawn(line);
-            view! { <span class=class class:is-current=current id=id inner_html=html></span>{under} }
-        })
-        .collect_view();
-    view! { {before} {lines} {after} }.into_any()
+    let mut out = drawn(0);
+    for (line, tokens) in (1_u32..).zip(lines) {
+        let id = code.ids.as_ref().map_or_else(String::new, |prefix| {
+            format!(" id=\"{}\"", Html::text(format!("{prefix}{line}")))
+        });
+        let mut class = class_of(found.get(&line).into_iter().flatten().copied()).to_owned();
+        if code.current == Some(line) {
+            class.push_str(" is-current");
+        }
+        out = out
+            .then(Html::raw(format!(
+                "<span{id} class=\"{class}\">{}</span>",
+                highlight::line_html(&tokens)
+            )))
+            .then(drawn(line));
+    }
+    out.then(drawn(last.saturating_add(1)))
 }
 
 /// The number of lines `text` reads as: a final line break opens none.
@@ -204,72 +219,90 @@ fn box_id(copy: &str) -> String {
 
 /// Returns the scrolling box of `code`, with the id `id` when it has one:
 /// its numbered lines under the scroll cue.
-fn code_box(code: &Code, id: Option<String>) -> AnyView {
-    let label = tr_with(Text::CodeRegion, &[("code", code.label.clone().into())]);
-    view! {
-        <div
-            class="fui-code-panel fui-code-panel-numbered fui-scroll-cue"
-            id=id
-            role="region"
-            aria-label=label
-            tabindex="0"
-        >
-            <pre>{numbered_lines(code)}</pre>
-        </div>
+fn code_box(locale: &Locale, code: &Code, id: Option<String>) -> Html {
+    CodeBox {
+        id,
+        label: tr_with(
+            locale,
+            Text::CodeRegion,
+            &[("code", code.label.clone().into())],
+        )
+        .text()
+        .to_owned(),
+        lines: numbered_lines(locale, code),
     }
-    .into_any()
+    .html()
+}
+
+#[derive(Template)]
+#[template(path = "code/code.html", block = "code_box")]
+struct CodeBox {
+    id: Option<String>,
+    label: String,
+    lines: Html,
 }
 
 /// Returns the head's meta: its tags, the line count of `text`, its digest,
 /// the Copy button `copy`, which copies the lines of the box it names
 /// ([`box_id`]), and its actions.
 fn meta(
+    locale: &Locale,
     tags: Vec<String>,
     text: &str,
     digest: Option<Digest>,
     copy: Option<String>,
-    actions: Option<AnyView>,
-) -> AnyView {
-    let copy = copy.map(|id| {
-        view! {
-            <CopyButton
-                id=id.clone()
-                label=tr(Text::DocumentCopy)
-                source=CopySource::Lines {
-                    id: box_id(&id),
-                    final_break: text.ends_with('\n'),
-                }
-                words=CopyWords::of_page()
-            />
-        }
-    });
-    let tags = tags.into_iter().map(crate::view::tag::tag).collect_view();
-    let lines = tr_with(Text::CodeLines, &[("count", line_count(text).into())]);
-    let digest = digest.map(|Digest { text, title }| {
-        view! {
-            <span class="fui-codeview-sha" title=title>
-                {text}
-            </span>
-        }
-    });
-    view! {
-        <span class="fui-codeview-meta">
-            {tags} <span>{lines}</span> {digest} {copy} {actions}
-        </span>
+    actions: Option<Html>,
+) -> Html {
+    let copy = copy
+        .map(|id| {
+            let source = CopySource::Lines {
+                id: box_id(&id),
+                final_break: text.ends_with('\n'),
+            };
+            copy_from(
+                id,
+                tr(locale, Text::DocumentCopy),
+                source,
+                CopyWords::of(locale),
+            )
+        })
+        .unwrap_or_default();
+    MetaView {
+        tags: tags.into_iter().map(crate::view::tag::tag).collect(),
+        lines: tr_with(
+            locale,
+            Text::CodeLines,
+            &[("count", line_count(text).into())],
+        ),
+        digest,
+        copy,
+        actions: actions.unwrap_or_default(),
     }
-    .into_any()
+    .html()
+}
+
+#[derive(Template)]
+#[template(path = "code/code.html", block = "meta")]
+struct MetaView {
+    tags: Html,
+    lines: Word,
+    digest: Option<Digest>,
+    copy: Html,
+    actions: Html,
 }
 
 /// Returns `title` as a path that may break after each slash and never
 /// inside a name.
-pub(crate) fn path(title: &str) -> AnyView {
+pub(crate) fn path(title: &str) -> Html {
     let mut parts = title.split_inclusive('/').peekable();
-    let mut out = Vec::new();
+    let mut out = Html::empty();
     while let Some(part) = parts.next() {
-        let more = parts.peek().is_some();
-        out.push(view! { {part.to_owned()}{more.then(|| view! { <wbr /> })} });
+        out = out.then(Html::text(part));
+        if parts.peek().is_some() {
+            out = out.then(Html::raw(String::from("<wbr>")));
+        }
     }
-    out.collect_view().into_any()
+    out
 }
 
 /// Returns the code viewer of `code`, under `head` when it has one.
@@ -278,35 +311,39 @@ pub(crate) fn path(title: &str) -> AnyView {
 /// sections ([`crate::view::surface::source_split`]); with no head it is the
 /// bare box.
 #[must_use]
-pub fn code_viewer(head: Option<CodeHead>, code: &Code) -> AnyView {
-    let head = head.map(
-        |CodeHead {
-             title,
-             tags,
-             digest,
-             copy,
-             actions,
-         }| {
+pub fn code_viewer(locale: &Locale, head: Option<CodeHead>, code: &Code) -> Html {
+    let (head, source) = match head {
+        Some(CodeHead {
+            title,
+            tags,
+            digest,
+            copy,
+            actions,
+        }) => {
             let source = copy.as_deref().map(box_id);
-            let meta = meta(tags, &code.text, digest, copy, actions);
-            let head = view! {
-                <div class="fui-codeview-head">
-                    <h3 class="fui-codeview-path">{path(&title)}</h3>
-                    {meta}
-                </div>
-            };
-            (head, source)
-        },
-    );
-    let (head, source) = head.unzip();
-    let body = code_box(code, source.flatten());
-    view! { <div class="fui-codeview">{head} {body}</div> }.into_any()
+            let meta = meta(locale, tags, &code.text, digest, copy, actions);
+            (Some((path(&title), meta)), source)
+        }
+        None => (None, None),
+    };
+    ViewerView {
+        head,
+        body: code_box(locale, code, source),
+    }
+    .html()
+}
+
+#[derive(Template)]
+#[template(path = "code/code.html", block = "viewer")]
+struct ViewerView {
+    head: Option<(Html, Html)>,
+    body: Html,
 }
 
 /// Returns the code viewer of `code` in a card of its own, named by its
 /// head, whose title is the card's level-two heading.
 #[must_use]
-pub fn code_card(head: CodeHead, code: &Code) -> AnyView {
+pub fn code_card(locale: &Locale, head: CodeHead, code: &Code) -> Html {
     let CodeHead {
         title,
         tags,
@@ -314,29 +351,31 @@ pub fn code_card(head: CodeHead, code: &Code) -> AnyView {
         copy,
         actions,
     } = head;
-    let name = title.clone();
     let source = copy.as_deref().map(box_id);
-    let meta = meta(tags, &code.text, digest, copy, actions);
-    let body = code_box(code, source);
-    view! {
-        <section class="fui-card fui-codeview-card" aria-label=name>
-            <div class="fui-codeview">
-                <div class="fui-codeview-head">
-                    <h2 class="fui-codeview-path">{path(&title)}</h2>
-                    {meta}
-                </div>
-                {body}
-            </div>
-        </section>
+    let meta = meta(locale, tags, &code.text, digest, copy, actions);
+    CardView {
+        path: path(&title),
+        name: title,
+        meta,
+        body: code_box(locale, code, source),
     }
-    .into_any()
+    .html()
+}
+
+#[derive(Template)]
+#[template(path = "code/code.html", block = "card")]
+struct CardView {
+    name: String,
+    path: Html,
+    meta: Html,
+    body: Html,
 }
 
 /// Returns the code viewer of `code` as a panel section (B10): the
 /// section's heading row carries the head's title and meta, its one head,
 /// and the viewer runs edge to edge under it.
 #[must_use]
-pub fn code_section(head: CodeHead, code: &Code) -> AnyView {
+pub fn code_section(locale: &Locale, head: CodeHead, code: &Code) -> Html {
     let CodeHead {
         title,
         tags,
@@ -345,10 +384,11 @@ pub fn code_section(head: CodeHead, code: &Code) -> AnyView {
         actions,
     } = head;
     let source = copy.as_deref().map(box_id);
-    let meta = meta(tags, &code.text, digest, copy, actions);
-    let body = code_box(code, source);
-    let viewer = view! { <div class="fui-codeview">{body}</div> }.into_any();
+    let meta = meta(locale, tags, &code.text, digest, copy, actions);
+    let body = String::from(code_box(locale, code, source));
+    let viewer = Html::raw(format!("<div class=\"fui-codeview\">{body}</div>"));
     panel_section(
+        locale,
         Some(SectionHead {
             title,
             count: None,
@@ -364,19 +404,25 @@ pub fn code_section(head: CodeHead, code: &Code) -> AnyView {
 ///
 /// A line never wraps: a long one scrolls sideways, on a phone too.
 #[must_use]
-pub fn self_description(label: &str, language: Language, text: &str) -> impl IntoView + use<> {
+pub fn self_description(label: &str, language: Language, text: &str) -> Html {
     let text = text.strip_suffix('\n').unwrap_or(text);
-    let lines = highlight::html(language, text, highlight::Lines::default(), |_| None);
-    view! {
-        <div
-            class="fui-code-panel fui-self-description fui-scroll-cue"
-            role="region"
-            aria-label=label.to_owned()
-            tabindex="0"
-        >
-            <pre inner_html=lines></pre>
-        </div>
+    SelfDescriptionView {
+        label,
+        lines: Html::raw(highlight::html(
+            language,
+            text,
+            highlight::Lines::default(),
+            |_| None,
+        )),
     }
+    .html()
+}
+
+#[derive(Template)]
+#[template(path = "code/code.html", block = "self_description")]
+struct SelfDescriptionView<'a> {
+    label: &'a str,
+    lines: Html,
 }
 
 #[cfg(test)]

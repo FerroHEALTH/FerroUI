@@ -17,7 +17,7 @@ use crate::stack::Gallery;
 pub(super) const STATES: &[&str] = &["trees-folder-focus", "trees-keyboard"];
 
 /// Focuses the item `selector` until `key` moves the focus off it, which
-/// also waits for its island to hydrate.
+/// also waits for its module to run.
 async fn walk(browser: &Browser, selector: &str, key: Key) -> Result<(), Box<dyn Error>> {
     until("the tree answers the keyboard", async || {
         let item = browser.element(By::Css(selector)).await?;

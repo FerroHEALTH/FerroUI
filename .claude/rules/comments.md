@@ -24,7 +24,7 @@ durable home and goes there, not into the source:
 | Content | Home |
 |---|---|
 | Adjudications, spec-conflict essays, history | the PR description or tracker issue |
-| Design decisions | `.claude/rules/leptos-ui.md`, `CLAUDE.md`, the tracker issue |
+| Design decisions | `.claude/rules/console-ui.md`, `CLAUDE.md`, the tracker issue |
 | API usage, contracts, examples | doc comments (`///`) |
 | What changed and why it is correct | the PR, never the code |
 
@@ -64,7 +64,7 @@ A comment describes the code as it IS.
   links (`[`Type`]`) and reference-style links; bare URLs in `<…>`.
 - Doc comments state the CURRENT contract only, with no history and no
   adjudication trail. Citations follow `spec-adherence.md` (WCAG 2.2,
-  WAI-ARIA, the HTML Living Standard, CSS and the Leptos book, plus official external
+  WAI-ARIA, the HTML Living Standard, CSS and the Askama book, plus official external
   docs only).
 
 ## Annotation vocabulary (the only sanctioned markers)

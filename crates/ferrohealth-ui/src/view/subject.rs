@@ -13,20 +13,18 @@
 //! Information Model, § `EHR_STATUS`). No specification governs the line:
 //! our own design.
 
-use leptos::prelude::*;
-
-use crate::i18n::{Text, Word, tr};
+use crate::html::Html;
+use crate::i18n::{Locale, Text, Word, tr};
 use crate::view::state::{Mark, state};
 
 /// Whose record it is.
 #[derive(Debug)]
 pub enum Subject {
     /// The record names an external subject: the identifier as the console
-    /// draws it, a [`crate::widget::identifier::identifier`] inside its own
-    /// island with the namespace as its domain, or
-    /// [`crate::widget::identifier::identifier_static`] where no reveal is
-    /// offered.
-    External(AnyView),
+    /// draws it, a [`crate::view::identifier::identifier`] with the namespace
+    /// as its domain, or [`crate::view::identifier::identifier_static`] where
+    /// no reveal is offered.
+    External(Html),
     /// The record names no external subject.
     None,
 }
@@ -44,7 +42,7 @@ pub struct SubjectLine {
 
 /// Returns the F12 state of a capability: the ok mark beside `word` when
 /// `on`, the mark of a cleared state when not.
-fn on_off(on: bool, word: Word) -> AnyView {
+fn on_off(on: bool, word: Word) -> Html {
     state(if on { Mark::Ok } else { Mark::Off }, word, None)
 }
 
@@ -53,22 +51,22 @@ fn on_off(on: bool, word: Word) -> AnyView {
 /// # Examples
 ///
 /// ```
+/// use ferrohealth_ui::i18n::Locale;
 /// use ferrohealth_ui::view::subject::{Subject, SubjectLine, subject_line};
-/// use leptos::prelude::*;
 ///
-/// let html = Owner::new().with(|| {
-///     subject_line(SubjectLine {
+/// let html = subject_line(
+///     &Locale::english(),
+///     SubjectLine {
 ///         subject: Subject::None,
 ///         queryable: true,
 ///         modifiable: false,
-///     })
-///     .to_html()
-/// });
+///     },
+/// ).to_string();
 /// assert!(html.contains("No external subject"));
 /// assert!(html.contains("Not modifiable"));
 /// ```
 #[must_use]
-pub fn subject_line(line: SubjectLine) -> AnyView {
+pub fn subject_line(locale: &Locale, line: SubjectLine) -> Html {
     let SubjectLine {
         subject,
         queryable,
@@ -76,34 +74,35 @@ pub fn subject_line(line: SubjectLine) -> AnyView {
     } = line;
     let who = match subject {
         Subject::External(identifier) => identifier,
-        Subject::None => {
-            view! { <span class="fui-subject-none">{tr(Text::SubjectNone)}</span> }.into_any()
-        }
+        Subject::None => Html::raw(format!(
+            "<span class=\"fui-subject-none\">{}</span>",
+            tr(locale, Text::SubjectNone)
+        )),
     };
     let queryable = on_off(
         queryable,
-        tr(if queryable {
-            Text::SubjectQueryable
-        } else {
-            Text::SubjectNotQueryable
-        }),
+        tr(
+            locale,
+            if queryable {
+                Text::SubjectQueryable
+            } else {
+                Text::SubjectNotQueryable
+            },
+        ),
     );
     let modifiable = on_off(
         modifiable,
-        tr(if modifiable {
-            Text::SubjectModifiable
-        } else {
-            Text::SubjectNotModifiable
-        }),
+        tr(
+            locale,
+            if modifiable {
+                Text::SubjectModifiable
+            } else {
+                Text::SubjectNotModifiable
+            },
+        ),
     );
-    view! {
-        <div class="fui-subject">
-            <span class="fui-subject-who">
-                <span class="fui-subject-label">{tr(Text::SubjectLabel)}</span>
-                {who}
-            </span>
-            <span class="fui-subject-states">{queryable}{modifiable}</span>
-        </div>
-    }
-    .into_any()
+    Html::raw(format!(
+        "<div class=\"fui-subject\"><span class=\"fui-subject-who\"><span class=\"fui-subject-label\">{}</span>{who}</span><span class=\"fui-subject-states\">{queryable}{modifiable}</span></div>",
+        tr(locale, Text::SubjectLabel)
+    ))
 }

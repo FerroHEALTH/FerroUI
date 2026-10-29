@@ -5,19 +5,20 @@
 //! catalog, a listing's noun chosen by count, an editor's title by its
 //! mode, and the card-header action every console draws.
 
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::i18n::Message;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::table::model::{Noun, OpenWindow, Paging, Window};
 use ferrohealth_ui::table::pager::{Listing, link_open_pager, link_pager};
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::dialog::{Confirmation, confirm_dialog};
+use ferrohealth_ui::view::nav::{Entry, Group};
 use ferrohealth_ui::view::surface::{
     Crumb, Header, Mode, card_action, editor_heading, editor_title, titled_panel,
 };
-use ferrohealth_ui::widget::nav::{Entry, Group};
-use leptos::prelude::*;
 
 use crate::markup::has;
+use crate::render::{en, html};
 
 fluent_templates::static_loader! {
     static CONSOLE = {
@@ -32,41 +33,48 @@ fn message(id: &'static str) -> Message {
     Message::new(&*CONSOLE, id)
 }
 
-/// `view` rendered to HTML in a page tree.
-fn html(view: impl FnOnce() -> AnyView) -> String {
-    Owner::new().with(|| view().to_html())
-}
-
 #[test]
 fn a_listing_names_its_rows_by_the_consoles_noun_chosen_by_count() {
     let sets = Noun::new(message("value-sets"));
     let listing = || Listing::new(String::from("Value sets")).noun(sets);
-    let page = html(|| {
-        link_pager(listing(), Window::over(312, Paging::default()), &|_| {
-            String::new()
-        })
+    let page = html({
+        link_pager(
+            &en(),
+            listing(),
+            Window::over(312, Paging::default()),
+            &|_| String::new(),
+        )
     });
     assert!(page.contains("1-25 of 312 value sets"), "{page}");
     assert!(page.contains(r#"aria-label="Value sets""#), "{page}");
-    let one = html(|| {
-        link_pager(listing(), Window::over(1, Paging::default()), &|_| {
-            String::new()
-        })
+    let one = html({
+        link_pager(
+            &en(),
+            listing(),
+            Window::over(1, Paging::default()),
+            &|_| String::new(),
+        )
     });
     assert!(one.contains("1-1 of 1 value set<"), "{one}");
-    let none = html(|| {
-        link_pager(listing(), Window::over(0, Paging::default()), &|_| {
-            String::new()
-        })
+    let none = html({
+        link_pager(
+            &en(),
+            listing(),
+            Window::over(0, Paging::default()),
+            &|_| String::new(),
+        )
     });
     assert!(
         none.contains("No value sets"),
         "the empty sentence is the console's: {none}"
     );
-    let open = html(|| {
-        link_open_pager(listing(), OpenWindow::of(Paging::default(), 25), &|_| {
-            String::new()
-        })
+    let open = html({
+        link_open_pager(
+            &en(),
+            listing(),
+            OpenWindow::of(Paging::default(), 25),
+            &|_| String::new(),
+        )
     });
     assert!(
         open.contains("Value sets 1 to 25"),
@@ -78,13 +86,13 @@ fn a_listing_names_its_rows_by_the_consoles_noun_chosen_by_count() {
 fn an_editor_says_new_when_it_creates_and_edit_when_it_edits() {
     let editor = message("file-editor");
     let list = || Crumb::new("Mapping files", "/files");
-    let creating = html(|| {
+    let creating = html({
         let header = Header {
             crumbs: vec![list()],
             mono: true,
             ..Header::default()
         };
-        editor_heading(editor, &Mode::Creating, header, ActionGroup::none())
+        editor_heading(&en(), editor, &Mode::Creating, header, ActionGroup::none())
     });
     assert!(creating.contains("<h1>New mapping file</h1>"), "{creating}");
     assert!(
@@ -96,13 +104,13 @@ fn an_editor_says_new_when_it_creates_and_edit_when_it_edits() {
         "the trail never ends with the editor: {creating}"
     );
     let editing = Mode::Editing(String::from("vitals.model.yml"));
-    let changing = html(|| {
+    let changing = html({
         let header = Header {
             crumbs: vec![list(), Crumb::new("vitals.model.yml", "/files/vitals")],
             mono: true,
             ..Header::default()
         };
-        editor_heading(editor, &editing, header, ActionGroup::none())
+        editor_heading(&en(), editor, &editing, header, ActionGroup::none())
     });
     assert!(
         changing.contains("<h1>Edit</h1>"),
@@ -114,7 +122,7 @@ fn an_editor_says_new_when_it_creates_and_edit_when_it_edits() {
             && !changing.contains("aria-current"),
         "the trail ends with the file it edits, never with Edit: {changing}"
     );
-    let title = Owner::new().with(|| editor_title(editor, &Mode::Creating));
+    let title = editor_title(&en(), editor, &Mode::Creating);
     assert_eq!(
         "New mapping file", title,
         "the document's title says the same"
@@ -123,13 +131,12 @@ fn an_editor_says_new_when_it_creates_and_edit_when_it_edits() {
 
 #[test]
 fn the_card_header_action_is_a_link_with_its_words_then_an_arrow() {
-    let panel = html(|| {
+    let panel = html({
         titled_panel(
             "Members",
             card_action("/members", String::from("All members")),
-            (),
+            Html::empty(),
         )
-        .into_any()
     });
     assert!(
         panel
@@ -163,16 +170,16 @@ fn a_consoles_words_made_at_run_time_reach_every_label() {
         "3 files", groups[0].entries[0].label,
         "a navigation entry's words"
     );
-    let dialog = html(|| {
+    let dialog = html({
         confirm_dialog(
+            &en(),
             Confirmation {
                 id: "drop".into(),
                 title: format!("Drop {}?", "vitals").into(),
                 message: String::from("The file goes for good.").into(),
             },
-            (),
+            Html::empty(),
         )
-        .into_any()
     });
     assert!(dialog.contains("Drop vitals?"), "{dialog}");
 }

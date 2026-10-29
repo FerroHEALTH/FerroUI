@@ -1,18 +1,14 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The gallery's pages as lazy routes, as a console splits its code.
+//! The gallery's pages by the path that names each, and the handler that
+//! draws the one a request names.
 //!
-//! The pages load in five groups, each from chunks of its own under `cargo
-//! leptos build --split` (the Leptos book, "Code Splitting"): one lazy route
-//! a page made some 800 chunks, more than a browser fetches at once, and a
-//! group of pages read together loads as one. Every route of a group draws
-//! the page its path names. [`ROUTES`] tells the library which link loads
-//! which group ahead of a visit ([`ferrohealth_ui::widget::prefetch`]).
+//! A page is one function of its module, `page(&Visit) -> Page`, which reads
+//! the request and draws the page once, whole; [`draw`] picks it by path.
 
-use ferrohealth_ui::widget::prefetch::Route;
-use leptos::prelude::*;
-use leptos_router::{LazyRoute, lazy_route};
+use crate::app::Page as Drawn;
+use crate::visit::Visit;
 
 /// A gallery page, as its path names it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -93,221 +89,75 @@ impl Page {
     }
 }
 
-/// Declares the lazy route `$name` of a group of pages, drawing each page
-/// `$page` by its component `$component`.
-///
-/// Each group matches its own pages alone, so its chunks hold their code
-/// and no other group's.
-macro_rules! group {
-    ($(#[$doc:meta])* $name:ident { $($page:ident => $component:path),+ $(,)? }) => {
-        $(#[$doc])*
-        #[derive(Debug, Clone, Copy)]
-        pub struct $name(Option<Page>);
-
-        #[lazy_route]
-        impl LazyRoute for $name {
-            fn data() -> Self {
-                Self(Page::of(&leptos_router::hooks::use_location().pathname.get_untracked()))
-            }
-
-            fn view(this: Self) -> AnyView {
-                match this.0 {
-                    $(Some(Page::$page) => view! { <$component /> }.into_any(),)+
-                    _ => ().into_any(),
-                }
-            }
-        }
+/// Draws the page `visit` names, or the gallery's not-found page.
+#[must_use]
+pub fn draw(visit: &Visit) -> Drawn {
+    use crate::pages;
+    let Some(page) = Page::of(&visit.path) else {
+        return if visit.path == "/" {
+            crate::app::index(visit)
+        } else {
+            crate::app::not_found(visit)
+        };
     };
+    if page != Page::SignIn
+        && page != Page::Fault
+        && visit
+            .segment(0)
+            .and_then(ferrohealth_ui::style::Brand::parse)
+            .is_none()
+    {
+        return crate::app::not_found(visit);
+    }
+    match page {
+        Page::SignIn => pages::sign_in::page(visit),
+        Page::Fault => pages::templates::fault(visit),
+        Page::Template => pages::templates::page(visit),
+        Page::Overview => pages::overview::page(visit),
+        Page::Forms => pages::forms::page(visit),
+        Page::Tables => pages::tables::page(visit),
+        Page::Code => pages::code::page(visit),
+        Page::Configuration => pages::configuration::page(visit),
+        Page::Provisioned => pages::configuration::provisioned(visit),
+        Page::Preferences => pages::preferences::page(visit),
+        Page::Find => pages::find::page(visit),
+        Page::Charts => pages::charts::page(visit),
+        Page::Layouts => pages::layouts::page(visit),
+        Page::Trees => pages::trees::page(visit),
+        Page::Clinical => pages::clinical::page(visit),
+        Page::Terminology => pages::terminology::page(visit),
+        Page::Operations => pages::operations::page(visit),
+        Page::Federation => pages::federation::page(visit),
+        Page::FederationPart => pages::federation::part(visit),
+        Page::Overlays => pages::overlays::page(visit),
+        Page::Access => pages::overlays::access(visit),
+    }
 }
 
-group!(
-    /// The pages no navigation leads to: sign-in, the fault page and the
-    /// templates.
-    LAside {
-        SignIn => crate::pages::sign_in::SignInPage,
-        Fault => crate::pages::templates::FaultPage,
-        Template => crate::pages::templates::TemplatePage,
+/// Draws the page `visit` names with the answer to the form body `body`
+/// posted to it, for a page that takes a post; `None` for any other.
+#[must_use]
+pub fn posted(visit: &Visit, body: &str) -> Option<Drawn> {
+    match Page::of(&visit.path)? {
+        Page::Forms => Some(crate::pages::forms::posted(visit, body)),
+        _ => None,
     }
-);
-
-group!(
-    /// The overview, forms, tables, code, configuration, preferences and
-    /// find pages.
-    LCore {
-        Overview => crate::pages::overview::OverviewPage,
-        Forms => crate::pages::forms::FormsPage,
-        Tables => crate::pages::tables::TablesPage,
-        Code => crate::pages::code::CodePage,
-        Configuration => crate::pages::configuration::ConfigurationPage,
-        Provisioned => crate::pages::configuration::ProvisionedPage,
-        Preferences => crate::pages::preferences::PreferencesPage,
-        Find => crate::pages::find::FindPage,
-    }
-);
-
-group!(
-    /// The charts, layouts and trees pages.
-    LVisual {
-        Charts => crate::pages::charts::ChartsPage,
-        Layouts => crate::pages::layouts::LayoutsPage,
-        Trees => crate::pages::trees::TreesPage,
-    }
-);
-
-group!(
-    /// The clinical, terminology and operations pages.
-    LRecords {
-        Clinical => crate::pages::clinical::ClinicalPage,
-        Terminology => crate::pages::terminology::TerminologyPage,
-        Operations => crate::pages::operations::OperationsPage,
-    }
-);
-
-group!(
-    /// The federation and overlays pages.
-    LFederation {
-        Federation => crate::pages::federation::FederationPage,
-        FederationPart => crate::pages::federation::FederationPart,
-        Overlays => crate::pages::overlays::OverlaysPage,
-        Access => crate::pages::overlays::AccessPage,
-    }
-);
-
-/// Every route by its path and the group that draws it.
-///
-/// The four groups of the main navigation load once the first page is idle,
-/// each once, through the first of its routes; the pages aside load on a
-/// hover or a focus.
-pub static ROUTES: &[Route] = &[
-    Route {
-        path: "/sign-in/:brand/:variant",
-        preload: || Box::pin(LAside::preload()),
-        idle: false,
-    },
-    Route {
-        path: "/fault/:brand",
-        preload: || Box::pin(LAside::preload()),
-        idle: false,
-    },
-    Route {
-        path: "/:brand/templates/:variant",
-        preload: || Box::pin(LAside::preload()),
-        idle: false,
-    },
-    Route {
-        path: "/:brand",
-        preload: || Box::pin(LCore::preload()),
-        idle: true,
-    },
-    Route {
-        path: "/:brand/forms",
-        preload: || Box::pin(LCore::preload()),
-        idle: false,
-    },
-    Route {
-        path: "/:brand/tables",
-        preload: || Box::pin(LCore::preload()),
-        idle: false,
-    },
-    Route {
-        path: "/:brand/code",
-        preload: || Box::pin(LCore::preload()),
-        idle: false,
-    },
-    Route {
-        path: "/:brand/configuration",
-        preload: || Box::pin(LCore::preload()),
-        idle: false,
-    },
-    Route {
-        path: "/:brand/configuration/provisioned",
-        preload: || Box::pin(LCore::preload()),
-        idle: false,
-    },
-    Route {
-        path: "/:brand/preferences",
-        preload: || Box::pin(LCore::preload()),
-        idle: false,
-    },
-    Route {
-        path: "/:brand/preferences/:section",
-        preload: || Box::pin(LCore::preload()),
-        idle: false,
-    },
-    Route {
-        path: "/:brand/find",
-        preload: || Box::pin(LCore::preload()),
-        idle: false,
-    },
-    Route {
-        path: "/:brand/charts",
-        preload: || Box::pin(LVisual::preload()),
-        idle: true,
-    },
-    Route {
-        path: "/:brand/layouts",
-        preload: || Box::pin(LVisual::preload()),
-        idle: false,
-    },
-    Route {
-        path: "/:brand/trees",
-        preload: || Box::pin(LVisual::preload()),
-        idle: false,
-    },
-    Route {
-        path: "/:brand/clinical",
-        preload: || Box::pin(LRecords::preload()),
-        idle: true,
-    },
-    Route {
-        path: "/:brand/terminology",
-        preload: || Box::pin(LRecords::preload()),
-        idle: false,
-    },
-    Route {
-        path: "/:brand/operations",
-        preload: || Box::pin(LRecords::preload()),
-        idle: false,
-    },
-    Route {
-        path: "/:brand/federation",
-        preload: || Box::pin(LFederation::preload()),
-        idle: true,
-    },
-    Route {
-        path: "/:brand/federation/:part",
-        preload: || Box::pin(LFederation::preload()),
-        idle: false,
-    },
-    Route {
-        path: "/:brand/overlays",
-        preload: || Box::pin(LFederation::preload()),
-        idle: false,
-    },
-    Route {
-        path: "/:brand/overlays/access",
-        preload: || Box::pin(LFederation::preload()),
-        idle: false,
-    },
-];
+}
 
 #[cfg(test)]
 mod tests {
-    use super::{Page, ROUTES};
+    use super::Page;
 
     #[test]
-    fn every_route_names_a_page() {
-        for route in ROUTES {
-            let path = route
-                .path
-                .replace(":brand", "ferrobridge")
-                .replace(":variant", "a")
-                .replace(":section", "b")
-                .replace(":part", "c");
-            assert!(Page::of(&path).is_some(), "{}", route.path);
-        }
+    fn every_path_names_its_page() {
         assert_eq!(Some(Page::Access), Page::of("/ferrofed/overlays/access"));
         assert_eq!(Some(Page::Overview), Page::of("/ferrofed/"));
+        assert_eq!(Some(Page::SignIn), Page::of("/sign-in/ferrofed/basic"));
+        assert_eq!(
+            Some(Page::FederationPart),
+            Page::of("/ferrofed/federation/node-a")
+        );
         assert_eq!(None, Page::of("/ferrofed/no/such/page"));
+        assert_eq!(None, Page::of("/"));
     }
 }

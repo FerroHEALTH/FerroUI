@@ -7,12 +7,12 @@
 #      change.
 #   2. The Rust tier runs when the workspace exists (the `detect` job looks
 #      for the root Cargo.toml after checkout, which hashFiles() at `if:` time
-#      cannot): fmt, clippy on the host and on wasm32, nextest with the
+#      cannot): fmt, clippy, nextest with the
 #      contrast test, rustdoc, cargo-deny, the publish dry run.
-#   3. The gallery tier runs when the change reaches the gallery: the release
-#      site bundle with its size budget and path check, then the browser
-#      journeys in two parts and, when the change can move a pixel, the
-#      screenshot capture in one job per brand, in Chrome for Testing.
+#   3. The gallery tier runs when the change reaches the gallery: the gallery
+#      built with cargo build, then the browser journeys in two parts and,
+#      when the change can move a pixel, the screenshot capture in one job
+#      per brand, in Chrome for Testing.
 #   4. The design tier builds the console design library's pages (design/)
 #      and runs its checks in headless Chrome, one job per design set the
 #      change reaches.
@@ -134,8 +134,8 @@ jobs:
           persist-credentials: false
       - run: bash scripts/checks/comment-style.sh --all
 
-  # No string a reader sees in a component outside the catalogs
-  # (.claude/rules/leptos-ui.md §13).
+  # No string a reader sees in a component outside the catalogs, in the
+  # Rust and in the templates.
   stray-literals:
     name: stray-literals
     runs-on: ubuntu-latest
@@ -146,12 +146,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - run: bash scripts/checks/stray-literals.sh crates/ferrohealth-ui/src app/ferrohealth-ui-gallery/src
+      - run: bash scripts/checks/stray-literals.sh crates/ferrohealth-ui/src crates/ferrohealth-ui/templates app/ferrohealth-ui-gallery/src
 
-  # The mechanical part of the Leptos rules (.claude/rules/leptos-ui.md
-  # §14 and §15), with its self-test.
-  leptos-rules:
-    name: leptos-rules
+  # The markup keeps a console's policy at script-src 'self' and
+  # style-src 'self': no style attribute or element, no inline script or
+  # handler, no javascript: URL; with its self-test.
+  markup-rules:
+    name: markup-rules
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -160,8 +161,23 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - run: bash scripts/checks/leptos-rules.sh --self-test
-      - run: bash scripts/checks/leptos-rules.sh
+      - run: bash scripts/checks/markup-rules.sh --self-test
+      - run: bash scripts/checks/markup-rules.sh crates/ferrohealth-ui/src crates/ferrohealth-ui/templates app/ferrohealth-ui-gallery/src
+
+  # The script modules within their budget, with no eval, no absolute URL
+  # and no fetch outside the two documented wires; with its self-test.
+  script-budget:
+    name: script-budget
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: bash scripts/checks/script-budget.sh --self-test
+      - run: bash scripts/checks/script-budget.sh
 
   # Every TODO(#N) names an open issue.
   todo-issues:
@@ -385,7 +401,7 @@ jobs:
       - run: cargo fmt --all --check
 
   clippy:
-    name: clippy (host and wasm32)
+    name: clippy
     needs: detect
     if: needs.detect.outputs.cargo == 'true'
     runs-on: ubuntu-latest
@@ -399,19 +415,11 @@ jobs:
       - uses: ./.github/actions/setup-rust
         with:
           components: clippy
-          target: wasm32-unknown-unknown
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
-      # The library compiles under every render mode a console turns on
-      # (.claude/rules/leptos-ui.md §2), so the browser target is linted
-      # under hydrate and under csr.
-      - run: cargo clippy -p ferrohealth-ui --lib --locked --target wasm32-unknown-unknown --features leptos/hydrate -- -D warnings
-      - run: cargo clippy -p ferrohealth-ui --lib --locked --target wasm32-unknown-unknown --features leptos/csr -- -D warnings
-      # The browser half builds at the lowest web-sys its manifest asks for,
-      # so the library never moves a console's wasm-bindgen.
-      - run: bash scripts/checks/browser-floor.sh
-      - if: needs.detect.outputs.gallery == 'true'
-        run: cargo clippy -p ferrohealth-ui-gallery --lib --locked --target wasm32-unknown-unknown -- -D warnings
+      # A console that serves the assets itself builds the library without
+      # its axum feature.
+      - run: cargo clippy -p ferrohealth-ui --all-targets --locked --no-default-features -- -D warnings
 
   test:
     name: nextest (with the contrast test)
@@ -490,7 +498,9 @@ jobs:
       # A VEX statement whose published argument names the wrong dependency
       # path: compared with the graph cargo resolves, in both directions.
       - name: Every VEX statement names the real dependency path
-        run: bash scripts/checks/vex-reachability.sh
+        run: |
+          bash scripts/checks/vex-reachability.sh --self-test
+          bash scripts/checks/vex-reachability.sh
 
   # The published Rust advisory VEX is exactly what deny.toml and
   # security/vex/rust-advisories.toml generate, and every hand-written
@@ -520,7 +530,9 @@ jobs:
           sudo install -m 0755 "$RUNNER_TEMP/yq" /usr/local/bin/yq
           yq --version
       - name: Every accepted advisory has a published VEX justification
-        run: bash scripts/checks/vex-advisories.sh
+        run: |
+          bash scripts/checks/vex-advisories.sh --self-test
+          bash scripts/checks/vex-advisories.sh
 
   # The vendored Lucide set is whole: every listed icon and its licence, and
   # no file the list does not name.
@@ -596,10 +608,9 @@ jobs:
           comment-summary-in-pr: on-failure
 
   # ---- Tier 3 ---------------------------------------------------------------
-  # The release site bundle, then in headless Chrome for Testing at the
-  # pinned release, in parallel jobs that each build the bundle: the
-  # journeys in two parts (the first with the bundle's size budget and path
-  # check), and, when the change can move a pixel (the `capture` output of
+  # The gallery in headless Chrome for Testing at the pinned release, in
+  # parallel jobs that each build the gallery: the journeys in two parts,
+  # and, when the change can move a pixel (the `capture` output of
   # detect), the screenshot capture in one job per brand. A journey or a shot
   # fails on any error the browser logs. Each capture job uploads its brand's
   # screenshots, and gallery-screenshots merges them into one artifact.
@@ -621,28 +632,19 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-rust
         with:
-          target: wasm32-unknown-unknown
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
       - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
         with:
-          tool: cargo-leptos@0.3.11,wasm-bindgen@0.2.129,cargo-nextest
-      - name: Install the Tailwind CSS CLI and wasm-opt
-        run: |
-          bash scripts/release/gallery-tools.sh "$RUNNER_TEMP/gallery-tools"
-          echo "$RUNNER_TEMP/gallery-tools/bin" >> "$GITHUB_PATH"
+          tool: cargo-nextest
       - name: Install Chrome and chromedriver
         id: chrome
         uses: browser-actions/setup-chrome@48ad923757ca74d66703209fe939badbdf80f2f4 # v2.2.0
         with:
           chrome-version: 155.0.8059.79
           install-chromedriver: true
-      - run: bash scripts/release/gallery-site.sh --release
-      # The sizes go to the job summary; the step fails above the budget of
-      # .claude/rules/leptos-ui.md §12.
-      - if: matrix.part == 'journeys' && startsWith(matrix.partition, '1/')
-        run: bash scripts/checks/gallery-bundle.sh
-      - if: matrix.part == 'journeys' && startsWith(matrix.partition, '1/')
-        run: bash scripts/checks/gallery-paths.sh
+      # The gallery is a server and its pages' script modules are the
+      # library's: a cargo build is the whole build.
+      - run: cargo build --locked -p ferrohealth-ui-gallery
       # Every test of the gallery's package, split by count into the parts
       # (nextest, --partition), so each part opens its share of the browsers.
       - name: Run the journeys
@@ -777,7 +779,8 @@ jobs:
       - shellcheck
       - comment-style
       - stray-literals
-      - leptos-rules
+      - markup-rules
+      - script-budget
       - todo-issues
       - contribution-licence
       - guards

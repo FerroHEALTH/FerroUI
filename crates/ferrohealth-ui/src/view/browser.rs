@@ -10,14 +10,14 @@
 //! ([`Panes::Flat`]). FerroEHR's path browser puts a template's paths
 //! beside the node inspector ([`Panes::Two`], [`path_node`]). Each pane is
 //! a labelled section with its head; the tree in a pane is
-//! [`crate::widget::tree`], drawn by the island
-//! [`crate::island::TreeView`]. Every move is a link or a form, so a
-//! browser walks with no WebAssembly. No specification governs the look:
+//! [`crate::view::tree`]. Every move is a link or a form, so a browser
+//! walks with no script. No specification governs the look:
 //! our own design.
 
-use leptos::prelude::*;
+use askama::Template;
 
-use crate::i18n::{Text, tr, tr_with};
+use crate::html::{Html, Render as _};
+use crate::i18n::{Locale, Text, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::table::filter::Find;
 use crate::table::model::PAGE_KEY;
@@ -73,28 +73,28 @@ pub struct BrowserPane {
     /// Its title, which names its section too.
     pub title: String,
     /// The actions at the end of its head.
-    pub actions: Option<AnyView>,
+    pub actions: Option<Html>,
     /// What it holds: [`pane_body`] for padded content, or a tree or a
     /// list that runs to its edges.
-    pub body: AnyView,
+    pub body: Html,
 }
 
 impl BrowserPane {
     /// The pane `title` holding `body`.
     #[must_use]
-    pub fn new(title: impl Into<String>, body: impl IntoView + 'static) -> Self {
+    pub fn new(title: impl Into<String>, body: Html) -> Self {
         Self {
             title: title.into(),
             actions: None,
-            body: body.into_any(),
+            body,
         }
     }
 
     /// This pane, with `actions` at the end of its head.
     #[must_use]
-    pub fn actions(self, actions: impl IntoView + 'static) -> Self {
+    pub fn actions(self, actions: Html) -> Self {
         Self {
-            actions: Some(actions.into_any()),
+            actions: Some(actions),
             ..self
         }
     }
@@ -103,44 +103,51 @@ impl BrowserPane {
 /// Returns the browser of `panes`, laid out as `layout`, each pane's
 /// heading at `heading`.
 #[must_use]
-pub fn browser(layout: Panes, heading: Heading, panes: Vec<BrowserPane>) -> AnyView {
-    let panes = panes
+pub fn browser(layout: Panes, heading: Heading, panes: Vec<BrowserPane>) -> Html {
+    let level = match heading {
+        Heading::Two => "h2",
+        Heading::Three => "h3",
+    };
+    let panes: Html = panes
         .into_iter()
         .map(|pane| {
-            let BrowserPane {
-                title,
-                actions,
-                body,
-            } = pane;
-            let head = match heading {
-                Heading::Two => {
-                    view! { <h2 class="fui-browser-title">{title.clone()}</h2> }.into_any()
-                }
-                Heading::Three => {
-                    view! { <h3 class="fui-browser-title">{title.clone()}</h3> }.into_any()
-                }
-            };
-            let actions = actions.map(|actions| view! { <div class="fui-actions">{actions}</div> });
-            view! {
-                <section class="fui-browser-pane" aria-label=title>
-                    <div class="fui-browser-head">{head} {actions}</div>
-                    {body}
-                </section>
-            }
+            let title = Html::text(&pane.title);
+            let actions = pane.actions.map_or_else(String::new, |actions| {
+                format!("<div class=\"fui-actions\">{actions}</div>")
+            });
+            Html::raw(format!(
+                "<section aria-label=\"{title}\" class=\"fui-browser-pane\"><div class=\"fui-browser-head\"><{level} class=\"fui-browser-title\">{title}</{level}>{actions}</div>{body}</section>",
+                body = pane.body,
+            ))
         })
-        .collect_view();
-    view! {
-        <div class=layout.class()>
-            {panes}
-        </div>
-    }
-    .into_any()
+        .collect();
+    Html::raw(format!("<div class=\"{}\">{panes}</div>", layout.class()))
 }
 
 /// Returns `children` padded as a pane's body.
 #[must_use]
-pub fn pane_body(children: impl IntoView + 'static) -> AnyView {
-    view! { <div class="fui-browser-body">{children}</div> }.into_any()
+pub fn pane_body(children: Html) -> Html {
+    Html::raw(format!(
+        "<div class=\"fui-browser-body\">{}</div>",
+        String::from(children)
+    ))
+}
+
+#[derive(Template)]
+#[template(
+    source = r#"<form role="search" method="{{ method }}"{% if let Some(action) = action %} action="{{ action }}"{% endif %} class="fui-browser-find">{{ carried }}<div class="fui-list-find"><span class="fui-search-glyph">{{ glyph }}</span><label for="{{ id }}" class="fui-sr-only">{{ label }}</label><input id="{{ id }}" name="{{ name }}" type="search" class="{{ input }}" value="{{ value }}" placeholder="{{ label }}" autocomplete="off" spellcheck="false" enterkeyhint="search"></div></form>"#,
+    ext = "html"
+)]
+struct FindView<'a> {
+    method: &'static str,
+    action: Option<&'a str>,
+    carried: Html,
+    glyph: Html,
+    id: &'a str,
+    label: &'a str,
+    name: &'a str,
+    input: &'static str,
+    value: &'a str,
 }
 
 /// Returns the find field at the top of a pane.
@@ -149,38 +156,19 @@ pub fn pane_body(children: impl IntoView + 'static) -> AnyView {
 /// technology alone, submitting on Enter as `find` says (a `GET` form, or a
 /// `POST` form for words that can be clinical).
 #[must_use]
-pub fn browser_find(find: Find<'_>) -> AnyView {
-    let carried = hidden_fields(find.fields, &[find.name, PAGE_KEY]);
-    let id = find.id.to_owned();
-    let label = find.label.to_owned();
-    view! {
-        <form
-            role="search"
-            method=method(find.source)
-            action=find.action.map(str::to_owned)
-            class="fui-browser-find"
-        >
-            {carried}
-            <div class="fui-list-find">
-                <span class="fui-search-glyph">{icon(Glyph::SEARCH, "16")}</span>
-                <label for=id.clone() class="fui-sr-only">
-                    {label.clone()}
-                </label>
-                <input
-                    id=id
-                    name=find.name.to_owned()
-                    type="search"
-                    class=INPUT
-                    value=find.value.to_owned()
-                    placeholder=label
-                    autocomplete="off"
-                    spellcheck="false"
-                    enterkeyhint="search"
-                />
-            </div>
-        </form>
+pub fn browser_find(find: Find<'_>) -> Html {
+    FindView {
+        method: method(find.source),
+        action: find.action,
+        carried: hidden_fields(find.fields, &[find.name, PAGE_KEY]),
+        glyph: icon(Glyph::SEARCH, "16"),
+        id: find.id,
+        label: find.label,
+        name: find.name,
+        input: INPUT,
+        value: find.value,
     }
-    .into_any()
+    .html()
 }
 
 /// Returns the matches of a search, named `label`: one row each, the row
@@ -192,17 +180,15 @@ pub fn browser_find(find: Find<'_>) -> AnyView {
 /// its row takes the tint from that mark, so assistive technology hears
 /// "current" on the link a keyboard reaches.
 #[must_use]
-pub fn match_list(label: impl Into<String>, matches: Vec<AnyView>) -> AnyView {
-    let rows = matches
+pub fn match_list(label: &str, matches: Vec<Html>) -> Html {
+    let rows: Html = matches
         .into_iter()
-        .map(|each| view! { <li>{each}</li> })
-        .collect_view();
-    view! {
-        <ul class="fui-match-list" aria-label=label.into()>
-            {rows}
-        </ul>
-    }
-    .into_any()
+        .map(|each| Html::raw(format!("<li>{each}</li>")))
+        .collect();
+    Html::raw(format!(
+        "<ul aria-label=\"{}\" class=\"fui-match-list\">{rows}</ul>",
+        Html::text(label)
+    ))
 }
 
 /// One node of a template, as the path browser's inspector reads it (E5).
@@ -218,11 +204,11 @@ pub struct PathNode {
     pub occurrences: String,
     /// Its units, as a person reads them, with the UCUM code in the
     /// tooltip.
-    pub units: Option<AnyView>,
+    pub units: Option<Html>,
     /// Its FLAT path, when the template has a web template.
     pub flat_path: Option<String>,
     /// A coded node's value set, one M2 coding each.
-    pub codes: Vec<AnyView>,
+    pub codes: Vec<Html>,
     /// The more row after the codes, when the console's server pages a
     /// large value set; the heading then counts its total.
     pub more: Option<MoreCodes>,
@@ -232,11 +218,11 @@ pub struct PathNode {
     pub query: Option<String>,
 }
 
-/// Returns the inspector pane of the node `node`: its facts, a coded
-/// node's value set, and Build a query on this path in its head where the
-/// node has a query.
+/// Returns the inspector pane of the node `node`, in `locale`: its facts, a
+/// coded node's value set, and Build a query on this path in its head
+/// where the node has a query.
 #[must_use]
-pub fn path_node(node: PathNode) -> BrowserPane {
+pub fn path_node(locale: &Locale, node: PathNode) -> BrowserPane {
     let PathNode {
         name,
         path: at,
@@ -249,50 +235,53 @@ pub fn path_node(node: PathNode) -> BrowserPane {
         query,
     } = node;
     let mut rows = vec![
-        (tr(Text::PathNodePath), path(&at)),
+        (tr(locale, Text::PathNodePath), path(&at)),
         (
-            tr(Text::PathNodeRmType),
-            view! { <span class="fui-rm-type">{rm_type}</span> }.into_any(),
+            tr(locale, Text::PathNodeRmType),
+            Html::raw(format!(
+                "<span class=\"fui-rm-type\">{}</span>",
+                Html::text(&rm_type)
+            )),
         ),
-        (tr(Text::PathNodeOccurrences), occurrences.into_any()),
+        (
+            tr(locale, Text::PathNodeOccurrences),
+            Html::text(&occurrences),
+        ),
     ];
     if let Some(units) = units {
-        rows.push((tr(Text::PathNodeUnits), units));
+        rows.push((tr(locale, Text::PathNodeUnits), units));
     }
     if let Some(flat) = flat_path {
-        rows.push((tr(Text::PathNodeFlat), path(&flat)));
+        rows.push((tr(locale, Text::PathNodeFlat), path(&flat)));
     }
     let facts = definitions(rows);
     let body = if codes.is_empty() {
-        view! { <div class="fui-browser-body">{facts}</div> }.into_any()
+        Html::raw(format!("<div class=\"fui-browser-body\">{facts}</div>"))
     } else {
         let total = more
             .as_ref()
             .map_or_else(|| codes.len().into(), |more| more.total.into());
-        let heading = tr_with(Text::PathNodeValueSet, &[("count", total)]);
-        let codes = codes
+        let heading = tr_with(locale, Text::PathNodeValueSet, &[("count", total)]);
+        let codes: Html = codes
             .into_iter()
-            .map(|code| view! { <li>{code}</li> })
-            .collect_view();
-        let more = more.map(more_codes);
-        view! {
-            <div class="fui-browser-body fui-stack">
-                {facts}
-                <div>
-                    <p class="fui-label">{heading}</p>
-                    <ul class="fui-code-list">{codes} {more}</ul>
-                </div>
-            </div>
-        }
-        .into_any()
+            .map(|code| Html::raw(format!("<li>{code}</li>")))
+            .collect();
+        let more = more.map(more_codes).unwrap_or_default();
+        Html::raw(format!(
+            "<div class=\"fui-browser-body fui-stack\">{facts}<div><p class=\"fui-label\">{heading}</p><ul class=\"fui-code-list\">{codes}{more}</ul></div></div>"
+        ))
     };
     let pane = BrowserPane::new(name, body);
     match query {
-        Some(query) => pane.actions(view! {
-            <a href=query class=Variant::Secondary.small()>
-                {label(Some(Glyph::SQUARE_TERMINAL), tr(Text::PathNodeQuery))}
-            </a>
-        }),
+        Some(query) => pane.actions(Html::raw(format!(
+            "<a href=\"{}\" class=\"{}\">{}</a>",
+            Html::text(&query),
+            Variant::Secondary.small(),
+            label(
+                Some(Glyph::SQUARE_TERMINAL),
+                tr(locale, Text::PathNodeQuery)
+            )
+        ))),
         None => pane,
     }
 }

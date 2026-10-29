@@ -18,7 +18,9 @@ allow ^Ferro(BRIDGE|FED|EHR|TERM|PIX)$ # product names, the same in every langua
 allow ^Cadasto B\.V\.$                  # the maker's legal name
 allow ^(start|middle|end)$              # SVG text-anchor keywords
 allow ^%2F$                             # a tree's path key: the percent-encoded separator inside a key
-allow ^<                                # SVG markup a chart writes as a string
+allow ^(public, max-age=31536000, immutable|text/(css|javascript); charset=utf-8)$   # the HTTP header values the asset routes answer with
+allow ^\{\}-L$                         # an editor line's id
+allow ^dialog shortcuts$                # the script modules an element asks the loader for
 allow ^M\{                              # SVG path data
 allow ^M-?[0-9][-0-9 .AHLVZ]*$          # the SVG path of a chart's point mark
 allow ^(Zz|Tt )$                        # the bytes a timestamp parser accepts
@@ -53,11 +55,8 @@ allow ^[0-9a-f]{8}-[0-9a-f-]+           # an identifier in the UUID form
 allow ^0123456789ab$                    # a synthetic version hash
 allow ^CARGO_PKG_VERSION$               # the environment variable Cargo sets
 allow ^(GET|POST)$                      # an HTTP method
-allow ^theme=\{\}&back=                 # a form body the theme toggle posts
 allow ^fhirUser$                      # a SMART App Launch scope token the scope parser matches; a reader sees the catalog's words
-allow ^main h1$                          # the CSS selector of the page heading the announcer focuses, which the browser code reads
-allow ^FerroUI: this panic came before the page hydrated   # a debug build's note to a developer in the browser console, never a reader's text
-allow ^nav\[\{TAB_KEYS\}\] a\[href\]$   # the CSS selector of the binder's link tabs, which the browser code reads
 allow ^extended \{\} \{\}$                # the session message one tab sends the others, never drawn
 allow ^0123456789ABCDEF$                 # the hex digits of a percent-encoded return address
-allow ^use widget::hydration::hydrate as the browser entry   # a #[deprecated] note, which the compiler shows a console's developer and no page draws
+allow ^<html><head><title>502 Bad Gateway   # the synthetic upstream error document the error page draws as code
+allow ^<\?xml version=                  # an XML declaration in a sample document the editor draws as code

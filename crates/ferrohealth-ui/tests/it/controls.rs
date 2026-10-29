@@ -7,15 +7,14 @@
 
 use std::borrow::Cow;
 
-use ferrohealth_ui::i18n::{Locale, provide_locale};
+use ferrohealth_ui::i18n::Locale;
 use ferrohealth_ui::style::STYLESHEET;
+use ferrohealth_ui::view::date::DateWords;
+use ferrohealth_ui::view::picker::{Picker, picker_field};
 use ferrohealth_ui::view::refusal::{ISSUES_DRAWN, ISSUES_OPEN, Issue, Refusal, Severity, refusal};
-use ferrohealth_ui::widget::date::DateWords;
-use ferrohealth_ui::widget::picker::{Picker, picker_field};
-use leptos::prelude::*;
 
 use crate::markup::{has, tags};
-use crate::render::html;
+use crate::render::{en, html};
 
 fluent_templates::static_loader! {
     static THROWAWAY = {
@@ -25,17 +24,12 @@ fluent_templates::static_loader! {
     };
 }
 
-/// `view` rendered in a page in the throwaway language `qaa`, whose catalog
-/// holds a few of the library's messages.
-fn in_qaa(view: impl FnOnce() -> AnyView) -> String {
-    Owner::new().with(|| {
-        provide_locale(
-            Locale::parse("qaa")
-                .expect("a private-use language")
-                .with_catalog(&*THROWAWAY),
-        );
-        view().to_html()
-    })
+/// The throwaway language `qaa`, whose catalog holds a few of the
+/// library's messages.
+fn qaa() -> Locale {
+    Locale::parse("qaa")
+        .expect("a private-use language")
+        .with_catalog(&*THROWAWAY)
 }
 
 /// The block of the rule whose selector line is `selector`.
@@ -78,20 +72,22 @@ fn the_upload_shows_its_hidden_inputs_focus_on_the_chooser() {
 
 /// A refusal answered with `count` warnings.
 fn refusal_of(count: usize) -> String {
-    html(move || {
+    html({
         let issues = (0..count)
             .map(|place| {
                 Issue::new(Severity::Warning, "business-rule").text(format!("issue {place}"))
             })
             .chain([Issue::new(Severity::Error, "processing").text("the gravest")])
             .collect();
-        refusal(&Refusal {
-            status: Some(422),
-            summary: String::from("the server refused the bundle."),
-            issues,
-            ..Refusal::default()
-        })
-        .into_any()
+        refusal(
+            &en(),
+            &Refusal {
+                status: Some(422),
+                summary: String::from("the server refused the bundle."),
+                issues,
+                ..Refusal::default()
+            },
+        )
     })
 }
 
@@ -142,15 +138,15 @@ fn a_refusal_is_announced_by_its_title_alone() {
 #[test]
 fn the_pickers_select_has_a_visible_label() {
     // WCAG 2.2 SC 3.3.2: each control of the picker carries a label a reader sees.
-    let shown = html(|| {
+    let shown = html({
         picker_field(Picker {
             id: String::from("vs"),
             name: String::from("url"),
             label: Cow::Borrowed("Value set"),
             choose_label: Cow::Borrowed("Choose a value set"),
             help: None,
-            choices: Signal::stored(Vec::new()),
-            value: RwSignal::new(String::new()),
+            choices: Vec::new(),
+            value: String::new(),
             empty_word: Cow::Borrowed("Choose one"),
             other_word: Cow::Borrowed("Another"),
         })
@@ -168,15 +164,15 @@ fn the_pickers_select_has_a_visible_label() {
 #[test]
 fn a_word_that_falls_back_to_english_is_marked_english() {
     // WCAG 2.2 SC 3.1.2: the qaa catalog holds no severity word, so it is drawn in English.
-    let shown = in_qaa(|| {
-        refusal(&Refusal {
+    let shown = String::from(refusal(
+        &qaa(),
+        &Refusal {
             status: Some(400),
             summary: String::from("qefused."),
             issues: vec![Issue::new(Severity::Error, "invalid").text("qad")],
             ..Refusal::default()
-        })
-        .into_any()
-    });
+        },
+    ));
     assert!(shown.contains(r#"<span lang="en">error</span>"#), "{shown}");
     let english = refusal_of(1);
     assert!(
@@ -187,19 +183,12 @@ fn a_word_that_falls_back_to_english_is_marked_english() {
 
 #[test]
 fn a_date_is_typed_in_the_order_its_pages_language_writes() {
-    let english = Owner::new().with(|| DateWords::of_page(false));
+    let english = DateWords::of(&Locale::english(), false);
     assert_eq!(
         ferrohealth_ui::calendar::DateOrder::Ymd,
         english.order,
         "English takes ISO 8601"
     );
-    let qaa = Owner::new().with(|| {
-        provide_locale(
-            Locale::parse("qaa")
-                .expect("a private-use language")
-                .with_catalog(&*THROWAWAY),
-        );
-        DateWords::of_page(false)
-    });
+    let qaa = DateWords::of(&qaa(), false);
     assert_eq!(ferrohealth_ui::calendar::DateOrder::Dmy, qaa.order);
 }

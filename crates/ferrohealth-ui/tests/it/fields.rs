@@ -7,34 +7,21 @@
 //! is given, and the stylesheet rules that hold their layout.
 
 use ferrohealth_ui::calendar::{Bounds, Day, Preset, Weekday};
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::i18n::Phrase;
 use ferrohealth_ui::icon::Glyph;
-use ferrohealth_ui::island::{DatePicker, DateRangePicker};
 use ferrohealth_ui::style::STYLESHEET;
+use ferrohealth_ui::view::date::{
+    DateField, DateRange, DateWords, RangeEnd, RangePreset, date_field, date_range,
+};
 use ferrohealth_ui::view::form::{
     Field, INNER_BUTTON, INPUT, Inner, described_by, described_with_unit, masked_input, unit_id,
 };
+use ferrohealth_ui::view::masked::HoldWords;
 use ferrohealth_ui::view::tag::{Tag, tag};
-use ferrohealth_ui::widget::date::{DateField, DateRange, DateWords, RangeEnd, RangePreset};
-use ferrohealth_ui::widget::masked::HoldWords;
-use leptos::prelude::*;
 
 use crate::markup::{has, tags};
-
-/// The HTML `view` renders to, under a reactive owner as a server render
-/// runs, without the empty comments that mark where a dynamic child goes.
-fn html(view: impl FnOnce() -> AnyView) -> String {
-    Owner::new().with(|| view().to_html()).replace("<!>", "")
-}
-
-/// `view` rendered in a page tree with the server's shared context, as a
-/// page draws an island.
-fn page_html(view: impl FnOnce() -> AnyView) -> String {
-    let owner = Owner::new_root(Some(std::sync::Arc::new(
-        hydration_context::SsrSharedContext::new(),
-    )));
-    owner.with(|| view().to_html())
-}
+use crate::render::{en, html};
 
 fn day(text: &str) -> Day {
     Day::parse(text).expect("a test day")
@@ -58,21 +45,21 @@ fn audit_from(value: &str, error: Option<&str>) -> DateField {
         with_time: false,
         quick: Vec::new(),
         chosen: None,
-        words: Owner::new().with(|| DateWords::of_page(false)),
+        words: DateWords::of(&en(), false),
     }
 }
 
 #[test]
 fn a_tag_is_its_words_on_one_line_with_a_quiet_code_and_a_hidden_glyph() {
-    let plain = html(|| tag("FHIR R4"));
+    let plain = html(tag("FHIR R4"));
     assert!(has(&plain, "span", &[("class", "fui-tag")]), "{plain}");
     assert!(plain.contains(">FHIR R4</span>"), "{plain}");
-    let coded = html(|| Tag::new("Read").code("r").view());
+    let coded = html(Tag::new("Read").code("r").view());
     assert!(
         coded.contains(r#"Read<span class="fui-tag-code">r</span>"#),
         "the raw code follows the word: {coded}"
     );
-    let locked = html(|| {
+    let locked = html({
         Tag::new("Directory")
             .locked("From the care services directory")
             .view()
@@ -92,14 +79,14 @@ fn a_tag_is_its_words_on_one_line_with_a_quiet_code_and_a_hidden_glyph() {
         has(&locked, "svg", &[("aria-hidden", "true")]),
         "the lock is hidden from assistive technology: {locked}"
     );
-    let mono = html(|| Tag::new("1.1.0").mono().glyph(Glyph::TAGS).view());
+    let mono = html(Tag::new("1.1.0").mono().glyph(Glyph::TAGS).view());
     assert!(
         has(&mono, "span", &[("class", "fui-tag fui-tag-mono")]),
         "{mono}"
     );
-    let escaped = html(|| Tag::new("<script>").code("a&b").view());
-    assert!(escaped.contains("&lt;script&gt;"), "{escaped}");
-    assert!(escaped.contains("a&amp;b"), "{escaped}");
+    let escaped = html(Tag::new("<script>").code("a&b").view());
+    assert!(escaped.contains("&#60;script&#62;"), "{escaped}");
+    assert!(escaped.contains("a&#38;b"), "{escaped}");
     assert!(!escaped.contains("style="), "{escaped}");
 }
 
@@ -128,11 +115,12 @@ fn a_tag_keeps_to_one_line_while_it_fits_and_never_widens_the_page() {
 
 #[test]
 fn a_field_holds_its_unit_inside_its_edge_and_names_it_in_its_description() {
-    let page = html(|| {
+    let page = html({
         let id = "timeout";
-        let input = view! {
-            <input id=id name="timeout" class=INPUT inputmode="numeric" aria-describedby=described_with_unit(id, true, false) />
-        };
+        let input = Html::raw(format!(
+            r#"<input id="{id}" name="timeout" inputmode="numeric" aria-describedby="{}" class="{INPUT}">"#,
+            described_with_unit(id, true, false)
+        ));
         Field::new(id, "Timeout")
             .help("Below the overall budget.")
             .trailing(Inner::Unit(String::from("ms")))
@@ -162,16 +150,16 @@ fn a_field_holds_its_unit_inside_its_edge_and_names_it_in_its_description() {
 
 #[test]
 fn a_field_holds_a_prefix_and_a_named_button_inside_its_edge() {
-    let page = html(|| {
-        let input = view! { <input id="base" name="base" class=INPUT type="password" /> };
-        let reveal = view! {
-            <button type="button" class=INNER_BUTTON aria-label="Show the secret" aria-pressed="false">
-                "o"
-            </button>
-        };
+    let page = html({
+        let input = Html::raw(format!(
+            r#"<input id="base" name="base" type="password" class="{INPUT}">"#
+        ));
+        let reveal = Html::raw(format!(
+            r#"<button type="button" aria-label="Show the secret" aria-pressed="false" class="{INNER_BUTTON}">o</button>"#
+        ));
         Field::new("base", "Secret")
             .leading(Inner::Text(String::from("https://")))
-            .trailing(Inner::Button(reveal.into_any()))
+            .trailing(Inner::Button(reveal))
             .view(input)
     });
     assert!(
@@ -186,8 +174,10 @@ fn a_field_holds_a_prefix_and_a_named_button_inside_its_edge() {
         ),
         "an inner button keeps its name: {page}"
     );
-    let plain =
-        html(|| Field::new("plain", "Plain").view(view! { <input id="plain" class=INPUT /> }));
+    let plain = html(
+        Field::new("plain", "Plain")
+            .view(Html::raw(format!(r#"<input id="plain" class="{INPUT}">"#))),
+    );
     assert!(
         !plain.contains("fui-input-group"),
         "no part, no group: {plain}"
@@ -197,18 +187,18 @@ fn a_field_holds_a_prefix_and_a_named_button_inside_its_edge() {
 /// The masked identifier field with its hold-to-show eye, as a page draws
 /// it.
 fn masked_field() -> String {
-    page_html(|| {
+    html(
         Field::new("identifier", "Identifier")
             .help("Nine digits.")
             .trailing(Inner::HoldToShow(
-                HoldWords::of_page().named("Show the identifier while held"),
+                HoldWords::of(&en()).named("Show the identifier while held"),
             ))
             .view(masked_input(
                 "identifier",
                 "identifier",
                 described_by("identifier", true, false),
-            ))
-    })
+            )),
+    )
 }
 
 #[test]
@@ -239,8 +229,8 @@ fn a_masked_field_draws_its_input_masked_with_no_autocomplete_capitals_or_spelli
 }
 
 #[test]
-fn the_eye_is_disabled_and_says_the_field_stays_masked_until_the_webassembly_runs() {
-    // leptos-ui.md §15.8; WAI-ARIA 1.2 `button`: a toggle button says whether it is pressed.
+fn the_eye_is_disabled_and_says_the_field_stays_masked_until_its_module_runs() {
+    // WAI-ARIA 1.2 `button`: a toggle button says whether it is pressed.
     let page = masked_field();
     assert!(
         has(
@@ -266,19 +256,18 @@ fn the_eye_is_disabled_and_says_the_field_stays_masked_until_the_webassembly_run
 
 #[test]
 fn the_masked_field_writes_no_props_into_the_page() {
-    // NOTE: leptos-ui.md §5: the page hydrates whole, so a component's props never cross
-    // to the browser as data in the page, and no typed value travels outside its input.
+    // NOTE: no specification governs this: our own design; no typed value travels outside
+    // its input, so the page carries no copy of it as data.
     let page = masked_field();
     assert!(!page.contains("data-props"), "{page}");
-    assert!(!page.contains("<leptos-island"), "{page}");
 }
 
 #[test]
-fn an_islands_inner_button_keeps_the_groups_target_size() {
-    // WCAG 2.2 SC 2.5.8: the eye in its island's wrapper is the same 30 px target.
+fn an_inner_button_keeps_the_groups_target_size() {
+    // WCAG 2.2 SC 2.5.8: the masked input's eye is the same 30 px target as any inner button.
     for rule in [
-        "  .fui-input-group > leptos-island > .fui-input-toggle {\n    width: 1.875rem;\n    height: 1.875rem;",
-        "  .fui-input-group > .fui-input:has(+ :is(.fui-input-suffix, .fui-input-toggle, leptos-island)) {",
+        "  .fui-input-group > .fui-input-toggle {\n    width: 1.875rem;\n    height: 1.875rem;",
+        "  .fui-input-group > .fui-input:has(+ :is(.fui-input-suffix, .fui-input-toggle)) {",
         "  .fui-input-hold {\n    touch-action: none;",
     ] {
         assert!(STYLESHEET.contains(rule), "missing: {rule}");
@@ -305,8 +294,7 @@ fn the_group_draws_the_fields_one_edge_and_the_focus_ring_round_its_parts() {
 
 #[test]
 fn the_server_draws_the_date_field_closed_with_its_typed_value_posting() {
-    let page =
-        page_html(|| view! { <DatePicker field=audit_from("2026-10-14", None) /> }.into_any());
+    let page = html(date_field(audit_from("2026-10-14", None)));
     let input = tags(&page, "input")
         .into_iter()
         .find(|input| input.get("id").map(String::as_str) == Some("audit-from"))
@@ -332,7 +320,7 @@ fn the_server_draws_the_date_field_closed_with_its_typed_value_posting() {
         "the format is stated after the label: {page}"
     );
     assert!(
-        page.contains("From &lt;b&gt;"),
+        page.contains("From &#60;b&#62;"),
         "the label is escaped: {page}"
     );
     let button = tags(&page, "button")
@@ -341,7 +329,7 @@ fn the_server_draws_the_date_field_closed_with_its_typed_value_posting() {
         .expect("the calendar button");
     assert!(
         button.contains_key("disabled"),
-        "disabled until the WebAssembly runs: {page}"
+        "disabled until its module runs: {page}"
     );
     assert_eq!(
         Some("Type the date: the calendar opens once the page has loaded"),
@@ -362,9 +350,7 @@ fn the_server_draws_the_date_field_closed_with_its_typed_value_posting() {
 #[test]
 fn a_refused_value_marks_the_field_invalid_and_says_why() {
     let reason = "2026-10-41 is not a date: October has 31 days.";
-    let page = page_html(|| {
-        view! { <DatePicker field=audit_from("2026-10-41", Some(reason)) /> }.into_any()
-    });
+    let page = html(date_field(audit_from("2026-10-41", Some(reason))));
     assert!(
         has(
             &page,
@@ -385,7 +371,7 @@ fn a_refused_value_marks_the_field_invalid_and_says_why() {
 }
 
 #[test]
-fn the_range_shows_its_from_and_to_fields_until_the_webassembly_runs() {
+fn the_range_shows_its_from_and_to_fields_until_its_module_runs() {
     let range = DateRange {
         id: String::from("audit-range"),
         label: String::from("Actions between"),
@@ -407,10 +393,10 @@ fn the_range_shows_its_from_and_to_fields_until_the_webassembly_runs() {
             latest: Some(day("2026-10-21")),
         },
         first_day: Weekday::Monday,
-        presets: Owner::new().with(|| vec![RangePreset::of_page(Preset::LastDays(7))]),
-        words: Owner::new().with(|| DateWords::of_page(false)),
+        presets: vec![RangePreset::of(&en(), Preset::LastDays(7))],
+        words: DateWords::of(&en(), false),
     };
-    let page = page_html(|| view! { <DateRangePicker range=range /> }.into_any());
+    let page = html(date_range(range));
     assert!(
         has(&page, "div", &[("class", "fui-date-range-fields")]),
         "{page}"
@@ -434,7 +420,7 @@ fn the_range_shows_its_from_and_to_fields_until_the_webassembly_runs() {
         .expect("the range button");
     assert!(
         button.contains_key("hidden"),
-        "the button waits for the WebAssembly: {page}"
+        "the button waits for its module: {page}"
     );
     assert!(
         page.contains("2026-10-15 to 2026-10-21"),
@@ -444,7 +430,7 @@ fn the_range_shows_its_from_and_to_fields_until_the_webassembly_runs() {
 
 #[test]
 fn a_preset_names_the_range_it_fills() {
-    let words = Owner::new().with(|| RangePreset::of_page(Preset::LastDays(7)).words);
+    let words = RangePreset::of(&en(), Preset::LastDays(7)).words;
     assert_eq!("Last 7 days", words);
     let (from, to) = Preset::LastDays(7)
         .range(day("2026-10-21"))
@@ -475,26 +461,4 @@ fn the_phone_sheet_shows_one_month_with_both_arrows_and_centred_buttons() {
     ] {
         assert!(STYLESHEET.contains(rule), "missing: {rule}");
     }
-}
-
-#[test]
-fn the_return_field_names_the_page_in_view_with_its_query() {
-    let field = html(|| {
-        provide_context(ferrohealth_ui::widget::nav::CurrentPath(Signal::stored(
-            String::from("/files?sort=name"),
-        )));
-        ferrohealth_ui::widget::action::return_field().into_any()
-    });
-    assert!(
-        has(
-            &field,
-            "input",
-            &[
-                ("type", "hidden"),
-                ("name", ferrohealth_ui::widget::action::RETURN),
-                ("value", "/files?sort=name"),
-            ]
-        ),
-        "{field}"
-    );
 }

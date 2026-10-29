@@ -9,9 +9,9 @@
 //! its code in the code face, its line and column as a link to the line,
 //! its message, and the mapping it belongs to. The link targets the id the
 //! code viewer ([`crate::view::code`]) and the editor
-//! ([`crate::widget::editor::line_id`]) give each line, and the row for the
-//! current line takes `is-current` and `aria-current`, in step with the
-//! line. A file's name heads its rows as a link in the ink with no
+//! ([`crate::view::editor::line_id`]) give each line, and the row for the
+//! current line takes `is-current` and `aria-current`, which the `editor`
+//! module keeps in step with the caret. A file's name heads its rows as a link in the ink with no
 //! underline (family rule 4), with its counts. On a phone a row is one
 //! column, and a long code, message, mapping or path breaks rather than
 //! widen the page (WCAG 2.2 SC 1.4.10). A file whose findings run past
@@ -19,10 +19,11 @@
 //! to them all, when the console gives one; a list with no finding says
 //! so in one line. No specification governs the list: our own design.
 
-use leptos::prelude::*;
+use askama::Template;
 use serde::{Deserialize, Serialize};
 
-use crate::i18n::{Phrase, Text, Word, tr, tr_with};
+use crate::html::{Html, Render as _};
+use crate::i18n::{Locale, Phrase, Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::view::code::Gravity;
 
@@ -115,7 +116,7 @@ pub fn ordered_files(files: &[FileFindings]) -> Vec<&FileFindings> {
 
 /// The counts of `file` as its head says them, such as "2 errors, 1
 /// warning".
-fn counts(file: &FileFindings) -> Word {
+fn counts(locale: &Locale, file: &FileFindings) -> Word {
     let errors = file
         .findings
         .iter()
@@ -123,11 +124,17 @@ fn counts(file: &FileFindings) -> Word {
         .count();
     let warnings = file.findings.len().saturating_sub(errors);
     let errors =
-        (errors > 0).then(|| tr_with(Text::DiagnosticsErrors, &[("count", errors.into())]));
-    let warnings =
-        (warnings > 0).then(|| tr_with(Text::DiagnosticsWarnings, &[("count", warnings.into())]));
+        (errors > 0).then(|| tr_with(locale, Text::DiagnosticsErrors, &[("count", errors.into())]));
+    let warnings = (warnings > 0).then(|| {
+        tr_with(
+            locale,
+            Text::DiagnosticsWarnings,
+            &[("count", warnings.into())],
+        )
+    });
     match (errors, warnings) {
         (Some(errors), Some(warnings)) => tr_with(
+            locale,
             Text::DiagnosticsErrorsWarnings,
             &[("errors", errors.into()), ("warnings", warnings.into())],
         ),
@@ -136,8 +143,7 @@ fn counts(file: &FileFindings) -> Word {
     }
 }
 
-/// The words a diagnostics row draws, resolved on the server in the page's
-/// locale, so an island that draws the list carries no catalog.
+/// The words a diagnostics row draws, in the page's locale.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DiagnosticsWords {
     /// The word of an error.
@@ -159,14 +165,15 @@ pub struct DiagnosticsWords {
 }
 
 impl DiagnosticsWords {
-    /// The row words in the locale of the page being drawn.
+    /// The row words in `locale`.
     #[must_use]
-    pub fn of_page() -> Self {
+    pub fn of(locale: &Locale) -> Self {
         Self {
-            error: tr(Text::DiagnosticsError),
-            warning: tr(Text::DiagnosticsWarning),
-            whole: tr(Text::DiagnosticsWhole),
+            error: tr(locale, Text::DiagnosticsError),
+            warning: tr(locale, Text::DiagnosticsWarning),
+            whole: tr(locale, Text::DiagnosticsWhole),
             line: Phrase::new(tr_with(
+                locale,
                 Text::DiagnosticsLine,
                 &[
                     ("line", Phrase::open("line")),
@@ -174,10 +181,12 @@ impl DiagnosticsWords {
                 ],
             )),
             mapping: Phrase::new(tr_with(
+                locale,
                 Text::DiagnosticsMapping,
                 &[("mapping", Phrase::open("mapping"))],
             )),
             more: Phrase::new(tr_with(
+                locale,
                 Text::DiagnosticsMore,
                 &[
                     ("shown", Phrase::open("shown")),
@@ -185,24 +194,18 @@ impl DiagnosticsWords {
                 ],
             )),
             more_all: Phrase::new(tr_with(
+                locale,
                 Text::DiagnosticsMoreAll,
                 &[("total", Phrase::open("total"))],
             )),
-            none: tr(Text::DiagnosticsNone),
+            none: tr(locale, Text::DiagnosticsNone),
         }
     }
 }
 
 /// Returns the row of `finding` of a file whose lines are linked as
-/// `lines`; it is current while `current` names its line, and `on_line`
-/// hears a click on its line link.
-fn row(
-    finding: &Finding,
-    lines: &str,
-    words: &DiagnosticsWords,
-    current: Signal<Option<u32>>,
-    on_line: Option<Callback<Position>>,
-) -> AnyView {
+/// `lines`; it is current while `current` names its line.
+fn row(finding: &Finding, lines: &str, words: &DiagnosticsWords, current: Option<u32>) -> Html {
     let (class, glyph, word) = match finding.gravity {
         Gravity::Error => ("fui-diag fui-tone-bad", Glyph::CIRCLE_X, &words.error),
         Gravity::Warning => (
@@ -212,60 +215,62 @@ fn row(
         ),
     };
     let line = finding.at.map(|at| at.line);
-    let is_current = move || line.is_some() && current.get() == line;
-    let place = match finding.at {
-        Some(at) => {
-            let href = format!("{lines}{}", at.line);
-            let words = words.line.fill(&[
-                ("line", &at.line.to_string()),
-                ("column", &at.column.to_string()),
-            ]);
-            view! {
-                <a
-                    class="fui-diag-where"
-                    href=href
-                    on:click=move |_| {
-                        if let Some(on_line) = on_line {
-                            on_line.run(at);
-                        }
-                    }
-                >
-                    {words}
-                </a>
-            }
-            .into_any()
-        }
-        None => view! { <span class="fui-diag-where">{words.whole.clone()}</span> }.into_any(),
-    };
-    let mapping = finding.mapping.as_ref().map(|mapping| {
-        let words = words.mapping.fill(&[("mapping", mapping)]);
-        view! { <span class="fui-diag-mapping">{words}</span> }
-    });
-    view! {
-        <li
-            class=class
-            class:is-current=is_current
-            aria-current=move || is_current().then_some("true")
-        >
-            <span class="fui-diag-sev">{icon(glyph, "14")} {word.clone()}</span>
-            <span class="fui-diag-head">
-                <code class="fui-diag-code">{finding.code.clone()}</code>
-                {place}
-            </span>
-            <p class="fui-diag-msg">{finding.message.clone()} {mapping}</p>
-        </li>
+    RowView {
+        line,
+        current: line.is_some() && current == line,
+        class,
+        glyph: icon(glyph, "14"),
+        word,
+        code: &finding.code,
+        place: finding.at.map(|at| {
+            (
+                format!("{lines}{}", at.line),
+                words.line.fill(&[
+                    ("line", &at.line.to_string()),
+                    ("column", &at.column.to_string()),
+                ]),
+                at.column,
+            )
+        }),
+        whole: &words.whole,
+        message: &finding.message,
+        mapping: finding
+            .mapping
+            .as_ref()
+            .map(|mapping| words.mapping.fill(&[("mapping", mapping)])),
     }
-    .into_any()
+    .html()
+}
+
+#[derive(Template)]
+#[template(path = "diagnostics/diagnostics.html", block = "row")]
+struct RowView<'a> {
+    line: Option<u32>,
+    current: bool,
+    class: &'static str,
+    glyph: Html,
+    word: &'a Word,
+    code: &'a str,
+    place: Option<(String, Word, u32)>,
+    whole: &'a Word,
+    message: &'a str,
+    mapping: Option<Word>,
 }
 
 /// Returns the row that says a list holds no finding, in `words`.
-fn none_row(words: &DiagnosticsWords) -> AnyView {
-    view! {
-        <li class="fui-diags-empty">
-            {icon(Glyph::CIRCLE_CHECK, "14")} <span>{words.none.clone()}</span>
-        </li>
+fn none_row(words: &DiagnosticsWords) -> Html {
+    NoneView {
+        glyph: icon(Glyph::CIRCLE_CHECK, "14"),
+        words: &words.none,
     }
-    .into_any()
+    .html()
+}
+
+#[derive(Template)]
+#[template(path = "diagnostics/diagnostics.html", block = "none")]
+struct NoneView<'a> {
+    glyph: Html,
+    words: &'a Word,
 }
 
 /// The number of rows of `file` the list draws: every finding, or the
@@ -279,91 +284,95 @@ fn shown(file: &FileFindings) -> usize {
 
 /// Returns the rows of `file`, errors first, current while `current` names
 /// their line, in `words`, the first [`WINDOW`] and a more row while the
-/// console links to them all; `on_line` hears a click on a line link.
-pub(crate) fn rows(
-    file: &FileFindings,
-    words: &DiagnosticsWords,
-    current: Signal<Option<u32>>,
-    on_line: Option<Callback<Position>>,
-) -> AnyView {
+/// console links to them all.
+pub(crate) fn rows(file: &FileFindings, words: &DiagnosticsWords, current: Option<u32>) -> Html {
     if file.findings.is_empty() {
         return none_row(words);
     }
     let shown = shown(file);
     let total = file.findings.len();
-    let drawn = ordered(&file.findings)
+    let drawn: Html = ordered(&file.findings)
         .into_iter()
         .take(shown)
-        .map(|finding| row(finding, &file.lines, words, current, on_line))
-        .collect_view();
-    let more = file.all.as_ref().filter(|_| shown < total).map(|all| {
-        let (shown, total) = (shown.to_string(), total.to_string());
-        let said = words.more.fill(&[("shown", &shown), ("total", &total)]);
-        let link = words.more_all.fill(&[("total", &total)]);
-        view! {
-            <li class="fui-diags-more">
-                <span>{said} " " <a href=all.clone()>{link}</a></span>
-            </li>
-        }
-    });
-    view! { {drawn} {more} }.into_any()
+        .map(|finding| row(finding, &file.lines, words, current))
+        .collect();
+    let more = file
+        .all
+        .as_ref()
+        .filter(|_| shown < total)
+        .map(|all| {
+            let (shown, total) = (shown.to_string(), total.to_string());
+            MoreView {
+                said: words.more.fill(&[("shown", &shown), ("total", &total)]),
+                all,
+                link: words.more_all.fill(&[("total", &total)]),
+            }
+            .html()
+        })
+        .unwrap_or_default();
+    drawn.then(more)
+}
+
+#[derive(Template)]
+#[template(path = "diagnostics/diagnostics.html", block = "more")]
+struct MoreView<'a> {
+    said: Word,
+    all: &'a str,
+    link: Word,
 }
 
 /// Returns the diagnostics list of one file, named `label`, with no file
 /// head: the list beside an editor or a code viewer of that file.
 #[must_use]
-pub fn diagnostics(label: &str, file: &FileFindings) -> AnyView {
-    let rows = rows(
-        file,
-        &DiagnosticsWords::of_page(),
-        Signal::stored(file.current),
-        None,
-    );
-    view! {
-        <ul class="fui-diags" aria-label=label.to_owned()>
-            {rows}
-        </ul>
-    }
-    .into_any()
+pub fn diagnostics(locale: &Locale, label: &str, file: &FileFindings) -> Html {
+    let rows = rows(file, &DiagnosticsWords::of(locale), file.current);
+    Html::raw(format!(
+        "<ul aria-label=\"{}\" class=\"fui-diags\">{rows}</ul>",
+        Html::text(label)
+    ))
 }
 
 /// Returns the diagnostics list of `files`, named `label`: each file's
 /// rows under its head, the files with an error first.
 #[must_use]
-pub fn diagnostics_by_file(label: &str, files: &[FileFindings]) -> AnyView {
-    let words = DiagnosticsWords::of_page();
-    let groups = ordered_files(files)
+pub fn diagnostics_by_file(locale: &Locale, label: &str, files: &[FileFindings]) -> Html {
+    let words = DiagnosticsWords::of(locale);
+    let groups: Html = ordered_files(files)
         .into_iter()
         .map(|file| {
-            let name = crate::view::code::path(&file.file);
+            let path = crate::view::code::path(&file.file);
             let name = match &file.href {
-                Some(href) => view! {
-                    <a href=href.clone() class="fui-row-link">
-                        <code>{name}</code>
-                    </a>
-                }
-                .into_any(),
-                None => view! { <code>{name}</code> }.into_any(),
+                Some(href) => Html::raw(format!(
+                    "<a href=\"{}\" class=\"fui-row-link\"><code>{path}</code></a>",
+                    Html::text(href)
+                )),
+                None => Html::raw(format!("<code>{path}</code>")),
             };
-            let rows = rows(file, &words, Signal::stored(file.current), None);
-            view! {
-                <li>
-                    <p class="fui-diags-file">
-                        {name} <span class="fui-muted">{counts(file)}</span>
-                    </p>
-                    <ul class="fui-diags">{rows}</ul>
-                </li>
+            FileView {
+                name,
+                counts: counts(locale, file),
+                rows: rows(file, &words, file.current),
             }
+            .html()
         })
-        .collect_view();
-    let none = files.is_empty().then(|| none_row(&words));
-    view! {
-        <ul class="fui-diags" aria-label=label.to_owned()>
-            {none}
-            {groups}
-        </ul>
-    }
-    .into_any()
+        .collect();
+    let none = if files.is_empty() {
+        none_row(&words)
+    } else {
+        Html::empty()
+    };
+    Html::raw(format!(
+        "<ul aria-label=\"{}\" class=\"fui-diags\">{none}{groups}</ul>",
+        Html::text(label)
+    ))
+}
+
+#[derive(Template)]
+#[template(path = "diagnostics/diagnostics.html", block = "file")]
+struct FileView {
+    name: Html,
+    counts: Word,
+    rows: Html,
 }
 
 #[cfg(test)]

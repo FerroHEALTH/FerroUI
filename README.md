@@ -44,8 +44,8 @@ still works when its scripts do not load.
 
 - **People who use the FerroHEALTH consoles**, who get the same layout,
   keyboard behaviour and themes in each product.
-- **Developers of the FerroHEALTH consoles**, and of other Leptos
-  applications in Rust, who build pages from reviewed components.
+- **Developers of the FerroHEALTH consoles**, and of other server-rendered
+  web applications in Rust, who build pages from reviewed components.
 
 ### Why you can trust what it claims
 
@@ -75,20 +75,19 @@ and FerroPIX are all built from FerroUI.
 
 ## Quick start
 
-Add the crate to a Leptos 0.8 application, pinned exactly:
+Add the crate to an axum application, pinned exactly:
 
 ```sh
-cargo add ferrohealth-ui@=0.4.0
+cargo add ferrohealth-ui@=0.6.0
 ```
 
 The [crate README](crates/ferrohealth-ui/README.md) is the integration
-guide: the islands setup, the stylesheet and theme, and the page templates.
-To see every component, run the gallery from a checkout with
-[`cargo-leptos`](https://crates.io/crates/cargo-leptos):
+guide: the assets, the document, the stylesheet and theme, and the
+locales. To see every component, run the gallery from a checkout:
 
 ```sh
-git clone https://github.com/FerroHEALTH/FerroUI && cd FerroUI/app/ferrohealth-ui-gallery
-cargo leptos watch
+git clone https://github.com/FerroHEALTH/FerroUI && cd FerroUI
+cargo run -p ferrohealth-ui-gallery
 ```
 
 Then open <http://127.0.0.1:3000>.
@@ -110,7 +109,7 @@ Then open <http://127.0.0.1:3000>.
 
 | Crate | What it does | Version | Docs | Downloads |
 |---|---|---|---|---|
-| [`ferrohealth-ui`](https://crates.io/crates/ferrohealth-ui) | The shared UI components of the FerroHEALTH consoles: Leptos views and widgets, role tokens, highlighters and one table model | [![crates.io](https://img.shields.io/crates/v/ferrohealth-ui?logo=rust&label=crates.io)](https://crates.io/crates/ferrohealth-ui) | [![docs.rs](https://img.shields.io/docsrs/ferrohealth-ui?logo=docsdotrs&label=docs.rs)](https://docs.rs/ferrohealth-ui) | [![downloads](https://img.shields.io/crates/d/ferrohealth-ui?logo=rust&label=downloads)](https://crates.io/crates/ferrohealth-ui) |
+| [`ferrohealth-ui`](https://crates.io/crates/ferrohealth-ui) | The shared UI components of the FerroHEALTH consoles: server-rendered Askama components, role tokens, plain script modules, a highlighter and one table model | [![crates.io](https://img.shields.io/crates/v/ferrohealth-ui?logo=rust&label=crates.io)](https://crates.io/crates/ferrohealth-ui) | [![docs.rs](https://img.shields.io/docsrs/ferrohealth-ui?logo=docsdotrs&label=docs.rs)](https://docs.rs/ferrohealth-ui) | [![downloads](https://img.shields.io/crates/d/ferrohealth-ui?logo=rust&label=downloads)](https://crates.io/crates/ferrohealth-ui) |
 
 </details>
 

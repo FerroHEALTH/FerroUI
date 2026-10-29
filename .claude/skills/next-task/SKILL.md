@@ -48,7 +48,7 @@ that is a separate step the caller takes after seeing the plan.
    - **Which specifications govern it:** for any spec-facing task, name the
      authoritative source the work must be read against (WCAG 2.2, WAI-ARIA
      and its Authoring Practices, the HTML Living Standard, CSS, or
-     the Leptos book), per `.claude/rules/spec-adherence.md` and
+     the Askama book), per `.claude/rules/spec-adherence.md` and
      the `spec-researcher` agent. Doing the work starts by reading those.
    - **What "done" looks like** for this task specifically: the issue's
      `## Acceptance criteria` checklist, plus what proves it.

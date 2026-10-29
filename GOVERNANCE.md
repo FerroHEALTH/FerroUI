@@ -29,7 +29,7 @@ after looking at its own screens.
 |---------------------------|---------------------------------------------------------|
 | What to build, and why    | the issue, with its acceptance criteria                 |
 | How a component behaves   | the pull request, citing WCAG, WAI-ARIA or HTML         |
-| Component rules           | `.claude/rules/leptos-ui.md`                            |
+| Component rules           | `.claude/rules/console-ui.md`                            |
 | A release's contents      | its `CHANGELOG.md` section and its milestone            |
 
 ## Becoming a maintainer

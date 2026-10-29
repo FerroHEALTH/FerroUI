@@ -1,8 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The data table, its cells and the list card it sits in, drawn as static
-//! views.
+//! The data table, its cells and the rows of a list card.
 //!
 //! The table is drawn to the design's measures (`design/COMPONENTS.md`,
 //! § The table): inside a card or a panel the card edge is its only frame,
@@ -13,30 +12,22 @@
 //! for one that keeps it out), so a page sorts with no script, and the
 //! sorted column's header carries `aria-sort` (WAI-ARIA 1.2).
 //!
-//! Below 40rem the rows stack: inside a card or a panel each row is a line
-//! under a hairline that keeps the panel's inset. In a list card
-//! ([`crate::view::template::list::list_card`]) the row is the compact
-//! work-list line the cells' [`Role`] places: the
-//! checkbox, the name and the row menu on the first line, the facts on the
-//! second, a wide column left out. The cell helpers ([`cell`],
-//! [`title_cell`], [`count_cell`], [`menu_cell`], [`check_cell`],
-//! [`group_row`]) write each cell's label and role, so a console's rows
-//! take that form. No specification governs the measures: our own design.
+//! Below 40rem the rows stack: each row is a line under a hairline that
+//! keeps the panel's inset, the cells placed by their [`Role`]. The cell
+//! helpers write each cell's label and role, so a console's rows take that
+//! form. No specification governs the measures: our own design.
 
 use std::borrow::Cow;
 
-use leptos::prelude::*;
+use askama::Template;
 
-use crate::i18n::Word;
+use crate::html::{Html, Render as _};
+use crate::i18n::{Locale, Word};
 use crate::icon::{Glyph, icon};
 use crate::table::model::{Noun, ORDER_KEY, PAGE_KEY, SORT_KEY, Sort, StateSource};
 use crate::view::path::path;
 
-/// Where a column's cells sit in the compact phone row of a list card
-/// ([`crate::view::template::list::list_card`]).
-///
-/// Outside a list card a stacked row shows every cell under its column's
-/// name, and the role changes nothing.
+/// Where a column's cells sit in the compact phone row of a list card.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Role {
     /// The row's name, which opens the first line.
@@ -48,9 +39,8 @@ pub enum Role {
     Meta,
     /// A quiet fact on the second line, such as a count.
     Quiet,
-    /// A column left out of the phone row. It holds only what a phone
-    /// reader finds again on the row's own page (`design/COMPONENTS.md`,
-    /// § The table): never a selection, a state or the row's name.
+    /// A column left out of the phone row: only what a phone reader finds
+    /// again on the row's own page, never a selection, a state or the name.
     Wide,
     /// The row menu, at the end of the first line.
     Menu,
@@ -94,20 +84,14 @@ pub struct Column {
     /// Whether the header is code (a path, an alias), drawn in the code
     /// face and in its own case.
     pub mono: bool,
-    /// The header's title, such as the path a query column reads, which the
-    /// header carries once so no cell repeats it.
+    /// The header's title, such as the path a query column reads.
     pub title: Option<Cow<'static, str>>,
     /// Where the column's cells sit in the compact phone row.
     pub role: Role,
 }
 
 impl Column {
-    /// A text column that does not sort, its header `label` a fixed word or
-    /// one the console looks up at run time.
-    ///
-    /// A column is built where its table is drawn, so its header follows the
-    /// page's locale; a console keeps its columns in a function rather than
-    /// a `const`.
+    /// A text column that does not sort, its header `label`.
     #[must_use]
     pub fn text(key: &'static str, label: impl Into<Word>) -> Self {
         Self {
@@ -121,8 +105,7 @@ impl Column {
         }
     }
 
-    /// A text column whose key and header are known only at run time, such
-    /// as the columns of a query's result set.
+    /// A text column whose key and header are known only at run time.
     #[must_use]
     pub fn owned(key: impl Into<String>, label: impl Into<String>) -> Self {
         Self {
@@ -165,10 +148,6 @@ impl Column {
     }
 
     /// This column, its header carrying the title `title`.
-    ///
-    /// A title is extra detail a pointer shows and a keyboard does not, so
-    /// the header's words still name the column on their own (HTML Living
-    /// Standard, the `title` attribute).
     #[must_use]
     pub fn titled(mut self, title: impl Into<Cow<'static, str>>) -> Self {
         self.title = Some(title.into());
@@ -183,13 +162,10 @@ pub const NUM: &str = "fui-num";
 pub const ACTIONS: &str = "fui-table-actions";
 
 /// The class of a row that is excluded: muted, its State cell saying so in
-/// words (`design/COMPONENTS.md`, § The table; family rule 12).
+/// words (family rule 12).
 pub const EXCLUDED: &str = "is-excluded";
 
 /// The indentation classes of a hierarchy row's leading cell, one per level.
-///
-/// A class per level rather than a `style` attribute, so a console keeps
-/// `style-src 'self'`; the last step stands for every deeper level.
 const DEPTHS: [&str; 9] = [
     "fui-depth-0",
     "fui-depth-1",
@@ -203,10 +179,7 @@ const DEPTHS: [&str; 9] = [
 ];
 
 /// The class that indents the leading cell of a table row `depth` levels down
-/// a hierarchy, such as a concept under its parents in an expansion.
-///
-/// Every level past the eighth takes the eighth's indentation. Put the class
-/// on the one cell that names the row; the other cells keep their column.
+/// a hierarchy; every level past the eighth takes the eighth's indentation.
 #[must_use]
 pub fn depth(depth: u32) -> &'static str {
     let index = usize::try_from(depth).unwrap_or(usize::MAX);
@@ -221,16 +194,14 @@ pub fn depth(depth: u32) -> &'static str {
 #[derive(Debug)]
 pub enum Body {
     /// The rows, each a `<tr>` the console draws.
-    Rows(AnyView),
+    Rows(Html),
     /// This many skeleton rows, while the rows load.
     Loading(u8),
     /// The empty state, when there is no row.
-    Empty(AnyView),
+    Empty(Html),
     /// Several bodies, each a `<tbody>` of `<tr>` rows the console draws,
-    /// such as one per page of an answer or one per group under its
-    /// [`group_row`], written as they are under the header and stacked below
-    /// 40rem like any other rows.
-    Bodies(AnyView),
+    /// such as one per group under its [`group_row`].
+    Bodies(Html),
 }
 
 /// How a table's sortable headers sort.
@@ -243,23 +214,18 @@ pub struct Sorting<'a> {
     /// The sort in force, if any.
     pub sort: Option<&'a Sort>,
     /// Where the listing keeps its sort: [`StateSource::Url`] submits a
-    /// `GET` form, so the sort lands in the query and a page sorts before
-    /// it hydrates; [`StateSource::Session`] posts it, so a listing that
-    /// can show patient data keeps its order out of the URL and the history.
+    /// `GET` form; [`StateSource::Session`] posts it, so a listing that can
+    /// show patient data keeps its order out of the URL and the history.
     pub source: StateSource,
     /// The URL the form submits to; `None` submits to the page's own
-    /// address, which is what a `GET` form of a URL listing wants.
+    /// address.
     pub action: Option<&'a str>,
-    /// The other fields the form carries as they are: the rest of the
-    /// listing's query ([`crate::table::model::fields`]), such as its size
-    /// and its filter, or what the console's handler reads. A `sort`, an
-    /// `order` or a `page` among them is left out.
+    /// The other fields the form carries as they are, such as the listing's
+    /// size and its filter. A `sort`, an `order` or a `page` among them is
+    /// left out.
     pub fields: &'a [(String, String)],
-    /// The words of an order of several keys ("Sorted by grade, then score,
-    /// then the longest wait"), which the header of the column that leads it
-    /// carries as its title (`design/COMPONENTS.md`, T1, the documented
-    /// exception). The card's header row states it with
-    /// [`crate::view::template::list::ListCard::order`].
+    /// The words of an order of several keys, which the header of the
+    /// column that leads it carries as its title.
     pub stated: Option<&'a str>,
 }
 
@@ -278,15 +244,18 @@ pub struct DataTable<'a> {
 }
 
 /// The hidden fields of a form: `fields` without the keys in `dropped`.
-pub(crate) fn hidden_fields(fields: &[(String, String)], dropped: &[&str]) -> AnyView {
+pub(crate) fn hidden_fields(fields: &[(String, String)], dropped: &[&str]) -> Html {
     fields
         .iter()
         .filter(|(name, _)| !dropped.contains(&name.as_str()))
         .map(|(name, value)| {
-            view! { <input type="hidden" name=name.clone() value=value.clone() /> }
+            Html::raw(format!(
+                "<input type=\"hidden\" name=\"{}\" value=\"{}\">",
+                Html::text(name),
+                Html::text(value)
+            ))
         })
-        .collect_view()
-        .into_any()
+        .collect()
 }
 
 /// The `method` of a form for a listing that keeps its state in `source`.
@@ -297,8 +266,37 @@ pub(crate) const fn method(source: StateSource) -> &'static str {
     }
 }
 
+#[derive(Template)]
+#[template(
+    source = r#"<th scope="col"{% if let Some(class) = class %} class="{{ class }}"{% endif %}{% if let Some(title) = title %} title="{{ title }}"{% endif %}{% if let Some(aria) = aria_sort %} aria-sort="{{ aria }}"{% endif %}>{{ inside }}</th>"#,
+    ext = "html"
+)]
+struct Header {
+    class: Option<String>,
+    title: Option<String>,
+    aria_sort: Option<&'static str>,
+    inside: Html,
+}
+
+#[derive(Template)]
+#[template(
+    source = r#"<form method="{{ method }}"{% if let Some(action) = action %} action="{{ action }}"{% endif %} class="fui-sort-form">{{ carried }}<input type="hidden" name="{{ order_key }}" value="{{ order }}"><button type="submit" class="fui-sort" name="{{ sort_key }}" value="{{ column }}">{{ words }}{{ glyph }}</button></form>"#,
+    ext = "html"
+)]
+struct SortForm {
+    method: &'static str,
+    action: Option<String>,
+    carried: Html,
+    order_key: &'static str,
+    order: &'static str,
+    sort_key: &'static str,
+    column: String,
+    words: Html,
+    glyph: Html,
+}
+
 /// Returns the header cell of `column` under `sorting`.
-fn header(column: &Column, sorting: &Sorting<'_>) -> AnyView {
+fn header(column: &Column, sorting: &Sorting<'_>) -> Html {
     let mut classes: Vec<&str> = Vec::new();
     if column.numeric {
         classes.push(NUM);
@@ -310,7 +308,6 @@ fn header(column: &Column, sorting: &Sorting<'_>) -> AnyView {
         classes.push("fui-row-check");
     }
     let class = (!classes.is_empty()).then(|| classes.join(" "));
-    let label = column.label.clone();
     let leads = sorting
         .sort
         .is_some_and(|sort| sort.column == column.key.as_ref());
@@ -319,43 +316,49 @@ fn header(column: &Column, sorting: &Sorting<'_>) -> AnyView {
         .as_deref()
         .or(sorting.stated.filter(|_| leads))
         .map(str::to_owned);
+    let hidden_label = Html::raw(format!(
+        "<span class=\"fui-sr-only\">{}</span>",
+        column.label
+    ));
     if column.role == Role::Check {
-        // NOTE: leptos-ui.md §15.8: a select-all only script can work stays hidden until a
-        // work-list island shows it (`crate::widget::worklist`).
-        let name = String::from(label.clone());
-        return view! {
-            <th scope="col" title=title>
-                <span class="fui-sr-only">{label}</span>
-                <input type="checkbox" class="fui-select-all" aria-label=name hidden />
-            </th>
+        // NOTE: a select-all only script can work stays hidden until the
+        // work-list module shows it.
+        let inside = hidden_label.then(Html::raw(format!(
+            "<input type=\"checkbox\" class=\"fui-select-all\" aria-label=\"{}\" hidden>",
+            Html::text(column.label.text())
+        )));
+        return Header {
+            class,
+            title,
+            aria_sort: None,
+            inside,
         }
-        .attr("class", class)
-        .into_any();
+        .html();
     }
     if column.role.hides_header() {
-        return view! {
-            <th scope="col" title=title>
-                <span class="fui-sr-only">{label}</span>
-            </th>
+        return Header {
+            class,
+            title,
+            aria_sort: None,
+            inside: hidden_label,
         }
-        .attr("class", class)
-        .into_any();
+        .html();
     }
     // NOTE: no specification governs this: our own design; a code header breaks only
     // where a path does, so it never sets its column's width alone.
     let words = if column.mono {
-        path(label.text())
+        path(column.label.text())
     } else {
-        label.into_render()
+        column.label.clone().into()
     };
     if !column.sortable {
-        return view! {
-            <th scope="col" title=title>
-                {words}
-            </th>
+        return Header {
+            class,
+            title,
+            aria_sort: None,
+            inside: words,
         }
-        .attr("class", class)
-        .into_any();
+        .html();
     }
     let aria = Sort::aria(sorting.sort, &column.key);
     let glyph = match aria {
@@ -364,22 +367,38 @@ fn header(column: &Column, sorting: &Sorting<'_>) -> AnyView {
         _ => Glyph::ARROW_UP_DOWN,
     };
     let next = Sort::toggled(sorting.sort, &column.key);
-    let carried = hidden_fields(sorting.fields, &[SORT_KEY, ORDER_KEY, PAGE_KEY]);
-    let action = sorting.action.map(str::to_owned);
-    view! {
-        <th scope="col" title=title aria-sort=aria>
-            <form method=method(sorting.source) action=action class="fui-sort-form">
-                {carried}
-                <input type="hidden" name=ORDER_KEY value=next.direction.key() />
-                <button type="submit" class="fui-sort" name=SORT_KEY value=next.column>
-                    {words}
-                    {icon(glyph, "12")}
-                </button>
-            </form>
-        </th>
+    let form = SortForm {
+        method: method(sorting.source),
+        action: sorting.action.map(str::to_owned),
+        carried: hidden_fields(sorting.fields, &[SORT_KEY, ORDER_KEY, PAGE_KEY]),
+        order_key: ORDER_KEY,
+        order: next.direction.key(),
+        sort_key: SORT_KEY,
+        column: next.column,
+        words,
+        glyph: icon(glyph, "12"),
     }
-    .attr("class", class)
-    .into_any()
+    .html();
+    Header {
+        class,
+        title,
+        aria_sort: Some(aria),
+        inside: form,
+    }
+    .html()
+}
+
+#[derive(Template)]
+#[template(
+    source = r#"<div class="{{ class }}" role="region" aria-label="{{ caption }}" tabindex="0"><table class="fui-table"{% if busy %} aria-busy="true"{% endif %}><caption>{{ caption }}</caption><thead><tr>{{ headers }}</tr></thead>{{ body }}</table></div>"#,
+    ext = "html"
+)]
+struct TableView {
+    class: String,
+    caption: String,
+    busy: bool,
+    headers: Html,
+    body: Html,
 }
 
 /// Returns the data table `table`, its rows stacked below 40rem.
@@ -387,10 +406,9 @@ fn header(column: &Column, sorting: &Sorting<'_>) -> AnyView {
 /// Every body cell that carries `data-label` (its column's name) shows the
 /// name beside its value, and the cell with none (the row's name) heads the
 /// row, so a phone shows every column with no sideways scroll
-/// (WCAG 2.2 SC 1.4.10). The cell helpers write `data-label`; a console
-/// that draws its own cells writes it on every cell but the row's name.
+/// (WCAG 2.2 SC 1.4.10).
 #[must_use]
-pub fn data_table(table: DataTable<'_>) -> impl IntoView + use<> {
+pub fn data_table(table: DataTable<'_>) -> Html {
     drawn(table, true, false)
 }
 
@@ -398,28 +416,21 @@ pub fn data_table(table: DataTable<'_>) -> impl IntoView + use<> {
 /// width, its rows stacked below 40rem.
 ///
 /// It is the table of a column set no console bounds, such as a query's
-/// result set, which can be wider than any card.
-/// Its header gives up sticking to the viewport from 64rem, which a scroll
-/// box would hold to itself: the table scrolls inside its card and never
-/// widens the page (WCAG 2.2 SC 1.4.10). A table with a code header
-/// ([`Column::mono`], a query's alias or path) is drawn this way by
-/// [`data_table`] and [`data_table_unstacked`] too.
+/// result set, which never widens the page (WCAG 2.2 SC 1.4.10).
 #[must_use]
-pub fn data_table_wide(table: DataTable<'_>) -> impl IntoView + use<> {
+pub fn data_table_wide(table: DataTable<'_>) -> Html {
     drawn(table, true, true)
 }
 
 /// Returns the data table `table` as a grid at every width: the opt-out for
-/// a small table that fits a phone as it is (two short columns), which
-/// scrolls sideways inside its box if a value outgrows it.
+/// a small table that fits a phone as it is.
 #[must_use]
-pub fn data_table_unstacked(table: DataTable<'_>) -> impl IntoView + use<> {
+pub fn data_table_unstacked(table: DataTable<'_>) -> Html {
     drawn(table, false, false)
 }
 
-/// The table [`data_table`], [`data_table_wide`] and
-/// [`data_table_unstacked`] draw.
-fn drawn(table: DataTable<'_>, stacked: bool, wide: bool) -> impl IntoView + use<> {
+/// The table the three forms draw.
+fn drawn(table: DataTable<'_>, stacked: bool, wide: bool) -> Html {
     let wide = wide || table.columns.iter().any(|column| column.mono);
     let mut classes = vec!["fui-table-scroll"];
     if stacked {
@@ -428,171 +439,106 @@ fn drawn(table: DataTable<'_>, stacked: bool, wide: bool) -> impl IntoView + use
     if wide {
         classes.push("fui-table-wide");
     }
-    let class = classes.join(" ");
-    let headers = table
+    let headers: Html = table
         .columns
         .iter()
         .map(|column| header(column, &table.sorting))
-        .collect_view();
-    let width = u8::try_from(table.columns.len()).unwrap_or(u8::MAX);
+        .collect();
+    let width = table.columns.len().max(1);
     let (body, busy) = match table.body {
         Body::Bodies(bodies) => (bodies, false),
-        Body::Rows(rows) => (view! { <tbody>{rows}</tbody> }.into_any(), false),
+        Body::Rows(rows) => (Html::raw(format!("<tbody>{rows}</tbody>")), false),
         Body::Loading(count) => {
-            let rows = (0..count)
-                .map(|_| {
-                    let cells = (0..width)
-                        .map(|_| view! { <td><span class="fui-skeleton"></span></td> })
-                        .collect_view();
-                    view! { <tr>{cells}</tr> }
-                })
-                .collect_view();
-            (view! { <tbody>{rows}</tbody> }.into_any(), true)
+            let cells: String = "<td><span class=\"fui-skeleton\"></span></td>".repeat(width);
+            let rows: String = format!("<tr>{cells}</tr>").repeat(usize::from(count));
+            (Html::raw(format!("<tbody>{rows}</tbody>")), true)
         }
         Body::Empty(empty) => (
-            view! {
-                <tbody>
-                    <tr>
-                        <td colspan=width.to_string()>{empty}</td>
-                    </tr>
-                </tbody>
-            }
-            .into_any(),
+            Html::raw(format!(
+                "<tbody><tr><td colspan=\"{width}\">{empty}</td></tr></tbody>"
+            )),
             false,
         ),
     };
-    let label = table.caption.to_owned();
-    let caption = label.clone();
-    view! {
-        <div
-            class=class
-            role="region"
-            aria-label=label
-            tabindex="0"
-        >
-            <table class="fui-table" aria-busy=busy.then_some("true")>
-                <caption>{caption}</caption>
-                <thead>
-                    <tr>{headers}</tr>
-                </thead>
-                {body}
-            </table>
-        </div>
+    TableView {
+        class: classes.join(" "),
+        caption: table.caption.to_owned(),
+        busy,
+        headers,
+        body,
     }
+    .html()
 }
 
 /// Returns the link that names a row and opens it: the name in the ink with
 /// no underline, the whole row its target (family rule 4; R9's extension).
 #[must_use]
-pub fn row_link(href: &str, name: impl IntoView + 'static) -> AnyView {
-    linked(href.to_owned(), name.into_any())
-}
-
-/// The link [`row_link`] draws, one concrete body for every name.
-fn linked(href: String, name: AnyView) -> AnyView {
-    view! {
-        <a class="fui-row-link" href=href>
-            {name}
-        </a>
-    }
-    .into_any()
+pub fn row_link(href: &str, name: Html) -> Html {
+    let name = String::from(name);
+    Html::raw(format!(
+        "<a class=\"fui-row-link\" href=\"{}\">{name}</a>",
+        Html::text(href)
+    ))
 }
 
 /// Returns the cell that names a row: its row header, the name a
 /// [`row_link`] to `href` when the row opens, and `sub` a quiet second
-/// line under it.
-///
-/// It is the row's header (HTML Living Standard, `th` with `scope="row"`)
-/// and opens the phone row's first line.
+/// line under it (HTML Living Standard, `th` with `scope="row"`).
 #[must_use]
-pub fn title_cell(
-    href: Option<&str>,
-    name: impl IntoView + 'static,
-    sub: Option<AnyView>,
-) -> AnyView {
-    let name = name.into_any();
-    titled_row(
-        match href {
-            Some(href) => linked(href.to_owned(), name),
-            None => name,
-        },
-        sub,
-    )
-}
-
-/// The cell [`title_cell`] draws, one concrete body for every name.
-fn titled_row(name: AnyView, sub: Option<AnyView>) -> AnyView {
-    let sub = sub.map(|sub| view! { <span class="fui-row-sub">{sub}</span> });
-    view! {
-        <th scope="row" data-role=Role::Title.key()>
-            {name}
-            {sub}
-        </th>
-    }
-    .into_any()
+pub fn title_cell(href: Option<&str>, name: Html, sub: Option<Html>) -> Html {
+    let name = match href {
+        Some(href) => row_link(href, name),
+        None => name,
+    };
+    let sub = sub
+        .map(|sub| format!("<span class=\"fui-row-sub\">{sub}</span>"))
+        .unwrap_or_default();
+    let name = String::from(name);
+    Html::raw(format!(
+        "<th scope=\"row\" data-role=\"{}\">{name}{sub}</th>",
+        Role::Title.key()
+    ))
 }
 
 /// Returns the cell of `column` holding `value`, named by the column on a
 /// phone and placed by its role.
-///
-/// The value is one node, so the stacked row keeps it together beside its
-/// name; a quiet note in it (`fui-muted`) takes its own line on a phone, and
-/// an empty value takes no line.
 #[must_use]
-pub fn cell(column: &Column, value: impl IntoView + 'static) -> AnyView {
-    valued(column, value.into_any())
-}
-
-/// The cell [`cell`] draws, one concrete body for every value.
-fn valued(column: &Column, value: AnyView) -> AnyView {
-    let class = column.numeric.then_some(NUM);
-    view! {
-        <td data-label=column.label.text().to_owned() data-role=column.role.key()>
-            <span>{value}</span>
-        </td>
-    }
-    .attr("class", class)
-    .into_any()
+pub fn cell(column: &Column, value: Html) -> Html {
+    let value = String::from(value);
+    let class = if column.numeric {
+        format!(" class=\"{NUM}\"")
+    } else {
+        String::new()
+    };
+    Html::raw(format!(
+        "<td data-label=\"{}\" data-role=\"{}\"{class}><span>{value}</span></td>",
+        Html::text(column.label.text()),
+        column.role.key()
+    ))
 }
 
 /// Returns the cell of `column` holding `count`, which carries its noun on a
-/// phone ("3 profiles") from the console's `noun`.
-///
-/// The count aligns right in tabular figures; on a phone, where no header
-/// names it, the noun follows it (`data-unit`).
+/// phone ("3 profiles") from the console's `noun`, in `locale`.
 #[must_use]
-pub fn count_cell(column: &Column, count: u32, noun: Noun) -> AnyView {
-    view! {
-        <td
-            data-label=column.label.text().to_owned()
-            data-role=column.role.key()
-            data-unit=noun.word(count)
-            class=NUM
-        >
-            <span>{crate::i18n::number::grouped(u64::from(count))}</span>
-        </td>
-    }
-    .into_any()
+pub fn count_cell(locale: &Locale, column: &Column, count: u32, noun: Noun) -> Html {
+    Html::raw(format!(
+        "<td data-label=\"{}\" data-role=\"{}\" data-unit=\"{}\" class=\"{NUM}\"><span>{}</span></td>",
+        Html::text(column.label.text()),
+        column.role.key(),
+        Html::text(noun.word(locale, count).text()),
+        Html::text(crate::i18n::number::grouped(locale, u64::from(count)))
+    ))
 }
 
 /// Returns the cell that holds a row's menu, the ⋯ button the console
 /// draws, at the end of the row and on the phone row's first line.
-///
-/// Give the button an accessible name that says whose actions it holds
-/// ("Actions for synthetic-007").
 #[must_use]
-pub fn menu_cell(menu: impl IntoView + 'static) -> AnyView {
-    menu_of(menu.into_any())
-}
-
-/// The cell [`menu_cell`] draws, one concrete body for every menu.
-fn menu_of(menu: AnyView) -> AnyView {
-    view! {
-        <td data-label="" class="fui-row-menu" data-role=Role::Menu.key()>
-            {menu}
-        </td>
-    }
-    .into_any()
+pub fn menu_cell(menu: Html) -> Html {
+    let menu = String::from(menu);
+    Html::raw(format!(
+        "<td data-label=\"\" class=\"fui-row-menu\" data-role=\"{}\">{menu}</td>",
+        Role::Menu.key()
+    ))
 }
 
 /// A row's checkbox: one choice of a selection that a form submits.
@@ -600,13 +546,11 @@ fn menu_of(menu: AnyView) -> AnyView {
 pub struct RowCheck<'a> {
     /// The checkbox's id, unique on the page.
     pub id: &'a str,
-    /// The field it submits as, such as the argument of the console's bulk
-    /// action.
+    /// The field it submits as.
     pub name: &'a str,
     /// The value it submits: the row's id, never a record.
     pub value: &'a str,
-    /// What it selects, its label for assistive technology ("Select
-    /// synthetic-007").
+    /// What it selects, its label for assistive technology.
     pub label: &'a str,
     /// The id of the form it belongs to, when the table is not inside it.
     pub form: Option<&'a str>,
@@ -614,52 +558,44 @@ pub struct RowCheck<'a> {
     pub checked: bool,
 }
 
+#[derive(Template)]
+#[template(
+    source = r#"<td class="fui-row-check" data-role="check"><input type="checkbox" id="{{ id }}" name="{{ name }}" value="{{ value }}"{% if let Some(form) = form %} form="{{ form }}"{% endif %}{% if checked %} checked{% endif %}><label for="{{ id }}" class="fui-sr-only">{{ label }}</label></td>"#,
+    ext = "html"
+)]
+struct CheckCell<'a> {
+    id: &'a str,
+    name: &'a str,
+    value: &'a str,
+    form: Option<&'a str>,
+    checked: bool,
+    label: &'a str,
+}
+
 /// Returns the cell that holds a row's checkbox, at the start of the row
-/// and of the phone row's first line.
-///
-/// The checkbox is native: it submits with its form, with no script. Its
-/// label is visually hidden and names it by `for` (WCAG 2.2 SC 1.3.1,
-/// SC 4.1.2).
+/// and of the phone row's first line. The checkbox is native: it submits
+/// with its form, with no script (WCAG 2.2 SC 1.3.1, SC 4.1.2).
 #[must_use]
-pub fn check_cell(check: RowCheck<'_>) -> AnyView {
-    let id = check.id.to_owned();
-    view! {
-        <td class="fui-row-check" data-role=Role::Check.key()>
-            <input
-                type="checkbox"
-                id=id.clone()
-                name=check.name.to_owned()
-                value=check.value.to_owned()
-                form=check.form.map(str::to_owned)
-                checked=check.checked
-            />
-            <label for=id class="fui-sr-only">
-                {check.label.to_owned()}
-            </label>
-        </td>
+pub fn check_cell(check: RowCheck<'_>) -> Html {
+    CheckCell {
+        id: check.id,
+        name: check.name,
+        value: check.value,
+        form: check.form,
+        checked: check.checked,
+        label: check.label,
     }
-    .into_any()
+    .html()
 }
 
 /// Returns a group row across all of `columns`, its `heading` in the sunken
-/// band (a full-width band on a phone).
-///
-/// It heads the rows of its group: put each group in a `<tbody>` of its own
-/// ([`Body::Bodies`]), the group row first (`scope="rowgroup"`). A link in
-/// the heading is a name: ink, no underline (family rule 4).
+/// band: put each group in a `<tbody>` of its own ([`Body::Bodies`]), the
+/// group row first (`scope="rowgroup"`).
 #[must_use]
-pub fn group_row(columns: &[Column], heading: impl IntoView + 'static) -> AnyView {
-    grouped(columns.len().max(1).to_string(), heading.into_any())
-}
-
-/// The row [`group_row`] draws, one concrete body for every heading.
-fn grouped(width: String, heading: AnyView) -> AnyView {
-    view! {
-        <tr class="fui-group-row">
-            <th scope="rowgroup" colspan=width>
-                {heading}
-            </th>
-        </tr>
-    }
-    .into_any()
+pub fn group_row(columns: &[Column], heading: Html) -> Html {
+    let heading = String::from(heading);
+    Html::raw(format!(
+        "<tr class=\"fui-group-row\"><th scope=\"rowgroup\" colspan=\"{}\">{heading}</th></tr>",
+        columns.len().max(1)
+    ))
 }

@@ -7,17 +7,10 @@
 
 use ferrohealth_ui::style::STYLESHEET;
 use ferrohealth_ui::view::kbd::{Shortcut, ShortcutGroup, kbd, shortcut_hint, shortcut_keys};
-use ferrohealth_ui::widget::shortcuts::{LegendWords, shortcut_legend};
-use leptos::prelude::*;
+use ferrohealth_ui::view::shortcuts::shortcut_legend;
 
 use crate::markup::{has, tags};
-
-/// The HTML `view` renders to, under a reactive owner as a server render
-/// runs.
-fn html(view: impl FnOnce() -> AnyView) -> String {
-    let owner = Owner::new();
-    owner.with(|| view().to_html())
-}
+use crate::render::en;
 
 /// A shortcut of `keys` that does `does`.
 fn shortcut(keys: &str, does: &str) -> Shortcut {
@@ -29,16 +22,16 @@ fn shortcut(keys: &str, does: &str) -> Shortcut {
 
 #[test]
 fn a_key_is_one_cap_as_printed_and_a_chord_a_cap_per_key() {
-    let key = html(|| kbd("j"));
+    let key = kbd("j").to_string();
     assert_eq!(1, tags(&key, "kbd").len(), "{key}");
     assert!(key.contains(r#"<kbd class="fui-kbd">J</kbd>"#), "{key}");
-    let chord = html(|| kbd("g d"));
+    let chord = kbd("g d").to_string();
     assert_eq!(2, tags(&chord, "kbd").len(), "{chord}");
     assert!(
         chord.contains(">G</kbd>") && chord.contains(">D</kbd>"),
         "{chord}"
     );
-    let held = html(|| kbd("Ctrl s"));
+    let held = kbd("Ctrl s").to_string();
     assert!(
         held.contains(">Ctrl</kbd>") && held.contains(">S</kbd>"),
         "{held}"
@@ -47,7 +40,7 @@ fn a_key_is_one_cap_as_printed_and_a_chord_a_cap_per_key() {
 
 #[test]
 fn alternative_keys_are_joined_by_the_word_or() {
-    let keys = html(|| shortcut_keys("j | down", "or"));
+    let keys = shortcut_keys("j | down", "or").to_string();
     assert!(keys.contains(">J</kbd>"), "{keys}");
     assert!(keys.contains(">↓</kbd>"), "{keys}");
     assert!(
@@ -58,7 +51,11 @@ fn alternative_keys_are_joined_by_the_word_or() {
 
 #[test]
 fn the_hint_is_one_line_hidden_from_a_reader_with_its_words_escaped() {
-    let hint = html(|| shortcut_hint(&[shortcut("/", "Find <a> file"), shortcut("?", "Keys")]));
+    let hint = shortcut_hint(
+        &en(),
+        &[shortcut("/", "Find <a> file"), shortcut("?", "Keys")],
+    )
+    .to_string();
     assert!(
         has(
             &hint,
@@ -69,31 +66,28 @@ fn the_hint_is_one_line_hidden_from_a_reader_with_its_words_escaped() {
     );
     assert_eq!(1, tags(&hint, "p").len(), "one line: {hint}");
     assert_eq!(2, tags(&hint, "span").len(), "{hint}");
-    assert!(hint.contains("Find &lt;a&gt; file"), "{hint}");
+    assert!(hint.contains("Find &#60;a&#62; file"), "{hint}");
 }
 
 #[test]
 fn the_legend_is_a_dialog_listing_each_group_of_keys_and_words() {
-    let legend = html(|| {
-        shortcut_legend(
-            vec![
-                ShortcutGroup {
-                    title: String::from("Lists"),
-                    shortcuts: vec![
-                        shortcut("j | down", "Next row"),
-                        shortcut("k | up", "Previous row"),
-                    ],
-                },
-                ShortcutGroup {
-                    title: String::from("Patient"),
-                    shortcuts: vec![shortcut("m", "Merge into…")],
-                },
-            ],
-            LegendWords::of_page(),
-            Signal::stored(false),
-            Callback::new(|()| {}),
-        )
-    });
+    let legend = shortcut_legend(
+        &en(),
+        vec![
+            ShortcutGroup {
+                title: String::from("Lists"),
+                shortcuts: vec![
+                    shortcut("j | down", "Next row"),
+                    shortcut("k | up", "Previous row"),
+                ],
+            },
+            ShortcutGroup {
+                title: String::from("Patient"),
+                shortcuts: vec![shortcut("m", "Merge into…")],
+            },
+        ],
+    )
+    .to_string();
     assert!(
         has(
             &legend,

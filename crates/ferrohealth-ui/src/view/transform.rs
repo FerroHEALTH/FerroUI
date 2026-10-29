@@ -23,19 +23,17 @@
 //! every verdict is a load report ([`crate::view::load_report`]).
 //!
 //! The console wraps the options and the panes in one form, so Run posts
-//! the options and the input with no WebAssembly. No specification governs
+//! the options and the input with no script. No specification governs
 //! the pair: our own design.
 
-use leptos::prelude::*;
-
-use crate::i18n::{Text, tr};
+use crate::html::Html;
+use crate::i18n::{Locale, Text, tr};
 use crate::icon::{Glyph, icon};
-use crate::island::CopyButton;
+use crate::view::copy::{CopySource, CopyWords, copy_from};
 use crate::view::empty::{Busy, busy};
 use crate::view::kbd::{aria_keys, kbd};
 use crate::view::load_report::Outcome;
 use crate::view::surface::disclosure;
-use crate::widget::copy::{CopySource, CopyWords};
 
 /// How many fields an options row holds, which sets how they share it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -51,29 +49,26 @@ pub enum Density {
 /// Returns the options row: `fields` with `run` at its end, its fields
 /// sharing the row as `density` says.
 #[must_use]
-pub fn transform_options(
-    density: Density,
-    fields: impl IntoView + 'static,
-    run: impl IntoView + 'static,
-) -> AnyView {
-    let fields = fields.into_any();
-    let run = run.into_any();
-    let dense = density == Density::Dense;
-    view! {
-        <div class="fui-transform-options" class:is-dense=dense>
-            {fields}
-            {run}
-        </div>
-    }
-    .into_any()
+pub fn transform_options(density: Density, fields: Html, run: Html) -> Html {
+    let dense = if density == Density::Dense {
+        " is-dense"
+    } else {
+        ""
+    };
+    let (fields, run) = (String::from(fields), String::from(run));
+    Html::raw(format!(
+        "<div class=\"fui-transform-options{dense}\">{fields}{run}</div>"
+    ))
 }
 
 /// Returns the check boxes `checks` stacked as one field of an options
 /// row, at the row's foot.
 #[must_use]
-pub fn field_checks(checks: impl IntoView + 'static) -> AnyView {
-    let checks = checks.into_any();
-    view! { <div class="fui-field fui-field-checks">{checks}</div> }.into_any()
+pub fn field_checks(checks: Html) -> Html {
+    let checks = String::from(checks);
+    Html::raw(format!(
+        "<div class=\"fui-field fui-field-checks\">{checks}</div>"
+    ))
 }
 
 /// Whether Run can be pressed.
@@ -111,7 +106,7 @@ pub struct Run {
 
 /// Returns Run at the end of an options row: the form's submit button.
 #[must_use]
-pub fn run_button(run: Run) -> AnyView {
+pub fn run_button(run: Run) -> Html {
     let Run {
         id,
         label,
@@ -121,60 +116,38 @@ pub fn run_button(run: Run) -> AnyView {
         operation,
         state,
     } = run;
+    let id = Html::text(id);
     let button = match state {
-        RunState::Running => view! {
-            <button
-                id=id
-                type="button"
-                class="fui-button fui-button-primary"
-                aria-busy="true"
-                disabled
-            >
-                <span class="fui-spinner-ring" aria-hidden="true"></span>
-                {busy}
-            </button>
-        }
-        .into_any(),
+        RunState::Running => format!(
+            "<button id=\"{id}\" type=\"button\" aria-busy=\"true\" disabled class=\"fui-button fui-button-primary\"><span class=\"fui-spinner-ring\" aria-hidden=\"true\"></span>{}</button>",
+            Html::text(busy)
+        ),
         RunState::Off(reason) => {
-            let why = format!("{id}-why");
-            view! {
-                <button
-                    id=id
-                    type="submit"
-                    class="fui-button fui-button-primary"
-                    title=reason.clone()
-                    aria-describedby=why.clone()
-                    disabled
-                >
-                    {icon(glyph, "16")}
-                    {label}
-                </button>
-                <span id=why class="fui-sr-only">
-                    {reason}
-                </span>
-            }
-            .into_any()
+            let reason = Html::text(reason);
+            format!(
+                "<button id=\"{id}\" type=\"submit\" title=\"{reason}\" aria-describedby=\"{id}-why\" disabled class=\"fui-button fui-button-primary\">{}{}</button><span id=\"{id}-why\" class=\"fui-sr-only\">{reason}</span>",
+                icon(glyph, "16"),
+                Html::text(label)
+            )
         }
         RunState::Ready => {
-            let keys = shortcut.as_deref().and_then(aria_keys);
-            let caps = shortcut.as_deref().map(kbd);
-            view! {
-                <button
-                    id=id
-                    type="submit"
-                    class="fui-button fui-button-primary"
-                    title=operation
-                    aria-keyshortcuts=keys
-                >
-                    {icon(glyph, "16")}
-                    {label}
-                    {caps}
-                </button>
-            }
-            .into_any()
+            let title = operation
+                .map(|operation| format!(" title=\"{}\"", Html::text(operation)))
+                .unwrap_or_default();
+            let keys = shortcut
+                .as_deref()
+                .and_then(aria_keys)
+                .map(|keys| format!(" aria-keyshortcuts=\"{}\"", Html::text(keys)))
+                .unwrap_or_default();
+            let caps = shortcut.as_deref().map(kbd).unwrap_or_default();
+            format!(
+                "<button id=\"{id}\" type=\"submit\"{title}{keys} class=\"fui-button fui-button-primary\">{}{}{caps}</button>",
+                icon(glyph, "16"),
+                Html::text(label)
+            )
         }
     };
-    view! { <div class="fui-transform-run">{button}</div> }.into_any()
+    Html::raw(format!("<div class=\"fui-transform-run\">{button}</div>"))
 }
 
 /// The answer's state, in its pane's head.
@@ -198,9 +171,9 @@ pub struct TransformPane {
     /// The answer's state, in the answer pane once there is an answer.
     pub state: Option<AnswerState>,
     /// The pane's own actions at its head's end, such as Copy.
-    pub actions: Option<AnyView>,
+    pub actions: Option<Html>,
     /// What it holds: an editor, a code panel, or an [`Answer`].
-    pub body: AnyView,
+    pub body: Html,
 }
 
 /// What the answer pane holds.
@@ -212,24 +185,24 @@ pub enum Answer {
     /// A run is in progress: the busy mark with its words.
     Running(String),
     /// The answer, such as a code panel.
-    Answered(AnyView),
+    Answered(Html),
     /// The refusal ([`crate::view::refusal::refusal`]).
-    Refused(AnyView),
+    Refused(Html),
 }
 
 impl Answer {
     /// Returns the answer as a pane's body.
     #[must_use]
-    pub fn view(self) -> AnyView {
+    pub fn view(self) -> Html {
         match self {
             Self::Waiting(line) => transform_quiet(line),
-            Self::Running(words) => {
-                view! { <div class="fui-transform-body">{busy(words, Busy::Inline)}</div> }
-                    .into_any()
-            }
+            Self::Running(words) => Html::raw(format!(
+                "<div class=\"fui-transform-body\">{}</div>",
+                busy(words, Busy::Inline)
+            )),
             Self::Answered(body) => body,
             Self::Refused(refusal) => {
-                view! { <div class="fui-transform-body">{refusal}</div> }.into_any()
+                Html::raw(format!("<div class=\"fui-transform-body\">{refusal}</div>"))
             }
         }
     }
@@ -238,35 +211,32 @@ impl Answer {
 /// Returns the one quiet line that stands where an answer will be, before
 /// the first run; also under an options row with no panes.
 #[must_use]
-pub fn transform_quiet(line: impl Into<String>) -> AnyView {
-    view! { <p class="fui-transform-empty">{line.into()}</p> }.into_any()
+pub fn transform_quiet(line: impl Into<String>) -> Html {
+    Html::raw(format!(
+        "<p class=\"fui-transform-empty\">{}</p>",
+        Html::text(line.into())
+    ))
 }
 
 /// Returns the answer's state: its mark and word, then its detail.
-fn answer_state(state: AnswerState) -> AnyView {
+fn answer_state(state: AnswerState) -> String {
     let AnswerState {
         outcome,
         word,
         detail,
     } = state;
     let tone = outcome.tone().class();
-    let mark = format!("fui-state {tone}");
-    let dot = format!("fui-dot {tone}");
-    let detail = detail.map(|detail| view! { <span class="fui-muted">{detail}</span> });
-    view! {
-        <span class="fui-transform-status">
-            <span class=mark>
-                <span class=dot aria-hidden="true"></span>
-                {word}
-            </span>
-            {detail}
-        </span>
-    }
-    .into_any()
+    let detail = detail
+        .map(|detail| format!("<span class=\"fui-muted\">{}</span>", Html::text(detail)))
+        .unwrap_or_default();
+    format!(
+        "<span class=\"fui-transform-status\"><span class=\"fui-state {tone}\"><span aria-hidden=\"true\" class=\"fui-dot {tone}\"></span>{}</span>{detail}</span>",
+        Html::text(word)
+    )
 }
 
 /// Returns one pane: its sticky head over its body.
-fn transform_pane(pane: TransformPane) -> AnyView {
+fn transform_pane(pane: TransformPane) -> String {
     let TransformPane {
         title,
         tags,
@@ -274,30 +244,26 @@ fn transform_pane(pane: TransformPane) -> AnyView {
         actions,
         body,
     } = pane;
-    let tags = tags.into_iter().map(crate::view::tag::tag).collect_view();
-    let state = state.map(answer_state);
-    let actions = actions.map(|actions| view! { <div class="fui-actions">{actions}</div> });
-    view! {
-        <section class="fui-transform-pane">
-            <div class="fui-transform-head">
-                <h3 class="fui-transform-title">{title}</h3>
-                {tags}
-                {state}
-                {actions}
-            </div>
-            {body}
-        </section>
-    }
-    .into_any()
+    let tags: Html = tags.into_iter().map(crate::view::tag::tag).collect();
+    let state = state.map(answer_state).unwrap_or_default();
+    let actions = actions
+        .map(|actions| format!("<div class=\"fui-actions\">{actions}</div>"))
+        .unwrap_or_default();
+    format!(
+        "<section class=\"fui-transform-pane\"><div class=\"fui-transform-head\"><h3 class=\"fui-transform-title\">{}</h3>{tags}{state}{actions}</div>{body}</section>",
+        Html::text(title)
+    )
 }
 
 /// Returns the pair: `input` beside `answer` from 64 rem, a hairline
 /// between them, and one above the other below it.
 #[must_use]
-pub fn transform_pair(input: TransformPane, answer: TransformPane) -> AnyView {
-    let input = transform_pane(input);
-    let answer = transform_pane(answer);
-    view! { <div class="fui-transform">{input} {answer}</div> }.into_any()
+pub fn transform_pair(input: TransformPane, answer: TransformPane) -> Html {
+    Html::raw(format!(
+        "<div class=\"fui-transform\">{}{}</div>",
+        transform_pane(input),
+        transform_pane(answer)
+    ))
 }
 
 /// The request an answer came from.
@@ -309,52 +275,45 @@ pub struct Request {
     pub copy: Option<String>,
     /// The raw answer under it: the disclosure's summary and its body, such
     /// as a code viewer.
-    pub raw: Option<(String, AnyView)>,
+    pub raw: Option<(String, Html)>,
 }
 
 /// Returns `text` with a break opportunity after each slash and each
 /// ampersand, so a long request breaks there and never inside a name.
-fn breakable(text: &str) -> AnyView {
-    let mut out = Vec::new();
+fn breakable(text: &str) -> String {
+    let mut out = String::new();
     let mut part = String::new();
     for c in text.chars() {
         part.push(c);
         if matches!(c, '/' | '&') {
-            let done = std::mem::take(&mut part);
-            out.push(view! { {done}<wbr /> }.into_any());
+            out.push_str(&String::from(Html::text(std::mem::take(&mut part))));
+            out.push_str("<wbr>");
         }
     }
-    if !part.is_empty() {
-        out.push(part.into_any());
-    }
-    out.collect_view().into_any()
+    out.push_str(&String::from(Html::text(part)));
+    out
 }
 
 /// Returns the request an answer came from, in the code face, with its
 /// Copy button and the raw answer in a disclosure under it.
 #[must_use]
-pub fn request(request: Request) -> AnyView {
+pub fn request(locale: &Locale, request: Request) -> Html {
     let Request { text, copy, raw } = request;
-    let copy = copy.map(|id| {
-        view! {
-            <CopyButton
-                id=id
-                label=tr(Text::DocumentCopy)
-                source=CopySource::Text(text.clone())
-                words=CopyWords::of_page()
-            />
-        }
-    });
     let line = breakable(&text);
-    let raw = raw.map(|(summary, body)| disclosure(summary, body));
-    view! {
-        <div class="fui-request">
-            <p class="fui-alert-request">
-                <code>{line}</code>
-            </p>
-            {copy}
-        </div>
-        {raw}
-    }
-    .into_any()
+    let copy = copy
+        .map(|id| {
+            copy_from(
+                id,
+                tr(locale, Text::DocumentCopy),
+                CopySource::Text(text),
+                CopyWords::of(locale),
+            )
+        })
+        .unwrap_or_default();
+    let raw = raw
+        .map(|(summary, body)| disclosure(summary, body))
+        .unwrap_or_default();
+    Html::raw(format!(
+        "<div class=\"fui-request\"><p class=\"fui-alert-request\"><code>{line}</code></p>{copy}</div>{raw}"
+    ))
 }

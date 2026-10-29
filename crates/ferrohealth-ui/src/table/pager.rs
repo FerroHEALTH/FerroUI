@@ -1,24 +1,23 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The pagers of a listing, drawn as static views.
+//! The pagers of a listing.
 //!
 //! A pager states the range, then First, Previous, the position, Next and
 //! Last, and the sizes; a step that cannot be taken stays where it is,
-//! drawn as a disabled control on the sunken ground, and says
-//! "(unavailable)" to assistive technology in visually hidden text
-//! (WCAG 2.2 SC 1.4.1, SC 4.1.2). A listing that keeps its state in the URL
-//! pages by links ([`link_pager`]); one that keeps its position out of the
-//! URL, because it can show patient data, pages by a `POST` form whose
-//! buttons carry the page and the size ([`post_pager`]), so no position
-//! reaches a URL or the history and the rows stay server HTML. Both work
+//! drawn as a disabled control, and says "(unavailable)" to assistive
+//! technology (WCAG 2.2 SC 1.4.1, SC 4.1.2). A listing that keeps its state
+//! in the URL pages by links ([`link_pager`]); one that keeps its position
+//! out of the URL, because it can show patient data, pages by a `POST` form
+//! whose buttons carry the page and the size ([`post_pager`]). Both work
 //! with no script.
 
 use std::borrow::Cow;
 
-use leptos::prelude::*;
+use askama::Template;
 
-use crate::i18n::{Text, Word, tr, tr_with};
+use crate::html::{Html, Render as _};
+use crate::i18n::{Locale, Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::table::model::{
     Noun, OpenWindow, PAGE_KEY, Paging, SIZE_KEY, SIZES, StateSource, Window, partial_note,
@@ -54,15 +53,18 @@ impl Step {
         }
     }
 
-    /// The step's words in the page's locale.
+    /// The step's words in `locale`.
     #[must_use]
-    pub fn label(self) -> Word {
-        tr(match self {
-            Self::First => Text::StepFirst,
-            Self::Previous => Text::StepPrevious,
-            Self::Next => Text::StepNext,
-            Self::Last => Text::StepLast,
-        })
+    pub fn label(self, locale: &Locale) -> Word {
+        tr(
+            locale,
+            match self {
+                Self::First => Text::StepFirst,
+                Self::Previous => Text::StepPrevious,
+                Self::Next => Text::StepNext,
+                Self::Last => Text::StepLast,
+            },
+        )
     }
 
     /// The step's icon.
@@ -92,26 +94,32 @@ impl Step {
 }
 
 /// Returns the inside of a pager step's control: the icon beside the words,
-/// the icon after them for a step forward.
-///
-/// A step that cannot be taken adds "(unavailable)" as visually hidden
-/// text; the control's disabled look shows it to the eye.
+/// the icon after them for a step forward, and "(unavailable)" as visually
+/// hidden text when the step cannot be taken.
 #[must_use]
-pub fn step_label(step: Step, available: bool) -> impl IntoView + use<> {
+pub fn step_label(locale: &Locale, step: Step, available: bool) -> Html {
     let forward = matches!(step, Step::Next | Step::Last);
-    view! {
-        {(!forward).then(|| icon(step.glyph(), "14"))}
-        <span class="fui-step-words">{step.label()}</span>
-        {(!available)
-            .then(|| view! { <span class="fui-sr-only">{tr(Text::StepUnavailable).map(|words| format!(" {words}"))}</span> })}
-        {forward.then(|| icon(step.glyph(), "14"))}
+    let glyph = icon(step.glyph(), "14");
+    let words = Html::raw(format!(
+        "<span class=\"fui-step-words\">{}</span>",
+        step.label(locale)
+    ));
+    let unavailable = if available {
+        Html::empty()
+    } else {
+        Html::raw(format!(
+            "<span class=\"fui-sr-only\"> {}</span>",
+            tr(locale, Text::StepUnavailable)
+        ))
+    };
+    if forward {
+        Html::join([words, unavailable, glyph])
+    } else {
+        Html::join([glyph, words, unavailable])
     }
 }
 
 /// What a pager says about the listing it pages.
-///
-/// The label is a fixed word or one the console looks up at run time; a
-/// listing is `Clone`, and built where it is drawn.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Listing {
     /// The pager's accessible name, which tells two pagers on one screen
@@ -122,7 +130,7 @@ pub struct Listing {
     /// The one-click page sizes; none when the size is a setting.
     pub sizes: &'static [u32],
     /// The rows the server counted, when it stated a count that the rows in
-    /// hand may fall short of (a FHIR search's `Bundle.total`).
+    /// hand may fall short of.
     pub stated: Option<u32>,
 }
 
@@ -169,109 +177,125 @@ impl From<String> for Listing {
     }
 }
 
+/// How a step or a size is drawn: a link, or a submit button of a form.
+type StepDrawer<'a> = &'a dyn Fn(Step, Option<u32>) -> Html;
+type SizeDrawer<'a> = &'a dyn Fn(u32, bool) -> Html;
+
 /// Returns the size choices of `listing` around `current`, or nothing when
 /// it offers none.
-fn size_choices(listing: &Listing, current: u32, size: &dyn Fn(u32, bool) -> AnyView) -> AnyView {
+fn size_choices(locale: &Locale, listing: &Listing, current: u32, size: SizeDrawer<'_>) -> Html {
     if listing.sizes.is_empty() {
-        return ().into_any();
+        return Html::empty();
     }
-    let sizes = listing
+    let sizes: Html = listing
         .sizes
         .iter()
         .map(|choice| size(*choice, *choice == current))
-        .collect_view();
-    view! {
-        <div class="fui-pager-sizes">
-            <span class="fui-muted">{tr(Text::RowsPerPage)}</span>
-            <span class="fui-pager-size-choices">{sizes}</span>
-        </div>
-    }
-    .into_any()
+        .collect();
+    Html::raw(format!(
+        "<div class=\"fui-pager-sizes\"><span class=\"fui-muted\">{}</span><span class=\"fui-pager-size-choices\">{sizes}</span></div>",
+        tr(locale, Text::RowsPerPage)
+    ))
+}
+
+#[derive(Template)]
+#[template(
+    source = r#"<nav class="fui-pager" aria-label="{{ label }}">{{ forms }}<p role="status">{{ range }}</p>{% if let Some(steps) = steps %}<div class="fui-pager-steps">{{ steps }}</div>{% endif %}{{ sizes }}</nav>"#,
+    ext = "html"
+)]
+struct Frame {
+    label: Cow<'static, str>,
+    forms: Html,
+    range: Word,
+    steps: Option<Html>,
+    sizes: Html,
 }
 
 /// Returns a pager over `window`, each step and size drawn by `step` and
-/// `size` (a link for URL state, a submit button for session state).
+/// `size`.
 ///
 /// The range names the rows by the listing's noun, and a second sentence
 /// says so when the server counted more than the listing holds.
 #[must_use]
 pub fn pager(
+    locale: &Locale,
     listing: impl Into<Listing>,
     window: Window,
-    step: &dyn Fn(Step, Option<u32>) -> AnyView,
-    size: &dyn Fn(u32, bool) -> AnyView,
-) -> AnyView {
-    framed(listing.into(), window, step, size, ().into_any())
+    step: StepDrawer<'_>,
+    size: SizeDrawer<'_>,
+) -> Html {
+    framed(locale, listing.into(), window, step, size, Html::empty())
 }
 
-/// The pager [`pager`] draws, with `forms` (the forms its buttons submit)
-/// inside its frame.
 fn framed(
+    locale: &Locale,
     listing: Listing,
     window: Window,
-    step: &dyn Fn(Step, Option<u32>) -> AnyView,
-    size: &dyn Fn(u32, bool) -> AnyView,
-    forms: AnyView,
-) -> AnyView {
+    step: StepDrawer<'_>,
+    size: SizeDrawer<'_>,
+    forms: Html,
+) -> Html {
     let [first, previous, next, last] = Step::ALL.map(|each| step(each, each.target(window)));
-    let range = match partial_note(window.total, listing.stated, listing.noun) {
+    let range = match partial_note(locale, window.total, listing.stated, listing.noun) {
         Some(note) => tr_with(
+            locale,
             Text::RangeWithNote,
             &[
-                ("range", window.range_of(listing.noun).into()),
+                ("range", window.range_of(locale, listing.noun).into()),
                 ("note", note.into()),
             ],
         ),
-        None => window.range_of(listing.noun),
+        None => window.range_of(locale, listing.noun),
     };
-    let sizes = size_choices(&listing, window.size, size);
-    // A listing of one page draws the range and the sizes alone: no step can
-    // be taken, so none needs saying.
+    let sizes = size_choices(locale, &listing, window.size, size);
+    // A listing of one page draws the range and the sizes alone.
     let steps = (window.pages > 1).then(|| {
-        view! {
-            <div class="fui-pager-steps">
-                {first} {previous}
-                <span class="fui-pager-position">
-                    {tr_with(
-                        Text::PageOf,
-                        &[("page", window.page.into()), ("pages", window.pages.into())],
-                    )}
-                </span> {next} {last}
-            </div>
-        }
+        let position = tr_with(
+            locale,
+            Text::PageOf,
+            &[("page", window.page.into()), ("pages", window.pages.into())],
+        );
+        Html::join([
+            first,
+            previous,
+            Html::raw(format!(
+                "<span class=\"fui-pager-position\">{position}</span>"
+            )),
+            next,
+            last,
+        ])
     });
-    view! {
-        <nav class="fui-pager" aria-label=listing.label>
-            {forms}
-            <p role="status">{range}</p>
-            {steps}
-            {sizes}
-        </nav>
+    Frame {
+        label: listing.label,
+        forms,
+        range,
+        steps,
+        sizes,
     }
-    .into_any()
+    .html()
 }
 
 /// Returns the pager of a listing whose total the server does not report:
-/// Previous and Next around the range, which names no total ("Rows 26 to
-/// 50"), each step and size drawn by `step` and `size`.
+/// Previous and Next around the range, which names no total.
 #[must_use]
 pub fn open_pager(
+    locale: &Locale,
     listing: impl Into<Listing>,
     window: OpenWindow,
-    step: &dyn Fn(Step, Option<u32>) -> AnyView,
-    size: &dyn Fn(u32, bool) -> AnyView,
-) -> AnyView {
-    framed_open(listing.into(), window, step, size, ().into_any())
+    step: StepDrawer<'_>,
+    size: SizeDrawer<'_>,
+) -> Html {
+    framed_open(locale, listing.into(), window, step, size, Html::empty())
 }
 
-/// The pager [`open_pager`] draws, with `forms` inside its frame.
 fn framed_open(
+    locale: &Locale,
     listing: Listing,
     window: OpenWindow,
-    step: &dyn Fn(Step, Option<u32>) -> AnyView,
-    size: &dyn Fn(u32, bool) -> AnyView,
-    forms: AnyView,
-) -> AnyView {
+    step: StepDrawer<'_>,
+    size: SizeDrawer<'_>,
+    forms: Html,
+) -> Html {
     let previous = step(
         Step::Previous,
         window.has_previous().then(|| window.page - 1),
@@ -280,32 +304,34 @@ fn framed_open(
         Step::Next,
         window.has_next().then(|| window.page.saturating_add(1)),
     );
-    let sizes = size_choices(&listing, window.size, size);
-    view! {
-        <nav class="fui-pager" aria-label=listing.label>
-            {forms}
-            <p role="status">{window.range_of(listing.noun)}</p>
-            <div class="fui-pager-steps">{previous} {next}</div>
-            {sizes}
-        </nav>
+    let sizes = size_choices(locale, &listing, window.size, size);
+    Frame {
+        label: listing.label,
+        forms,
+        range: window.range_of(locale, listing.noun),
+        steps: Some(Html::join([previous, next])),
+        sizes,
     }
-    .into_any()
+    .html()
 }
 
-/// Returns the pager over `window` whose steps and sizes are links, the
-/// href of each from `href`: the pager of a listing that keeps its state in
-/// the URL, working before the page hydrates.
+/// Returns the pager over `window` whose steps and sizes are links.
+///
+/// The href of each comes from `href`: it is the pager of a listing that
+/// keeps its state in the URL.
 #[must_use]
 pub fn link_pager(
+    locale: &Locale,
     listing: impl Into<Listing>,
     window: Window,
     href: &dyn Fn(Paging) -> String,
-) -> AnyView {
+) -> Html {
     let paging = window.paging();
     pager(
+        locale,
         listing,
         window,
-        &|each, target| link_step(href, paging, each, target),
+        &|each, target| link_step(locale, href, paging, each, target),
         &|choice, current| link_size(href, choice, current),
     )
 }
@@ -314,160 +340,137 @@ pub fn link_pager(
 /// steps and sizes are links from `href`.
 #[must_use]
 pub fn link_open_pager(
+    locale: &Locale,
     listing: impl Into<Listing>,
     window: OpenWindow,
     href: &dyn Fn(Paging) -> String,
-) -> AnyView {
+) -> Html {
     let paging = window.paging();
     open_pager(
+        locale,
         listing,
         window,
-        &|each, target| link_step(href, paging, each, target),
+        &|each, target| link_step(locale, href, paging, each, target),
         &|choice, current| link_size(href, choice, current),
     )
 }
 
-/// Returns a pager step as a link to its page, or as a span that says
-/// "(unavailable)" when it cannot be taken.
 fn link_step(
+    locale: &Locale,
     href: &dyn Fn(Paging) -> String,
     paging: Paging,
     each: Step,
     target: Option<u32>,
-) -> AnyView {
+) -> Html {
+    let class = Variant::Secondary.small();
     match target {
-        Some(page) => view! {
-            <a href=href(paging.at(page)) class=Variant::Secondary.small() data-page=each.key()>
-                {step_label(each, true)}
-            </a>
-        }
-        .into_any(),
-        None => view! {
-            <span class=Variant::Secondary.small() aria-disabled="true" data-page=each.key()>
-                {step_label(each, false)}
-            </span>
-        }
-        .into_any(),
+        Some(page) => Html::raw(format!(
+            "<a href=\"{}\" class=\"{class}\" data-page=\"{}\">{}</a>",
+            Html::text(href(paging.at(page))),
+            each.key(),
+            step_label(locale, each, true)
+        )),
+        None => Html::raw(format!(
+            "<span class=\"{class}\" aria-disabled=\"true\" data-page=\"{}\">{}</span>",
+            each.key(),
+            step_label(locale, each, false)
+        )),
     }
 }
 
-/// Returns a size choice as a link to the first page at that size.
-fn link_size(href: &dyn Fn(Paging) -> String, choice: u32, current: bool) -> AnyView {
-    view! {
-        <a
-            href=href(Paging::sized(choice))
-            class="fui-pager-size"
-            aria-current=current.then_some("true")
-        >
-            {choice.to_string()}
-        </a>
-    }
-    .into_any()
+fn link_size(href: &dyn Fn(Paging) -> String, choice: u32, current: bool) -> Html {
+    let here = if current {
+        " aria-current=\"true\""
+    } else {
+        ""
+    };
+    Html::raw(format!(
+        "<a href=\"{}\" class=\"fui-pager-size\"{here}>{choice}</a>",
+        Html::text(href(Paging::sized(choice)))
+    ))
 }
 
 /// Where a pager whose listing keeps its position out of the URL posts the
-/// page and the size: the console's route or server function, which keeps
-/// the position (in its session) and answers with that page.
+/// page and the size.
 ///
-/// The library defines no handler. The pager's buttons submit the fields
-/// `page` and `size` ([`PAGE_KEY`], [`SIZE_KEY`]) beside `fields`, so the
-/// console's handler takes arguments of those names.
+/// The console's route keeps the position in its
+/// session and answers with that page. The pager's buttons submit the
+/// fields `page` and `size` beside `fields`.
 #[derive(Debug, Clone, Copy)]
 pub struct PostTo<'a> {
     /// The name the pager's two forms are made from, unique on the page.
     pub id: &'a str,
     /// The URL the forms post to.
     pub action: &'a str,
-    /// The other fields each form carries, such as which listing it pages
-    /// and the page to return to. A `page` or a `size` among them is left
-    /// out.
+    /// The other fields each form carries. A `page` or a `size` among them
+    /// is left out.
     pub fields: &'a [(String, String)],
 }
 
 impl PostTo<'_> {
-    /// The id of the form a step submits, which carries the size.
     fn steps(&self) -> String {
         format!("{}-steps", self.id)
     }
 
-    /// The id of the form a size submits, which starts at the first page.
     fn sizes(&self) -> String {
         format!("{}-sizes", self.id)
     }
 
     /// The two forms the pager's buttons submit by their `form` attribute:
-    /// hidden fields alone, drawn with no box, so the pager keeps its layout
-    /// (HTML Living Standard, form-associated elements).
-    fn forms(&self, size: u32) -> AnyView {
+    /// hidden fields alone, drawn with no box.
+    fn forms(&self, size: u32) -> Html {
         let carried = || hidden_fields(self.fields, &[PAGE_KEY, SIZE_KEY]);
-        let action = self.action.to_owned();
         let posts = method(StateSource::Session);
-        view! {
-            <form id=self.steps() class="fui-pager-form" method=posts action=action.clone() data-ferroui-navigates="">
-                {carried()}
-                <input type="hidden" name=SIZE_KEY value=size.to_string() />
-            </form>
-            <form id=self.sizes() class="fui-pager-form" method=posts action=action data-ferroui-navigates="">
-                {carried()}
-                <input type="hidden" name=PAGE_KEY value="1" />
-            </form>
-        }
-        .into_any()
+        let action = Html::text(self.action);
+        Html::raw(format!(
+            "<form id=\"{}\" class=\"fui-pager-form\" method=\"{posts}\" action=\"{action}\">{}<input type=\"hidden\" name=\"{SIZE_KEY}\" value=\"{size}\"></form><form id=\"{}\" class=\"fui-pager-form\" method=\"{posts}\" action=\"{action}\">{}<input type=\"hidden\" name=\"{PAGE_KEY}\" value=\"1\"></form>",
+            Html::text(self.steps()),
+            carried(),
+            Html::text(self.sizes()),
+            carried()
+        ))
     }
 }
 
-/// Returns a pager step as a submit button of the steps form `form` that
-/// carries its page, or as a disabled button that says "(unavailable)"
-/// when it cannot be taken.
-fn post_step(form: &str, each: Step, target: Option<u32>) -> AnyView {
+fn post_step(locale: &Locale, form: &str, each: Step, target: Option<u32>) -> Html {
     let available = target.is_some();
-    view! {
-        <button
-            type="submit"
-            form=form.to_owned()
-            name=PAGE_KEY
-            value=target.map(|page| page.to_string())
-            class=Variant::Secondary.small()
-            data-page=each.key()
-            disabled=!available
-        >
-            {step_label(each, available)}
-        </button>
-    }
-    .into_any()
+    let value = target.map_or(String::new(), |page| format!(" value=\"{page}\""));
+    let disabled = if available { "" } else { " disabled" };
+    Html::raw(format!(
+        "<button type=\"submit\" form=\"{}\" name=\"{PAGE_KEY}\"{value} class=\"{}\" data-page=\"{}\"{disabled}>{}</button>",
+        Html::text(form),
+        Variant::Secondary.small(),
+        each.key(),
+        step_label(locale, each, available)
+    ))
 }
 
-/// Returns a size choice as a submit button of the sizes form `form` that
-/// carries the size, pressed when it is the size in force.
-fn post_size(form: &str, choice: u32, current: bool) -> AnyView {
-    view! {
-        <button
-            type="submit"
-            form=form.to_owned()
-            name=SIZE_KEY
-            value=choice.to_string()
-            class="fui-pager-size"
-            aria-pressed=current.to_string()
-        >
-            {choice.to_string()}
-        </button>
-    }
-    .into_any()
+fn post_size(form: &str, choice: u32, current: bool) -> Html {
+    Html::raw(format!(
+        "<button type=\"submit\" form=\"{}\" name=\"{SIZE_KEY}\" value=\"{choice}\" class=\"fui-pager-size\" aria-pressed=\"{current}\">{choice}</button>",
+        Html::text(form)
+    ))
 }
 
 /// Returns the pager over `window` of a listing that keeps its position out
-/// of the URL: each step and size a submit button of a `POST` form to
-/// `post`, which carries the page and the size.
+/// of the URL.
 ///
-/// The position never reaches a URL or the history, the rows stay server
-/// HTML (no row is an island prop), and it pages with no script.
+/// Each step and size is a submit button of a `POST` form to `post`, which
+/// carries the page and the size, so no position reaches a URL or the
+/// history.
 #[must_use]
-pub fn post_pager(listing: impl Into<Listing>, window: Window, post: PostTo<'_>) -> AnyView {
+pub fn post_pager(
+    locale: &Locale,
+    listing: impl Into<Listing>,
+    window: Window,
+    post: PostTo<'_>,
+) -> Html {
     let (steps, sizes) = (post.steps(), post.sizes());
     framed(
+        locale,
         listing.into(),
         window,
-        &|each, target| post_step(&steps, each, target),
+        &|each, target| post_step(locale, &steps, each, target),
         &|choice, current| post_size(&sizes, choice, current),
         post.forms(window.size),
     )
@@ -477,15 +480,17 @@ pub fn post_pager(listing: impl Into<Listing>, window: Window, post: PostTo<'_>)
 /// keeps its position out of the URL, whose steps and sizes post to `post`.
 #[must_use]
 pub fn post_open_pager(
+    locale: &Locale,
     listing: impl Into<Listing>,
     window: OpenWindow,
     post: PostTo<'_>,
-) -> AnyView {
+) -> Html {
     let (steps, sizes) = (post.steps(), post.sizes());
     framed_open(
+        locale,
         listing.into(),
         window,
-        &|each, target| post_step(&steps, each, target),
+        &|each, target| post_step(locale, &steps, each, target),
         &|choice, current| post_size(&sizes, choice, current),
         post.forms(window.size),
     )

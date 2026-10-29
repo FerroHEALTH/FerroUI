@@ -4,22 +4,22 @@
 //! The keys of a keyboard shortcut: the key cap, a shortcut and the words of
 //! what it does, and the one-line hint at the foot of a listing (R1).
 //!
-//! A key is drawn as it is printed on the keyboard, in a `<kbd>` element,
-//! which names a key of a user's input (HTML Living Standard, the `kbd`
-//! element): a letter as a capital, an arrow as its arrow. The library binds
-//! no key itself; a console owns its listeners and the library draws the
-//! keys. Below 40 rem every key cap and hint is hidden, since a phone has no
-//! keyboard (family rule 6); the shortcut legend keeps its keys.
+//! A key is drawn as it is printed on the keyboard, in a `<kbd>` element
+//! (HTML Living Standard, the `kbd` element): a letter as a capital, an
+//! arrow as its arrow. The library binds no key itself; a console owns its
+//! listeners and the library draws the keys. Below 40 rem every key cap and
+//! hint is hidden, since a phone has no keyboard (family rule 6); the
+//! shortcut legend keeps its keys.
 //!
 //! A shortcut's keys are written as words separated by spaces, each word a
 //! key pressed in turn or held together with a modifier (`g d`, `Ctrl s`),
 //! and ` | ` separates the alternatives of one shortcut (`j | down`). No
 //! specification governs the notation: our own design.
 
-use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::i18n::{Text, Word, tr};
+use crate::html::Html;
+use crate::i18n::{Locale, Text, Word, tr};
 
 /// A shortcut of the page and the words of what it does.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -80,8 +80,7 @@ pub fn key_cap(word: &str) -> String {
 }
 
 /// The key `word` names, as the `aria-keyshortcuts` attribute writes it
-/// (WAI-ARIA 1.2, `aria-keyshortcuts`): a letter as a capital, an arrow as
-/// `ArrowDown`, Esc as `Escape`.
+/// (WAI-ARIA 1.2, `aria-keyshortcuts`).
 fn aria_key(word: &str) -> String {
     let mut letters = word.chars();
     if let (Some(letter), None) = (letters.next(), letters.next())
@@ -141,18 +140,22 @@ pub fn aria_keys(keys: &str) -> Option<String> {
 ///
 /// It draws one alternative; [`shortcut_keys`] draws them all.
 #[must_use]
-pub fn kbd(keys: &str) -> AnyView {
+pub fn kbd(keys: &str) -> Html {
     keys.split_whitespace()
-        .map(|word| view! { <kbd class="fui-kbd">{key_cap(word)}</kbd> })
-        .collect_view()
-        .into_any()
+        .map(|word| {
+            Html::raw(format!(
+                "<kbd class=\"fui-kbd\">{}</kbd>",
+                Html::text(key_cap(word))
+            ))
+        })
+        .collect()
 }
 
 /// Returns the keys of `keys` with each alternative's caps, the word `or`
 /// between them, such as "J or ↓".
 #[must_use]
-pub fn shortcut_keys(keys: &str, or: impl Into<Word>) -> AnyView {
-    let or = or.into();
+pub fn shortcut_keys(keys: &str, or: impl Into<Word>) -> Html {
+    let or: Word = or.into();
     let alternatives: Vec<&str> = keys
         .split('|')
         .map(str::trim)
@@ -163,14 +166,13 @@ pub fn shortcut_keys(keys: &str, or: impl Into<Word>) -> AnyView {
         .into_iter()
         .enumerate()
         .map(|(place, alternative)| {
-            let or = (place < last).then(|| view! { <span class="fui-muted">{or.clone()}</span> });
-            view! {
-                {kbd(alternative)}
-                {or}
+            let mut drawn = kbd(alternative);
+            if place < last {
+                drawn = drawn.then(Html::raw(format!("<span class=\"fui-muted\">{or}</span>")));
             }
+            drawn
         })
-        .collect_view()
-        .into_any()
+        .collect()
 }
 
 /// Returns the one-line hint at the foot of a listing, each shortcut's keys
@@ -181,30 +183,26 @@ pub fn shortcut_keys(keys: &str, or: impl Into<Word>) -> AnyView {
 /// below 40 rem, and a console leaves it out where the person turned the
 /// hints off in Your preferences.
 #[must_use]
-pub fn shortcut_hint(shortcuts: &[Shortcut]) -> AnyView {
-    let or = tr(Text::KeysOr);
-    let items = shortcuts
+pub fn shortcut_hint(locale: &Locale, shortcuts: &[Shortcut]) -> Html {
+    let or = tr(locale, Text::KeysOr);
+    let items: Html = shortcuts
         .iter()
         .map(|shortcut| {
-            view! {
-                <span>
-                    {shortcut_keys(&shortcut.keys, &or)}
-                    {shortcut.does.clone()}
-                </span>
-            }
+            Html::raw(format!(
+                "<span>{}{}</span>",
+                shortcut_keys(&shortcut.keys, &or),
+                Html::text(&shortcut.does)
+            ))
         })
-        .collect_view();
-    view! {
-        <p class="fui-shortcut-hint" aria-hidden="true">
-            {items}
-        </p>
-    }
-    .into_any()
+        .collect();
+    Html::raw(format!(
+        "<p class=\"fui-shortcut-hint\" aria-hidden=\"true\">{items}</p>"
+    ))
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{aria_keys, key_cap};
+    use super::{aria_keys, kbd, key_cap};
 
     #[test]
     fn a_letter_is_a_capital_and_an_arrow_its_arrow() {
@@ -213,6 +211,10 @@ mod tests {
         assert_eq!("Esc", key_cap("Esc"));
         assert_eq!("?", key_cap("?"));
         assert_eq!("/", key_cap("/"));
+        assert_eq!(
+            "<kbd class=\"fui-kbd\">G</kbd><kbd class=\"fui-kbd\">D</kbd>",
+            kbd("g d").as_str()
+        );
     }
 
     #[test]

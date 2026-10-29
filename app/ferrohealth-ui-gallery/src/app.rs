@@ -1,53 +1,40 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The page tree the server renders and the browser hydrates.
+//! The document around every page and the shell around a brand's pages.
 //!
 //! Each brand has its pages under its key, `/ferrobridge/…`, drawn in the
 //! shell a console draws, and the sign-in cards under `/sign-in/…`. The
-//! document links the library's stylesheet and the brand's theme file, which
-//! the server serves from the library's constants, and carries the theme the
-//! request's cookie names as `data-theme` and the density as
-//! `data-density`, so a page arrives in its theme before any script runs,
-//! and its locale as `lang`, the locale every component draws its words in.
+//! document links the library's stylesheet and the brand's theme file from
+//! the library's asset router, and carries the theme the request's cookie
+//! names as `data-theme` and the density as `data-density`, so a page
+//! arrives in its theme before any script runs, and its locale as `lang`,
+//! the locale every component draws its words in.
 
-use ferrohealth_ui::i18n::{Arg, Locale, provide_locale};
-use ferrohealth_ui::icon::Glyph;
-use ferrohealth_ui::island::{FormNavigator, PageAnnouncer, ToastRegion};
+use ferrohealth_ui::html::Html;
+use ferrohealth_ui::i18n::Arg;
+use ferrohealth_ui::icon::{Glyph, icon};
+use ferrohealth_ui::serve::Assets;
 use ferrohealth_ui::style::Brand;
 use ferrohealth_ui::table::model::Paging;
 use ferrohealth_ui::theme::{Preferences, Theme, cookie};
 use ferrohealth_ui::tone::Tone;
+use ferrohealth_ui::view::empty::empty_state;
+use ferrohealth_ui::view::menu::{Choice, Choices, ThemeChoice, UserLink, UserMenu, user_menu};
+use ferrohealth_ui::view::nav::{Count, Entry, Group, Rail, Sidebar, sidebar};
 use ferrohealth_ui::view::segmented::segmented_links;
-use ferrohealth_ui::view::shell::{Footer, Shell, TopBar, centred, lockup, mark, shell, topbar};
+use ferrohealth_ui::view::shell::{
+    Document, Footer, Shell, TopBar, centred, document, lockup, mark, shell, topbar,
+};
 use ferrohealth_ui::view::status::{Reach, StatusPill, banner, status_pill};
-use ferrohealth_ui::widget::menu::{Choice, Choices, ThemeChoice, UserLink, UserMenu, user_menu};
-use ferrohealth_ui::widget::nav::{Count, Entry, Group, Rail, Sidebar, sidebar};
-use ferrohealth_ui::widget::toast::RegionWords;
-use ferrohealth_ui::widget::version::{VersionSelect, version_select};
-use leptos::prelude::*;
-use leptos_meta::{Stylesheet, Title, provide_meta_context};
-use leptos_router::components::{Outlet, ParentRoute, Route, Router, Routes};
-use leptos_router::hooks::{use_location, use_params_map, use_query_map};
-use leptos_router::{Lazy, path};
+use ferrohealth_ui::view::toast::{Flash, toast_region};
+use ferrohealth_ui::view::version::{VersionSelect, version_select};
 
-use crate::cookies::cookies_requested;
-use crate::locale::gallery_locale;
-use crate::locale::{Msg, tr, tr_with};
-use crate::routes::{LAside, LCore, LFederation, LRecords, LVisual};
-
-/// The gallery's name, as its footer and titles name it, in the page's
-/// locale.
-#[must_use]
-pub fn product() -> String {
-    tr(Msg::Product)
-}
+use crate::locale::Msg;
+use crate::visit::Visit;
 
 /// The gallery's version.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
-
-/// The path of the library's stylesheet the server serves.
-pub const STYLESHEET: &str = "/ferrohealth-ui.css";
 
 /// The path of the route every preference posts to, its value under its
 /// cookie's name: Your preferences, the user menu's theme and the
@@ -107,12 +94,6 @@ pub const SIGN_OUT_ROUTE: &str = "/sign-out";
 /// The id of the navigation, which the drawer button opens.
 const SIDEBAR_ID: &str = "sidebar";
 
-/// The path of the theme file of `brand`.
-#[must_use]
-pub fn theme_path(brand: Brand) -> String {
-    format!("/themes/{}.css", brand.key())
-}
-
 /// The brand a request path names: the first segment that is a brand's key,
 /// FerroBRIDGE for a path that names none.
 #[must_use]
@@ -136,14 +117,6 @@ pub fn theme_of(cookies: &str) -> Theme {
     preferences_of(cookies).theme
 }
 
-/// The locale the language preference names: the pseudo-locale when it is
-/// chosen, and English, the language the gallery serves every browser, for
-/// anything else.
-#[must_use]
-pub fn locale_of(cookies: &str) -> Locale {
-    gallery_locale(preferences_of(cookies).language.tag().unwrap_or_default())
-}
-
 /// The value of the gallery's own preference `name`, one of
 /// [`OWN_PREFERENCES`], that the `Cookie` header value `cookies` keeps.
 #[must_use]
@@ -160,250 +133,167 @@ pub fn paging_of(cookies: &str, listing: &str) -> Paging {
     Paging::read(kept.map(|(page, _)| page), kept.map(|(_, size)| size))
 }
 
-/// The paging of the session listing `listing` the request keeps.
-///
-/// Both halves read it from the cookies the page knows
-/// ([`crate::cookies::Cookies`]).
-#[must_use]
-pub fn session_paging(listing: &'static str) -> Paging {
-    paging_of(&cookies_requested(), listing)
-}
-
-/// The whole HTML document the server renders around [`App`], in the theme
-/// the request's cookie names and with the theme file of the brand its path
-/// names.
-#[cfg(not(target_arch = "wasm32"))]
-#[must_use]
-pub fn document(options: LeptosOptions) -> impl IntoView {
-    let parts = use_context::<http::request::Parts>();
-    let cookies = parts
-        .as_ref()
-        .and_then(|parts| parts.headers.get(http::header::COOKIE))
-        .and_then(|value| value.to_str().ok())
-        .unwrap_or_default()
-        .to_owned();
-    let preferences = preferences_of(&cookies);
-    let theme = preferences.theme.key();
-    let density = preferences.density.key();
-    let motion = preferences.motion.key();
-    let hints = preferences.hints.key();
-    let lang = locale_of(&cookies).tag();
-    view! {
-        <!DOCTYPE html>
-        <html lang=lang data-theme=theme data-density=density data-motion=motion data-hints=hints>
-            <head>
-                <meta charset="utf-8" />
-                <meta name="viewport" content="width=device-width, initial-scale=1" />
-                <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-                <link rel="stylesheet" href=STYLESHEET />
-                <HydrationScripts options />
-                <leptos_meta::MetaTags />
-            </head>
-            <body>
-                <App />
-            </body>
-        </html>
-    }
-}
-
-/// The theme the request names, which the server decided and the browser
-/// reads serialized, so both halves draw the same switch.
-fn theme_requested() -> Theme {
-    theme_of(&cookies_requested())
-}
-
 /// Whether the `Cookie` header value `cookies` asks for the sidebar's rail.
 #[must_use]
 pub fn rail_of(cookies: &str) -> bool {
     cookie(cookies, SIDEBAR_COOKIE) == Some("rail")
 }
 
-/// Whether the request asks for the sidebar's rail, decided as the theme is.
-fn rail_requested() -> bool {
-    rail_of(&cookies_requested())
+/// How a page is framed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Frame {
+    /// In the brand's shell: the top bar, the navigation, the footer.
+    Shell,
+    /// Centred above the footer, as the sign-in and a fault are.
+    Centred,
 }
 
-/// The tag of the locale the request names, decided as the theme is.
-fn locale_requested() -> String {
-    locale_of(&cookies_requested()).tag()
+/// A page a handler drew: its title words, its frame and its content.
+#[derive(Debug)]
+pub struct Page {
+    /// The page's own words in the document title; the brand and the
+    /// gallery follow them.
+    pub title: String,
+    /// How the page is framed.
+    pub frame: Frame,
+    /// The page's content.
+    pub content: Html,
+    /// The answer's status.
+    pub status: http::StatusCode,
+    /// The toasts the page arrives with, such as the outcome of the action
+    /// that led to it.
+    pub flash: Vec<Flash>,
 }
 
-/// The root component: the routes, the toast region and the title.
-///
-/// The server draws it and the browser hydrates it whole; each page is a
-/// lazy route ([`crate::routes`]), and the browser marks the root element
-/// once the page has hydrated ([`ferrohealth_ui::widget::hydration`]), which
-/// the journeys and the screenshot capture wait for.
-#[component]
-pub fn App() -> impl IntoView {
-    provide_meta_context();
-    // NOTE: the Leptos book, `ssr/22_life_cycle`: the cookies the server read reach the
-    // hydrating page serialized, so both halves draw the same page.
-    let cookies = RwSignal::new((*SharedValue::new_str(crate::cookies::server_cookies)).clone());
-    provide_context(crate::cookies::Cookies(cookies));
-    ferrohealth_ui::widget::prefetch::routes(crate::routes::ROUTES);
-    let tag = SharedValue::new_str(locale_requested);
-    provide_locale(gallery_locale(&tag));
-    view! {
-        <Title formatter=crate::pages::title_format(product()) text=String::new() />
-        <Router>
-            <crate::cookies::FollowCookies />
-            <FormNavigator />
-            <crate::session::GallerySession />
-            <Routes fallback=|| view! { <NotFound /> }>
-                <Route path=path!("/") view=Index />
-                <Route path=path!("/sign-in/:brand/:variant") view={Lazy::<LAside>::new()} />
-                <Route path=path!("/fault/:brand") view={Lazy::<LAside>::new()} />
-                <ParentRoute path=path!("/:brand") view=BrandShell>
-                    <Route path=path!("") view={Lazy::<LCore>::new()} />
-                    <Route path=path!("forms") view={Lazy::<LCore>::new()} />
-                    <Route path=path!("tables") view={Lazy::<LCore>::new()} />
-                    <Route path=path!("code") view={Lazy::<LCore>::new()} />
-                    <Route path=path!("configuration") view={Lazy::<LCore>::new()} />
-                    <Route path=path!("configuration/provisioned") view={Lazy::<LCore>::new()} />
-                    <Route path=path!("overlays") view={Lazy::<LFederation>::new()} />
-                    <Route path=path!("overlays/access") view={Lazy::<LFederation>::new()} />
-                    <Route path=path!("charts") view={Lazy::<LVisual>::new()} />
-                    <Route path=path!("layouts") view={Lazy::<LVisual>::new()} />
-                    <Route path=path!("operations") view={Lazy::<LRecords>::new()} />
-                    <Route path=path!("clinical") view={Lazy::<LRecords>::new()} />
-                    <Route path=path!("terminology") view={Lazy::<LRecords>::new()} />
-                    <Route path=path!("federation") view={Lazy::<LFederation>::new()} />
-                    <Route path=path!("find") view={Lazy::<LCore>::new()} />
-                    <Route path=path!("federation/:part") view={Lazy::<LFederation>::new()} />
-                    <Route path=path!("preferences") view={Lazy::<LCore>::new()} />
-                    <Route path=path!("preferences/:section") view={Lazy::<LCore>::new()} />
-                    <Route path=path!("templates/:variant") view={Lazy::<LAside>::new()} />
-                    <Route path=path!("trees") view={Lazy::<LVisual>::new()} />
-                </ParentRoute>
-            </Routes>
-        </Router>
-        <ToastRegion words=RegionWords::of_page() flash=Vec::new() />
-        <PageAnnouncer />
+impl Page {
+    /// A page in the brand's shell.
+    #[must_use]
+    pub fn shell(title: String, content: Html) -> Self {
+        Self {
+            title,
+            frame: Frame::Shell,
+            content,
+            status: http::StatusCode::OK,
+            flash: Vec::new(),
+        }
     }
+
+    /// A page centred above the footer.
+    #[must_use]
+    pub fn centred(title: String, content: Html) -> Self {
+        Self {
+            title,
+            frame: Frame::Centred,
+            content,
+            status: http::StatusCode::OK,
+            flash: Vec::new(),
+        }
+    }
+
+    /// This page with the toasts `flash`.
+    #[must_use]
+    pub fn with_flash(mut self, flash: Vec<Flash>) -> Self {
+        self.flash = flash;
+        self
+    }
+
+    /// This page answered with `status`.
+    #[must_use]
+    pub fn with_status(mut self, status: http::StatusCode) -> Self {
+        self.status = status;
+        self
+    }
+}
+
+/// The gallery's name, as its footer and titles name it.
+fn product(visit: &Visit) -> String {
+    visit.tr(Msg::Product)
 }
 
 /// The footer every gallery page carries.
 #[must_use]
-pub fn footer() -> Footer {
+pub fn footer(visit: &Visit) -> Footer {
     Footer {
-        product: product().into(),
+        product: product(visit).into(),
         version: VERSION.into(),
         about: "/".into(),
     }
 }
 
-/// The brand the route's `:brand` names, when it names one.
+/// The document title of the page `name` in the visit's brand, the
+/// gallery's for a path under no brand.
 #[must_use]
-pub fn route_brand() -> Option<Brand> {
-    let params = use_params_map();
-    params.with_untracked(|params| params.get_str("brand").and_then(Brand::parse))
+pub fn title(visit: &Visit, name: &str) -> String {
+    let product = product(visit);
+    if name.is_empty() {
+        return product;
+    }
+    let under = if visit
+        .path
+        .split('/')
+        .any(|part| Brand::parse(part).is_some())
+    {
+        visit.brand.product().to_owned()
+    } else {
+        visit.tr(Msg::Gallery)
+    };
+    format!("{name} · {under} · {product}")
 }
 
-/// The entries of the navigation of the brand `key`.
-macro_rules! entries {
-    ($key:literal) => {
-        vec![
-            Entry {
-                href: concat!("/", $key).into(),
-                label: tr(Msg::Overview).into(),
-                glyph: Glyph::LAYOUT_DASHBOARD,
-                exact: true,
-                count: None,
-            },
-            Entry {
-                href: concat!("/", $key, "/forms").into(),
-                label: tr(Msg::FormsEditor).into(),
-                glyph: Glyph::PENCIL,
-                exact: true,
-                count: None,
-            },
-            Entry {
-                href: concat!("/", $key, "/tables").into(),
-                label: tr(Msg::TablesPaging).into(),
-                glyph: Glyph::DATABASE,
-                exact: true,
-                count: None,
-            },
-            Entry {
-                href: concat!("/", $key, "/code").into(),
-                label: tr(Msg::Documents).into(),
-                glyph: Glyph::SQUARE_TERMINAL,
-                exact: true,
-                count: None,
-            },
-            Entry {
-                href: concat!("/", $key, "/configuration").into(),
-                label: tr(Msg::Configuration).into(),
-                glyph: Glyph::SETTINGS,
-                exact: false,
-                count: None,
-            },
-            Entry {
-                href: concat!("/", $key, "/overlays").into(),
-                label: tr(Msg::Overlays).into(),
-                glyph: Glyph::LAYERS,
-                exact: true,
-                count: None,
-            },
-            Entry {
-                href: concat!("/", $key, "/charts").into(),
-                label: tr(Msg::Charts).into(),
-                glyph: Glyph::CHART_LINE,
-                exact: true,
-                count: None,
-            },
-            Entry {
-                href: concat!("/", $key, "/layouts").into(),
-                label: tr(Msg::Layouts).into(),
-                glyph: Glyph::PANEL_RIGHT,
-                exact: true,
-                count: None,
-            },
-            Entry {
-                href: concat!("/", $key, "/operations").into(),
-                label: tr(Msg::Operations).into(),
-                glyph: Glyph::FLASK_CONICAL,
-                exact: true,
-                count: None,
-            },
-            Entry {
-                href: concat!("/", $key, "/terminology").into(),
-                label: tr(Msg::Terminology).into(),
-                glyph: Glyph::BOOK_A,
-                exact: true,
-                count: None,
-            },
-            Entry {
-                href: concat!("/", $key, "/trees").into(),
-                label: tr(Msg::Trees).into(),
-                glyph: Glyph::FOLDER_OPEN,
-                exact: true,
-                count: None,
-            },
-            Entry {
-                href: concat!("/", $key, "/find").into(),
-                label: tr(Msg::FindTitle).into(),
-                glyph: Glyph::SEARCH,
-                exact: true,
-                count: None,
-            },
-            Entry {
-                href: concat!("/", $key, "/clinical").into(),
-                label: tr(Msg::ClinicalRecords).into(),
-                glyph: Glyph::HEART_PULSE,
-                exact: true,
-                count: None,
-            },
-            Entry {
-                href: concat!("/", $key, "/federation").into(),
-                label: tr(Msg::Federation).into(),
-                glyph: Glyph::NETWORK,
-                exact: false,
-                count: None,
-            },
-        ]
+/// The whole document of `page` for `visit`.
+#[must_use]
+pub fn render(visit: &Visit, page: Page) -> Html {
+    let toasts = toast_region(&visit.locale, page.flash);
+    let body = match page.frame {
+        Frame::Shell => brand_shell(visit, page.content, toasts),
+        Frame::Centred => centred(&visit.locale, page.content, toasts, footer(visit)),
     };
+    document(Document {
+        locale: visit.locale.clone(),
+        preferences: visit.preferences.clone(),
+        title: title(visit, &page.title),
+        assets: Assets::of(visit.brand),
+        nonce: None,
+        head: Html::raw(String::from(
+            "<link rel=\"icon\" type=\"image/svg+xml\" href=\"/favicon.svg\">",
+        )),
+        body,
+    })
+}
+
+/// One entry of the navigation.
+fn entry(href: String, label: String, glyph: Glyph, exact: bool) -> Entry {
+    Entry {
+        href: href.into(),
+        label: label.into(),
+        glyph,
+        exact,
+        count: None,
+    }
+}
+
+/// The entries of the navigation of `brand`.
+fn entries(visit: &Visit, brand: Brand) -> Vec<Entry> {
+    let key = brand.key();
+    [
+        ("", Msg::Overview, Glyph::LAYOUT_DASHBOARD, true),
+        ("/forms", Msg::FormsEditor, Glyph::PENCIL, true),
+        ("/tables", Msg::TablesPaging, Glyph::DATABASE, true),
+        ("/code", Msg::Documents, Glyph::SQUARE_TERMINAL, true),
+        ("/configuration", Msg::Configuration, Glyph::SETTINGS, false),
+        ("/overlays", Msg::Overlays, Glyph::LAYERS, true),
+        ("/charts", Msg::Charts, Glyph::CHART_LINE, true),
+        ("/layouts", Msg::Layouts, Glyph::PANEL_RIGHT, true),
+        ("/operations", Msg::Operations, Glyph::FLASK_CONICAL, true),
+        ("/terminology", Msg::Terminology, Glyph::BOOK_A, true),
+        ("/trees", Msg::Trees, Glyph::FOLDER_OPEN, true),
+        ("/find", Msg::FindTitle, Glyph::SEARCH, true),
+        ("/clinical", Msg::ClinicalRecords, Glyph::HEART_PULSE, true),
+        ("/federation", Msg::Federation, Glyph::NETWORK, false),
+    ]
+    .into_iter()
+    .map(|(page, msg, glyph, exact)| entry(format!("/{key}{page}"), visit.tr(msg), glyph, exact))
+    .collect()
 }
 
 /// The `href` of the federation entry of `brand`, the nested sidebar
@@ -418,191 +308,114 @@ const fn federation_entry(brand: Brand) -> &'static str {
     }
 }
 
-/// The page template entries of the brand `key`.
-macro_rules! templates {
-    ($key:literal) => {
-        vec![
-            Entry {
-                href: concat!("/", $key, "/templates/list").into(),
-                label: tr(Msg::NavList).into(),
-                glyph: Glyph::LIST_CHECKS,
-                exact: true,
-                count: None,
-            },
-            Entry {
-                href: concat!("/", $key, "/templates/list-many").into(),
-                label: tr(Msg::NavListMany).into(),
-                glyph: Glyph::LIST_CHECKS,
-                exact: true,
-                count: None,
-            },
-            Entry {
-                href: concat!("/", $key, "/templates/list-empty").into(),
-                label: tr(Msg::NavListEmpty).into(),
-                glyph: Glyph::INBOX,
-                exact: true,
-                count: None,
-            },
-            Entry {
-                href: concat!("/", $key, "/templates/list-tabs").into(),
-                label: tr(Msg::NavListTabs).into(),
-                glyph: Glyph::LIST_CHECKS,
-                exact: true,
-                count: None,
-            },
-            Entry {
-                href: concat!("/", $key, "/templates/detail").into(),
-                label: tr(Msg::NavDetail).into(),
-                glyph: Glyph::FILE_TEXT,
-                exact: true,
-                count: None,
-            },
-            Entry {
-                href: concat!("/", $key, "/templates/settings").into(),
-                label: tr(Msg::NavSettings).into(),
-                glyph: Glyph::SETTINGS,
-                exact: true,
-                count: None,
-            },
-            Entry {
-                href: concat!("/", $key, "/templates/settings-managed").into(),
-                label: tr(Msg::NavSettingsManaged).into(),
-                glyph: Glyph::SLIDERS_HORIZONTAL,
-                exact: true,
-                count: None,
-            },
-            Entry {
-                href: concat!("/", $key, "/preferences").into(),
-                label: tr(Msg::NavPreferences).into(),
-                glyph: Glyph::CIRCLE_USER,
-                exact: false,
-                count: None,
-            },
-            Entry {
-                href: concat!("/", $key, "/templates/about").into(),
-                label: tr(Msg::NavAbout).into(),
-                glyph: Glyph::INFO,
-                exact: true,
-                count: None,
-            },
-            Entry {
-                href: concat!("/", $key, "/templates/forbidden").into(),
-                label: tr(Msg::NavForbidden).into(),
-                glyph: Glyph::SHIELD_OFF,
-                exact: true,
-                count: None,
-            },
-            Entry {
-                href: concat!("/", $key, "/templates/not-found").into(),
-                label: tr(Msg::NavNotFound).into(),
-                glyph: Glyph::COMPASS,
-                exact: true,
-                count: None,
-            },
-            Entry {
-                href: concat!("/fault/", $key).into(),
-                label: tr(Msg::NavFault).into(),
-                glyph: Glyph::SERVER_CRASH,
-                exact: true,
-                count: None,
-            },
+/// The page template entries of `brand`.
+fn templates(visit: &Visit, brand: Brand) -> Vec<Entry> {
+    let key = brand.key();
+    let mut entries: Vec<Entry> = [
+        ("list", Msg::NavList, Glyph::LIST_CHECKS),
+        ("list-many", Msg::NavListMany, Glyph::LIST_CHECKS),
+        ("list-empty", Msg::NavListEmpty, Glyph::INBOX),
+        ("list-tabs", Msg::NavListTabs, Glyph::LIST_CHECKS),
+        ("detail", Msg::NavDetail, Glyph::FILE_TEXT),
+        ("settings", Msg::NavSettings, Glyph::SETTINGS),
+        (
+            "settings-managed",
+            Msg::NavSettingsManaged,
+            Glyph::SLIDERS_HORIZONTAL,
+        ),
+    ]
+    .into_iter()
+    .map(|(page, msg, glyph)| {
+        entry(
+            format!("/{key}/templates/{page}"),
+            visit.tr(msg),
+            glyph,
+            true,
+        )
+    })
+    .collect();
+    entries.push(entry(
+        format!("/{key}/preferences"),
+        visit.tr(Msg::NavPreferences),
+        Glyph::CIRCLE_USER,
+        false,
+    ));
+    entries.extend(
+        [
+            ("about", Msg::NavAbout, Glyph::INFO),
+            ("forbidden", Msg::NavForbidden, Glyph::SHIELD_OFF),
+            ("not-found", Msg::NavNotFound, Glyph::COMPASS),
         ]
-    };
+        .into_iter()
+        .map(|(page, msg, glyph)| {
+            entry(
+                format!("/{key}/templates/{page}"),
+                visit.tr(msg),
+                glyph,
+                true,
+            )
+        }),
+    );
+    entries.push(entry(
+        format!("/fault/{key}"),
+        visit.tr(Msg::NavFault),
+        Glyph::SERVER_CRASH,
+        true,
+    ));
+    entries
 }
 
-/// The sign-in entries of the brand `key`.
-macro_rules! sign_ins {
-    ($key:literal) => {
-        vec![
-            Entry {
-                href: concat!("/sign-in/", $key, "/basic").into(),
-                label: tr(Msg::BasicSign).into(),
-                glyph: Glyph::LOG_IN,
-                exact: true,
-                count: None,
-            },
-            Entry {
-                href: concat!("/sign-in/", $key, "/provider").into(),
-                label: tr(Msg::ProviderSign).into(),
-                glyph: Glyph::SHIELD_CHECK,
-                exact: true,
-                count: None,
-            },
-            Entry {
-                href: concat!("/sign-in/", $key, "/expired").into(),
-                label: tr(Msg::SignInStates).into(),
-                glyph: Glyph::CLOCK,
-                exact: true,
-                count: None,
-            },
-        ]
-    };
+/// The sign-in entries of `brand`.
+fn sign_ins(visit: &Visit, brand: Brand) -> Vec<Entry> {
+    let key = brand.key();
+    [
+        ("basic", Msg::BasicSign, Glyph::LOG_IN),
+        ("provider", Msg::ProviderSign, Glyph::SHIELD_CHECK),
+        ("expired", Msg::SignInStates, Glyph::CLOCK),
+    ]
+    .into_iter()
+    .map(|(page, msg, glyph)| entry(format!("/sign-in/{key}/{page}"), visit.tr(msg), glyph, true))
+    .collect()
 }
 
 /// The navigation groups of `brand`: its pages, its page templates and
 /// its sign-in cards. The brand itself is chosen in the top bar, so the
 /// navigation marks one page.
-fn navigation(brand: Brand) -> [Group; 3] {
-    let (mut pages, layouts, signs): (Vec<Entry>, Vec<Entry>, Vec<Entry>) = match brand {
-        Brand::Bridge => (
-            entries!("ferrobridge"),
-            templates!("ferrobridge"),
-            sign_ins!("ferrobridge"),
-        ),
-        Brand::Fed => (
-            entries!("ferrofed"),
-            templates!("ferrofed"),
-            sign_ins!("ferrofed"),
-        ),
-        Brand::Ehr => (
-            entries!("ferroehr"),
-            templates!("ferroehr"),
-            sign_ins!("ferroehr"),
-        ),
-        Brand::Term => (
-            entries!("ferroterm"),
-            templates!("ferroterm"),
-            sign_ins!("ferroterm"),
-        ),
-        Brand::Pix => (
-            entries!("ferropix"),
-            templates!("ferropix"),
-            sign_ins!("ferropix"),
-        ),
-    };
+fn navigation(visit: &Visit, brand: Brand) -> Vec<Group> {
+    let mut pages = entries(visit, brand);
     // The honest count (R12): a number on the overlays, and none known for the charts.
-    if let Some(overlays) = pages.get_mut(4) {
+    if let Some(overlays) = pages.get_mut(5) {
         overlays.count = Some(Count::Known {
             count: 2,
-            words: tr_with(Msg::NavIssues, &[("count", Arg::Number(2.0))]),
+            words: visit.tr_with(Msg::NavIssues, &[("count", Arg::Number(2.0))]),
         });
     }
-    if let Some(charts) = pages.get_mut(5) {
+    if let Some(charts) = pages.get_mut(6) {
         charts.count = Some(Count::Unknown {
-            why: tr(Msg::NavNotProbed),
+            why: visit.tr(Msg::NavNotProbed),
         });
     }
-    [
+    vec![
         Group {
             id: "nav-components",
-            title: tr(Msg::Components).into(),
+            title: visit.tr(Msg::Components).into(),
             entries: pages,
         },
         Group {
             id: "nav-templates",
-            title: tr(Msg::Templates).into(),
-            entries: layouts,
+            title: visit.tr(Msg::Templates).into(),
+            entries: templates(visit, brand),
         },
         Group {
             id: "nav-sign-in",
-            title: tr(Msg::SignInGroup).into(),
-            entries: signs,
+            title: visit.tr(Msg::SignInGroup).into(),
+            entries: sign_ins(visit, brand),
         },
     ]
 }
 
 /// The same page as `back` in each brand, as a link and its words.
-fn brand_links(back: &str) -> Vec<(Brand, String, String)> {
+fn brand_links(visit: &Visit, back: &str) -> Vec<(Brand, String, String)> {
     let page = back
         .strip_prefix('/')
         .and_then(|rest| rest.split_once('/').map(|(_, page)| format!("/{page}")))
@@ -610,13 +423,13 @@ fn brand_links(back: &str) -> Vec<(Brand, String, String)> {
     Brand::ALL
         .into_iter()
         .map(|each| {
-            let words = match each {
-                Brand::Bridge => tr(Msg::Bridge),
-                Brand::Fed => tr(Msg::Fed),
-                Brand::Ehr => tr(Msg::Ehr),
-                Brand::Term => tr(Msg::Term),
-                Brand::Pix => tr(Msg::Pix),
-            };
+            let words = visit.tr(match each {
+                Brand::Bridge => Msg::Bridge,
+                Brand::Fed => Msg::Fed,
+                Brand::Ehr => Msg::Ehr,
+                Brand::Term => Msg::Term,
+                Brand::Pix => Msg::Pix,
+            });
             (each, format!("/{}{page}", each.key()), words)
         })
         .collect()
@@ -624,29 +437,29 @@ fn brand_links(back: &str) -> Vec<(Brand, String, String)> {
 
 /// The brand switcher of the top bar from 40 rem up: the same page in each
 /// brand, the one in force marked current.
-fn brand_switch(brand: Brand, back: &str) -> impl IntoView + use<> {
-    let links = brand_links(back);
+fn brand_switch(visit: &Visit, back: &str) -> Html {
+    let links = brand_links(visit, back);
     let current = links
         .iter()
-        .position(|(each, _, _)| *each == brand)
+        .position(|(each, _, _)| *each == visit.brand)
         .unwrap_or(0);
     let choices = links
         .into_iter()
         .map(|(_, href, words)| (href, words))
         .collect();
-    segmented_links(tr(Msg::Brand), choices, current)
+    segmented_links(visit.tr(Msg::Brand), choices, current)
 }
 
 /// The brand switcher as the user menu holds it below 40 rem.
-fn brand_choices(brand: Brand, back: &str) -> Choices {
+fn brand_choices(visit: &Visit, back: &str) -> Choices {
     Choices {
-        label: tr(Msg::Brand),
-        choices: brand_links(back)
+        label: visit.tr(Msg::Brand),
+        choices: brand_links(visit, back)
             .into_iter()
             .map(|(each, href, words)| Choice {
                 words,
                 href,
-                chosen: each == brand,
+                chosen: each == visit.brand,
             })
             .collect(),
     }
@@ -664,265 +477,173 @@ pub const fn brand_glyph(brand: Brand) -> Glyph {
     }
 }
 
-/// The shell of a brand's pages: the top bar with the theme switch and the
-/// operator, the sandbox banner, the navigation and the page.
-///
-/// The shell is drawn again when the brand or the page changes, so the
-/// brand's theme file and the page the theme switch returns to follow a
-/// navigation the router makes in the browser.
-#[component]
-fn BrandShell() -> impl IntoView {
-    ferrohealth_ui::widget::nav::follow_path();
-    let params = use_params_map();
-    let location = use_location();
-    let query = use_query_map();
-    // NOTE: FerroUI #437; the shell is drawn once per brand and follows the path itself, so
-    // only a change of brand, of the search state the address names or of the nested
-    // section under Federation draws it again.
-    let at = Memo::new(move |_| {
-        let brand = params.with(|params| params.get_str("brand").and_then(Brand::parse));
-        let search = query.with(|query| query.get("search"));
-        let nest = brand.and_then(|brand| {
-            location
-                .pathname
-                .with(|path| crate::pages::federation::nest(brand, path, federation_entry(brand)))
-        });
-        (brand, search, nest)
-    });
-    move || match at.get() {
-        (Some(brand), search, _) => {
-            let back = location.pathname.get_untracked();
-            let typed = query
-                .with_untracked(|query| query.get("q"))
-                .filter(|_| back.ends_with("/find"));
-            brand_shell(
-                brand,
-                &back,
-                Searched {
-                    state: search.as_deref(),
-                    typed: typed.as_deref(),
-                },
-            )
-        }
-        (None, _, _) => view! { <NotFound /> }.into_any(),
-    }
+/// The FHIR version select (M3) the top bar of the visit's page carries:
+/// the terminology page's alone.
+fn fhir_version(visit: &Visit) -> Option<VersionSelect> {
+    visit.path.ends_with("/terminology").then(|| {
+        crate::pages::terminology::version_select(
+            visit,
+            &visit.path,
+            visit.param(crate::pages::terminology::version_key()),
+        )
+    })
 }
 
-/// The FHIR version select (M3) the top bar of the page at `back` carries,
-/// `chosen` in view: the terminology page's alone.
-fn fhir_version(back: &str, chosen: Option<&str>) -> Option<VersionSelect> {
-    back.ends_with("/terminology")
-        .then(|| crate::pages::terminology::version_select(back, chosen))
-}
-
-/// The user menu of `brand` on the page at `back`, the FHIR version
-/// `fhir` in view.
-fn operator_menu(brand: Brand, back: &str, fhir: Option<&str>) -> AnyView {
+/// The user menu of the visit's brand.
+fn operator_menu(visit: &Visit, version: Option<&VersionSelect>) -> Html {
+    let brand = visit.brand;
+    let back = &visit.path;
     // A name as long as a FHIR user reference gets, so the top bar shows how
     // it gives way; the synthetic operator the gallery is signed in as.
     let operator = String::from("Practitioner/synthetic-terminologist-on-call");
-    let version = fhir_version(back, fhir);
-    let mut choices = vec![brand_choices(brand, back)];
-    choices.extend(version.as_ref().map(VersionSelect::choices));
-    user_menu(UserMenu {
-        id: "user-menu",
-        label: operator.clone(),
-        name: Some(operator.clone()),
-        who: operator,
-        line: tr(Msg::GalleryOperatorLine),
-        preferences: format!("/{}/preferences", brand.key()),
-        links: vec![UserLink {
-            words: tr(Msg::Access),
-            href: format!("/{}/overlays/access", brand.key()),
-            glyph: Glyph::KEY_ROUND,
-        }],
-        theme: ThemeChoice {
-            current: theme_requested(),
-            action: String::from(PREFERENCE_ROUTE),
-            back: back.to_owned(),
+    let mut choices = vec![brand_choices(visit, back)];
+    choices.extend(version.map(VersionSelect::choices));
+    user_menu(
+        &visit.locale,
+        UserMenu {
+            id: "user-menu",
+            label: operator.clone(),
+            name: Some(operator.clone()),
+            who: operator,
+            line: visit.tr(Msg::GalleryOperatorLine),
+            preferences: format!("/{}/preferences", brand.key()),
+            links: vec![UserLink {
+                words: visit.tr(Msg::Access),
+                href: format!("/{}/overlays/access", brand.key()),
+                glyph: Glyph::KEY_ROUND,
+            }],
+            theme: ThemeChoice {
+                current: visit.preferences.theme,
+                action: String::from(PREFERENCE_ROUTE),
+                back: back.clone(),
+            },
+            choices,
+            shortcuts: Some(format!("/{}/overlays", brand.key())),
+            sign_out: Some(format!("{SIGN_OUT_ROUTE}/{}", brand.key())),
         },
-        choices,
-        shortcuts: Some(format!("/{}/overlays", brand.key())),
-        sign_out: Some(format!("{SIGN_OUT_ROUTE}/{}", brand.key())),
-    })
-    .into_any()
+    )
 }
 
-/// Counts each time the browser draws a brand shell, on the root element's
-/// `data-gallery-shells`, so a journey sees whether a navigation drew the
-/// shell again (FerroUI #437).
-fn count_shell_mount() {
-    #[cfg(target_arch = "wasm32")]
-    if let Some(root) = document().document_element() {
-        let drawn = root
-            .get_attribute("data-gallery-shells")
-            .and_then(|count| count.parse::<u32>().ok())
-            .unwrap_or(0);
-        if root
-            .set_attribute("data-gallery-shells", &drawn.saturating_add(1).to_string())
-            .is_err()
-        {
-            leptos::logging::warn!("the browser refused the shell count");
-        }
-    }
-}
-
-/// What the top bar's search shows: the state the address names and the
-/// words the find page answers.
-#[derive(Debug, Clone, Copy)]
-struct Searched<'a> {
-    /// The state, `busy` or `disabled`.
-    state: Option<&'a str>,
-    /// The words the find page answers.
-    typed: Option<&'a str>,
-}
-
-/// The shell of `brand`'s pages, drawn for the page at `back` and then
-/// following the router, with its search `search`.
-fn brand_shell(brand: Brand, back: &str, search: Searched<'_>) -> AnyView {
-    Effect::new(move |_| count_shell_mount());
+/// The shell of the visit's brand around `content`: the top bar with the
+/// brand switch and the operator, the sandbox banner, the navigation, the
+/// page, the session watch while a journey's session lasts, and the
+/// toasts.
+fn brand_shell(visit: &Visit, content: Html, toasts: Html) -> Html {
+    let brand = visit.brand;
+    let back = &visit.path;
+    let locale = &visit.locale;
     let lockup = lockup(
         "/",
         mark(brand_glyph(brand)),
         brand.product(),
-        tr(Msg::Gallery),
-    )
-    .into_any();
-    let collapsed = rail_requested();
-    let nav = sidebar(Sidebar {
-        id: SIDEBAR_ID,
-        label: tr(Msg::Pages),
-        groups: navigation(brand).into(),
-        current: back.to_owned(),
-        rail: Some(Rail {
-            collapsed,
-            action: String::from(SIDEBAR_ROUTE),
-            back: back.to_owned(),
-        }),
-        nest: crate::pages::federation::nest(brand, back, federation_entry(brand)),
-    });
+        visit.tr(Msg::Gallery),
+    );
+    let nav = sidebar(
+        locale,
+        Sidebar {
+            id: SIDEBAR_ID,
+            label: visit.tr(Msg::Pages),
+            groups: navigation(visit, brand),
+            current: back.clone(),
+            rail: Some(Rail {
+                collapsed: rail_of(&visit.cookies),
+                action: String::from(SIDEBAR_ROUTE),
+                back: back.clone(),
+            }),
+            nest: crate::pages::federation::nest(visit, brand, back, federation_entry(brand)),
+        },
+    );
     let pill = status_pill(StatusPill {
         reach: Reach::Up,
-        words: tr(Msg::LibraryUp),
-        detail: Some(tr_with(
-            Msg::LibraryVersion,
-            &[("version", Arg::from(VERSION))],
+        words: visit.tr(Msg::LibraryUp),
+        detail: Some(visit.tr_with(Msg::LibraryVersion, &[("version", Arg::from(VERSION))])),
+    });
+    let version = fhir_version(visit);
+    let end = Html::join([
+        Html::raw(format!(
+            "<span class=\"fui-wide-only\">{}</span>",
+            brand_switch(visit, back)
         )),
-    });
-    // NOTE: FerroUI #437; the parts that name the page in view follow the router, so the
-    // shell around them is drawn once: the brand switch, the version select and the menu.
-    let location = use_location();
-    let query = use_query_map();
-    let page = Memo::new(move |_| {
-        (
-            location.pathname.get(),
-            query.with(|query| query.get(crate::pages::terminology::version_key())),
-        )
-    });
-    let end = view! {
-        <span class="fui-wide-only">
-            {move || page.with(|(back, _)| brand_switch(brand, back).into_any())}
-        </span>
-        {move || page.with(|(back, fhir)| fhir_version(back, fhir.as_deref()).map(version_select))}
-        {pill}
-        {move || page.with(|(back, fhir)| operator_menu(brand, back, fhir.as_deref()))}
-    }
-    .into_any();
-    let search = crate::search::gallery_search(brand, search.state, search.typed);
-    let page = shell(Shell {
-        topbar: topbar(TopBar {
-            sidebar: SIDEBAR_ID,
-            lockup,
-            search: Some(search),
-            end,
-        }),
-        banner: Some(
-            banner(
+        version
+            .clone()
+            .map(|select| version_select(locale, select))
+            .unwrap_or_default(),
+        pill,
+        operator_menu(visit, version.as_ref()),
+    ]);
+    let typed = visit.param("q").filter(|_| back.ends_with("/find"));
+    let search = crate::search::gallery_search(visit, visit.param("search"), typed);
+    let content = Html::join([content, crate::session::watch(visit).unwrap_or_default()]);
+    shell(
+        locale,
+        Shell {
+            topbar: topbar(
+                locale,
+                TopBar {
+                    sidebar: SIDEBAR_ID,
+                    lockup,
+                    search: Some(search),
+                    end,
+                },
+            ),
+            banner: Some(banner(
                 Tone::Warn,
                 Glyph::TRIANGLE_ALERT,
-                tr(Msg::Gallery),
-                &tr(Msg::EveryRowTextThesePages),
+                visit.tr(Msg::Gallery),
+                &visit.tr(Msg::EveryRowTextThesePages),
                 None,
-            )
-            .into_any(),
-        ),
-        sidebar: nav,
-        // NOTE: the Leptos book, `router/18_params_and_queries`: the pages read their query
-        // as the server drew them, so a new query draws the page again.
-        content: {
-            let location = use_location();
-            (move || {
-                location.search.track();
-                view! { <Outlet /> }
-            })
-            .into_any()
+            )),
+            sidebar: nav,
+            content,
+            dock: None,
+            toasts,
+            footer: footer(visit),
         },
-        dock: None,
-        footer: footer(),
-    });
-    view! {
-        <Stylesheet id="brand-theme" href=theme_path(brand) />
-        {page}
-    }
-    .into_any()
+    )
 }
 
 /// The gallery's front page: the brands, each a link to its pages.
-#[component]
-fn Index() -> impl IntoView {
-    let brands = Brand::ALL
-        .into_iter()
-        .map(|brand| {
-            view! {
-                <p>
-                    <a href=format!("/{}", brand.key()) class="fui-button fui-button-secondary">
-                        {ferrohealth_ui::icon::icon(brand_glyph(brand), "16")}
-                        {brand.product()}
-                    </a>
-                </p>
-            }
-        })
-        .collect_view()
-        .into_any();
-    let content = view! {
-        <div class="fui-card fui-sign-in">
-            <div class="fui-sign-in-lockup">
-                {lockup("/", mark(Glyph::LAYERS), tr(Msg::FerrohealthUi), tr(Msg::Gallery))}
-            </div>
-            <p class="fui-muted">{tr(Msg::EveryComponentLibraryEveryProduct)}</p>
-            <div class="fui-stack">{brands}</div>
-        </div>
-    }
-    .into_any();
-    centred(content, footer())
+#[must_use]
+pub fn index(visit: &Visit) -> Page {
+    let brands = Html::join(Brand::ALL.into_iter().map(|brand| {
+        Html::raw(format!(
+            "<p><a href=\"/{}\" class=\"fui-button fui-button-secondary\">{}{}</a></p>",
+            brand.key(),
+            icon(brand_glyph(brand), "16"),
+            Html::text(brand.product())
+        ))
+    }));
+    let content = Html::raw(format!(
+        "<div class=\"fui-card fui-sign-in\"><div class=\"fui-sign-in-lockup\">{}</div><p class=\"fui-muted\">{}</p><div class=\"fui-stack\">{brands}</div></div>",
+        lockup(
+            "/",
+            mark(Glyph::LAYERS),
+            visit.tr(Msg::FerrohealthUi),
+            visit.tr(Msg::Gallery)
+        ),
+        Html::text(visit.tr(Msg::EveryComponentLibraryEveryProduct)),
+    ));
+    Page::centred(String::new(), content)
 }
 
 /// The page for a path the gallery does not serve: `404`, and the way back.
-#[component]
-#[expect(
-    clippy::must_use_candidate,
-    reason = "the #[component] macro drops a #[must_use] from the function it writes"
-)]
-pub(crate) fn NotFound() -> impl IntoView {
-    #[cfg(not(target_arch = "wasm32"))]
-    if let Some(response) = use_context::<leptos_axum::ResponseOptions>() {
-        response.set_status(http::StatusCode::NOT_FOUND);
-    }
-    let content = ferrohealth_ui::view::empty::empty_state(
+#[must_use]
+pub fn not_found(visit: &Visit) -> Page {
+    let content = empty_state(
         Glyph::COMPASS,
-        tr(Msg::NotFound),
-        tr(Msg::NotFoundBody),
-        view! {
-            <a href="/" class="fui-button fui-button-primary">
-                {ferrohealth_ui::icon::icon(Glyph::ARROW_LEFT, "16")}
-                {tr(Msg::BackGallery)}
-            </a>
-        },
+        visit.tr(Msg::NotFound),
+        visit.tr(Msg::NotFoundBody),
+        Html::raw(format!(
+            "<a href=\"/\" class=\"fui-button fui-button-primary\">{}{}</a>",
+            icon(Glyph::ARROW_LEFT, "16"),
+            Html::text(visit.tr(Msg::BackGallery))
+        )),
     );
-    view! {
-        <Title text=tr(Msg::NotFound) />
-        {centred(view! { <div class="fui-card">{content}</div> }.into_any(), footer())}
-    }
+    Page::centred(
+        visit.tr(Msg::NotFound),
+        Html::raw(format!("<div class=\"fui-card\">{content}</div>")),
+    )
+    .with_status(http::StatusCode::NOT_FOUND)
 }
 
 #[cfg(test)]

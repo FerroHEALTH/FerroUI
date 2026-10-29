@@ -15,9 +15,8 @@
 //! long value wraps inside its cell and is never cut off. No specification
 //! governs the preview: our own design.
 
-use leptos::prelude::*;
-
-use crate::i18n::{Text, tr, tr_with};
+use crate::html::Html;
+use crate::i18n::{Locale, Text, tr, tr_with};
 use crate::icon::{Glyph, icon};
 
 /// One value of a previewed row.
@@ -54,73 +53,73 @@ pub struct RowTable {
 }
 
 /// Returns `value` as its cell shows it.
-fn value(value: RowValue) -> AnyView {
+fn value(locale: &Locale, value: RowValue) -> String {
     match value {
-        RowValue::Value(value) if value.is_empty() => view! {
-            <span class="fui-rowgraph-empty">{tr(Text::RowsEmpty)}</span>
-        }
-        .into_any(),
-        RowValue::Value(value) => value.into_any(),
-        RowValue::Null => {
-            view! { <span class="fui-rowgraph-null">{tr(Text::RowsNull)}</span> }.into_any()
-        }
-        RowValue::ConceptZero => view! {
-            <span class="fui-concept-zero">
-                {icon(Glyph::TRIANGLE_ALERT, "12")}
-                {tr(Text::RowsConceptZero)}
-            </span>
-        }
-        .into_any(),
+        RowValue::Value(value) if value.is_empty() => format!(
+            "<span class=\"fui-rowgraph-empty\">{}</span>",
+            tr(locale, Text::RowsEmpty)
+        ),
+        RowValue::Value(value) => String::from(Html::text(value)),
+        RowValue::Null => format!(
+            "<span class=\"fui-rowgraph-null\">{}</span>",
+            tr(locale, Text::RowsNull)
+        ),
+        RowValue::ConceptZero => format!(
+            "<span class=\"fui-concept-zero\">{}{}</span>",
+            icon(Glyph::TRIANGLE_ALERT, "12"),
+            tr(locale, Text::RowsConceptZero)
+        ),
     }
 }
 
 /// Returns one row's columns and values.
-fn row(fields: Vec<RowField>) -> AnyView {
-    let fields = fields
+fn row(locale: &Locale, fields: Vec<RowField>) -> String {
+    let fields: String = fields
         .into_iter()
         .map(
             |RowField {
                  column,
                  value: cell,
              }| {
-                view! {
-                    <div>
-                        <dt>{column}</dt>
-                        <dd>{value(cell)}</dd>
-                    </div>
-                }
+                format!(
+                    "<div><dt>{}</dt><dd>{}</dd></div>",
+                    Html::text(column),
+                    value(locale, cell)
+                )
             },
         )
-        .collect_view();
-    view! { <dl class="fui-rowgraph-fields">{fields}</dl> }.into_any()
+        .collect::<Vec<_>>()
+        .concat();
+    format!("<dl class=\"fui-rowgraph-fields\">{fields}</dl>")
 }
 
 /// Returns one table: its name with its row count over its rows.
-fn table(table: RowTable) -> AnyView {
+fn table(locale: &Locale, table: RowTable) -> String {
     let RowTable { name, detail, rows } = table;
     let count = u32::try_from(rows.len()).unwrap_or(u32::MAX);
-    let mut note = tr_with(Text::RowsCount, &[("count", count.into())]);
+    let mut note = tr_with(locale, Text::RowsCount, &[("count", count.into())]);
     if let Some(detail) = detail {
         note = note.map(|note| format!("{note} · {detail}"));
     }
-    let rows = rows.into_iter().map(row).collect_view();
-    view! {
-        <section class="fui-rowgraph-table">
-            <h4 class="fui-rowgraph-name">
-                {name}
-                " "
-                <span class="fui-muted">{note}</span>
-            </h4>
-            {rows}
-        </section>
-    }
-    .into_any()
+    let rows: String = rows
+        .into_iter()
+        .map(|fields| row(locale, fields))
+        .collect::<Vec<_>>()
+        .concat();
+    format!(
+        "<section class=\"fui-rowgraph-table\"><h4 class=\"fui-rowgraph-name\">{} <span class=\"fui-muted\">{note}</span></h4>{rows}</section>",
+        Html::text(name)
+    )
 }
 
 /// Returns the preview of `tables`, each name a level-four heading under
 /// the answer pane's title.
 #[must_use]
-pub fn row_preview(tables: Vec<RowTable>) -> AnyView {
-    let tables = tables.into_iter().map(table).collect_view();
-    view! { <div class="fui-rowgraph">{tables}</div> }.into_any()
+pub fn row_preview(locale: &Locale, tables: Vec<RowTable>) -> Html {
+    let tables: String = tables
+        .into_iter()
+        .map(|each| table(locale, each))
+        .collect::<Vec<_>>()
+        .concat();
+    Html::raw(format!("<div class=\"fui-rowgraph\">{tables}</div>"))
 }

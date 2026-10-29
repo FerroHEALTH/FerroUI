@@ -16,9 +16,8 @@
 //! contribution (openEHR RM, Common Information Model, § Change Control).
 //! No specification governs the look: our own design.
 
-use leptos::prelude::*;
-
-use crate::i18n::{Arg, Text, Word, tr, tr_with};
+use crate::html::Html;
+use crate::i18n::{Arg, Locale, Text, Word, tr, tr_with};
 use crate::table::view::{Body, Column, DataTable, Role, cell, data_table, title_cell};
 use crate::tone::Tone;
 use crate::view::button::Variant;
@@ -52,9 +51,9 @@ pub struct Version {
     pub committer: String,
     /// When it was committed, relative with the full timestamp in its
     /// tooltip, as the console draws it (family rule 11).
-    pub when: AnyView,
+    pub when: Html,
     /// Its contribution, a link the console draws.
-    pub contribution: AnyView,
+    pub contribution: Html,
     /// Whether this is the version the page reads, marked `aria-current`.
     pub read: bool,
 }
@@ -65,10 +64,10 @@ pub struct AtTime {
     /// The console's route the form opens with a `GET`, its field's value
     /// in the query.
     pub action: String,
-    /// The date and time field: [`crate::island::DatePicker`] over a
-    /// [`crate::widget::date::DateField`] with its time, labelled
+    /// The date and time field: [`crate::view::date::date_field`] over a
+    /// [`crate::view::date::DateField`] with its time, labelled
     /// [`at_time_label`].
-    pub field: AnyView,
+    pub field: Html,
     /// The one quiet line on what it opens, such as "Opens the version
     /// current then."
     pub opens: String,
@@ -89,32 +88,37 @@ pub struct VersionHistory {
 /// The label of the At a time field, for the [`AtTime::field`] a console
 /// builds.
 #[must_use]
-pub fn at_time_label() -> Word {
-    tr(Text::VersionsAtTime)
+pub fn at_time_label(locale: &Locale) -> Word {
+    tr(locale, Text::VersionsAtTime)
 }
 
 /// Returns a version's name as its table shows it: "Version 3" with the
 /// Current mark beside it, kept on one line, or the Deleted state after it.
 #[must_use]
-pub fn version_cell(number: &str, standing: Standing) -> AnyView {
-    let name = tr_with(Text::VersionsCell, &[("value", Arg::from(number))]);
+pub fn version_cell(locale: &Locale, number: &str, standing: Standing) -> Html {
+    let name = tr_with(locale, Text::VersionsCell, &[("value", Arg::from(number))]);
     let mark = match standing {
-        Standing::Current => Some(
-            view! { <span class=Tone::Accent.badge()>{tr(Text::VersionsCurrent)}</span> }
-                .into_any(),
+        Standing::Current => format!(
+            "<span class=\"{}\">{}</span>",
+            Tone::Accent.badge(),
+            tr(locale, Text::VersionsCurrent)
         ),
-        Standing::Older => None,
-        Standing::Deleted => Some(state(Mark::Off, tr(Text::VersionsDeleted), None)),
+        Standing::Older => String::new(),
+        Standing::Deleted => {
+            String::from(state(Mark::Off, tr(locale, Text::VersionsDeleted), None))
+        }
     };
-    view! { <span class="fui-version-cell">{name}{mark}</span> }.into_any()
+    Html::raw(format!(
+        "<span class=\"fui-version-cell\">{name}{mark}</span>"
+    ))
 }
 
 /// The columns of a version history, built where it is drawn so their
 /// headers follow the page's locale.
-fn columns() -> [Column; 5] {
+fn columns(locale: &Locale) -> [Column; 5] {
     let column = |key: &'static str, label: Text, role: Role| Column {
         role,
-        ..Column::text(key, tr(label))
+        ..Column::text(key, tr(locale, label))
     };
     [
         column("version", Text::VersionsVersion, Role::Title),
@@ -126,7 +130,7 @@ fn columns() -> [Column; 5] {
 }
 
 /// Returns one row of the table.
-fn row(version: Version, columns: &[Column; 5]) -> AnyView {
+fn row(locale: &Locale, version: Version, columns: &[Column; 5]) -> String {
     let Version {
         number,
         standing,
@@ -144,42 +148,40 @@ fn row(version: Version, columns: &[Column; 5]) -> AnyView {
         when_column,
         contribution_column,
     ] = columns;
-    let name = title_cell(href.as_deref(), version_cell(&number, standing), None);
-    let current = read.then_some("true");
-    view! {
-        <tr aria-current=current>
-            {name}
-            {cell(change_column, change)}
-            {cell(committer_column, committer)}
-            {cell(when_column, when)}
-            {cell(contribution_column, contribution)}
-        </tr>
-    }
-    .into_any()
+    let name = title_cell(
+        href.as_deref(),
+        version_cell(locale, &number, standing),
+        None,
+    );
+    format!(
+        "<tr{}>{name}{}{}{}{}</tr>",
+        if read { " aria-current=\"true\"" } else { "" },
+        cell(change_column, Html::text(change)),
+        cell(committer_column, Html::text(committer)),
+        cell(when_column, when),
+        cell(contribution_column, contribution)
+    )
 }
 
 /// Returns the At a time row `at`: its field and Open on one row, then its
 /// quiet line.
 ///
-/// It is a plain `GET` form, so Open works with no WebAssembly; a time is
-/// no patient identifier (`leptos-ui.md` §0).
+/// It is a plain `GET` form, so Open works with no script; a time is no
+/// patient identifier.
 #[must_use]
-pub fn at_time(at: AtTime) -> AnyView {
+pub fn at_time(locale: &Locale, at: AtTime) -> Html {
     let AtTime {
         action,
         field,
         opens,
     } = at;
-    view! {
-        <form class="fui-at-time" method="get" action=action>
-            {field}
-            <button type="submit" class=Variant::Secondary.class()>
-                {tr(Text::VersionsOpen)}
-            </button>
-            <span class="fui-small fui-muted">{opens}</span>
-        </form>
-    }
-    .into_any()
+    Html::raw(format!(
+        "<form method=\"get\" action=\"{}\" class=\"fui-at-time\">{field}<button type=\"submit\" class=\"{}\">{}</button><span class=\"fui-small fui-muted\">{}</span></form>",
+        Html::text(action),
+        Variant::Secondary.class(),
+        tr(locale, Text::VersionsOpen),
+        Html::text(opens)
+    ))
 }
 
 /// Returns the version history `history`: the table, then At a time under
@@ -190,23 +192,26 @@ pub fn at_time(at: AtTime) -> AnyView {
 /// [`crate::view::surface::panel_section`], where the table runs edge to
 /// edge.
 #[must_use]
-pub fn version_history(history: VersionHistory) -> AnyView {
+pub fn version_history(locale: &Locale, history: VersionHistory) -> Html {
     let VersionHistory {
         caption,
         versions,
         at_time: at,
     } = history;
-    let columns = columns();
+    let columns = columns(locale);
     let body = if versions.is_empty() {
-        Body::Empty(view! { <span class="fui-muted">{tr(Text::VersionsNone)}</span> }.into_any())
+        Body::Empty(Html::raw(format!(
+            "<span class=\"fui-muted\">{}</span>",
+            tr(locale, Text::VersionsNone)
+        )))
     } else {
-        Body::Rows(
+        Body::Rows(Html::raw(
             versions
                 .into_iter()
-                .map(|version| row(version, &columns))
-                .collect_view()
-                .into_any(),
-        )
+                .map(|version| row(locale, version, &columns))
+                .collect::<Vec<_>>()
+                .concat(),
+        ))
     };
     let table = data_table(DataTable {
         caption: &caption,
@@ -214,32 +219,31 @@ pub fn version_history(history: VersionHistory) -> AnyView {
         sorting: crate::table::view::Sorting::default(),
         body,
     });
-    let at = at.map(at_time);
-    view! {
-        {table}
-        {at}
-    }
-    .into_any()
+    table.then(at.map(|at| at_time(locale, at)).unwrap_or_default())
 }
 
 /// Returns the notice over an older version: "You are reading version
 /// `version` of `count`." and the link to the latest at `latest`.
 #[must_use]
-pub fn older_version(version: &str, count: u32, latest: impl Into<String>) -> AnyView {
+pub fn older_version(
+    locale: &Locale,
+    version: &str,
+    count: u32,
+    latest: impl Into<String>,
+) -> Html {
     let reading = tr_with(
+        locale,
         Text::VersionsReading,
         &[("value", Arg::from(version)), ("total", Arg::from(count))],
     );
-    let latest = latest.into();
     notice(
         Tone::Info,
         Announce::Status,
         None,
-        view! {
-            {reading}
-            " "
-            <a href=latest>{tr(Text::VersionsLatest)}</a>
-        },
+        Html::raw(format!(
+            "{reading} <a href=\"{}\">{}</a>",
+            Html::text(latest.into()),
+            tr(locale, Text::VersionsLatest)
+        )),
     )
-    .into_any()
 }

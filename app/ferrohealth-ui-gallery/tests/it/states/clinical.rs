@@ -42,18 +42,11 @@ pub(super) async fn clinical(
     theme: &str,
 ) -> Result<(), Box<dyn Error>> {
     let page = gallery.url(&format!("/{}/clinical", brand.key()));
-    browser.goto(&page).await?;
-    let reveal = browser
-        .element(By::Css("#subject-identifier button[aria-pressed='false']"))
+    // Reveal leads to the reveal page, which draws the subject answered.
+    browser
+        .goto(&gallery.url(&format!("/{}/clinical?reveal=subject", brand.key())))
         .await?;
-    let hydrated = browser
-        .element(By::Css("#subject-identifier .fui-identifier-press"))
-        .await?;
-    until("the subject identifier has hydrated", async || {
-        Ok(hydrated.attr("hidden").await?.is_none())
-    })
-    .await?;
-    press(browser, &reveal).await?;
+    browser.hydrated().await?;
     let value = browser
         .element(By::Css("#subject-identifier .fui-identifier-value"))
         .await?;

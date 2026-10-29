@@ -14,9 +14,8 @@
 
 use std::cmp::Ordering;
 
-use leptos::prelude::*;
-
-use crate::i18n::{Text, Word, tr, tr_with};
+use crate::html::Html;
+use crate::i18n::{Locale, Text, Word, tr, tr_with};
 use crate::tone::Tone;
 use crate::view::chart::{nice_step, proportion};
 use crate::view::status::pill;
@@ -239,17 +238,18 @@ fn signed(weight: f64) -> String {
     }
 }
 
-/// A score as the breakdown prints it, with two decimals, or "no value".
-fn figure(score: f64) -> String {
+/// A score as the breakdown prints it, with two decimals, or "no value"
+/// in `locale`.
+fn figure(locale: &Locale, score: f64) -> String {
     if score.is_finite() {
         format!("{score:.2}")
     } else {
-        tr(Text::ChartNoValueCell).into()
+        tr(locale, Text::ChartNoValueCell).into()
     }
 }
 
 /// The bar of one weight on a track whose ends stand for `largest`.
-fn weight_bar(weight: f64, largest: f64) -> AnyView {
+fn weight_bar(weight: f64, largest: f64) -> String {
     let share = (weight.abs() / largest).min(1.0);
     let fill = if weight > 0.0 {
         let width = share * (100.0 - ZERO);
@@ -260,38 +260,19 @@ fn weight_bar(weight: f64, largest: f64) -> AnyView {
     } else {
         None
     };
-    let fill = fill.map(|(class, x, width)| {
-        let x = format!("{x:.1}");
-        let width = format!("{width:.1}");
-        view! { <rect class=class x=x y="1" width=width height="12" rx="2"></rect> }
+    let fill = fill.map_or_else(String::new, |(class, x, width)| {
+        format!(
+            "<rect x=\"{x:.1}\" y=\"1\" width=\"{width:.1}\" height=\"12\" rx=\"2\" class=\"{class}\"></rect>"
+        )
     });
-    let zero = format!("{ZERO:.0}");
-    view! {
-        <svg
-            class="fui-score-bar"
-            viewBox="0 0 100 14"
-            preserveAspectRatio="none"
-            focusable="false"
-            aria-hidden="true"
-        >
-            <rect class="fui-score-bar-ground" x="0" y="1" width="100" height="12" rx="2"></rect>
-            {fill}
-            <line
-                class="fui-score-bar-zero"
-                x1=zero.clone()
-                x2=zero
-                y1="0"
-                y2="14"
-                vector-effect="non-scaling-stroke"
-            ></line>
-        </svg>
-    }
-    .into_any()
+    format!(
+        "<svg viewBox=\"0 0 100 14\" preserveAspectRatio=\"none\" focusable=\"false\" aria-hidden=\"true\" class=\"fui-score-bar\"><rect x=\"0\" y=\"1\" width=\"100\" height=\"12\" rx=\"2\" class=\"fui-score-bar-ground\"></rect>{fill}<line x1=\"{ZERO:.0}\" x2=\"{ZERO:.0}\" y1=\"0\" y2=\"14\" vector-effect=\"non-scaling-stroke\" class=\"fui-score-bar-zero\"></line></svg>"
+    )
 }
 
 /// The row of one contribution: the words, the comparator after them, the
 /// bar and the weight.
-fn row(contribution: &Contribution, largest: f64) -> AnyView {
+fn row(contribution: &Contribution, largest: f64) -> String {
     let weight = contribution.weight;
     let tone = if weight > 0.0 {
         "fui-score-weight fui-num fui-score-add"
@@ -300,34 +281,36 @@ fn row(contribution: &Contribution, largest: f64) -> AnyView {
     } else {
         "fui-score-weight fui-num fui-score-zero"
     };
-    let reading = contribution.reading.clone().map(|reading| {
-        view! {
-            " "
-            <span class="fui-score-reading">{reading}</span>
-        }
-    });
-    view! {
-        <div class="fui-score-row">
-            <span class="fui-score-label">{contribution.label.clone()} {reading}</span>
-            {weight_bar(weight, largest)}
-            <span class=tone>{signed(weight)}</span>
-        </div>
-    }
-    .into_any()
+    let reading = contribution
+        .reading
+        .as_deref()
+        .map_or_else(String::new, |reading| {
+            format!(
+                " <span class=\"fui-score-reading\">{}</span>",
+                Html::text(reading)
+            )
+        });
+    format!(
+        "<div class=\"fui-score-row\"><span class=\"fui-score-label\">{label}{reading}</span>{bar}<span class=\"{tone}\">{weight}</span></div>",
+        label = Html::text(&contribution.label),
+        bar = weight_bar(weight, largest),
+        weight = signed(weight),
+    )
 }
 
-/// The accessible name of the scale: the score, the grade, the thresholds
-/// and every contribution.
-fn scale_name(score: &Score) -> Word {
+/// The accessible name of the scale, in `locale`: the score, the grade,
+/// the thresholds and every contribution.
+fn scale_name(locale: &Locale, score: &Score) -> Word {
     let thresholds = score
         .thresholds
         .iter()
         .map(|threshold| {
             tr_with(
+                locale,
                 Text::ScoreThreshold,
                 &[
                     ("title", threshold.label.clone().into()),
-                    ("value", figure(threshold.at).into()),
+                    ("value", figure(locale, threshold.at).into()),
                 ],
             )
         })
@@ -339,6 +322,7 @@ fn scale_name(score: &Score) -> Word {
         .iter()
         .map(|contribution| {
             tr_with(
+                locale,
                 Text::ScoreContribution,
                 &[
                     ("title", contribution.label.clone().into()),
@@ -350,9 +334,10 @@ fn scale_name(score: &Score) -> Word {
         .collect::<Vec<_>>()
         .join(", ");
     tr_with(
+        locale,
         Text::ScoreName,
         &[
-            ("value", figure(score.value).into()),
+            ("value", figure(locale, score.value).into()),
             ("status", score.grade.clone().into()),
             ("range", thresholds.into()),
             ("summary", contributions.into()),
@@ -360,10 +345,10 @@ fn scale_name(score: &Score) -> Word {
     )
 }
 
-/// The scale of `score`: the bands between the thresholds, each threshold's
-/// label centred on its mark, the start labelled, and the score as the
-/// point.
-fn scale(score: &Score) -> AnyView {
+/// The scale of `score`, in `locale`: the bands between the thresholds,
+/// each threshold's label centred on its mark, the start labelled, and the
+/// score as the point.
+fn scale(locale: &Locale, score: &Score) -> String {
     let (low, high) = domain(score);
     let share = move |value: f64| ((value - low) / (high - low)).clamp(0.0, 1.0);
     let at = move |value: f64| share(value) * 100.0;
@@ -373,24 +358,27 @@ fn scale(score: &Score) -> AnyView {
         .iter()
         .map(|threshold| threshold.at)
         .collect();
-    let bands = starts
+    let bands: Vec<String> = starts
         .iter()
         .enumerate()
         .map(|(index, start)| {
             let end = starts.get(index + 1).copied().unwrap_or(high);
-            let x = format!("{:.1}%", at(*start));
-            let width = format!("{:.1}%", (at(end) - at(*start)).max(0.0));
-            let class = band(index, count).class();
-            view! { <rect class=class x=x y="8" width=width height="10"></rect> }
+            format!(
+                "<rect x=\"{x:.1}%\" y=\"8\" width=\"{width:.1}%\" height=\"10\" class=\"{class}\"></rect>",
+                x = at(*start),
+                width = (at(end) - at(*start)).max(0.0),
+                class = band(index, count).class(),
+            )
         })
-        .collect_view();
+        .collect();
+    let bands = bands.concat();
     // The start's label and each threshold's, along the track, with the
     // rows they take on a phone and from 40 rem.
-    let mut labels: Vec<(f64, String)> = vec![(low, figure(low))];
+    let mut labels: Vec<(f64, String)> = vec![(low, figure(locale, low))];
     labels.extend(score.thresholds.iter().map(|threshold| {
         (
             threshold.at,
-            format!("{} {}", threshold.label, figure(threshold.at)),
+            format!("{} {}", threshold.label, figure(locale, threshold.at)),
         )
     }));
     labels.sort_by(|a, b| a.0.total_cmp(&b.0));
@@ -409,116 +397,94 @@ fn scale(score: &Score) -> AnyView {
         "{:.0}",
         30.0 + ROW_PX * f64::from(u8::try_from(rows(&narrow)).unwrap_or(1))
     );
-    let marks = score
+    let marks: Vec<String> = score
         .thresholds
         .iter()
         .map(|threshold| {
             let x = format!("{:.1}%", at(threshold.at));
-            view! { <line class="fui-score-mark" x1=x.clone() x2=x y1="4" y2="24"></line> }
+            format!(
+                "<line x1=\"{x}\" x2=\"{x}\" y1=\"4\" y2=\"24\" class=\"fui-score-mark\"></line>"
+            )
         })
-        .collect_view();
-    let words = labels
+        .collect();
+    let marks = marks.concat();
+    let words: Vec<String> = labels
         .into_iter()
         .zip(narrow.into_iter().zip(wide))
         .map(|((value, words), (row, wide))| {
-            let x = format!("{:.1}%", at(value));
-            let y = format!(
-                "{:.0}",
-                38.0 + ROW_PX * f64::from(u8::try_from(row).unwrap_or(0))
-            );
-            let class = shift_class(row, wide);
-            view! {
-                <text class=class x=x y=y text-anchor="middle">
-                    {words}
-                </text>
-            }
+            format!(
+                "<text x=\"{x:.1}%\" y=\"{y:.0}\" text-anchor=\"middle\" class=\"{class}\">{words}</text>",
+                x = at(value),
+                y = 38.0 + ROW_PX * f64::from(u8::try_from(row).unwrap_or(0)),
+                class = shift_class(row, wide),
+                words = Html::text(&words),
+            )
         })
-        .collect_view();
-    let point = score.value.is_finite().then(|| {
-        let point = format!("{:.1}%", at(score.value));
-        view! { <circle class="fui-score-point" cx=point cy="13" r="6"></circle> }
-    });
-    let inner = height.clone();
-    view! {
-        <div class="fui-score-scale-box">
-            <svg class=class width="100%" height=height role="img" aria-label=scale_name(score)>
-                <svg x="8%" width="84%" height=inner overflow="visible">
-                    <rect
-                        class="fui-score-scale-band-none"
-                        x="0"
-                        y="8"
-                        width="100%"
-                        height="10"
-                        rx="3"
-                    ></rect>
-                    {bands}
-                    {marks}
-                    {words}
-                    {point}
-                </svg>
-            </svg>
-        </div>
-    }
-    .into_any()
+        .collect();
+    let words = words.concat();
+    let point = if score.value.is_finite() {
+        format!(
+            "<circle cx=\"{:.1}%\" cy=\"13\" r=\"6\" class=\"fui-score-point\"></circle>",
+            at(score.value)
+        )
+    } else {
+        String::new()
+    };
+    format!(
+        "<div class=\"fui-score-scale-box\"><svg width=\"100%\" height=\"{height}\" role=\"img\" aria-label=\"{name}\" class=\"{class}\"><svg x=\"8%\" width=\"84%\" height=\"{height}\" overflow=\"visible\"><rect x=\"0\" y=\"8\" width=\"100%\" height=\"10\" rx=\"3\" class=\"fui-score-scale-band-none\"></rect>{bands}{marks}{words}{point}</svg></svg></div>",
+        name = Html::text(scale_name(locale, score).text()),
+    )
 }
 
-/// Returns the breakdown of `score`: one row per contribution, its words
-/// first and its comparator after them as a quiet hint, then the total
-/// weight, the score with its grade, and the scale.
+/// Returns the breakdown of `score` in `locale`: one row per contribution,
+/// its words first and its comparator after them as a quiet hint, then the
+/// total weight, the score with its grade, and the scale.
 ///
 /// The bars share one track, whose ends stand for the largest weight, with
 /// the zero line at 40 % of its width. A threshold's label is centred on
 /// its mark at every width, and the start of the scale keeps its label on
 /// a phone.
 #[must_use]
-pub fn score_breakdown(score: &Score) -> AnyView {
+pub fn score_breakdown(locale: &Locale, score: &Score) -> Html {
     let largest = score
         .contributions
         .iter()
         .map(|contribution| contribution.weight.abs())
         .fold(1.0, f64::max);
-    let rows = score
+    let rows: String = score
         .contributions
         .iter()
         .map(|contribution| row(contribution, largest))
-        .collect_view();
-    view! {
-        <div class="fui-score">{rows}</div>
-        <div class="fui-score-total">
-            <span>
-                {tr(Text::ScoreTotalWeight)} " "
-                <span class="fui-muted fui-num">{signed(score.total)}</span>
-            </span>
-            <span>
-                {tr(Text::ScoreWord)} " " <span class="fui-score-figure fui-num">{figure(score.value)}</span>
-                " " {pill(score.tone(), &score.grade)}
-            </span>
-        </div>
-        {scale(score)}
-    }
-    .into_any()
+        .collect();
+    Html::raw(format!(
+        "<div class=\"fui-score\">{rows}</div><div class=\"fui-score-total\"><span>{total} <span class=\"fui-muted fui-num\">{weight}</span></span><span>{word} <span class=\"fui-score-figure fui-num\">{figure}</span> {pill}</span></div>{scale}",
+        total = tr(locale, Text::ScoreTotalWeight),
+        weight = signed(score.total),
+        word = tr(locale, Text::ScoreWord),
+        figure = Html::text(figure(locale, score.value)),
+        pill = pill(score.tone(), &score.grade),
+        scale = scale(locale, score),
+    ))
 }
 
 /// Returns the compact score for a table cell: a short bar in `tone`, the
-/// grade's, beside the score in figures.
+/// grade's, beside the score in figures ("no value" in `locale`).
 ///
 /// The bar repeats the figure beside it and is hidden from assistive
 /// technology.
 #[must_use]
-pub fn score_bar(score: f64, tone: Tone) -> AnyView {
-    let class = format!("fui-score-cell {}", tone.class());
+pub fn score_bar(locale: &Locale, score: f64, tone: Tone) -> Html {
     let share = (score.clamp(0.0, 1.0) * 100.0).round();
     let percent = (0..=100_u8)
         .rev()
         .find(|whole| f64::from(*whole) <= share)
         .unwrap_or(0);
-    view! {
-        <span class=class>
-            {proportion(percent, None)}
-            <span class="fui-num">{figure(score)}</span>
-        </span>
-    }
-    .into_any()
+    Html::raw(format!(
+        "<span class=\"fui-score-cell {}\">{}<span class=\"fui-num\">{}</span></span>",
+        tone.class(),
+        proportion(percent, None),
+        Html::text(figure(locale, score))
+    ))
 }
 
 #[cfg(test)]

@@ -5,10 +5,13 @@
 //! bar with its status pill and no theme control, the navigation with its
 //! rail and counts, the user menu, and the sign-in card in every state.
 
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::theme::Theme;
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::flow::FlowState;
+use ferrohealth_ui::view::menu::{Choice, Choices, ThemeChoice, UserLink, UserMenu, user_menu};
+use ferrohealth_ui::view::nav::{Count, Entry, Group, Nest, NestItem, Rail, Sidebar, sidebar};
 use ferrohealth_ui::view::shell::{TopBar, lockup, lockup_plain, mark, skip_link, topbar};
 use ferrohealth_ui::view::sign_in::{
     Basic, NOTICE_ID, Notice, Provider, Retry, SignIn, State, sign_in,
@@ -17,48 +20,48 @@ use ferrohealth_ui::view::status::{
     BannerLink, Reach, StatusPill, badge, banner, pill, status, status_pill,
 };
 use ferrohealth_ui::view::tabs::{Tab, binder};
-use ferrohealth_ui::widget::menu::{Choice, Choices, ThemeChoice, UserLink, UserMenu, user_menu};
-use ferrohealth_ui::widget::nav::{Count, Entry, Group, Nest, NestItem, Rail, Sidebar, sidebar};
-use leptos::prelude::*;
 
 use crate::markup::{has, tags};
-use crate::render::{html, page_html};
+use crate::render::en;
 
 #[test]
 fn a_banner_ends_with_its_link_after_the_sentence() {
-    let shown = html(|| {
-        banner(
-            Tone::Warn,
-            Glyph::TRIANGLE_ALERT,
-            "Sandbox",
-            "3 production safeguards are off",
-            Some(BannerLink {
-                words: String::from("Details"),
-                href: String::from("/server/sandbox"),
-            }),
-        )
-    });
+    let shown = banner(
+        Tone::Warn,
+        Glyph::TRIANGLE_ALERT,
+        "Sandbox",
+        "3 production safeguards are off",
+        Some(BannerLink {
+            words: String::from("Details"),
+            href: String::from("/server/sandbox"),
+        }),
+    )
+    .to_string();
     assert!(
-        shown.replace("<!>", "").contains(
+        shown.contains(
             r#"3 production safeguards are off · <a href="/server/sandbox">Details</a></p>"#
         ),
         "{shown}"
     );
-    let plain = html(|| banner(Tone::Warn, Glyph::TRIANGLE_ALERT, "Sandbox", "Off.", None));
+    let plain = banner(Tone::Warn, Glyph::TRIANGLE_ALERT, "Sandbox", "Off.", None).to_string();
     assert!(!plain.contains("<a"), "{plain}");
 }
 
 #[test]
 fn a_status_is_a_word_as_well_as_a_tint() {
-    let marks = html(|| {
-        view! {
-            {pill(Tone::Ok, "Bridge UP")}
-            {badge(Tone::Bad, "down")}
-            {status(Tone::Info, Glyph::INFO, "Serving", Some(String::from("R4")))}
-            {banner(Tone::Warn, Glyph::TRIANGLE_ALERT, "Sandbox", "Holds no real patient data.", None)}
-        }
-        .into_any()
-    });
+    let marks = Html::join([
+        pill(Tone::Ok, "Bridge UP"),
+        badge(Tone::Bad, "down"),
+        status(Tone::Info, Glyph::INFO, "Serving", Some(String::from("R4"))),
+        banner(
+            Tone::Warn,
+            Glyph::TRIANGLE_ALERT,
+            "Sandbox",
+            "Holds no real patient data.",
+            None,
+        ),
+    ])
+    .to_string();
     for word in [
         "Bridge UP",
         "down",
@@ -73,14 +76,12 @@ fn a_status_is_a_word_as_well_as_a_tint() {
 
 /// The status pill of `reach` saying `words`, with `detail` in its tooltip.
 fn status_html(reach: Reach, words: &str, detail: Option<&str>) -> String {
-    html(|| {
-        status_pill(StatusPill {
-            reach,
-            words: words.to_owned(),
-            detail: detail.map(str::to_owned),
-        })
-        .into_any()
+    status_pill(StatusPill {
+        reach,
+        words: words.to_owned(),
+        detail: detail.map(str::to_owned),
     })
+    .to_string()
 }
 
 #[test]
@@ -108,7 +109,7 @@ fn the_status_pill_keeps_its_words_as_its_name_and_its_version_in_the_tooltip() 
     );
     let down = status_html(Reach::Unreachable, "Bridge <down>", None);
     assert!(
-        has(&down, "span", &[("title", "Bridge &lt;down&gt;")]),
+        has(&down, "span", &[("title", "Bridge &#60;down&#62;")]),
         "no detail, the words alone, escaped: {down}"
     );
 }
@@ -133,14 +134,16 @@ fn every_reach_draws_the_shape_of_its_tone() {
 #[test]
 fn the_top_bar_holds_its_parts_and_no_theme_control() {
     // Family rule 5: the theme is set only in the user menu and Your preferences.
-    let bar = html(|| {
-        topbar(TopBar {
+    let bar = topbar(
+        &en(),
+        TopBar {
             sidebar: "sidebar",
-            lockup: lockup("/", mark(Glyph::SERVER), "FerroBRIDGE", "Console").into_any(),
-            search: Some(view! { <form role="search"></form> }.into_any()),
-            end: view! { <span class="fui-pill">"Bridge up"</span> }.into_any(),
-        })
-    });
+            lockup: lockup("/", mark(Glyph::SERVER), "FerroBRIDGE", "Console"),
+            search: Some(Html::raw(String::from(r#"<form role="search"></form>"#))),
+            end: Html::raw(String::from(r#"<span class="fui-pill">Bridge up</span>"#)),
+        },
+    )
+    .to_string();
     assert!(
         has(
             &bar,
@@ -157,14 +160,16 @@ fn the_top_bar_holds_its_parts_and_no_theme_control() {
     assert!(bar.contains(r#"<div class="fui-topbar-middle">"#), "{bar}");
     assert!(bar.contains(r#"<div class="fui-topbar-end">"#), "{bar}");
     assert!(!bar.contains("theme"), "no theme control: {bar}");
-    let bare = html(|| {
-        topbar(TopBar {
+    let bare = topbar(
+        &en(),
+        TopBar {
             sidebar: "sidebar",
-            lockup: lockup("/", mark(Glyph::SERVER), "FerroBRIDGE", "Console").into_any(),
+            lockup: lockup("/", mark(Glyph::SERVER), "FerroBRIDGE", "Console"),
             search: None,
-            end: ().into_any(),
-        })
-    });
+            end: Html::empty(),
+        },
+    )
+    .to_string();
     assert!(
         !bare.contains("fui-topbar-middle"),
         "no search, no middle: {bare}"
@@ -173,19 +178,19 @@ fn the_top_bar_holds_its_parts_and_no_theme_control() {
 
 #[test]
 fn a_plain_lockup_leads_nowhere() {
-    let plain = html(|| lockup_plain(mark(Glyph::SERVER), "FerroBRIDGE", "Console").into_any());
+    let plain = lockup_plain(mark(Glyph::SERVER), "FerroBRIDGE", "Console").to_string();
     assert!(plain.starts_with(r#"<span class="fui-lockup">"#), "{plain}");
     assert!(!plain.contains("<a"), "{plain}");
     assert!(plain.contains("FerroBRIDGE"), "{plain}");
 }
 
 #[test]
-fn the_skip_link_is_a_fragment_link_the_router_leaves_to_the_browser() {
+fn the_skip_link_is_a_fragment_link_the_browser_follows() {
     // WCAG 2.2 SC 2.4.1: the browser's fragment navigation moves the focus starting point to
-    // the main area, which a link the router takes over never does (#482).
-    let skip = html(|| skip_link().into_any());
+    // the main area (#482). With no router in the page, the plain fragment link needs no target.
+    let skip = skip_link(&en()).to_string();
     assert!(
-        skip.starts_with(r##"<a href="#main" target="_self" class="fui-skip">"##),
+        skip.starts_with(r##"<a href="#main" class="fui-skip">"##),
         "{skip}"
     );
 }
@@ -193,8 +198,9 @@ fn the_skip_link_is_a_fragment_link_the_router_leaves_to_the_browser() {
 /// The navigation with one group of three entries, the page at
 /// `/files/synthetic-007`, and the rail `rail`.
 fn navigation(rail: Option<Rail>) -> String {
-    page_html(|| {
-        sidebar(Sidebar {
+    String::from(sidebar(
+        &en(),
+        Sidebar {
             id: "sidebar",
             label: String::from("Pages"),
             groups: vec![Group {
@@ -235,8 +241,8 @@ fn navigation(rail: Option<Rail>) -> String {
             current: String::from("/files/synthetic-007"),
             rail,
             nest: None,
-        })
-    })
+        },
+    ))
 }
 
 #[test]
@@ -263,7 +269,7 @@ fn the_navigation_is_plain_links_with_the_page_marked_inside_its_drawer() {
         "a navigation that never folds has no foot: {page}"
     );
     // WAI-ARIA Authoring Practices, the dialog (modal) pattern: the drawer is a
-    // native modal dialog, so the page behind is inert with no WebAssembly.
+    // native modal dialog, so the page behind is inert with no script.
     assert!(
         has(
             &page,
@@ -292,7 +298,7 @@ fn a_count_is_a_number_on_screen_and_a_phrase_to_assistive_technology() {
     // R12, the honest count; WCAG 2.2 SC 1.3.1.
     let page = navigation(None);
     assert!(
-        page.contains(r#"<span aria-hidden="true" class="fui-nav-count-whole">2</span><!><span class="fui-sr-only">2 errors in the running load</span>"#),
+        page.contains(r#"<span aria-hidden="true" class="fui-nav-count-whole">2</span><span class="fui-sr-only">2 errors in the running load</span>"#),
         "{page}"
     );
     assert!(
@@ -315,8 +321,9 @@ fn a_count_is_a_number_on_screen_and_a_phrase_to_assistive_technology() {
 #[test]
 fn a_count_past_99_shows_whole_and_short_for_the_rail() {
     // Shell edge audit, row 12: 123456 on the rail's badge covered its glyph.
-    let page = page_html(|| {
-        sidebar(Sidebar {
+    let page = String::from(sidebar(
+        &en(),
+        Sidebar {
             id: "sidebar",
             label: String::from("Pages"),
             groups: vec![Group {
@@ -336,8 +343,8 @@ fn a_count_past_99_shows_whole_and_short_for_the_rail() {
             current: String::from("/files"),
             rail: None,
             nest: None,
-        })
-    });
+        },
+    ));
     assert!(
         page.contains(r#"<span aria-hidden="true" class="fui-nav-count-whole">123,456</span><span aria-hidden="true" class="fui-nav-count-short">99+</span><span class="fui-sr-only">123456 errors in the running load</span>"#),
         "{page}"
@@ -353,8 +360,9 @@ fn an_entry_and_its_nested_section_take_a_base_path_learnt_at_run_time() {
     // Shell edge audit, row 29: a console mounted under a base path it reads from its configuration.
     let base = String::from("/console");
     let files = format!("{base}/files");
-    let page = page_html(|| {
-        sidebar(Sidebar {
+    let page = String::from(sidebar(
+        &en(),
+        Sidebar {
             id: "sidebar",
             label: String::from("Pages"),
             groups: vec![Group {
@@ -384,8 +392,8 @@ fn an_entry_and_its_nested_section_take_a_base_path_learnt_at_run_time() {
                 children: Vec::new(),
                 all: String::from("All files"),
             }),
-        })
-    });
+        },
+    ));
     assert!(
         page.contains(r#"<a href="/console/files" aria-current="location" class="fui-nav-entry">"#),
         "the entry leads under the base and opens its nested section: {page}"
@@ -481,8 +489,9 @@ fn the_rail_names_every_entry_by_tooltip_and_posts_its_expand() {
 
 /// The user menu of `name`, signed in with a sign-out route when `sign_out`.
 fn menu_html(name: Option<&str>, sign_out: bool) -> String {
-    page_html(|| {
-        user_menu(UserMenu {
+    String::from(user_menu(
+        &en(),
+        UserMenu {
             id: "user-menu",
             label: name.unwrap_or("Your menu").to_owned(),
             name: name.map(str::to_owned),
@@ -516,8 +525,8 @@ fn menu_html(name: Option<&str>, sign_out: bool) -> String {
             }],
             shortcuts: Some(String::from("/shortcuts")),
             sign_out: sign_out.then(|| String::from("/sign-out")),
-        })
-    })
+        },
+    ))
 }
 
 #[test]
@@ -532,17 +541,17 @@ fn the_user_menu_is_a_menu_button_over_a_popover() {
                 ("popovertarget", "user-menu"),
                 ("aria-haspopup", "menu"),
                 ("aria-controls", "user-menu-menu"),
-                ("title", "Demo &lt;Operator&gt;")
+                ("title", "Demo &#60;Operator&#62;")
             ]
         ),
         "{menu}"
     );
     assert!(
         !menu.contains("aria-expanded"),
-        "the button says it is open only once its island runs, never a fixed false: {menu}"
+        "the button says it is open only once its module runs, never a fixed false: {menu}"
     );
     assert!(
-        menu.contains(r#"<span class="fui-operator-name">Demo &lt;Operator&gt;</span>"#),
+        menu.contains(r#"<span class="fui-operator-name">Demo &#60;Operator&#62;</span>"#),
         "the name is escaped: {menu}"
     );
     assert!(
@@ -567,7 +576,7 @@ fn the_user_menu_is_a_menu_button_over_a_popover() {
             &[
                 ("id", "user-menu-menu"),
                 ("role", "menu"),
-                ("aria-label", "Demo &lt;Operator&gt;")
+                ("aria-label", "Demo &#60;Operator&#62;")
             ]
         ),
         "{menu}"
@@ -739,9 +748,10 @@ fn a_menu_with_nobody_signed_in_has_an_icon_button_and_no_sign_out() {
 /// The sign-in card in `state`, with the provider's action, and the basic
 /// form when `basic`.
 fn sign_in_html(state: State, basic: Option<Basic>) -> String {
-    html(|| {
-        sign_in(SignIn {
-            lockup: lockup_plain(mark(Glyph::SERVER), "FerroBRIDGE", "Console").into_any(),
+    String::from(sign_in(
+        &en(),
+        SignIn {
+            lockup: lockup_plain(mark(Glyph::SERVER), "FerroBRIDGE", "Console"),
             title: Some(String::from("Sign in to the console")),
             state,
             provider: Some(Provider {
@@ -768,9 +778,8 @@ fn sign_in_html(state: State, basic: Option<Basic>) -> String {
             caption: Some(String::from(
                 "ferrobridge-console. It holds no clinical data.",
             )),
-        })
-        .into_any()
-    })
+        },
+    ))
 }
 
 /// A basic form after a wrong password.
@@ -858,7 +867,7 @@ fn every_state_names_its_cause_in_its_tone_and_role() {
             "{name}: {card}"
         );
         assert!(
-            card.contains("The cause &lt;and&gt; the way on."),
+            card.contains("The cause &#60;and&#62; the way on."),
             "{name}: the words are escaped: {card}"
         );
     }
@@ -923,7 +932,7 @@ fn redirecting_is_a_busy_disabled_button_and_unavailable_a_disabled_one() {
 }
 
 #[test]
-fn a_stopped_state_crosses_to_the_browser_as_json_and_back_unchanged() {
+fn a_stopped_state_crosses_a_redirect_as_json_and_back_unchanged() {
     let state = State::Refused(Notice {
         text: String::from("The sign-in could not be completed."),
         detail: Some(String::from("The provider answered 502.")),
@@ -938,7 +947,7 @@ fn a_stopped_state_crosses_to_the_browser_as_json_and_back_unchanged() {
     assert_eq!(
         sign_in_html(back, None),
         sign_in_html(state, None),
-        "the browser draws the card the server drew"
+        "the state read back draws the card the server chose"
     );
 }
 
@@ -985,7 +994,7 @@ fn the_basic_form_is_a_plain_post_a_password_manager_reads_with_no_placeholder()
             "input",
             &[
                 ("name", "next"),
-                ("value", "/files?x=&quot;&lt;y&gt;&quot;")
+                ("value", "/files?x=&#34;&#60;y&#62;&#34;")
             ]
         ),
         "the destination is escaped: {card}"
@@ -1003,9 +1012,10 @@ fn the_basic_form_is_a_plain_post_a_password_manager_reads_with_no_placeholder()
 
 #[test]
 fn a_card_with_no_method_says_so() {
-    let card = html(|| {
-        sign_in(SignIn {
-            lockup: lockup_plain(mark(Glyph::SERVER), "FerroBRIDGE", "Console").into_any(),
+    let card = String::from(sign_in(
+        &en(),
+        SignIn {
+            lockup: lockup_plain(mark(Glyph::SERVER), "FerroBRIDGE", "Console"),
             title: None,
             state: State::Ready,
             provider: None,
@@ -1014,17 +1024,17 @@ fn a_card_with_no_method_says_so() {
             note: None,
             links: Vec::new(),
             caption: None,
-        })
-        .into_any()
-    });
+        },
+    ));
     assert!(card.contains("No sign-in method is available"), "{card}");
     assert!(!card.contains("<h1"), "{card}");
 }
 
 #[test]
 fn a_navigation_or_tab_count_groups_its_digits() {
-    let page = page_html(|| {
-        sidebar(Sidebar {
+    let page = String::from(sidebar(
+        &en(),
+        Sidebar {
             id: "sidebar",
             label: String::from("Pages"),
             groups: vec![Group {
@@ -1044,20 +1054,20 @@ fn a_navigation_or_tab_count_groups_its_digits() {
             current: String::from("/files"),
             rail: None,
             nest: None,
-        })
-    });
+        },
+    ));
     assert!(
         page.contains(r#"<span aria-hidden="true" class="fui-nav-count-whole">312,000</span>"#),
         "{page}"
     );
-    let tabs = html(|| {
-        binder(
-            "Sections",
-            vec![Tab::new("nodes", "/nodes", "Nodes").count(12_345, "12,345 nodes")],
-            "nodes",
-            ().into_any(),
-        )
-    });
+    let tabs = binder(
+        &en(),
+        "Sections",
+        vec![Tab::new("nodes", "/nodes", "Nodes").count(12_345, "12,345 nodes")],
+        "nodes",
+        Html::empty(),
+    )
+    .to_string();
     assert!(
         tabs.contains(r#"<span aria-hidden="true">12,345</span>"#),
         "{tabs}"

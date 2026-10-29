@@ -5,27 +5,21 @@
 //! them: the record compare, the timeline, the masked identifier and the
 //! work-list. Every value here is invented and follows no national scheme.
 
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::table::view::{Body, Column, DataTable, Role, Sorting, cell, data_table};
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::compare::{
     Compare, CompareField, CompareRecord, Verdict, compare, compare_pair, compare_stacked,
 };
-use ferrohealth_ui::view::timeline::{Event, Window, timeline, timeline_window};
-use ferrohealth_ui::widget::identifier::{
+use ferrohealth_ui::view::identifier::{
     Domain, Identifier, IdentifierWords, Masked, Reveal, identifier, identifier_list,
     identifier_static,
 };
-use ferrohealth_ui::widget::worklist::{WorkList, WorkRow, row, worklist, worklist_foot};
-use leptos::prelude::*;
+use ferrohealth_ui::view::timeline::{Event, Window, timeline, timeline_window};
+use ferrohealth_ui::view::worklist::{WorkRow, row, worklist, worklist_foot};
 
 use crate::markup::{has, tags};
-
-/// The HTML `view` renders to, under a reactive owner as a server render
-/// runs.
-fn html(view: impl FnOnce() -> AnyView) -> String {
-    let owner = Owner::new();
-    owner.with(|| view().to_html())
-}
+use crate::render::{en, html};
 
 /// A record titled `title` with `values`, each a plain text or none.
 fn record(key: &str, title: &str, values: &[Option<&'static str>]) -> CompareRecord {
@@ -33,10 +27,7 @@ fn record(key: &str, title: &str, values: &[Option<&'static str>]) -> CompareRec
         key: key.to_owned(),
         title: title.to_owned(),
         sub: None,
-        values: values
-            .iter()
-            .map(|value| value.map(|value| ViewFn::from(move || value.into_any())))
-            .collect(),
+        values: values.iter().map(|value| value.map(Html::text)).collect(),
     }
 }
 
@@ -63,7 +54,7 @@ fn verdict(field: &str, other: usize) -> Verdict {
 
 /// The compare of a leading record and `count` others.
 fn drawn(count: usize, differ_first: bool, stacked: bool) -> String {
-    html(|| {
+    html({
         let fields = fields();
         let leading = record(
             "lead",
@@ -93,9 +84,9 @@ fn drawn(count: usize, differ_first: bool, stacked: bool) -> String {
             differ_first,
         };
         if stacked {
-            compare_stacked(table, 1)
+            compare_stacked(&en(), table, 1)
         } else {
-            compare(table)
+            compare(&en(), table)
         }
     })
 }
@@ -196,19 +187,22 @@ fn the_differing_rows_come_first_when_asked() {
 
 #[test]
 fn a_compare_whose_fields_all_agree_says_so_in_its_caption() {
-    let table = html(|| {
+    let table = html({
         let fields = fields();
         let leading = record("a", "Source A", &[Some("x"), Some("y"), Some("z")]);
         let others = [record("b", "Source B", &[Some("x"), Some("y"), Some("z")])];
-        compare(Compare {
-            id: "agree",
-            caption: "Two sources",
-            fields: &fields,
-            leading: &leading,
-            others: &others,
-            verdict: &|_, _| Verdict::Agree,
-            differ_first: true,
-        })
+        compare(
+            &en(),
+            Compare {
+                id: "agree",
+                caption: "Two sources",
+                fields: &fields,
+                leading: &leading,
+                others: &others,
+                verdict: &|_, _| Verdict::Agree,
+                differ_first: true,
+            },
+        )
     });
     assert!(
         table.contains("<caption>Two sources: every field agrees</caption>"),
@@ -258,14 +252,15 @@ fn the_stacked_form_is_a_radio_choice_with_every_mark_at_its_line_end() {
     );
     // The absent value keeps its empty place before its mark.
     assert!(
-        stacked.contains(r#"<span class="fui-compare-value"><!></span><span title="absent""#),
+        stacked.contains(r#"<span class="fui-compare-value"></span><span title="absent""#),
         "{stacked}"
     );
-    let pair = html(|| {
+    let pair = html({
         let fields = fields();
         let leading = record("a", "Source A", &[Some("x"), None, Some("z")]);
         let others = [record("b", "Source B", &[Some("x"), Some("y"), Some("w")])];
         compare_pair(
+            &en(),
             Compare {
                 id: "pair",
                 caption: "Pair",
@@ -284,34 +279,37 @@ fn the_stacked_form_is_a_radio_choice_with_every_mark_at_its_line_end() {
 
 #[test]
 fn a_compare_escapes_what_it_is_given() {
-    let table = html(|| {
+    let table = html({
         let fields = vec![CompareField {
             key: String::from("k"),
             label: String::from("<b>field</b>"),
         }];
         let leading = record("a", "<i>lead</i>", &[Some("<script>")]);
         let others = [record("b", "B", &[None])];
-        compare(Compare {
-            id: "esc",
-            caption: "<caption>",
-            fields: &fields,
-            leading: &leading,
-            others: &others,
-            verdict: &|_, _| Verdict::Absent,
-            differ_first: false,
-        })
+        compare(
+            &en(),
+            Compare {
+                id: "esc",
+                caption: "<caption>",
+                fields: &fields,
+                leading: &leading,
+                others: &others,
+                verdict: &|_, _| Verdict::Absent,
+                differ_first: false,
+            },
+        )
     });
     assert!(
         !table.contains("<b>field") && !table.contains("<i>lead") && !table.contains("<script>"),
         "{table}"
     );
-    assert!(table.contains("&lt;b&gt;field"), "{table}");
+    assert!(table.contains("&#60;b&#62;field"), "{table}");
 }
 
 /// The stacked compare of a leading record and `count` others, `shown`
 /// read first.
 fn stacked_of(count: usize, shown: usize) -> String {
-    html(|| {
+    html({
         let fields = fields();
         let leading = record("lead", "Source zero", &[Some("Alpha"), None, Some("SYN-1")]);
         let others: Vec<CompareRecord> = (1..=count)
@@ -324,6 +322,7 @@ fn stacked_of(count: usize, shown: usize) -> String {
             })
             .collect();
         compare_stacked(
+            &en(),
             Compare {
                 id: "many",
                 caption: "Records of one person",
@@ -418,8 +417,9 @@ fn event(key: &str, at: &str, kind: &str) -> Event {
 
 #[test]
 fn a_timeline_is_a_labelled_list_newest_first_each_time_a_time_element() {
-    let list = html(|| {
+    let list = html({
         timeline(
+            &en(),
             "History",
             &[
                 event("old", "2026-01-01T08:00:00Z", "created"),
@@ -456,8 +456,9 @@ fn a_timeline_is_a_labelled_list_newest_first_each_time_a_time_element() {
 
 #[test]
 fn an_event_with_no_actor_and_no_body_draws_neither() {
-    let list = html(|| {
+    let list = html({
         timeline(
+            &en(),
             "History",
             &[event("one", "2026-01-01T08:00:00Z", "created")],
         )
@@ -469,14 +470,14 @@ fn an_event_with_no_actor_and_no_body_draws_neither() {
 
 #[test]
 fn an_event_draws_its_code_actor_identifiers_reason_and_a_body_that_opens() {
-    let list = html(|| {
+    let list = html({
         let mut full = event("full", "2026-01-01T08:00:00Z", "merged");
         full.code = Some(String::from("merge"));
         full.actor = Some(String::from("Steward"));
         full.reason = Some(String::from("Same person"));
         full.identifiers = vec![Masked::new(Domain::new("Local"), "AB-0000-7", 3)];
-        full.body = Some(ViewFn::from(|| view! { <p>"Diff"</p> }.into_any()));
-        timeline("History", &[full])
+        full.body = Some(Html::raw(String::from("<p>Diff</p>")));
+        timeline(&en(), "History", &[full])
     });
     assert!(
         list.contains(r#"<span class="fui-timeline-code">merge</span>"#),
@@ -499,15 +500,16 @@ fn fifty_events_draw_whole_with_no_cap() {
             )
         })
         .collect();
-    let list = html(|| timeline("History", &events));
+    let list = html(timeline(&en(), "History", &events));
     assert_eq!(50, tags(&list, "li").len());
 }
 
 #[test]
 fn events_sort_by_the_moment_they_name_whatever_their_offsets() {
     // 10:00+02:00 is 08:00 UTC, before 09:30Z, though its text sorts after it.
-    let list = html(|| {
+    let list = html({
         timeline(
+            &en(),
             "History",
             &[
                 event("east", "2026-01-01T10:00:00+02:00", "linked"),
@@ -539,8 +541,9 @@ fn a_windowed_timeline_shows_its_newest_and_links_to_the_older() {
             )
         })
         .collect();
-    let list = html(|| {
+    let list = html({
         timeline_window(
+            &en(),
             "History",
             &events,
             Window {
@@ -560,8 +563,9 @@ fn a_windowed_timeline_shows_its_newest_and_links_to_the_older() {
         has(&list, "a", &[("href", "/history?events=all")]),
         "{list}"
     );
-    let whole = html(|| {
+    let whole = html({
         timeline_window(
+            &en(),
             "History",
             &events,
             Window {
@@ -580,27 +584,24 @@ fn a_windowed_timeline_shows_its_newest_and_links_to_the_older() {
 
 /// The words of a masked identifier.
 fn words() -> IdentifierWords {
-    IdentifierWords::of_page()
+    IdentifierWords::of(&en())
 }
 
 /// The masked identifier drawn by the server in `state`.
 fn masked_identifier(state: Reveal) -> String {
-    html(|| {
-        identifier(
-            Identifier {
-                id: String::from("id-1"),
-                masked: Masked::new(
-                    Domain::new("Local MRN").system("urn:example:mrn"),
-                    "SYN-7Q2-XYZ",
-                    3,
-                ),
-                show_domain: true,
-                state: RwSignal::new(state),
-                fallback: String::from("/reveal/1"),
-                words: words(),
-            },
-            Callback::new(|()| {}),
-        )
+    html({
+        identifier(Identifier {
+            id: String::from("id-1"),
+            masked: Masked::new(
+                Domain::new("Local MRN").system("urn:example:mrn"),
+                "SYN-7Q2-XYZ",
+                3,
+            ),
+            show_domain: true,
+            state,
+            fallback: String::from("/reveal/1"),
+            words: words(),
+        })
     })
 }
 
@@ -620,11 +621,9 @@ fn the_server_draws_the_identifier_masked_with_its_domain_and_no_value() {
         ),
         "{drawn}"
     );
-    // NOTE: leptos-ui.md §15.8: before hydration the reveal is a link to the console's page.
-    assert!(has(&drawn, "a", &[("href", "/reveal/1")]), "{drawn}");
     assert!(
-        has(&drawn, "button", &[("aria-pressed", "false")]),
-        "{drawn}"
+        has(&drawn, "a", &[("href", "/reveal/1")]),
+        "the reveal is a link to the console's page: {drawn}"
     );
     assert!(!drawn.contains("style="), "{drawn}");
 }
@@ -639,20 +638,6 @@ fn the_copy_button_waits_in_an_inert_face_while_masked() {
     assert_eq!(
         2, disabled,
         "Hide and Copy are disabled while masked: {drawn}"
-    );
-    // NOTE: WAI-ARIA APG, "Focusability of disabled controls": the busy twin takes no
-    // press but can hold the focus Reveal hands it (WCAG 2.2 SC 2.4.3).
-    assert!(
-        has(
-            &drawn,
-            "button",
-            &[
-                ("aria-busy", "true"),
-                ("aria-disabled", "true"),
-                ("tabindex", "-1")
-            ]
-        ),
-        "the busy twin takes no press and no tab stop: {drawn}"
     );
     assert!(drawn.contains(">Copy</button>"), "{drawn}");
     let faces: Vec<_> = tags(&drawn, "span")
@@ -708,24 +693,31 @@ fn a_long_revealed_value_breaks_inside_its_row() {
 
 #[test]
 fn the_listing_form_has_no_control_and_a_list_keeps_its_order() {
-    let one = html(|| identifier_static(&Masked::new(Domain::new("Local"), "SYN-0042", 3), false));
+    let one = html(identifier_static(
+        &en(),
+        &Masked::new(Domain::new("Local"), "SYN-0042", 3),
+        false,
+    ));
     assert!(!one.contains("<button") && !one.contains("<a "), "{one}");
     assert!(
         one.contains(r#"<span class="fui-sr-only">Local </span>"#),
         "{one}"
     );
-    let list = html(|| {
-        identifier_list(&[
-            Masked::new(Domain::new("Second"), "SYN-0002", 3),
-            Masked::new(Domain::new("First"), "SYN-0001", 3),
-        ])
+    let list = html({
+        identifier_list(
+            &en(),
+            &[
+                Masked::new(Domain::new("Second"), "SYN-0002", 3),
+                Masked::new(Domain::new("First"), "SYN-0001", 3),
+            ],
+        )
     });
     assert!(list.find("Second") < list.find("First"), "{list}");
 }
 
-/// A work-list of three rows inside its island part.
+/// A work-list of three rows inside its module part.
 fn queue() -> String {
-    html(|| {
+    html({
         let columns = [
             Column::text("select", "Select every row").role(Role::Check),
             Column::text("name", "Name").role(Role::Title),
@@ -739,30 +731,17 @@ fn queue() -> String {
                     key,
                     focused: index == 0,
                     class: None,
-                    cells: view! { <td></td> {cell(name, key)} }.into_any(),
+                    cells: Html::raw(String::from("<td></td>")).then(cell(name, Html::text(key))),
                 })
             })
-            .collect_view()
-            .into_any();
+            .collect::<Html>();
         let table = data_table(DataTable {
             caption: "Queue",
             columns: &columns,
             sorting: Sorting::default(),
             body: Body::Rows(rows),
-        })
-        .into_any();
-        let list = worklist(
-            WorkList {
-                focused: RwSignal::new(None),
-                on_open: Callback::new(|_: String| {}),
-            },
-            table,
-        );
-        view! {
-            {list}
-            {worklist_foot(None, None)}
-        }
-        .into_any()
+        });
+        worklist(table).then(worklist_foot(None, None))
     })
 }
 

@@ -13,9 +13,8 @@
 //! out is drawn dashed and stays listed, never hidden. No specification
 //! governs the component: our own design.
 
-use leptos::prelude::*;
-
-use crate::i18n::{Text, Word, tr};
+use crate::html::Html;
+use crate::i18n::{Locale, Text, Word, tr};
 use crate::tone::Tone;
 use crate::view::notice::{Announce, notice};
 
@@ -122,74 +121,67 @@ impl Verdict {
         }
     }
 
-    /// The verdict in a word.
-    fn word(self) -> Word {
-        tr(match self {
-            Self::Complete => Text::FanoutComplete,
-            Self::Incomplete => Text::FanoutIncomplete,
-            Self::Failed => Text::FanoutFailed,
-            Self::Unasked => Text::FanoutUnasked,
-        })
+    /// The verdict in a word, in `locale`.
+    fn word(self, locale: &Locale) -> Word {
+        tr(
+            locale,
+            match self {
+                Self::Complete => Text::FanoutComplete,
+                Self::Incomplete => Text::FanoutIncomplete,
+                Self::Failed => Text::FanoutFailed,
+                Self::Unasked => Text::FanoutUnasked,
+            },
+        )
     }
 }
 
 /// Returns a node's name with a break opportunity after each dot, so a
 /// long host name wraps between its labels.
-fn breakable(name: &str) -> impl IntoView + use<> {
-    let mut pieces = Vec::new();
-    let mut rest = name;
-    while let Some(at) = rest.find('.') {
-        let (head, tail) = rest.split_at(at + 1);
-        pieces.push(view! { {head.to_owned()} <wbr /> }.into_any());
-        rest = tail;
-    }
-    pieces.push(rest.to_owned().into_any());
-    pieces
+fn breakable(name: &str) -> String {
+    Html::text(name).to_string().replace('.', ".<wbr>")
 }
 
 /// Returns one node's row: its name and state on one line, what it gave
 /// under them, and the reason last.
-fn node_row(node: FanoutNode) -> impl IntoView {
-    let FanoutNode {
-        name,
-        answer,
-        word,
-        term,
-        measure,
-        reason,
-    } = node;
-    let tone = answer.tone();
-    let class = format!("fui-fanout-item {}", tone.class());
-    let term = term.map(|term| view! { <span class="fui-fanout-term"><code>{term}</code></span> });
-    let reason = reason.map(|reason| view! { <span class="fui-fanout-error">{reason}</span> });
-    view! {
-        <li class=class class:is-excluded=answer == Answer::Skipped>
-            <span class="fui-fanout-line">
-                <code>{breakable(&name)}</code>
-                <span class=tone.pill()>{word}</span>
-                {term}
-            </span>
-            <span class="fui-fanout-meta">{measure}</span>
-            {reason}
-        </li>
-    }
+fn node_row(node: &FanoutNode) -> String {
+    let tone = node.answer.tone();
+    let excluded = if node.answer == Answer::Skipped {
+        " is-excluded"
+    } else {
+        ""
+    };
+    let term = node.term.as_deref().map_or_else(String::new, |term| {
+        format!(
+            "<span class=\"fui-fanout-term\"><code>{}</code></span>",
+            Html::text(term)
+        )
+    });
+    let reason = node.reason.as_deref().map_or_else(String::new, |reason| {
+        format!(
+            "<span class=\"fui-fanout-error\">{}</span>",
+            Html::text(reason)
+        )
+    });
+    format!(
+        "<li class=\"fui-fanout-item {tone}{excluded}\"><span class=\"fui-fanout-line\"><code>{name}</code><span class=\"{pill}\">{word}</span>{term}</span><span class=\"fui-fanout-meta\">{measure}</span>{reason}</li>",
+        tone = tone.class(),
+        name = breakable(&node.name),
+        pill = tone.pill(),
+        word = Html::text(&node.word),
+        measure = Html::text(&node.measure),
+    )
 }
 
-/// Returns the fan-out outcome `fanout`: "Incomplete answer" in words when
-/// a node failed, the verdict with the summary line, and one row per node.
+/// Returns the fan-out outcome `fanout` in `locale`: "Incomplete answer" in
+/// words when a node failed, the verdict with the summary line, and one row
+/// per node.
 ///
 /// Put it in the answer's panel section, above the rows the request
 /// returned.
 #[must_use]
-pub fn fanout(fanout: Fanout) -> AnyView {
-    let Fanout {
-        label,
-        line,
-        missing,
-        nodes,
-    } = fanout;
-    let verdict = Verdict::of(&nodes);
-    let incomplete = matches!(verdict, Verdict::Incomplete | Verdict::Failed).then(|| {
+pub fn fanout(locale: &Locale, fanout: &Fanout) -> Html {
+    let verdict = Verdict::of(&fanout.nodes);
+    let incomplete = if matches!(verdict, Verdict::Incomplete | Verdict::Failed) {
         let tone = if verdict == Verdict::Failed {
             Tone::Bad
         } else {
@@ -199,34 +191,29 @@ pub fn fanout(fanout: Fanout) -> AnyView {
             tone,
             Announce::Status,
             None,
-            view! {
-                <strong>{tr(Text::FanoutIncompleteAnswer)}</strong>
-                " "
-                {missing}
-            },
+            Html::raw(format!(
+                "<strong>{}</strong> {}",
+                tr(locale, Text::FanoutIncompleteAnswer),
+                Html::text(&fanout.missing)
+            )),
         )
-    });
-    let rows = nodes.into_iter().map(node_row).collect_view();
-    view! {
-        <div class="fui-fanout">
-            {incomplete}
-            <p class="fui-fanout-summary">
-                <span class=verdict.tone().pill()>{verdict.word()}</span>
-                <span class="fui-muted">{line}</span>
-            </p>
-            <ul class="fui-fanout-list" aria-label=label>
-                {rows}
-            </ul>
-        </div>
-    }
-    .into_any()
+    } else {
+        Html::default()
+    };
+    let rows: String = fanout.nodes.iter().map(node_row).collect();
+    Html::raw(format!(
+        "<div class=\"fui-fanout\">{incomplete}<p class=\"fui-fanout-summary\"><span class=\"{pill}\">{word}</span><span class=\"fui-muted\">{line}</span></p><ul aria-label=\"{label}\" class=\"fui-fanout-list\">{rows}</ul></div>",
+        pill = verdict.tone().pill(),
+        word = verdict.word(locale),
+        line = Html::text(&fanout.line),
+        label = Html::text(&fanout.label),
+    ))
 }
 
 #[cfg(test)]
 mod tests {
-    use leptos::prelude::*;
-
     use super::{Answer, Fanout, FanoutNode, Verdict, fanout};
+    use crate::i18n::Locale;
 
     fn node(name: &str, answer: Answer) -> FanoutNode {
         FanoutNode {
@@ -240,15 +227,16 @@ mod tests {
     }
 
     fn drawn(nodes: Vec<FanoutNode>) -> String {
-        Owner::new().with(|| {
-            fanout(Fanout {
+        fanout(
+            &Locale::english(),
+            &Fanout {
                 label: String::from("What each node did"),
                 line: String::from("0 of 2 nodes asked"),
                 missing: String::new(),
                 nodes,
-            })
-            .to_html()
-        })
+            },
+        )
+        .to_string()
     }
 
     #[test]

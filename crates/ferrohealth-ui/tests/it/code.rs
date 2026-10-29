@@ -9,11 +9,11 @@ use std::time::{Duration, Instant};
 
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::view::code::{Code, CodeHead, Gravity, LineDiagnostic, code_card};
+use ferrohealth_ui::view::document::DocumentView;
 use ferrohealth_ui::view::document::{Document, document_pane};
-use ferrohealth_ui::widget::document::DocumentView;
 
 use crate::markup::has;
-use crate::render::page_html;
+use crate::render::{en, html};
 
 /// A text of `count` lines, each naming its number.
 fn numbered(count: u32) -> String {
@@ -47,8 +47,9 @@ fn code(text: String, diagnostics: Vec<LineDiagnostic>) -> Code {
 
 /// `code` in a card headed `f.yml`, with Copy when `copy` names its id.
 fn card(code: &Code, copy: Option<&str>) -> String {
-    page_html(|| {
+    html({
         code_card(
+            &en(),
             CodeHead {
                 title: String::from("f.yml"),
                 copy: copy.map(str::to_owned),
@@ -142,7 +143,7 @@ fn copy_reads_the_viewers_lines_and_carries_no_copy_of_the_text() {
     assert_eq!(
         1,
         drawn.matches("marker_unique").count(),
-        "the text is drawn once, in the lines, never as island data: {drawn}"
+        "the text is drawn once, in the lines, never as module data: {drawn}"
     );
     assert!(
         has(
@@ -156,20 +157,23 @@ fn copy_reads_the_viewers_lines_and_carries_no_copy_of_the_text() {
 
 /// The document pane `doc` over `text`.
 fn pane(text: &str) -> String {
-    page_html(|| {
-        document_pane(Document {
-            id: String::from("doc"),
-            label: String::from("Bundle"),
-            formats: vec![
-                (String::from("?format=json"), String::from("JSON")),
-                (String::from("?format=xml"), String::from("XML")),
-            ],
-            format: 0,
-            language: Language::Json,
-            text: text.to_owned(),
-            opening: DocumentView::Highlighted,
-            rendered: None,
-        })
+    html({
+        document_pane(
+            &en(),
+            Document {
+                id: String::from("doc"),
+                label: String::from("Bundle"),
+                formats: vec![
+                    (String::from("?format=json"), String::from("JSON")),
+                    (String::from("?format=xml"), String::from("XML")),
+                ],
+                format: 0,
+                language: Language::Json,
+                text: text.to_owned(),
+                opening: DocumentView::Highlighted,
+                rendered: None,
+            },
+        )
     })
 }
 
@@ -192,7 +196,7 @@ fn a_document_pane_carries_its_text_once_per_view_and_copies_from_the_raw_view()
     );
     assert!(
         drawn.contains("doc-text"),
-        "the copy island names the raw view's text"
+        "the copy module names the raw view's text"
     );
 }
 

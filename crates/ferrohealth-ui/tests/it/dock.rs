@@ -11,16 +11,9 @@ use ferrohealth_ui::view::button::Variant;
 use ferrohealth_ui::view::dock::{
     Decision, DecisionBar, DecisionState, DockField, DockForm, DockLine, DockLink, decision_bar,
 };
-use leptos::prelude::*;
 
 use crate::markup::{has, tags};
-
-/// The HTML `view` renders to, under a reactive owner as a server render
-/// runs.
-fn html(view: impl FnOnce() -> AnyView) -> String {
-    let owner = Owner::new();
-    owner.with(|| view().to_html())
-}
+use crate::render::html;
 
 /// The reason field, changed by `change`.
 fn reason(change: impl FnOnce(&mut DockField)) -> DockField {
@@ -61,7 +54,7 @@ fn decisions(link: DecisionState, other: DecisionState) -> Vec<Decision> {
 /// The bar of its own form at `/decide`, with `fields`, `line` and
 /// `decisions`.
 fn bar(fields: Vec<DockField>, line: Option<DockLine>, decisions: Vec<Decision>) -> String {
-    html(move || {
+    html({
         decision_bar(DecisionBar {
             id: String::from("dock"),
             label: String::from("Decision"),
@@ -143,7 +136,7 @@ fn the_bar_is_a_named_region_whose_decisions_submit_its_post_form() {
 
 #[test]
 fn a_bar_on_the_pages_form_joins_it_and_draws_no_form_of_its_own() {
-    let html = html(|| {
+    let html = html({
         decision_bar(DecisionBar {
             id: String::from("dock"),
             label: String::from("Your changes"),
@@ -322,7 +315,7 @@ fn a_reason_refused_is_marked_invalid_named_and_takes_the_focus() {
         "{html}"
     );
     assert!(
-        html.contains("Write why &lt;you&gt; decided this."),
+        html.contains("Write why &#60;you&#62; decided this."),
         "{html}"
     );
     assert!(

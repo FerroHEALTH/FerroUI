@@ -10,14 +10,13 @@
 //! [`crate::table::view::data_table`], so on a phone the source, the
 //! relationship and the target stack in reading order. In an editor each
 //! source code is one block ([`map_element`]) with its targets under it as
-//! F7 rows ([`crate::widget::repeat`]). No specification governs the
+//! F7 rows ([`crate::view::repeat`]). No specification governs the
 //! layout: our own design. The relationships are the HL7 FHIR
 //! specification's: R4 `ConceptMapEquivalence` and R5
 //! `ConceptMapRelationship`.
 
-use leptos::prelude::*;
-
-use crate::i18n::{Text, Word, tr};
+use crate::html::Html;
+use crate::i18n::{Locale, Text, Word, tr};
 use crate::icon::{Glyph, icon};
 use crate::table::view::{Column, Role, cell, title_cell};
 use crate::view::coding::{Coding, Layout, coding};
@@ -95,38 +94,40 @@ impl Relationship {
 
     /// The words of the relationship in the page's locale.
     #[must_use]
-    pub fn words(self) -> Word {
-        tr(match self {
-            Self::RelatedTo => Text::RelationRelated,
-            Self::Equivalent => Text::RelationEquivalent,
-            Self::Equal => Text::RelationEqual,
-            Self::Wider => Text::RelationTargetWider,
-            Self::Subsumes => Text::RelationSubsumes,
-            Self::Narrower => Text::RelationTargetNarrower,
-            Self::Specializes => Text::RelationSpecializes,
-            Self::Inexact => Text::RelationInexact,
-            Self::Disjoint => Text::RelationDisjoint,
-            Self::SourceNarrower => Text::RelationNarrower,
-            Self::SourceBroader => Text::RelationBroader,
-            Self::NotRelatedTo => Text::RelationNotRelated,
-            Self::Unmatched => Text::RelationNone,
-        })
+    pub fn words(self, locale: &Locale) -> Word {
+        tr(
+            locale,
+            match self {
+                Self::RelatedTo => Text::RelationRelated,
+                Self::Equivalent => Text::RelationEquivalent,
+                Self::Equal => Text::RelationEqual,
+                Self::Wider => Text::RelationTargetWider,
+                Self::Subsumes => Text::RelationSubsumes,
+                Self::Narrower => Text::RelationTargetNarrower,
+                Self::Specializes => Text::RelationSpecializes,
+                Self::Inexact => Text::RelationInexact,
+                Self::Disjoint => Text::RelationDisjoint,
+                Self::SourceNarrower => Text::RelationNarrower,
+                Self::SourceBroader => Text::RelationBroader,
+                Self::NotRelatedTo => Text::RelationNotRelated,
+                Self::Unmatched => Text::RelationNone,
+            },
+        )
     }
 }
 
 /// Returns the relationship `relationship` as its arrow and its words, or,
 /// for a mapping to nothing, its own glyph and the words "maps to nothing".
 #[must_use]
-pub fn relation(relationship: Relationship) -> AnyView {
+pub fn relation(locale: &Locale, relationship: Relationship) -> Html {
     let none = relationship == Relationship::Unmatched;
     let glyph = if none { Glyph::BAN } else { Glyph::ARROW_RIGHT };
-    view! {
-        <span class="fui-relation" class:is-none=none>
-            {icon(glyph, "14")}
-            {relationship.words()}
-        </span>
-    }
-    .into_any()
+    Html::raw(format!(
+        "<span class=\"fui-relation{}\">{}{}</span>",
+        if none { " is-none" } else { "" },
+        icon(glyph, "14"),
+        relationship.words(locale)
+    ))
 }
 
 /// One mapping of a concept map.
@@ -147,14 +148,14 @@ pub struct Mapping {
 /// relationship, the target and, when `comments`, the comment, which leaves
 /// the compact phone row.
 #[must_use]
-pub fn mapping_columns(comments: bool) -> Vec<Column> {
+pub fn mapping_columns(locale: &Locale, comments: bool) -> Vec<Column> {
     let mut columns = vec![
-        Column::owned("source", tr(Text::MappingSource)).role(Role::Title),
-        Column::owned("relationship", tr(Text::MappingRelationship)).role(Role::Sub),
-        Column::owned("target", tr(Text::MappingTarget)).role(Role::Quiet),
+        Column::owned("source", tr(locale, Text::MappingSource)).role(Role::Title),
+        Column::owned("relationship", tr(locale, Text::MappingRelationship)).role(Role::Sub),
+        Column::owned("target", tr(locale, Text::MappingTarget)).role(Role::Quiet),
     ];
     if comments {
-        columns.push(Column::owned("comment", tr(Text::MappingComment)).role(Role::Wide));
+        columns.push(Column::owned("comment", tr(locale, Text::MappingComment)).role(Role::Wide));
     }
     columns
 }
@@ -164,7 +165,7 @@ pub fn mapping_columns(comments: bool) -> Vec<Column> {
 /// The source heads the row; the comment cell is drawn when the columns
 /// have one, empty for a mapping with no comment.
 #[must_use]
-pub fn mapping_row(columns: &[Column], mapping: Mapping) -> AnyView {
+pub fn mapping_row(locale: &Locale, columns: &[Column], mapping: Mapping) -> Html {
     let Mapping {
         source,
         relationship,
@@ -176,31 +177,36 @@ pub fn mapping_row(columns: &[Column], mapping: Mapping) -> AnyView {
     } else {
         Relationship::Unmatched
     };
-    let head = title_cell(None, coding(source, Layout::Stacked), None);
-    let related = columns.get(1).map(|column| {
-        let label = column.label.text().to_owned();
-        view! {
-            <td data-label=label data-role=column.role.key() class="fui-relation-cell">
-                {relation(relationship)}
-            </td>
-        }
-    });
-    let target = columns.get(2).map(|column| {
-        let shown = match target {
-            Some(target) => coding(target, Layout::Stacked),
-            None => view! {
-                <span class="fui-muted" role="img" aria-label=tr(Text::MappingNoTarget)>
-                    "\u{2013}"
-                </span>
-            }
-            .into_any(),
-        };
-        cell(column, shown)
-    });
+    let head = title_cell(None, coding(locale, source, Layout::Stacked), None);
+    let related = columns
+        .get(1)
+        .map(|column| {
+            format!(
+                "<td data-label=\"{}\" data-role=\"{}\" class=\"fui-relation-cell\">{}</td>",
+                Html::text(column.label.text()),
+                column.role.key(),
+                relation(locale, relationship)
+            )
+        })
+        .unwrap_or_default();
+    let target = columns
+        .get(2)
+        .map(|column| {
+            let shown = match target {
+                Some(target) => coding(locale, target, Layout::Stacked),
+                None => Html::raw(format!(
+                    "<span role=\"img\" aria-label=\"{}\" class=\"fui-muted\">\u{2013}</span>",
+                    Html::text(tr(locale, Text::MappingNoTarget).text())
+                )),
+            };
+            String::from(cell(column, shown))
+        })
+        .unwrap_or_default();
     let comment = columns
         .get(3)
-        .map(|column| cell(column, comment.unwrap_or_default()));
-    view! { <tr>{head} {related} {target} {comment}</tr> }.into_any()
+        .map(|column| String::from(cell(column, Html::text(comment.unwrap_or_default()))))
+        .unwrap_or_default();
+    Html::raw(format!("<tr>{head}{related}{target}{comment}</tr>"))
 }
 
 /// One source code of a concept map in an editor, with its targets.
@@ -209,41 +215,40 @@ pub struct MapElement {
     /// The source code.
     pub source: Coding,
     /// The actions at the end of its head, such as Preview and Remove.
-    pub actions: Option<AnyView>,
-    /// Its targets, F7 rows from [`crate::widget::repeat::repeat`], each a
+    pub actions: Option<Html>,
+    /// Its targets, F7 rows from [`crate::view::repeat::repeat`], each a
     /// target code, a relationship and a comment. A target with no
     /// relationship says so in the line after its row.
-    pub targets: AnyView,
+    pub targets: Html,
     /// What shows under the targets, such as a Translate preview.
-    pub after: Option<AnyView>,
+    pub after: Option<Html>,
 }
 
 /// Returns the source codes of a concept map in an editor, one block each.
 #[must_use]
-pub fn map_elements(elements: impl IntoView + 'static) -> AnyView {
-    let elements = elements.into_any();
-    view! { <ul class="fui-map-elements">{elements}</ul> }.into_any()
+pub fn map_elements(elements: Html) -> Html {
+    let elements = String::from(elements);
+    Html::raw(format!("<ul class=\"fui-map-elements\">{elements}</ul>"))
 }
 
 /// Returns the block of `element`: its source coding and actions over its
 /// target rows.
 #[must_use]
-pub fn map_element(element: MapElement) -> AnyView {
+pub fn map_element(locale: &Locale, element: MapElement) -> Html {
     let MapElement {
         source,
         actions,
         targets,
         after,
     } = element;
-    let actions = actions.map(|actions| view! { <div class="fui-actions">{actions}</div> });
-    view! {
-        <li class="fui-map-element">
-            <div class="fui-map-element-head">{coding(source, Layout::Inline)} {actions}</div>
-            {targets}
-            {after}
-        </li>
-    }
-    .into_any()
+    let actions = actions
+        .map(|actions| format!("<div class=\"fui-actions\">{actions}</div>"))
+        .unwrap_or_default();
+    Html::raw(format!(
+        "<li class=\"fui-map-element\"><div class=\"fui-map-element-head\">{}{actions}</div>{targets}{}</li>",
+        coding(locale, source, Layout::Inline),
+        after.unwrap_or_default()
+    ))
 }
 
 #[cfg(test)]

@@ -1,0 +1,9 @@
+{% block skip %}<a href="#{{ main_id }}" class="fui-skip">{{ words }}</a>{% endblock %}
+{% block footer %}<footer class="fui-footer"><p>{{ line }} <a href="{{ about }}">{{ words }}</a></p></footer>{% endblock %}
+{% block drawer %}<button type="button" command="show-modal" commandfor="{{ sidebar }}" aria-controls="{{ sidebar }}" aria-haspopup="dialog" aria-label="{{ words }}" class="fui-icon-button fui-drawer-only">{{ glyph }}</button>{% endblock %}
+{% block topbar %}<header class="fui-topbar"><div class="fui-topbar-row">{{ drawer }}{{ lockup }}{% if let Some(search) = search %}<div class="fui-topbar-middle">{{ search }}</div>{% endif %}<div class="fui-topbar-end">{{ end }}</div></div></header>{% endblock %}
+{% block page %}<div class="fui-page">{{ skip }}{{ topbar }}{% if let Some(banner) = banner %}{{ banner }}{% endif %}<div class="fui-body">{{ sidebar }}<main id="{{ main_id }}" class="fui-main"><div class="fui-column">{{ content }}</div>{% if let Some(dock) = dock %}{{ dock }}{% endif %}</main></div>{{ toasts }}{{ footer }}</div>{% endblock %}
+{% block centred %}<div class="fui-page"><main id="{{ main_id }}" class="fui-centred">{{ content }}</main>{{ toasts }}{{ footer }}</div>{% endblock %}
+{% block mark %}<span aria-hidden="true" class="fui-mark">{{ glyph }}</span>{% endblock %}
+{% block brand_mark %}<span aria-hidden="true" class="fui-brand-mark"><img src="{{ light }}" alt="" width="24" height="24" class="fui-brand-light"><img src="{{ dark }}" alt="" width="24" height="24" class="fui-brand-dark"></span>{% endblock %}
+{% block lockup %}{% if let Some(href) = href %}<a href="{{ href }}" class="fui-lockup">{% else %}<span class="fui-lockup">{% endif %}{{ mark }}<span class="fui-lockup-name">{{ name }} <span class="fui-lockup-accent">{{ word }}</span></span>{% if href.is_some() %}</a>{% else %}</span>{% endif %}{% endblock %}

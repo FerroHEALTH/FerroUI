@@ -17,7 +17,7 @@ use ferrohealth_ui::view::funnel::{Bar, Funnel, FunnelPart, bar_list, funnel};
 use ferrohealth_ui::view::score::{Contribution, Score, Threshold, score_bar, score_breakdown};
 
 use crate::markup::has;
-use crate::render::html;
+use crate::render::{en, html};
 
 fn part(label: &str, count: u64, tone: Tone) -> FunnelPart {
     FunnelPart {
@@ -43,10 +43,12 @@ fn run(refused: u64) -> Funnel {
 
 #[test]
 fn the_stacked_bar_is_an_image_named_by_its_sentence_and_the_legend_prints_each_figure() {
-    let shown = html(|| funnel(&run(5)));
+    let shown = html(funnel(&run(5)));
     assert!(shown.contains(r#"role="img""#), "{shown}");
     assert!(
-        shown.contains("aria-label=\"Of 100 read: 80 written, 20 skipped, 5 refused &lt;now&gt;\""),
+        shown.contains(
+            "aria-label=\"Of 100 read: 80 written, 20 skipped, 5 refused &#60;now&#62;\""
+        ),
         "the sentence is the name, escaped: {shown}"
     );
     assert_eq!(3, shown.matches("<rect").count(), "{shown}");
@@ -60,7 +62,7 @@ fn the_stacked_bar_is_an_image_named_by_its_sentence_and_the_legend_prints_each_
 
 #[test]
 fn a_run_with_nothing_refused_draws_no_segment_and_keeps_its_zero_in_the_legend() {
-    let shown = html(|| funnel(&run(0)));
+    let shown = html(funnel(&run(0)));
     assert_eq!(2, shown.matches("<rect").count(), "{shown}");
     assert!(!shown.contains("fui-funnel-part fui-tone-bad"), "{shown}");
     assert!(shown.contains("fui-funnel-swatch fui-tone-bad"), "{shown}");
@@ -74,7 +76,7 @@ fn a_bar_list_measures_each_row_against_the_largest_and_prints_its_number() {
         count,
         figure: count.to_string(),
     });
-    let shown = html(|| bar_list("Rows per table", &bars));
+    let shown = html(bar_list("Rows per table", &bars));
     assert!(shown.contains(r#"aria-label="Rows per table""#), "{shown}");
     assert!(shown.contains(r#"width="25.0%""#), "{shown}");
     assert!(shown.contains(r#"width="100.0%""#), "{shown}");
@@ -145,7 +147,10 @@ fn bridge(cdr: FlowState, term: FlowState) -> Flow {
 
 #[test]
 fn a_flow_draws_each_state_as_a_line_style_and_marks_and_labels_only_its_problem_edges() {
-    let shown = html(|| flow(&bridge(FlowState::Unreachable, FlowState::Degraded)));
+    let shown = html(flow(
+        &en(),
+        &bridge(FlowState::Unreachable, FlowState::Degraded),
+    ));
     for class in [
         "fui-edge fui-edge-ok",
         "fui-edge fui-edge-bad",
@@ -172,17 +177,20 @@ fn a_flow_draws_each_state_as_a_line_style_and_marks_and_labels_only_its_problem
 #[test]
 fn the_edge_rule_draws_each_state_as_its_line_its_word_its_style_and_its_meaning() {
     // NOTE: WCAG 2.2 SC 1.4.1: the line sample is hidden; the word and the style say the state.
-    let shown = html(|| {
-        edge_rule(vec![
-            EdgeRule {
-                state: FlowState::Up,
-                meaning: String::from("it answers"),
-            },
-            EdgeRule {
-                state: FlowState::Degraded,
-                meaning: String::from("it answers slowly"),
-            },
-        ])
+    let shown = html({
+        edge_rule(
+            &en(),
+            vec![
+                EdgeRule {
+                    state: FlowState::Up,
+                    meaning: String::from("it answers"),
+                },
+                EdgeRule {
+                    state: FlowState::Degraded,
+                    meaning: String::from("it answers slowly"),
+                },
+            ],
+        )
     });
     assert!(
         has(
@@ -209,15 +217,18 @@ fn the_edge_rule_draws_each_state_as_its_line_its_word_its_style_and_its_meaning
 #[test]
 fn the_flow_rule_is_a_short_informational_dialog_its_button_opens_with_no_script() {
     // NOTE: HTML Living Standard, the button element's command attribute: show-modal opens a dialog.
-    let dialog = html(|| {
-        rule_dialog(FlowRule {
-            id: "flow-rule".into(),
-            rules: vec![EdgeRule {
-                state: FlowState::Off,
-                meaning: String::from("not configured"),
-            }],
-            note: String::from("A card opens its page."),
-        })
+    let dialog = html({
+        rule_dialog(
+            &en(),
+            FlowRule {
+                id: "flow-rule".into(),
+                rules: vec![EdgeRule {
+                    state: FlowState::Off,
+                    meaning: String::from("not configured"),
+                }],
+                note: String::from("A card opens its page."),
+            },
+        )
     });
     assert!(
         has(
@@ -240,7 +251,7 @@ fn the_flow_rule_is_a_short_informational_dialog_its_button_opens_with_no_script
         dialog.contains(r#"<p class="fui-small fui-muted">A card opens its page.</p>"#),
         "{dialog}"
     );
-    let button = html(|| rule_button("flow-rule".into()));
+    let button = html(rule_button(&en(), "flow-rule"));
     assert!(
         has(
             &button,
@@ -259,7 +270,7 @@ fn the_flow_rule_is_a_short_informational_dialog_its_button_opens_with_no_script
 
 #[test]
 fn the_flow_drawing_is_an_image_whose_description_names_each_problem_edge() {
-    let shown = html(|| flow(&bridge(FlowState::Unreachable, FlowState::Up)));
+    let shown = html(flow(&en(), &bridge(FlowState::Unreachable, FlowState::Up)));
     assert!(shown.contains(r#"role="img""#), "{shown}");
     assert!(
         shown.contains(r#"aria-labelledby="bridge-title bridge-desc""#),
@@ -271,7 +282,7 @@ fn the_flow_drawing_is_an_image_whose_description_names_each_problem_edge() {
         ),
         "{shown}"
     );
-    let steady = html(|| flow(&bridge(FlowState::Up, FlowState::Up)));
+    let steady = html(flow(&en(), &bridge(FlowState::Up, FlowState::Up)));
     assert!(
         steady.contains("No edge is degraded or unreachable."),
         "{steady}"
@@ -280,7 +291,7 @@ fn the_flow_drawing_is_an_image_whose_description_names_each_problem_edge() {
 
 #[test]
 fn every_flow_card_is_a_named_link_with_its_path_and_pulse_beside_it() {
-    let shown = html(|| flow(&bridge(FlowState::Up, FlowState::Up)));
+    let shown = html(flow(&en(), &bridge(FlowState::Up, FlowState::Up)));
     assert!(shown.contains(r#"href="/cdr""#), "{shown}");
     assert!(
         shown.contains(r#"aria-label="Card cdr, Line of cdr: Up. Opens its page.""#),
@@ -298,7 +309,7 @@ fn every_flow_card_is_a_named_link_with_its_path_and_pulse_beside_it() {
 
 #[test]
 fn the_phone_list_holds_a_heading_per_lane_and_a_row_per_card_with_its_state_in_words() {
-    let shown = html(|| flow(&bridge(FlowState::Unreachable, FlowState::Off)));
+    let shown = html(flow(&en(), &bridge(FlowState::Unreachable, FlowState::Off)));
     assert!(shown.contains(r#"class="fui-pipeline-list""#), "{shown}");
     assert_eq!(3, shown.matches("fui-pipeline-lane").count(), "{shown}");
     assert_eq!(4, shown.matches("fui-pipeline-name").count(), "{shown}");
@@ -368,7 +379,7 @@ fn crowded(fold: Option<bool>) -> Flow {
 #[test]
 fn a_lane_past_the_threshold_folds_its_quiet_cards_into_one_summary_that_unfolds_by_a_link() {
     const { assert!(12 > FOLD_PAST) };
-    let shown = html(|| flow(&crowded(Some(false))));
+    let shown = html(flow(&en(), &crowded(Some(false))));
     for kept in ["/caller-03", "/caller-07"] {
         assert!(
             shown.contains(&format!("href=\"{kept}\"")),
@@ -402,7 +413,7 @@ fn a_lane_past_the_threshold_folds_its_quiet_cards_into_one_summary_that_unfolds
 
 #[test]
 fn an_open_lane_shows_every_card_and_folds_again_by_a_link_and_a_lane_with_no_fold_never_folds() {
-    let open = html(|| flow(&crowded(Some(true))));
+    let open = html(flow(&en(), &crowded(Some(true))));
     assert_eq!(
         13,
         open.matches(r#"class="fui-tnode-link""#).count(),
@@ -413,7 +424,7 @@ fn an_open_lane_shows_every_card_and_folds_again_by_a_link_and_a_lane_with_no_fo
         open.matches("Fold the quiet cards of Callers").count(),
         "the drawing's link, its tooltip and the list's row: {open}"
     );
-    let never = html(|| flow(&crowded(None)));
+    let never = html(flow(&en(), &crowded(None)));
     assert_eq!(13, never.matches(r#"class="fui-tnode-link""#).count());
     assert!(!never.contains("fui-tnode-toggle"), "{never}");
     assert!(!never.contains("more in Callers"), "{never}");
@@ -421,7 +432,7 @@ fn an_open_lane_shows_every_card_and_folds_again_by_a_link_and_a_lane_with_no_fo
 
 #[test]
 fn labelled_problem_edges_that_meet_one_card_carry_their_labels_at_their_starts() {
-    let shown = html(|| flow(&crowded(Some(true))));
+    let shown = html(flow(&en(), &crowded(Some(true))));
     assert_eq!(
         2,
         shown
@@ -459,7 +470,7 @@ fn score(score: f64, weights: &[f64]) -> Score {
 
 #[test]
 fn a_breakdown_draws_a_positive_a_negative_and_a_zero_weight_in_figures() {
-    let shown = html(|| score_breakdown(&score(0.87, &[2.4, -1.2, 0.0])));
+    let shown = html(score_breakdown(&en(), &score(0.87, &[2.4, -1.2, 0.0])));
     assert!(shown.contains("fui-score-bar-add"), "{shown}");
     assert!(shown.contains("fui-score-bar-remove"), "{shown}");
     for weight in [">+2.4<", ">\u{2212}1.2<", ">0<"] {
@@ -479,7 +490,7 @@ fn a_breakdown_draws_a_positive_a_negative_and_a_zero_weight_in_figures() {
 
 #[test]
 fn a_rows_words_come_before_its_comparator() {
-    let shown = html(|| score_breakdown(&score(0.87, &[2.4])));
+    let shown = html(score_breakdown(&en(), &score(0.87, &[2.4])));
     let words = shown.find("Field 2.4: close match").expect("the words");
     let reading = shown.find("Jaro-Winkler 0.94").expect("the comparator");
     assert!(words < reading, "{shown}");
@@ -491,7 +502,7 @@ fn a_rows_words_come_before_its_comparator() {
 
 #[test]
 fn the_scale_is_an_image_that_reads_the_score_the_grade_and_every_contribution() {
-    let shown = html(|| score_breakdown(&score(0.80, &[2.4, -1.2])));
+    let shown = html(score_breakdown(&en(), &score(0.80, &[2.4, -1.2])));
     assert!(
         shown.contains(
             "aria-label=\"Score 0.80, Probable, on the scale: Possible from 0.60, Probable from 0.80, Certain from 0.95. Field 2.4: close match +2.4, Field -1.2: close match \u{2212}1.2.\""
@@ -503,7 +514,7 @@ fn the_scale_is_an_image_that_reads_the_score_the_grade_and_every_contribution()
 
 #[test]
 fn every_threshold_label_is_centred_on_its_mark_and_the_start_keeps_its_label() {
-    let shown = html(|| score_breakdown(&score(0.70, &[1.0])));
+    let shown = html(score_breakdown(&en(), &score(0.70, &[1.0])));
     assert_eq!(
         4,
         shown.matches(r#"text-anchor="middle""#).count(),
@@ -523,7 +534,7 @@ fn every_threshold_label_is_centred_on_its_mark_and_the_start_keeps_its_label() 
 
 #[test]
 fn the_compact_score_is_a_bar_in_the_grades_tone_beside_its_figure() {
-    let shown = html(|| score_bar(0.87, Tone::Info));
+    let shown = html(score_bar(&en(), 0.87, Tone::Info));
     assert!(shown.contains("fui-score-cell fui-tone-info"), "{shown}");
     assert!(shown.contains(r#"width="87""#), "{shown}");
     assert!(

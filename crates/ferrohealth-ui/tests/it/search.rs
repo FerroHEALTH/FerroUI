@@ -3,7 +3,7 @@
 
 //! The top bar's search as the server draws it (#144): one joined `GET`
 //! form, its states, the `/` key cap and its shortcut, the typeahead panel
-//! it holds closed until the page hydrates, the answer's JSON wire, and the
+//! it holds closed until its module runs, the answer's JSON wire, and the
 //! find page's results in the page, grouped by kind.
 
 use ferrohealth_ui::icon::Glyph;
@@ -12,18 +12,9 @@ use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::search::{
     Hit, HitGroup, Mark, SearchAnswer, SearchBox, Way, find_results, search_box,
 };
-use leptos::prelude::*;
 
 use crate::markup::{has, tags};
-
-/// `view` rendered to HTML in a page tree with the server's shared
-/// context, as a page draws an island that takes children.
-fn page_html(view: impl FnOnce() -> AnyView) -> String {
-    let owner = Owner::new_root(Some(std::sync::Arc::new(
-        hydration_context::SsrSharedContext::new(),
-    )));
-    owner.with(|| view().to_html())
-}
+use crate::render::{en, html};
 
 /// A search box of the console's route `/find`, changed by `change`.
 fn search(change: impl FnOnce(&mut SearchBox)) -> SearchBox {
@@ -39,8 +30,8 @@ fn search(change: impl FnOnce(&mut SearchBox)) -> SearchBox {
 }
 
 /// The HTML of `search`.
-fn drawn(search: SearchBox) -> String {
-    page_html(move || search_box(search))
+fn drawn(search: &SearchBox) -> String {
+    html(search_box(&en(), search))
 }
 
 /// A hit named `name` that leads to `href`.
@@ -56,7 +47,7 @@ fn hit(name: &str, href: &str) -> Hit {
 
 #[test]
 fn the_search_is_one_get_form_a_landmark_with_a_hidden_label_and_a_named_submit() {
-    let html = drawn(search(|_| {}));
+    let html = drawn(&search(|_| {}));
     assert!(
         has(
             &html,
@@ -106,7 +97,7 @@ fn the_search_is_one_get_form_a_landmark_with_a_hidden_label_and_a_named_submit(
 
 #[test]
 fn the_slash_cap_is_hidden_from_a_reader_and_drawn_only_with_a_shortcut() {
-    let html = drawn(search(|_| {}));
+    let html = drawn(&search(|_| {}));
     assert!(
         has(
             &html,
@@ -118,7 +109,7 @@ fn the_slash_cap_is_hidden_from_a_reader_and_drawn_only_with_a_shortcut() {
         ),
         "{html}"
     );
-    let none = drawn(search(|search| search.shortcut = None));
+    let none = drawn(&search(|search| search.shortcut = None));
     assert!(tags(&none, "kbd").is_empty(), "no shortcut, no cap: {none}");
     assert!(
         tags(&none, "input")
@@ -130,7 +121,7 @@ fn the_slash_cap_is_hidden_from_a_reader_and_drawn_only_with_a_shortcut() {
 
 #[test]
 fn the_busy_search_draws_the_spinner_in_the_glyphs_place_and_the_submit_waits() {
-    let html = drawn(search(|search| search.busy = true));
+    let html = drawn(&search(|search| search.busy = true));
     assert!(has(&html, "form", &[("aria-busy", "true")]), "{html}");
     assert!(
         has(
@@ -146,7 +137,7 @@ fn the_busy_search_draws_the_spinner_in_the_glyphs_place_and_the_submit_waits() 
             .any(|button| button.contains_key("disabled")),
         "{html}"
     );
-    let idle = drawn(search(|_| {}));
+    let idle = drawn(&search(|_| {}));
     assert!(!idle.contains("fui-spinner-ring"), "{idle}");
     assert!(!idle.contains("aria-busy"), "{idle}");
 }
@@ -154,7 +145,7 @@ fn the_busy_search_draws_the_spinner_in_the_glyphs_place_and_the_submit_waits() 
 #[test]
 fn the_disabled_search_shows_its_reason_as_text_and_drops_its_key_cap() {
     let reason = "Search waits while the index is rebuilding";
-    let html = drawn(search(|search| {
+    let html = drawn(&search(|search| {
         search.disabled = Some(String::from(reason));
     }));
     let input = tags(&html, "input").remove(0);
@@ -206,9 +197,8 @@ fn answer() -> SearchAnswer {
 }
 
 #[test]
-fn a_search_with_an_answer_route_holds_its_panel_closed_and_claims_no_combobox_before_it_hydrates()
-{
-    let html = drawn(search(|search| {
+fn a_suggesting_search_holds_its_panel_closed_and_claims_no_combobox_before_its_module_runs() {
+    let html = drawn(&search(|search| {
         search.suggest = Some(String::from("/find/suggest"));
     }));
     assert!(
@@ -247,11 +237,11 @@ fn a_search_with_an_answer_route_holds_its_panel_closed_and_claims_no_combobox_b
         ),
         "the count is announced from outside the panel: {html}"
     );
-    // WAI-ARIA 1.2: with no WebAssembly the field never expands, so it is no combobox.
+    // WAI-ARIA 1.2: with no script the field never expands, so it is no combobox.
     let input = tags(&html, "input").remove(0);
     assert!(!input.contains_key("role"), "{html}");
     assert!(!input.contains_key("aria-expanded"), "{html}");
-    let plain = drawn(search(|_| {}));
+    let plain = drawn(&search(|_| {}));
     assert!(
         !plain.contains("fui-search-results"),
         "no route, no panel: {plain}"
@@ -306,7 +296,7 @@ fn the_answer_crosses_the_wire_as_json_and_reads_back() -> Result<(), Box<dyn st
 
 #[test]
 fn the_find_page_draws_every_hit_of_each_kind_in_a_list_card_of_its_own() {
-    let html = page_html(move || find_results(answer()));
+    let html = html(find_results(&en(), &answer()));
     assert!(html.contains(r#"<div class="fui-find-results">"#), "{html}");
     assert!(
         has(&html, "section", &[("aria-label", "Files")]),
@@ -341,7 +331,7 @@ fn the_find_page_draws_every_hit_of_each_kind_in_a_list_card_of_its_own() {
 
 #[test]
 fn a_hit_emphasises_the_words_searched_for() {
-    let html = page_html(move || find_results(answer()));
+    let html = html(find_results(&en(), &answer()));
     assert!(
         html.contains(r#"<mark class="fui-search-match">alp</mark>ha-1.yml"#),
         "{html}"
@@ -365,7 +355,7 @@ fn a_hit_on_the_find_page_draws_its_mark() {
         }],
         ..SearchAnswer::default()
     };
-    let html = page_html(move || find_results(answer));
+    let html = html(find_results(&en(), &answer));
     assert!(
         has(
             &html,
@@ -386,7 +376,7 @@ fn a_find_page_that_found_nothing_says_so_in_the_page() {
         }),
         ..SearchAnswer::default()
     };
-    let html = page_html(move || find_results(answer));
+    let html = html(find_results(&en(), &answer));
     assert!(html.contains("fui-find-empty"), "{html}");
     assert!(html.contains("No matches for “zz”"), "{html}");
     assert!(
@@ -405,9 +395,9 @@ fn a_find_page_that_found_nothing_says_so_in_the_page() {
         )),
         ..SearchAnswer::default()
     };
-    let html = page_html(move || find_results(said));
+    let html = crate::render::html(find_results(&en(), &said));
     assert!(
-        html.contains("No file found for &lt;zz&gt;"),
+        html.contains("No file found for &#60;zz&#62;"),
         "escaped: {html}"
     );
     assert!(html.contains("Check the spelling."), "{html}");
@@ -417,7 +407,7 @@ fn a_find_page_that_found_nothing_says_so_in_the_page() {
 fn an_answer_that_may_not_be_whole_says_so_over_its_hits() {
     let mut answer = answer();
     answer.unfinished = Some(String::from("Templates did not answer"));
-    let html = page_html(move || find_results(answer));
+    let html = html(find_results(&en(), &answer));
     assert!(
         has(
             &html,
@@ -441,10 +431,13 @@ fn a_hit_escapes_its_name_and_line() {
         }],
         ..SearchAnswer::default()
     };
-    let html = page_html(move || find_results(answer));
+    let html = html(find_results(&en(), &answer));
     assert!(!html.contains("<script>"), "{html}");
-    assert!(html.contains("&lt;script&gt;x&lt;/script&gt;"), "{html}");
-    assert!(html.contains("a &amp; b"), "{html}");
+    assert!(
+        html.contains("&#60;script&#62;x&#60;/script&#62;"),
+        "{html}"
+    );
+    assert!(html.contains("a &#38; b"), "{html}");
 }
 
 #[test]
@@ -474,7 +467,7 @@ fn the_panel_is_an_overlay_anchored_under_the_field_and_a_hits_line_keeps_its_ro
 
 #[test]
 fn a_search_that_can_carry_clinical_content_posts_its_query() {
-    let html = drawn(search(|search| search.post = true));
+    let html = drawn(&search(|search| search.post = true));
     assert!(
         has(&html, "form", &[("role", "search"), ("method", "post")]),
         "{html}"

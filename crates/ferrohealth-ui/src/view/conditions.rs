@@ -18,15 +18,14 @@
 //! groups: the choices post as they stand (a chosen value its select does
 //! not list stays chosen, said to be not in the list), and Remove, Add a condition and
 //! Add a group are submit buttons naming what they act on, so the builder
-//! works with no WebAssembly (`leptos-ui.md` §15.8). No specification
+//! works with no script. No specification
 //! governs the builder: our own design; the query it builds is the
 //! console's AQL (openEHR Query, AQL, § WHERE).
 
-use leptos::prelude::*;
-
-use crate::i18n::{Arg, Text, tr, tr_with};
+use crate::html::Html;
+use crate::i18n::{Arg, Locale, Text, tr, tr_with};
 use crate::icon::{Glyph, icon};
-use crate::view::button::{Variant, label};
+use crate::view::button::Variant;
 use crate::view::form::{
     Field, INPUT, Inner, SELECT, described_with_unit, keyed_check, keyed_field,
 };
@@ -133,44 +132,44 @@ pub struct ConditionGroup {
 /// and said to be not in the list, so the select shows and posts the value
 /// the condition has rather than its first option; an empty one chooses
 /// nothing.
-fn options(choice: Choice) -> AnyView {
+fn options(locale: &Locale, choice: Choice) -> String {
     let Choice { options, chosen } = choice;
-    let unlisted =
-        (!chosen.is_empty() && !options.iter().any(|(value, _)| *value == chosen)).then(|| {
-            let words = tr_with(Text::CondNotListed, &[("value", Arg::from(chosen.clone()))]);
-            view! {
-                <option value=chosen.clone() selected=true>
-                    {words}
-                </option>
-            }
-        });
-    let listed = options
+    let unlisted = if !chosen.is_empty() && !options.iter().any(|(value, _)| *value == chosen) {
+        let words = tr_with(
+            locale,
+            Text::CondNotListed,
+            &[("value", Arg::from(chosen.clone()))],
+        );
+        format!(
+            "<option value=\"{}\" selected>{}</option>",
+            Html::text(&chosen),
+            Html::text(words.text())
+        )
+    } else {
+        String::new()
+    };
+    let listed: String = options
         .into_iter()
         .map(|(value, words)| {
-            let selected = value == chosen;
-            view! {
-                <option value=value selected=selected>
-                    {words}
-                </option>
-            }
+            format!(
+                "<option value=\"{}\"{}>{}</option>",
+                Html::text(&value),
+                if value == chosen { " selected" } else { "" },
+                Html::text(words)
+            )
         })
-        .collect_view();
-    view! {
-        {unlisted}
-        {listed}
-    }
-    .into_any()
+        .collect::<Vec<_>>()
+        .concat();
+    format!("{unlisted}{listed}")
 }
 
 /// Returns the select `id` holding `choice`.
-fn select(id: String, choice: Choice) -> AnyView {
-    let name = id.clone();
-    view! {
-        <select id=id name=name class=SELECT>
-            {options(choice)}
-        </select>
-    }
-    .into_any()
+fn select(locale: &Locale, id: &str, choice: Choice) -> Html {
+    let id = Html::text(id);
+    Html::raw(format!(
+        "<select id=\"{id}\" name=\"{id}\" class=\"{SELECT}\">{}</select>",
+        options(locale, choice)
+    ))
 }
 
 /// Returns the words of the chosen option of `choice`, or its value when
@@ -184,7 +183,7 @@ fn chosen_words(choice: &Choice) -> String {
 }
 
 /// Returns one condition row.
-fn condition(condition: Condition) -> AnyView {
+fn condition(locale: &Locale, condition: Condition) -> String {
     let Condition {
         key,
         path,
@@ -192,45 +191,46 @@ fn condition(condition: Condition) -> AnyView {
         operator,
         operand,
     } = condition;
-    let remove_name = tr_with(
-        Text::CondRemove,
-        &[("label", Arg::from(chosen_words(&path)))],
+    let remove_name = Html::text(
+        tr_with(
+            locale,
+            Text::CondRemove,
+            &[("label", Arg::from(chosen_words(&path)))],
+        )
+        .text(),
     );
     let path_id = format!("{key}-path");
-    let path_hint = archetype_path.clone();
-    let path_field = Field::new(path_id.clone(), tr(Text::CondPath))
-        .after(view! {
-            <span class="fui-cond-path" title=path_hint>
-                {archetype_path}
-            </span>
-        })
-        .view(select(path_id, path));
+    let path_field = Field::new(path_id.clone(), tr(locale, Text::CondPath))
+        .after(Html::raw(format!(
+            "<span title=\"{0}\" class=\"fui-cond-path\">{0}</span>",
+            Html::text(&archetype_path)
+        )))
+        .view(select(locale, &path_id, path));
     let operator_id = format!("{key}-op");
     let operator_field = keyed_field(
         operator_id.clone(),
-        tr(Text::CondOperator),
+        tr(locale, Text::CondOperator),
         None,
-        select(operator_id, operator),
+        select(locale, &operator_id, operator),
     );
     let value_id = format!("{key}-value");
     let value_field = match operand {
         Operand::Typed { value, unit } => {
             let described = unit
                 .as_ref()
-                .map(|_| described_with_unit(&value_id, false, false));
-            let input_id = value_id.clone();
-            let input_name = value_id.clone();
-            let input = view! {
-                <input
-                    id=input_id
-                    name=input_name
-                    class=INPUT
-                    value=value
-                    inputmode="decimal"
-                    aria-describedby=described
-                />
-            };
-            let field = Field::new(value_id, tr(Text::CondValue));
+                .map(|_| {
+                    format!(
+                        " aria-describedby=\"{}\"",
+                        Html::text(described_with_unit(&value_id, false, false))
+                    )
+                })
+                .unwrap_or_default();
+            let input = Html::raw(format!(
+                "<input id=\"{0}\" name=\"{0}\" value=\"{1}\" inputmode=\"decimal\"{described} class=\"{INPUT}\">",
+                Html::text(&value_id),
+                Html::text(value)
+            ));
+            let field = Field::new(value_id, tr(locale, Text::CondValue));
             match unit {
                 Some(unit) => field.trailing(Inner::Unit(unit)).view(input),
                 None => field.view(input),
@@ -238,83 +238,49 @@ fn condition(condition: Condition) -> AnyView {
         }
         Operand::Coded(choice) => keyed_field(
             value_id.clone(),
-            tr(Text::CondValue),
+            tr(locale, Text::CondValue),
             None,
-            select(value_id, choice),
-        )
-        .into_any(),
+            select(locale, &value_id, choice),
+        ),
     };
-    view! {
-        <li class="fui-cond">
-            {path_field}
-            {operator_field}
-            {value_field}
-            <button
-                type="submit"
-                class="fui-icon-button"
-                name=REMOVE
-                value=key
-                aria-label=remove_name.clone()
-                title=remove_name
-            >
-                {icon(Glyph::X, "16")}
-            </button>
-        </li>
-    }
-    .into_any()
+    format!(
+        "<li class=\"fui-cond\">{path_field}{operator_field}{value_field}<button type=\"submit\" name=\"{REMOVE}\" value=\"{}\" aria-label=\"{remove_name}\" title=\"{remove_name}\" class=\"fui-icon-button\">{}</button></li>",
+        Html::text(&key),
+        icon(Glyph::X, "16")
+    )
 }
 
 /// Returns the group's All or Any choice: the head's phrase, its visible
 /// words hidden from the accessibility tree and said once as the radio
 /// group's name, so a screen reader hears one phrase.
-fn match_choice(key: &str, number: u32, matching: Match) -> AnyView {
-    let name = format!("{key}-match");
-    let label_id = format!("{key}-match-label");
-    let labelled = label_id.clone();
-    let segments = [(Match::All, Text::CondAll), (Match::Any, Text::CondAny)]
+fn match_choice(locale: &Locale, key: &str, number: u32, matching: Match) -> String {
+    let name = Html::text(format!("{key}-match"));
+    let segments: String = [(Match::All, Text::CondAll), (Match::Any, Text::CondAny)]
         .into_iter()
         .map(|(each, words)| {
-            let id = format!("{name}-{}", each.key());
-            let label_for = id.clone();
-            let radio_name = name.clone();
-            view! {
-                <label for=label_for class="fui-segment">
-                    <input
-                        type="radio"
-                        id=id
-                        name=radio_name
-                        value=each.key()
-                        checked=each == matching
-                        class="fui-sr-only"
-                    />
-                    {tr(words)}
-                </label>
-            }
+            format!(
+                "<label for=\"{name}-{key}\" class=\"fui-segment\"><input type=\"radio\" id=\"{name}-{key}\" name=\"{name}\" value=\"{key}\"{} class=\"fui-sr-only\">{}</label>",
+                if each == matching { " checked" } else { "" },
+                tr(locale, words),
+                key = each.key()
+            )
         })
-        .collect_view();
+        .collect::<Vec<_>>()
+        .concat();
     let said = tr_with(
+        locale,
         Text::CondGroupLabel,
         &[("label", Arg::from(number.to_string()))],
     );
-    view! {
-        <span class="fui-cond-phrase" aria-hidden="true">
-            {tr(Text::CondMatch)}
-        </span>
-        <span id=label_id class="fui-sr-only">
-            {said}
-        </span>
-        <div class="fui-segmented" role="radiogroup" aria-labelledby=labelled>
-            {segments}
-        </div>
-        <span class="fui-cond-phrase" aria-hidden="true">
-            {tr(Text::CondOfThese)}
-        </span>
-    }
-    .into_any()
+    format!(
+        "<span aria-hidden=\"true\" class=\"fui-cond-phrase\">{}</span><span id=\"{name}-label\" class=\"fui-sr-only\">{said}</span><div role=\"radiogroup\" aria-labelledby=\"{name}-label\" class=\"fui-segmented\">{segments}</div><span aria-hidden=\"true\" class=\"fui-cond-phrase\">{}</span>",
+        tr(locale, Text::CondMatch),
+        tr(locale, Text::CondOfThese)
+    )
 }
 
 /// Returns the group `group`, nested `depth` groups deep.
-fn group_view(group: ConditionGroup, depth: u32) -> AnyView {
+fn group_view(locale: &Locale, group: ConditionGroup, depth: u32) -> String {
     let ConditionGroup {
         key,
         number,
@@ -325,72 +291,62 @@ fn group_view(group: ConditionGroup, depth: u32) -> AnyView {
     } = group;
     let nested = depth > 0;
     let not_id = format!("{key}-not");
-    let not_name = not_id.clone();
     let negation = keyed_check(
-        not_id.clone(),
-        tr(Text::CondNot),
-        view! { <input type="checkbox" id=not_id name=not_name value="true" checked=negated /> },
+        &not_id,
+        tr(locale, Text::CondNot),
+        Html::raw(format!(
+            "<input type=\"checkbox\" id=\"{0}\" name=\"{0}\" value=\"true\"{1}>",
+            Html::text(&not_id),
+            if negated { " checked" } else { "" }
+        )),
     );
-    let remove = nested.then(|| {
-        let name = tr_with(
-            Text::CondRemoveGroup,
-            &[("label", Arg::from(number.to_string()))],
-        );
-        let value = key.clone();
-        view! {
-            <div class="fui-actions">
-                <button
-                    type="submit"
-                    class="fui-icon-button"
-                    name=REMOVE_GROUP
-                    value=value
-                    aria-label=name.clone()
-                    title=name
-                >
-                    {icon(Glyph::TRASH, "16")}
-                </button>
-            </div>
-        }
-    });
-    let rows = conditions.into_iter().map(condition).collect_view();
-    let inner = groups
+    let label = || Arg::from(number.to_string());
+    let remove = if nested {
+        let name = Html::text(tr_with(locale, Text::CondRemoveGroup, &[("label", label())]).text());
+        format!(
+            "<div class=\"fui-actions\"><button type=\"submit\" name=\"{REMOVE_GROUP}\" value=\"{}\" aria-label=\"{name}\" title=\"{name}\" class=\"fui-icon-button\">{}</button></div>",
+            Html::text(&key),
+            icon(Glyph::TRASH, "16")
+        )
+    } else {
+        String::new()
+    };
+    let rows: String = conditions
         .into_iter()
-        .map(|inner| view! { <li>{group_view(inner, depth + 1)}</li> })
-        .collect_view();
-    let add_said = nested.then(|| {
-        String::from(tr_with(
-            Text::CondAddConditionTo,
-            &[("label", Arg::from(number.to_string()))],
-        ))
-    });
-    let condition_value = key.clone();
-    let add_group = (!nested).then(|| {
-        let value = key.clone();
-        view! {
-            <button type="submit" class=Variant::Ghost.small() name=ADD_GROUP value=value>
-                {label(Some(Glyph::PLUS), tr(Text::CondAddGroup))}
-            </button>
-        }
-    });
-    view! {
-        <div class="fui-cond-group" class:is-not=negated>
-            <div class="fui-cond-head">{match_choice(&key, number, matching)}{negation}{remove}</div>
-            <ul class="fui-cond-list">{rows}{inner}</ul>
-            <div class="fui-cluster fui-add-row">
-                <button
-                    type="submit"
-                    class=Variant::Ghost.small()
-                    name=ADD_CONDITION
-                    value=condition_value
-                    aria-label=add_said
-                >
-                    {label(Some(Glyph::PLUS), tr(Text::CondAddCondition))}
-                </button>
-                {add_group}
-            </div>
-        </div>
-    }
-    .into_any()
+        .map(|each| condition(locale, each))
+        .collect::<Vec<_>>()
+        .concat();
+    let inner: String = groups
+        .into_iter()
+        .map(|inner| format!("<li>{}</li>", group_view(locale, inner, depth + 1)))
+        .collect::<Vec<_>>()
+        .concat();
+    let add_said = if nested {
+        format!(
+            " aria-label=\"{}\"",
+            Html::text(tr_with(locale, Text::CondAddConditionTo, &[("label", label())]).text())
+        )
+    } else {
+        String::new()
+    };
+    let add_group = if nested {
+        String::new()
+    } else {
+        format!(
+            "<button type=\"submit\" name=\"{ADD_GROUP}\" value=\"{}\" class=\"{}\">{}</button>",
+            Html::text(&key),
+            Variant::Ghost.small(),
+            crate::view::button::label(Some(Glyph::PLUS), tr(locale, Text::CondAddGroup))
+        )
+    };
+    format!(
+        "<div class=\"fui-cond-group{}\"><div class=\"fui-cond-head\">{}{negation}{remove}</div><ul class=\"fui-cond-list\">{rows}{inner}</ul><div class=\"fui-cluster fui-add-row\"><button type=\"submit\" name=\"{ADD_CONDITION}\" value=\"{}\"{add_said} class=\"{}\">{}</button>{add_group}</div></div>",
+        if negated { " is-not" } else { "" },
+        match_choice(locale, &key, number, matching),
+        Html::text(&key),
+        Variant::Ghost.small(),
+        crate::view::button::label(Some(Glyph::PLUS), tr(locale, Text::CondAddCondition))
+    )
 }
 
 /// Returns the condition groups of a query, `group` the outermost.
@@ -400,6 +356,6 @@ fn group_view(group: ConditionGroup, depth: u32) -> AnyView {
 /// [`ADD_GROUP`]). Only the outermost group offers Add a group; a nested
 /// group offers its own Remove.
 #[must_use]
-pub fn condition_groups(group: ConditionGroup) -> AnyView {
-    group_view(group, 0)
+pub fn condition_groups(locale: &Locale, group: ConditionGroup) -> Html {
+    Html::raw(group_view(locale, group, 0))
 }

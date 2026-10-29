@@ -6,13 +6,12 @@
 
 use ferrohealth_ui::view::flow::FlowState;
 use ferrohealth_ui::view::state::{Mark, state};
-use leptos::prelude::*;
 
 use crate::markup::has;
 
 /// The HTML of the state mark `mark` beside `word`, with `detail`.
 fn drawn(mark: Mark, word: &str, detail: Option<&str>) -> String {
-    Owner::new().with(|| state(mark, word, detail.map(str::to_owned)).to_html())
+    state(mark, word, detail.map(str::to_owned)).to_string()
 }
 
 #[test]
@@ -70,7 +69,7 @@ fn a_state_switched_off_is_the_hollow_ring_with_its_word_muted() {
 fn a_detail_follows_the_word_quietly_and_is_text() {
     let html = drawn(Mark::Warn, "1 warning", Some("<b>2,940 ms</b>"));
     assert!(
-        html.contains(r#"<span class="fui-status-detail">&lt;b&gt;2,940 ms&lt;/b&gt;</span>"#),
+        html.contains(r#"<span class="fui-status-detail">&#60;b&#62;2,940 ms&#60;/b&#62;</span>"#),
         "{html}"
     );
     let plain = drawn(Mark::Ok, "Compiles", None);

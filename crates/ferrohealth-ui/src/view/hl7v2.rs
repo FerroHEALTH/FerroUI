@@ -14,9 +14,8 @@
 //! console reads the message with its own HL7 v2 model and hands the
 //! segments over. No specification governs the viewer: our own design.
 
-use leptos::prelude::*;
-
 use crate::highlight::{self, Language};
+use crate::html::Html;
 
 /// One field of a parsed segment.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -46,38 +45,24 @@ pub struct Hl7Segment {
 ///
 /// A carriage return, a line feed or both end a segment.
 #[must_use]
-pub fn hl7v2_raw(label: impl Into<String>, message: &str) -> AnyView {
+pub fn hl7v2_raw(label: impl Into<String>, message: &str) -> Html {
     let text = message.replace("\r\n", "\n").replace('\r', "\n");
     let text = text.strip_suffix('\n').unwrap_or(&text);
-    let lines = highlight::lines(Language::Hl7v2, text);
-    let last = lines.len().saturating_sub(1);
-    let lines = lines
-        .into_iter()
-        .enumerate()
-        .map(|(index, tokens)| {
-            let tokens = tokens
-                .into_iter()
-                .map(|token| match token.kind.class() {
-                    Some(class) => view! { <span class=class>{token.text}</span> }.into_any(),
-                    None => token.text.into_any(),
-                })
-                .collect_view();
-            let end = (index < last).then_some("\n");
-            view! { {tokens}{end} }
-        })
-        .collect_view();
-    view! {
-        <pre class="fui-hl7-raw" role="region" aria-label=label.into() tabindex="0">
-            {lines}
-        </pre>
-    }
-    .into_any()
+    let lines: Vec<String> = highlight::lines(Language::Hl7v2, text)
+        .iter()
+        .map(|tokens| highlight::line_html(tokens))
+        .collect();
+    Html::raw(format!(
+        "<pre role=\"region\" aria-label=\"{}\" tabindex=\"0\" class=\"fui-hl7-raw\">{}</pre>",
+        Html::text(label.into()),
+        lines.join("\n")
+    ))
 }
 
 /// Returns one segment's block: its id and name over its fields.
-fn segment(segment: Hl7Segment) -> AnyView {
+fn segment(segment: Hl7Segment) -> Html {
     let Hl7Segment { id, name, fields } = segment;
-    let fields = fields
+    let fields: String = fields
         .into_iter()
         .map(
             |Hl7Field {
@@ -85,38 +70,30 @@ fn segment(segment: Hl7Segment) -> AnyView {
                  name,
                  value,
              }| {
-                view! {
-                    <div>
-                        <dt>{position}</dt>
-                        <dd class="fui-hl7-name">{name}</dd>
-                        <dd>{value}</dd>
-                    </div>
-                }
+                format!(
+                    "<div><dt>{}</dt><dd class=\"fui-hl7-name\">{}</dd><dd>{}</dd></div>",
+                    Html::text(position),
+                    Html::text(name),
+                    Html::text(value)
+                )
             },
         )
-        .collect_view();
-    view! {
-        <li class="fui-hl7-seg">
-            <p class="fui-hl7-seg-head">
-                <span class="fui-hl7-seg-id">{id}</span>
-                " "
-                <span>{name}</span>
-            </p>
-            <dl class="fui-hl7-fields">{fields}</dl>
-        </li>
-    }
-    .into_any()
+        .collect::<Vec<_>>()
+        .concat();
+    Html::raw(format!(
+        "<li class=\"fui-hl7-seg\"><p class=\"fui-hl7-seg-head\"><span class=\"fui-hl7-seg-id\">{}</span> <span>{}</span></p><dl class=\"fui-hl7-fields\">{fields}</dl></li>",
+        Html::text(id),
+        Html::text(name)
+    ))
 }
 
 /// Returns the message as read, one block per segment of `segments`, as a
 /// list named `label`.
 #[must_use]
-pub fn hl7v2_segments(label: impl Into<String>, segments: Vec<Hl7Segment>) -> AnyView {
-    let segments = segments.into_iter().map(segment).collect_view();
-    view! {
-        <ul class="fui-hl7-segs" aria-label=label.into()>
-            {segments}
-        </ul>
-    }
-    .into_any()
+pub fn hl7v2_segments(label: impl Into<String>, segments: Vec<Hl7Segment>) -> Html {
+    let segments: Html = segments.into_iter().map(segment).collect();
+    Html::raw(format!(
+        "<ul aria-label=\"{}\" class=\"fui-hl7-segs\">{segments}</ul>",
+        Html::text(label.into())
+    ))
 }

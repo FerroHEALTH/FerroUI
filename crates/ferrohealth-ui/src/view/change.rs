@@ -9,9 +9,8 @@
 //! well as tone, and an absent value reads "not set", so a change never
 //! rides on colour alone.
 
-use leptos::prelude::*;
-
-use crate::i18n::{Text, tr};
+use crate::html::Html;
+use crate::i18n::{Locale, Text, tr};
 use crate::table::view::{Body, Column, DataTable, Sorting, data_table};
 
 /// One setting's change.
@@ -26,70 +25,73 @@ pub struct Change {
 }
 
 /// The columns of a change table, named in the page's locale.
-fn columns() -> [Column; 3] {
+fn columns(locale: &Locale) -> [Column; 3] {
     [
-        Column::owned("key", tr(Text::ChangeSetting)),
-        Column::owned("from", tr(Text::ChangeBefore)),
-        Column::owned("to", tr(Text::ChangeAfter)),
+        Column::owned("key", tr(locale, Text::ChangeSetting)),
+        Column::owned("from", tr(locale, Text::ChangeBefore)),
+        Column::owned("to", tr(locale, Text::ChangeAfter)),
     ]
 }
 
 /// Returns one side of a change: `value` marked with `sign` in the removed
 /// or the added tone, or "not set".
-fn side(value: Option<&String>, sign: &'static str, removed: bool) -> AnyView {
+fn side(locale: &Locale, value: Option<&String>, sign: &'static str, removed: bool) -> String {
     let class = if removed {
         "fui-change fui-change-removed"
     } else {
         "fui-change fui-change-added"
     };
     match value {
-        Some(value) => view! {
-            <span class=class>
-                <span class="fui-change-sign" aria-hidden="true">
-                    {sign}
-                </span>
-                <span class="fui-sr-only">
-                    {tr(if removed { Text::ChangeRemoved } else { Text::ChangeAdded }).map(|words| format!("{words} "))}
-                </span>
-                <code>{value.clone()}</code>
-            </span>
+        Some(value) => {
+            let said = tr(
+                locale,
+                if removed {
+                    Text::ChangeRemoved
+                } else {
+                    Text::ChangeAdded
+                },
+            )
+            .map(|words| format!("{words} "));
+            format!(
+                "<span class=\"{class}\"><span aria-hidden=\"true\" class=\"fui-change-sign\">{sign}</span><span class=\"fui-sr-only\">{said}</span><code>{}</code></span>",
+                Html::text(value)
+            )
         }
-        .into_any(),
-        None => view! { <span class="fui-muted">{tr(Text::ChangeNotSet)}</span> }.into_any(),
+        None => format!(
+            "<span class=\"fui-muted\">{}</span>",
+            tr(locale, Text::ChangeNotSet)
+        ),
     }
 }
 
 /// Returns the table of `changes` captioned `caption`; an empty list reads
 /// as a sentence.
 #[must_use]
-pub fn change_table(caption: impl Into<String>, changes: &[Change]) -> AnyView {
+pub fn change_table(locale: &Locale, caption: impl Into<String>, changes: &[Change]) -> Html {
     let caption = caption.into();
     if changes.is_empty() {
-        return view! { <p class="fui-muted">{tr(Text::ChangeNone)}</p> }.into_any();
+        return Html::raw(format!(
+            "<p class=\"fui-muted\">{}</p>",
+            tr(locale, Text::ChangeNone)
+        ));
     }
-    let before = tr(Text::ChangeBefore);
-    let after = tr(Text::ChangeAfter);
-    let rows = changes
+    let before = Html::text(tr(locale, Text::ChangeBefore).text());
+    let after = Html::text(tr(locale, Text::ChangeAfter).text());
+    let rows: Html = changes
         .iter()
         .map(|change| {
-            view! {
-                <tr>
-                    <th scope="row">
-                        <code>{change.key.clone()}</code>
-                    </th>
-                    <td data-label=before.clone()>{side(change.from.as_ref(), "−", true)}</td>
-                    <td data-label=after.clone()>{side(change.to.as_ref(), "+", false)}</td>
-                </tr>
-            }
+            Html::raw(format!(
+                "<tr><th scope=\"row\"><code>{}</code></th><td data-label=\"{before}\">{}</td><td data-label=\"{after}\">{}</td></tr>",
+                Html::text(&change.key),
+                side(locale, change.from.as_ref(), "\u{2212}", true),
+                side(locale, change.to.as_ref(), "+", false)
+            ))
         })
-        .collect_view()
-        .into_any();
+        .collect();
     data_table(DataTable {
         caption: &caption,
-        columns: &columns(),
+        columns: &columns(locale),
         sorting: Sorting::default(),
         body: Body::Rows(rows),
     })
-    .into_any()
-    .into_any()
 }

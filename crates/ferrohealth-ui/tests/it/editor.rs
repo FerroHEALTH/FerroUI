@@ -7,19 +7,19 @@
 //! links and the current row.
 
 use ferrohealth_ui::highlight::Language;
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::view::code::Gravity;
 use ferrohealth_ui::view::diagnostics::{
     DiagnosticsWords, FileFindings, Finding, Position, WINDOW, diagnostics, diagnostics_by_file,
 };
-use ferrohealth_ui::widget::editor::{
-    Editor, EditorWords, LineMark, MarkKind, Opened, Panel, code_editor, code_editor_by_edit,
-    editor_diagnostics, editor_panel, editor_panel_by_edit, editor_split,
+use ferrohealth_ui::view::editor::{
+    Editor, EditorWords, LineMark, MarkKind, Opened, Panel, code_editor, editor_diagnostics,
+    editor_panel, editor_split,
 };
-use leptos::prelude::*;
 use std::time::{Duration, Instant};
 
 use crate::markup::{has, tags};
-use crate::render::html;
+use crate::render::{en, html};
 
 /// A finding of `gravity` with `code` at `line` and `column`.
 fn finding(gravity: Gravity, code: &str, at: Option<(u32, u32)>) -> Finding {
@@ -73,7 +73,7 @@ fn the_list_draws_errors_first_grouped_by_file_with_counts_and_line_links() {
             ],
         ),
     ];
-    let shown = html(|| diagnostics_by_file("Diagnostics, by file", &files));
+    let shown = html(diagnostics_by_file(&en(), "Diagnostics, by file", &files));
     assert_eq!(
         vec!["FC-100", "FC-201", "FC-311", "FC-310"],
         codes(&shown),
@@ -110,7 +110,7 @@ fn the_list_draws_errors_first_grouped_by_file_with_counts_and_line_links() {
     );
     assert!(shown.contains("Mapping synthetic_weight"), "{shown}");
     assert!(
-        shown.contains("FC-201 says &lt;why&gt; &amp; how."),
+        shown.contains("FC-201 says &#60;why&#62; &#38; how."),
         "a message is text: {shown}"
     );
     assert!(!shown.contains(" style="), "{shown}");
@@ -128,7 +128,7 @@ fn a_row_says_its_gravity_in_shape_colour_and_word() {
             finding(Gravity::Warning, "W", Some((2, 1))),
         ],
     );
-    let shown = html(|| diagnostics("Diagnostics", &one));
+    let shown = html(diagnostics(&en(), "Diagnostics", &one));
     assert!(
         has(&shown, "li", &[("class", "fui-diag fui-tone-bad")]),
         "{shown}"
@@ -161,7 +161,7 @@ fn the_row_of_the_current_line_is_current() {
             finding(Gravity::Error, "E", Some((9, 1))),
         ],
     );
-    let shown = html(|| diagnostics("Diagnostics", &one));
+    let shown = html(diagnostics(&en(), "Diagnostics", &one));
     assert!(
         has(
             &shown,
@@ -188,8 +188,8 @@ fn editor(text: &str) -> Editor {
     Editor {
         id: "draft".into(),
         language: Language::Yaml,
-        text: Signal::stored(text.to_owned()),
-        marks: Signal::stored(vec![
+        text: (text.to_owned()),
+        marks: (vec![
             LineMark {
                 line: 3,
                 kind: MarkKind::Error,
@@ -199,7 +199,7 @@ fn editor(text: &str) -> Editor {
                 kind: MarkKind::Warning,
             },
         ]),
-        editable: Signal::stored(false),
+        editable: (false),
     }
 }
 
@@ -212,28 +212,27 @@ fn panel_of(text: &str, opened: Opened, at: Position) -> Panel {
         lead: String::from("YAML · mapping context"),
         facts: vec![String::from("UTF-8 · LF")],
         opened,
-        caret: RwSignal::new(at),
-        tools: Some(view! { <button type="submit">"Check"</button> }.into_any()),
-        end: Some(view! { <span>"console"</span> }.into_any()),
-        words: EditorWords::of_page(),
+        caret: (at),
+        tools: Some(Html::raw(String::from(
+            r#"<button type="submit">Check</button>"#,
+        ))),
+        end: Some(Html::raw(String::from("<span>console</span>"))),
+        words: EditorWords::of(&en()),
     }
 }
 
 /// The code editor over `text`, opened as `opened`, its caret at `at`.
-fn panel(text: &str, opened: Opened, at: Position) -> AnyView {
-    editor_panel(panel_of(text, opened, at), |_| {})
+fn panel(text: &str, opened: Opened, at: Position) -> Html {
+    editor_panel(panel_of(text, opened, at))
 }
 
 #[test]
-fn an_editable_editor_takes_keys_and_shows_them_before_its_island_runs() {
-    let shown = html(|| {
-        code_editor(
-            Editor {
-                editable: Signal::stored(true),
-                ..editor("a: 1\n")
-            },
-            |_| {},
-        )
+fn an_editable_editor_takes_keys_and_shows_them_before_its_module_runs() {
+    let shown = html({
+        code_editor(&Editor {
+            editable: (true),
+            ..editor("a: 1\n")
+        })
     });
     let area = tags(&shown, "textarea");
     let area = area.first().expect("the text area is drawn");
@@ -242,7 +241,7 @@ fn an_editable_editor_takes_keys_and_shows_them_before_its_island_runs() {
         has(&shown, "div", &[("class", "fui-editor-stack is-static")]),
         "{shown}"
     );
-    let read_only = html(|| code_editor(editor("a: 1\n"), |_| {}));
+    let read_only = html(code_editor(&editor("a: 1\n")));
     assert!(
         tags(&read_only, "textarea")
             .first()
@@ -261,23 +260,22 @@ fn an_editable_editor_takes_keys_and_shows_them_before_its_island_runs() {
     };
     assert!(
         rule("  .fui-editor-stack.is-static > .fui-editor-input").contains("color: var(--ink);"),
-        "the text area shows its own text until the island runs"
+        "the text area shows its own text until the module runs"
     );
 }
 
 #[test]
 fn editors_made_per_row_take_ids_made_at_run_time() {
-    let shown = html(|| {
+    let shown = html({
         (1..=3_u32)
             .map(|staged| {
                 let editor = Editor {
                     id: format!("staged-{staged}").into(),
                     ..editor("a: 1\n")
                 };
-                code_editor(editor, |_| {})
+                code_editor(&editor)
             })
-            .collect_view()
-            .into_any()
+            .collect::<Html>()
     });
     for staged in 1..=3_u32 {
         let id = format!("staged-{staged}");
@@ -291,7 +289,7 @@ fn editors_made_per_row_take_ids_made_at_run_time() {
 #[test]
 fn the_editor_draws_its_toolbar_marks_and_status_line() {
     let text = "a: 1\nb: </textarea>&\nc: 3\n";
-    let shown = html(|| {
+    let shown = html({
         panel(
             text,
             Opened::Text(String::from("a: 1\n")),
@@ -369,10 +367,14 @@ fn the_editor_draws_its_toolbar_marks_and_status_line() {
 #[test]
 fn the_status_line_says_unchanged_or_new() {
     let text = "a: 1\n";
-    let same = html(|| panel(text, Opened::Text(text.to_owned()), Position::default()));
+    let same = html(panel(
+        text,
+        Opened::Text(text.to_owned()),
+        Position::default(),
+    ));
     assert!(same.contains("Unchanged"), "{same}");
     assert!(!same.contains("fui-editor-dirty"), "{same}");
-    let new = html(|| panel("", Opened::New, Position::default()));
+    let new = html(panel("", Opened::New, Position::default()));
     assert!(new.contains("New file"), "{new}");
     assert!(
         has(
@@ -387,7 +389,7 @@ fn the_status_line_says_unchanged_or_new() {
 
 #[test]
 fn a_draft_opened_changed_says_so_and_counts_its_lines() {
-    let shown = html(|| {
+    let shown = html({
         panel(
             "a: 1\nb: 2\n\nc: 3\n",
             Opened::Text(String::from("a: 1\n")),
@@ -403,26 +405,10 @@ fn a_draft_opened_changed_says_so_and_counts_its_lines() {
 }
 
 #[test]
-fn an_editor_that_hands_over_edits_draws_as_the_whole_text_one_does() {
-    // No specification governs this: our own design; the callback changes what the console
-    // hears, never what the server draws (#478).
-    let text = "a: 1\nb: 2\n";
-    assert_eq!(
-        html(|| code_editor(editor(text), |_| {})),
-        html(|| code_editor_by_edit(editor(text), |_| {}))
-    );
-    let opened = || Opened::Text(String::from("a: 1\n"));
-    assert_eq!(
-        html(|| editor_panel(panel_of(text, opened(), Position::default()), |_| {})),
-        html(|| editor_panel_by_edit(panel_of(text, opened(), Position::default()), |_| {}))
-    );
-}
-
-#[test]
 fn on_a_marked_line_the_line_and_its_row_are_current_and_the_status_says_so() {
     let text = "a: 1\nb: 2\nc: 3\n";
     let caret = Position { line: 3, column: 2 };
-    let shown = html(|| panel(text, Opened::New, caret));
+    let shown = html(panel(text, Opened::New, caret));
     assert!(shown.contains("Ln 3, Col 2"), "{shown}");
     assert!(
         has(
@@ -445,15 +431,15 @@ fn on_a_marked_line_the_line_and_its_row_are_current_and_the_status_says_so() {
             finding(Gravity::Warning, "W", Some((2, 1))),
         ],
     );
-    let beside = html(|| {
+    let beside = html({
         editor_split(
             panel(text, Opened::New, caret),
             editor_diagnostics(
                 "Diagnostics",
                 &one,
-                &DiagnosticsWords::of_page(),
-                editor(text),
-                RwSignal::new(caret),
+                &DiagnosticsWords::of(&en()),
+                &editor(text),
+                caret,
             ),
         )
     });
@@ -481,13 +467,20 @@ fn a_list_with_no_finding_says_so_in_one_line() {
     for (what, shown) in [
         (
             "one clean file",
-            html(|| diagnostics("Diagnostics", &clean)),
+            html(diagnostics(&en(), "Diagnostics", &clean)),
         ),
         (
             "a clean file among others",
-            html(|| diagnostics_by_file("Diagnostics", std::slice::from_ref(&clean))),
+            html(diagnostics_by_file(
+                &en(),
+                "Diagnostics",
+                std::slice::from_ref(&clean),
+            )),
         ),
-        ("no file", html(|| diagnostics_by_file("Diagnostics", &[]))),
+        (
+            "no file",
+            html(diagnostics_by_file(&en(), "Diagnostics", &[])),
+        ),
     ] {
         assert!(
             has(&shown, "li", &[("class", "fui-diags-empty")])
@@ -520,7 +513,11 @@ fn rows(html: &str) -> usize {
 
 #[test]
 fn a_file_past_the_window_draws_its_first_rows_and_a_link_to_them_all() {
-    let windowed = html(|| diagnostics("Diagnostics", &many(2_000, Some("?findings=all"))));
+    let windowed = html(diagnostics(
+        &en(),
+        "Diagnostics",
+        &many(2_000, Some("?findings=all")),
+    ));
     assert_eq!(WINDOW, rows(&windowed), "the window holds the first rows");
     assert!(
         has(&windowed, "li", &[("class", "fui-diags-more")])
@@ -529,15 +526,16 @@ fn a_file_past_the_window_draws_its_first_rows_and_a_link_to_them_all() {
             && windowed.contains("Show all 2000"),
         "one quiet row says how many more there are and links to them: {windowed}"
     );
-    let whole = html(|| diagnostics("Diagnostics", &many(2_000, None)));
+    let whole = html(diagnostics(&en(), "Diagnostics", &many(2_000, None)));
     assert_eq!(
         2_000,
         rows(&whole),
         "the page the link opens draws them all"
     );
     assert!(!whole.contains("fui-diags-more"));
-    let full = html(|| {
+    let full = html({
         diagnostics(
+            &en(),
             "Diagnostics",
             &many(u32::try_from(WINDOW).unwrap(), Some("?findings=all")),
         )
@@ -566,17 +564,14 @@ fn layer_time(lines: u32) -> Duration {
         .map(|_| {
             let (text, marks) = (text.clone(), marks.clone());
             let start = Instant::now();
-            let drawn = html(move || {
-                code_editor(
-                    Editor {
-                        id: "draft".into(),
-                        language: Language::Yaml,
-                        text: Signal::stored(text),
-                        marks: Signal::stored(marks),
-                        editable: Signal::stored(true),
-                    },
-                    |_| {},
-                )
+            let drawn = html({
+                code_editor(&Editor {
+                    id: "draft".into(),
+                    language: Language::Yaml,
+                    text: (text),
+                    marks: (marks),
+                    editable: (true),
+                })
             });
             let took = start.elapsed();
             assert!(drawn.contains("fui-mark-warning"), "the marks are drawn");

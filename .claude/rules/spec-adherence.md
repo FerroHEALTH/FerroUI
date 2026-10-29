@@ -17,8 +17,9 @@ how another library behaves:
    text and attribute values.
 4. **CSS** (<https://www.w3.org/Style/CSS/>): cascade layers, custom
    properties, `prefers-color-scheme`, `prefers-reduced-motion`.
-5. **The Leptos book** (<https://github.com/leptos-rs/book>, `main`, Leptos
-   0.8) and the docs.rs pages of the pinned crates, for every Leptos question.
+5. **The Askama book** (<https://askama.readthedocs.io/>, Askama 0.16) and
+   the docs.rs pages of the pinned crates, for every template question, and
+   MDN for a browser API a script module calls.
 
 ## Hard rules
 

@@ -21,9 +21,8 @@
 //! of saying every field agrees. No specification governs the layout: our
 //! own design.
 
-use leptos::prelude::*;
-
-use crate::i18n::{Text, Word, tr, tr_with};
+use crate::html::Html;
+use crate::i18n::{Locale, Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::tone::Tone;
 use crate::view::status::badge;
@@ -47,10 +46,10 @@ pub struct CompareRecord {
     pub title: String,
     /// A quiet line under the title, when the record has one.
     pub sub: Option<String>,
-    /// The record's value of each field, `None` where it has none. A value
-    /// is drawn each time a form shows it, so it may be an island such as
-    /// a masked identifier with its reveal, or a list of identifiers.
-    pub values: Vec<Option<ViewFn>>,
+    /// The record's value of each field, `None` where it has none, such as
+    /// a masked identifier or a list of identifiers; it is drawn in each
+    /// form that shows it.
+    pub values: Vec<Option<Html>>,
 }
 
 impl std::fmt::Debug for CompareRecord {
@@ -200,14 +199,16 @@ fn all_agree(rows: &[Row<'_>]) -> bool {
 
 /// The caption: the console's, the console's saying there is no other
 /// record, or the console's saying every field agrees.
-fn caption(table: &Compare<'_>, rows: &[Row<'_>]) -> Word {
+fn caption(locale: &Locale, table: &Compare<'_>, rows: &[Row<'_>]) -> Word {
     if table.others.is_empty() {
         tr_with(
+            locale,
             Text::CompareNoOthers,
             &[("label", table.caption.to_owned().into())],
         )
     } else if all_agree(rows) {
         tr_with(
+            locale,
             Text::CompareAllAgree,
             &[("label", table.caption.to_owned().into())],
         )
@@ -219,76 +220,75 @@ fn caption(table: &Compare<'_>, rows: &[Row<'_>]) -> Word {
 /// Returns the mark of `verdict`: its glyph and its word, the word shown
 /// for a difference or an absence and visually hidden for agreement.
 #[must_use]
-pub fn mark(verdict: Verdict) -> Option<AnyView> {
+pub fn mark(locale: &Locale, verdict: Verdict) -> Option<Html> {
     let (class, glyph, text, shown) = verdict.mark()?;
-    let word = tr(text);
-    let title = word.clone();
-    Some(
-        view! {
-            <span class=class title=title>
-                {icon(glyph, "12")}
-                <span class:fui-sr-only=!shown>{word}</span>
-            </span>
-        }
-        .into_any(),
-    )
+    let word = tr(locale, text);
+    Some(Html::raw(format!(
+        "<span title=\"{}\" class=\"{class}\">{}<span{}>{word}</span></span>",
+        Html::text(word.text()),
+        icon(glyph, "12"),
+        if shown { "" } else { " class=\"fui-sr-only\"" }
+    )))
 }
 
 /// Returns the words of a value that is not there: a dash for the eye and
 /// the word "absent" for a reader.
-fn none() -> AnyView {
-    let word = tr(Text::CompareAbsent);
-    let title = word.clone();
-    view! {
-        <span class="fui-compare-value fui-compare-none" title=title>
-            <span aria-hidden="true">"\u{2013}"</span>
-            <span class="fui-sr-only">{word}</span>
-        </span>
-    }
-    .into_any()
+fn none(locale: &Locale) -> Html {
+    let word = tr(locale, Text::CompareAbsent);
+    Html::raw(format!(
+        "<span title=\"{}\" class=\"fui-compare-value fui-compare-none\"><span aria-hidden=\"true\">\u{2013}</span><span class=\"fui-sr-only\">{word}</span></span>",
+        Html::text(word.text())
+    ))
 }
 
 /// The value of `record` at field `index`, when it has one.
-fn value_of(record: &CompareRecord, index: usize) -> Option<AnyView> {
-    record
-        .values
-        .get(index)
-        .and_then(Option::as_ref)
-        .map(ViewFn::run)
+fn value_of(record: &CompareRecord, index: usize) -> Option<Html> {
+    record.values.get(index).and_then(Option::clone)
 }
 
 /// Returns a cell of the table: the value and its mark.
-fn cell(record: &CompareRecord, index: usize, verdict: Option<Verdict>) -> AnyView {
+fn cell(locale: &Locale, record: &CompareRecord, index: usize, verdict: Option<Verdict>) -> String {
     let leading = verdict.is_none();
-    let marked = verdict.and_then(mark);
+    let marked = verdict.and_then(|verdict| mark(locale, verdict));
     let value = match value_of(record, index) {
-        Some(value) => Some(view! { <span class="fui-compare-value">{value}</span> }.into_any()),
-        None if marked.is_some() => None,
-        None => Some(none()),
+        Some(value) => format!("<span class=\"fui-compare-value\">{value}</span>"),
+        None if marked.is_some() => String::new(),
+        None => String::from(none(locale)),
     };
-    view! {
-        <td class:fui-compare-leading=leading data-label=record.title.clone()>
-            <span class="fui-compare-cell">{value} {marked}</span>
-        </td>
-    }
-    .into_any()
+    format!(
+        "<td data-label=\"{}\"{}><span class=\"fui-compare-cell\">{value}{}</span></td>",
+        Html::text(&record.title),
+        if leading {
+            " class=\"fui-compare-leading\""
+        } else {
+            ""
+        },
+        marked.unwrap_or_default()
+    )
 }
 
 /// Returns a record's column header: its title, the leading badge, and its
 /// quiet line.
-fn head(record: &CompareRecord, leading: bool) -> AnyView {
-    let badge = leading.then(|| badge(Tone::Accent, tr(Text::CompareLeading)));
+fn head(locale: &Locale, record: &CompareRecord, leading: bool) -> String {
+    let badge = if leading {
+        String::from(badge(Tone::Accent, tr(locale, Text::CompareLeading)))
+    } else {
+        String::new()
+    };
     let sub = record
         .sub
-        .clone()
-        .map(|sub| view! { <span class="fui-compare-sub">{sub}</span> });
-    view! {
-        <th scope="col" class:fui-compare-leading=leading>
-            <span class="fui-compare-title">{record.title.clone()} {badge}</span>
-            {sub}
-        </th>
-    }
-    .into_any()
+        .as_ref()
+        .map(|sub| format!("<span class=\"fui-compare-sub\">{}</span>", Html::text(sub)))
+        .unwrap_or_default();
+    format!(
+        "<th scope=\"col\"{}><span class=\"fui-compare-title\">{}{badge}</span>{sub}</th>",
+        if leading {
+            " class=\"fui-compare-leading\""
+        } else {
+            ""
+        },
+        Html::text(&record.title)
+    )
 }
 
 /// Returns the compare `table` as a table: the field names down the first
@@ -298,69 +298,53 @@ fn head(record: &CompareRecord, leading: bool) -> AnyView {
 /// card is narrower than its columns, the field and the leading record held
 /// in view. A caption whose fields all agree says so.
 #[must_use]
-pub fn compare(table: Compare<'_>) -> AnyView {
-    drawn_table(&table, false)
+pub fn compare(locale: &Locale, table: Compare<'_>) -> Html {
+    drawn_table(locale, &table, false)
 }
 
 /// The table [`compare`] and [`compare_pair`] draw; `pair` hides it below
 /// 64 rem, where the stacked form takes its place.
-fn drawn_table(table: &Compare<'_>, pair: bool) -> AnyView {
+fn drawn_table(locale: &Locale, table: &Compare<'_>, pair: bool) -> Html {
     let rows = rows(table);
-    let caption = caption(table, &rows);
-    let label = caption.clone();
-    let heads = std::iter::once(head(table.leading, true))
-        .chain(table.others.iter().map(|other| head(other, false)))
-        .collect_view()
-        .into_any();
-    let columns = (0..table.others.len())
-        .map(|_| view! { <col class="fui-compare-col" /> })
-        .collect_view()
-        .into_any();
-    let body = rows
+    let caption = caption(locale, table, &rows);
+    let heads: String = std::iter::once(head(locale, table.leading, true))
+        .chain(table.others.iter().map(|other| head(locale, other, false)))
+        .collect::<Vec<_>>()
+        .concat();
+    let columns = "<col class=\"fui-compare-col\">".repeat(table.others.len());
+    let body: String = rows
         .iter()
         .map(|row| {
-            let cells = table
+            let cells: String = table
                 .others
                 .iter()
                 .zip(&row.verdicts)
-                .map(|(other, verdict)| cell(other, row.index, Some(*verdict)))
-                .collect_view()
-                .into_any();
-            view! {
-                <tr class:fui-compare-row-differ=row.differs()>
-                    <th scope="row">{row.field.label.clone()}</th>
-                    {cell(table.leading, row.index, None)}
-                    {cells}
-                </tr>
-            }
+                .map(|(other, verdict)| cell(locale, other, row.index, Some(*verdict)))
+                .collect::<Vec<_>>()
+                .concat();
+            format!(
+                "<tr{}><th scope=\"row\">{}</th>{}{cells}</tr>",
+                if row.differs() {
+                    " class=\"fui-compare-row-differ\""
+                } else {
+                    ""
+                },
+                Html::text(&row.field.label),
+                cell(locale, table.leading, row.index, None)
+            )
         })
-        .collect_view()
-        .into_any();
+        .collect::<Vec<_>>()
+        .concat();
     let class = if pair {
         "fui-table-scroll fui-compare-scroll fui-compare-wide"
     } else {
         "fui-table-scroll fui-compare-scroll"
     };
-    view! {
-        <div class=class role="region" aria-label=label tabindex="0">
-            <table class="fui-compare">
-                <caption>{caption}</caption>
-                <colgroup>
-                    <col class="fui-compare-col-field" />
-                    <col class="fui-compare-col" />
-                    {columns}
-                </colgroup>
-                <thead>
-                    <tr>
-                        <th scope="col">{tr(Text::CompareField)}</th>
-                        {heads}
-                    </tr>
-                </thead>
-                <tbody>{body}</tbody>
-            </table>
-        </div>
-    }
-    .into_any()
+    Html::raw(format!(
+        "<div role=\"region\" aria-label=\"{}\" tabindex=\"0\" class=\"{class}\"><table class=\"fui-compare\"><caption>{caption}</caption><colgroup><col class=\"fui-compare-col-field\"><col class=\"fui-compare-col\">{columns}</colgroup><thead><tr><th scope=\"col\">{}</th>{heads}</tr></thead><tbody>{body}</tbody></table></div>",
+        Html::text(caption.text()),
+        tr(locale, Text::CompareField)
+    ))
 }
 
 /// The most other records the stacked form offers as a choice; past it,
@@ -380,25 +364,19 @@ pub const STACKED_MAX: usize = crate::view::segmented::REVEAL_MAX;
 /// with no script. Every mark sits at the end of its value's line, so the
 /// marks read as one column.
 #[must_use]
-pub fn compare_stacked(table: Compare<'_>, shown: usize) -> AnyView {
-    stacked(&table, shown, false)
+pub fn compare_stacked(locale: &Locale, table: Compare<'_>, shown: usize) -> Html {
+    stacked(locale, &table, shown, false)
 }
 
 /// Returns the compare `table` as the table from 64 rem and the stacked
 /// form below it, `shown` the record the stacked form reads first.
 #[must_use]
-pub fn compare_pair(table: Compare<'_>, shown: usize) -> AnyView {
-    let wide = drawn_table(&table, true);
-    let narrow = stacked(&table, shown, true);
-    view! {
-        {wide}
-        {narrow}
-    }
-    .into_any()
+pub fn compare_pair(locale: &Locale, table: Compare<'_>, shown: usize) -> Html {
+    drawn_table(locale, &table, true).then(stacked(locale, &table, shown, true))
 }
 
 /// The stacked form; `pair` hides it from 64 rem, where the table shows.
-fn stacked(table: &Compare<'_>, shown: usize, pair: bool) -> AnyView {
+fn stacked(locale: &Locale, table: &Compare<'_>, shown: usize, pair: bool) -> Html {
     let rows = rows(table);
     let shown = shown.min(table.others.len().saturating_sub(1));
     let name = format!("{}-read", table.id);
@@ -409,82 +387,67 @@ fn stacked(table: &Compare<'_>, shown: usize, pair: bool) -> AnyView {
     };
     if table.others.is_empty() {
         let none = tr_with(
+            locale,
             Text::CompareNoOthers,
             &[("label", table.caption.to_owned().into())],
         );
-        return view! {
-            <div class=class>
-                <p class="fui-small fui-muted">{none}</p>
-            </div>
-        }
-        .into_any();
+        return Html::raw(format!(
+            "<div class=\"{class}\"><p class=\"fui-small fui-muted\">{none}</p></div>"
+        ));
     }
     let against = tr_with(
+        locale,
         Text::CompareMarkedAgainst,
         &[("title", table.leading.title.clone().into())],
     );
     if table.others.len() > STACKED_MAX {
-        let records = disclosures(table, &rows, shown, &name);
-        return view! {
-            <div class=class>
-                <p class="fui-small fui-muted">{against}</p>
-                <div class="fui-compare-records">{records}</div>
-            </div>
-        }
-        .into_any();
+        let records = disclosures(locale, table, &rows, shown, &name);
+        return Html::raw(format!(
+            "<div class=\"{class}\"><p class=\"fui-small fui-muted\">{against}</p><div class=\"fui-compare-records\">{records}</div></div>"
+        ));
     }
-    let segments = table
+    let name_text = Html::text(&name);
+    let segments: String = table
         .others
         .iter()
         .enumerate()
         .map(|(index, record)| {
-            let id = format!("{name}-{index}");
-            let label_for = id.clone();
-            view! {
-                <label for=label_for class="fui-segment">
-                    <input
-                        type="radio"
-                        id=id
-                        name=name.clone()
-                        value=record.key.clone()
-                        checked=index == shown
-                        class="fui-sr-only"
-                    />
-                    {record.title.clone()}
-                </label>
-            }
-            .into_any()
+            format!(
+                "<label for=\"{name_text}-{index}\" class=\"fui-segment\"><input type=\"radio\" id=\"{name_text}-{index}\" name=\"{name_text}\" value=\"{}\"{} class=\"fui-sr-only\">{}</label>",
+                Html::text(&record.key),
+                if index == shown { " checked" } else { "" },
+                Html::text(&record.title)
+            )
         })
-        .collect_view()
-        .into_any();
-    let parts = table
+        .collect::<Vec<_>>()
+        .concat();
+    let parts: String = table
         .others
         .iter()
         .enumerate()
         .map(|(other, record)| {
-            view! { <div class="fui-revealed">{record_rows(table, &rows, other, record)}</div> }
-                .into_any()
+            format!(
+                "<div class=\"fui-revealed\">{}</div>",
+                record_rows(locale, table, &rows, other, record)
+            )
         })
-        .collect_view()
-        .into_any();
-    view! {
-        <div class=class>
-            <div class="fui-reveal">
-                <fieldset class="fui-fieldset fui-choice">
-                    <legend class="fui-label">{tr(Text::CompareRecordToRead)}</legend>
-                    <div class="fui-segmented">{segments}</div>
-                </fieldset>
-                <p class="fui-small fui-muted">{against}</p>
-                <div class="fui-reveal-parts">{parts}</div>
-            </div>
-        </div>
-    }
-    .into_any()
+        .collect::<Vec<_>>()
+        .concat();
+    Html::raw(format!(
+        "<div class=\"{class}\"><div class=\"fui-reveal\"><fieldset class=\"fui-fieldset fui-choice\"><legend class=\"fui-label\">{}</legend><div class=\"fui-segmented\">{segments}</div></fieldset><p class=\"fui-small fui-muted\">{against}</p><div class=\"fui-reveal-parts\">{parts}</div></div></div>",
+        tr(locale, Text::CompareRecordToRead)
+    ))
 }
 
 /// Returns every other record of `table` as a native disclosure, one open
 /// at a time, `shown` open first.
-fn disclosures(table: &Compare<'_>, rows: &[Row<'_>], shown: usize, name: &str) -> AnyView {
+fn disclosures(
+    locale: &Locale,
+    table: &Compare<'_>,
+    rows: &[Row<'_>],
+    shown: usize,
+    name: &str,
+) -> String {
     table
         .others
         .iter()
@@ -492,66 +455,64 @@ fn disclosures(table: &Compare<'_>, rows: &[Row<'_>], shown: usize, name: &str) 
         .map(|(other, record)| {
             let sub = record
                 .sub
-                .clone()
-                .map(|sub| view! { <span class="fui-compare-sub">{sub}</span> });
-            view! {
-                <details class="fui-disclosure fui-compare-record" name=name.to_owned() open=other == shown>
-                    <summary>
-                        <span class="fui-compare-title">{record.title.clone()}</span>
-                        {sub}
-                    </summary>
-                    <div>{record_rows(table, rows, other, record)}</div>
-                </details>
-            }
-            .into_any()
+                .as_ref()
+                .map(|sub| format!("<span class=\"fui-compare-sub\">{}</span>", Html::text(sub)))
+                .unwrap_or_default();
+            format!(
+                "<details name=\"{}\"{} class=\"fui-disclosure fui-compare-record\"><summary><span class=\"fui-compare-title\">{}</span>{sub}</summary><div>{}</div></details>",
+                Html::text(name),
+                if other == shown { " open" } else { "" },
+                Html::text(&record.title),
+                record_rows(locale, table, rows, other, record)
+            )
         })
-        .collect_view()
-        .into_any()
+        .collect::<Vec<_>>()
+        .concat()
 }
 
 /// Returns the fields of `record`, the other record at index `other`, as
 /// the stacked form reads them: each marked against the leading record,
 /// whose value follows each one that differs.
 fn record_rows(
+    locale: &Locale,
     table: &Compare<'_>,
     rows: &[Row<'_>],
     other: usize,
     record: &CompareRecord,
-) -> AnyView {
-    let lines = rows
+) -> String {
+    let lines: String = rows
         .iter()
         .map(|row| {
             let verdict = row.verdicts.get(other).copied().unwrap_or(Verdict::Unmarked);
             let differs = verdict == Verdict::Differ;
-            let value = value_of(record, row.index);
-            let leading = differs.then(|| {
-                let lead = value_of(table.leading, row.index).unwrap_or_else(none);
-                view! {
-                    <span class="fui-small fui-muted fui-compare-lead">
-                        {tr_with(Text::CompareLeadingValue, &[("title", table.leading.title.clone().into())])}
-                        " "
-                        {lead}
-                    </span>
-                }
-                .into_any()
-            });
-            view! {
-                <div class:fui-compare-row-differ=differs>
-                    <dt>{row.field.label.clone()}</dt>
-                    <dd>
-                        <span class="fui-compare-cell">
-                            <span class="fui-compare-value">{value}</span>
-                            {mark(verdict)}
-                        </span>
-                        {leading}
-                    </dd>
-                </div>
-            }
-            .into_any()
+            let value = value_of(record, row.index).unwrap_or_default();
+            let leading = if differs {
+                let lead = value_of(table.leading, row.index).unwrap_or_else(|| none(locale));
+                format!(
+                    "<span class=\"fui-small fui-muted fui-compare-lead\">{} {lead}</span>",
+                    tr_with(
+                        locale,
+                        Text::CompareLeadingValue,
+                        &[("title", table.leading.title.clone().into())]
+                    )
+                )
+            } else {
+                String::new()
+            };
+            format!(
+                "<div{}><dt>{}</dt><dd><span class=\"fui-compare-cell\"><span class=\"fui-compare-value\">{value}</span>{}</span>{leading}</dd></div>",
+                if differs {
+                    " class=\"fui-compare-row-differ\""
+                } else {
+                    ""
+                },
+                Html::text(&row.field.label),
+                mark(locale, verdict).unwrap_or_default()
+            )
         })
-        .collect_view()
-        .into_any();
-    view! { <dl class="fui-compare-stacked-rows">{lines}</dl> }.into_any()
+        .collect::<Vec<_>>()
+        .concat();
+    format!("<dl class=\"fui-compare-stacked-rows\">{lines}</dl>")
 }
 
 #[cfg(test)]

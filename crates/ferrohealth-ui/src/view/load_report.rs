@@ -12,8 +12,7 @@
 //! words carry the outcome, never the colour alone (WCAG 2.2 SC 1.4.1).
 //! No specification governs the line: our own design.
 
-use leptos::prelude::*;
-
+use crate::html::Html;
 use crate::icon::{Glyph, icon};
 use crate::tone::Tone;
 
@@ -84,16 +83,16 @@ pub struct LoadReport {
     pub arrival: Arrival,
     /// The title, a sentence that may hold a `<strong>` count or a
     /// `<code>` name.
-    pub title: AnyView,
+    pub title: Html,
     /// The counts after the title, none for a verdict with nothing to count.
     pub counts: Vec<Count>,
     /// The one action at the line's end, such as a link to the findings.
-    pub action: Option<AnyView>,
+    pub action: Option<Html>,
 }
 
 /// Returns the load report `report`.
 #[must_use]
-pub fn load_report(report: LoadReport) -> AnyView {
+pub fn load_report(report: LoadReport) -> Html {
     let LoadReport {
         outcome,
         arrival,
@@ -101,31 +100,33 @@ pub fn load_report(report: LoadReport) -> AnyView {
         counts,
         action,
     } = report;
-    let class = format!("fui-load-report {}", outcome.tone().class());
-    let role = (arrival == Arrival::AfterAction).then_some("status");
-    let counts = (!counts.is_empty()).then(|| {
-        let items = counts
+    let role = if arrival == Arrival::AfterAction {
+        " role=\"status\""
+    } else {
+        ""
+    };
+    let counts = if counts.is_empty() {
+        String::new()
+    } else {
+        let items: String = counts
             .into_iter()
             .map(|Count { value, noun }| {
-                view! {
-                    <li>
-                        <strong>{value}</strong>
-                        " "
-                        {noun}
-                    </li>
-                }
+                format!(
+                    "<li><strong>{}</strong> {}</li>",
+                    Html::text(value),
+                    Html::text(noun)
+                )
             })
-            .collect_view();
-        view! { <ul class="fui-load-counts">{items}</ul> }
-    });
-    let action = action.map(|action| view! { <div class="fui-actions">{action}</div> });
-    view! {
-        <div class=class role=role>
-            {icon(outcome.glyph(), "18")}
-            <span class="fui-load-report-title">{title}</span>
-            {counts}
-            {action}
-        </div>
-    }
-    .into_any()
+            .collect::<Vec<_>>()
+            .concat();
+        format!("<ul class=\"fui-load-counts\">{items}</ul>")
+    };
+    let action = action
+        .map(|action| format!("<div class=\"fui-actions\">{action}</div>"))
+        .unwrap_or_default();
+    Html::raw(format!(
+        "<div{role} class=\"fui-load-report {}\">{}<span class=\"fui-load-report-title\">{title}</span>{counts}{action}</div>",
+        outcome.tone().class(),
+        icon(outcome.glyph(), "18")
+    ))
 }

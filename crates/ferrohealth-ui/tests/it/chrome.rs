@@ -12,10 +12,9 @@ use std::borrow::Cow;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::style::STYLESHEET;
 use ferrohealth_ui::view::shell::{Footer, footer, lockup, mark};
-use leptos::prelude::*;
 
 use crate::markup::has;
-use crate::render::page_html;
+use crate::render::en;
 
 /// One rule of the stylesheet: the at-rules and the selector around it,
 /// outermost first, and its declarations.
@@ -238,18 +237,22 @@ fn the_dock_stops_sticking_in_a_short_window() {
 #[test]
 fn the_footer_and_the_lockup_take_paths_known_at_run_time() {
     let base = String::from("/console");
-    let page = page_html(|| {
-        let about = format!("{base}/about");
-        view! {
-            {lockup(format!("{base}/"), mark(Glyph::LAYERS), "FerroUI", "Gallery")}
-            {footer(Footer {
-                product: "FerroUI Gallery".into(),
-                version: Cow::Owned(format!("0.3.{}", 2)),
-                about: about.into(),
-            })}
-        }
-        .into_any()
-    });
+    let about = format!("{base}/about");
+    let page = lockup(
+        format!("{base}/"),
+        mark(Glyph::LAYERS),
+        "FerroUI",
+        "Gallery",
+    )
+    .then(footer(
+        &en(),
+        Footer {
+            product: "FerroUI Gallery".into(),
+            version: Cow::Owned(format!("0.3.{}", 2)),
+            about: about.into(),
+        },
+    ))
+    .to_string();
     assert!(
         has(
             &page,
