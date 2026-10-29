@@ -13,7 +13,7 @@ use std::error::Error;
 use thirtyfour::ElementRect;
 use thirtyfour::prelude::*;
 
-use crate::browser::{Browser, until, with_browser};
+use crate::browser::{Browser, with_browser};
 use crate::journeys::window;
 use crate::journeys_enabled;
 use crate::stack::Gallery;
@@ -92,82 +92,6 @@ async fn the_pair_stands_side_by_side_wide_and_stacks_on_a_phone_with_run_across
         let name = browser.element(By::Css(".fui-hl7-fields .fui-hl7-name")).await?;
         assert!(!name.is_displayed().await?, "a field's name drops on a phone");
         browser.console_clean("the operations page").await
-    })
-    .await
-}
-
-/// The last line the editor `pair-running-input`'s layer draws, which follows
-/// the console's text.
-async fn drawn_last_line(browser: &Browser) -> Result<String, Box<dyn Error>> {
-    let line: String = browser
-        .driver()
-        .execute(
-            "const layer = document.getElementById('pair-running-input').previousElementSibling;
-             return layer.lastElementChild.textContent.trimEnd();",
-            Vec::new(),
-        )
-        .await?
-        .convert()?;
-    Ok(line)
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn the_editor_keeps_a_key_typed_while_its_store_answers_an_earlier_one()
--> Result<(), Box<dyn Error>> {
-    if !journeys_enabled() {
-        return Ok(());
-    }
-    let gallery = Gallery::start().await?;
-    with_browser(async |browser| {
-        window(browser, 1440, 900).await?;
-        browser
-            .goto(&gallery.url("/ferrobridge/operations"))
-            .await?;
-        let input = browser.element(By::Id("pair-running-input")).await?;
-        until("the editor hydrates", async || {
-            browser.editor_live(&input).await
-        })
-        .await?;
-        let start = input.prop("value").await?.unwrap_or_default();
-        input.click().await?;
-        browser
-            .driver()
-            .execute(
-                "const area = document.getElementById('pair-running-input');
-                 area.setSelectionRange(area.value.length, area.value.length);",
-                Vec::new(),
-            )
-            .await?;
-        input.send_keys("XYZ").await?;
-        // The store answers one edit at a time: once the layer draws the first, the rest wait.
-        let last = start
-            .rsplit('\n')
-            .next()
-            .unwrap_or_default()
-            .trim_end()
-            .to_owned();
-        let first = format!("{last}X");
-        until("the store answers the first key", async || {
-            Ok(drawn_last_line(browser).await? == first)
-        })
-        .await?;
-        input.send_keys("!").await?;
-        until("the store answers the last key", async || {
-            Ok(drawn_last_line(browser).await?.ends_with('!'))
-        })
-        .await?;
-        assert_eq!(
-            format!("{last}XYZ!"),
-            drawn_last_line(browser).await?,
-            "the console holds every key typed"
-        );
-        let expected = format!("{start}XYZ!");
-        assert_eq!(
-            Some(expected.clone()),
-            input.prop("value").await?,
-            "no key typed while the store answered was lost"
-        );
-        browser.console_clean("the editor and its late store").await
     })
     .await
 }

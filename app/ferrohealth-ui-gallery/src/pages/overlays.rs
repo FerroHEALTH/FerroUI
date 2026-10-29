@@ -49,22 +49,27 @@ const FILES: [&str; 2] = ["synthetic-007.model.yml", "synthetic-011.extension.ym
 /// The attributes with which the `toast` module raises `flash` in place of
 /// following its link.
 fn raises(flash: &Flash) -> String {
-    let mut attributes = format!(
-        " {RAISES}=\"{}\" data-fui-toast-title=\"{}\"",
+    let line = flash
+        .line
+        .as_ref()
+        .map(|line| format!(" data-fui-toast-line=\"{}\"", t(line)))
+        .unwrap_or_default();
+    let action = flash
+        .action
+        .as_ref()
+        .map(|action| {
+            format!(
+                " data-fui-toast-action=\"{}\" data-fui-toast-href=\"{}\"",
+                t(&action.label),
+                t(&action.href)
+            )
+        })
+        .unwrap_or_default();
+    format!(
+        " {RAISES}=\"{}\" data-fui-toast-title=\"{}\"{line}{action}",
         flash.tone.name(),
         t(&flash.title)
-    );
-    if let Some(line) = &flash.line {
-        attributes.push_str(&format!(" data-fui-toast-line=\"{}\"", t(line)));
-    }
-    if let Some(action) = &flash.action {
-        attributes.push_str(&format!(
-            " data-fui-toast-action=\"{}\" data-fui-toast-href=\"{}\"",
-            t(&action.label),
-            t(&action.href)
-        ));
-    }
-    attributes
+    )
 }
 
 /// The path of this brand's page `page`.

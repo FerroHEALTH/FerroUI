@@ -87,10 +87,7 @@ pub(super) async fn records(
     shot_of(browser, brand, theme, "compare-stacked-second", &compare).await?;
     // Each Reveal leads to the reveal page, which draws its row answered.
     browser
-        .goto(&gallery.url(&format!(
-            "/{}/forms?reveal=bsn&reveal=ssn",
-            brand.key()
-        )))
+        .goto(&gallery.url(&format!("/{}/forms?reveal=bsn&reveal=ssn", brand.key())))
         .await?;
     browser.hydrated().await?;
     browser

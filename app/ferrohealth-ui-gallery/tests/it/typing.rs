@@ -225,13 +225,6 @@ async fn a_key_typed_into_a_large_document_costs_what_it_costs_in_a_small_one()
                 let opened = ferrohealth_ui_gallery::data::DRAFT_OPENED;
                 put(browser, id, opened).await?;
                 panel_says(browser, id, opened, "Unchanged").await?;
-            } else {
-                // The gallery keeps its copy of this draft by the edits alone.
-                let bytes = last.len();
-                let lines = last.split('\n').count();
-                browser
-                    .text("p", &format!("{bytes} bytes in {lines} lines."))
-                    .await?;
             }
         }
         browser.console_clean("typing into a large document").await

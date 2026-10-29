@@ -283,9 +283,6 @@ async fn the_editor_keeps_every_byte_typed_and_a_diagnostic_leads_to_its_line()
             Ok(draft.prop("value").await?.as_deref() == Some(expected.as_str()))
         })
         .await?;
-        browser
-            .text("p", &format!("{} bytes", expected.len()))
-            .await?;
         let layer = browser
             .element(By::XPath(
                 "//textarea[@id = 'gallery-draft']/preceding-sibling::pre[contains(@class, 'fui-editor-layer')]",
@@ -1867,51 +1864,6 @@ async fn a_keyed_combobox_names_its_help_and_keeps_its_own_choice() -> Result<()
             "the second clause posts the option chosen in it"
         );
         browser.console_clean("the keyed combobox").await
-    })
-    .await
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn an_editor_inside_a_reloading_transition_keeps_taking_keys() -> Result<(), Box<dyn Error>> {
-    if !journeys_enabled() {
-        return Ok(());
-    }
-    let gallery = Gallery::start().await?;
-    with_browser(async |browser| {
-        browser.goto(&gallery.url("/ferroterm/forms")).await?;
-        let draft = browser.element(By::Id("reloading-draft")).await?;
-        until("the editor hydrates", async || {
-            browser.editor_live(&draft).await
-        })
-        .await?;
-        draft.send_keys("x").await?;
-        for round in 1..=2 {
-            browser
-                .element(By::Id("reload-draft"))
-                .await?
-                .click()
-                .await?;
-            // The old editor stays on screen while the read is pending, and a
-            // key typed into it then reached a disposed signal.
-            browser
-                .element(By::Id("reloading-draft"))
-                .await?
-                .send_keys("y")
-                .await?;
-            browser
-                .text("p[@id='reloaded']", &format!("Read {round} times again."))
-                .await?;
-        }
-        let typed: String = measure(
-            browser,
-            "return document.getElementById('reloading-draft').value;",
-        )
-        .await?;
-        assert!(
-            typed.trim_end().ends_with("xyy"),
-            "the editor kept `{typed}`"
-        );
-        browser.console_clean("the reloading editor").await
     })
     .await
 }

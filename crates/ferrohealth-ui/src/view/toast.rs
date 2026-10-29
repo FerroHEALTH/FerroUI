@@ -34,8 +34,9 @@ pub const DWELL_MS: u64 = 6000;
 /// The most toasts the region shows at once.
 pub const SHOWN_MAX: usize = 3;
 
-/// The attribute of a link whose page answers with a toast, naming the
-/// toast's tone (`ok`, `info`, `warn`, `bad`); `data-fui-toast-title`,
+/// The attribute of a link whose page answers with a toast, naming its tone.
+///
+/// The tone is `ok`, `info`, `warn` or `bad`; `data-fui-toast-title`,
 /// `-line`, `-action` and `-href` carry its words and its action, and the
 /// `toast` module raises it in place of following the link.
 pub const RAISES: &str = "data-fui-toast";

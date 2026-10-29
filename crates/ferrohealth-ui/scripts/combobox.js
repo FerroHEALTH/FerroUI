@@ -117,7 +117,7 @@ export function enhance(root) {
       item.addEventListener("mousemove", () => {
         if (state.active !== row) {
           state.active = row;
-          draw();
+          highlight();
         }
       });
       item.addEventListener("click", () => choose(place));
@@ -126,6 +126,22 @@ export function enhance(root) {
     const empty = (text) => make("li", { class: "fui-combobox-empty", role: "option", "aria-disabled": "true", "aria-selected": "false", text });
     if (places.length === 0) list.append(empty(root.getAttribute("data-fui-no-match") || ""));
     if (more) list.append(empty(root.getAttribute("data-fui-more") || ""));
+    const active = state.open && state.active !== null ? places[state.active] : undefined;
+    if (active === undefined) input.removeAttribute("aria-activedescendant");
+    else {
+      input.setAttribute("aria-activedescendant", id + "-option-" + active);
+      const row = list.children[state.active];
+      if (row && row.scrollIntoView) row.scrollIntoView({ block: "nearest" });
+    }
+  }
+  // Moves the highlight among the rows drawn, keeping every row.
+  function highlight() {
+    const { places } = view();
+    [...list.children].forEach((item, row) => {
+      if (item.getAttribute("role") !== "option" || item.hasAttribute("aria-disabled")) return;
+      if (state.active === row) item.setAttribute("data-active", "true");
+      else item.removeAttribute("data-active");
+    });
     const active = state.open && state.active !== null ? places[state.active] : undefined;
     if (active === undefined) input.removeAttribute("aria-activedescendant");
     else {
@@ -186,17 +202,17 @@ export function enhance(root) {
       if (places.length === 0) state.active = null;
       else if (state.active === null) state.active = 0;
       else state.active = key === "ArrowDown" ? Math.min(state.active + 1, places.length - 1) : Math.max(state.active - 1, 0);
-      return draw();
+      return highlight();
     }
     if (!state.open) return;
     if (key === "Home") {
       event.preventDefault();
       state.active = places.length ? 0 : null;
-      draw();
+      highlight();
     } else if (key === "End") {
       event.preventDefault();
       state.active = places.length ? places.length - 1 : null;
-      draw();
+      highlight();
     } else if (key === "Enter") {
       const place = state.active === null ? undefined : places[state.active];
       if (place === undefined && remote) return;

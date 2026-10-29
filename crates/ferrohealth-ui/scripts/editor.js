@@ -5,13 +5,23 @@
 // draws the text area over its highlighted, numbered layer, so a form posts
 // the text and the reader sees it highlighted with no script. Here each
 // edit is highlighted again with the library's tokenizers written for the
-// browser (highlight.js), and the layer redraws only the lines whose
-// highlighting or mark changed. In a code editor the toolbar's line count,
+// browser (highlight.js), line by line for a grammar whose tokens keep to
+// their line, and the layer redraws only the lines whose highlighting or
+// mark changed. In a code editor the toolbar's line count,
 // the cursor's place, the changed state and the current marked line follow
 // the caret, and the diagnostics list beside it (ul[data-fui-for]) marks
 // the row of the line the cursor is on; following a row's line link moves
 // the caret there and gives the editor the focus.
-import { linesHtml } from "./highlight.js";
+import { MAX_BYTES, linesHtml } from "./highlight.js";
+
+// The grammars whose tokens never run past a line, which an edit
+// highlights again line by line: a key costs the lines it touches, not the
+// document.
+const LINE_BY_LINE = new Set(["yaml", "plain"]);
+
+function small(text) {
+  return text.length * 3 <= MAX_BYTES || new TextEncoder().encode(text).length <= MAX_BYTES;
+}
 
 const OPEN = "";
 const SHUT = "";
@@ -112,6 +122,7 @@ export function enhance(root) {
   const isNew = panel ? panel.hasAttribute("data-fui-new") : false;
   const list = area.id ? document.querySelector("ul[data-fui-for='" + CSS.escape(area.id) + "']") : null;
   let bodies = linesHtml(language, area.value);
+  let raw = area.value.split("\n");
   let current = root.hasAttribute("data-current") ? Number(root.getAttribute("data-current")) : null;
   if (stack) stack.classList.remove("is-static");
 
@@ -138,8 +149,18 @@ export function enhance(root) {
       root.setAttribute("data-language", language);
       layer.textContent = "";
       bodies = [];
+      raw = [];
     }
-    const next = linesHtml(language, area.value);
+    const lines = area.value.split("\n");
+    let next;
+    if (LINE_BY_LINE.has(language) && raw.length === bodies.length && small(area.value)) {
+      const changed = patch(raw, lines);
+      next = bodies
+        .slice(0, changed.head)
+        .concat(lines.slice(changed.head, changed.head + changed.inserted).map((line) => linesHtml(language, line)[0]))
+        .concat(bodies.slice(bodies.length - changed.tail));
+    } else next = linesHtml(language, area.value);
+    raw = lines;
     const p = patch(bodies, next);
     const all = layer.children;
     for (let n = 0; n < p.removed; n++) if (all[p.head]) all[p.head].remove();
