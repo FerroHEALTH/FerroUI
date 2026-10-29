@@ -6,7 +6,10 @@
 // words following, says the time left in the polite live region at the
 // announce point and at zero, and drops the value from the page when the
 // seconds run out or Hide is pressed, handing the focus to Reveal when it
-// was on the value's controls (WCAG 2.2 SC 2.4.3).
+// was on the value's controls (WCAG 2.2 SC 2.4.3). A Reveal followed by the
+// keyboard hands the focus, on the page the reveal draws, to Hide or, for a
+// refusal, back to Reveal.
+const FOCUS = "fui-identifier-focus";
 const OPEN = "";
 const SHUT = "";
 const text = (word) => (word && typeof word === "object" ? word.en : word || "");
@@ -20,9 +23,33 @@ export function ticked(seconds) {
   return seconds > 1 ? seconds - 1 : 0;
 }
 
+function returned(root) {
+  try {
+    if (sessionStorage.getItem(FOCUS) !== root.id) return false;
+    sessionStorage.removeItem(FOCUS);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
 export function enhance(root) {
+  const link = root.querySelector("a.fui-identifier-reveal");
+  if (link)
+    link.addEventListener("click", (event) => {
+      if (event.detail !== 0) return;
+      try {
+        sessionStorage.setItem(FOCUS, root.id);
+      } catch (_) {
+        // Storage refused: the page opens with the focus at its top.
+      }
+    });
+  const back = returned(root);
   const total = Number(root.getAttribute("data-seconds") || "0");
-  if (!total) return;
+  if (!total) {
+    if (back && link) link.focus();
+    return;
+  }
   const words = JSON.parse(root.getAttribute("data-words") || "{}");
   const [masked, shown] = root.querySelectorAll(".fui-identifier-face");
   const ring = root.querySelector(".fui-identifier-countdown-left");
@@ -58,6 +85,10 @@ export function enhance(root) {
     draw();
     if (left === words.announce_at && live) live.textContent = text(words.left_said);
   }, 1000);
-  if (hide) hide.addEventListener("click", drop);
+  if (hide) {
+    hide.disabled = false;
+    hide.addEventListener("click", drop);
+    if (back) hide.focus();
+  }
   draw();
 }

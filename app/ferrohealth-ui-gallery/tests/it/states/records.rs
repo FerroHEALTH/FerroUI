@@ -85,24 +85,14 @@ pub(super) async fn records(
     press(browser, &stacked).await?;
     let compare = browser.element(By::Css(".fui-compare-alone")).await?;
     shot_of(browser, brand, theme, "compare-stacked-second", &compare).await?;
+    // Each Reveal leads to the reveal page, which draws its row answered.
     browser
-        .goto(&gallery.url(&format!("/{}/forms", brand.key())))
+        .goto(&gallery.url(&format!(
+            "/{}/forms?reveal=bsn&reveal=ssn",
+            brand.key()
+        )))
         .await?;
-    let hydrated = browser
-        .element(By::Css("#identifier-bsn .fui-identifier-press"))
-        .await?;
-    until("the identifiers have hydrated", async || {
-        Ok(hydrated.attr("hidden").await?.is_none())
-    })
-    .await?;
-    for each in ["bsn", "ssn"] {
-        let reveal = browser
-            .element(By::Css(format!(
-                "#identifier-{each} button[aria-pressed='false']"
-            )))
-            .await?;
-        press(browser, &reveal).await?;
-    }
+    browser.hydrated().await?;
     browser
         .element(By::Css("#identifier-ssn .fui-identifier-refused"))
         .await?;

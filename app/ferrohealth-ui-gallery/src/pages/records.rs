@@ -466,15 +466,15 @@ fn answer(v: &Visit, row: &IdentifierRow) -> Reveal {
     })
 }
 
-/// The identifiers table: each row in its own state, the one the address's
+/// The identifiers table: each row in its own state, each the address's
 /// `reveal` names answered as the console's reveal page would answer it.
-fn identifiers_table(v: &Visit, revealed: Option<&str>) -> Html {
+fn identifiers_table(v: &Visit, revealed: &[&str]) -> Html {
     let words = IdentifierWords::of(&v.locale);
     let brand = v.brand.key();
     let body: Html = identifier_rows()
         .into_iter()
         .map(|each| {
-            let state = if revealed == Some(each.key.as_str()) {
+            let state = if revealed.contains(&each.key.as_str()) {
                 answer(v, &each)
             } else {
                 match each.start {
@@ -514,6 +514,13 @@ fn identifiers_table(v: &Visit, revealed: Option<&str>) -> Html {
 #[must_use]
 pub fn identifiers_section(v: &Visit) -> Html {
     let reveal = v.param("reveal");
+    let revealed: Vec<&str> = v
+        .query
+        .pairs()
+        .iter()
+        .filter(|(name, _)| name == "reveal")
+        .map(|(_, key)| key.as_str())
+        .collect();
     let note = reveal
         .and_then(synthetic)
         .map(|each| {
@@ -535,6 +542,6 @@ pub fn identifiers_section(v: &Visit) -> Html {
             "<span class=\"fui-small fui-muted\">{}</span>",
             t(v.tr(Msg::RecordsMaskedNote))
         )),
-        Html::join([note, identifiers_table(v, reveal)]),
+        Html::join([note, identifiers_table(v, &revealed)]),
     )
 }

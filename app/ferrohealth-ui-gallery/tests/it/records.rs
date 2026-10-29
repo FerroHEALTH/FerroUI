@@ -205,31 +205,27 @@ pub(crate) async fn open_identifiers(
     browser
         .goto(&gallery.url(&format!("/{brand}/forms")))
         .await?;
-    let press = browser
-        .element(By::Css("#identifier-bsn .fui-identifier-press"))
-        .await?;
-    until("the identifiers have hydrated", async || {
-        Ok(press.attr("hidden").await?.is_none())
-    })
-    .await
+    browser.hydrated().await
 }
 
-/// Reveals the identifier `key` and waits for its countdown.
+/// The Reveal of the identifier `key`: a link to the console's reveal page.
+fn reveal_link(key: &str) -> By {
+    By::Css(format!("#identifier-{key} a.fui-identifier-reveal"))
+}
+
+/// Reveals the identifier `key` by its link and waits for the page its
+/// reveal draws.
 pub(crate) async fn reveal(browser: &Browser, key: &str) -> Result<(), Box<dyn Error>> {
-    let button = browser
-        .element(By::Css(format!(
-            "#identifier-{key} button[aria-pressed='false']"
-        )))
-        .await?;
+    let link = browser.element(reveal_link(key)).await?;
     browser
         .driver()
         .execute(
             "arguments[0].scrollIntoView({block: 'center'});",
-            vec![button.to_json()?],
+            vec![link.to_json()?],
         )
         .await?;
-    button.click().await?;
-    Ok(())
+    browser.click_and_load(&link).await?;
+    browser.hydrated().await
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -251,6 +247,9 @@ async fn an_identifier_reveals_counts_down_and_hides_without_moving_its_row()
             "the value is not on the page while masked"
         );
         reveal(browser, "bsn").await?;
+        let value = browser
+            .element(By::Css("#identifier-bsn .fui-identifier-value"))
+            .await?;
         until("the value shows", async || {
             Ok(value.text().await?.contains("999 000 124"))
         })
@@ -315,9 +314,7 @@ async fn the_focus_follows_reveal_hide_and_a_refusal_to_the_face_that_shows()
     with_browser(async |browser| {
         window(browser, 1440, 900).await?;
         open_identifiers(browser, &gallery, "ferropix").await?;
-        let reveal = browser
-            .element(By::Css("#identifier-bsn button[aria-pressed='false']"))
-            .await?;
+        let reveal = browser.element(reveal_link("bsn")).await?;
         browser
             .driver()
             .execute(
@@ -325,19 +322,23 @@ async fn the_focus_follows_reveal_hide_and_a_refusal_to_the_face_that_shows()
                 vec![reveal.to_json()?],
             )
             .await?;
+        let old = browser.loader().await?;
         press(browser, Key::Enter).await?;
+        until("the reveal page loads", async || {
+            Ok(browser.loader().await? != old)
+        })
+        .await?;
+        browser.hydrated().await?;
         until("the focus moves to Hide once the value shows", async || {
             focus_is(browser, "#identifier-bsn button[aria-pressed='true']").await
         })
         .await?;
         press(browser, Key::Enter).await?;
         until("the focus returns to Reveal once hidden", async || {
-            focus_is(browser, "#identifier-bsn button[aria-pressed='false']").await
+            focus_is(browser, "#identifier-bsn a.fui-identifier-reveal").await
         })
         .await?;
-        let refused = browser
-            .element(By::Css("#identifier-ssn button[aria-pressed='false']"))
-            .await?;
+        let refused = browser.element(reveal_link("ssn")).await?;
         browser
             .driver()
             .execute(
@@ -345,12 +346,18 @@ async fn the_focus_follows_reveal_hide_and_a_refusal_to_the_face_that_shows()
                 vec![refused.to_json()?],
             )
             .await?;
+        let old = browser.loader().await?;
         press(browser, Key::Enter).await?;
+        until("the refusal's page loads", async || {
+            Ok(browser.loader().await? != old)
+        })
+        .await?;
+        browser.hydrated().await?;
         browser
             .text("span", "Not revealed: the hourly limit is reached")
             .await?;
         until("the focus returns to Reveal after a refusal", async || {
-            focus_is(browser, "#identifier-ssn button[aria-pressed='false']").await
+            focus_is(browser, "#identifier-ssn a.fui-identifier-reveal").await
         })
         .await?;
         Ok(())

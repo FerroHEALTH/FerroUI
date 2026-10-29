@@ -1650,19 +1650,7 @@ async fn a_control_tabbed_to_above_the_fold_lands_below_the_sticky_top_bar()
         window(browser, 1440, 900).await?;
         browser.goto(&gallery.url("/ferroehr/forms")).await?;
         browser.element(By::Css("main h1")).await?;
-        // NOTE: Leptos 0.8 `#[island(lazy)]` hydrates after the page loads, and a
-        // masked identifier swaps its fallback link for its button then.
-        until("the identifiers have hydrated", async || {
-            let pending = browser
-                .driver()
-                .execute(
-                    "return document.querySelectorAll('.fui-identifier-press[hidden]').length;",
-                    vec![],
-                )
-                .await?;
-            Ok(*pending.json() == json!(0))
-        })
-        .await?;
+        browser.hydrated().await?;
         // From the foot of the page, the focus goes to the control after one
         // well above the fold without scrolling; Shift+Tab then moves to
         // that control, which the browser scrolls into view at the top.
