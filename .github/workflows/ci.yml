@@ -197,10 +197,13 @@ jobs:
       contents: read
       pull-requests: read
     steps:
+      # The whole history of commits and trees, each old blob fetched when a
+      # guard reads it: the screenshots of every release stay on the server (#497).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           fetch-depth: 0
+          filter: blob:none
       - name: The guards prove themselves over stub repositories
         run: |
           set -euo pipefail
@@ -562,10 +565,13 @@ jobs:
     permissions:
       contents: read
     steps:
+      # The whole history of commits and trees, each old blob fetched when a
+      # guard reads it: the screenshots of every release stay on the server (#497).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           fetch-depth: 0
+          filter: blob:none
       - name: The version, the lock and the changelog agree
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
