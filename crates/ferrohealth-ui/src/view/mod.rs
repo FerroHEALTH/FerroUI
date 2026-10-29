@@ -29,6 +29,7 @@ pub mod flow;
 pub mod form;
 pub mod help;
 pub mod kbd;
+pub mod masked;
 pub mod menu;
 pub mod nav;
 pub mod notice;

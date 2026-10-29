@@ -138,7 +138,7 @@ mod tests {
         );
         assert!(
             html.as_str()
-                .starts_with(r#"<a href="/a?b=1&amp;c=2" class="fui-button fui-button-primary">"#)
+                .starts_with(r#"<a href="/a?b=1&#38;c=2" class="fui-button fui-button-primary">"#)
                 || html.as_str().starts_with(
                     r#"<a href="/a?b=1&#38;c=2" class="fui-button fui-button-primary">"#
                 ),

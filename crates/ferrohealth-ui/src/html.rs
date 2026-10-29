@@ -131,7 +131,7 @@ impl Extend<Html> for Html {
 pub fn escape_into(out: &mut String, text: &str) {
     for c in text.chars() {
         match c {
-            '&' => out.push_str("&amp;"),
+            '&' => out.push_str("&#38;"),
             '<' => out.push_str("&#60;"),
             '>' => out.push_str("&#62;"),
             '"' => out.push_str("&#34;"),
@@ -161,7 +161,7 @@ mod tests {
     #[test]
     fn text_is_escaped_and_raw_markup_is_kept() {
         assert_eq!(
-            "a &#60;b&#62; &amp; &#34;c&#39;",
+            "a &#60;b&#62; &#38; &#34;c&#39;",
             Html::text("a <b> & \"c'").as_str()
         );
         assert_eq!("<b>x</b>", Html::raw(String::from("<b>x</b>")).as_str());

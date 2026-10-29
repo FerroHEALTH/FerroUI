@@ -118,6 +118,12 @@ pub enum Inner {
     /// A button, such as a clear or the date picker's: give it
     /// [`INNER_BUTTON`] and a name.
     Button(Html),
+    /// The eye of a masked input ([`masked_input`]), after it: held by the
+    /// pointer, by touch or by Space or Enter, it shows what was typed, and
+    /// released, it masks it again ([`crate::view::masked::hold_to_show`]).
+    /// Until the `masked` module runs it is disabled and says the field
+    /// stays masked.
+    HoldToShow(crate::view::masked::HoldWords),
 }
 
 impl Inner {
@@ -139,6 +145,7 @@ impl Inner {
                 Html::text(words)
             )),
             Self::Button(button) => button,
+            Self::HoldToShow(words) => crate::view::masked::hold_to_show(id.to_owned(), words),
         }
     }
 }
@@ -161,7 +168,7 @@ struct Masked {
 /// autocomplete, no capitals and no spelling check, as for an identifier.
 /// It carries no value: what is typed stays in the input and posts with its
 /// form. A page that answers the post draws the field empty again
-/// ([`crate::view::posted`]), so the value never comes back to the page.
+/// ([`Posted`]), so the value never comes back to the page.
 #[must_use]
 pub fn masked_input(id: &str, name: &str, described_by: Option<String>) -> Html {
     Masked {
@@ -499,9 +506,138 @@ pub fn chip_choices(
     .html()
 }
 
+/// The name every secret mark starts with: a hidden field
+/// `ferroui_secret_<hex>` whose value names the field it marks.
+pub const SECRET: &str = "ferroui_secret";
+
+/// The name of the mark of the field `name`: [`SECRET`], an underscore and
+/// the field's name in hexadecimal, so two marked fields post two names.
+fn mark_name(name: &str) -> String {
+    name.bytes().fold(format!("{SECRET}_"), |mut mark, byte| {
+        mark.push(hex_digit(byte >> 4));
+        mark.push(hex_digit(byte & 0x0f));
+        mark
+    })
+}
+
+/// The lower-case hexadecimal digit of `nibble`, 0 to 15.
+fn hex_digit(nibble: u8) -> char {
+    match nibble {
+        0..=9 => char::from(b'0' + nibble),
+        _ => char::from(b'a' + (nibble - 10)),
+    }
+}
+
+/// Whether the field `name` is a secret mark: [`SECRET`] alone (the mark
+/// of 0.5.7) or followed by an underscore and hexadecimal digits.
+fn is_mark(name: &str) -> bool {
+    name.strip_prefix(SECRET).is_some_and(|rest| {
+        rest.is_empty()
+            || rest.strip_prefix('_').is_some_and(|hex| {
+                !hex.is_empty() && hex.bytes().all(|byte| byte.is_ascii_hexdigit())
+            })
+    })
+}
+
+#[derive(Template)]
+#[template(
+    source = r#"<input type="hidden" name="{{ mark }}" value="{{ name }}">"#,
+    ext = "html"
+)]
+struct Mark<'a> {
+    mark: String,
+    name: &'a str,
+}
+
+/// Returns the hidden mark that keeps the field `name` out of the fields a
+/// page draws again ([`Posted::read`]): a secret the reader typed, such as
+/// a password, reaches the console's handler and never comes back into
+/// the page. Draw it in the same form as the field.
+#[must_use]
+pub fn secret_mark(name: &str) -> Html {
+    Mark {
+        mark: mark_name(name),
+        name,
+    }
+    .html()
+}
+
+/// The fields of a form post a page draws again, such as a form the
+/// console refused, shown with what the reader typed: every field but the
+/// ones a [`secret_mark`] names, and the marks themselves.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Posted {
+    fields: Vec<(String, String)>,
+}
+
+impl Posted {
+    /// The fields of the form body `body` (`application/x-www-form-urlencoded`,
+    /// the HTML Living Standard's form submission), each marked field and
+    /// each mark left out.
+    #[must_use]
+    pub fn read(body: &str) -> Self {
+        let pairs: Vec<(String, String)> = form_urlencoded::parse(body.as_bytes())
+            .into_owned()
+            .collect();
+        let secret: Vec<&str> = pairs
+            .iter()
+            .filter(|(name, _)| is_mark(name))
+            .map(|(_, marked)| marked.as_str())
+            .collect();
+        let fields = pairs
+            .iter()
+            .filter(|(name, _)| !is_mark(name) && !secret.contains(&name.as_str()))
+            .cloned()
+            .collect();
+        Self { fields }
+    }
+
+    /// The first value posted as `name`, if any.
+    #[must_use]
+    pub fn field(&self, name: &str) -> Option<&str> {
+        self.fields
+            .iter()
+            .find(|(field, _)| field == name)
+            .map(|(_, value)| value.as_str())
+    }
+
+    /// Every field, in the order posted.
+    #[must_use]
+    pub fn fields(&self) -> &[(String, String)] {
+        &self.fields
+    }
+
+    /// Whether nothing was posted.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.fields.is_empty()
+    }
+}
+
+/// Whether `field` names a page of the console's own origin: an absolute
+/// path, never a second slash, a backslash or a control character after
+/// which a browser would read another origin or a header.
+#[must_use]
+pub fn own_path(field: &str) -> bool {
+    field.starts_with('/')
+        && !field.starts_with("//")
+        && !field.contains('\\')
+        && !field.chars().any(char::is_control)
+}
+
+/// The page a form post returns to: the `back` field it posted when that
+/// names a page of the console's own ([`own_path`]), so a theme or a
+/// sidebar post redirects to where the reader was and never elsewhere.
+#[must_use]
+pub fn back_to(field: Option<&str>) -> Option<String> {
+    field.filter(|field| own_path(field)).map(str::to_owned)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{Field, Inner, described_by, masked_input};
+    use super::{
+        Field, Inner, Posted, back_to, described_by, is_mark, mark_name, masked_input, secret_mark,
+    };
 
     #[test]
     fn a_masked_field_posts_dots_and_names_its_help() {
@@ -520,5 +656,88 @@ mod tests {
             "{html}"
         );
         assert!(html.as_str().contains("fui-input-group"), "{html}");
+    }
+
+    #[test]
+    fn a_post_returns_to_its_own_page_with_its_query() {
+        assert_eq!(
+            Some(String::from("/files?sort=name")),
+            back_to(Some("/files?sort=name"))
+        );
+        assert_eq!(Some(String::from("/")), back_to(Some("/")));
+    }
+
+    #[test]
+    fn a_field_naming_another_origin_a_scheme_or_no_path_is_refused() {
+        for field in [
+            "//evil.example/files",
+            "/\\evil.example",
+            "https://evil.example/",
+            "javascript:alert(1)",
+            "files",
+            "",
+            "/files\r\nLocation: /x",
+        ] {
+            assert_eq!(None, back_to(Some(field)), "{field:?}");
+        }
+        assert_eq!(None, back_to(None));
+    }
+
+    #[test]
+    fn a_secret_field_is_kept_out_of_the_fields_drawn_again() {
+        let posted = Posted::read(
+            "note=seen&token%5Bvalue%5D=synthetic-secret-7&ferroui_secret=token%5Bvalue%5D",
+        );
+        assert_eq!(Some("seen"), posted.field("note"));
+        assert_eq!(None, posted.field("token[value]"));
+        assert_eq!(None, posted.field("ferroui_secret"));
+        assert!(
+            !format!("{posted:?}").contains("synthetic-secret-7"),
+            "the posted fields hold no secret"
+        );
+    }
+
+    #[test]
+    fn a_post_with_two_secret_marks_keeps_both_out_of_the_page() {
+        let body = format!(
+            "user=u&password=synthetic-pass-3&{}=password&token=synthetic-token-5&{}=token",
+            mark_name("password"),
+            mark_name("token"),
+        );
+        let posted = Posted::read(&body);
+        assert_eq!(Some("u"), posted.field("user"));
+        let carried = format!("{posted:?}");
+        assert!(
+            !carried.contains("synthetic-pass-3") && !carried.contains("synthetic-token-5"),
+            "neither secret is in the posted fields: {carried}"
+        );
+        assert!(!carried.contains("ferroui_secret"), "nor a mark: {carried}");
+    }
+
+    #[test]
+    fn a_mark_is_named_by_the_field_it_marks() {
+        assert_eq!("ferroui_secret_70617373", mark_name("pass"));
+        assert!(is_mark("ferroui_secret_70617373"));
+        assert!(is_mark("ferroui_secret"), "the mark of 0.5.7");
+        assert!(!is_mark("ferroui_secret_"));
+        assert!(!is_mark("ferroui_secret_zz"));
+        assert!(!is_mark("ferroui_secrets"));
+        assert!(!is_mark("password"));
+        assert!(
+            secret_mark("pass")
+                .as_str()
+                .contains(r#"name="ferroui_secret_70617373" value="pass""#)
+        );
+    }
+
+    #[test]
+    fn a_page_with_no_post_has_no_fields() {
+        let posted = Posted::default();
+        assert!(posted.is_empty());
+        assert_eq!(None, posted.field("note"));
+        assert_eq!(
+            vec![(String::from("a"), String::from("b c"))],
+            Posted::read("a=b+c").fields()
+        );
     }
 }

@@ -23,6 +23,7 @@ mod chrome;
 mod contrast;
 mod controls;
 mod dock;
+mod fields;
 mod filter;
 mod kbd;
 mod markup;
