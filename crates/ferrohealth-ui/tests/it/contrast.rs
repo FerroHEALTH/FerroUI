@@ -47,6 +47,7 @@ const EVERY_GROUND: &[&str] = &[
     "surface",
     "surface-raised",
     "surface-sunken",
+    "surface-hover",
     "surface-head",
     "neutral-ground",
     "accent-tint",
@@ -104,12 +105,18 @@ const EDGE_PAIRS: &[(&str, &[&str])] = &[
         ],
     ),
     ("focus", ACCENT_GROUNDS),
+    ("focus", &["surface-hover"]),
     ("accent", &["surface", "surface-raised", "surface-sunken"]),
     ("neutral", &["surface-raised"]),
     ("ok", &["surface", "surface-sunken"]),
     ("warn", &["surface"]),
     ("bad", &["surface", "surface-sunken"]),
 ];
+
+/// How far the hover bar of an item stands from the raised panel it sits
+/// on, the most the palette allows while muted text on the bar keeps
+/// 4.5:1; WCAG 2.2 SC 1.4.11's 3:1 would fail that text (#498).
+const HOVER_BAR: f64 = 1.35;
 
 /// An sRGB colour with its alpha, each channel in 0 to 255.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -420,6 +427,23 @@ fn a_focused_segments_ring_meets_3_to_1_pressed_or_not_in_every_brand() {
         }
     }
     assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+#[test]
+fn the_hover_bar_stands_apart_from_its_panel_in_every_brand() {
+    for (name, theme) in every_theme() {
+        let bar = token(&theme, "surface-hover");
+        let panel = token(&theme, "surface-raised");
+        let seen = ratio(bar, panel);
+        assert!(
+            seen >= HOVER_BAR,
+            "{name}: the hover bar is {seen:.2}:1 against the panel, under {HOVER_BAR}:1"
+        );
+        assert!(
+            ratio(bar, token(&theme, "surface-sunken")) > 1.0,
+            "{name}: the hover bar is a colour of its own"
+        );
+    }
 }
 
 #[test]

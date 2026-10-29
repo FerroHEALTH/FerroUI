@@ -122,7 +122,7 @@
   }
 
   .fui-listbox-option.mk-hover {
-    background: var(--surface-sunken);
+    background: var(--surface-hover);
   }
 
   .mk-scopes {
@@ -887,8 +887,12 @@
   }
 
   .fui-menu .fui-menu-item:is(.mk-hover, .mk-focus) {
-    background: var(--surface-sunken);
+    background: var(--surface-hover);
     color: var(--ink);
+  }
+
+  .fui-menu .fui-menu-item:is([aria-pressed="true"], [aria-current="true"]):is(.mk-hover, .mk-focus) {
+    background: var(--accent-tint);
   }
 
   .fui-menu .fui-menu-item:is(.mk-hover, .mk-focus) > .fui-icon {
