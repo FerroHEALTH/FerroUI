@@ -78,6 +78,7 @@ pub mod time;
 pub mod timeline;
 pub mod toast;
 pub mod transform;
+pub mod upload;
 pub mod version;
 pub mod versions;
 pub mod worklist;

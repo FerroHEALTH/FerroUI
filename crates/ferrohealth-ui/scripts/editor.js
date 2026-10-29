@@ -61,6 +61,12 @@ export function offsetOf(value, at) {
   return units;
 }
 
+// The grammar of a text, as the crate's Language::detect reads it.
+export function detect(value) {
+  const first = value.trimStart().charAt(0);
+  return first === "{" || first === "[" ? "json" : first === "<" ? "xml" : "plain";
+}
+
 export function lineCount(value) {
   const body = value.endsWith("\n") ? value.slice(0, -1) : value;
   return body.split("\n").length;
@@ -95,7 +101,8 @@ export function enhance(root) {
   const layer = root.querySelector(".fui-editor-layer");
   const stack = root.querySelector(".fui-editor-stack");
   if (!area || !layer) return;
-  const language = root.getAttribute("data-language") || "plain";
+  let language = root.getAttribute("data-language") || "plain";
+  const follows = root.hasAttribute("data-fui-detect");
   const marks = JSON.parse(root.getAttribute("data-marks") || "[]");
   const marked = kinds(marks);
   const prefix = area.id + "-L";
@@ -126,6 +133,12 @@ export function enhance(root) {
     }
   }
   function redraw() {
+    if (follows && detect(area.value) !== language) {
+      language = detect(area.value);
+      root.setAttribute("data-language", language);
+      layer.textContent = "";
+      bodies = [];
+    }
     const next = linesHtml(language, area.value);
     const p = patch(bodies, next);
     const all = layer.children;

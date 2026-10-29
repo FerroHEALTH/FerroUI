@@ -87,7 +87,11 @@ fn item(locale: &Locale, root: VersionRoot, chosen: bool) -> String {
         default,
     } = root;
     let line = if default {
-        tr_with(locale, Text::VersionDefault, &[("note", Arg::from(release))])
+        tr_with(
+            locale,
+            Text::VersionDefault,
+            &[("note", Arg::from(release))],
+        )
     } else {
         Word::new(release)
     };

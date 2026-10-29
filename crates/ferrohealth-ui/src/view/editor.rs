@@ -255,12 +255,16 @@ pub(crate) struct Drawn<'a> {
     pub(crate) label: Option<String>,
     /// The marked line the cursor is on.
     pub(crate) current: Option<u32>,
+    /// Whether the grammar follows the text as it changes
+    /// ([`Language::detect`]), as the upload field's does.
+    pub(crate) detect: bool,
 }
 
 #[derive(Template)]
 #[template(path = "editor/editor.html", block = "field")]
 struct FieldView<'a> {
     language: &'static str,
+    detect: bool,
     marks: String,
     current: Option<u32>,
     layer: Html,
@@ -280,10 +284,12 @@ pub(crate) fn drawn(drawn: Drawn<'_>) -> Html {
         placeholder,
         label,
         current,
+        detect,
     } = drawn;
     let prefix = format!("{}-L", editor.id);
     FieldView {
         language: grammar_key(editor.language),
+        detect,
         // NOTE: serde_json `to_string` fails only for a map with a key that is no
         // string, and a list of marks holds none.
         marks: serde_json::to_string(&editor.marks).unwrap_or_default(),
@@ -318,6 +324,7 @@ pub fn code_editor(editor: &Editor) -> Html {
         placeholder: None,
         label: None,
         current: None,
+        detect: false,
     })
 }
 
@@ -513,6 +520,7 @@ pub fn editor_panel(panel: Panel) -> Html {
         placeholder: None,
         label: Some(label),
         current,
+        detect: false,
     });
     PanelView {
         // NOTE: serde_json `to_string` fails only for a map with a key that is no

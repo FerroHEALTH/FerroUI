@@ -131,6 +131,10 @@ pub const MODULES: &[Module] = &[
         text: include_str!("../scripts/toast.js"),
     },
     Module {
+        file: "upload.js",
+        text: include_str!("../scripts/upload.js"),
+    },
+    Module {
         file: "user_menu.js",
         text: include_str!("../scripts/user_menu.js"),
     },

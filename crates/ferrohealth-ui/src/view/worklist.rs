@@ -54,7 +54,11 @@ pub fn row(row: WorkRow<'_>) -> Html {
         "<tr data-key=\"{}\" tabindex=\"{}\"{}{}>{cells}</tr>",
         Html::text(key),
         if focused { "0" } else { "-1" },
-        if focused { " aria-current=\"true\"" } else { "" },
+        if focused {
+            " aria-current=\"true\""
+        } else {
+            ""
+        },
         class
             .map(|class| format!(" class=\"{class}\""))
             .unwrap_or_default()
