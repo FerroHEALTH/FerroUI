@@ -36,6 +36,8 @@ export function enhance(root) {
   const other = () => select.selectedIndex === select.options.length - 1;
   const show = () => box.classList.toggle("fui-picker-hidden", !other());
   show();
+  // A form's reset puts the select and the input back; the input follows.
+  if (select.form) select.form.addEventListener("reset", () => setTimeout(show));
   select.addEventListener("pointerdown", () => (stepping = false));
   select.addEventListener("keydown", (event) => {
     const explicit = event.key === "Enter" || event.key === " ";
