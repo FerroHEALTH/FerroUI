@@ -18,17 +18,13 @@ publish = false
 
 # The authoritative third-party set. A crate takes a dependency with
 # dep.workspace = true, and every version is checked against crates.io on the
-# day it is added (.claude/rules/reliability.md). The Leptos line is the one
-# the four FerroHEALTH consoles resolve, so the library adds no second copy to
-# any of them. Verified against crates.io on 2026-10-18.
+# day it is added (.claude/rules/reliability.md). Verified against crates.io
+# on 2026-10-18.
 [workspace.dependencies]
 # The library's templates, compiled in. No `config` feature: the templates
 # sit in the default `templates/` directory with the default whitespace, and
 # the feature's TOML reader is unmaintained (RUSTSEC-2026-0374).
 askama = { version = "0.16.1", default-features = false, features = ["derive", "std"] }
-leptos = { version = "0.8.22", default-features = false }
-leptos_router = { version = "0.8.17", default-features = false }
-leptos_meta = { version = "0.8.7", default-features = false }
 serde = { version = "1.0.229", features = ["derive"] }
 # The catalogs of the strings the components draw: Project Fluent's message
 # format, the catalogs embedded at build time from the `locales/` directory
@@ -39,38 +35,18 @@ fluent-templates = { version = "0.15.1", default-features = false, features = ["
 # number formatter reads (`ferrohealth_ui::i18n::format_number`). In the lock
 # already under fluent-templates. Verified against crates.io on 2026-10-22.
 intl-memoizer = "0.5.3"
-# The gallery app alone: its server half and its browser half. The
-# wasm-bindgen CLI of the gallery build equals the wasm-bindgen crate version
-# (scripts/release/gallery-tools.sh); the library itself never pins it, and
-# asks for its own floors of web-sys and wasm-bindgen-futures.
-leptos_axum = "0.8.10"
-wasm-bindgen = "0.2.129"
-console_error_panic_hook = "0.1.7"
-# The gallery's browser APIs that Leptos turns on no feature for (the theme
-# toggle's post in place), and the future of a browser promise. Both are in
-# the lock already under Leptos.
-web-sys = { version = "0.3.106", default-features = false }
-wasm-bindgen-futures = "0.4.79"
 axum = "0.8.9"
 http = "1.5.0"
 tokio = { version = "1.53.1", default-features = false }
 tower = "0.5.3"
-# The fields of a plain form post, which `widget::action::draw_answers` reads
-# to draw them on the page again. In the lock already under url. Verified
+# The fields of a plain form post, which `view::form::Posted` reads to draw
+# them on the page again. In the lock already under url. Verified
 # against crates.io on 2026-10-27.
 form_urlencoded = "1.2.2"
 tower-http = { version = "0.7.1", default-features = false }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", default-features = false, features = ["std", "fmt", "env-filter", "ansi"] }
 serde_json = "1.0.151"
-# Test-only: the server's shared context, which an island with children
-# needs to render to HTML in a test as it does in a page. In the lock
-# already under Leptos.
-hydration_context = { version = "0.3.2", default-features = false }
-# Test-only: the parser a hydrated `<ActionForm>` reads its form with
-# (leptos 0.8 `FromFormData`), so the secret marks are tested against it. In
-# the lock already under server_fn. Verified against crates.io on 2026-10-29.
-serde_qs = { version = "0.15.0", default-features = false }
 # Test-only: the gallery's browser journeys, a WebDriver client in Rust over
 # chromedriver with the Chrome DevTools Protocol for the window size, the
 # colour scheme and the painted colours.
@@ -218,26 +194,3 @@ opt-level = 3
 
 [profile.dev.package.simd-adler32]
 opt-level = 3
-
-# The gallery's WebAssembly bundle, built by cargo-leptos: optimized for size,
-# as each console builds its own (the Cargo reference, profiles; no
-# specification governs this: our own design).
-[profile.wasm-release]
-inherits = "release"
-opt-level = "z"
-lto = true
-codegen-units = 1
-debug = false
-
-# The gallery's WebAssembly for local journeys (scripts/fast.sh): the
-# release settings without the size optimization, LTO or wasm-opt pass, so
-# it builds quickly and hydrates like the release bundle. CI, the release
-# and the bundle budget build wasm-release alone (no specification governs
-# this: our own design).
-[profile.wasm-dev]
-inherits = "release"
-opt-level = 1
-lto = false
-codegen-units = 256
-incremental = true
-debug = false

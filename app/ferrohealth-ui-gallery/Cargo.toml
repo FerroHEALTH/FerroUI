@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: BUSL-1.1
 [package]
 name = "ferrohealth-ui-gallery"
-description = "The gallery of the FerroHEALTH UI components: every component in every product theme, light and dark, rendered on the server and hydrated whole, each page a lazy route"
+description = "The gallery of the FerroHEALTH UI components: every component in every product theme, light and dark, rendered on the server, its behaviour in the library's plain script modules"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -12,11 +12,7 @@ homepage.workspace = true
 authors.workspace = true
 publish = false
 
-# One crate, two halves, chosen by target, never by Cargo feature, as every
-# FerroHEALTH console builds: the rlib feeds the server binary and the cdylib
-# is the WebAssembly bundle the browser hydrates with.
 [lib]
-crate-type = ["cdylib", "rlib"]
 path = "src/lib.rs"
 
 [[bin]]
@@ -24,32 +20,14 @@ name = "ferrohealth-ui-gallery"
 path = "src/main.rs"
 
 [dependencies]
-# The gallery builds with `cargo leptos build --split`, so each page, a lazy
-# route, loads its code from chunks of its own (scripts/release/gallery-site.sh).
+# The gallery is an axum service drawing every page on the server with the
+# library's parts and its own Askama templates; it builds with cargo build.
 ferrohealth-ui = { path = "../../crates/ferrohealth-ui" }
+askama.workspace = true
 # The pseudo-locale's catalog, a Fluent loader over the library's English.
 fluent-templates.workspace = true
-leptos = { workspace = true }
-leptos_meta.workspace = true
-leptos_router.workspace = true
-# The state the server read crosses to the browser as JSON, through serde.
 serde.workspace = true
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-leptos = { workspace = true, features = ["hydrate"] }
-wasm-bindgen.workspace = true
-wasm-bindgen-futures.workspace = true
-console_error_panic_hook.workspace = true
-# The concept tree keeps its open items in the address, a confirm closes its
-# dialog, and the app marks the root element once the page hydrates.
-web-sys = { workspace = true, features = ["Document", "Element", "History", "HtmlElement", "Window"] }
-
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-# The per-request script nonce of the Content-Security-Policy rides `nonce`.
-leptos = { workspace = true, features = ["ssr", "nonce"] }
-leptos_meta = { workspace = true, features = ["ssr"] }
-leptos_router = { workspace = true, features = ["ssr"] }
-leptos_axum.workspace = true
+serde_json.workspace = true
 axum.workspace = true
 http.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread", "macros", "net", "signal", "time"] }
@@ -57,29 +35,12 @@ tower-http = { workspace = true, features = ["set-header"] }
 tracing.workspace = true
 tracing-subscriber.workspace = true
 
-[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-serde_json.workspace = true
+[dev-dependencies]
 thirtyfour.workspace = true
 rustix.workspace = true
 png.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread", "macros", "net", "process", "io-util", "time", "fs"] }
-tower.workspace = true
+tower = { workspace = true, features = ["util"] }
 
 [lints]
 workspace = true
-
-# cargo-leptos: the site bundle (the WebAssembly and its JavaScript glue)
-# under target/site. The gallery has no stylesheet of its own: it serves the
-# library's stylesheet and the brand themes from the library's constants,
-# as a console does.
-[package.metadata.leptos]
-output-name = "ferrohealth-ui-gallery"
-site-root = "target/site"
-site-pkg-dir = "pkg"
-site-addr = "127.0.0.1:3000"
-reload-port = 3001
-lib-profile-release = "wasm-release"
-lib-profile-dev = "wasm-dev"
-# A dev build keeps its component types, as the server half does, so the
-# bundle hydrates the pages the server rendered.
-disable-erase-components = true

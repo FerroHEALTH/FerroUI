@@ -11,14 +11,15 @@
 //! gallery's answer route ([`SUGGEST_ROUTE`]), which finds the mapping files
 //! and the template whose names hold the words.
 
-use ferrohealth_ui::i18n::Phrase;
+use ferrohealth_ui::html::Html;
+use ferrohealth_ui::i18n::{Locale, Phrase};
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::style::Brand;
 use ferrohealth_ui::view::search::{Hit, HitGroup, Mark, SearchAnswer, SearchBox, Way, search_box};
-use leptos::prelude::*;
 
 use crate::data::{SEARCHED_BUSY, TEMPLATE, rows};
-use crate::locale::{Msg, tr, tr_with};
+use crate::locale::{Msg, tr_in};
+use crate::visit::Visit;
 
 /// The id of the top bar's search field.
 pub const SEARCH_ID: &str = "gallery-search";
@@ -47,7 +48,9 @@ pub fn find_path(brand: Brand) -> String {
 /// Returns the top bar's search of `brand`'s pages in the state `state`
 /// names, holding the words `typed`.
 #[must_use]
-pub fn gallery_search(brand: Brand, state: Option<&str>, typed: Option<&str>) -> AnyView {
+pub fn gallery_search(visit: &Visit, state: Option<&str>, typed: Option<&str>) -> Html {
+    let brand = visit.brand;
+    let tr = |msg| visit.tr(msg);
     let mut search = SearchBox {
         id: String::from(SEARCH_ID),
         label: tr(Msg::SearchMappingFiles),
@@ -57,10 +60,7 @@ pub fn gallery_search(brand: Brand, state: Option<&str>, typed: Option<&str>) ->
         suggest: Some(format!("{SUGGEST_ROUTE}/{}", brand.key())),
         signed_out: Some(format!("/sign-in/{}/expired", brand.key())),
         all: (brand == Brand::Pix).then(|| {
-            Phrase::new(tr_with(
-                Msg::SearchPatientsFor,
-                &[("query", Phrase::open("query"))],
-            ))
+            Phrase::new(visit.tr_with(Msg::SearchPatientsFor, &[("query", Phrase::open("query"))]))
         }),
         ..SearchBox::default()
     };
@@ -74,14 +74,17 @@ pub fn gallery_search(brand: Brand, state: Option<&str>, typed: Option<&str>) ->
         }
         _ => {}
     }
-    search_box(search)
+    search_box(&visit.locale, &search)
 }
 
 /// What `brand`'s gallery holds under the words `query`: the mapping files
 /// and the template whose names hold them, without regard to case, with the
 /// way to every file when nothing does.
 #[must_use]
-pub fn answer(brand: Brand, query: &str) -> SearchAnswer {
+pub fn answer(locale: &Locale, brand: Brand, query: &str) -> SearchAnswer {
+    let tr = |msg| tr_in(locale, msg, &[]);
+    let tr_with =
+        |msg, args: &[(&'static str, ferrohealth_ui::i18n::Arg)]| tr_in(locale, msg, args);
     let tables = format!("/{}/tables", brand.key());
     let needle = query.trim().to_lowercase();
     let files: Vec<Hit> = rows()
@@ -144,12 +147,13 @@ mod tests {
 
     #[test]
     fn the_answer_holds_the_names_that_hold_the_words() {
-        let found = answer(Brand::Bridge, " SYNTHETIC-00 ");
+        let en = ferrohealth_ui::i18n::Locale::english();
+        let found = answer(&en, Brand::Bridge, " SYNTHETIC-00 ");
         assert_eq!("SYNTHETIC-00", found.query);
         assert_eq!(9, found.total(), "synthetic-001 to synthetic-009");
-        let template = answer(Brand::Bridge, "vital");
+        let template = answer(&en, Brand::Bridge, "vital");
         assert_eq!(1, template.total());
-        let none = answer(Brand::Bridge, "zz-unknown");
+        let none = answer(&en, Brand::Bridge, "zz-unknown");
         assert!(!none.found());
         assert!(none.none.is_some() && none.more.is_some(), "{none:?}");
     }
