@@ -6,7 +6,6 @@
 //! behind its confirmation.
 
 use ferrohealth_ui::calendar::Weekday;
-use ferrohealth_ui::html::Html;
 use ferrohealth_ui::i18n::{Locale, Word};
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::theme::{Density, Hints, Language, Motion, Preferences, Theme, WeekStart};
