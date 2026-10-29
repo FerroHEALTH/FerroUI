@@ -2439,6 +2439,24 @@ fn the_copy_button_waits_hidden_and_leaves_its_text_to_the_page() {
 }
 
 #[test]
+fn the_copy_buttons_states_are_its_own_children_with_the_glyph_first() {
+    let copy = html(copy_from(
+        "about-copy",
+        "Copy",
+        CopySource::Text(String::from("text")),
+        copy_words(),
+    ));
+    // NOTE: the stylesheet spaces a state's glyph and words through `.fui-copy > .fui-button > [data-fui-ready]`.
+    assert!(
+        copy.contains("class=\"fui-copy\"><button")
+            && copy.contains("fui-button-small\"><span data-fui-ready><svg")
+            && copy.contains("</svg>Copy</span><span data-fui-done hidden><svg")
+            && copy.contains("</svg>Copied</span></button>"),
+        "each state is a child of the button, its glyph before its words: {copy}"
+    );
+}
+
+#[test]
 fn the_side_panel_opens_from_a_link_to_its_route_until_its_module_runs() {
     let panel = html(side_panel(SidePanel {
         id: String::from("access"),
