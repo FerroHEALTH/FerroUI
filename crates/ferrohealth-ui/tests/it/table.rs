@@ -193,7 +193,7 @@ fn a_header_title_rides_its_header_alone_sortable_or_not() {
             columns: &columns,
             sorting: Sorting::default(),
             body: Body::Rows(Html::raw(String::from(
-                r#"<tr><td>a</td><td>b</td><td>1</td></tr>"#,
+                "<tr><td>a</td><td>b</td><td>1</td></tr>",
             ))),
         })
     });
@@ -242,7 +242,7 @@ fn a_plain_header_writes_no_class_and_a_sortable_one_carries_its_sort_beside_the
                 sort: sort.as_ref(),
                 ..Sorting::default()
             },
-            body: Body::Rows(Html::raw(String::from(r#"<tr><td>a</td><td>1</td></tr>"#))),
+            body: Body::Rows(Html::raw(String::from("<tr><td>a</td><td>1</td></tr>"))),
         })
     });
     let headers = tags(&table, "th");
@@ -285,7 +285,7 @@ fn a_sortable_header_is_a_button_in_a_get_form_that_carries_the_rest_of_the_quer
                 fields: &fields,
                 ..Sorting::default()
             },
-            body: Body::Rows(Html::raw(String::from(r#"<tr><td>a</td><td>1</td></tr>"#))),
+            body: Body::Rows(Html::raw(String::from("<tr><td>a</td><td>1</td></tr>"))),
         })
     });
     // design/COMPONENTS.md, § The table: a sort is a button, never a link.
@@ -356,7 +356,7 @@ fn a_session_listing_posts_its_sort_to_the_consoles_action() {
                 action: Some("/listing/sort"),
                 ..Sorting::default()
             },
-            body: Body::Rows(Html::raw(String::from(r#"<tr><td>a</td></tr>"#))),
+            body: Body::Rows(Html::raw(String::from("<tr><td>a</td></tr>"))),
         })
     });
     assert!(
@@ -393,7 +393,7 @@ fn a_stated_order_rides_the_header_of_the_column_that_leads_it() {
                 stated: Some("Sorted by grade, then score"),
                 ..Sorting::default()
             },
-            body: Body::Rows(Html::raw(String::from(r#"<tr><td>a</td><td>b</td></tr>"#))),
+            body: Body::Rows(Html::raw(String::from("<tr><td>a</td><td>b</td></tr>"))),
         })
     });
     assert!(
@@ -598,7 +598,7 @@ fn the_list_card_states_an_order_of_several_keys_beside_its_count() {
                     order: order.map(str::to_owned),
                     tabs: None,
                     actions: None,
-                    body: Html::raw(String::from(r#"<p>table</p>"#)),
+                    body: Html::raw(String::from("<p>table</p>")),
                     pager: None,
                 },
             )
@@ -965,7 +965,7 @@ fn a_query_column_makes_a_wide_table_and_its_header_breaks_like_a_path() {
             caption: "Result",
             columns: &columns,
             sorting: Sorting::default(),
-            body: Body::Rows(Html::raw(String::from(r#"<tr><td>120</td></tr>"#))),
+            body: Body::Rows(Html::raw(String::from("<tr><td>120</td></tr>"))),
         })
     });
     assert!(table.contains("fui-table-wide"), "{table}");

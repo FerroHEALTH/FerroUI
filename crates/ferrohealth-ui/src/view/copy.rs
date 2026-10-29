@@ -185,14 +185,20 @@ struct KeyHintView {
 /// and the button is hidden, as the copy button is.
 #[must_use]
 pub fn key_hint(key: String, words: KeyHintWords) -> Html {
+    let KeyHintWords {
+        label,
+        title,
+        copied,
+        refused,
+    } = words;
     KeyHintView {
         key,
-        label: words.label.text().to_owned(),
-        title: words.title.text().to_owned(),
+        label: label.into(),
+        title: title.into(),
         copy_glyph: icon(Glyph::COPY, "12"),
         check_glyph: icon(Glyph::CHECK, "12"),
-        copied: words.copied.text().to_owned(),
-        refused: words.refused.text().to_owned(),
+        copied: copied.into(),
+        refused: refused.into(),
     }
     .html()
 }

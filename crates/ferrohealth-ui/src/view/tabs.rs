@@ -124,7 +124,7 @@ struct TabView {
 }
 
 #[derive(Template)]
-#[template(path = "tabs/binder.html")]
+#[template(path = "tabs/binder.html", block = "binder")]
 struct Binder {
     sheet: String,
     label: String,
@@ -253,44 +253,47 @@ pub fn moved(key: &str, current: usize, count: usize) -> Option<usize> {
     }
 }
 
+#[derive(Template)]
+#[template(path = "tabs/binder.html", block = "panels")]
+struct Panels<'a> {
+    prefix: &'a str,
+    bodies: Vec<Html>,
+}
+
+/// Returns the panels `bodies` of keyboard tabs whose ids start with
+/// `prefix`, every one in the page, the first shown and the others
+/// hidden, for [`keyboard_tabs`].
+#[must_use]
+pub fn tab_panels(prefix: &str, bodies: Vec<Html>) -> Html {
+    Panels { prefix, bodies }.html()
+}
+
+#[derive(Template)]
+#[template(path = "tabs/binder.html", block = "keyboard")]
+struct Keyboard<'a> {
+    label: &'a str,
+    prefix: &'a str,
+    tabs: &'a [String],
+    panels: Html,
+}
+
 /// Returns the keyboard tabs `prefix` named `label`: one tab per word in
-/// `tabs` over its panel in `panels`.
+/// `tabs` over `panels`, from [`tab_panels`].
 ///
-/// The first is shown and the others
-/// hidden, switched in place by the `tabs` module with the keys of the
-/// WAI-ARIA Authoring Practices tabs pattern (automatic activation).
-///
-/// Every panel is in the page, so a reader with no script reads the first;
+/// The `tabs` module switches them in place with the keys of the
+/// WAI-ARIA Authoring Practices tabs pattern (automatic activation). Every
+/// panel is in the page, so a reader with no script reads the first;
 /// where every panel must be reachable with no script a page uses
 /// [`binder`], whose tabs are routes.
 #[must_use]
-pub fn keyboard_tabs(label: &str, prefix: &str, tabs: &[String], panels: Vec<Html>) -> Html {
-    let buttons: Html = tabs
-        .iter()
-        .enumerate()
-        .map(|(index, words)| {
-            let on = index == 0;
-            Html::raw(format!(
-                "<button type=\"button\" role=\"tab\" id=\"{prefix}-tab-{index}\" class=\"fui-tab\" aria-controls=\"{prefix}-panel-{index}\" aria-selected=\"{on}\" tabindex=\"{}\">{}</button>",
-                if on { "0" } else { "-1" },
-                Html::text(words)
-            ))
-        })
-        .collect();
-    let panels: Html = panels
-        .into_iter()
-        .enumerate()
-        .map(|(index, body)| {
-            Html::raw(format!(
-                "<div role=\"tabpanel\" id=\"{prefix}-panel-{index}\" class=\"fui-tab-panel\" aria-labelledby=\"{prefix}-tab-{index}\"{} tabindex=\"0\">{body}</div>",
-                if index == 0 { "" } else { " hidden" }
-            ))
-        })
-        .collect();
-    Html::raw(format!(
-        "<div class=\"fui-tabbed\"><div role=\"tablist\" aria-label=\"{}\" class=\"fui-tabs\" data-fui=\"tabs\">{buttons}</div>{panels}</div>",
-        Html::text(label)
-    ))
+pub fn keyboard_tabs(label: &str, prefix: &str, tabs: &[String], panels: Html) -> Html {
+    Keyboard {
+        label,
+        prefix,
+        tabs,
+        panels,
+    }
+    .html()
 }
 
 #[cfg(test)]
@@ -319,10 +322,10 @@ mod tests {
         ];
         let html = binder(&en, "Template views", tabs, "paths", Html::text("body"));
         let html = html.as_str();
-        assert!(html.contains(r#"<a href="/t" class="fui-tab" data-tab="overview" data-fui-panel="panel-overview">"#), "{html}");
+        assert!(html.contains(r#"<a href="/t" data-tab="overview" data-fui-panel="panel-overview" class="fui-tab">"#), "{html}");
         assert!(
             html.contains(
-                r#"href="/t?tab=paths" class="fui-tab" aria-current="page" data-tab="paths">"#
+                r#"href="/t?tab=paths" aria-current="page" data-tab="paths" class="fui-tab">"#
             ),
             "{html}"
         );

@@ -227,6 +227,7 @@ pub fn file_line(locale: &Locale, file: &str, how: How) -> Html {
 /// then the setting `rows` across the panel's width.
 #[must_use]
 pub fn settings_panel(intro: Html, actions: Option<Html>, rows: Vec<Html>) -> Html {
+    let intro = String::from(intro);
     Html::raw(format!(
         "<div class=\"fui-settings-panel\"><div class=\"fui-settings-panel-head\"><p class=\"fui-settings-panel-intro\">{intro}</p><div class=\"fui-actions\">{}</div></div><div class=\"fui-setting-rows\">{}</div></div>",
         actions.unwrap_or_default(),

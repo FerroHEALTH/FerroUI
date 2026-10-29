@@ -1,0 +1,169 @@
+// SPDX-FileCopyrightText: Cadasto B.V.
+// SPDX-License-Identifier: BUSL-1.1
+
+//! The About page: two cards of facts and, where the product has one, its
+//! raw self-description.
+//!
+//! The Versions card opens with the console's own version in the one form
+//! the footer writes ([`crate::view::shell::Footer::release`]); the
+//! Manufacturer card names the maker, the licence, where to ask for help
+//! and the documentation. Under them a product may show its
+//! self-description (an OPTIONS document, a `CapabilityStatement`) with Copy
+//! and Download, capped at 24 rem with its own scroll. The page has no
+//! tabs, no sub-navigation and no side panel.
+
+use crate::highlight::Language;
+use crate::html::Html;
+use crate::i18n::{Locale, Text, Word, tr};
+use crate::icon::{Glyph, icon};
+use crate::view::action::ActionGroup;
+use crate::view::button::Variant;
+use crate::view::code::self_description;
+use crate::view::copy::{CopySource, CopyWords, copy_from};
+use crate::view::replica::{Replica, replica_line};
+use crate::view::shell::MAKER;
+use crate::view::surface::{Header, card, definitions, page_heading};
+
+/// A fact's link: its words and where it leads.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Link {
+    /// The link's words.
+    pub label: String,
+    /// Where it leads.
+    pub href: String,
+}
+
+/// What the Manufacturer card says besides the maker.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Manufacturer {
+    /// The product's licence, such as "Business Source License 1.1".
+    pub licence: String,
+    /// Where to ask for help, such as the maker's address.
+    pub support: Link,
+    /// The product's documentation, when it has one.
+    pub documentation: Option<Link>,
+}
+
+/// A product's raw self-description, such as its OPTIONS document.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SelfDescription {
+    /// The card's title, also the code box's accessible name.
+    pub title: String,
+    /// One quiet line on what the document is.
+    pub line: String,
+    /// The document's language, for its token colours.
+    pub language: Language,
+    /// The document as the product answers it.
+    pub text: String,
+    /// The id of its Copy button.
+    pub copy_id: String,
+    /// The address Download fetches the document from.
+    pub download: String,
+}
+
+/// What an About page shows.
+#[derive(Debug)]
+pub struct AboutPage {
+    /// The title and its one-line subtitle.
+    pub header: Header,
+    /// The console and its version, in the footer's form.
+    pub release: String,
+    /// The Versions card's further rows: the server, the build, the
+    /// specifications, the library.
+    pub versions: Vec<(String, Html)>,
+    /// The Manufacturer card.
+    pub manufacturer: Manufacturer,
+    /// Full-width cards a product adds under the two, such as the
+    /// console's own settings.
+    pub cards: Vec<Html>,
+    /// The product's self-description, when it has one.
+    pub self_description: Option<SelfDescription>,
+    /// The replica that answered, for a replicated product (F6), drawn as
+    /// one quiet line under the header.
+    pub replica: Option<Replica>,
+}
+
+/// Returns `link` as a fact's value.
+fn linked(link: Link) -> Html {
+    Html::raw(format!(
+        "<a href=\"{}\">{}</a>",
+        Html::text(link.href),
+        Html::text(link.label)
+    ))
+}
+
+/// Returns the self-description card: its title with Copy and Download in
+/// the card's head, its line, and the document in its capped box.
+fn self_description_card(locale: &Locale, document: SelfDescription) -> Html {
+    let SelfDescription {
+        title,
+        line,
+        language,
+        text,
+        copy_id,
+        download,
+    } = document;
+    let panel = self_description(&title, language, &text);
+    let copy = copy_from(
+        copy_id,
+        tr(locale, Text::DocumentCopy),
+        CopySource::Text(text),
+        CopyWords::of(locale),
+    );
+    Html::raw(format!(
+        "<section class=\"fui-card fui-panel\"><div class=\"fui-panel-head\"><h2 class=\"fui-card-title\">{}</h2><div class=\"fui-actions\">{copy}<a href=\"{}\" download=\"\" class=\"{}\">{}{}</a></div></div><div class=\"fui-panel-body fui-stack\"><p class=\"fui-small fui-muted\">{}</p>{panel}</div></section>",
+        Html::text(&title),
+        Html::text(download),
+        Variant::Secondary.small(),
+        icon(Glyph::DOWNLOAD, "14"),
+        tr(locale, Text::Download),
+        Html::text(line)
+    ))
+}
+
+/// Returns the About page: its header, the Versions and Manufacturer cards
+/// side by side, the product's further cards, and its self-description.
+#[must_use]
+pub fn about_page(locale: &Locale, page: AboutPage) -> Html {
+    let AboutPage {
+        header,
+        release,
+        versions,
+        manufacturer,
+        cards,
+        self_description,
+        replica,
+    } = page;
+    let heading = page_heading(locale, header, ActionGroup::none());
+    let replica = replica
+        .map(|replica| replica_line(locale, replica))
+        .unwrap_or_default();
+    let mut rows = vec![(tr(locale, Text::AboutConsole), Html::text(release))];
+    rows.extend(
+        versions
+            .into_iter()
+            .map(|(label, value)| (Word::from(label), value)),
+    );
+    let versions = card(tr(locale, Text::AboutVersions), definitions(rows));
+    let Manufacturer {
+        licence,
+        support,
+        documentation,
+    } = manufacturer;
+    let mut facts = vec![
+        (tr(locale, Text::AboutMadeBy), Html::text(MAKER)),
+        (tr(locale, Text::AboutLicence), Html::text(licence)),
+        (tr(locale, Text::AboutSupport), linked(support)),
+    ];
+    if let Some(documentation) = documentation {
+        facts.push((tr(locale, Text::AboutDocumentation), linked(documentation)));
+    }
+    let maker = card(tr(locale, Text::AboutManufacturer), definitions(facts));
+    let document = self_description
+        .map(|document| self_description_card(locale, document))
+        .unwrap_or_default();
+    Html::raw(format!(
+        "{heading}{replica}<div class=\"fui-stack\"><div class=\"fui-grid fui-grid-start\">{versions}{maker}</div>{}{document}</div>",
+        Html::join(cards)
+    ))
+}

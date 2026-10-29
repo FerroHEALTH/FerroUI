@@ -17,6 +17,7 @@
 //! table, a form, binder tabs, an action group) as [`crate::html::Html`].
 //! No specification governs the templates: our own design.
 
+pub mod about;
 pub mod detail;
 pub mod list;
 pub mod settings;
