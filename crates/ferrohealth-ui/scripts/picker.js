@@ -8,7 +8,9 @@
 // the closed select by arrow key (WCAG 2.2 SC 3.2.2). A pick-or-type field
 // swaps its picker for its text input when the picker's data-other option
 // is chosen (a select's or a combobox's), and back on its control marked
-// data-fui-pick-back. With no script both of a picker's controls show.
+// data-fui-pick-back, which puts the picker on the listed option chosen
+// before, or on its first, so choosing data-other again shows the input.
+// With no script both of a picker's controls show.
 export function enhance(root) {
   const pick = root.querySelector(":scope > [data-side='pick']");
   const type = root.querySelector(":scope > [data-side='type']");
@@ -21,11 +23,33 @@ export function enhance(root) {
       const field = (typing ? type : pick).querySelector("input:not([type='hidden']), textarea, select");
       if (field) field.focus();
     };
+    const other = (control) => {
+      const option = control.selectedOptions ? control.selectedOptions[0] : control;
+      return Boolean(option && option.hasAttribute("data-other"));
+    };
+    // The listed option chosen last: a select's place, a combobox's value.
+    let before = { place: 0, value: "" };
+    const drawn = pick.querySelector("select");
+    if (drawn && !other(drawn)) before = { place: drawn.selectedIndex, value: drawn.value };
     pick.addEventListener("change", (event) => {
-      const option = event.target.selectedOptions ? event.target.selectedOptions[0] : event.target;
-      if (option && option.hasAttribute("data-other")) side(true);
+      if (other(event.target)) side(true);
+      else before = { place: event.target.selectedIndex ?? 0, value: event.target.value };
     });
-    if (back) back.addEventListener("click", () => side(false));
+    const listed = () => {
+      const select = pick.querySelector("select");
+      if (select) {
+        const option = select.options[before.place];
+        select.selectedIndex = option && !option.hasAttribute("data-other") ? before.place : 0;
+        return;
+      }
+      const combobox = pick.querySelector("[data-fui='combobox']");
+      if (combobox) combobox.dispatchEvent(new CustomEvent("fui:choose", { detail: { value: before.value } }));
+    };
+    if (back)
+      back.addEventListener("click", () => {
+        listed();
+        side(false);
+      });
     return;
   }
   const select = root.querySelector(":scope > select");
