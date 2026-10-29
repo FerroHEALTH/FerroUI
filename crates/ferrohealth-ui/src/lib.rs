@@ -3,42 +3,38 @@
 
 //! FerroUI: the shared UI components of the FerroHEALTH consoles.
 //!
-//! The library has three parts a page draws with, for a console that Leptos
-//! renders in islands mode. [`view`] holds static view functions: plain
-//! functions returning a typed view, with no reactive props and no
-//! `#[component]`, drawn on the server alone and shipped to the browser as
-//! HTML. [`widget`] holds the interactive components, each where
-//! interaction needs browser code, as functions a page calls inside an
-//! island. [`island`] holds the widgets that need nothing from the console's
-//! code as ready islands, such as the toast region, the navigation drawer,
-//! the user menu, the keyboard tabs, the action menus and the date picker.
-//! [`table`] is the one paging and sorting model every listing shares,
-//! [`calendar`] the days a date field counts in, [`highlight`] the
-//! tokenizers of YAML,
-//! JSON, XML and AQL, [`icon`] the vendored Lucide outlines, [`tone`] and
-//! [`theme`] the status tones and the theme choice, [`i18n`] the locale and
-//! the catalogs of every word the components draw, and [`style`] the
-//! stylesheet and the brand themes as text a console serves.
+//! The library renders HTML on the server. Every component is a Rust
+//! struct over an Askama template compiled into the crate, and returns
+//! [`html::Html`], markup a console's own template writes with `{{ part }}`
+//! or hands to the next component as its child. [`view`] holds the
+//! components; [`table`] is the one paging and sorting model every listing
+//! shares, [`calendar`] the days a date field counts in, [`highlight`] the
+//! tokenizers of YAML, JSON, XML and AQL, [`icon`] the vendored Lucide
+//! outlines, [`tone`] and [`theme`] the status tones and the theme choice,
+//! [`i18n`] the locale and the catalogs of every word the components draw,
+//! [`style`] the stylesheet and the brand themes as text, [`script`] the
+//! plain script modules as text, and [`serve`] the router a console mounts
+//! to serve them.
 //!
-//! Every page works with no WebAssembly: what an island adds is behaviour on
+//! Every page works with no script: what a module adds is behaviour on
 //! top of complete server-rendered HTML, with a link or a form behind every
-//! action. Data arrives as props, only the search box's typeahead and the
-//! session watch fetch, from routes the console names, and browser-only code
-//! runs inside an event handler or an effect. No component writes a
-//! `style` attribute or a `<style>` element, so a console keeps
-//! `style-src 'self'`, and no component defines a server function or
-//! touches browser storage. No specification governs the components: our
-//! own design.
+//! action. No component writes a `style` attribute, a `<style>` element or
+//! an inline script, so a console keeps `style-src 'self'` and `script-src
+//! 'self'`; no component touches browser storage beyond what the tree keeps
+//! of its open items for the session. No specification governs the
+//! components: our own design (FerroUI #510).
 #![doc(test(attr(deny(warnings))))]
 
 pub mod calendar;
 pub mod highlight;
+pub mod html;
 pub mod i18n;
 pub mod icon;
-pub mod island;
+pub mod query;
+pub mod script;
+pub mod serve;
 pub mod style;
 pub mod table;
 pub mod theme;
 pub mod tone;
 pub mod view;
-pub mod widget;

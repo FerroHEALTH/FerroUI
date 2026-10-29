@@ -10,7 +10,7 @@
 //! after each break. A path scrolls sideways when one segment is wider than
 //! its box. No specification governs the breaks: our own design.
 
-use leptos::prelude::*;
+use crate::html::Html;
 
 /// The segments of `text`, each ending after one of `breaks` but the last.
 pub(crate) fn segments(text: &str, breaks: &[char]) -> Vec<String> {
@@ -29,35 +29,32 @@ pub(crate) fn segments(text: &str, breaks: &[char]) -> Vec<String> {
 }
 
 /// The segments `parts`, each a `<span>` with a break offered after it.
-pub(crate) fn broken(parts: Vec<String>) -> impl IntoView {
+pub(crate) fn broken(parts: Vec<String>) -> Html {
     parts
         .into_iter()
-        .map(|part| {
-            view! {
-                <span>{part}</span>
-                <wbr />
-            }
-        })
-        .collect_view()
+        .map(|part| Html::raw(format!("<span>{}</span><wbr>", Html::text(part))))
+        .collect()
 }
 
 /// Returns the archetype id or HRID `id` in mono, breaking only after a
 /// dot, the whole id in its tooltip.
 #[must_use]
-pub fn archetype(id: &str) -> AnyView {
-    view! {
-        <code class="fui-archetype" title=id.to_owned()>
-            {broken(segments(id, &['.']))}
-        </code>
-    }
-    .into_any()
+pub fn archetype(id: &str) -> Html {
+    Html::raw(format!(
+        "<code class=\"fui-archetype\" title=\"{}\">{}</code>",
+        Html::text(id),
+        broken(segments(id, &['.']))
+    ))
 }
 
 /// Returns the archetype path `path` in mono, breaking only after a slash,
 /// a dot or an opening bracket.
 #[must_use]
-pub fn path(path: &str) -> AnyView {
-    view! { <span class="fui-path">{broken(segments(path, &['/', '.', '[']))}</span> }.into_any()
+pub fn path(path: &str) -> Html {
+    Html::raw(format!(
+        "<span class=\"fui-path\">{}</span>",
+        broken(segments(path, &['/', '.', '[']))
+    ))
 }
 
 #[cfg(test)]

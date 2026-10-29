@@ -22,6 +22,7 @@ publish = false
 # the four FerroHEALTH consoles resolve, so the library adds no second copy to
 # any of them. Verified against crates.io on 2026-10-18.
 [workspace.dependencies]
+askama = "0.16.1"
 leptos = { version = "0.8.22", default-features = false }
 leptos_router = { version = "0.8.17", default-features = false }
 leptos_meta = { version = "0.8.7", default-features = false }

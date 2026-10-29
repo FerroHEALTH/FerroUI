@@ -5,9 +5,9 @@
 //! input, so each is parsed defensively and clamped, and every sum
 //! saturates. No specification governs paging: our own design.
 
-use leptos_router::params::ParamsMap;
+use crate::query::Query;
 
-use crate::i18n::{Message, Text, Word, tr, tr_with};
+use crate::i18n::{Locale, Message, Text, Word, tr, tr_with};
 
 /// The rows a page shows when the request names no size.
 pub const DEFAULT_SIZE: u32 = 25;
@@ -72,29 +72,29 @@ impl Noun {
 
     /// The word for `count` rows in the page's locale.
     #[must_use]
-    pub fn word(self, count: u32) -> Word {
+    pub fn word(self, locale: &Locale, count: u32) -> Word {
         let args = [("count", count.into())];
         match self.message {
-            Some(message) => message.text_with(&args).into(),
-            None => tr_with(Text::Rows, &args),
+            Some(message) => message.text_with(locale, &args).into(),
+            None => tr_with(locale, Text::Rows, &args),
         }
     }
 
     /// The sentence for a listing with no row: "No value sets".
     #[must_use]
-    pub fn empty(self) -> Word {
+    pub fn empty(self, locale: &Locale) -> Word {
         match self.message {
-            Some(message) => message.attribute("empty", &[("count", 0.into())]).into(),
-            None => tr(Text::RangeEmpty),
+            Some(message) => message.attribute(locale, "empty", &[("count", 0.into())]).into(),
+            None => tr(locale, Text::RangeEmpty),
         }
     }
 
     /// The word for several rows as a sentence opens with it: "Value sets".
     #[must_use]
-    pub fn opening(self) -> Word {
+    pub fn opening(self, locale: &Locale) -> Word {
         match self.message {
-            Some(message) => message.attribute("opening", &[("count", 2.into())]).into(),
-            None => tr(Text::RowsOpening),
+            Some(message) => message.attribute(locale, "opening", &[("count", 2.into())]).into(),
+            None => tr(locale, Text::RowsOpening),
         }
     }
 }
@@ -187,26 +187,26 @@ impl Paging {
 
     /// The paging the query `query` names.
     #[must_use]
-    pub fn from_query(query: &ParamsMap) -> Self {
+    pub fn from_query(query: &Query) -> Self {
         Self::from_query_within(query, Sizes::STANDARD)
     }
 
     /// The paging the query `query` names under the console's `sizes`.
     #[must_use]
-    pub fn from_query_within(query: &ParamsMap, sizes: Sizes) -> Self {
+    pub fn from_query_within(query: &Query, sizes: Sizes) -> Self {
         Self::read_within(query.get_str(PAGE_KEY), query.get_str(SIZE_KEY), sizes)
     }
 
     /// This paging written into `query`: the first page and the default size
     /// are written as their absence, so the first page's URL is the plain
     /// path.
-    pub fn write(self, query: &mut ParamsMap) {
+    pub fn write(self, query: &mut Query) {
         self.write_within(query, Sizes::STANDARD);
     }
 
     /// This paging written into `query`, the size `sizes.default` written
     /// as its absence.
-    pub fn write_within(self, query: &mut ParamsMap, sizes: Sizes) {
+    pub fn write_within(self, query: &mut Query, sizes: Sizes) {
         if self.page <= 1 {
             drop(query.remove(PAGE_KEY));
         } else {
@@ -298,11 +298,12 @@ impl Window {
 
     /// The range label: "1-25 of 312", or "No rows" for an empty listing.
     #[must_use]
-    pub fn range_label(self) -> Word {
+    pub fn range_label(self, locale: &Locale) -> Word {
         if self.total == 0 {
-            return tr(Text::RangeEmpty);
+            return tr(locale, Text::RangeEmpty);
         }
         tr_with(
+            locale,
             Text::Range,
             &[
                 ("first", self.start.saturating_add(1).into()),
@@ -315,17 +316,18 @@ impl Window {
     /// The range label naming the rows by `noun`: "1-25 of 312 value
     /// sets", "1-1 of 1 value set", or "No value sets".
     #[must_use]
-    pub fn range_of(self, noun: Noun) -> Word {
+    pub fn range_of(self, locale: &Locale, noun: Noun) -> Word {
         if self.total == 0 {
-            return noun.empty();
+            return noun.empty(locale);
         }
         tr_with(
+            locale,
             Text::RangeOf,
             &[
                 ("first", self.start.saturating_add(1).into()),
                 ("last", self.end.into()),
                 ("total", self.total.into()),
-                ("noun", noun.word(self.total).into()),
+                ("noun", noun.word(locale, self.total).into()),
             ],
         )
     }
@@ -347,13 +349,14 @@ impl Window {
 /// sent: `held` rows in hand, `stated` counted (a FHIR search's
 /// `Bundle.total`). `None` when the two agree or nothing was stated.
 #[must_use]
-pub fn partial_note(held: u32, stated: Option<u32>, noun: Noun) -> Option<Word> {
+pub fn partial_note(locale: &Locale, held: u32, stated: Option<u32>, noun: Noun) -> Option<Word> {
     let stated = stated.filter(|stated| *stated != held)?;
     Some(tr_with(
+        locale,
         Text::PartialNote,
         &[
             ("stated", stated.into()),
-            ("noun", noun.word(stated).into()),
+            ("noun", noun.word(locale, stated).into()),
             ("held", held.into()),
         ],
     ))
@@ -416,20 +419,22 @@ impl OpenWindow {
     /// sets" when the first page came back empty, or "Page 9 is past the
     /// last value set." when a later one did, beside the Previous it offers.
     #[must_use]
-    pub fn range_of(self, noun: Noun) -> Word {
+    pub fn range_of(self, locale: &Locale, noun: Noun) -> Word {
         if self.held == 0 && self.page > 1 {
             return tr_with(
+                locale,
                 Text::OpenRangePast,
-                &[("page", self.page.into()), ("noun", noun.word(1).into())],
+                &[("page", self.page.into()), ("noun", noun.word(locale, 1).into())],
             );
         }
         if self.held == 0 {
-            return noun.empty();
+            return noun.empty(locale);
         }
         tr_with(
+            locale,
             Text::OpenRangeOf,
             &[
-                ("nouns", noun.opening().into()),
+                ("nouns", noun.opening(locale).into()),
                 ("first", self.start.saturating_add(1).into()),
                 ("last", self.start.saturating_add(self.held).into()),
             ],
@@ -497,7 +502,7 @@ impl Sort {
 
     /// The sort the query `query` names, over the sortable `columns`.
     #[must_use]
-    pub fn from_query(query: &ParamsMap, columns: &[&str]) -> Option<Self> {
+    pub fn from_query(query: &Query, columns: &[&str]) -> Option<Self> {
         Self::read(query.get_str(SORT_KEY), query.get_str(ORDER_KEY), columns)
     }
 
@@ -527,7 +532,7 @@ impl Sort {
     }
 
     /// This sort written into `query`, from the first page.
-    pub fn write(&self, query: &mut ParamsMap) {
+    pub fn write(&self, query: &mut Query) {
         query.replace(SORT_KEY, self.column.clone());
         query.replace(ORDER_KEY, self.direction.key().to_owned());
         drop(query.remove(PAGE_KEY));
@@ -536,7 +541,7 @@ impl Sort {
 
 /// The href of `path` with the query `query`, encoded by the router.
 #[must_use]
-pub fn href(path: &str, query: &ParamsMap) -> String {
+pub fn href(path: &str, query: &Query) -> String {
     format!("{path}{}", query.to_query_string())
 }
 
@@ -544,11 +549,8 @@ pub fn href(path: &str, query: &ParamsMap) -> String {
 /// that keeps the rest of a listing's query when it submits (a sort that
 /// keeps the filter and the size).
 #[must_use]
-pub fn fields(query: &ParamsMap) -> Vec<(String, String)> {
-    query
-        .into_iter()
-        .map(|(key, value)| (key.to_string(), value.to_owned()))
-        .collect()
+pub fn fields(query: &Query) -> Vec<(String, String)> {
+    query.pairs().to_vec()
 }
 
 /// The columns of `columns` that some row of `rows` fills, in their order.
@@ -592,7 +594,12 @@ mod tests {
         assert_eq!(keys, ["code", "use"]);
     }
 
-    use leptos_router::params::ParamsMap;
+    use crate::query::Query;
+    use crate::i18n::Locale;
+
+    fn en() -> Locale {
+        Locale::english()
+    }
 
     use super::{
         DEFAULT_SIZE, Direction, MAX_SIZE, Noun, OpenWindow, Paging, Sizes, Sort, Window, href,
@@ -617,22 +624,22 @@ mod tests {
     fn the_range_names_its_noun_and_a_partial_answer_says_so() {
         let sets = noun("value-sets");
         let window = Window::over(312, Paging { page: 2, size: 25 });
-        assert_eq!("26-50 of 312 value sets", window.range_of(sets));
+        assert_eq!("26-50 of 312 value sets", window.range_of(&en(), sets));
         assert_eq!(
             "1-1 of 1 value set",
-            Window::over(1, Paging::default()).range_of(sets)
+            Window::over(1, Paging::default()).range_of(&en(), sets)
         );
         assert_eq!(
             "No value sets",
-            Window::over(0, Paging::default()).range_of(sets)
+            Window::over(0, Paging::default()).range_of(&en(), sets)
         );
-        assert_eq!(None, partial_note(312, Some(312), sets));
-        assert_eq!(None, partial_note(312, None, sets));
+        assert_eq!(None, partial_note(&en(), 312, Some(312), sets));
+        assert_eq!(None, partial_note(&en(), 312, None, sets));
         assert_eq!(
             Some(String::from(
                 "The server counted 340 value sets, and this listing holds 312."
             )),
-            partial_note(312, Some(340), sets).map(String::from)
+            partial_note(&en(), 312, Some(340), sets).map(String::from)
         );
     }
 
@@ -654,7 +661,7 @@ mod tests {
             1000,
         );
         assert_eq!((0, 1000, 4), (window.start, window.end, window.pages));
-        let mut query = ParamsMap::new();
+        let mut query = Query::new();
         Paging { page: 1, size: 100 }.write_within(&mut query, sizes);
         assert_eq!("/l", href("/l", &query), "the default is its absence");
     }
@@ -664,22 +671,22 @@ mod tests {
         let rows = Noun::ROWS;
         let first = OpenWindow::of(Paging { page: 1, size: 25 }, 25);
         assert!(!first.has_previous() && first.has_next());
-        assert_eq!("Rows 1 to 25", first.range_of(rows));
+        assert_eq!("Rows 1 to 25", first.range_of(&en(), rows));
         let second = OpenWindow::of(Paging { page: 2, size: 25 }, 12);
         assert_eq!(25, second.start, "the offset the console asks for");
         assert!(
             second.has_previous() && !second.has_next(),
             "a short page ends it"
         );
-        assert_eq!("Rows 26 to 37", second.range_of(rows));
+        assert_eq!("Rows 26 to 37", second.range_of(&en(), rows));
         let past = OpenWindow::of(Paging { page: 9, size: 25 }, 0);
-        assert_eq!("Page 9 is past the last row.", past.range_of(rows));
+        assert_eq!("Page 9 is past the last row.", past.range_of(&en(), rows));
         let empty = OpenWindow::of(Paging { page: 1, size: 25 }, 0);
-        assert_eq!("No rows", empty.range_of(rows));
-        assert_eq!("EHRs", noun("ehrs").opening());
-        assert_eq!("EHRs 1 to 25", first.range_of(noun("ehrs")));
-        assert_eq!("No EHRs", empty.range_of(noun("ehrs")));
-        assert_eq!("Page 9 is past the last EHR.", past.range_of(noun("ehrs")));
+        assert_eq!("No rows", empty.range_of(&en(), rows));
+        assert_eq!("EHRs", noun("ehrs").opening(&en()));
+        assert_eq!("EHRs 1 to 25", first.range_of(&en(), noun("ehrs")));
+        assert_eq!("No EHRs", empty.range_of(&en(), noun("ehrs")));
+        assert_eq!("Page 9 is past the last EHR.", past.range_of(&en(), noun("ehrs")));
     }
 
     #[test]
@@ -701,7 +708,7 @@ mod tests {
     fn a_window_clamps_its_page_and_never_shows_nothing() {
         let window = Window::over(312, Paging { page: 2, size: 25 });
         assert_eq!((25, 50, 13), (window.start, window.end, window.pages));
-        assert_eq!("26-50 of 312", window.range_label());
+        assert_eq!("26-50 of 312", window.range_label(&en()));
         let last = Window::over(312, Paging { page: 99, size: 25 });
         assert_eq!((13, 300, 312), (last.page, last.start, last.end));
         assert!(!last.has_next() && last.has_previous(), "the last page");
@@ -710,7 +717,7 @@ mod tests {
             (1, 1, 0, 0),
             (empty.page, empty.pages, empty.start, empty.end)
         );
-        assert_eq!("No rows", empty.range_label());
+        assert_eq!("No rows", empty.range_label(&en()));
         let rows: Vec<u32> = (0..60).collect();
         let window = Window::over(60, Paging { page: 3, size: 25 });
         assert_eq!(&rows[50..60], window.slice(&rows));
@@ -721,19 +728,19 @@ mod tests {
         let rows: Vec<u32> = (1..=137).collect();
         let full = Window::over(137, Paging { page: 1, size: 25 });
         assert_eq!(25, full.slice(&rows).len());
-        assert_eq!("1-25 of 137", full.range_label());
+        assert_eq!("1-25 of 137", full.range_label(&en()));
         let last = Window::over(137, Paging { page: 6, size: 25 });
         assert_eq!(&rows[125..], last.slice(&rows));
         assert_eq!(12, last.slice(&rows).len());
-        assert_eq!("126-137 of 137", last.range_label());
+        assert_eq!("126-137 of 137", last.range_label(&en()));
     }
 
     #[test]
     fn a_default_is_written_as_its_absence_and_other_keys_are_kept() {
-        let mut query = ParamsMap::new();
+        let mut query = Query::new();
         query.insert("filter", String::from("a b&c"));
         Paging::default().write(&mut query);
-        assert_eq!("/list?filter=a%20b%26c", href("/list", &query));
+        assert_eq!("/list?filter=a+b%26c", href("/list", &query));
         Paging { page: 2, size: 50 }.write(&mut query);
         let link = href("/list", &query);
         assert!(
@@ -745,7 +752,7 @@ mod tests {
 
     #[test]
     fn the_fields_of_a_query_keep_its_keys_values_and_order() {
-        let mut query = ParamsMap::new();
+        let mut query = Query::new();
         query.insert("q", String::from("a b&c"));
         query.insert("size", String::from("50"));
         assert_eq!(
@@ -774,9 +781,9 @@ mod tests {
             Direction::Descending,
             Sort::toggled(Some(&ascending), "name").direction
         );
-        let mut query = ParamsMap::new();
+        let mut query = Query::new();
         query.insert("page", String::from("4"));
         sort.write(&mut query);
-        assert_eq!("/l?order=desc&sort=name", href("/l", &query));
+        assert_eq!("/l?sort=name&order=desc", href("/l", &query));
     }
 }

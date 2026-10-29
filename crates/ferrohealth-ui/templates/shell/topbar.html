@@ -1,0 +1,6 @@
+<header class="fui-topbar"><div class="fui-topbar-row">
+<button type="button" class="fui-icon-button fui-drawer-only" command="show-modal" commandfor="{{ sidebar }}" aria-controls="{{ sidebar }}" aria-haspopup="dialog" aria-label="{{ open_menu }}">{{ menu_glyph }}</button>
+{{ lockup }}
+{% if let Some(search) = search %}<div class="fui-topbar-middle">{{ search }}</div>{% endif %}
+<div class="fui-topbar-end">{{ end }}</div>
+</div></header>

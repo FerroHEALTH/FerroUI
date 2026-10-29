@@ -9,8 +9,9 @@
 //! icon is hidden from assistive technology, which reads the word beside
 //! it: an icon never carries meaning alone (WCAG 2.2 SC 1.1.1, SC 1.4.1).
 
-use leptos::prelude::*;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+use crate::html::Html;
 
 /// The inner markup of one Lucide outline, drawn on a 24 by 24 grid with a
 /// two-unit round stroke in the current colour.
@@ -564,7 +565,7 @@ impl Glyph {
     }
 }
 
-// NOTE: leptos-ui.md §15.2; an island's glyph prop crosses to the browser as its Lucide name.
+// NOTE: no specification governs this: our own design; a glyph travels as its Lucide name.
 impl Serialize for Glyph {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let name = self
@@ -588,46 +589,30 @@ impl<'de> Deserialize<'de> for Glyph {
 /// `size` is a CSS pixel count as text, such as `"16"`; the icon takes the
 /// text colour of its parent.
 #[must_use]
-pub fn icon(glyph: Glyph, size: &'static str) -> impl IntoView + use<> {
+pub fn icon(glyph: Glyph, size: &'static str) -> Html {
     icon_classed(glyph, size, "")
 }
 
 /// Returns `glyph` as [`icon`] draws it, with the classes `class` beside the
 /// library's own.
 #[must_use]
-pub fn icon_classed(
-    glyph: Glyph,
-    size: &'static str,
-    class: &'static str,
-) -> impl IntoView + use<> {
+pub fn icon_classed(glyph: Glyph, size: &'static str, class: &'static str) -> Html {
     let class = if class.is_empty() {
         String::from("fui-icon")
     } else {
         format!("fui-icon {class}")
     };
-    view! {
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width=size
-            height=size
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-            focusable="false"
-            class=class
-            inner_html=glyph.markup()
-        ></svg>
-    }
+    Html::raw(format!(
+        "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{size}\" height=\"{size}\" \
+         viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" \
+         stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" \
+         focusable=\"false\" class=\"{class}\">{}</svg>",
+        glyph.markup()
+    ))
 }
 
 #[cfg(test)]
 mod tests {
-    use leptos::prelude::RenderHtml as _;
-
     use super::Glyph;
 
     /// The inner markup of the vendored outline `name`, each line trimmed and
@@ -686,7 +671,7 @@ mod tests {
 
     #[test]
     fn an_icon_is_hidden_and_draws_its_outline() {
-        let html = super::icon(Glyph::CHECK, "16").to_html();
+        let html = super::icon(Glyph::CHECK, "16").to_string();
         assert!(html.contains(r#"aria-hidden="true""#), "{html}");
         assert!(html.contains(r#"width="16""#), "{html}");
         assert!(html.contains(Glyph::CHECK.markup()), "{html}");

@@ -7,36 +7,28 @@
 //!
 //! A tag is a short word in the UI face on the sunken ground, on one line
 //! while it fits, and it is read as the text it shows. A tag wider than
-//! its box, such as a domain named by a canonical URL or an OID, wraps
-//! between its words and breaks inside a word only where the word alone
-//! is wider, so it never widens the page (WCAG 2.2 SC 1.4.10).
-//! The word starts with a capital, as every word the family draws for a
-//! state or a kind does; where the value has a raw code (a language key, a
-//! scope operation), the code follows inside the tag as a quiet hint in the
-//! code face, so a reader who knows the code finds it. A glyph before the
-//! word is hidden from assistive technology, since the word says it
-//! already. An identifier-like tag, a version or an RM type, draws in the
-//! code face.
-//!
-//! The provenance tag (F4, [`Tag::locked`]) marks a value the console may
-//! not change: a file, a directory or a reserved namespace owns it. It is
-//! the tag with a dashed edge and the lock before its word, and it names
-//! its owner in its tooltip and in its accessible name, so neither the
-//! lock nor the dashed edge stands alone. No specification governs the
-//! tag: our own design.
+//! its box wraps between its words and breaks inside a word only where the
+//! word alone is wider, so it never widens the page (WCAG 2.2 SC 1.4.10).
+//! The word starts with a capital; where the value has a raw code, the code
+//! follows inside the tag as a quiet hint in the code face. A glyph before
+//! the word is hidden from assistive technology. The provenance tag (F4,
+//! [`Tag::locked`]) marks a value the console may not change: the tag with
+//! a dashed edge and the lock before its word, naming its owner in its
+//! tooltip and its accessible name. No specification governs the tag: our
+//! own design.
 
-use leptos::prelude::*;
+use askama::Template;
 
+use crate::html::{Html, Render as _};
 use crate::icon::{Glyph, icon};
 
 /// A tag, drawn by [`Tag::view`]; [`tag`] draws the plain one.
 ///
 /// ```
 /// use ferrohealth_ui::view::tag::Tag;
-/// use leptos::prelude::*;
 ///
-/// let html = Owner::new().with(|| Tag::new("FHIRconnect").code("fhirconnect").view().to_html());
-/// assert!(html.contains("fui-tag-code"));
+/// let html = Tag::new("FHIRconnect").code("fhirconnect").view();
+/// assert!(html.as_str().contains("fui-tag-code"));
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[must_use]
@@ -88,8 +80,7 @@ impl Tag {
     }
 
     /// Marks a value the console cannot change (F4): a dashed edge, no
-    /// ground, muted words and the lock before them, with `owner` (what
-    /// owns it, such as "Provisioned from mappings/observation.yml") as its
+    /// ground, muted words and the lock before them, with `owner` as its
     /// tooltip and after its word in its accessible name. A later
     /// [`Tag::title`] replaces the tooltip alone.
     pub fn locked(mut self, owner: impl Into<String>) -> Self {
@@ -119,38 +110,36 @@ impl Tag {
 
     /// Returns the tag.
     #[must_use]
-    pub fn view(self) -> AnyView {
+    pub fn view(self) -> Html {
         let class = self.class();
-        let Self {
-            words,
-            code,
-            glyph,
-            title,
-            owner,
-            ..
-        } = self;
-        if glyph.is_none() && code.is_none() && owner.is_none() {
-            return view! {
-                <span class=class title=title>
-                    {words}
-                </span>
-            }
-            .into_any();
+        TagView {
+            class,
+            glyph: self.glyph.map(|glyph| icon(glyph, "12")),
+            words: self.words,
+            code: self.code,
+            owner: self.owner,
+            title: self.title,
         }
-        view! {
-            <span class=class title=title>
-                {glyph.map(|glyph| icon(glyph, "12"))}
-                {words}
-                {code.map(|code| view! { <span class="fui-tag-code">{code}</span> })}
-                {owner.map(|owner| view! { <span class="fui-sr-only">{format!(" ({owner})")}</span> })}
-            </span>
-        }
-        .into_any()
+        .html()
     }
+}
+
+#[derive(Template)]
+#[template(
+    source = r#"<span class="{{ class }}"{% if let Some(title) = title %} title="{{ title }}"{% endif %}>{% if let Some(glyph) = glyph %}{{ glyph }}{% endif %}{{ words }}{% if let Some(code) = code %}<span class="fui-tag-code">{{ code }}</span>{% endif %}{% if let Some(owner) = owner %}<span class="fui-sr-only"> ({{ owner }})</span>{% endif %}</span>"#,
+    ext = "html"
+)]
+struct TagView {
+    class: &'static str,
+    glyph: Option<Html>,
+    words: String,
+    code: Option<String>,
+    owner: Option<String>,
+    title: Option<String>,
 }
 
 /// Returns the plain tag `words`, such as a format in a pane head.
 #[must_use]
-pub fn tag(words: impl Into<String>) -> AnyView {
+pub fn tag(words: impl Into<String>) -> Html {
     Tag::new(words).view()
 }

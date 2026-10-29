@@ -21,7 +21,7 @@ use fluent_templates::fluent_bundle::FluentValue;
 use fluent_templates::fluent_bundle::memoizer::MemoizerKind;
 use intl_memoizer::Memoizable;
 
-use super::{Locale, Text, locale};
+use super::{Locale, Text};
 
 /// The marks a language writes a number with.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -73,8 +73,8 @@ impl Marks {
 /// after a title or on a tab; a number inside a message is written by the
 /// catalog's formatter.
 #[must_use]
-pub fn grouped(count: u64) -> String {
-    Marks::of(&locale()).write(&count.to_string(), true)
+pub fn grouped(locale: &Locale, count: u64) -> String {
+    Marks::of(locale).write(&count.to_string(), true)
 }
 
 /// The mark the page's language groups the digits of a count by, resolved
@@ -107,9 +107,9 @@ impl Default for Grouping {
 impl Grouping {
     /// The grouping of the page being drawn.
     #[must_use]
-    pub fn of_page() -> Self {
+    pub fn of(locale: &Locale) -> Self {
         Self {
-            group: locale().text(Text::NumberGroup),
+            group: locale.text(Text::NumberGroup),
         }
     }
 
@@ -170,14 +170,8 @@ pub fn format_number<M: MemoizerKind>(value: &FluentValue<'_>, memoizer: &M) -> 
     let language = memoizer
         .with_try_get_threadsafe::<Language, _, _>((), |language| language.0.clone())
         .ok()?;
-    // NOTE: no specification governs this: our own design; the page's locale, with a
-    // console's catalog of its language, gives the marks when the languages agree.
-    let page = locale();
-    let marks = if page.language == language {
-        Marks::of(&page)
-    } else {
-        Marks::of(&Locale::of(language))
-    };
+    // NOTE: no specification governs this: our own design; the bundle's language gives the marks.
+    let marks = Marks::of(&Locale::of(language));
     Some(marks.write(&number.as_string(), number.options.use_grouping))
 }
 

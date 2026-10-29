@@ -37,7 +37,6 @@ use std::fmt;
 
 use fluent_templates::fluent_bundle::FluentValue;
 use fluent_templates::{LanguageIdentifier, Loader, StaticLoader};
-use leptos::prelude::*;
 
 mod negotiate;
 pub mod number;
@@ -54,6 +53,17 @@ fluent_templates::static_loader! {
             bundle.set_formatter(Some(number::format_number));
         },
     };
+}
+
+/// The ids of every message the library's components draw, by the area
+/// whose catalog file holds it: what a catalog of another language must
+/// hold whole, and what a console's own check may read.
+#[must_use]
+pub fn message_ids() -> Vec<(&'static str, Vec<&'static str>)> {
+    words::AREAS
+        .iter()
+        .map(|(area, texts)| (*area, texts.iter().map(|text| text.id()).collect()))
+        .collect()
 }
 
 /// The library's catalogs, every language it ships, so a catalog of a
@@ -113,8 +123,8 @@ impl From<usize> for Arg {
 impl From<u64> for Arg {
     fn from(number: u64) -> Self {
         // NOTE: no specification governs this: our own design; a count past what a float
-        // holds exactly is written grouped as text, which a plural reads as its default.
-        number::exact(number).map_or_else(|| Self::Text(number::grouped(number)), Self::Number)
+        // holds exactly is written as text, which a plural reads as its default.
+        number::exact(number).map_or_else(|| Self::Text(number.to_string()), Self::Number)
     }
 }
 
@@ -370,46 +380,31 @@ impl Message {
 
     /// The message in the page's locale.
     #[must_use]
-    pub fn text(self) -> String {
-        locale().lookup(self.catalog, self.id)
+    pub fn text(self, locale: &Locale) -> String {
+        locale.lookup(self.catalog, self.id)
     }
 
     /// The message in the page's locale, with the placeables `args` filled
     /// in.
     #[must_use]
-    pub fn text_with(self, args: &[(&'static str, Arg)]) -> String {
-        locale().lookup_with(self.catalog, self.id, args)
+    pub fn text_with(self, locale: &Locale, args: &[(&'static str, Arg)]) -> String {
+        locale.lookup_with(self.catalog, self.id, args)
     }
 
     /// The message's attribute `name` (`.empty`) in the page's locale, with
     /// the placeables `args` filled in.
     #[must_use]
-    pub fn attribute(self, name: &str, args: &[(&'static str, Arg)]) -> String {
-        locale().lookup_with(self.catalog, &format!("{}.{name}", self.id), args)
+    pub fn attribute(self, locale: &Locale, name: &str, args: &[(&'static str, Arg)]) -> String {
+        locale.lookup_with(self.catalog, &format!("{}.{name}", self.id), args)
     }
 }
 
 /// The text drawn for the message `id` no catalog holds: the id itself,
 /// never nothing, with a warning in the log.
 fn missing(id: &str) -> String {
-    leptos::logging::warn!("no catalog holds the message {id}");
     id.to_owned()
 }
 
-/// Makes `locale` the locale of the page tree under the calling component:
-/// call it once, at the root of the page tree the server draws.
-pub fn provide_locale(locale: Locale) {
-    provide_context(locale);
-}
-
-/// The locale of the page being drawn: the one the page tree provides, and
-/// English when there is none.
-#[must_use]
-pub fn locale() -> Locale {
-    // NOTE: no specification governs this: our own design; a page that names no
-    // locale, or a string rendered outside a page tree, draws the reference one.
-    use_context::<Locale>().unwrap_or_default()
-}
 
 /// The marks around the name of a placeable a [`Phrase`] leaves open:
 /// Unicode private-use characters, which no catalog writes.
@@ -658,15 +653,21 @@ impl PartialEq<Word> for String {
     }
 }
 
-// NOTE: the HTML standard, "The lang and xml:lang attributes": an attribute takes the
-// language of its element, so a word written into one carries the page's language.
-impl IntoAttributeValue for Word {
-    type Output = String;
-
-    fn into_attribute_value(self) -> String {
-        self.text
+// NOTE: WCAG 2.2 SC 3.1.2; a word that fell back to English is drawn inside
+// `<span lang="en">`, and an attribute takes its element's language, so it takes the text.
+impl fmt::Display for Word {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut out = String::with_capacity(self.text.len());
+        crate::html::escape_into(&mut out, &self.text);
+        if self.english {
+            write!(f, "<span lang=\"en\">{out}</span>")
+        } else {
+            f.write_str(&out)
+        }
     }
 }
+
+impl askama::filters::HtmlSafe for Word {}
 
 impl From<Word> for Arg {
     fn from(word: Word) -> Self {
@@ -674,28 +675,22 @@ impl From<Word> for Arg {
     }
 }
 
-impl IntoRender for Word {
-    type Output = AnyView;
-
-    fn into_render(self) -> AnyView {
-        if self.english {
-            view! { <span lang="en">{self.text}</span> }.into_any()
-        } else {
-            self.text.into_any()
-        }
+impl From<Word> for crate::html::Html {
+    fn from(word: Word) -> Self {
+        Self::raw(word.to_string())
     }
 }
 
 /// The library's message `text` in the page's locale.
 #[inline(never)]
-pub(crate) fn tr(text: Text) -> Word {
-    locale().library_word(text.id(), &[])
+pub(crate) fn tr(locale: &Locale, text: Text) -> Word {
+    locale.library_word(text.id(), &[])
 }
 
 /// The library's message `text` in the page's locale, with `args` filled in.
 #[inline(never)]
-pub(crate) fn tr_with(text: Text, args: &[(&'static str, Arg)]) -> Word {
-    locale().library_word(text.id(), args)
+pub(crate) fn tr_with(locale: &Locale, text: Text, args: &[(&'static str, Arg)]) -> Word {
+    locale.library_word(text.id(), args)
 }
 
 impl Locale {

@@ -1,0 +1,10 @@
+<span class="fui-anchor" data-fui="user_menu"><button type="button" class="fui-button fui-button-ghost fui-operator" popovertarget="{{ id }}" aria-haspopup="menu" aria-controls="{{ list_id }}"{% if let Some(named) = named %} aria-label="{{ named }}"{% endif %}{% if let Some(name) = name %} title="{{ name }}"{% endif %}>{{ user_glyph }}{% if let Some(name) = name %}<span class="fui-operator-name">{{ name }}</span>{% endif %}{{ chevron }}</button>
+<div id="{{ id }}" popover="auto" class="fui-menu fui-menu-compact fui-menu-anchored fui-menu-sheet fui-user-menu">
+<p class="fui-menu-sheet-title" aria-hidden="true">{{ label }}</p>
+<div class="fui-menu-header"><strong>{{ who }}</strong><span>{{ line }}</span></div>
+<div class="fui-menu-sep"></div>
+<div id="{{ list_id }}" role="menu" aria-label="{{ label }}" class="fui-menu-items">
+{{ items }}
+</div>
+<button type="button" class="fui-menu-cancel" popovertarget="{{ id }}" popovertargetaction="hide">{{ cancel }}</button>
+</div></span>

@@ -1,0 +1,9 @@
+<dialog id="{{ id }}" closedby="any" aria-label="{{ label }}" class="fui-sidebar{% if rail %} fui-sidebar-rail{% endif %}" data-fui="drawer">
+<button type="button" class="{{ close_class }}" command="close" commandfor="{{ id }}">{{ close_glyph }}{{ close }}</button>
+<nav aria-label="{{ label }}" class="fui-sidebar-nav">
+{% for group in groups %}<p id="{{ group.id }}" class="fui-nav-group">{{ group.title }}</p>
+<ul class="fui-nav-list" aria-labelledby="{{ group.id }}">{% for entry in group.entries %}<li><a href="{{ entry.href }}" class="fui-nav-entry"{% if let Some(current) = entry.current %} aria-current="{{ current }}"{% endif %}>{{ entry.glyph }}<span class="fui-nav-word">{{ entry.label }}</span>{{ entry.count }}{% if let Some(tooltip) = entry.tooltip %}<span class="fui-tooltip" aria-hidden="true">{{ tooltip }}</span>{% endif %}</a>{% if let Some(nest) = entry.nest %}{{ nest }}{% endif %}</li>{% endfor %}</ul>
+{% endfor %}
+{% if let Some(foot) = foot %}<form method="post" action="{{ foot.action }}" class="fui-sidebar-foot fui-wide-only"><input type="hidden" name="back" value="{{ foot.back }}"><button type="submit" name="sidebar" value="{{ foot.value }}" class="{{ foot.class }}" aria-expanded="{{ foot.expanded }}" aria-controls="{{ id }}">{{ foot.glyph }}<span class="fui-nav-word">{{ foot.words }}</span></button></form>{% endif %}
+</nav>
+</dialog>

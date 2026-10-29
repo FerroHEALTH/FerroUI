@@ -4,42 +4,63 @@
 //! The status marks: the pill, the badge, the status indicator and the
 //! banner. Each is a word first and a tint second (WCAG 2.2 SC 1.4.1).
 
-use leptos::prelude::*;
+use askama::Template;
 
+use crate::html::{Html, Render as _};
 use crate::i18n::Word;
 use crate::icon::{Glyph, icon};
 use crate::tone::Tone;
 
+#[derive(Template)]
+#[template(source = r#"<span class="{{ class }}">{{ word }}</span>"#, ext = "html")]
+struct Marked {
+    class: &'static str,
+    word: Word,
+}
+
 /// Returns a status pill: a dot and `word` on the ground of `tone`.
 #[must_use]
-pub fn pill(tone: Tone, word: &str) -> impl IntoView + use<> {
-    view! { <span class=tone.pill()>{word.to_owned()}</span> }
+pub fn pill(tone: Tone, word: &str) -> Html {
+    Marked {
+        class: tone.pill(),
+        word: Word::new(word),
+    }
+    .html()
 }
 
 /// Returns a badge: `word` on the ground of `tone`, with no dot.
 #[must_use]
-pub fn badge<W: Into<Word>>(tone: Tone, word: W) -> impl IntoView + use<W> {
-    let word: Word = word.into();
-    view! { <span class=tone.badge()>{word}</span> }
+pub fn badge(tone: Tone, word: impl Into<Word>) -> Html {
+    Marked {
+        class: tone.badge(),
+        word: word.into(),
+    }
+    .html()
+}
+
+#[derive(Template)]
+#[template(
+    source = r#"<span class="fui-status {{ tone }}">{{ glyph }}{{ word }}{% if let Some(detail) = detail %}<span class="fui-status-detail">{{ detail }}</span>{% endif %}</span>"#,
+    ext = "html"
+)]
+struct Status {
+    tone: &'static str,
+    glyph: Html,
+    word: String,
+    detail: Option<String>,
 }
 
 /// Returns a status indicator: `glyph` beside `word`, in `tone`, with a
 /// muted `detail` after it when there is one.
 #[must_use]
-pub fn status(
-    tone: Tone,
-    glyph: Glyph,
-    word: &str,
-    detail: Option<String>,
-) -> impl IntoView + use<> {
-    let class = format!("fui-status {}", tone.class());
-    view! {
-        <span class=class>
-            {icon(glyph, "14")}
-            {word.to_owned()}
-            {detail.map(|detail| view! { <span class="fui-status-detail">{detail}</span> })}
-        </span>
+pub fn status(tone: Tone, glyph: Glyph, word: &str, detail: Option<String>) -> Html {
+    Status {
+        tone: tone.class(),
+        glyph: icon(glyph, "14"),
+        word: word.to_owned(),
+        detail,
     }
+    .html()
 }
 
 /// The link a banner ends with, after its sentence: where the reader
@@ -50,6 +71,19 @@ pub struct BannerLink {
     pub words: String,
     /// Where it leads.
     pub href: String,
+}
+
+#[derive(Template)]
+#[template(
+    source = r#"<div role="note" aria-label="{{ title }}" class="fui-banner {{ tone }}">{{ glyph }}<p><strong>{{ title }}: </strong>{{ body }}{% if let Some(link) = link %} · <a href="{{ link.href }}">{{ link.words }}</a>{% endif %}</p></div>"#,
+    ext = "html"
+)]
+struct Banner {
+    tone: &'static str,
+    glyph: Html,
+    title: String,
+    body: String,
+    link: Option<BannerLink>,
 }
 
 /// Returns a banner across the page in `tone`: `glyph`, the bold `title`
@@ -64,27 +98,15 @@ pub fn banner(
     title: impl Into<String>,
     body: &str,
     link: Option<BannerLink>,
-) -> AnyView {
-    let title = title.into();
-    let words = title.clone();
-    let class = format!("fui-banner {}", tone.class());
-    let link = link.map(|link| {
-        view! {
-            " · "
-            <a href=link.href>{link.words}</a>
-        }
-    });
-    view! {
-        <div role="note" aria-label=title class=class>
-            {icon(glyph, "16")}
-            <p>
-                <strong>{words} ": "</strong>
-                {body.to_owned()}
-                {link}
-            </p>
-        </div>
+) -> Html {
+    Banner {
+        tone: tone.class(),
+        glyph: icon(glyph, "16"),
+        title: title.into(),
+        body: body.to_owned(),
+        link,
     }
-    .into_any()
+    .html()
 }
 
 /// The state of the product a console reaches, as the top bar's status pill
@@ -141,6 +163,17 @@ pub struct StatusPill {
     pub detail: Option<String>,
 }
 
+#[derive(Template)]
+#[template(
+    source = r#"<span class="{{ class }} fui-topbar-status" title="{{ tooltip }}"><span class="fui-roomy-text">{{ words }}</span></span>"#,
+    ext = "html"
+)]
+struct TopbarStatus {
+    class: &'static str,
+    tooltip: String,
+    words: String,
+}
+
 /// Returns the top bar's status pill: the state's shape and its words, with
 /// the words and the detail in its tooltip.
 ///
@@ -148,15 +181,15 @@ pub struct StatusPill {
 /// its shape alone, and the words stay in the page, visually hidden, as its
 /// accessible name and in its tooltip (F12).
 #[must_use]
-pub fn status_pill(pill: StatusPill) -> impl IntoView + use<> {
-    let class = format!("{} fui-topbar-status", pill.reach.tone().pill());
+pub fn status_pill(pill: StatusPill) -> Html {
     let tooltip = match pill.detail {
         Some(detail) => format!("{} · {detail}", pill.words),
         None => pill.words.clone(),
     };
-    view! {
-        <span class=class title=tooltip>
-            <span class="fui-roomy-text">{pill.words}</span>
-        </span>
+    TopbarStatus {
+        class: pill.reach.tone().pill(),
+        tooltip,
+        words: pill.words,
     }
+    .html()
 }
