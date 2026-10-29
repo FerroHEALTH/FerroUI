@@ -233,7 +233,7 @@ impl DateWords {
     }
 
     /// These words with the number of days a range holds, from 1 to
-    /// [`COUNTED`], each with its plural in `locale`.
+    /// `COUNTED` (62), each with its plural in `locale`.
     #[must_use]
     pub fn counted(self, locale: &Locale) -> Self {
         Self {
@@ -276,7 +276,8 @@ impl DateWords {
         ])
     }
 
-    /// The number of days `count`, for a range of at most [`COUNTED`] days.
+    /// The number of days `count`, for a range of at most `COUNTED` (62)
+    /// days.
     #[must_use]
     pub fn days(&self, count: u32) -> Option<&str> {
         let place = usize::try_from(count.checked_sub(1)?).ok()?;

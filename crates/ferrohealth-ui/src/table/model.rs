@@ -135,7 +135,7 @@ impl Default for Sizes {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum StateSource {
     /// In the URL's query: shareable, walked by back and forward, working
-    /// before the page hydrates.
+    /// with no script.
     #[default]
     Url,
     /// Out of the URL and the history: the listing's forms post it and the

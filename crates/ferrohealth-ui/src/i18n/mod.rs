@@ -15,15 +15,14 @@
 //! and the one every lookup falls back to. [`Locale::negotiate`] chooses a
 //! locale by an `Accept-Language` header.
 //!
-//! A console chooses the locale once per render: it builds a [`Locale`] from
-//! its configuration or the request and hands it to [`provide_locale`] at
-//! the root of its page tree on the server, and writes [`Locale::tag`] as
-//! `<html lang>` (WCAG 2.2 SC 3.1.1). A component reads it with [`locale`],
-//! and a page that provides none renders in English. An island never looks a
-//! word up: the server resolves each word it draws, through a widget's
-//! `*Words::of_page()` or a [`Phrase`] for a sentence around a value the
-//! browser learns, and hands them over as props, so the browser carries no
-//! catalog. A console catalogs its own page strings the same
+//! A console chooses the locale once per request: it builds a [`Locale`]
+//! from its configuration or the request, hands it to every component that
+//! draws words of its own, and writes [`Locale::tag`] as `<html lang>` (WCAG
+//! 2.2 SC 3.1.1); [`Locale::english`] renders in English. A script module
+//! never looks a word up: the server resolves each word it draws, through a
+//! component's `*Words::of(locale)` or a [`Phrase`] for a sentence around a
+//! value the browser learns, and writes them into the page, so the browser
+//! carries no catalog. A console catalogs its own page strings the same
 //! way: its own `static_loader!` over its own `locales/`, looked up through
 //! [`Locale::lookup`] so its words follow the same choice.
 //!
@@ -411,13 +410,14 @@ const OPEN: char = '\u{E000}';
 /// The mark after the name of an open placeable.
 const SHUT: char = '\u{E001}';
 
-/// Words resolved on the server with placeables left open, which an island
-/// fills with values it learns only as it runs, such as a file's name.
+/// Words resolved on the server with placeables left open, which a script
+/// module fills with values it learns only as it runs, such as a file's
+/// name.
 ///
-/// An island takes its words as props, resolved on the server, so it carries
-/// no catalog (`leptos-ui.md` §15.4). Where a sentence names a value the
-/// browser learns, the server looks the message up with [`Phrase::open`] in
-/// place of that value, and the island fills it with [`Phrase::fill`]. A
+/// A module takes its words from the page, resolved on the server, so it
+/// carries no catalog. Where a sentence names a value the browser learns,
+/// the server looks the message up with [`Phrase::open`] in place of that
+/// value, and the module fills it as [`Phrase::fill`] does. A
 /// catalog never selects a form by an open placeable: a plural is chosen on
 /// the server, by a count it knows.
 ///
@@ -483,8 +483,8 @@ impl Text {
 ///
 /// Drawn as a text node, a word that fell back is wrapped in
 /// `<span lang="en">` so a screen reader speaks it as English (WCAG 2.2 SC
-/// 3.1.2). An island takes its words as `Word`s resolved on the server, so
-/// it draws the same mark. A word written into an attribute (an accessible
+/// 3.1.2). A script module takes its words as `Word`s resolved on the
+/// server, so it draws the same mark. A word written into an attribute (an accessible
 /// name, a title, a placeholder) carries the language of the page: an
 /// attribute value has no language of its own in HTML. A word joined into
 /// a longer sentence, or into a chart's drawn text, takes the sentence's
@@ -496,7 +496,8 @@ pub struct Word {
     english: bool,
 }
 
-/// A word as an island's props carry it: a word in the page's language as
+/// A word as the page carries it to a script module: a word in the page's
+/// language as
 /// a plain string, so a page in English carries what it always did, and a
 /// word that fell back as `{"en": text}`.
 #[derive(serde::Serialize, serde::Deserialize)]

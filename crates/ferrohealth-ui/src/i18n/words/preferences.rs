@@ -56,7 +56,7 @@ texts! {
     PreferencesResetConfirm = "preferences-reset-confirm",
     /// The question of the reset dialog.
     PreferencesResetTitle = "preferences-reset-title",
-    /// The button that posts a preference before the page has hydrated.
+    /// The button that posts a preference before the `preference` module runs.
     PreferencesSave = "preferences-save",
     /// The mark of a preference just kept.
     PreferencesSaved = "preferences-saved",

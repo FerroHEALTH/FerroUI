@@ -18,7 +18,7 @@
 //! groups: the choices post as they stand (a chosen value its select does
 //! not list stays chosen, said to be not in the list), and Remove, Add a condition and
 //! Add a group are submit buttons naming what they act on, so the builder
-//! works with no WebAssembly (`leptos-ui.md` §15.8). No specification
+//! works with no script. No specification
 //! governs the builder: our own design; the query it builds is the
 //! console's AQL (openEHR Query, AQL, § WHERE).
 

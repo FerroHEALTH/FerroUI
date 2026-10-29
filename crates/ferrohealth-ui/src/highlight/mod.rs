@@ -9,7 +9,8 @@
 //! multi-byte character is never split, and the texts of its tokens joined
 //! together are the input exactly: text the grammar does not classify is a
 //! [`Kind::Plain`] token, never dropped. It is a pure function of its input,
-//! so the server pass and hydration agree. The classes are decoration over
+//! so the server pass and the `highlight` module, its twin in the browser,
+//! agree. The classes are decoration over
 //! text that reads the same without them. [`html`] writes a text as escaped,
 //! classed lines, which the code panel and the editor draw. The YAML
 //! tokenizer is FerroBRIDGE's, the AQL and JSON ones FerroFED's, the XML one

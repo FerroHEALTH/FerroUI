@@ -15,8 +15,8 @@
 //! A list says when something happened relative to now, with the full
 //! timestamp as its title (family rule 11): [`relative`] reads `13 s ago`,
 //! `30 min ago`, `2 h ago` the same day, `yesterday`, then days, weeks,
-//! months and years, against the now the console hands it, so the server
-//! and the hydrated page draw the same words. The rounding is our own
+//! months and years, against the now the console hands it, so every page
+//! the server draws says the same words. The rounding is our own
 //! design, the one every console mockup draws.
 
 use crate::html::Html;

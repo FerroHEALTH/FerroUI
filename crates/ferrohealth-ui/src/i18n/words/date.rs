@@ -42,7 +42,7 @@ texts! {
     DateMonthTitle = "date-month-title",
     /// The name of the month chooser's grid.
     DateMonthsOf = "date-months-of",
-    /// The name of the date picker's button before the page's WebAssembly runs.
+    /// The name of the date picker's button before the `date` module runs.
     DateNeedsScript = "date-needs-script",
     /// The picker's arrow to the month after.
     DateNextMonth = "date-next-month",

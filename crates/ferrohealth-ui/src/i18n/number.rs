@@ -78,11 +78,11 @@ pub fn grouped(locale: &Locale, count: u64) -> String {
 }
 
 /// The mark the page's language groups the digits of a count by, resolved
-/// on the server, so an island writes a count it learns in the browser as
-/// the server writes one.
+/// on the server, so a script module writes a count it learns in the
+/// browser as the server writes one.
 ///
-/// An island carries no catalog (`leptos-ui.md` §15.4), so a widget whose
-/// island counts takes this as part of its words.
+/// A module carries no catalog, so a component whose module counts takes
+/// this as part of its words.
 ///
 /// # Examples
 ///

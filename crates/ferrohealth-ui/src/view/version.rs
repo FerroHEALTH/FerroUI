@@ -8,12 +8,11 @@
 //! and release as its tooltip and its accessible name, and no prefix text.
 //! Its menu (F13) lists each root with its release in a second column, a
 //! check on the one in view and "default" on the default; each choice is a
-//! link, so choosing works with no WebAssembly, and the island
-//! [`crate::island::MenuButton`] adds the menu button pattern of the
-//! WAI-ARIA Authoring Practices 1.2 and returns the focus to the control.
-//! Below 40 rem the control leaves the top bar and the user menu holds the
-//! same choices as a segmented control ([`VersionSelect::choices`] into
-//! [`crate::widget::menu::UserMenu::choices`]). No specification governs
+//! link, so choosing works with no script, and the `menu` module adds the
+//! menu button pattern of the WAI-ARIA Authoring Practices 1.2 and returns
+//! the focus to the control. Below 40 rem the control leaves the top bar
+//! and the user menu holds the same choices as a segmented control
+//! ([`VersionSelect::choices`] into [`crate::view::menu::UserMenu::choices`]). No specification governs
 //! the layout: our own design.
 
 use crate::html::Html;
