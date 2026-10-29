@@ -25,6 +25,7 @@ mod console;
 mod contrast;
 mod controls;
 mod dock;
+mod federation;
 mod fields;
 mod figures;
 mod filter;

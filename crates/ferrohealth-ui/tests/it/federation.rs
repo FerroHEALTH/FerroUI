@@ -6,11 +6,13 @@
 //! (F9). Each state is a shape, a colour and a word (family rule 12), every
 //! action is a link or a form, and nothing writes a style attribute.
 
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::i18n::Word;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::fanout::{Answer, Fanout, FanoutNode, Verdict, fanout};
 use ferrohealth_ui::view::flow::FlowState;
+use ferrohealth_ui::view::nav::{Entry, Group, Nest, NestItem, Sidebar, sidebar};
 use ferrohealth_ui::view::replica::Replica;
 use ferrohealth_ui::view::surface::Header;
 use ferrohealth_ui::view::template::settings::{How, SettingsPage, Source, settings_page};
@@ -18,19 +20,8 @@ use ferrohealth_ui::view::topology::{
     ClusterLink, QuickLook, RowAction, StatusCount, StatusMenu, Topology, TopologyCallers,
     TopologyCard, TopologyGroup, TopologySide, TopologyView, topology,
 };
-use ferrohealth_ui::view::nav::{Entry, Group, Nest, NestItem, Sidebar, sidebar};
 
-use crate::render;
-
-/// `view` rendered as a server render runs, its hydration marks left out.
-fn html(view: impl FnOnce() -> AnyView) -> String {
-    render::html(view).replace("", "")
-}
-
-/// `view` rendered in a page tree, its hydration marks left out.
-fn page_html(view: impl FnOnce() -> AnyView) -> String {
-    render::page_html(view).replace("", "")
-}
+use crate::render::{en, html};
 
 fn node(name: &str, answer: Answer) -> FanoutNode {
     FanoutNode {
@@ -49,12 +40,15 @@ fn node(name: &str, answer: Answer) -> FanoutNode {
 
 fn outcome(nodes: Vec<FanoutNode>) -> String {
     html({
-        fanout(Fanout {
-            label: String::from("What each endpoint did"),
-            line: String::from("2 of 3 asked nodes answered"),
-            missing: String::from("node-b answered 503."),
-            nodes,
-        })
+        fanout(
+            &en(),
+            &Fanout {
+                label: String::from("What each endpoint did"),
+                line: String::from("2 of 3 asked nodes answered"),
+                missing: String::from("node-b answered 503."),
+                nodes,
+            },
+        )
     })
 }
 
@@ -124,23 +118,26 @@ fn the_verdict_follows_the_failures() {
 #[test]
 fn a_reference_page_draws_the_replica_line_under_its_header() {
     let page = html({
-        settings_page(SettingsPage {
-            header: Header {
-                title: Word::from("Self-description"),
-                ..Header::default()
+        settings_page(
+            &en(),
+            SettingsPage {
+                header: Header {
+                    title: Word::from("Self-description"),
+                    ..Header::default()
+                },
+                actions: ActionGroup::none(),
+                source: Source::File {
+                    file: String::from("ferrofed.toml"),
+                    how: How::Page(String::from("/how")),
+                },
+                tabs: None,
+                settings: Vec::new(),
+                replica: Some(Replica {
+                    name: String::from("gateway-0"),
+                    at: None,
+                }),
             },
-            actions: ActionGroup::none(),
-            source: Source::File {
-                file: String::from("ferrofed.toml"),
-                how: How::Page(String::from("/how")),
-            },
-            tabs: None,
-            settings: Vec::new(),
-            replica: Some(Replica {
-                name: String::from("gateway-0"),
-                at: None,
-            }),
-        })
+        )
     });
     let header = page.find("</header>").expect("{page}");
     let line = page.find("fui-replica-line").expect("{page}");
@@ -178,38 +175,41 @@ fn navigation(current: &str, collapsed: bool) -> String {
 
 fn navigation_of(current: &str, collapsed: bool, children: Vec<NestItem>) -> String {
     html({
-        sidebar(Sidebar {
-            id: "sidebar",
-            label: String::from("Console"),
-            groups: vec![Group {
-                id: "nav-fed",
-                title: "Federation".into(),
-                entries: vec![Entry {
-                    href: "/organisations".into(),
-                    label: "Organisations".into(),
-                    glyph: Glyph::USERS,
-                    exact: false,
-                    count: None,
+        sidebar(
+            &en(),
+            Sidebar {
+                id: "sidebar",
+                label: String::from("Console"),
+                groups: vec![Group {
+                    id: "nav-fed",
+                    title: "Federation".into(),
+                    entries: vec![Entry {
+                        href: "/organisations".into(),
+                        label: "Organisations".into(),
+                        glyph: Glyph::USERS,
+                        exact: false,
+                        count: None,
+                    }],
                 }],
-            }],
-            current: current.to_owned(),
-            rail: Some(ferrohealth_ui::view::nav::Rail {
-                collapsed,
-                action: String::from("/sidebar"),
-                back: current.to_owned(),
-            }),
-            nest: Some(Nest {
-                under: "/organisations".into(),
-                label: String::from("Voorbeeldstad and its nodes"),
-                parent: NestItem {
-                    state_words: String::from("Worst node: reachable"),
-                    ..item("Voorbeeldstad", "/organisations/voorbeeldstad", false)
-                },
-                count_words: format!("{} nodes", children.len()),
-                children,
-                all: String::from("All nodes"),
-            }),
-        })
+                current: current.to_owned(),
+                rail: Some(ferrohealth_ui::view::nav::Rail {
+                    collapsed,
+                    action: String::from("/sidebar"),
+                    back: current.to_owned(),
+                }),
+                nest: Some(Nest {
+                    under: "/organisations".into(),
+                    label: String::from("Voorbeeldstad and its nodes"),
+                    parent: NestItem {
+                        state_words: String::from("Worst node: reachable"),
+                        ..item("Voorbeeldstad", "/organisations/voorbeeldstad", false)
+                    },
+                    count_words: format!("{} nodes", children.len()),
+                    children,
+                    all: String::from("All nodes"),
+                }),
+            },
+        )
     })
 }
 
@@ -357,82 +357,85 @@ fn group(
 
 fn federation(collapsed: bool, look: bool, view: TopologyView) -> String {
     html({
-        topology(Topology {
-            id: String::from("fed"),
-            label: String::from("The federation as a map"),
-            list_label: String::from("The federation as a list"),
-            hub: TopologyCard {
-                look: None,
-                action: None,
-                ..card("gateway", FlowState::Up, None)
+        topology(
+            &en(),
+            Topology {
+                id: String::from("fed"),
+                label: String::from("The federation as a map"),
+                list_label: String::from("The federation as a list"),
+                hub: TopologyCard {
+                    look: None,
+                    action: None,
+                    ..card("gateway", FlowState::Up, None)
+                },
+                callers: Some(TopologyCallers {
+                    title: String::from("Calls the gateway"),
+                    line: String::from("who calls it"),
+                    cards: vec![card("ncp", FlowState::NotChecked, None)],
+                }),
+                start: None,
+                end: Some(TopologySide {
+                    title: String::from("Organisations"),
+                    line: String::from("and their nodes"),
+                    groups: vec![
+                        group(
+                            "oost",
+                            FlowState::Degraded,
+                            vec![card("node-b", FlowState::Degraded, Some("503"))],
+                            collapsed,
+                        ),
+                        group(
+                            "proefdorp",
+                            FlowState::Unreachable,
+                            vec![card("node-c", FlowState::Unreachable, Some("no answer"))],
+                            false,
+                        ),
+                        group(
+                            "stad",
+                            FlowState::Up,
+                            vec![card("node-a", FlowState::Up, Some("never shown"))],
+                            false,
+                        ),
+                    ],
+                }),
+                view,
+                views: (String::from("?view=map"), String::from("?view=list")),
+                status: StatusMenu {
+                    action: String::from("/topology"),
+                    name: String::from("show"),
+                    states: vec![
+                        StatusCount {
+                            state: FlowState::Up,
+                            count: 1,
+                            shown: true,
+                        },
+                        StatusCount {
+                            state: FlowState::Degraded,
+                            count: 1,
+                            shown: false,
+                        },
+                    ],
+                },
+                tools: None,
+                updated: None,
+                collapse_all: Some(ClusterLink {
+                    href: String::from("?collapse=all"),
+                    on: false,
+                }),
+                minimap: Some(ClusterLink {
+                    href: String::from("?minimap=on"),
+                    on: true,
+                }),
+                look: look.then(|| QuickLook {
+                    card: String::from("node-b"),
+                    title: String::from("node-b"),
+                    mono: true,
+                    line: None,
+                    close: String::from("?"),
+                    body: Html::raw(String::from("<p>Answers 503.</p>")),
+                }),
             },
-            callers: Some(TopologyCallers {
-                title: String::from("Calls the gateway"),
-                line: String::from("who calls it"),
-                cards: vec![card("ncp", FlowState::NotChecked, None)],
-            }),
-            start: None,
-            end: Some(TopologySide {
-                title: String::from("Organisations"),
-                line: String::from("and their nodes"),
-                groups: vec![
-                    group(
-                        "oost",
-                        FlowState::Degraded,
-                        vec![card("node-b", FlowState::Degraded, Some("503"))],
-                        collapsed,
-                    ),
-                    group(
-                        "proefdorp",
-                        FlowState::Unreachable,
-                        vec![card("node-c", FlowState::Unreachable, Some("no answer"))],
-                        false,
-                    ),
-                    group(
-                        "stad",
-                        FlowState::Up,
-                        vec![card("node-a", FlowState::Up, Some("never shown"))],
-                        false,
-                    ),
-                ],
-            }),
-            view,
-            views: (String::from("?view=map"), String::from("?view=list")),
-            status: StatusMenu {
-                action: String::from("/topology"),
-                name: String::from("show"),
-                states: vec![
-                    StatusCount {
-                        state: FlowState::Up,
-                        count: 1,
-                        shown: true,
-                    },
-                    StatusCount {
-                        state: FlowState::Degraded,
-                        count: 1,
-                        shown: false,
-                    },
-                ],
-            },
-            tools: None,
-            updated: None,
-            collapse_all: Some(ClusterLink {
-                href: String::from("?collapse=all"),
-                on: false,
-            }),
-            minimap: Some(ClusterLink {
-                href: String::from("?minimap=on"),
-                on: true,
-            }),
-            look: look.then(|| QuickLook {
-                card: String::from("node-b"),
-                title: String::from("node-b"),
-                mono: true,
-                line: None,
-                close: String::from("?"),
-                body: view! { <p>"Answers 503."</p> },
-            }),
-        })
+        )
     })
 }
 

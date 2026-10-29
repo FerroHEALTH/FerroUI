@@ -46,7 +46,9 @@ fn the_stacked_bar_is_an_image_named_by_its_sentence_and_the_legend_prints_each_
     let shown = html(funnel(&run(5)));
     assert!(shown.contains(r#"role="img""#), "{shown}");
     assert!(
-        shown.contains("aria-label=\"Of 100 read: 80 written, 20 skipped, 5 refused &#60;now&#62;\""),
+        shown.contains(
+            "aria-label=\"Of 100 read: 80 written, 20 skipped, 5 refused &#60;now&#62;\""
+        ),
         "the sentence is the name, escaped: {shown}"
     );
     assert_eq!(3, shown.matches("<rect").count(), "{shown}");
@@ -145,7 +147,10 @@ fn bridge(cdr: FlowState, term: FlowState) -> Flow {
 
 #[test]
 fn a_flow_draws_each_state_as_a_line_style_and_marks_and_labels_only_its_problem_edges() {
-    let shown = html(flow(&en(), &bridge(FlowState::Unreachable, FlowState::Degraded)));
+    let shown = html(flow(
+        &en(),
+        &bridge(FlowState::Unreachable, FlowState::Degraded),
+    ));
     for class in [
         "fui-edge fui-edge-ok",
         "fui-edge fui-edge-bad",
@@ -173,16 +178,19 @@ fn a_flow_draws_each_state_as_a_line_style_and_marks_and_labels_only_its_problem
 fn the_edge_rule_draws_each_state_as_its_line_its_word_its_style_and_its_meaning() {
     // NOTE: WCAG 2.2 SC 1.4.1: the line sample is hidden; the word and the style say the state.
     let shown = html({
-        edge_rule(&en(), vec![
-            EdgeRule {
-                state: FlowState::Up,
-                meaning: String::from("it answers"),
-            },
-            EdgeRule {
-                state: FlowState::Degraded,
-                meaning: String::from("it answers slowly"),
-            },
-        ])
+        edge_rule(
+            &en(),
+            vec![
+                EdgeRule {
+                    state: FlowState::Up,
+                    meaning: String::from("it answers"),
+                },
+                EdgeRule {
+                    state: FlowState::Degraded,
+                    meaning: String::from("it answers slowly"),
+                },
+            ],
+        )
     });
     assert!(
         has(
@@ -210,14 +218,17 @@ fn the_edge_rule_draws_each_state_as_its_line_its_word_its_style_and_its_meaning
 fn the_flow_rule_is_a_short_informational_dialog_its_button_opens_with_no_script() {
     // NOTE: HTML Living Standard, the button element's command attribute: show-modal opens a dialog.
     let dialog = html({
-        rule_dialog(&en(), FlowRule {
-            id: "flow-rule".into(),
-            rules: vec![EdgeRule {
-                state: FlowState::Off,
-                meaning: String::from("not configured"),
-            }],
-            note: String::from("A card opens its page."),
-        })
+        rule_dialog(
+            &en(),
+            FlowRule {
+                id: "flow-rule".into(),
+                rules: vec![EdgeRule {
+                    state: FlowState::Off,
+                    meaning: String::from("not configured"),
+                }],
+                note: String::from("A card opens its page."),
+            },
+        )
     });
     assert!(
         has(
@@ -240,7 +251,7 @@ fn the_flow_rule_is_a_short_informational_dialog_its_button_opens_with_no_script
         dialog.contains(r#"<p class="fui-small fui-muted">A card opens its page.</p>"#),
         "{dialog}"
     );
-    let button = html(rule_button(&en(), "flow-rule".into()));
+    let button = html(rule_button(&en(), "flow-rule"));
     assert!(
         has(
             &button,
