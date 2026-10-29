@@ -11,7 +11,7 @@
 //! arrive at run time, a result whose pages are bodies of their own, the
 //! pagers of a listing with no stated total, the loading and empty tables,
 //! and a small table that fits a phone unstacked. Every listing works with
-//! no WebAssembly, and below 40rem every row is a line under a hairline.
+//! no script, and below 40rem every row is a line under a hairline.
 
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
@@ -148,7 +148,7 @@ fn row(v: &Visit, row: &Row, columns: &[Column; 6]) -> Html {
 
 /// The listing whose filter, page, size and sort live in the URL: the find
 /// field and the sortable headers are `GET` forms and the pager is links,
-/// so each works before the page hydrates, and back and forward walk them.
+/// so each works before the page is enhanced, and back and forward walk them.
 fn url_table(v: &Visit) -> Html {
     let query = &v.query;
     let path = &v.path;
@@ -226,7 +226,7 @@ fn url_table(v: &Visit) -> Html {
 /// The same rows paged by a `POST` form whose buttons carry the page and the
 /// size, as a screen that can show patient data pages them: the gallery
 /// keeps the position in a session cookie and draws that page, so it never
-/// reaches a URL or the history, and no row reaches the page as island data.
+/// reaches a URL or the history, and no row reaches the page as module data.
 fn session_table(v: &Visit) -> Html {
     let paging = paging_of(&v.cookies, "files");
     let back = v.path.clone();

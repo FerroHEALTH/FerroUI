@@ -610,7 +610,7 @@ fn a_setting_names_its_key_with_a_labelled_copy_button() {
                 ("aria-label", "Copy the key telemetry.&#60;format&#62;")
             ]
         ),
-        "R15: a labelled button the keyboard reaches once hydrated: {page}"
+        "R15: a labelled button the keyboard reaches once enhanced: {page}"
     );
     assert!(
         has(
@@ -618,7 +618,7 @@ fn a_setting_names_its_key_with_a_labelled_copy_button() {
             "button",
             &[("class", "fui-key-hint"), ("hidden", "")]
         ),
-        "§15.8: the button waits for the WebAssembly: {page}"
+        "§1: the button waits for the script: {page}"
     );
     assert!(
         page.contains(
@@ -751,7 +751,7 @@ fn the_about_page_writes_the_console_version_in_the_footer_form() {
     );
     assert!(
         has(&page, "button", &[("id", "about-copy"), ("hidden", "")]),
-        "Copy is the copy island, hidden until it works: {page}"
+        "Copy is the copy module, hidden until it works: {page}"
     );
     let foot = html(footer(&en(), release));
     assert!(

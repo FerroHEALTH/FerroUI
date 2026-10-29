@@ -3,7 +3,7 @@
 
 //! The top bar's search as the server draws it (#144): one joined `GET`
 //! form, its states, the `/` key cap and its shortcut, the typeahead panel
-//! it holds closed until the page hydrates, the answer's JSON wire, and the
+//! it holds closed until its module runs, the answer's JSON wire, and the
 //! find page's results in the page, grouped by kind.
 
 use ferrohealth_ui::icon::Glyph;
@@ -197,8 +197,7 @@ fn answer() -> SearchAnswer {
 }
 
 #[test]
-fn a_search_with_an_answer_route_holds_its_panel_closed_and_claims_no_combobox_before_it_hydrates()
-{
+fn a_suggesting_search_holds_its_panel_closed_and_claims_no_combobox_before_its_module_runs() {
     let html = drawn(&search(|search| {
         search.suggest = Some(String::from("/find/suggest"));
     }));
@@ -238,7 +237,7 @@ fn a_search_with_an_answer_route_holds_its_panel_closed_and_claims_no_combobox_b
         ),
         "the count is announced from outside the panel: {html}"
     );
-    // WAI-ARIA 1.2: with no WebAssembly the field never expands, so it is no combobox.
+    // WAI-ARIA 1.2: with no script the field never expands, so it is no combobox.
     let input = tags(&html, "input").remove(0);
     assert!(!input.contains_key("role"), "{html}");
     assert!(!input.contains_key("aria-expanded"), "{html}");

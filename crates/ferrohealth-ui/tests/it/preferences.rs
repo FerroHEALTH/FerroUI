@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Your preferences: exactly three tabs, each preference a plain form post
-//! that works with no WebAssembly, Saved in its slot, and Reset to defaults
+//! that works with no script, Saved in its slot, and Reset to defaults
 //! behind its confirmation.
 
 use ferrohealth_ui::calendar::Weekday;
@@ -149,7 +149,7 @@ fn appearance_draws_the_theme_and_density_as_radio_cards_marked_by_more_than_col
 }
 
 #[test]
-fn every_preference_is_a_plain_form_post_with_a_save_button_before_hydration() {
+fn every_preference_is_a_plain_form_post_with_a_save_button_before_its_module_runs() {
     let shown = drawn(page(Section::Appearance, Preferences::default(), None));
     let forms = tags(&shown, "form")
         .into_iter()
@@ -183,7 +183,7 @@ fn every_preference_is_a_plain_form_post_with_a_save_button_before_hydration() {
         .count();
     assert!(
         saves >= 3,
-        "a Save button posts each before the page hydrates: {shown}"
+        "a Save button posts each before its module runs: {shown}"
     );
     assert!(!shown.contains("style="), "{shown}");
 }

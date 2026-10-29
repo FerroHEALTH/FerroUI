@@ -4,7 +4,7 @@
 //! The journeys of the patient-record components: the work-list walked by
 //! the keyboard, the masked identifier revealed, hidden and refused, the
 //! stacked compare's choice and a timeline event's details, and the floor
-//! each keeps with its WebAssembly withheld.
+//! each keeps with its scripts withheld.
 
 use std::error::Error;
 
@@ -66,7 +66,7 @@ async fn focused_row_in_view(browser: &Browser) -> Result<bool, Box<dyn Error>> 
     Ok(clear.json().as_bool() == Some(true))
 }
 
-/// Opens the tables page of FerroPIX and waits until the work-list's island
+/// Opens the tables page of FerroPIX and waits until the work-list's module
 /// has made its table a grid.
 pub(crate) async fn open_worklist(
     browser: &Browser,
@@ -157,7 +157,7 @@ async fn the_work_list_moves_its_focused_row_by_the_keys_and_opens_it() -> Resul
             .await?;
         assert!(
             header.is_displayed().await?,
-            "the select-all shows once hydrated"
+            "the select-all shows once enhanced"
         );
         let mixed = browser
             .driver()
@@ -195,8 +195,8 @@ async fn row_size(browser: &Browser, key: &str) -> Result<String, Box<dyn Error>
     Ok(format!("{:.0} by {:.0}", rect.width, rect.height))
 }
 
-/// Opens the forms page of `brand` and waits until the identifiers island
-/// has hydrated, its Reveal a button.
+/// Opens the forms page of `brand` and waits until the identifiers module
+/// has been enhanced, its Reveal a button.
 pub(crate) async fn open_identifiers(
     browser: &Browser,
     gallery: &Gallery,
@@ -403,7 +403,7 @@ async fn the_stacked_compare_reads_the_record_chosen_and_an_event_opens()
     .await
 }
 
-/// The floor of the forms page's identifiers with no WebAssembly: each
+/// The floor of the forms page's identifiers with no script: each
 /// Reveal is a link to the console's reveal page, and no value is shown.
 pub(crate) async fn identifiers_floor(browser: &Browser) -> Result<(), Box<dyn Error>> {
     let link = browser
@@ -420,7 +420,7 @@ pub(crate) async fn identifiers_floor(browser: &Browser) -> Result<(), Box<dyn E
     Ok(())
 }
 
-/// The floor of the tables page's work-list with no WebAssembly: a table
+/// The floor of the tables page's work-list with no script: a table
 /// whose rows open by their links, with the select-all hidden.
 pub(crate) async fn worklist_floor(browser: &Browser) -> Result<(), Box<dyn Error>> {
     let rows = browser.driver().find_all(By::Css(ROWS)).await?;
@@ -433,7 +433,7 @@ pub(crate) async fn worklist_floor(browser: &Browser) -> Result<(), Box<dyn Erro
         .await?;
     assert!(
         !header.is_displayed().await?,
-        "the select-all waits for its island"
+        "the select-all waits for its module"
     );
     Ok(())
 }

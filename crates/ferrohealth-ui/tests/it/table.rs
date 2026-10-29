@@ -883,7 +883,7 @@ fn a_find_field_whose_words_can_be_clinical_posts() {
             Html::empty(),
         )
     });
-    // .claude/rules/leptos-ui.md §5: a clinical field is never a GET form.
+    // .claude/rules/console-ui.md §5: a clinical field is never a GET form.
     assert!(
         has(
             &found,

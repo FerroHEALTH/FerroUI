@@ -415,7 +415,7 @@ async fn a_refused_plain_post_of_an_answer_form_draws_the_refusal_and_keeps_the_
 }
 
 /// A field the form marks secret goes to the function alone: the page drawn
-/// with the answer carries it neither in its markup nor in its hydration
+/// with the answer carries it neither in its markup nor in its data
 /// data, where every other posted field crosses to the browser (#499).
 #[tokio::test]
 async fn a_secret_field_of_an_answer_form_appears_nowhere_on_the_page_it_draws()
@@ -436,7 +436,7 @@ async fn a_secret_field_of_an_answer_form_appears_nowhere_on_the_page_it_draws()
     );
     assert!(
         !body.contains("synthetic-pin-4711"),
-        "the secret is nowhere in the page or its hydration data: {body}"
+        "the secret is nowhere in the page or its data attributes: {body}"
     );
     Ok(())
 }
@@ -458,7 +458,7 @@ async fn two_secret_fields_of_an_answer_form_appear_nowhere_on_the_page_it_draws
     );
     assert!(
         !body.contains("synthetic-pin-4712") && !body.contains("synthetic-key-4712"),
-        "neither secret is in the page or its hydration data: {body}"
+        "neither secret is in the page or its data attributes: {body}"
     );
     Ok(())
 }

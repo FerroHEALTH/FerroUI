@@ -38,7 +38,7 @@ one is a defect. In short:
 4. No link underlines in tables: a name in a table is ink, the row is the
    target.
 5. The theme is set only in the user menu and in Your preferences; the top
-   bar carries no theme toggle (`leptos-ui.md` §8).
+   bar carries no theme toggle (`console-ui.md` §8).
 6. No key hints on phones, below 40 rem; the shortcut legend keeps its
    keys.
 7. Destructive actions come last in menus, after a separator, in the danger

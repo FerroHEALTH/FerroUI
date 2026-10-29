@@ -46,7 +46,7 @@ async fn blur(browser: &Browser) -> Result<(), Box<dyn Error>> {
 }
 
 /// Waits until `/` from the page focuses the search, which also waits for
-/// its island to hydrate.
+/// its module to run.
 async fn slash_reaches_the_search(browser: &Browser) -> Result<(), Box<dyn Error>> {
     until("the slash focuses the search", async || {
         blur(browser).await?;
@@ -132,7 +132,7 @@ async fn the_slash_focuses_the_search_and_escape_clears_it_keeping_the_focus()
     .await
 }
 
-/// Types `words` into the search once its island has hydrated, and waits
+/// Types `words` into the search once its module has run, and waits
 /// until the panel under it holds an answer.
 pub(crate) async fn typed(browser: &Browser, words: &str) -> Result<WebElement, Box<dyn Error>> {
     let search = browser
@@ -328,7 +328,7 @@ async fn the_legend_opens_over_the_page_and_returns_the_focus() -> Result<(), Bo
         window(browser, 1440, 900).await?;
         browser.goto(&gallery.url("/ferrofed/overlays")).await?;
         let opener = browser.element(By::Id("open-shortcuts")).await?;
-        until("the opener shows once the page hydrates", async || {
+        until("the opener shows once the page is enhanced", async || {
             Ok(opener.is_displayed().await?)
         })
         .await?;

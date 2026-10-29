@@ -27,7 +27,7 @@ async fn readout(browser: &Browser) -> Result<String, Box<dyn Error>> {
         .to_owned())
 }
 
-/// Waits until the topology's island runs: its Zoom in is enabled.
+/// Waits until the topology's module runs: its Zoom in is enabled.
 async fn hydrated(browser: &Browser) -> Result<(), Box<dyn Error>> {
     let zoom = browser.element(By::Css("button[data-zoom='in']")).await?;
     until("the zoom cluster is enabled", async || {

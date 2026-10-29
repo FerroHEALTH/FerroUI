@@ -73,7 +73,7 @@ products = [
 # `[advisories].ignore`, and every id there MUST appear here. The generator
 # enforces both directions.
 
-# None today: the Leptos family that carried `paste` (RUSTSEC-2024-0436) left
+# None today: the framework that carried `paste` (RUSTSEC-2024-0436) left
 # the workspace with FerroUI 0.6.0 (#510).
 
 # Lock-file-only advisories: findings cargo-deny never raises, because it

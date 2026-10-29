@@ -608,10 +608,9 @@ jobs:
           comment-summary-in-pr: on-failure
 
   # ---- Tier 3 ---------------------------------------------------------------
-  # The release site bundle, then in headless Chrome for Testing at the
-  # pinned release, in parallel jobs that each build the bundle: the
-  # journeys in two parts (the first with the bundle's size budget and path
-  # check), and, when the change can move a pixel (the `capture` output of
+  # The gallery in headless Chrome for Testing at the pinned release, in
+  # parallel jobs that each build the gallery: the journeys in two parts,
+  # and, when the change can move a pixel (the `capture` output of
   # detect), the screenshot capture in one job per brand. A journey or a shot
   # fails on any error the browser logs. Each capture job uploads its brand's
   # screenshots, and gallery-screenshots merges them into one artifact.

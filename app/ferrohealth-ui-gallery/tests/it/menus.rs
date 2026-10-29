@@ -16,7 +16,7 @@ use crate::journeys::window;
 use crate::journeys_enabled;
 use crate::stack::Gallery;
 
-/// The trigger of the menu `id`, once its island has hydrated, which the
+/// The trigger of the menu `id`, once its module has run, which the
 /// trigger's `aria-expanded` says.
 pub(crate) async fn hydrated_trigger(
     browser: &Browser,
@@ -25,7 +25,7 @@ pub(crate) async fn hydrated_trigger(
     let trigger = browser
         .element(By::Css(format!("summary[aria-controls='{id}']")))
         .await?;
-    until(&format!("the menu {id} hydrates"), async || {
+    until(&format!("the menu {id} is enhanced"), async || {
         Ok(trigger.attr("aria-expanded").await?.is_some())
     })
     .await?;
@@ -206,7 +206,7 @@ async fn a_copy_item_copies_its_text_and_says_so_in_a_toast() -> Result<(), Box<
                 "//button[@role = 'menuitem' and contains(., \"Copy the set's name\")]",
             ))
             .await?;
-        until("the copy item shows once the menu hydrates", async || {
+        until("the copy item shows once the menu is enhanced", async || {
             Ok(copy.is_displayed().await?)
         })
         .await?;
@@ -442,7 +442,7 @@ async fn a_row_menus_remove_asks_why_and_removes_the_row_by_keyboard() -> Result
 }
 
 /// The confirmation is the `<ActionForm>` of a server function, so once
-/// the page has hydrated its confirm runs the removal in the page and the
+/// the page has been enhanced its confirm runs the removal in the page and the
 /// router draws the page the function names, with no new document (#500).
 #[tokio::test(flavor = "multi_thread")]
 async fn a_rows_removal_runs_its_server_action_in_the_page() -> Result<(), Box<dyn Error>> {
@@ -581,7 +581,7 @@ async fn the_results_export_menu_submits_the_query_form_to_its_format() -> Resul
         let export = browser
             .element(By::Css("#results-form summary[aria-haspopup='menu']"))
             .await?;
-        until("Export hydrates", async || {
+        until("Export is enhanced", async || {
             Ok(export.attr("aria-expanded").await?.is_some())
         })
         .await?;

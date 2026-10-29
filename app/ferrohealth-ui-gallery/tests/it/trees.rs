@@ -38,8 +38,8 @@ async fn press(browser: &Browser, key: Key) -> Result<(), Box<dyn Error>> {
 }
 
 /// Focuses the item `selector` of a tree until `key` moves the focus to the
-/// row that starts with `words`, which also waits for the island to
-/// hydrate.
+/// row that starts with `words`, which also waits for the module to
+/// run.
 async fn walk_from(
     browser: &Browser,
     selector: &str,

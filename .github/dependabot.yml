@@ -31,7 +31,5 @@ updates:
       cargo-minor-patch:
         patterns: ["*"]
         update-types: ["minor", "patch"]
-      leptos:
-        patterns: ["leptos*"]
     commit-message:
       prefix: "deps"

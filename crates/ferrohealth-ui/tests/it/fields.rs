@@ -260,15 +260,14 @@ fn the_masked_field_writes_no_props_into_the_page() {
     // its input, so the page carries no copy of it as data.
     let page = masked_field();
     assert!(!page.contains("data-props"), "{page}");
-    assert!(!page.contains("<leptos-island"), "{page}");
 }
 
 #[test]
-fn an_islands_inner_button_keeps_the_groups_target_size() {
-    // WCAG 2.2 SC 2.5.8: the eye in its island's wrapper is the same 30 px target.
+fn an_inner_button_keeps_the_groups_target_size() {
+    // WCAG 2.2 SC 2.5.8: the masked input's eye is the same 30 px target as any inner button.
     for rule in [
-        "  .fui-input-group > leptos-island > .fui-input-toggle {\n    width: 1.875rem;\n    height: 1.875rem;",
-        "  .fui-input-group > .fui-input:has(+ :is(.fui-input-suffix, .fui-input-toggle, leptos-island)) {",
+        "  .fui-input-group > .fui-input-toggle {\n    width: 1.875rem;\n    height: 1.875rem;",
+        "  .fui-input-group > .fui-input:has(+ :is(.fui-input-suffix, .fui-input-toggle)) {",
         "  .fui-input-hold {\n    touch-action: none;",
     ] {
         assert!(STYLESHEET.contains(rule), "missing: {rule}");

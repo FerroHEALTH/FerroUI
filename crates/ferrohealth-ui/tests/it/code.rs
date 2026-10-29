@@ -143,7 +143,7 @@ fn copy_reads_the_viewers_lines_and_carries_no_copy_of_the_text() {
     assert_eq!(
         1,
         drawn.matches("marker_unique").count(),
-        "the text is drawn once, in the lines, never as island data: {drawn}"
+        "the text is drawn once, in the lines, never as module data: {drawn}"
     );
     assert!(
         has(
@@ -196,7 +196,7 @@ fn a_document_pane_carries_its_text_once_per_view_and_copies_from_the_raw_view()
     );
     assert!(
         drawn.contains("doc-text"),
-        "the copy island names the raw view's text"
+        "the copy module names the raw view's text"
     );
 }
 

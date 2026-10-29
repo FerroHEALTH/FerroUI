@@ -61,8 +61,7 @@ different components off each other's lines. Each one has a check.
   state's name in its body, and the refresh pull request before the tag
   draws it (`docs/release.md`).
 - **Module lists are alphabetical.** Every top-level `mod` declaration of a
-  file, `tests/it/main.rs` and the `view`, `widget` and `island` lists
-  included, is in ascending order of its name, so two new modules land on
+  file, `tests/it/main.rs` and the `view` list included, is in ascending order of its name, so two new modules land on
   different lines. Check: `scripts/checks/mod-order.sh`.
 - **The journeys' page list is a slice in alphabetical order.** `PAGES` in
   `app/ferrohealth-ui-gallery/tests/it/journeys.rs` is a `&[&str]`, so no
@@ -75,10 +74,11 @@ different components off each other's lines. Each one has a check.
   every journey, and the two modules that open no browser (`http`,
   `screenshots`). A new journey module needs no line there. Check: the
   script's `--self-test`.
-- **No file lists the islands.** `crates/ferrohealth-ui/src/island.rs` is
-  the list: each island is a `#[island]` function there, and its module doc,
-  the crate's `CLAUDE.md` and its `README.md` point at the module instead of
-  naming every island. Review-enforced.
+- **The script modules are listed once.** `script::MODULES` in
+  `crates/ferrohealth-ui/src/script.rs` holds one entry per module, the
+  loader first and the rest in ascending order of the file name, so two
+  new modules land in different places; the crate's `CLAUDE.md` and its `README.md` point at it instead of
+  naming every module. Review-enforced.
 
 ## On a conflict anyway
 

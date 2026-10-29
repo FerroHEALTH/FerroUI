@@ -6,6 +6,6 @@
   interactive behaviour comes from small plain ES modules under
   `/ferrohealth-ui/<version>/`, which the one loader `fui.js` imports for
   each element that asks for one with `data-fui`. Every page works with the
-  modules refused. `serve::assets()` (the default `axum` feature) serves
+  modules refused. `serve::axum_router::router()` (the default `axum` feature) serves
   the stylesheet, the brand themes and the modules. `docs/migration-0.6.md`
   maps every removed item to its successor.

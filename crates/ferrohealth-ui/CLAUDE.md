@@ -4,88 +4,68 @@
 # CLAUDE.md: `ferrohealth-ui`
 
 The crate-local discipline of the library. The component rules are
-`.claude/rules/leptos-ui.md`; this file holds the interaction contract and
-the rendering mode every component is built to, decided on FerroUI#196.
+`.claude/rules/console-ui.md`; this file holds the interaction contract and
+the rendering mode every component is built to, decided on FerroUI #510.
 
 ## The interaction contract
 
-Every component follows it (owner, 2026-10-22; the mode rewritten by the
-owner's ruling on FerroUI #410, 2026-10-25):
+Every component follows it (the owner's rulings of 2026-10-29 on #510):
 
-1. **Native elements first:** `<dialog>`, the `popover` attribute,
-   `<details>`, plain links, and GET and POST forms.
-2. **Behaviour in Rust compiled to WebAssembly**, in components the browser
-   hydrates.
-3. **Interactions stay in the page, with no document reload.** A link is
-   followed by the console's `leptos_router` in the page, and a form
-   submits through it; a plain post that loads a new document is the
-   fallback for a page whose WebAssembly has not loaded, never the normal
-   path. The gallery's `tests/it/no_wasm.rs` still loads every page with
-   the bundle refused, so the fallback keeps working.
-4. **No hand-written JavaScript and no npm:** only the `wasm-bindgen` glue
-   and the loader Leptos writes. The strict CSP stays.
+1. **Native elements first:** `<dialog>` with `command` and `commandfor`,
+   the `popover` attribute, `<details>`, plain links, and GET and POST
+   forms.
+2. **Every page is complete with no script.** The server draws the whole
+   page with the state it read, and a link or a form is behind every
+   action. The gallery's `tests/it/no_script.rs` loads every page with the
+   modules refused.
+3. **Behaviour in small plain modules** under `scripts/`, one per job, each
+   `enhance(element)` over what the server drew, loaded by `fui.js` for an
+   element marked `data-fui="<job>"`. An in-page change toggles what the
+   server drew, with no round trip.
+4. **A navigation is one fast document.** A link or a form loads its page
+   whole; the `keep` module keeps the scroll across a same-path navigation
+   and the `tree` module a tree's folds. No WebAssembly, no npm, no bundler:
+   the CSP is `script-src 'self'; style-src 'self'`.
 
-## The mode: the whole page hydrated, split by route
+## The mode: server-rendered HTML on Askama
 
-NOTE: the Leptos book, "Hydration" and "Code Splitting"; FerroUI #410. The
-server draws every page whole, the browser hydrates the whole page, and the
-console's `leptos_router` draws the next page in the browser, so a link or
-a form never reloads the document. The pages load in a few groups, each a
-`LazyRoute` whose code loads from chunks of its own under `cargo leptos
-build --split`, and [`widget::prefetch`](src/widget/prefetch.rs) loads a
-route's code when a link to it is hovered or focused, and the main
-navigation's once the first page is idle. One lazy route a page made the
-gallery's 21 pages into 811 chunks, a page needing 300 to 444 of them, and
-Chrome refused the fetches past its limit (`net::ERR_INSUFFICIENT_RESOURCES`);
-five groups make 32 chunks, 16 a group.
+NOTE: FerroUI #510; the owner's rulings of 2026-10-29. The library renders
+HTML on the server from Askama templates compiled into the crate (Askama
+0.16, with no `config` feature: the templates sit in the default
+`templates/` with the default whitespace). A component is a function or a
+struct over a template that returns [`html::Html`](src/html.rs), a string of
+markup that implements `askama::filters::HtmlSafe`, so a console's own
+template writes it with `{{ part }}` and never escapes it twice. A console's
+handler builds its page from its own templates and the library's parts,
+then `view::shell::document` writes the whole document: the stylesheet, the
+brand's theme, the loader and the console's own head parts.
 
-FerroUI #196 had chosen islands mode on bundle size and time to interactive.
-The owner ruled on #410 that a page that reloads on every click is not
-acceptable and that the experience outranks the bundle. The Leptos 0.8.22
-islands router was read and set aside: it never diffs an island's children
-or props, never removes a stale attribute, has no fallback for a failed
-navigation, and drops a form submitter's value and file inputs
-(`leptos/src/hydration/islands_routing.js`). The gallery measured the
-change (release build, brotli -q 11, Chrome for Testing with the CPU slowed
-4x, 2026-10-25):
-
-| Gallery build | Entry WebAssembly, brotli | Page chunks, brotli |
-|---|---:|---:|
-| Islands, v0.4.0 | 465420 | 387833 (eight lazy islands) |
-| Whole page, no split | 1557224 | none |
-| Whole page, every page a lazy route | 465338 | 1846251 (all pages, 811 chunks) |
-| Whole page, five groups of pages | 474860 | 1456880 (all pages, 32 chunks) |
-
-| Link click, one session | Islands (a new document) | Whole page (in the page) |
-|---|---:|---:|
-| tables to forms, first visit | 226 ms | 424 ms |
-| forms to tables | 267 ms | 181 ms |
-| tables to forms, again | 234 ms | 171 ms |
-| find to tables | 267 ms | 134 ms |
-
-A first visit of a heavy page paid for its chunk; [`widget::prefetch`]
-loads it before the click.
+The hydrated mode of #410 made every tab and tree node a navigation the
+router redrew whole, with an empty fallback while it asked the server
+again, so expansion, scroll and selection were lost. Here an in-page change
+is a few lines of script, and a navigation is one document the browser
+paints whole, with no WebAssembly to load before a click works.
 
 ## How the crate is laid out for it
 
-- `view`: plain functions, drawn on the server and again in the browser as
-  the page hydrates or the router draws the next page.
-- `island`: the ready components, each a thin `#[component]` over its
-  widget function. The module keeps its name from islands mode; it is the
-  list of them, so two pull requests that each add one touch different
-  lines (`.claude/rules/parallel-prs.md`).
-- `widget`: the interactive components as functions a page calls, the
-  library's own or a console's; their browser code runs only in handlers
-  and effects behind `#[cfg(target_arch = "wasm32")]`, so the first paint is
-  the server's and hydration matches it.
+- `view`: the components, each over a template under
+  `templates/<area>/`. A component takes `&Locale` where it draws words and
+  its children as `Html`.
+- `scripts/`: the modules, vendored in the crate as text
+  ([`script::MODULES`](src/script.rs)), each within the budget
+  `scripts/checks/script-budget.sh` holds (16 KiB, 160 KiB for all).
+- `serve`: under the default `axum` feature, the router a console mounts at
+  `serve::PREFIX` for the stylesheet, the themes and the modules, with long
+  cache headers; `serve::Assets` the paths the shell writes. A console with
+  no axum serves the same bytes from `style::STYLESHEET`,
+  `style::Brand::theme` and `script::MODULES`.
+- `i18n`: the locale, its negotiation, the Fluent catalogs, `Word` and
+  `Phrase`. A module's words ride in data attributes or a `<template>`,
+  resolved on the server; no catalog reaches the browser.
 
-Every widget takes the words it draws as props: a `*Words` struct whose
-`of_page()` resolves them in the page's locale, with an `i18n::Phrase` for a
-sentence around a value the browser learns (a file's name, a page number).
-The browser now resolves the words too, so the console provides the same
-locale in both halves. Each word is an `i18n::Word`, which carries whether it
-fell back to English and draws itself inside `<span lang="en">` when it did
-(WCAG 2.2 SC 3.1.2), and a widget that writes a count carries the page's
+Each word is an `i18n::Word`, which carries whether it fell back to English
+and draws itself inside `<span lang="en">` when it did (WCAG 2.2 SC 3.1.2),
+and a component whose module writes a count carries the page's
 `i18n::number::Grouping` among its words.
 
 ## The session's end (FerroUI #444)
@@ -95,14 +75,13 @@ to WCAG 2.2 (SC 2.2.1, SC 2.2.5) and the OWASP Session Management Cheat
 Sheet (idle and absolute timeouts, logout across tabs). The decisions:
 
 - **What the browser knows:** the seconds the session has left, idle and
-  absolute (`widget::session::Left`), never a deadline, so a wrong browser
-  clock moves nothing, and never a token. The server draws them into the
-  page (carried by a `SharedValue`) and answers its session route with the
-  same; the wire is in `docs/consoles.md` § The session's end.
-- **Leaving:** when the time is up the watch asks the route; a `401`, or no
-  answer once the browser's own count has run out, loads the console's
-  sign-in page with the page's path and query as `return`. A `401` the
-  console's own code meets does the same through `widget::session::gone()`.
+  absolute (`view::session::Left`), never a deadline, so a wrong browser
+  clock moves nothing, and never a token. The server writes them on the
+  watch (`view::session::session_watch`) and answers its session route with
+  the same; the wire is in `docs/consoles.md` § The session's end.
+- **Leaving:** when the time is up the `session` module asks the route; a
+  `401`, or no answer once its own count has run out, loads the console's
+  sign-in page with the page's path and query as `return`.
 - **The warning:** `WARN_AT` seconds (120) before the idle timeout, never
   fewer than 20, a modal `<dialog role="alertdialog">` names the time left
   and offers Stay signed in, which takes the focus, and Sign out; Escape
@@ -112,21 +91,10 @@ Sheet (idle and absolute timeouts, logout across tabs). The decisions:
   which covers a laptop that slept while its timers stood still.
 - **Idle means the user is idle:** a `GET` of the route never extends the
   session; a `POST` does, sent for Stay signed in and for the user's own
-  key or pointer input at most once a minute. A console's background poll
-  must not extend its session on the server either.
+  key or pointer input at most once a minute.
 - **Every tab:** a `BroadcastChannel` named `ferroui-session`, bound to the
-  console's origin, carries `ended` and `extended <idle> <absolute>`. The
-  `storage` event the issue named as a fallback would write browser storage,
-  which the library never touches. A browser with no `BroadcastChannel`
-  still leaves each tab at its own count or its next re-check, and the
-  server's own redirect on the next request stays the fallback.
+  console's origin, carries `ended` and `extended <idle> <absolute>`. A
+  signed-out page carries `view::session::session_ended`, which tells every
+  tab the session is over.
 - **Nothing lost:** the return address brings the user back to the page;
   keeping a draft through sign-in is the console's, where it has drafts.
-
-## The bundle budget
-
-The gallery's brotli-compressed entry WebAssembly, what every page loads
-before its route's chunks, is held to 507904 bytes (496 KiB) by
-`scripts/checks/gallery-bundle.sh`, which reads the number from
-`leptos-ui.md` §12. Each console keeps its own budget in its own
-repository: FerroBRIDGE's is 458752 bytes.

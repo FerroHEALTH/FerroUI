@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The configuration page in a browser: the countdown counting down once
-//! it hydrates, the secret field's choice moved by the keyboard revealing
+//! it is enhanced, the secret field's choice moved by the keyboard revealing
 //! its control, the lifecycle stacked on a phone inside the layout
-//! viewport, and the page's floor with no WebAssembly.
+//! viewport, and the page's floor with no script.
 
 use std::error::Error;
 
@@ -24,7 +24,7 @@ async fn time_left(browser: &Browser) -> Result<String, Box<dyn Error>> {
         .await?)
 }
 
-/// The page with no WebAssembly: the countdown shows the time the server
+/// The page with no script: the countdown shows the time the server
 /// drew, both trial actions are links, the secret field shows the chosen
 /// choice's control alone, and no value is filled.
 pub(crate) async fn config_floor(browser: &Browser) -> Result<(), Box<dyn Error>> {
@@ -51,7 +51,7 @@ pub(crate) async fn config_floor(browser: &Browser) -> Result<(), Box<dyn Error>
     Ok(())
 }
 
-/// The provisioned file with no WebAssembly: the lock tag in its title row
+/// The provisioned file with no script: the lock tag in its title row
 /// names its owner in its tooltip.
 pub(crate) async fn provisioned_floor(browser: &Browser) -> Result<(), Box<dyn Error>> {
     browser

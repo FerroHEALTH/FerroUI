@@ -715,7 +715,7 @@ fn the_listing_form_has_no_control_and_a_list_keeps_its_order() {
     assert!(list.find("Second") < list.find("First"), "{list}");
 }
 
-/// A work-list of three rows inside its island part.
+/// A work-list of three rows inside its module part.
 fn queue() -> String {
     html({
         let columns = [

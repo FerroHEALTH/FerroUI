@@ -189,7 +189,7 @@ fn a_toggle_is_a_link_where_the_console_gives_one_and_names_its_item() {
         ),
         "{tree}"
     );
-    // A toggle with no link waits for the page to hydrate.
+    // A toggle with no link waits for the module to run.
     let bare = drawn(
         TreeKind::Concept,
         false,

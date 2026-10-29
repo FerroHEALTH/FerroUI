@@ -18,16 +18,15 @@ Actions Security Cheat Sheet, SLSA v1.0, OpenSSF Scorecard, and Sigstore.
   and push to `main`. The workflow tier (zizmor, actionlint, shellcheck, the
   comment-style guard, the Lucide vendor check), the Rust tier (`cargo fmt
   --all --check`; `cargo clippy --workspace --all-targets --locked -- -D
-  warnings`; the two wasm32 clippy runs of `leptos-ui.md` §10 and the
-  browser-floor build of `scripts/checks/browser-floor.sh`; `cargo nextest
+  warnings`, again without the `axum` feature; the markup rules and the
+  script budget (`console-ui.md` §12); `cargo nextest
   run --workspace --locked` plus `cargo test --doc --locked`; `cargo doc` with
   `RUSTDOCFLAGS=-D warnings`; `cargo deny check`; `cargo publish -p
   ferrohealth-ui --dry-run --locked`; the crate-version guard and
   `dependency-review-action` on pull requests), and the gallery tier
-  (parallel jobs of one matrix, each over its own release bundle: the
-  journeys in two parts split by nextest's `--partition count:`, the first
-  with the path and size checks of `scripts/checks/gallery-bundle.sh`, and,
-  when the change can move a pixel, the screenshot capture in Chrome for
+  (parallel jobs of one matrix, each over the gallery built with `cargo
+  build`: the journeys in two parts split by nextest's `--partition
+  count:`, and, when the change can move a pixel, the screenshot capture in Chrome for
   Testing in one job per brand (`FERROUI_SCREENSHOT_BRAND`), whose
   uploads the `gallery-screenshots` job merges into one artifact). On the
   refresh and the release pull request each brand's job also captures the
@@ -74,14 +73,12 @@ Actions Security Cheat Sheet, SLSA v1.0, OpenSSF Scorecard, and Sigstore.
 ## The local gate and the CI gate
 
 `scripts/fast.sh` is the local gate: rustfmt, clippy on the reached
-packages (wasm32 only when browser code changed, in `target/wasm-lint`
-beside the host steps), nextest and the doctests,
-the journeys of the touched area against the gallery built with the fast
-`wasm-dev` profile, and `design/tools/check.sh` for each reached design set.
+packages, nextest and the doctests, the journeys of the touched area
+against the gallery, and `design/tools/check.sh` for each reached design set.
 It reads the same table as `detect`, from the merge base with `origin/main`
 to the working tree. It never runs the screenshot capture; capture only the
 pages a change touches with `FERROUI_SCREENSHOT_PAGES`. CI is the full
-gate: the release bundle and its budget, every journey, the capture, and
+gate: the script budget, every journey, the capture, and
 every reached design set.
 
 The browser steps hold one machine-wide lock (`scripts/chrome-lock.sh`, a

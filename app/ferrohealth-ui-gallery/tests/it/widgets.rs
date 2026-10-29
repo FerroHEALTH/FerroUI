@@ -15,7 +15,7 @@ use crate::journeys_enabled;
 use crate::stack::Gallery;
 
 /// Presses the button `button` until `done` holds, which also waits for
-/// the page to hydrate.
+/// the page to be enhanced.
 async fn press_until(
     what: &str,
     button: &WebElement,
@@ -132,7 +132,7 @@ async fn the_picker_writes_a_choice_and_keeps_a_typed_value() -> Result<(), Box<
         browser.goto(&gallery.url("/ferroterm/layouts")).await?;
         let choice = browser.element(By::Id("run-value-set-choice")).await?;
         let input = browser.element(By::Id("run-value-set")).await?;
-        until("the picker hydrates and hides its input", async || {
+        until("the picker is enhanced and hides its input", async || {
             Ok(!input.is_displayed().await?)
         })
         .await?;
@@ -179,7 +179,7 @@ async fn the_pickers_select_follows_a_value_set_after_a_manual_choice() -> Resul
         browser.goto(&gallery.url("/ferroterm/layouts")).await?;
         let choice = browser.element(By::Id("run-value-set-choice")).await?;
         let input = browser.element(By::Id("run-value-set")).await?;
-        until("the picker hydrates and hides its input", async || {
+        until("the picker is enhanced and hides its input", async || {
             Ok(!input.is_displayed().await?)
         })
         .await?;
@@ -261,8 +261,8 @@ async fn the_pickers_select_follows_a_value_set_after_a_manual_choice() -> Resul
 /// The busy bridge on the charts page, which `browser` shows at a
 /// desktop's width: its folded callers lane holds a summary card, a link
 /// that unfolds the lane, after which the lane shows every caller and its
-/// fold link. It needs no WebAssembly: with it, the router unfolds the lane
-/// in the page (`in_page`), and without it the browser loads the page.
+/// fold link. It needs no script: the link loads the page with the lane
+/// open, followed by a click (`in_page`) or by a plain load.
 pub(crate) async fn busy_flow_unfolds(
     browser: &Browser,
     in_page: bool,
@@ -333,7 +333,7 @@ async fn the_chart_legend_hides_and_shows_a_series_in_place() -> Result<(), Box<
         let chip = browser
             .element(By::Css(".fui-legend-chip[data-series='Writes']"))
             .await?;
-        until("the legend shows once the page hydrates", async || {
+        until("the legend shows once the page is enhanced", async || {
             chip.is_displayed().await.map_err(Into::into)
         })
         .await?;
@@ -549,7 +549,7 @@ async fn the_search_box_submits_and_the_preferences_density_posts_on_change()
     .await
 }
 
-/// Waits until Your preferences has hydrated: every Save button has left,
+/// Waits until Your preferences has been enhanced: every Save button has left,
 /// since a change now posts by itself.
 async fn preferences_hydrated(browser: &Browser) -> Result<(), Box<dyn Error>> {
     until("the preferences post on change", async || {
@@ -735,7 +735,7 @@ async fn the_combobox_filters_as_typed_and_the_keys_choose() -> Result<(), Box<d
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
         browser.goto(&gallery.url("/ferroterm/forms")).await?;
-        // Hydrated, the native select gives way to the combobox.
+        // Enhanced, the native select gives way to the combobox.
         let input = browser
             .element(By::Css("#choose-system[role='combobox']"))
             .await?;

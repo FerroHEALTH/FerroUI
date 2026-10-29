@@ -48,7 +48,7 @@ async fn the_filter_says_its_count_once_the_typing_pauses() -> Result<(), Box<dy
         browser.goto(&gallery.url("/ferrobridge/forms")).await?;
         let field = browser.element(By::Id("gallery-filter")).await?;
         let shown = ".fui-table-tools p[aria-hidden='true']";
-        until("the filter hydrates and narrows the files", async || {
+        until("the filter is enhanced and narrows the files", async || {
             field.clear().await?;
             field.send_keys("d").await?;
             Ok(text_of(browser, shown).await? == MODELS)

@@ -5,8 +5,8 @@
 //! browser journeys and screenshots behind their gates.
 //!
 //! The journeys drive headless Chrome over `WebDriver`, through a
-//! chromedriver of their own, against the gallery served in-process from its
-//! release site bundle, so the browser hydrates the pages the server
+//! chromedriver of their own, against the gallery served in-process, so
+//! the browser runs the library's modules over the pages the server
 //! rendered. Without `FERROUI_JOURNEYS=1` each journey returns at once, and
 //! without `FERROUI_SCREENSHOTS=1` the capture does. Each journey fails on
 //! any `SEVERE` entry the browser logs and waits on elements, never on a

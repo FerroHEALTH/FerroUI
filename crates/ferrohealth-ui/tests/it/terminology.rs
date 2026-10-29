@@ -899,8 +899,8 @@ fn filters(rows: &[&str]) -> String {
 }
 
 #[test]
-fn a_repeatable_row_ends_in_its_remove_which_posts_without_webassembly() {
-    // NOTE: leptos-ui.md §15.8: Remove and Add are submit buttons, so they post with no script.
+fn a_repeatable_row_ends_in_its_remove_which_posts_without_script() {
+    // NOTE: console-ui.md §1: Remove and Add are submit buttons, so they post with no script.
     let shown = filters(&["a", "b"]);
     assert!(
         has(
@@ -972,12 +972,12 @@ fn a_repeatable_row_ends_in_its_remove_which_posts_without_webassembly() {
     );
     assert!(
         shown.contains(&format!("data-row=\"{ROW}\"")),
-        "the blank row keeps the key the island replaces: {shown}"
+        "the blank row keeps the key the module replaces: {shown}"
     );
 }
 
 #[test]
-fn a_blank_row_names_the_key_token_the_island_replaces() {
+fn a_blank_row_names_the_key_token_the_module_replaces() {
     // A nested list names a token of its own, so the list around it rekeys only its own token.
     let shown = html({
         repeat(Repeat {

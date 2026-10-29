@@ -269,7 +269,7 @@ fn the_navigation_is_plain_links_with_the_page_marked_inside_its_drawer() {
         "a navigation that never folds has no foot: {page}"
     );
     // WAI-ARIA Authoring Practices, the dialog (modal) pattern: the drawer is a
-    // native modal dialog, so the page behind is inert with no WebAssembly.
+    // native modal dialog, so the page behind is inert with no script.
     assert!(
         has(
             &page,
@@ -548,7 +548,7 @@ fn the_user_menu_is_a_menu_button_over_a_popover() {
     );
     assert!(
         !menu.contains("aria-expanded"),
-        "the button says it is open only once its island runs, never a fixed false: {menu}"
+        "the button says it is open only once its module runs, never a fixed false: {menu}"
     );
     assert!(
         menu.contains(r#"<span class="fui-operator-name">Demo &#60;Operator&#62;</span>"#),

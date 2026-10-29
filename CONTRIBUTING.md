@@ -3,11 +3,11 @@
 
 # Contributing to FerroUI
 
-FerroUI is the shared Leptos component library of the FerroHEALTH consoles,
+FerroUI is the shared server-rendered component library of the FerroHEALTH consoles,
 published as `ferrohealth-ui`, with a gallery that shows every component in
 every product theme. The working discipline is [`CLAUDE.md`](CLAUDE.md) and
 the component rule set is
-[`.claude/rules/leptos-ui.md`](.claude/rules/leptos-ui.md). Read both before
+[`.claude/rules/console-ui.md`](.claude/rules/console-ui.md). Read both before
 making a change. The contribution terms every FerroHEALTH product shares are
 in the family book at <https://ferrohealth.eu/docs/licensing.html#contributions>.
 
@@ -16,17 +16,17 @@ in the family book at <https://ferrohealth.eu/docs/licensing.html#contributions>
 ```
 cargo fmt --all --check
 cargo clippy --workspace --all-targets --locked -- -D warnings
-cargo clippy -p ferrohealth-ui --lib --locked --target wasm32-unknown-unknown \
-  --features leptos/hydrate -- -D warnings
 cargo nextest run --workspace --locked
+bash scripts/checks/markup-rules.sh crates/ferrohealth-ui/src crates/ferrohealth-ui/templates app/ferrohealth-ui-gallery/src
+bash scripts/checks/script-budget.sh
 ```
 
-The gallery runs with `cargo leptos watch` from `app/ferrohealth-ui-gallery`.
+The gallery runs with `cargo run -p ferrohealth-ui-gallery` and serves on
+`127.0.0.1:3000` (`GALLERY_ADDR` moves it).
 Its browser journeys and screenshots need Chrome for Testing and its
 chromedriver (`scripts/release/journey-tools.sh` installs both):
 
 ```
-scripts/release/gallery-site.sh --release
 FERROUI_JOURNEYS=1 cargo nextest run -p ferrohealth-ui-gallery --locked
 FERROUI_SCREENSHOTS=1 cargo nextest run -p ferrohealth-ui-gallery --locked screenshots
 ```
@@ -48,7 +48,7 @@ shellcheck --severity=style <the shell files you touched>
 
 WCAG 2.2 (Level AA), WAI-ARIA 1.2 with the Authoring Practices, the HTML
 Living Standard and the CSS specifications decide a component's markup,
-keyboard path and colours; the Leptos book decides how it is written. Cite the
+keyboard path and colours; the Askama book decides how a template is written. Cite the
 section in the pull request. Where none governs a choice, say so: "no
 specification governs this: our own design".
 

@@ -171,7 +171,7 @@ async fn arrowing_through_the_picker_keeps_the_focus_on_its_select() -> Result<(
         browser.goto(&gallery.url("/ferroterm/layouts")).await?;
         let choice = browser.element(By::Id("run-value-set-choice")).await?;
         let input = browser.element(By::Id("run-value-set")).await?;
-        until("the picker hydrates and hides its input", async || {
+        until("the picker is enhanced and hides its input", async || {
             Ok(!input.is_displayed().await?)
         })
         .await?;
@@ -242,7 +242,7 @@ async fn the_copy_button_says_refused_where_the_page_has_no_clipboard() -> Resul
             .goto(&gallery.url("/ferrobridge/operations"))
             .await?;
         let button = browser.element(By::Id("pair-answer-copy")).await?;
-        until("the copy button hydrates", async || {
+        until("the copy button is enhanced", async || {
             Ok(button.is_displayed().await?)
         })
         .await?;
@@ -428,7 +428,7 @@ async fn a_list_inside_a_sub_card_adds_and_removes_its_own_rows_alone() -> Resul
         let add = browser
             .element(By::Css("#ep-e2-profiles button[data-repeat='add']"))
             .await?;
-        // The page's islands hydrate from one entry, so the eye working
+        // The page's modules load from one loader, so the eye working
         // means the lists work too.
         masked(browser).await?;
         assert_eq!(2, rows_of(browser, "member-endpoints").await?);
@@ -482,14 +482,14 @@ async fn focused_id(browser: &Browser) -> Result<String, Box<dyn Error>> {
     script(browser, "return document.activeElement.id;", Vec::new()).await
 }
 
-/// Opens the member endpoints of the FerroFED forms page with its islands
+/// Opens the member endpoints of the FerroFED forms page with its modules
 /// running, and returns the endpoints' Add.
 async fn endpoints(browser: &Browser, gallery: &Gallery) -> Result<WebElement, Box<dyn Error>> {
     browser.goto(&gallery.url("/ferrofed/forms")).await?;
     let add = browser
         .element(By::Css("#member-endpoints button[name='add-endpoint']"))
         .await?;
-    // The page's islands hydrate from one entry, so the eye working means
+    // The page's modules load from one loader, so the eye working means
     // the lists work too.
     masked(browser).await?;
     script::<serde_json::Value>(
@@ -649,7 +649,7 @@ async fn an_action_answers_on_the_page_its_form_posts_to() -> Result<(), Box<dyn
 
 #[tokio::test(flavor = "multi_thread")]
 async fn a_plain_post_before_hydration_hydrates_the_page_it_drew() -> Result<(), Box<dyn Error>> {
-    // A form's own submit() skips the submit event, so it posts as before hydration.
+    // A form's own submit() skips the submit event, so it posts as before its modules run.
     if !journeys_enabled() {
         return Ok(());
     }
@@ -694,7 +694,7 @@ async fn a_plain_post_before_hydration_hydrates_the_page_it_drew() -> Result<(),
                 .await?
         );
         browser
-            .console_clean("the page a plain post drew, hydrated")
+            .console_clean("the page a plain post drew, enhanced")
             .await
     })
     .await

@@ -274,7 +274,7 @@ fn the_server_draws_the_time_left_with_the_ring_and_both_actions() {
             "form",
             &[("method", "post"), ("action", "/confirm")]
         ),
-        "Confirm posts with no WebAssembly: {drawn}"
+        "Confirm posts with no script: {drawn}"
     );
     assert!(has(&drawn, "a", &[("href", "/rolled-back")]), "{drawn}");
 }

@@ -236,8 +236,8 @@ async fn steady(browser: &Browser) -> Result<(), Box<dyn Error>> {
     browser.settled().await
 }
 
-/// Writes the screenshot of `element` as `state`, once the page's islands
-/// have hydrated.
+/// Writes the screenshot of `element` as `state`, once the page's modules
+/// have been enhanced.
 async fn shot_of(
     browser: &Browser,
     brand: Brand,
@@ -250,7 +250,7 @@ async fn shot_of(
 }
 
 /// Writes the screenshot of `element` as `state` without waiting for the
-/// islands, for a page whose WebAssembly is withheld.
+/// modules, for a page whose scripts are withheld.
 async fn shot_of_unhydrated(
     browser: &Browser,
     brand: Brand,

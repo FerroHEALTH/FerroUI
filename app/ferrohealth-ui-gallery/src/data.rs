@@ -4,7 +4,7 @@
 //! The synthetic rows and texts the gallery shows.
 //!
 //! They are invented for it and the same on every render, so the server pass
-//! and hydration agree and every screenshot is reproducible. Nothing here is
+//! and the modules agree and every screenshot is reproducible. Nothing here is
 //! clinical data.
 
 /// One synthetic row of the gallery's tables: a mapping file.

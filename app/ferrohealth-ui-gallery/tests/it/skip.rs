@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The skip link on a page that hydrates whole (#482): pressing it moves
+//! The skip link on a page that loads whole (#482): pressing it moves
 //! the sequential focus navigation starting point to the main area, so the
 //! next Tab lands on the main area's first focusable element (HTML Living
 //! Standard, "scroll to the fragment"; WCAG 2.2 SC 2.4.1 Bypass Blocks).

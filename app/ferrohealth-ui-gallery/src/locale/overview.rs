@@ -156,7 +156,7 @@ messages! {
     Notifications = "notifications",
     /// `POST https://bridge.example.org/fhir/Bundle?_format=json`
     PostHttpsBridgeExampleOrg = "post-https-bridge-example-org",
-    /// `A plain form post, with or without WebAssembly`
+    /// `A plain form post, with or without script`
     PostsTheDensity = "posts-the-density",
     /// `Product`
     ProductColumn = "product-column",

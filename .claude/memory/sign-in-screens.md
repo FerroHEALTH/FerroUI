@@ -20,7 +20,6 @@ the design to start from; the screens can always be improved.
 stays a plain `POST` with uncontrolled inputs and the standard autocomplete
 tokens.
 
-**The deliberate exception to the reactive rule** ([[reactive-console-ui]],
-owner 2026-10-25): sign-in starts an OAuth redirect, which is a full
-navigation by nature, so the sign-in form stays a plain `POST` that loads
-a new document. No other form takes this exception.
+**Like every form** ([[reactive-console-ui]], owner 2026-10-29), sign-in
+is a plain `POST` that loads a new document; it also starts an OAuth
+redirect, which is a full navigation by nature.

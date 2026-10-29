@@ -372,7 +372,7 @@ fn a_code_card_names_its_path_in_its_head_with_the_tags_the_count_and_the_digest
             "button",
             &[("id", "file-copy"), ("type", "button"), ("hidden", "")]
         ),
-        "Copy is the copy island in the head, hidden until it works: {card}"
+        "Copy is the copy module in the head, hidden until it works: {card}"
     );
     assert!(
         has(&card, "h2", &[("class", "fui-codeview-path")])
@@ -728,7 +728,7 @@ fn the_figures_table_names_each_point_by_its_own_label() {
 }
 
 #[test]
-fn the_legend_is_a_static_key_before_the_page_hydrates() {
+fn the_legend_is_a_static_key_before_its_module_runs() {
     let page = html(line_chart(&trend("Readings"), ChartWords::of(&en())));
     let keys = tags(&page, "span")
         .into_iter()
@@ -747,7 +747,7 @@ fn the_legend_is_a_static_key_before_the_page_hydrates() {
     assert!(page.contains("fui-swatch fui-series-1"), "{page}");
     assert!(
         tags(&page, "button").is_empty(),
-        "no chip offers a press before the page hydrates: {page}"
+        "no chip offers a press before its module runs: {page}"
     );
     assert!(
         has(&page, "div", &[("role", "group"), ("aria-label", "Series")]),
@@ -871,7 +871,7 @@ fn the_server_marks_the_pickers_initial_choice_and_fills_its_input() {
             "input",
             &[("name", "url"), ("value", "http://example.org/vs/b")]
         ),
-        "the form posts the value before the page hydrates: {listed}"
+        "the form posts the value before its module runs: {listed}"
     );
     let typed = picker_holding("http://example.org/vs/mine");
     assert!(
@@ -1438,7 +1438,7 @@ fn a_row_depth_names_its_level_and_holds_at_the_deepest_step() {
 }
 
 #[test]
-fn an_editor_carries_its_text_escaped_so_a_form_posts_it_with_no_webassembly() {
+fn an_editor_carries_its_text_escaped_so_a_form_posts_it_with_no_script() {
     // HTML Living Standard §13.1.2.2: a text area's text is escapable raw text.
     let page = html({
         code_editor(&Editor {
@@ -1456,7 +1456,7 @@ fn an_editor_carries_its_text_escaped_so_a_form_posts_it_with_no_webassembly() {
 }
 
 #[test]
-fn the_keyboard_tabs_show_the_first_panel_and_hide_the_others_before_any_webassembly() {
+fn the_keyboard_tabs_show_the_first_panel_and_hide_the_others_before_any_script() {
     // WAI-ARIA Authoring Practices 1.2, the tabs pattern.
     let page = html({
         keyboard_tabs(
@@ -1557,9 +1557,9 @@ fn the_toast_region_draws_the_flash_toasts_the_server_hands_it() {
             "button",
             &[("aria-label", "Dismiss"), ("hidden", "")]
         ),
-        "Dismiss is named, and absent until the page hydrates: {page}"
+        "Dismiss is named, and absent until its module runs: {page}"
     );
-    // Shell edge audit, row 3: with no WebAssembly a flash toast still closes.
+    // Shell edge audit, row 3: with no script a flash toast still closes.
     assert_eq!(
         2,
         page.matches(r#"<details open class="fui-toast-close"><summary aria-label="Dismiss" title="Dismiss" class="fui-icon-button">"#).count(),
@@ -1677,7 +1677,7 @@ fn binder_tabs_join_their_panel_and_mark_the_current_page_with_its_count_and_dra
 }
 
 #[test]
-fn past_five_binder_tabs_a_phone_select_waits_disabled_for_the_webassembly() {
+fn past_five_binder_tabs_a_phone_select_waits_disabled_for_the_script() {
     let page = html({
         let tabs = (1..=7)
             .map(|index| {
@@ -1698,7 +1698,7 @@ fn past_five_binder_tabs_a_phone_select_waits_disabled_for_the_webassembly() {
     );
     assert!(
         has(&page, "select", &[("disabled", "")]),
-        "no-WebAssembly floor: the row of links serves until the select works: {page}"
+        "no-script floor: the row of links serves until the select works: {page}"
     );
     assert!(
         page.contains(
@@ -1975,7 +1975,7 @@ fn the_action_group_draws_one_primary_then_more_with_the_destructive_item_last()
     );
     assert!(
         !page.contains("aria-expanded"),
-        "the server leaves the state to the summary until the island runs: {page}"
+        "the server leaves the state to the summary until the module runs: {page}"
     );
     let separator = page.find(r#"role="separator""#).expect("a separator");
     let delete = page
@@ -2002,7 +2002,7 @@ fn the_action_group_draws_one_primary_then_more_with_the_destructive_item_last()
 }
 
 #[test]
-fn every_item_of_more_works_with_no_webassembly_and_a_disabled_one_says_why() {
+fn every_item_of_more_works_with_no_script_and_a_disabled_one_says_why() {
     let page = file_group();
     assert!(
         has(&page, "form", &[("method", "post"), ("action", "/check")]),
@@ -2046,7 +2046,7 @@ fn every_item_of_more_works_with_no_webassembly_and_a_disabled_one_says_why() {
             "button",
             &[("class", "fui-menu-cancel"), ("hidden", "")]
         ),
-        "Cancel waits for the island: {page}"
+        "Cancel waits for the module: {page}"
     );
     assert!(
         page.contains("fui-menu-sheet"),
@@ -2109,7 +2109,7 @@ fn a_split_primary_carries_its_variants_and_more_alone_has_no_primary() {
 
 #[test]
 fn a_copy_item_waits_hidden_and_its_menu_carries_the_copy_words() {
-    // NOTE: leptos-ui.md §15.8: a control only script can work is absent before hydration.
+    // NOTE: console-ui.md §1: a control only script can work is absent before its module runs.
     let menu = Menu::new(
         "ehr-more",
         "More actions for the EHR",
@@ -2210,7 +2210,7 @@ fn a_row_menu_is_a_named_icon_button() {
 }
 
 #[test]
-fn the_select_button_shows_its_choice_and_each_option_works_with_no_webassembly() {
+fn the_select_button_shows_its_choice_and_each_option_works_with_no_script() {
     let page = html({
         listbox(
             &en(),
@@ -2354,7 +2354,7 @@ fn the_combobox_and_picker_draw_their_native_floor_on_the_server() {
             "select",
             &[("id", "choose-system"), ("name", "system")]
         ),
-        "a native select posts with no WebAssembly: {combo}"
+        "a native select posts with no script: {combo}"
     );
     assert!(
         has(&combo, "option", &[("value", "loinc"), ("selected", "")]),
@@ -2381,7 +2381,7 @@ fn the_combobox_and_picker_draw_their_native_floor_on_the_server() {
             "input",
             &[("name", "url"), ("value", "http://example.org/vs/mine")]
         ),
-        "the input posts the value with no WebAssembly: {picker}"
+        "the input posts the value with no script: {picker}"
     );
     // The line follows the switch of a form that has one, and shows in any other.
     assert!(
@@ -2421,7 +2421,7 @@ fn the_copy_button_waits_hidden_and_leaves_its_text_to_the_page() {
                 ("hidden", "")
             ]
         ),
-        "§15.8: with no WebAssembly no Copy shows: {copy}"
+        "§1: with no script no Copy shows: {copy}"
     );
     assert!(copy.contains("Copy &#60;it&#62;"), "{copy}");
     assert!(
@@ -2439,7 +2439,7 @@ fn the_copy_button_waits_hidden_and_leaves_its_text_to_the_page() {
 }
 
 #[test]
-fn the_side_panel_opens_from_a_link_to_its_route_until_it_hydrates() {
+fn the_side_panel_opens_from_a_link_to_its_route_until_its_module_runs() {
     let panel = html(side_panel(SidePanel {
         id: String::from("access"),
         title: String::from("Access <now>"),
@@ -2461,7 +2461,7 @@ fn the_side_panel_opens_from_a_link_to_its_route_until_it_hydrates() {
         .expect("the opener is a link to the content's route");
     assert!(
         !link.contains_key("hidden"),
-        "the link shows with no WebAssembly: {panel}"
+        "the link shows with no script: {panel}"
     );
     assert!(
         has(
@@ -2475,7 +2475,7 @@ fn the_side_panel_opens_from_a_link_to_its_route_until_it_hydrates() {
                 ("hidden", "")
             ]
         ),
-        "the button that opens it in place waits for the WebAssembly: {panel}"
+        "the button that opens it in place waits for the script: {panel}"
     );
     assert!(
         has(

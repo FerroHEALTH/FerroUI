@@ -17,8 +17,8 @@
 - [Brand palettes](brand-palettes.md): each product keeps its own accent
   (BRIDGE indigo, FED azure, EHR and TERM teal, PIX plum), a shade moved only to pass
   contrast; owner 2026-10-18
-- [Sign-in screens](sign-in-screens.md): a plain `POST`, the one exception to
-  the reactive rule; two forms, a basic form and an OAuth2
+- [Sign-in screens](sign-in-screens.md): a plain `POST` like every form; two
+  forms, a basic form and an OAuth2
   button alone (and both together), FerroEHR's card the reference design
 - [Signed commits and the merge queue](merge-queue-signed.md): `main` takes
   only signed commits through pull requests and the merge queue
@@ -31,5 +31,5 @@
 - [Release closes milestone](release-closes-milestone.md): release.yml refuses
   a tag whose milestone is missing or not empty and closes it after every
   leg; check it after a manual or recovery release; owner 2026-10-19 (#124)
-- [Reactive console UI](reactive-console-ui.md): owner 2026-10-25, no full page reload for an interaction; WebAssembly is the normal path, the no-WebAssembly page the fallback (FerroUI #410)
+- [Console UI mode](reactive-console-ui.md): owner 2026-10-29, server-rendered HTML with a little plain JavaScript, reversing the hydrated mode of 2026-10-25 (FerroUI #510)
 - [Contribution licence attestation](contribution-licence-attestation.md): owner 2026-10-25, always tick the licence checkbox on PRs opened for the owner, never ask

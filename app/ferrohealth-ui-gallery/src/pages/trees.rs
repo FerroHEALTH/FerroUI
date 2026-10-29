@@ -455,7 +455,7 @@ fn directory(v: &Visit, editing: bool) -> Vec<TreeNode> {
     ]
 }
 
-/// The directory's folder tree as the island draws it, `id`, in an edit
+/// The directory's folder tree as the module draws it, `id`, in an edit
 /// when `editing` says so.
 fn folder_tree(v: &Visit, id: &str, editing: bool) -> Html {
     let open = [

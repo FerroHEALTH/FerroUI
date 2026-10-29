@@ -238,10 +238,10 @@ fn a_forms_help_lines_show_by_its_switch_with_no_script() {
 }
 
 #[test]
-fn an_island_wrapper_draws_no_box_of_its_own() {
+fn the_stylesheet_styles_no_wrapper_the_markup_never_draws() {
     assert!(
-        STYLESHEET.contains("  leptos-island,\n  leptos-children {\n    display: contents;"),
-        "an island's wrapper would break the flex or grid it sits in"
+        !STYLESHEET.contains("island"),
+        "a selector through the old island wrapper matches nothing the server draws"
     );
 }
 
@@ -258,12 +258,10 @@ fn a_sort_form_and_a_pager_form_add_no_box() {
 }
 
 #[test]
-fn a_cards_rhythm_reaches_through_an_islands_wrapper() {
+fn a_cards_rhythm_spaces_its_children() {
     assert!(
-        STYLESHEET.contains(
-            "  .fui-card > * + *,\n  .fui-card > :where(leptos-island, leptos-children) > * + *,\n  .fui-card > * + :where(leptos-island, leptos-children) > :where(:first-child) {"
-        ),
-        "the parts an island draws in a card would lose the space between them"
+        STYLESHEET.contains("  .fui-card > * + * {"),
+        "the parts of a card would lose the space between them"
     );
 }
 
@@ -285,10 +283,10 @@ fn a_phone_row_keeps_its_checkbox_on_its_first_line() {
 }
 
 #[test]
-fn a_binder_panel_inside_an_island_is_the_sheet_its_tabs_open_into() {
+fn a_keyboard_tabs_panel_is_the_sheet_its_tabs_open_into() {
     assert!(
         STYLESHEET.contains(
-            "  .fui-tabbed > .fui-tab-panel,\n  .fui-tabbed > leptos-children > .fui-tab-panel {\n    min-width: 0;\n    border: 1px solid var(--edge-strong);"
+            "  .fui-tabbed > .fui-tab-panel {\n    min-width: 0;\n    border: 1px solid var(--edge-strong);"
         ),
         "the keyboard tabs' panels would lose the binder sheet"
     );
@@ -296,7 +294,7 @@ fn a_binder_panel_inside_an_island_is_the_sheet_its_tabs_open_into() {
 
 #[test]
 fn the_phone_tab_select_replaces_the_row_only_once_it_works() {
-    // NOTE: leptos-ui.md §15.8: with no WebAssembly the row of links is the floor.
+    // NOTE: console-ui.md, the no-script floor: with no script the row of links is the floor.
     assert!(
         STYLESHEET.contains(
             "    .fui-tabbed-many:has(.fui-tabs-select select:enabled) > .fui-tabs {\n      display: none;"
@@ -310,12 +308,12 @@ fn the_phone_tab_select_replaces_the_row_only_once_it_works() {
 }
 
 #[test]
-fn a_document_view_a_link_targets_shows_until_the_island_takes_over() {
+fn a_document_view_a_link_targets_shows_until_the_module_takes_over() {
     assert!(
         STYLESHEET.contains(
             "  .fui-document-views:not(.is-live):has(.fui-document-view:target) .fui-document-view:not(:target) {\n    display: none;"
         ),
-        "with no WebAssembly the view a link targets replaces the chosen one"
+        "with no script the view a link targets replaces the chosen one"
     );
     assert!(
         STYLESHEET.contains(
@@ -685,7 +683,7 @@ fn the_toast_region_stays_above_the_decision_bar_and_scrolls() {
     assert!(
         STYLESHEET
             .contains("  .fui-toast:has(> .fui-toast-close:not([open])) {\n    display: none;"),
-        "a toast closed with no WebAssembly hides"
+        "a toast closed with no script hides"
     );
     assert!(
         rule("  .fui-toast code").contains("overflow-wrap: anywhere;"),
@@ -829,7 +827,7 @@ fn a_menu_segment_keeps_its_word_on_one_line() {
 
 #[test]
 fn a_confirmation_with_fields_keeps_the_dialogs_rhythm_inside_its_form() {
-    let rhythm = "  .fui-dialog > * + *,\n  .fui-dialog > .fui-dialog-form > * + *,";
+    let rhythm = "  .fui-dialog > * + *,\n  .fui-dialog > .fui-dialog-form > * + * {";
     assert!(
         STYLESHEET.contains(rhythm),
         "the question, the sentence, the fields and the actions keep their spacing inside the form"

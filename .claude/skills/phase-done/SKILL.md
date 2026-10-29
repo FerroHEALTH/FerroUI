@@ -45,7 +45,7 @@ records, and it does not decide the work is done on your behalf.
 5. **Research-issue check:** for a design-phase research issue, confirm the
    deliverable is on the issue thread as cited evidence and a recommendation,
    not as an undocumented conclusion. If the issue was supposed to change
-   `.claude/rules/leptos-ui.md`, confirm it did.
+   `.claude/rules/console-ui.md`, confirm it did.
 6. **Gate check:** confirm the gates that apply actually ran and passed: the
    shell and workflow set (`shellcheck --severity=style`, `actionlint`,
    `zizmor --min-severity=low .github/`), every guard under `scripts/checks/`

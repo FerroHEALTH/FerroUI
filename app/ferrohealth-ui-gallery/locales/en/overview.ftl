@@ -83,7 +83,7 @@ no-program-maps-template-gallery = No program maps the template gallery.template
 notices = Notices
 notifications = Notifications
 post-https-bridge-example-org = POST https://bridge.example.org/fhir/Bundle?_format=json
-posts-the-density = A plain form post, with or without WebAssembly
+posts-the-density = A plain form post, with or without script
 product-column = Product
 profile = Profile
 quiet-empty-section = A quiet empty section

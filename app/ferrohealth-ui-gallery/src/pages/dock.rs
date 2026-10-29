@@ -5,7 +5,7 @@
 //!
 //! The bar is the page's one decision, at the foot of the main area; its
 //! decisions submit the long form, a `GET` form back to the page, so a save
-//! shows its outcome with no WebAssembly. The bar shows when the address asks
+//! shows its outcome with no script. The bar shows when the address asks
 //! for it, so the page's other cards keep the whole window: its `dock`
 //! query picks a state for the screenshots (`idle`, `missing`, `disabled`,
 //! `submitting`, `done`, `stale`, `bare` with no field, `path` with two),

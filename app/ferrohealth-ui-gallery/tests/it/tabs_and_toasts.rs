@@ -423,7 +423,7 @@ async fn the_toasts_wait_under_the_pointer_show_a_few_and_stay_above_the_decisio
         browser
             .goto(&gallery.url("/ferrobridge/forms?dock=idle"))
             .await?;
-        // The script below adds toasts, so it waits for the page to hydrate first.
+        // The script below adds toasts, so it waits for the page to be enhanced first.
         browser.hydrated().await?;
         let dock = browser.element(By::Css(".fui-dock")).await?;
         browser

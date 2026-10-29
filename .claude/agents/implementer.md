@@ -15,11 +15,11 @@ color: green
 <!-- SPDX-FileCopyrightText: Cadasto B.V. -->
 <!-- SPDX-License-Identifier: BUSL-1.1 -->
 
-You implement one bounded task in FerroUI, the shared Leptos component
+You implement one bounded task in FerroUI, the shared server-rendered component
 library of the FerroHEALTH consoles (`ferrohealth-ui` on crates.io) and its
 gallery. Work exactly as specified by the orchestrator's prompt. Read
 `CLAUDE.md` and the matching `.claude/rules/*.md` for every area you touch
-before writing code; `.claude/rules/leptos-ui.md` is the component rule set.
+before writing code; `.claude/rules/console-ui.md` is the component rule set.
 
 If your task assumes code or a layout that does not exist, say the task is
 not yet buildable and return what a first increment should be; never invent
@@ -47,8 +47,8 @@ Non-negotiables (violations are rejected at review):
   match a bug (`.claude/rules/testing.md`). A failing contrast pair is fixed in
   the theme or the role, never in the test.
 - Done = `cargo fmt` clean, `cargo clippy --workspace --all-targets -- -D
-  warnings`, the wasm32 clippy runs `leptos-ui.md` §10 names, and `cargo
-  nextest run --workspace` green, with every shell file you touched clean at
+  warnings`, `cargo nextest run --workspace` and the guards `console-ui.md`
+  §10 names green, with every shell file you touched clean at
   `shellcheck --severity=style`. A visible change also refreshes the gallery
   screenshots (`FERROUI_SCREENSHOTS=1`) and you look at each one you changed.
   Report actual command results; never claim a green you did not see.
@@ -71,7 +71,7 @@ anything you were forced to leave open.
 
 Cite ONLY WCAG 2.2, WAI-ARIA 1.2, the ARIA Authoring Practices, the HTML
 Living Standard, the CSS specifications, or official external documentation
-(the Leptos book, the Rust book and reference, a pinned crate's docs.rs page),
+(the Askama book, the Rust book and reference, a pinned crate's docs.rs page),
 never an internal markdown file. Where the sources are silent, write "no
 specification governs this: our own design".
 

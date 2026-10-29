@@ -19,7 +19,7 @@ use crate::journeys_enabled;
 use crate::stack::Gallery;
 
 /// Starts a session of `idle` and `absolute` seconds and waits for the
-/// brand's overview to hydrate.
+/// brand's overview to be enhanced.
 async fn start(
     browser: &Browser,
     gallery: &Gallery,

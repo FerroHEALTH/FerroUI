@@ -1,6 +1,6 @@
 ---
 name: reactive-console-ui
-description: The consoles must be reactive with no full page reload for an interaction (owner, 2026-10-25); WebAssembly is the normal path and the no-WebAssembly page only the fallback
+description: The consoles are server-rendered HTML with a little plain JavaScript (owner, 2026-10-29, FerroUI #510), reversing the hydrated-WebAssembly ruling of 2026-10-25; an in-page change is a few lines of script, a navigation one fast document
 metadata:
   type: feedback
 ---
@@ -8,18 +8,24 @@ metadata:
 <!-- SPDX-FileCopyrightText: Cadasto B.V. -->
 <!-- SPDX-License-Identifier: BUSL-1.1 -->
 
-The owner ruled on 2026-10-25 that every FerroHEALTH console stays reactive:
-a link, a form or an action never reloads the whole document. WebAssembly is
-the normal path; a page that works without it is the fallback, never the
-design target.
+The owner ruled on 2026-10-29 (FerroUI #510) that the FerroHEALTH consoles
+move to the VernumBOEK model: server-rendered HTML from Askama templates, a
+few plain ES modules, no WebAssembly and no hydration. This reverses
+the ruling of 2026-10-25 (FerroUI #410), which made hydrated WebAssembly the
+normal path.
 
-**Why:** FerroUI #196 (PR #223, 2026-10-22) moved the consoles to islands
-mode on bundle size and time-to-interactive alone and made every action a
-plain form post, so each click became a full page load, which the owner
-found slow and unacceptable. FerroUI #410 restores client navigation: PR
-#416 (merged 2026-10-25) replaced the islands mode with whole-page hydration
-and a lazy route per page group, so no link or form reloads the document.
+**Why:** the hydrated consoles flickered on every click and lost what the
+reader had done. A tab or a tree node was a navigation the router redrew
+whole, with an empty fallback while it asked the server again, so expansion,
+scroll and selection were gone. FerroUI #196 had earlier moved to islands
+and made every action a full page load, which was slow too.
 
-**How to apply:** user experience outranks bundle bytes. Judge a UI change
-by the interaction it gives, measure navigations as well as first load, and
-never land a design whose every interaction reloads the page.
+**How to apply:** the bar is that nothing flickers and nothing is lost.
+- An in-page change (a tab whose panel the page holds, a tree level the
+  server read, a menu) is a few lines of script that toggle what the server
+  drew, with no round trip.
+- A navigation is one fast document the browser paints whole, keeping
+  scroll and expansion (`keep`, `tree`).
+- Every page works with no script.
+- Judge a UI change by the interaction it gives, and hold it with the
+  gallery's navigation journeys.

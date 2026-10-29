@@ -209,7 +209,7 @@ async fn a_key_typed_into_a_large_document_costs_what_it_costs_in_a_small_one()
         browser.goto(&gallery.url("/ferroterm/forms")).await?;
         for id in ["gallery-draft", "gallery-mapping"] {
             let area = browser.element(By::Id(id)).await?;
-            until("the editor hydrates", async || {
+            until("the editor is enhanced", async || {
                 browser.editor_live(&area).await
             })
             .await?;

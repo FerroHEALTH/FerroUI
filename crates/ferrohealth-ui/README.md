@@ -4,60 +4,76 @@
 # ferrohealth-ui
 
 The shared UI components of the FerroHEALTH consoles (FerroBRIDGE, FerroFED,
-FerroEHR and FerroTERM), for Leptos 0.8: static view functions, a few
-interactive widgets, one table model, highlighters for YAML, JSON, XML and
-AQL, Lucide icons, and one plain-CSS stylesheet with a theme file per brand.
-Every pairing of every theme is held to WCAG 2.2 AA by the crate's tests.
+FerroEHR, FerroTERM and FerroPIX): components rendered on the server from
+Askama templates, small plain ES modules for the behaviour on top, one table
+model, highlighters for YAML, JSON, XML and AQL, Lucide icons, and one
+plain-CSS stylesheet with a theme file per brand. Every pairing of every
+theme is held to WCAG 2.2 AA by the crate's tests.
 
 ```toml
 [dependencies]
-ferrohealth-ui = "=0.4.0"
+ferrohealth-ui = "=0.6.0"
 ```
 
 Pin the version exactly: a console moves its pin after looking at its own
 screens. The [console guide](https://github.com/FerroHEALTH/FerroUI/blob/main/docs/consoles.md)
 says what the library owns, what a console owns, and which document governs
-each part.
+each part. A console on 0.5 moves with the
+[migration guide](https://github.com/FerroHEALTH/FerroUI/blob/main/docs/migration-0.6.md).
 
-## Hydration and routes
+## A page
 
-The crate has no features of its own and compiles under `csr`, `ssr` and
-`hydrate`, whichever your own `leptos` dependency turns on. A console
-hydrates the whole page and draws every page after the first in the
-browser, so no link or form reloads the document: write
-`<HydrationScripts options/>` in your shell, draw each page as a
-`leptos_router` `LazyRoute`, build your site with `cargo leptos build
---split`, and hydrate from your browser entry:
+Every component is a function that returns `html::Html`, markup your own
+Askama template writes with `{{ part }}` (it implements `HtmlSafe`, so it is
+never escaped twice). A handler draws its page and returns the whole
+document:
 
-```text
-#[wasm_bindgen]
-pub fn hydrate() {
-    console_error_panic_hook::set_once();
-    ferrohealth_ui::widget::hydration::explain();
-    ferrohealth_ui::widget::hydration::hydrate(App);
-}
+```rust
+use ferrohealth_ui::html::Html;
+use ferrohealth_ui::i18n::Locale;
+use ferrohealth_ui::serve::{Assets, PREFIX, axum_router};
+use ferrohealth_ui::style::Brand;
+use ferrohealth_ui::theme::Preferences;
+use ferrohealth_ui::view::shell::{Document, document};
+
+let app: axum::Router = axum::Router::new()
+    // .route("/templates", get(templates)) and the rest of your pages
+    .nest(PREFIX, axum_router::router());
+
+let page = document(Document {
+    locale: Locale::english(),
+    preferences: Preferences::default(),
+    title: String::from("Templates · FerroBRIDGE"),
+    assets: Assets::of(Brand::Bridge),
+    nonce: None,
+    head: Html::empty(),
+    body: Html::text("the page"),
+});
 ```
 
-Name your routes and their loaders once with `widget::prefetch::routes`,
-from your root component, and a route's code loads when a link to it is
-hovered or focused, the main navigation's once the first page is idle.
-Never turn on the `leptos` feature `islands`. Every widget takes the words
-it draws as props (each widget's `*Words::of_page()`), resolved in the
-page's locale, which your root component provides the same in both halves.
+`serve::axum_router::router()`, under the default `axum` feature, serves the
+stylesheet, the brand themes and the script modules under
+`/ferrohealth-ui/<version>/` with a one-year immutable cache. Without axum,
+serve `style::STYLESHEET`, `style::Brand::theme` and `script::MODULES` at the
+paths `serve::Assets` names.
 
-Every page still works with no WebAssembly, as the fallback: the HTML is
-complete, and every important action is a link or a form.
+The document loads one script, the loader `fui.js`, which imports the module
+each element asks for with `data-fui="<job>"`. Every page works with the
+modules refused: the HTML is complete, and every important action is a link
+or a form. Your policy is `script-src 'self'; style-src 'self'`; a nonce is
+needed only when your own policy keeps one (`Document::nonce`).
 
 ## The stylesheet and a theme
 
-Serve two stylesheets from your own origin, the theme after the stylesheet,
-so `style-src 'self'` holds:
+The document links two stylesheets from your own origin, the theme after
+the stylesheet, so `style-src 'self'` holds. The asset router serves both;
+without it, serve the text yourself:
 
 ```rust
 use ferrohealth_ui::style::{Brand, STYLESHEET};
 
-let stylesheet: &str = STYLESHEET;          // serve as /ferrohealth-ui.css
-let theme: &str = Brand::Bridge.theme();    // serve as /theme.css
+let stylesheet: &str = STYLESHEET;          // at Assets::stylesheet()
+let theme: &str = Brand::Bridge.theme();    // at Assets::theme()
 ```
 
 The same files are `css/ferrohealth-ui.css` and `themes/<brand>.css` in the
@@ -78,26 +94,21 @@ which your server writes from its own cookie or setting (`theme::Theme`).
 
 ## Components
 
-- `view`: `button`, `status` (pill, badge, banner, the top bar's status
-  pill), `surface` (page header, card, stat, definitions, disclosure),
-  `form` (field, check), `tabs` (binder tabs
-  joined to their panel), `popover` (the anchored popover form), `empty`, `refusal` (an error
-  with its issues), `code` (highlighted panel and numbered lines),
-  `preferences` (Your preferences: its three tabs, each preference a plain
-  form post), `dialog` (a popover confirmation), `shell` (skip link,
-  top bar, footer, centred page) and `sign_in` (the R19 card in every
-  state, with the provider's action and an optional basic form).
-- `island`: the ready components, such as `ToastRegion`, `NavDrawer`,
-  `KeyboardTabs` and `Search` (the module lists them all), each taking its
-  words as props. Every widget takes the words it draws as a `*Words`
-  struct its `of_page()` resolves in the page's locale.
-- `widget`: the interactive components as functions you call in a page:
+- `view`: every component, each a function over a template taking the
+  page's `&Locale` where it draws words. Among them: `button`, `status`
+  (pill, badge, banner, the top bar's status pill), `surface` (page header,
+  card, stat, definitions, disclosure), `form` (field, check), `tabs`
+  (binder tabs joined to their panel, keyboard tabs), `popover`, `empty`,
+  `refusal` (an error with its issues), `code` and `editor` (the
+  highlighted panel and the overlay editor with line marks), `dialog`,
   `nav` (the sidebar, plain links with the page marked, its counts and its
-  rail, inside its drawer), `menu` (the user menu), `tabs` (the panels for
-  `KeyboardTabs`), `toast` (`raise` a title, a line and an action from any
-  component), `prefetch` (a route's code before the visit), `editor` (the
-  highlighted overlay editor with line marks), `filter` (an in-place filter
-  over rows the page already holds) and the rest.
+  rail, inside its drawer), `menu` (the user menu), `action_menu`, `tree`,
+  `date`, `combobox`, `search`, `toast` (the region, and a `Flash` the
+  server raises as the page arrives), `session` (the watch over the
+  session's end), `preferences` (Your preferences), `shell` (the document,
+  skip link, top bar, footer, centred page) and `sign_in` (the R19 card in
+  every state, with the provider's action and an optional basic form).
+- `script`: the modules as text, one per job, and the loader.
 - `table`: the paging and sorting model (`Paging`, `Window`, `Sort`,
   `StateSource`), the data table with its cells and list card (`view`), the
   link and `POST` pagers (`pager`) and the find field (`filter`), each a
@@ -109,7 +120,7 @@ which your server writes from its own cookie or setting (`theme::Theme`).
 
 `view::shell::topbar` draws the drawer button, the lockup, the search box
 and, at the end, the status pill (`view::status::status_pill`) and the
-user menu (`widget::menu::user_menu`), on one row at every width; the
+user menu (`view::menu::user_menu`), on one row at every width; the
 search box takes a row of its own below 48rem. The top bar carries no
 theme control: the theme is set in the user menu and in Your preferences.
 The status pill keeps its shape at every width and shows its words from
@@ -118,10 +129,11 @@ user menu opens as an anchored menu, and below 40rem as a bottom sheet
 with Cancel; a control the top bar shows from 40rem up, such as a version
 choice, moves into the menu below it (`Choices`).
 
-No component writes a `style` attribute or a `<style>` element, defines a
-server function, or touches browser storage. Two fetch, from routes you
-name: the search box's typeahead and the session watch
-(`island::SessionWatch`), each on the wire `docs/consoles.md` documents.
+No component writes a `style` attribute, a `<style>` element or an inline
+script, defines a route, or touches browser storage beyond what the tree
+and the scroll keep for the session. Two modules fetch, from routes you
+name: the search box's typeahead (`search`) and the session watch
+(`session`), each on the wire `docs/consoles.md` documents.
 
 ## Locales
 
@@ -129,26 +141,22 @@ Every word a component draws itself (a pager step, a dialog's Cancel, the
 user menu's Sign out, an empty listing's range) comes from a Fluent catalog
 under `locales/`, one directory per language. English is the one catalog
 that ships, and every lookup falls back to it; a language joins as one
-catalog directory, with no code change. Choose the locale once per render, at the
-root of the page tree, the same on the server and in the browser, and write
-it as `<html lang>`; a widget takes the words it draws as props:
+catalog directory, with no code change. Choose the locale once per request
+and pass it to every component; the document writes it as `<html lang>`:
 
 ```rust
-use ferrohealth_ui::i18n::{Locale, locale, provide_locale};
-use leptos::prelude::*;
+use ferrohealth_ui::i18n::Locale;
 
-let lang = Owner::new().with(|| {
-    // From the configuration, or `Locale::negotiate` over `Accept-Language`.
-    provide_locale(Locale::parse("en-GB").unwrap_or_default());
-    locale().tag()
-});
-assert_eq!(lang, "en-GB");
+// From the configuration, or over `Accept-Language`.
+let locale = Locale::negotiate("nl-NL, en-GB;q=0.8");
+assert!(!locale.tag().is_empty());
 ```
 
-A page that provides no locale draws English. Catalog the console's own
-strings the same way: a `fluent_templates::static_loader!` over the
-console's own `locales/`, looked up with `Locale::lookup`, so the console's
-words follow the same choice. The language preference on Your preferences
+Catalog the console's own strings the same way: a
+`fluent_templates::static_loader!` over the console's own `locales/`,
+looked up with `Locale::lookup`, so the console's words follow the same
+choice. A module carries no catalog: the words it needs are resolved on the
+server and drawn into the page. The language preference on Your preferences
 (`view::preferences::language_select`) names each choice in its own
 language.
 
@@ -158,7 +166,7 @@ language.
 name: Appearance, Language and region (Reading in FerroEHR) and Keyboard,
 each a route of yours. Every preference is its own cookie, named by its
 `theme::Preference::COOKIE`, and posts as a plain form to the route you
-name, so the page works with no WebAssembly. You keep the cookie
+name, so the page works with no script. You keep the cookie
 (`SameSite=Lax`, `Secure`, one year), return to the tab saying which one
 you kept (`saved`), read them all with `theme::Preferences::read` as you
 render, and write `data-theme`, `data-density`, `data-motion` and

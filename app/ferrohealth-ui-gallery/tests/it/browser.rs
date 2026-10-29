@@ -486,8 +486,8 @@ impl Browser {
         until(what, done).await
     }
 
-    /// Whether the editor around the text area `area` has hydrated: its
-    /// stack drops `is-static` once its island runs. The text area takes
+    /// Whether the editor around the text area `area` has been enhanced: its
+    /// stack drops `is-static` once its module runs. The text area takes
     /// keys from the first paint, so its `readonly` tells nothing (#356).
     pub(crate) async fn editor_live(&self, area: &WebElement) -> Result<bool, Box<dyn Error>> {
         let live = self

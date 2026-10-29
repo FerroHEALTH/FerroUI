@@ -48,7 +48,7 @@ fn days(v: &Visit) -> [String; 7] {
 }
 
 /// The line chart of three synthetic series, one with a gap, its legend
-/// the library's island.
+/// the library's module.
 fn lines(v: &Visit) -> Html {
     card(v.tr(Msg::LineChart), requests_chart(RequestsWords::of(v)))
 }

@@ -227,7 +227,7 @@ fn panel(text: &str, opened: Opened, at: Position) -> Html {
 }
 
 #[test]
-fn an_editable_editor_takes_keys_and_shows_them_before_its_island_runs() {
+fn an_editable_editor_takes_keys_and_shows_them_before_its_module_runs() {
     let shown = html({
         code_editor(&Editor {
             editable: (true),
@@ -260,7 +260,7 @@ fn an_editable_editor_takes_keys_and_shows_them_before_its_island_runs() {
     };
     assert!(
         rule("  .fui-editor-stack.is-static > .fui-editor-input").contains("color: var(--ink);"),
-        "the text area shows its own text until the island runs"
+        "the text area shows its own text until the module runs"
     );
 }
 

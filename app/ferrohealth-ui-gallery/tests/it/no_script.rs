@@ -173,7 +173,7 @@ async fn side_panel_floor(browser: &Browser) -> Result<(), Box<dyn Error>> {
 }
 
 /// Checks that a setting's key reads as text and its copy button waits
-/// for the WebAssembly.
+/// for the scripts.
 async fn key_hint_floor(browser: &Browser) -> Result<(), Box<dyn Error>> {
     let key = browser
         .element(By::Css(".fui-key-hint.is-text code"))
@@ -459,7 +459,7 @@ async fn clinical_codings(browser: &Browser) -> Result<(), Box<dyn Error>> {
 /// version select opens its menu of links, and every Remove and Add of the
 /// repeatable rows is a submit button of the form around it.
 async fn terminology_content(browser: &Browser) -> Result<(), Box<dyn Error>> {
-    // NOTE: leptos-ui.md §15.8: a `<details>` opens with no script, and each root is a link.
+    // NOTE: console-ui.md §1: a `<details>` opens with no script, and each root is a link.
     let select = browser
         .element(By::Css("summary.fui-version-select"))
         .await?;
@@ -518,7 +518,7 @@ async fn overlays_content(browser: &Browser) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-/// The topology's floor (`leptos-ui.md` §15.8): the zoom waits for the
+/// The topology's floor (`console-ui.md` §1): the zoom waits for the
 /// script and says why, and the quick looks, the views and the List twin
 /// are there as links.
 async fn topology_floor(browser: &Browser) -> Result<(), Box<dyn Error>> {
@@ -553,7 +553,7 @@ async fn overview_floor(browser: &Browser) -> Result<(), Box<dyn Error>> {
             .await?,
         "the first keyboard tab's panel shows"
     );
-    // NOTE: leptos-ui.md §15.8: the phone's tab select waits disabled, and
+    // NOTE: console-ui.md §1: the phone's tab select waits disabled, and
     // every binder tab is a link to its own route.
     let select = browser.element(By::Css(".fui-tabs-select select")).await?;
     assert!(
@@ -596,7 +596,7 @@ async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error
         "/find" => find_page_in_flow(browser).await?,
         "/configuration/provisioned" => crate::configuration::provisioned_floor(browser).await?,
         "/operations" => {
-            // NOTE: leptos-ui.md §5: a text area carries its text in the server HTML, so
+            // NOTE: console-ui.md §5: a text area carries its text in the server HTML, so
             // Run posts the input with no script.
             let input = browser.element(By::Id("pair-answered-input")).await?;
             assert!(
@@ -613,7 +613,7 @@ async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error
             assert!(raw.starts_with("MSH|"), "the raw message shows: {raw}");
         }
         "/clinical" => {
-            // NOTE: leptos-ui.md §15.8: At a time, the switch and the builder are links
+            // NOTE: console-ui.md §1: At a time, the switch and the builder are links
             // and forms, so each works with no script.
             let subject = text_of(browser, By::Css("#subject .fui-subject")).await?;
             assert!(
