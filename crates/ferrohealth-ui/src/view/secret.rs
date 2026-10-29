@@ -316,6 +316,7 @@ fn error_line(id: &str, error: Option<&str>) -> Option<AnyView> {
 fn value_control(field: &str, error: Option<&str>) -> AnyView {
     let id = format!("{field}-value");
     let name = format!("{field}[value]");
+    let mark = crate::widget::action::secret_mark(&name);
     let invalid = error.is_some().then_some("true");
     let line = error_line(&id, error);
     view! {
@@ -323,6 +324,7 @@ fn value_control(field: &str, error: Option<&str>) -> AnyView {
             <label for=id.clone() class="fui-label">
                 {tr(Text::SecretValueLabel)}
             </label>
+            {mark}
             <input
                 id=id.clone()
                 name=name

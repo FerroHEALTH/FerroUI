@@ -125,7 +125,13 @@ answer to a form whose result is the point.
    action's value with the answer the page was drawn with and returns the
    posted fields (`Posted`); draw each field's value from
    `posted.field(name)`, which is empty on every other request.
-4. **The function:** write it as for its own client. It takes no
+4. **A secret field:** draw `widget::action::secret_mark(name)` beside
+   every input whose value the page must never show again, a password or
+   a key (`view::form::masked_input` among them; `view::secret::secret_field`
+   draws its own). The function reads the field as before, and the page
+   drawn with the answer leaves it out of `Posted`, so its value is in
+   neither the markup nor the hydration data (FerroUI #499).
+5. **The function:** write it as for its own client. It takes no
    `ferroui_return` and calls no redirect; one that calls
    `leptos_axum::redirect` anyway, such as on a session that is over, is
    followed: the browser gets a `303 See Other` to the address it named.
@@ -149,9 +155,9 @@ What a plain post of an answer form gets, with no WebAssembly:
 | | |
 |---|---|
 | Recognised by | `POST` with `Content-Type: application/x-www-form-urlencoded`, an `Accept` that names `text/html`, and a `ferroui_answer` field that is a path on your own origin; every other request passes to your router untouched, the page's own calls among them |
-| The function's call | The same post, its headers kept, without the `ferroui_answer` field and with `Accept: */*`, so it answers as to its own client and redirects nowhere |
+| The function's call | The same post, its headers kept, without the `ferroui_answer` and `ferroui_secret` fields and with `Accept: */*`, so it answers as to its own client and redirects nowhere |
 | The function redirects | A 3xx it answers is the answer. A call of `leptos_axum::redirect`, which under `Accept: */*` answers `200` with `Location` and the `serverfnredirect` header (leptos_axum 0.8.10 `redirect`), answers `303 See Other` to that `Location` with the cookies the function set and `Cache-Control: no-store` (RFC 9110 §15.4.4) |
-| The page | A `GET` of the field's address with the post's headers, drawn by your router with the answer as the action's value, an error as the error, and the posted fields in `Posted` |
+| The page | A `GET` of the field's address with the post's headers, drawn by your router with the answer as the action's value, an error as the error, and the posted fields in `Posted`, every field a `ferroui_secret` names left out |
 | Status | The page's own, as for the page a failed redirect-mode post returns to: the function's failure is the action's value |
 | Headers | The page's, the cookies the function set, and `Cache-Control: no-store` |
 | Limits | The post and the answer are read whole up to `widget::action::ANSWER_LIMIT` (16 MiB): a larger post answers `413`, a larger answer, or one that is not UTF-8 text, `500` |

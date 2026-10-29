@@ -163,7 +163,10 @@ impl Inner {
 /// autocomplete, no capitals and no spelling check, as for an identifier.
 ///
 /// It carries no value: what is typed stays in the input and posts with its
-/// form. Put [`Inner::HoldToShow`] after it to show the text while held.
+/// form. Put [`Inner::HoldToShow`] after it to show the text while held. In
+/// an answer form ([`crate::widget::action::answer_field`]), draw
+/// [`crate::widget::action::secret_mark`] for it too, so the page that
+/// answers the post never carries the value back.
 ///
 /// ```
 /// use ferrohealth_ui::view::form::{Field, Inner, described_by, masked_input};
