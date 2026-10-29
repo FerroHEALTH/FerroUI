@@ -7,13 +7,13 @@
 //! concept, over a long level beside a level being read, and over a flat
 //! code system; a directory's folder tree (E4) read and in an edit; and a
 //! template's path browser (E5) with a coded node selected. Every tree is
-//! the library's island `TreeView`. The first browser keeps its open items
-//! and its concept in the address, so each fold is a link the server
-//! answers with no WebAssembly.
+//! the library's `tree_view`. The first browser keeps its open items and
+//! its concept in the address, so each fold is a link the server answers
+//! with no script.
 
 use std::collections::BTreeSet;
 
-use ferrohealth_ui::island::TreeView;
+use ferrohealth_ui::html::Html;
 use ferrohealth_ui::table::filter::Find;
 use ferrohealth_ui::table::model::StateSource;
 use ferrohealth_ui::view::action::ActionGroup;
@@ -26,13 +26,13 @@ use ferrohealth_ui::view::surface::{
     Crumb, Header, SectionHead, definitions, page_heading, panel_section, section_intro, stack,
     titled_panel,
 };
-use ferrohealth_ui::widget::tree::{
-    Edit, Mark, More, TreeData, TreeKind, TreeNode, TreeWords, path_key,
+use ferrohealth_ui::view::tree::{
+    Edit, Mark, More, Tree, TreeKind, TreeNode, TreeWords, path_key, tree_view,
 };
-use leptos::prelude::*;
-use leptos_router::hooks::use_query_map;
 
-use crate::locale::{Msg, tr, tr_with};
+use crate::app::Page;
+use crate::locale::Msg;
+use crate::markup::{h, t};
 use crate::trees_data::{
     COUNTRIES, COUNTRIES_VERSION, Concept, FINDINGS, FINDINGS_MATCHED, FINDINGS_OPEN,
     FINDINGS_SELECTED, FINDINGS_SYSTEM, FINDINGS_TOP, FINDINGS_VERSION, NATIONAL_CHEST,
@@ -40,12 +40,11 @@ use crate::trees_data::{
     POSITION_FLAT, POSITION_OCCURRENCES, POSITION_PATH, POSITION_TYPE, REFERENCES, ROOT_ARCHETYPE,
     TEMPLATE, TEMPLATE_OPEN, TEMPLATE_SELECTED, reason_code,
 };
+use crate::visit::Visit;
 
 /// The key of the brand the route names, FerroTERM's for none.
-fn brand_key() -> String {
-    crate::app::route_brand()
-        .map_or("ferroterm", |brand| brand.key())
-        .to_owned()
+fn brand_key(v: &Visit) -> String {
+    v.brand.key().to_owned()
 }
 
 /// The trees page of the brand `brand` with the open items `open` and the
@@ -94,6 +93,7 @@ fn path_of(code: &str) -> String {
 /// reads one level at a time; each toggle leads to the page with its item
 /// opened or closed.
 fn deep_node(
+    v: &Visit,
     brand: &str,
     above: &[&str],
     code: &str,
@@ -103,7 +103,7 @@ fn deep_node(
     let (code, display, inactive) = finding(code)?;
     let keys = [above, &[code]].concat();
     let key = path_key(&keys);
-    let mut node = TreeNode::new(code, tr(display))
+    let mut node = TreeNode::new(code, v.tr(display))
         .code(code)
         .href(address(brand, open, code));
     if inactive {
@@ -122,7 +122,7 @@ fn deep_node(
         node.children(
             children
                 .into_iter()
-                .filter_map(|child| deep_node(brand, &keys, child, open, concept))
+                .filter_map(|child| deep_node(v, brand, &keys, child, open, concept))
                 .collect(),
         )
     } else {
@@ -146,16 +146,22 @@ fn open_in(query: Option<String>) -> BTreeSet<String> {
 
 /// A row of a search's matches: an inline M2 coding, its display the
 /// row's link, marked current when it is the concept in view.
-fn found(href: String, display: String, code: &str, current: bool) -> AnyView {
+fn found(v: &Visit, href: String, display: String, code: &str, current: bool) -> Html {
     coding(
+        &v.locale,
         Coding::new(code, display).href(href).current(current),
         Layout::Inline,
     )
 }
 
 /// The search pane, searching for `value` in a field `id`, with `matches`.
-fn search_pane(id: &'static str, value: &'static str, matches: Vec<AnyView>) -> BrowserPane {
-    let label = tr(Msg::TreesSearchDesignations);
+fn search_pane(
+    v: &Visit,
+    id: &'static str,
+    value: &'static str,
+    matches: Vec<Html>,
+) -> BrowserPane {
+    let label = v.tr(Msg::TreesSearchDesignations);
     let field = browser_find(Find {
         id,
         name: "q",
@@ -167,255 +173,248 @@ fn search_pane(id: &'static str, value: &'static str, matches: Vec<AnyView>) -> 
     });
     if matches.is_empty() {
         return BrowserPane::new(
-            tr(Msg::TreesSearch),
-            pane_body(view! {
-                {field}
-                <p class="fui-small fui-muted">{tr(Msg::TreesSearchToSee)}</p>
-            }),
+            v.tr(Msg::TreesSearch),
+            pane_body(h(format!(
+                "{field}<p class=\"fui-small fui-muted\">{}</p>",
+                t(v.tr(Msg::TreesSearchToSee))
+            ))),
         );
     }
-    let count = tr_with(Msg::TreesConceptsFound, &[("count", matches.len().into())]);
+    let count = v.tr_with(Msg::TreesConceptsFound, &[("count", matches.len().into())]);
     BrowserPane::new(
-        tr(Msg::TreesSearch),
-        view! {
-            {pane_body(view! {
-                {field}
-                <p class="fui-small fui-muted" role="status">{count}</p>
-            })}
-            {match_list(tr(Msg::TreesMatched), matches)}
-        },
+        v.tr(Msg::TreesSearch),
+        Html::join([
+            pane_body(h(format!(
+                "{field}<p class=\"fui-small fui-muted\" role=\"status\">{}</p>",
+                t(count)
+            ))),
+            match_list(&v.tr(Msg::TreesMatched), matches),
+        ]),
     )
 }
 
 /// The concept pane of the concept `code` named `display`, read from
 /// version `version`, with its `facts`.
 fn concept_pane(
+    v: &Visit,
     display: String,
     code: &str,
     version: &str,
     inactive: bool,
-    facts: Vec<(String, AnyView)>,
+    facts: Vec<(String, Html)>,
 ) -> BrowserPane {
-    let read = tr_with(Msg::TreesReadFrom, &[("version", version.into())]);
-    let mark = inactive.then(inactive_mark);
+    let read = v.tr_with(Msg::TreesReadFrom, &[("version", version.into())]);
+    let mark = if inactive {
+        inactive_mark(&v.locale)
+    } else {
+        Html::empty()
+    };
     BrowserPane::new(
-        tr(Msg::TreesTheConcept),
-        pane_body(view! {
-            <h3 class="fui-concept-title">{display}</h3>
-            <p class="fui-small fui-muted">
-                <code>{code.to_owned()}</code>
-                " · "
-                {read}
-                " "
-                {mark}
-            </p>
-            {definitions(facts)}
-        }),
+        v.tr(Msg::TreesTheConcept),
+        pane_body(h(format!(
+            "<h3 class=\"fui-concept-title\">{}</h3><p class=\"fui-small fui-muted\"><code>{}</code> · {} {mark}</p>{}",
+            t(display),
+            t(code),
+            t(read),
+            definitions(facts)
+        ))),
     )
 }
 
 /// The browser over a deep path, its open items and concept from the
 /// address.
-fn deep_browser() -> AnyView {
-    let brand = brand_key();
-    let query = use_query_map();
-    let concept = query
-        .with_untracked(|query| query.get("concept"))
+fn deep_browser(v: &Visit) -> Html {
+    let brand = brand_key(v);
+    let concept = v
+        .param("concept")
         .filter(|code| finding(code).is_some())
-        .unwrap_or_else(|| String::from(FINDINGS_SELECTED));
-    let open = open_in(query.with_untracked(|query| query.get("open")));
+        .unwrap_or(FINDINGS_SELECTED)
+        .to_owned();
+    let open = open_in(v.param("open").map(str::to_owned));
     let matches = FINDINGS_MATCHED
         .into_iter()
         .filter_map(finding)
         .map(|(code, display, _)| {
             found(
+                v,
                 address(&brand, &open, code),
-                tr(display),
+                v.tr(display),
                 code,
                 code == concept,
             )
         })
         .collect();
-    let nodes = deep_node(&brand, &[], FINDINGS_TOP, &open, &concept)
+    let nodes = deep_node(v, &brand, &[], FINDINGS_TOP, &open, &concept)
         .into_iter()
         .collect();
-    let tree = view! {
-        <TreeView
-            tree=TreeData {
-                id: String::from("trees-deep"),
-                label: tr(Msg::TreesHierarchyOfFindings),
-                kind: TreeKind::Concept,
-                editing: false,
-                nodes,
-                open: open.clone(),
-                selected: Some(path_of(&concept)),
-                open_field: None,
-            }
-            words=TreeWords::of_page()
-        />
-    };
+    let tree = tree_view(&Tree {
+        id: String::from("trees-deep"),
+        label: v.tr(Msg::TreesHierarchyOfFindings),
+        kind: TreeKind::Concept,
+        editing: false,
+        nodes,
+        open: open.clone(),
+        selected: Some(path_of(&concept)),
+        open_field: None,
+        words: TreeWords::of(&v.locale),
+    });
     let (display, inactive) = finding(&concept)
         .map_or((String::new(), false), |(_, display, inactive)| {
-            (tr(display), inactive)
+            (v.tr(display), inactive)
         });
     let parent = PARENTS
         .into_iter()
         .find(|(child, _)| *child == concept)
         .and_then(|(_, parent)| finding(parent));
     let mut facts = vec![(
-        tr(Msg::TreesSystem),
-        view! { <code>{FINDINGS_SYSTEM}</code> }.into_any(),
+        v.tr(Msg::TreesSystem),
+        h(format!("<code>{FINDINGS_SYSTEM}</code>")),
     )];
     if let Some((code, display, _)) = parent {
         facts.push((
-            tr(Msg::TreesParent),
-            found(address(&brand, &open, code), tr(display), code, false),
+            v.tr(Msg::TreesParent),
+            found(v, address(&brand, &open, code), v.tr(display), code, false),
         ));
     }
     let children = children_of(&concept);
     if !children.is_empty() {
-        facts.push((
-            tr(Msg::TreesChildren),
-            children.len().to_string().into_any(),
-        ));
+        facts.push((v.tr(Msg::TreesChildren), t(children.len().to_string())));
     }
     titled_panel(
-        tr(Msg::TreesDeepPath),
-        (),
+        v.tr(Msg::TreesDeepPath),
+        Html::empty(),
         browser(
             Panes::Three,
             Heading::Two,
             vec![
-                search_pane("trees-deep-find", "cough", matches),
-                BrowserPane::new(tr(Msg::TreesHierarchy), tree),
-                concept_pane(display, &concept, FINDINGS_VERSION, inactive, facts),
+                search_pane(v, "trees-deep-find", "cough", matches),
+                BrowserPane::new(v.tr(Msg::TreesHierarchy), tree),
+                concept_pane(v, display, &concept, FINDINGS_VERSION, inactive, facts),
             ],
         ),
     )
-    .into_any()
 }
 
 /// The browser over a long level, beside a level being read.
-fn long_browser() -> AnyView {
+fn long_browser(v: &Visit) -> Html {
     let (total, shown, next) = NATIONAL_LEVEL;
     let reasons = (1..=shown)
         .map(|index| {
             let code = reason_code(index);
             TreeNode::new(
                 code.clone(),
-                tr_with(Msg::TreesReason, &[("index", index.into())]),
+                v.tr_with(Msg::TreesReason, &[("index", index.into())]),
             )
             .code(code)
         })
         .collect();
-    let chest = TreeNode::new(NATIONAL_CHEST, tr(Msg::TreesChestReferral))
+    let chest = TreeNode::new(NATIONAL_CHEST, v.tr(Msg::TreesChestReferral))
         .code(NATIONAL_CHEST)
-        .paged(reasons, More::of_page(shown, total, next, "#trees-long"));
-    let skin = TreeNode::new(NATIONAL_SKIN, tr(Msg::TreesSkinReferral))
+        .paged(
+            reasons,
+            More::of(&v.locale, shown, total, next, "#trees-long"),
+        );
+    let skin = TreeNode::new(NATIONAL_SKIN, v.tr(Msg::TreesSkinReferral))
         .code(NATIONAL_SKIN)
         .unread();
-    let root = TreeNode::new(NATIONAL_TOP, tr(Msg::TreesNationalFinding))
+    let root = TreeNode::new(NATIONAL_TOP, v.tr(Msg::TreesNationalFinding))
         .code(NATIONAL_TOP)
         .children(vec![chest, skin]);
-    let tree = view! {
-        <TreeView
-            tree=TreeData {
-                id: String::from("trees-long"),
-                label: tr(Msg::TreesHierarchyOfNational),
-                kind: TreeKind::Concept,
-                editing: false,
-                nodes: vec![root],
-                open: [
-                    path_key(&[NATIONAL_TOP]),
-                    path_key(&[NATIONAL_TOP, NATIONAL_CHEST]),
-                    path_key(&[NATIONAL_TOP, NATIONAL_SKIN]),
-                ]
-                .into_iter()
-                .collect(),
-                selected: Some(path_key(&[NATIONAL_TOP, NATIONAL_CHEST])),
-                open_field: None,
-            }
-            words=TreeWords::of_page()
-        />
-    };
+    let tree = tree_view(&Tree {
+        id: String::from("trees-long"),
+        label: v.tr(Msg::TreesHierarchyOfNational),
+        kind: TreeKind::Concept,
+        editing: false,
+        nodes: vec![root],
+        open: [
+            path_key(&[NATIONAL_TOP]),
+            path_key(&[NATIONAL_TOP, NATIONAL_CHEST]),
+            path_key(&[NATIONAL_TOP, NATIONAL_SKIN]),
+        ]
+        .into_iter()
+        .collect(),
+        selected: Some(path_key(&[NATIONAL_TOP, NATIONAL_CHEST])),
+        open_field: None,
+        words: TreeWords::of(&v.locale),
+    });
     let facts = vec![
         (
-            tr(Msg::TreesParent),
+            v.tr(Msg::TreesParent),
             found(
+                v,
                 String::from("#trees-long"),
-                tr(Msg::TreesNationalFinding),
+                v.tr(Msg::TreesNationalFinding),
                 NATIONAL_TOP,
                 false,
             ),
         ),
-        (tr(Msg::TreesChildren), total.to_string().into_any()),
+        (v.tr(Msg::TreesChildren), t(total.to_string())),
     ];
-    view! {
-        <div id="trees-long">
-            {titled_panel(
-                tr(Msg::TreesLongLevel),
-                (),
-                browser(
-                    Panes::Three,
-                    Heading::Two,
-                    vec![
-                        search_pane("trees-long-find", "", Vec::new()),
-                        BrowserPane::new(tr(Msg::TreesHierarchy), tree),
-                        concept_pane(
-                            tr(Msg::TreesChestReferral),
-                            NATIONAL_CHEST,
-                            NATIONAL_VERSION,
-                            false,
-                            facts,
-                        ),
-                    ],
-                ),
-            )}
-        </div>
-    }
-    .into_any()
+    h(format!(
+        "<div id=\"trees-long\">{}</div>",
+        titled_panel(
+            v.tr(Msg::TreesLongLevel),
+            Html::empty(),
+            browser(
+                Panes::Three,
+                Heading::Two,
+                vec![
+                    search_pane(v, "trees-long-find", "", Vec::new()),
+                    BrowserPane::new(v.tr(Msg::TreesHierarchy), tree),
+                    concept_pane(
+                        v,
+                        v.tr(Msg::TreesChestReferral),
+                        NATIONAL_CHEST,
+                        NATIONAL_VERSION,
+                        false,
+                        facts,
+                    ),
+                ],
+            ),
+        )
+    ))
 }
 
 /// The browser over a flat code system: the search and the concept.
-fn flat_browser() -> AnyView {
+fn flat_browser(v: &Visit) -> Html {
     let matches = COUNTRIES
         .into_iter()
         .enumerate()
-        .map(|(at, (code, words))| found(String::from("#trees-flat"), tr(words), code, at == 0))
+        .map(|(at, (code, words))| {
+            found(v, String::from("#trees-flat"), v.tr(words), code, at == 0)
+        })
         .collect();
     let (code, words) = COUNTRIES[0];
-    let facts = vec![(tr(Msg::TreesDisplay), tr(words).into_any())];
-    view! {
-        <div id="trees-flat">
-            {titled_panel(
-                tr(Msg::TreesFlatSystem),
-                (),
-                browser(
-                    Panes::Flat,
-                    Heading::Two,
-                    vec![
-                        search_pane("trees-flat-find", "netherlands", matches),
-                        concept_pane(tr(words), code, COUNTRIES_VERSION, false, facts),
-                    ],
-                ),
-            )}
-        </div>
-    }
-    .into_any()
+    let facts = vec![(v.tr(Msg::TreesDisplay), t(v.tr(words)))];
+    h(format!(
+        "<div id=\"trees-flat\">{}</div>",
+        titled_panel(
+            v.tr(Msg::TreesFlatSystem),
+            Html::empty(),
+            browser(
+                Panes::Flat,
+                Heading::Two,
+                vec![
+                    search_pane(v, "trees-flat-find", "netherlands", matches),
+                    concept_pane(v, v.tr(words), code, COUNTRIES_VERSION, false, facts),
+                ],
+            ),
+        )
+    ))
 }
 
 /// A synthetic directory, in an edit when `editing` says so: a folder
 /// renamed and a reference removed.
-fn directory(editing: bool) -> Vec<TreeNode> {
+fn directory(v: &Visit, editing: bool) -> Vec<TreeNode> {
     let [vitals, laboratory, summary] = REFERENCES.map(|(key, words, uid)| {
-        TreeNode::new(key, tr(words))
+        TreeNode::new(key, v.tr(words))
             .mark(Mark::Reference)
             .code(uid)
             .href(String::from("#trees-directory"))
             .edits(vec![Edit::Remove])
     });
     let folder = |key: &str, words: Msg, count: String| {
-        TreeNode::new(key, tr(words))
+        TreeNode::new(key, v.tr(words))
             .mark(Mark::Folder)
             .count(count)
             .edits(vec![
@@ -425,19 +424,19 @@ fn directory(editing: bool) -> Vec<TreeNode> {
                 Edit::Remove,
             ])
     };
-    let items = |count: u32| tr_with(Msg::TreesItems, &[("count", count.into())]);
+    let items = |count: u32| v.tr_with(Msg::TreesItems, &[("count", count.into())]);
     let mut summary = summary;
     let mut follow_up = folder("follow-up", Msg::TreesFollowUp, items(2));
     let mut admission = folder("admission", Msg::TreesAdmission, items(1));
     if editing {
         summary = summary.removed().edits(vec![Edit::Undo]);
-        follow_up = follow_up.renaming(tr(Msg::TreesFollowUpRenamed));
-        admission = admission.count(tr(Msg::TreesEmpty));
+        follow_up = follow_up.renaming(v.tr(Msg::TreesFollowUpRenamed));
+        admission = admission.count(v.tr(Msg::TreesEmpty));
     }
     let episodes = folder(
         "episodes",
         Msg::TreesEpisodes,
-        tr_with(Msg::TreesFolders, &[("count", 2.into())]),
+        v.tr_with(Msg::TreesFolders, &[("count", 2.into())]),
     )
     .children(vec![
         follow_up.children(vec![vitals, laboratory]),
@@ -446,10 +445,10 @@ fn directory(editing: bool) -> Vec<TreeNode> {
     let correspondence = folder(
         "correspondence",
         Msg::TreesCorrespondence,
-        tr(Msg::TreesEmpty),
+        v.tr(Msg::TreesEmpty),
     );
     vec![
-        TreeNode::new("root", tr(Msg::TreesRoot))
+        TreeNode::new("root", v.tr(Msg::TreesRoot))
             .mark(Mark::Folder)
             .edits(vec![Edit::AddFolder, Edit::AddReference])
             .children(vec![episodes, correspondence]),
@@ -458,7 +457,7 @@ fn directory(editing: bool) -> Vec<TreeNode> {
 
 /// The directory's folder tree as the island draws it, `id`, in an edit
 /// when `editing` says so.
-fn folder_tree(id: &str, editing: bool) -> AnyView {
+fn folder_tree(v: &Visit, id: &str, editing: bool) -> Html {
     let open = [
         &["root"][..],
         &["root", "episodes"],
@@ -468,67 +467,60 @@ fn folder_tree(id: &str, editing: bool) -> AnyView {
     .into_iter()
     .map(path_key)
     .collect();
-    view! {
-        <TreeView
-            tree=TreeData {
-                id: id.to_owned(),
-                label: tr(Msg::TreesDirectoryOfEhr),
-                kind: TreeKind::Folder,
-                editing,
-                nodes: directory(editing),
-                open,
-                selected: None,
-                open_field: editing.then(|| String::from("open")),
-            }
-            words=TreeWords::of_page()
-        />
-    }
-    .into_any()
+    tree_view(&Tree {
+        id: id.to_owned(),
+        label: v.tr(Msg::TreesDirectoryOfEhr),
+        kind: TreeKind::Folder,
+        editing,
+        nodes: directory(v, editing),
+        open,
+        selected: None,
+        open_field: editing.then(|| String::from("open")),
+        words: TreeWords::of(&v.locale),
+    })
 }
 
 /// A directory, read and in an edit.
-fn directories() -> AnyView {
+fn directories(v: &Visit) -> Html {
     let read = panel_section(
+        &v.locale,
         Some(SectionHead {
-            title: tr(Msg::TreesFoldersSection),
+            title: v.tr(Msg::TreesFoldersSection),
             count: None,
             actions: None,
         }),
-        folder_tree("trees-directory", false),
+        folder_tree(v, "trees-directory", false),
     );
     // NOTE: the gallery holds no edit, so its form reads the page again with the action.
     let edit = panel_section(
+        &v.locale,
         Some(SectionHead {
-            title: tr(Msg::TreesInEdit),
+            title: v.tr(Msg::TreesInEdit),
             count: None,
             actions: None,
         }),
-        view! {
-            {section_intro(tr(Msg::TreesChangesStay))}
-            <form method="get" action="#trees-directory-edit">
-                {folder_tree("trees-directory-edit", true)}
-            </form>
-        },
+        h(format!(
+            "{}<form method=\"get\" action=\"#trees-directory-edit\">{}</form>",
+            section_intro(v.tr(Msg::TreesChangesStay)),
+            folder_tree(v, "trees-directory-edit", true)
+        )),
     );
-    view! {
-        <section id="trees-directory" class="fui-card fui-panel" aria-label=tr(Msg::TreesDirectory)>
-            {read}
-            {edit}
-        </section>
-    }
-    .into_any()
+    h(format!(
+        "<section id=\"trees-directory\" class=\"fui-card fui-panel\" aria-label=\"{}\">{read}{edit}</section>",
+        t(v.tr(Msg::TreesDirectory))
+    ))
 }
 
 /// The node `key` of the synthetic template, with the nodes under it.
-fn template_node(key: &str) -> Option<TreeNode> {
+fn template_node(v: &Visit, key: &str) -> Option<TreeNode> {
     let (key, _, words, rm_type) = TEMPLATE.into_iter().find(|(each, ..)| *each == key)?;
-    let node = TreeNode::new(key, tr(words))
+    let node = TreeNode::new(key, v.tr(words))
         .tag(rm_type)
         .href(format!("#{key}"));
     let children: Vec<TreeNode> = TEMPLATE
         .into_iter()
         .filter(|(_, parent, ..)| *parent == Some(key))
-        .filter_map(|(child, ..)| template_node(child))
+        .filter_map(|(child, ..)| template_node(v, child))
         .collect();
     Some(if children.is_empty() {
         node
@@ -538,9 +530,9 @@ fn template_node(key: &str) -> Option<TreeNode> {
 }
 
 /// The template's path browser, with the coded node Position selected.
-fn path_browser() -> AnyView {
-    let root = template_node(TEMPLATE[0].0);
-    let label = tr(Msg::TreesFindNode);
+fn path_browser(v: &Visit) -> Html {
+    let root = template_node(v, TEMPLATE[0].0);
+    let label = v.tr(Msg::TreesFindNode);
     let find = browser_find(Find {
         id: "trees-path-find",
         name: "path",
@@ -550,93 +542,82 @@ fn path_browser() -> AnyView {
         action: None,
         fields: &[],
     });
-    let tree = view! {
-        <TreeView
-            tree=TreeData {
-                id: String::from("trees-paths"),
-                label: tr(Msg::TreesPathsOf),
-                kind: TreeKind::Path,
-                editing: false,
-                nodes: root.into_iter().collect(),
-                open: TEMPLATE_OPEN.into_iter().map(str::to_owned).collect(),
-                selected: Some(String::from(TEMPLATE_SELECTED)),
-                open_field: None,
-            }
-            words=TreeWords::of_page()
-        />
-    };
+    let tree = tree_view(&Tree {
+        id: String::from("trees-paths"),
+        label: v.tr(Msg::TreesPathsOf),
+        kind: TreeKind::Path,
+        editing: false,
+        nodes: root.into_iter().collect(),
+        open: TEMPLATE_OPEN.into_iter().map(str::to_owned).collect(),
+        selected: Some(String::from(TEMPLATE_SELECTED)),
+        open_field: None,
+        words: TreeWords::of(&v.locale),
+    });
     let codes = POSITION_CODES
         .into_iter()
-        .map(|(words, code)| coding(Coding::new(code, tr(words)), Layout::Inline))
+        .map(|(words, code)| coding(&v.locale, Coding::new(code, v.tr(words)), Layout::Inline))
         .collect();
-    let node = path_node(PathNode {
-        name: tr(Msg::TreesPosition),
-        path: String::from(POSITION_PATH),
-        rm_type: String::from(POSITION_TYPE),
-        occurrences: String::from(POSITION_OCCURRENCES),
-        units: None,
-        flat_path: Some(String::from(POSITION_FLAT)),
-        codes,
-        more: None,
-        query: Some(String::from("#trees-paths")),
-    });
+    let node = path_node(
+        &v.locale,
+        PathNode {
+            name: v.tr(Msg::TreesPosition),
+            path: String::from(POSITION_PATH),
+            rm_type: String::from(POSITION_TYPE),
+            occurrences: String::from(POSITION_OCCURRENCES),
+            units: None,
+            flat_path: Some(String::from(POSITION_FLAT)),
+            codes,
+            more: None,
+            query: Some(String::from("#trees-paths")),
+        },
+    );
     let template = panel_section(
+        &v.locale,
         None,
         definitions(vec![(
-            tr(Msg::TreesRootArchetype),
+            v.tr(Msg::TreesRootArchetype),
             archetype(ROOT_ARCHETYPE),
         )]),
     );
     titled_panel(
-        tr(Msg::TreesTemplatePaths),
-        (),
-        view! {
-            {browser(
+        v.tr(Msg::TreesTemplatePaths),
+        Html::empty(),
+        Html::join([
+            browser(
                 Panes::Two,
                 Heading::Three,
-                vec![BrowserPane::new(tr(Msg::TreesPaths), pane_body(view! { {find} {tree} })), node],
-            )}
-            {template}
-        },
+                vec![
+                    BrowserPane::new(v.tr(Msg::TreesPaths), pane_body(Html::join([find, tree]))),
+                    node,
+                ],
+            ),
+            template,
+        ]),
     )
-    .into_any()
 }
 
 /// The trees page.
-#[component]
-pub fn TreesPage() -> impl IntoView {
-    let root =
-        crate::app::route_brand().map_or_else(String::new, |brand| format!("/{}", brand.key()));
+#[must_use]
+pub fn page(v: &Visit) -> Page {
+    let root = format!("/{}", v.brand.key());
     let header = page_heading(
+        &v.locale,
         Header {
-            title: tr(Msg::Trees).into(),
-            subtitle: Some(tr(Msg::TreesSubtitle).into()),
+            title: v.tr(Msg::Trees).into(),
+            subtitle: Some(v.tr(Msg::TreesSubtitle).into()),
             subtitle_view: None,
-            crumbs: vec![Crumb::new(tr(Msg::Gallery), root)],
+            crumbs: vec![Crumb::new(v.tr(Msg::Gallery), root)],
             mono: false,
             badge: None,
         },
         ActionGroup::none(),
-    )
-    .into_any();
-    let sections = (
-        deep_browser(),
-        long_browser(),
-        flat_browser(),
-        directories(),
-        path_browser(),
     );
-    view! {
-        {super::title(tr(Msg::Trees))}
-        {header}
-        {stack(
-            view! {
-                {sections.0}
-                {sections.1}
-                {sections.2}
-                {sections.3}
-                {sections.4}
-            },
-        )}
-    }
+    let body = stack(Html::join([
+        deep_browser(v),
+        long_browser(v),
+        flat_browser(v),
+        directories(v),
+        path_browser(v),
+    ]));
+    Page::shell(v.tr(Msg::Trees), Html::join([header, body]))
 }
