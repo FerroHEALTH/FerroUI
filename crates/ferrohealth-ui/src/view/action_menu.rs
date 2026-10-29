@@ -537,6 +537,24 @@ pub fn moved(key: &str, current: Option<usize>, count: usize) -> Option<usize> {
     }
 }
 
+/// The item a typed `letter` moves to: the next after `current` whose words
+/// start with it, wrapping, or `None` when no item does; the `menu` module
+/// moves the same way.
+#[must_use]
+pub fn typed(letter: &str, current: Option<usize>, words: &[String]) -> Option<usize> {
+    let letter = letter.to_lowercase();
+    if letter.chars().count() != 1 || letter.trim().is_empty() {
+        return None;
+    }
+    let count = words.len();
+    let start = current.map_or(0, |at| at + 1);
+    (0..count).map(|step| (start + step) % count).find(|at| {
+        words
+            .get(*at)
+            .is_some_and(|each| each.trim_start().to_lowercase().starts_with(&letter))
+    })
+}
+
 /// Whether an open popup flips above its anchor and to its other edge:
 /// above when it runs past the viewport's foot and fits above the anchor,
 /// to the other edge when it runs past either side.
@@ -667,7 +685,7 @@ pub fn menu_button(locale: &Locale, button: MenuButton, entries: Html) -> Html {
 
 #[cfg(test)]
 mod tests {
-    use super::{Act, Action, flips, moved};
+    use super::{Act, Action, flips, moved, typed};
 
     #[test]
     fn the_arrows_wrap_and_home_and_end_go_to_the_ends() {
@@ -679,6 +697,21 @@ mod tests {
         assert_eq!(Some(2), moved("End", Some(0), 3));
         assert_eq!(None, moved("Enter", Some(0), 3));
         assert_eq!(None, moved("ArrowDown", None, 0), "no item to move to");
+    }
+
+    #[test]
+    fn a_letter_moves_to_the_next_item_it_starts() {
+        let words = ["Copy path", "Download", "Check", "Delete"].map(String::from);
+        assert_eq!(
+            Some(2),
+            typed("c", Some(0), &words),
+            "the next, not the first"
+        );
+        assert_eq!(Some(0), typed("C", Some(2), &words), "wraps, any case");
+        assert_eq!(Some(1), typed("d", None, &words));
+        assert_eq!(None, typed("x", None, &words));
+        assert_eq!(None, typed("ArrowDown", None, &words), "a named key");
+        assert_eq!(None, typed(" ", None, &words));
     }
 
     #[test]

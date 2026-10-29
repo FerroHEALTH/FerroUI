@@ -285,8 +285,16 @@ mod tests {
         assert_eq!(Some(1), step("ArrowUp", Some(2), 4));
         assert_eq!(Some(0), step("Home", Some(2), 4));
         assert_eq!(Some(3), step("End", Some(0), 4));
+    }
+
+    #[test]
+    fn from_no_item_down_goes_to_the_first_and_up_to_the_last() {
         assert_eq!(Some(0), step("ArrowDown", None, 4));
         assert_eq!(Some(3), step("ArrowUp", None, 4));
+    }
+
+    #[test]
+    fn a_key_the_menu_leaves_alone_moves_nothing() {
         assert_eq!(None, step("Enter", Some(1), 4));
         assert_eq!(None, step("ArrowDown", None, 0), "no item to move to");
     }
