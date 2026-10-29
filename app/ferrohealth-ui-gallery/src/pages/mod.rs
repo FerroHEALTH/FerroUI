@@ -9,6 +9,7 @@ pub mod configuration;
 pub mod dock;
 pub mod find;
 pub mod forms;
+pub mod operations;
 pub mod overview;
 pub mod preferences;
 pub mod records;
