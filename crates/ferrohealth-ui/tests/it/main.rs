@@ -19,8 +19,13 @@
     reason = "test assertions"
 )]
 
+mod chrome;
 mod contrast;
+mod dock;
+mod filter;
+mod kbd;
 mod markup;
 mod render;
 mod shell;
+mod state;
 mod stylesheet;

@@ -11,3 +11,8 @@ use ferrohealth_ui::i18n::Locale;
 pub(crate) fn en() -> Locale {
     Locale::english()
 }
+
+/// The markup `view` renders, as a string a test reads.
+pub(crate) fn html(view: ferrohealth_ui::html::Html) -> String {
+    view.into()
+}

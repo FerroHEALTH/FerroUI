@@ -43,6 +43,10 @@ pub const MODULES: &[Module] = &[
         text: include_str!("../scripts/drawer.js"),
     },
     Module {
+        file: "filter.js",
+        text: include_str!("../scripts/filter.js"),
+    },
+    Module {
         file: "keep.js",
         text: include_str!("../scripts/keep.js"),
     },

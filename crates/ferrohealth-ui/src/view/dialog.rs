@@ -272,6 +272,7 @@ pub struct Modal {
 #[derive(Template)]
 #[template(path = "dialog/dialog.html", block = "modal")]
 struct ModalView {
+    jobs: &'static str,
     id: Cow<'static, str>,
     class: String,
     open: bool,
@@ -292,6 +293,12 @@ struct ModalView {
 /// as a modal as the page loads, so the page behind turns inert.
 #[must_use]
 pub fn modal_dialog(locale: &Locale, modal: Modal) -> Html {
+    modal_with(modal, tr(locale, Text::Cancel), "dialog")
+}
+
+/// Returns the modal dialog `modal` whose dismissing button says
+/// `dismiss`, its root asking for the modules `jobs`.
+pub(crate) fn modal_with(modal: Modal, dismiss: Word, jobs: &'static str) -> Html {
     let Modal {
         id,
         title,
@@ -310,6 +317,7 @@ pub fn modal_dialog(locale: &Locale, modal: Modal) -> Html {
         class.push_str(" fui-dialog-wide");
     }
     ModalView {
+        jobs,
         id,
         class,
         open,
@@ -323,7 +331,7 @@ pub fn modal_dialog(locale: &Locale, modal: Modal) -> Html {
         cancel,
         secondary: Variant::Secondary.class(),
         x: icon(Glyph::X, "16"),
-        cancel_words: tr(locale, Text::Cancel),
+        cancel_words: dismiss,
         actions,
     }
     .html()

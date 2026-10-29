@@ -1,0 +1,161 @@
+// SPDX-FileCopyrightText: Cadasto B.V.
+// SPDX-License-Identifier: BUSL-1.1
+
+//! The keyboard shortcut legend: the current page's shortcuts in a dialog
+//! over it, with the tests a console's own key listener asks first (R1).
+//!
+//! [`shortcut_legend`] draws the legend closed; its `shortcuts` module opens
+//! it on `?` pressed outside a field and from a control marked
+//! [`OPENS_LEGEND`], such as the user menu's Keyboard shortcuts, which with
+//! no script is a link to the console's legend page. The `tabs` module
+//! follows the binder's link tabs on the digit keys ([`TAB_KEYS`]). The
+//! legend is a modal `dialog` shown over the page it was opened from, which
+//! returns the focus there when it closes (WAI-ARIA Authoring Practices, the
+//! dialog (modal) pattern). It lists each group of shortcuts in a
+//! keys-and-words grid, the keys as printed on the keyboard
+//! ([`crate::view::kbd`]).
+//!
+//! A phone has no keyboard, so below 40 rem no shortcut shows or acts
+//! (family rule 6), and a control that opens the legend is hidden there. A
+//! single-key shortcut never acts while the person types ([`takes_text`]).
+//! No specification governs the component: our own design.
+
+use askama::Template;
+
+use crate::html::{Html, Render as _};
+use crate::i18n::{Locale, Text, Word, tr};
+use crate::view::dialog::{Modal, Width, modal_with};
+use crate::view::kbd::{ShortcutGroup, shortcut_keys};
+
+/// The id of the legend's dialog; its heading is `shortcuts-title`.
+pub const LEGEND_ID: &str = "shortcuts";
+
+/// The attribute of a control a click on which opens the legend in place of
+/// following it, such as the user menu's Keyboard shortcuts link; with no
+/// script the link is followed.
+pub const OPENS_LEGEND: &str = "data-fui-shortcuts";
+
+/// The attribute of the binder's tabs that the digit keys follow.
+pub const TAB_KEYS: &str = "data-fui-tab-keys";
+
+/// The link tab the digit `key` names among `count` tabs: `1` the first,
+/// `9` the ninth; `None` for another key or a tab the row does not have.
+/// The `tabs` module answers the keys by the same rule.
+#[must_use]
+pub fn tab_at(key: &str, count: usize) -> Option<usize> {
+    let mut chars = key.chars();
+    let digit = chars.next()?.to_digit(10)?;
+    if chars.next().is_some() || digit == 0 {
+        return None;
+    }
+    let at = usize::try_from(digit).ok()?.checked_sub(1)?;
+    (at < count).then_some(at)
+}
+
+/// Whether an element of the tag `tag`, an input's `kind` when it is one,
+/// takes typed text, where a single-key shortcut must not act. The modules
+/// ask the same question of the element a key reached.
+#[must_use]
+pub fn takes_text(tag: &str, kind: &str, content_editable: bool) -> bool {
+    if content_editable {
+        return true;
+    }
+    match tag {
+        "textarea" | "select" => true,
+        "input" => !matches!(
+            kind,
+            "checkbox"
+                | "radio"
+                | "button"
+                | "submit"
+                | "reset"
+                | "range"
+                | "color"
+                | "file"
+                | "image"
+        ),
+        _ => false,
+    }
+}
+
+struct GroupView {
+    title: String,
+    rows: Vec<(Html, String)>,
+}
+
+#[derive(Template)]
+#[template(path = "shortcuts/legend.html")]
+struct LegendBody {
+    legend_id: &'static str,
+    intro: Word,
+    groups: Vec<GroupView>,
+}
+
+/// Returns the legend of `groups`, drawn closed, which the `shortcuts`
+/// module opens as a modal and Close closes.
+///
+/// A console draws it once on a page that has shortcuts.
+#[must_use]
+pub fn shortcut_legend(locale: &Locale, groups: Vec<ShortcutGroup>) -> Html {
+    let or = tr(locale, Text::KeysOr);
+    let body = LegendBody {
+        legend_id: LEGEND_ID,
+        intro: tr(locale, Text::ShortcutsIntro),
+        groups: groups
+            .into_iter()
+            .map(|group| GroupView {
+                title: group.title,
+                rows: group
+                    .shortcuts
+                    .into_iter()
+                    .map(|shortcut| (shortcut_keys(&shortcut.keys, or.clone()), shortcut.does))
+                    .collect(),
+            })
+            .collect(),
+    }
+    .html();
+    modal_with(
+        Modal {
+            id: LEGEND_ID.into(),
+            title: tr(locale, Text::KeyboardShortcuts),
+            danger: false,
+            width: Width::Wide,
+            body,
+            actions: Html::empty(),
+            open: false,
+            cancel: None,
+        },
+        tr(locale, Text::Close),
+        "dialog shortcuts",
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{tab_at, takes_text};
+
+    #[test]
+    fn a_digit_names_its_tab_from_one_and_nothing_else_does() {
+        assert_eq!(Some(0), tab_at("1", 4));
+        assert_eq!(Some(3), tab_at("4", 4));
+        assert_eq!(None, tab_at("5", 4), "a tab the row does not have");
+        assert_eq!(None, tab_at("0", 4));
+        assert_eq!(None, tab_at("12", 20), "one key, one digit");
+        assert_eq!(None, tab_at("?", 4));
+    }
+
+    #[test]
+    fn a_field_takes_text_and_a_button_or_a_box_does_not() {
+        assert!(
+            takes_text("input", "", false),
+            "an input with no type is text"
+        );
+        assert!(takes_text("input", "search", false));
+        assert!(takes_text("textarea", "", false));
+        assert!(takes_text("select", "", false));
+        assert!(takes_text("div", "", true), "an editable region");
+        assert!(!takes_text("input", "checkbox", false));
+        assert!(!takes_text("button", "submit", false));
+        assert!(!takes_text("a", "", false));
+    }
+}
