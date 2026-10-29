@@ -135,6 +135,7 @@ struct RegionView {
     region: Word,
     dismiss: Word,
     x: Html,
+    placeholder: Html,
     action_class: &'static str,
     glyphs: Vec<(&'static str, Html)>,
     toasts: Vec<ToastView>,
@@ -149,6 +150,7 @@ pub fn toast_region(locale: &Locale, mut flash: Vec<Flash>) -> Html {
         region: tr(locale, Text::ToastRegion),
         dismiss: tr(locale, Text::ToastDismiss),
         x: icon(Glyph::X, "16"),
+        placeholder: icon(Glyph::INFO, "16"),
         action_class: Variant::Secondary.small(),
         glyphs: Tone::ALL
             .into_iter()
@@ -194,8 +196,14 @@ mod tests {
     fn a_bad_toast_is_an_alert_with_a_native_dismiss() {
         let html = toast_region(&Locale::english(), vec![Flash::new(Tone::Bad, "Nope")]);
         let html = html.as_str();
-        assert!(html.contains(r#"class="fui-toast fui-tone-bad" role="alert">"#), "{html}");
-        assert!(html.contains("<details open class=\"fui-toast-close\">"), "{html}");
+        assert!(
+            html.contains(r#"class="fui-toast fui-tone-bad" role="alert">"#),
+            "{html}"
+        );
+        assert!(
+            html.contains("<details open class=\"fui-toast-close\">"),
+            "{html}"
+        );
         assert!(html.contains("<template>"), "{html}");
     }
 }

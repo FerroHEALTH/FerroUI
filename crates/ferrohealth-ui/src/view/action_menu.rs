@@ -282,15 +282,15 @@ impl Trigger {
 }
 
 /// Returns the hidden inputs of a plain form, one per field.
-fn hidden_fields(fields: &[(String, String)]) -> String {
+fn hidden_fields(fields: &[(String, String)]) -> Html {
     fields
         .iter()
         .map(|(name, value)| {
-            format!(
+            Html::raw(format!(
                 "<input type=\"hidden\" name=\"{}\" value=\"{}\">",
                 Html::text(name),
                 Html::text(value)
-            )
+            ))
         })
         .collect()
 }
@@ -298,7 +298,10 @@ fn hidden_fields(fields: &[(String, String)]) -> String {
 /// Returns the inside of an item: its icon, its words and its second line.
 fn item_inside(glyph: Option<Glyph>, words: &str, line: Option<&str>) -> String {
     let line = line.map_or(String::new(), |line| {
-        format!("<span class=\"fui-menu-item-desc\">{}</span>", Html::text(line))
+        format!(
+            "<span class=\"fui-menu-item-desc\">{}</span>",
+            Html::text(line)
+        )
     });
     format!(
         "{}<span class=\"fui-menu-item-text\"><span>{}</span>{line}</span>",
@@ -343,8 +346,10 @@ fn item(item: &Item, danger: bool) -> Html {
         ),
         Act::SubmitTo { action, form } => format!(
             "<button type=\"submit\"{} formaction=\"{}\" role=\"menuitem\" class=\"{class}\">{inside}</button>",
-            form.as_ref()
-                .map_or(String::new(), |form| format!(" form=\"{}\"", Html::text(form))),
+            form.as_ref().map_or(String::new(), |form| format!(
+                " form=\"{}\"",
+                Html::text(form)
+            )),
             Html::text(action)
         ),
         Act::Dialog(target) => format!(
@@ -379,7 +384,12 @@ pub fn items(menu: &Menu) -> Html {
             "<div class=\"fui-menu-sep\" role=\"separator\"></div>",
         )));
     }
-    out.then(menu.destructive.iter().map(|each| item(each, true)).collect())
+    out.then(
+        menu.destructive
+            .iter()
+            .map(|each| item(each, true))
+            .collect(),
+    )
 }
 
 /// Returns the options of a listbox: one per choice, the one in force
@@ -546,9 +556,7 @@ const fn menu_trigger_class(trigger: &Trigger) -> &'static str {
         Trigger::Row => "fui-icon-button",
         Trigger::Variants => "fui-button fui-button-secondary fui-split-toggle",
         Trigger::Labelled { .. } => "fui-button fui-button-secondary fui-button-small",
-        Trigger::More { .. } | Trigger::Select { .. } => {
-            "fui-button fui-button-secondary fui-more"
-        }
+        Trigger::More { .. } | Trigger::Select { .. } => "fui-button fui-button-secondary fui-more",
         Trigger::Version { .. } => "fui-version-select",
     }
 }
@@ -676,11 +684,26 @@ mod tests {
     #[test]
     fn a_popup_flips_only_where_it_has_no_room() {
         let viewport = (1440.0, 900.0);
-        assert_eq!((false, false), flips((100.0, 136.0), (900.0, 1100.0, 200.0), viewport));
-        assert_eq!((true, false), flips((800.0, 836.0), (900.0, 1100.0, 200.0), viewport));
-        assert_eq!((false, false), flips((100.0, 836.0), (900.0, 1100.0, 200.0), viewport));
-        assert_eq!((false, true), flips((100.0, 136.0), (-40.0, 160.0, 200.0), viewport));
-        assert_eq!((false, true), flips((100.0, 136.0), (1300.0, 1500.0, 200.0), viewport));
+        assert_eq!(
+            (false, false),
+            flips((100.0, 136.0), (900.0, 1100.0, 200.0), viewport)
+        );
+        assert_eq!(
+            (true, false),
+            flips((800.0, 836.0), (900.0, 1100.0, 200.0), viewport)
+        );
+        assert_eq!(
+            (false, false),
+            flips((100.0, 836.0), (900.0, 1100.0, 200.0), viewport)
+        );
+        assert_eq!(
+            (false, true),
+            flips((100.0, 136.0), (-40.0, 160.0, 200.0), viewport)
+        );
+        assert_eq!(
+            (false, true),
+            flips((100.0, 136.0), (1300.0, 1500.0, 200.0), viewport)
+        );
     }
 
     #[test]

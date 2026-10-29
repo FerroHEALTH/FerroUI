@@ -317,7 +317,8 @@ impl DateOrder {
     pub fn of(locale: &crate::i18n::Locale) -> Self {
         // NOTE: no specification governs this: our own design; a catalog that names
         // no order the library knows takes ISO 8601 alone.
-        Self::parse(crate::i18n::tr(locale, crate::i18n::Text::DateOrder).text()).unwrap_or_default()
+        Self::parse(crate::i18n::tr(locale, crate::i18n::Text::DateOrder).text())
+            .unwrap_or_default()
     }
 }
 

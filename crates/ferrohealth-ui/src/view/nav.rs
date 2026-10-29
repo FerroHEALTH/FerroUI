@@ -238,7 +238,10 @@ pub fn sidebar(locale: &Locale, sidebar: Sidebar) -> Html {
                         // NOTE: WCAG 2.2 SC 1.4.13; a title shows on hover alone, so the rail draws its own tooltip.
                         tooltip: collapsed.then(|| entry.label.to_string()),
                         label: entry.label.into_owned(),
-                        count: entry.count.map(|each| count(locale, each)).unwrap_or_default(),
+                        count: entry
+                            .count
+                            .map(|each| count(locale, each))
+                            .unwrap_or_default(),
                         nest: nested.map(|nest| section(locale, nest, &current)),
                     }
                 })
@@ -247,9 +250,17 @@ pub fn sidebar(locale: &Locale, sidebar: Sidebar) -> Html {
         .collect();
     let foot = rail.map(|rail| {
         let (value, glyph, words) = if rail.collapsed {
-            ("full", Glyph::PANEL_LEFT_OPEN, tr(locale, Text::SidebarExpand))
+            (
+                "full",
+                Glyph::PANEL_LEFT_OPEN,
+                tr(locale, Text::SidebarExpand),
+            )
         } else {
-            ("rail", Glyph::PANEL_LEFT_CLOSE, tr(locale, Text::SidebarCollapse))
+            (
+                "rail",
+                Glyph::PANEL_LEFT_CLOSE,
+                tr(locale, Text::SidebarCollapse),
+            )
         };
         FootView {
             action: rail.action,
@@ -292,7 +303,9 @@ pub struct NestItem {
 }
 
 /// The nested section under one entry of the navigation (F10): the parent
-/// in view and its children, one level more under the one entry, never a
+/// in view and its children.
+///
+/// It is one level more under the one entry, never a
 /// second sidebar (family rule 2). The rail leaves it out; the drawer keeps
 /// it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -447,7 +460,12 @@ mod tests {
         assert_eq!(Some(&"/org/node-0"), hrefs(&first).first());
         let late = shown(nodes(300), "/org/node-250");
         assert_eq!(NEST_SHOWN, late.len());
-        assert_eq!(Some(&"/org/node-250"), hrefs(&late).last(), "{:?}", hrefs(&late));
+        assert_eq!(
+            Some(&"/org/node-250"),
+            hrefs(&late).last(),
+            "{:?}",
+            hrefs(&late)
+        );
         assert_eq!(Some(&"/org/node-0"), hrefs(&late).first());
     }
 

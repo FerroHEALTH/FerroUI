@@ -113,7 +113,11 @@ mod tests {
             assert!(!module.text.contains("eval("), "{}", module.file);
             assert!(!module.text.contains("new Function"), "{}", module.file);
             assert!(!module.text.contains("https://"), "{}", module.file);
-            assert!(module.text.starts_with("// SPDX-FileCopyrightText"), "{}", module.file);
+            assert!(
+                module.text.starts_with("// SPDX-FileCopyrightText"),
+                "{}",
+                module.file
+            );
         }
     }
 }

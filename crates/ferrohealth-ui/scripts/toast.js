@@ -15,7 +15,7 @@ export function trim(toasts) {
   const leaving = [];
   while (toasts.length - leaving.length > SHOWN_MAX) {
     const oldest = toasts.find(
-      (toast) => !leaving.includes(toast) && !toast.classList.contains("fui-tone-bad") && !toast.querySelector(".fui-toast-action"),
+      (toast) => !leaving.includes(toast) && !toast.classList.contains("fui-tone-bad") && !toast.querySelector("[data-fui-action]"),
     );
     if (!oldest) break;
     leaving.push(oldest);
@@ -32,13 +32,13 @@ export function enhance(region) {
 
   function settle(toast) {
     const details = toast.querySelector("details.fui-toast-close");
-    const button = toast.querySelector("button.fui-toast-dismiss");
+    const button = toast.querySelector("button[data-fui-dismiss]");
     if (details) details.hidden = true;
     if (button) {
       button.hidden = false;
       button.addEventListener("click", () => toast.remove());
     }
-    if (!toast.querySelector(".fui-toast-action")) later(toast);
+    if (!toast.querySelector("[data-fui-action]")) later(toast);
   }
 
   function later(toast) {
@@ -55,7 +55,7 @@ export function enhance(region) {
     else focused = on;
     if (before === paused()) return;
     epoch++;
-    if (!paused()) for (const toast of toasts()) if (!toast.querySelector(".fui-toast-action")) later(toast);
+    if (!paused()) for (const toast of toasts()) if (!toast.querySelector("[data-fui-action]")) later(toast);
   }
 
   region.addEventListener("pointerenter", () => held(true, "pointer"));
@@ -72,10 +72,10 @@ export function enhance(region) {
     toast.classList.add("fui-tone-" + tone);
     if (tone === "bad") toast.setAttribute("role", "alert");
     const glyph = template.content.querySelector("[data-tone='" + tone + "']") || template.content.querySelector("[data-tone]");
-    const slot = toast.querySelector(".fui-toast-glyph");
-    if (glyph && slot) slot.replaceChildren(glyph.cloneNode(true).firstElementChild);
+    const slot = toast.querySelector(":scope > .fui-icon");
+    if (glyph && slot) slot.replaceWith(glyph.firstElementChild.cloneNode(true));
     toast.querySelector("strong").textContent = title;
-    const lineSlot = toast.querySelector(".fui-toast-line");
+    const lineSlot = toast.querySelector(".fui-toast-text > span");
     if (lineSlot) {
       if (line) lineSlot.textContent = line;
       else lineSlot.remove();

@@ -1,10 +1,17 @@
+{%- macro link_item(item) -%}
+<a role="menuitem" href="{{ item.href }}" class="fui-menu-item{% if item.wide_only %} fui-wide-only{% endif %}"{% if item.key == Some("?") %} data-fui-shortcuts=""{% endif %}>{{ item.glyph }}<span class="fui-menu-item-text"><span class="fui-menu-item-label">{{ item.words }}</span></span>{% if let Some(key) = item.key %}<kbd class="fui-kbd">{{ key }}</kbd>{% endif %}</a>
+{%- endmacro -%}
 <span class="fui-anchor" data-fui="user_menu"><button type="button" class="fui-button fui-button-ghost fui-operator" popovertarget="{{ id }}" aria-haspopup="menu" aria-controls="{{ list_id }}"{% if let Some(named) = named %} aria-label="{{ named }}"{% endif %}{% if let Some(name) = name %} title="{{ name }}"{% endif %}>{{ user_glyph }}{% if let Some(name) = name %}<span class="fui-operator-name">{{ name }}</span>{% endif %}{{ chevron }}</button>
 <div id="{{ id }}" popover="auto" class="fui-menu fui-menu-compact fui-menu-anchored fui-menu-sheet fui-user-menu">
 <p class="fui-menu-sheet-title" aria-hidden="true">{{ label }}</p>
 <div class="fui-menu-header"><strong>{{ who }}</strong><span>{{ line }}</span></div>
 <div class="fui-menu-sep"></div>
 <div id="{{ list_id }}" role="menu" aria-label="{{ label }}" class="fui-menu-items">
-{{ items }}
+{%- for item in links %}{% call link_item(item) %}{% endcall %}{% endfor -%}
+{%- for group in groups %}<div class="fui-menu-version"><div class="fui-menu-label" id="{{ group.label_id }}">{{ group.label }}</div><div role="group" aria-labelledby="{{ group.label_id }}" class="fui-segmented">{% for choice in group.choices %}<a role="menuitemradio" href="{{ choice.href }}" class="fui-segment" aria-checked="{{ choice.chosen }}">{{ choice.words }}</a>{% endfor %}</div></div>{% endfor -%}
+<form method="post" action="{{ theme_action }}" class="fui-menu-theme"><input type="hidden" name="back" value="{{ theme_back }}"><div class="fui-menu-label" id="{{ id }}-theme">{{ theme_label }}</div><div role="group" aria-labelledby="{{ id }}-theme" class="fui-segmented">{% for theme in themes %}<button type="submit" name="theme" value="{{ theme.key }}" role="menuitemradio" class="fui-segment" aria-checked="{{ theme.checked }}">{{ theme.glyph }}{{ theme.label }}</button>{% endfor %}</div></form>
+{%- if let Some(item) = shortcuts %}{% call link_item(item) %}{% endcall %}{% endif -%}
+{%- if let Some(action) = sign_out %}<div class="fui-menu-sep" role="separator"></div><form method="post" action="{{ action }}" class="fui-menu-form"><button type="submit" role="menuitem" class="fui-menu-item">{{ sign_out_glyph }}<span class="fui-menu-item-text"><span class="fui-menu-item-label">{{ sign_out_words }}</span></span></button></form>{% endif -%}
 </div>
 <button type="button" class="fui-menu-cancel" popovertarget="{{ id }}" popovertargetaction="hide">{{ cancel }}</button>
 </div></span>

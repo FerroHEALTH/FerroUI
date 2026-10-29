@@ -379,7 +379,11 @@ fn link_step(
 }
 
 fn link_size(href: &dyn Fn(Paging) -> String, choice: u32, current: bool) -> Html {
-    let here = if current { " aria-current=\"true\"" } else { "" };
+    let here = if current {
+        " aria-current=\"true\""
+    } else {
+        ""
+    };
     Html::raw(format!(
         "<a href=\"{}\" class=\"fui-pager-size\"{here}>{choice}</a>",
         Html::text(href(Paging::sized(choice)))
@@ -387,7 +391,9 @@ fn link_size(href: &dyn Fn(Paging) -> String, choice: u32, current: bool) -> Htm
 }
 
 /// Where a pager whose listing keeps its position out of the URL posts the
-/// page and the size: the console's route, which keeps the position in its
+/// page and the size.
+///
+/// The console's route keeps the position in its
 /// session and answers with that page. The pager's buttons submit the
 /// fields `page` and `size` beside `fields`.
 #[derive(Debug, Clone, Copy)]

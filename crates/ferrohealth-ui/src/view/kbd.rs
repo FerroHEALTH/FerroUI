@@ -142,7 +142,12 @@ pub fn aria_keys(keys: &str) -> Option<String> {
 #[must_use]
 pub fn kbd(keys: &str) -> Html {
     keys.split_whitespace()
-        .map(|word| Html::raw(format!("<kbd class=\"fui-kbd\">{}</kbd>", Html::text(key_cap(word)))))
+        .map(|word| {
+            Html::raw(format!(
+                "<kbd class=\"fui-kbd\">{}</kbd>",
+                Html::text(key_cap(word))
+            ))
+        })
         .collect()
 }
 
@@ -206,7 +211,10 @@ mod tests {
         assert_eq!("Esc", key_cap("Esc"));
         assert_eq!("?", key_cap("?"));
         assert_eq!("/", key_cap("/"));
-        assert_eq!("<kbd class=\"fui-kbd\">G</kbd><kbd class=\"fui-kbd\">D</kbd>", kbd("g d").as_str());
+        assert_eq!(
+            "<kbd class=\"fui-kbd\">G</kbd><kbd class=\"fui-kbd\">D</kbd>",
+            kbd("g d").as_str()
+        );
     }
 
     #[test]

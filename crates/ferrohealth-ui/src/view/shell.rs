@@ -247,7 +247,13 @@ pub fn brand_mark(light: &str, dark: &str) -> Html {
 /// the product's `name` and its accented `word`, such as "FerroBRIDGE" and
 /// "Console".
 #[must_use]
-pub fn lockup(href: impl AsRef<str>, mark: Html, name: impl AsRef<str>, word: impl AsRef<str>) -> Html {
+pub fn lockup(
+    href: impl AsRef<str>,
+    mark: Html,
+    name: impl AsRef<str>,
+    word: impl AsRef<str>,
+) -> Html {
+    let mark = String::from(mark);
     Html::raw(format!(
         "<a href=\"{}\" class=\"fui-lockup\">{mark}<span class=\"fui-lockup-name\">{} <span class=\"fui-lockup-accent\">{}</span></span></a>",
         Html::text(href),
@@ -260,6 +266,7 @@ pub fn lockup(href: impl AsRef<str>, mark: Html, name: impl AsRef<str>, word: im
 /// for a page shown before sign-in.
 #[must_use]
 pub fn lockup_plain(mark: Html, name: impl AsRef<str>, word: impl AsRef<str>) -> Html {
+    let mark = String::from(mark);
     Html::raw(format!(
         "<span class=\"fui-lockup\">{mark}<span class=\"fui-lockup-name\">{} <span class=\"fui-lockup-accent\">{}</span></span></span>",
         Html::text(name),
@@ -294,7 +301,9 @@ struct TopBarView {
 }
 
 /// Returns the top bar: the drawer button, the lockup, the search box and,
-/// at the far end, the status pill and the user menu. It carries no theme
+/// at the far end, the status pill and the user menu.
+///
+/// It carries no theme
 /// control (family rule 5). Below 48 rem the search wraps onto its own row
 /// under the lockup (WCAG 2.2 SC 1.4.10).
 #[must_use]
@@ -312,7 +321,9 @@ pub fn topbar(locale: &Locale, bar: TopBar) -> Html {
 
 #[cfg(test)]
 mod tests {
-    use super::{Document, Footer, MAIN_ID, Shell, TopBar, centred, document, lockup, mark, shell, topbar};
+    use super::{
+        Document, Footer, MAIN_ID, Shell, TopBar, centred, document, lockup, mark, shell, topbar,
+    };
     use crate::html::Html;
     use crate::i18n::Locale;
     use crate::icon::Glyph;
@@ -342,13 +353,28 @@ mod tests {
             body,
         });
         let html = html.as_str();
-        assert!(html.starts_with("<!doctype html>\n<html lang=\"en\" data-theme=\"system\""), "{html}");
-        assert!(html.contains("<title>A &lt;title&gt;</title>"), "{html}");
+        assert!(
+            html.starts_with("<!doctype html>\n<html lang=\"en\" data-theme=\"system\""),
+            "{html}"
+        );
+        assert!(html.contains("<title>A &#60;title&#62;</title>"), "{html}");
         assert!(html.contains("/themes/ferroterm.css"), "{html}");
-        assert!(html.contains("<script type=\"module\" src=\"") && html.contains("fui.js\" nonce=\"n0nce\">"), "{html}");
+        assert!(
+            html.contains("<script type=\"module\" src=\"")
+                && html.contains("fui.js\" nonce=\"n0nce\">"),
+            "{html}"
+        );
         assert!(html.contains("<meta name=\"x\">"), "{html}");
-        assert!(html.contains(&format!("id=\"{MAIN_ID}\" class=\"fui-centred\">hello</main>")), "{html}");
-        assert!(html.contains("FerroTEST Console 0.6.0 · Cadasto B.V. · <a href=\"/about\">About</a>"), "{html}");
+        assert!(
+            html.contains(&format!(
+                "id=\"{MAIN_ID}\" class=\"fui-centred\">hello</main>"
+            )),
+            "{html}"
+        );
+        assert!(
+            html.contains("FerroTEST Console 0.6.0 · Cadasto B.V. · <a href=\"/about\">About</a>"),
+            "{html}"
+        );
     }
 
     #[test]
@@ -376,10 +402,23 @@ mod tests {
             },
         );
         let html = html.as_str();
-        let order = ["fui-skip", "fui-topbar", "commandfor=\"nav\"", "fui-lockup", "side", "fui-main", "page", "dock", "fui-footer"];
+        let order = [
+            "fui-skip",
+            "fui-topbar",
+            "commandfor=\"nav\"",
+            "fui-lockup",
+            "side",
+            "fui-main",
+            "page",
+            "dock",
+            "fui-footer",
+        ];
         let mut at = 0;
         for part in order {
-            let found = html[at..].find(part).unwrap_or_else(|| panic!("{part} after {at}: {html}"));
+            let found = html
+                .get(at..)
+                .and_then(|rest| rest.find(part))
+                .unwrap_or_else(|| panic!("{part} after {at}: {html}"));
             at += found;
         }
     }

@@ -14,11 +14,13 @@
 //! folds, a form posts, and a script module adds the keys and the in-page
 //! switches on top.
 
+pub mod action_menu;
 pub mod button;
 pub mod empty;
 pub mod form;
 pub mod help;
 pub mod kbd;
+pub mod menu;
 pub mod nav;
 pub mod notice;
 pub mod path;
@@ -26,4 +28,6 @@ pub mod segmented;
 pub mod shell;
 pub mod state;
 pub mod status;
+pub mod tabs;
 pub mod tag;
+pub mod toast;

@@ -151,9 +151,18 @@ mod tests {
     #[test]
     fn the_paths_name_the_version_and_the_brand() {
         let assets = Assets::of(Brand::Ehr);
-        assert_eq!(format!("{PREFIX}/{VERSION}/ferrohealth-ui.css"), assets.stylesheet());
-        assert_eq!(format!("{PREFIX}/{VERSION}/themes/ferroehr.css"), assets.theme());
-        assert_eq!(format!("{PREFIX}/{VERSION}/scripts/fui.js"), assets.loader());
+        assert_eq!(
+            format!("{PREFIX}/{VERSION}/ferrohealth-ui.css"),
+            assets.stylesheet()
+        );
+        assert_eq!(
+            format!("{PREFIX}/{VERSION}/themes/ferroehr.css"),
+            assets.theme()
+        );
+        assert_eq!(
+            format!("{PREFIX}/{VERSION}/scripts/fui.js"),
+            assets.loader()
+        );
     }
 
     #[cfg(feature = "axum")]
@@ -165,12 +174,27 @@ mod tests {
 
         let app: axum::Router = axum::Router::new().nest(PREFIX, super::axum_router::router());
         for (path, status) in [
-            (format!("{PREFIX}/{VERSION}/ferrohealth-ui.css"), StatusCode::OK),
-            (format!("{PREFIX}/{VERSION}/themes/ferropix.css"), StatusCode::OK),
-            (format!("{PREFIX}/{VERSION}/themes/none.css"), StatusCode::NOT_FOUND),
+            (
+                format!("{PREFIX}/{VERSION}/ferrohealth-ui.css"),
+                StatusCode::OK,
+            ),
+            (
+                format!("{PREFIX}/{VERSION}/themes/ferropix.css"),
+                StatusCode::OK,
+            ),
+            (
+                format!("{PREFIX}/{VERSION}/themes/none.css"),
+                StatusCode::NOT_FOUND,
+            ),
             (format!("{PREFIX}/{VERSION}/scripts/fui.js"), StatusCode::OK),
-            (format!("{PREFIX}/{VERSION}/scripts/none.js"), StatusCode::NOT_FOUND),
-            (format!("{PREFIX}/0.0.0/ferrohealth-ui.css"), StatusCode::NOT_FOUND),
+            (
+                format!("{PREFIX}/{VERSION}/scripts/none.js"),
+                StatusCode::NOT_FOUND,
+            ),
+            (
+                format!("{PREFIX}/0.0.0/ferrohealth-ui.css"),
+                StatusCode::NOT_FOUND,
+            ),
         ] {
             let request = Request::get(&path).body(Body::empty()).expect("a request");
             let answer = app.clone().oneshot(request).await.expect("an answer");

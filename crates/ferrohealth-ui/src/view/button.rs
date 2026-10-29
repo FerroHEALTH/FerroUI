@@ -136,7 +136,14 @@ mod tests {
             Some(Glyph::PLUS),
             "New <thing>",
         );
-        assert!(html.as_str().starts_with(r#"<a href="/a?b=1&amp;c=2" class="fui-button fui-button-primary">"#) || html.as_str().starts_with(r#"<a href="/a?b=1&#38;c=2" class="fui-button fui-button-primary">"#), "{html}");
+        assert!(
+            html.as_str()
+                .starts_with(r#"<a href="/a?b=1&amp;c=2" class="fui-button fui-button-primary">"#)
+                || html.as_str().starts_with(
+                    r#"<a href="/a?b=1&#38;c=2" class="fui-button fui-button-primary">"#
+                ),
+            "{html}"
+        );
         assert!(html.as_str().contains("New &lt;thing&gt;</a>"), "{html}");
         assert!(html.as_str().contains("<svg"), "{html}");
     }

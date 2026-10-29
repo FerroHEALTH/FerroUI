@@ -129,9 +129,10 @@ impl Inner {
             "fui-input-suffix"
         };
         match self {
-            Self::Text(words) => {
-                Html::raw(format!("<span class=\"{class}\">{}</span>", Html::text(words)))
-            }
+            Self::Text(words) => Html::raw(format!(
+                "<span class=\"{class}\">{}</span>",
+                Html::text(words)
+            )),
             Self::Unit(words) => Html::raw(format!(
                 "<span id=\"{}\" class=\"{class}\">{}</span>",
                 Html::text(unit_id(id)),
@@ -172,7 +173,9 @@ pub fn masked_input(id: &str, name: &str, described_by: Option<String>) -> Html 
 }
 
 /// The classes of a field's error line: the help's size in the refusal's
-/// colour. The line is the console's: give it the id [`error_id`], put it
+/// colour.
+///
+/// The line is the console's: give it the id [`error_id`], put it
 /// in the field's trailing slot ([`Field::after`]), and name it in the
 /// control's `aria-describedby` ([`described_by`]).
 pub const ERROR: &str = "fui-help fui-error";
@@ -302,7 +305,9 @@ impl Field {
             control
         } else {
             let leading = leading.map(|part| part.view(&id, true)).unwrap_or_default();
-            let trailing = trailing.map(|part| part.view(&id, false)).unwrap_or_default();
+            let trailing = trailing
+                .map(|part| part.view(&id, false))
+                .unwrap_or_default();
             Html::raw(format!(
                 "<div class=\"fui-input-group\">{leading}{control}{trailing}</div>"
             ))
@@ -328,7 +333,12 @@ impl Field {
 /// Returns the field of the control `id`: the label `label` above
 /// `control`, and the line `help` under it when there is one.
 #[must_use]
-pub fn field(id: &'static str, label: impl Into<Word>, help: Option<String>, control: Html) -> Html {
+pub fn field(
+    id: &'static str,
+    label: impl Into<Word>,
+    help: Option<String>,
+    control: Html,
+) -> Html {
     keyed_field(id.to_owned(), label, help, control)
 }
 
@@ -336,16 +346,24 @@ pub fn field(id: &'static str, label: impl Into<Word>, help: Option<String>, con
 /// per row of a list, so each label names its own control and the help id
 /// stays in step with it.
 #[must_use]
-pub fn keyed_field(id: String, label: impl Into<Word>, help: Option<String>, control: Html) -> Html {
+pub fn keyed_field(
+    id: String,
+    label: impl Into<Word>,
+    help: Option<String>,
+    control: Html,
+) -> Html {
     Field::new(id, label).help_if(help).view(control)
 }
 
 /// Returns the action `button` with the line `error` under it where its
-/// refusal shows: a field with no label, such as the button that adds a
+/// refusal shows.
+///
+/// It is a field with no label, such as the button that adds a
 /// row to a list. The button names the line in `aria-describedby`
 /// ([`error_id`]), and the line takes [`ERROR`].
 #[must_use]
 pub fn action_field(button: Html, error: Html) -> Html {
+    let (button, error) = (String::from(button), String::from(error));
     Html::raw(format!(
         "<div class=\"fui-field\"><div class=\"fui-cluster\">{button}</div>{error}</div>"
     ))
@@ -356,6 +374,7 @@ pub fn action_field(button: Html, error: Html) -> Html {
 /// the `fieldset` element; WCAG 2.2 SC 1.3.1).
 #[must_use]
 pub fn fieldset(legend: impl Into<String>, body: Html) -> Html {
+    let body = String::from(body);
     Html::raw(format!(
         "<fieldset class=\"fui-fieldset\"><legend>{}</legend>{body}</fieldset>",
         Html::text(legend.into())
@@ -366,6 +385,7 @@ pub fn fieldset(legend: impl Into<String>, body: Html) -> Html {
 /// below it.
 #[must_use]
 pub fn columns(body: Html) -> Html {
+    let body = String::from(body);
     Html::raw(format!("<div class=\"fui-columns\">{body}</div>"))
 }
 
@@ -373,6 +393,7 @@ pub fn columns(body: Html) -> Html {
 /// ([`FIELD_FLOW`]).
 #[must_use]
 pub fn field_flow(body: Html) -> Html {
+    let body = String::from(body);
     Html::raw(format!("<div class=\"{FIELD_FLOW}\">{body}</div>"))
 }
 
@@ -452,7 +473,9 @@ struct ChipChoices {
 }
 
 /// Returns a group of checkboxes named `name` under the legend `legend`,
-/// each drawn as a chip. A ticked chip takes the accent's edge, so the tick
+/// each drawn as a chip.
+///
+/// A ticked chip takes the accent's edge, so the tick
 /// and the edge both say so: a choice of several, such as the nodes a query
 /// asks.
 #[must_use]
@@ -491,7 +514,11 @@ mod tests {
                 described_by("identifier", true, false),
             ));
         assert!(html.as_str().contains(r#"type="password""#), "{html}");
-        assert!(html.as_str().contains(r#"aria-describedby="identifier-help""#), "{html}");
+        assert!(
+            html.as_str()
+                .contains(r#"aria-describedby="identifier-help""#),
+            "{html}"
+        );
         assert!(html.as_str().contains("fui-input-group"), "{html}");
     }
 }

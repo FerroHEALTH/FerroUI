@@ -39,12 +39,12 @@ const EXPLAINED: &str = "fui-help fui-explain";
 
 #[derive(Template)]
 #[template(
-    source = r#"<label class="fui-help-switch"><input type="checkbox" role="switch" id="{{ id }}" class="{{ switch }}"><span>{{ label }}</span></label>"#,
+    source = r#"<label class="fui-help-switch"><input type="checkbox" role="switch" id="{{ id }}" class="{{ class }}"><span>{{ label }}</span></label>"#,
     ext = "html"
 )]
 struct Switch {
     id: &'static str,
-    switch: &'static str,
+    class: &'static str,
     label: Word,
 }
 
@@ -55,7 +55,7 @@ struct Switch {
 pub fn help_switch(id: &'static str, words: HelpWords) -> Html {
     Switch {
         id,
-        switch: SWITCH,
+        class: SWITCH,
         label: words.label,
     }
     .html()

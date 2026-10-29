@@ -12,7 +12,10 @@ use crate::icon::{Glyph, icon};
 use crate::tone::Tone;
 
 #[derive(Template)]
-#[template(source = r#"<span class="{{ class }}">{{ word }}</span>"#, ext = "html")]
+#[template(
+    source = r#"<span class="{{ class }}">{{ word }}</span>"#,
+    ext = "html"
+)]
 struct Marked {
     class: &'static str,
     word: Word,

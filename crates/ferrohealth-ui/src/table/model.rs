@@ -84,7 +84,9 @@ impl Noun {
     #[must_use]
     pub fn empty(self, locale: &Locale) -> Word {
         match self.message {
-            Some(message) => message.attribute(locale, "empty", &[("count", 0.into())]).into(),
+            Some(message) => message
+                .attribute(locale, "empty", &[("count", 0.into())])
+                .into(),
             None => tr(locale, Text::RangeEmpty),
         }
     }
@@ -93,7 +95,9 @@ impl Noun {
     #[must_use]
     pub fn opening(self, locale: &Locale) -> Word {
         match self.message {
-            Some(message) => message.attribute(locale, "opening", &[("count", 2.into())]).into(),
+            Some(message) => message
+                .attribute(locale, "opening", &[("count", 2.into())])
+                .into(),
             None => tr(locale, Text::RowsOpening),
         }
     }
@@ -208,12 +212,12 @@ impl Paging {
     /// as its absence.
     pub fn write_within(self, query: &mut Query, sizes: Sizes) {
         if self.page <= 1 {
-            drop(query.remove(PAGE_KEY));
+            query.remove(PAGE_KEY);
         } else {
             query.replace(PAGE_KEY, self.page.to_string());
         }
         if self.size == sizes.default {
-            drop(query.remove(SIZE_KEY));
+            query.remove(SIZE_KEY);
         } else {
             query.replace(SIZE_KEY, self.size.to_string());
         }
@@ -424,7 +428,10 @@ impl OpenWindow {
             return tr_with(
                 locale,
                 Text::OpenRangePast,
-                &[("page", self.page.into()), ("noun", noun.word(locale, 1).into())],
+                &[
+                    ("page", self.page.into()),
+                    ("noun", noun.word(locale, 1).into()),
+                ],
             );
         }
         if self.held == 0 {
@@ -535,7 +542,7 @@ impl Sort {
     pub fn write(&self, query: &mut Query) {
         query.replace(SORT_KEY, self.column.clone());
         query.replace(ORDER_KEY, self.direction.key().to_owned());
-        drop(query.remove(PAGE_KEY));
+        query.remove(PAGE_KEY);
     }
 }
 
@@ -594,8 +601,8 @@ mod tests {
         assert_eq!(keys, ["code", "use"]);
     }
 
-    use crate::query::Query;
     use crate::i18n::Locale;
+    use crate::query::Query;
 
     fn en() -> Locale {
         Locale::english()
@@ -686,7 +693,10 @@ mod tests {
         assert_eq!("EHRs", noun("ehrs").opening(&en()));
         assert_eq!("EHRs 1 to 25", first.range_of(&en(), noun("ehrs")));
         assert_eq!("No EHRs", empty.range_of(&en(), noun("ehrs")));
-        assert_eq!("Page 9 is past the last EHR.", past.range_of(&en(), noun("ehrs")));
+        assert_eq!(
+            "Page 9 is past the last EHR.",
+            past.range_of(&en(), noun("ehrs"))
+        );
     }
 
     #[test]
@@ -747,7 +757,7 @@ mod tests {
             link.contains("page=2") && link.contains("size=50"),
             "{link}"
         );
-        assert!(link.contains("filter=a%20b%26c"), "{link}");
+        assert!(link.contains("filter=a+b%26c"), "{link}");
     }
 
     #[test]

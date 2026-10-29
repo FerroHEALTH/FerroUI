@@ -115,7 +115,9 @@ pub struct UserMenu {
 }
 
 /// The item a key moves the focus to from `current` of `count` items: Down
-/// and Up move and wrap, Home and End go to the ends, and from no item Down
+/// and Up move and wrap.
+///
+/// Home and End go to the ends, and from no item Down
 /// goes to the first and Up to the last; any other key is `None`.
 #[must_use]
 pub fn step(key: &str, current: Option<u32>, count: u32) -> Option<u32> {
@@ -129,74 +131,35 @@ pub fn step(key: &str, current: Option<u32>, count: u32) -> Option<u32> {
     }
 }
 
-/// Returns a menu item that leads to `href`, with `glyph`, `words` and the
-/// key `key` it answers to, if any.
-fn link_item(href: &str, glyph: Glyph, words: &Word, key: Option<&str>, class: &str) -> Html {
-    // NOTE: no specification governs this: our own design; the item with the `?` key opens
-    // the page's shortcut legend where the page has one, and is followed where it has not.
-    let opens = if key == Some("?") {
-        " data-fui-shortcuts=\"\""
-    } else {
-        ""
-    };
-    let cap = key.map_or(String::new(), |key| {
-        format!("<kbd class=\"fui-kbd\">{}</kbd>", Html::text(key))
-    });
-    Html::raw(format!(
-        "<a role=\"menuitem\" href=\"{}\" class=\"{class}\"{opens}>{}<span class=\"fui-menu-item-text\"><span class=\"fui-menu-item-label\">{words}</span></span>{cap}</a>",
-        Html::text(href),
-        icon(glyph, "16")
-    ))
+/// A link item of the menu.
+struct LinkItem {
+    href: String,
+    glyph: Html,
+    words: Word,
+    key: Option<&'static str>,
+    wide_only: bool,
 }
 
-/// Returns the theme as three `menuitemradio` choices, the one in force
-/// checked, each a submit button of one plain form.
-fn theme_group(locale: &Locale, id: &str, theme: &ThemeChoice) -> Html {
-    let buttons: String = Theme::ALL
-        .into_iter()
-        .map(|choice| {
-            format!(
-                "<button type=\"submit\" name=\"theme\" value=\"{}\" role=\"menuitemradio\" class=\"fui-segment\" aria-checked=\"{}\">{}{}</button>",
-                choice.key(),
-                choice == theme.current,
-                icon(glyph(choice), "14"),
-                choice.label(locale)
-            )
-        })
-        .collect();
-    Html::raw(format!(
-        "<form method=\"post\" action=\"{}\" class=\"fui-menu-theme\"><input type=\"hidden\" name=\"back\" value=\"{}\"><div class=\"fui-menu-label\" id=\"{id}-theme\">{}</div><div role=\"group\" aria-labelledby=\"{id}-theme\" class=\"fui-segmented\">{buttons}</div></form>",
-        Html::text(&theme.action),
-        Html::text(&theme.back),
-        tr(locale, Text::ThemeSwitch)
-    ))
+/// One choice of a group, as the template writes it.
+struct ChoiceView {
+    href: String,
+    words: String,
+    chosen: bool,
 }
 
-/// Returns the group `choices`, the menu's group number `at`, as
-/// `menuitemradio` links, the one in force checked, shown below 40 rem
-/// alone.
-fn choices_group(id: &str, at: usize, choices: &Choices) -> Html {
-    let label_id = if at == 0 {
-        format!("{id}-choices")
-    } else {
-        format!("{id}-choices-{at}")
-    };
-    let links: String = choices
-        .choices
-        .iter()
-        .map(|choice| {
-            format!(
-                "<a role=\"menuitemradio\" href=\"{}\" class=\"fui-segment\" aria-checked=\"{}\">{}</a>",
-                Html::text(&choice.href),
-                choice.chosen,
-                Html::text(&choice.words)
-            )
-        })
-        .collect();
-    Html::raw(format!(
-        "<div class=\"fui-menu-version\"><div class=\"fui-menu-label\" id=\"{label_id}\">{}</div><div role=\"group\" aria-labelledby=\"{label_id}\" class=\"fui-segmented\">{links}</div></div>",
-        Html::text(&choices.label)
-    ))
+/// One group of choices, as the template writes it.
+struct GroupView {
+    label_id: String,
+    label: String,
+    choices: Vec<ChoiceView>,
+}
+
+/// One theme of the theme group, as the template writes it.
+struct ThemeView {
+    key: &'static str,
+    checked: bool,
+    glyph: Html,
+    label: Word,
 }
 
 #[derive(Template)]
@@ -211,7 +174,16 @@ struct UserMenuView {
     chevron: Html,
     who: String,
     line: String,
-    items: Html,
+    links: Vec<LinkItem>,
+    groups: Vec<GroupView>,
+    theme_action: String,
+    theme_back: String,
+    theme_label: Word,
+    themes: Vec<ThemeView>,
+    shortcuts: Option<LinkItem>,
+    sign_out: Option<String>,
+    sign_out_glyph: Html,
+    sign_out_words: Word,
     cancel: Word,
 }
 
@@ -221,43 +193,60 @@ struct UserMenuView {
 #[must_use]
 pub fn user_menu(locale: &Locale, menu: UserMenu) -> Html {
     let id = menu.id;
-    let mut items = link_item(
-        &menu.preferences,
-        Glyph::SETTINGS,
-        &tr(locale, Text::YourPreferences),
-        None,
-        "fui-menu-item",
-    );
-    for link in &menu.links {
-        items = items.then(link_item(
-            &link.href,
-            link.glyph,
-            &Word::new(&link.words),
-            None,
-            "fui-menu-item",
-        ));
-    }
-    for (at, choices) in menu.choices.iter().enumerate() {
-        items = items.then(choices_group(id, at, choices));
-    }
-    items = items.then(theme_group(locale, id, &menu.theme));
-    if let Some(href) = &menu.shortcuts {
-        items = items.then(link_item(
-            href,
-            Glyph::KEYBOARD,
-            &tr(locale, Text::KeyboardShortcuts),
-            Some("?"),
-            "fui-menu-item fui-wide-only",
-        ));
-    }
-    if let Some(action) = &menu.sign_out {
-        items = items.then(Html::raw(format!(
-            "<div class=\"fui-menu-sep\" role=\"separator\"></div><form method=\"post\" action=\"{}\" class=\"fui-menu-form\"><button type=\"submit\" role=\"menuitem\" class=\"fui-menu-item\">{}<span class=\"fui-menu-item-text\"><span class=\"fui-menu-item-label\">{}</span></span></button></form>",
-            Html::text(action),
-            icon(Glyph::LOG_OUT, "16"),
-            tr(locale, Text::SignOut)
-        )));
-    }
+    let mut links = vec![LinkItem {
+        href: menu.preferences,
+        glyph: icon(Glyph::SETTINGS, "16"),
+        words: tr(locale, Text::YourPreferences),
+        key: None,
+        wide_only: false,
+    }];
+    links.extend(menu.links.into_iter().map(|link| LinkItem {
+        href: link.href,
+        glyph: icon(link.glyph, "16"),
+        words: Word::new(&link.words),
+        key: None,
+        wide_only: false,
+    }));
+    let groups = menu
+        .choices
+        .into_iter()
+        .enumerate()
+        .map(|(at, group)| GroupView {
+            label_id: if at == 0 {
+                format!("{id}-choices")
+            } else {
+                format!("{id}-choices-{at}")
+            },
+            label: group.label,
+            choices: group
+                .choices
+                .into_iter()
+                .map(|choice| ChoiceView {
+                    href: choice.href,
+                    words: choice.words,
+                    chosen: choice.chosen,
+                })
+                .collect(),
+        })
+        .collect();
+    let themes = Theme::ALL
+        .into_iter()
+        .map(|choice| ThemeView {
+            key: choice.key(),
+            checked: choice == menu.theme.current,
+            glyph: icon(glyph(choice), "14"),
+            label: choice.label(locale),
+        })
+        .collect();
+    // NOTE: no specification governs this: our own design; the item with the `?` key opens
+    // the page's shortcut legend where the page has one, and is followed where it has not.
+    let shortcuts = menu.shortcuts.map(|href| LinkItem {
+        href,
+        glyph: icon(Glyph::KEYBOARD, "16"),
+        words: tr(locale, Text::KeyboardShortcuts),
+        key: Some("?"),
+        wide_only: true,
+    });
     UserMenuView {
         id,
         list_id: format!("{id}-menu"),
@@ -268,7 +257,16 @@ pub fn user_menu(locale: &Locale, menu: UserMenu) -> Html {
         chevron: icon(Glyph::CHEVRON_DOWN, "14"),
         who: menu.who,
         line: menu.line,
-        items,
+        links,
+        groups,
+        theme_action: menu.theme.action,
+        theme_back: menu.theme.back,
+        theme_label: tr(locale, Text::ThemeSwitch),
+        themes,
+        shortcuts,
+        sign_out: menu.sign_out,
+        sign_out_glyph: icon(Glyph::LOG_OUT, "16"),
+        sign_out_words: tr(locale, Text::SignOut),
         cancel: tr(locale, Text::Cancel),
     }
     .html()

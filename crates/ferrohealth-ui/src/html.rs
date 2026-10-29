@@ -159,7 +159,10 @@ mod tests {
 
     #[test]
     fn text_is_escaped_and_raw_markup_is_kept() {
-        assert_eq!("a &lt;b&gt; &amp; &quot;c&#x27;", Html::text("a <b> & \"c'").as_str());
+        assert_eq!(
+            "a &lt;b&gt; &amp; &quot;c&#x27;",
+            Html::text("a <b> & \"c'").as_str()
+        );
         assert_eq!("<b>x</b>", Html::raw(String::from("<b>x</b>")).as_str());
         let joined = Html::join([Html::text("1"), Html::empty(), Html::text("2")]);
         assert_eq!("12", joined.as_str());

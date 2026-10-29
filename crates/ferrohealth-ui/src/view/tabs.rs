@@ -142,11 +142,19 @@ struct SelectView {
 }
 
 /// Returns the binder tabs `tabs` named `label`, the one whose key is
-/// `current` marked as the page, joined to `panel`. A page with one or two
+/// `current` marked as the page, joined to `panel`.
+///
+/// A page with one or two
 /// sections has none, and a tab this object cannot have is left out, never
 /// disabled.
 #[must_use]
-pub fn binder(locale: &Locale, label: impl Into<String>, tabs: Vec<Tab>, current: &str, panel: Html) -> Html {
+pub fn binder(
+    locale: &Locale,
+    label: impl Into<String>,
+    tabs: Vec<Tab>,
+    current: &str,
+    panel: Html,
+) -> Html {
     joined(
         locale,
         TabRow {
@@ -161,7 +169,12 @@ pub fn binder(locale: &Locale, label: impl Into<String>, tabs: Vec<Tab>, current
 
 /// Returns the binder tabs `row` joined to `panel`, the sheet taking the
 /// extra class `class` when there is one, as a page template draws them.
-pub(crate) fn joined(locale: &Locale, row: TabRow, panel: Html, class: Option<&'static str>) -> Html {
+pub(crate) fn joined(
+    locale: &Locale,
+    row: TabRow,
+    panel: Html,
+    class: Option<&'static str>,
+) -> Html {
     let TabRow {
         label,
         tabs,
@@ -241,7 +254,9 @@ pub fn moved(key: &str, current: usize, count: usize) -> Option<usize> {
 }
 
 /// Returns the keyboard tabs `prefix` named `label`: one tab per word in
-/// `tabs` over its panel in `panels`, the first shown and the others
+/// `tabs` over its panel in `panels`.
+///
+/// The first is shown and the others
 /// hidden, switched in place by the `tabs` module with the keys of the
 /// WAI-ARIA Authoring Practices tabs pattern (automatic activation).
 ///
@@ -249,27 +264,27 @@ pub fn moved(key: &str, current: usize, count: usize) -> Option<usize> {
 /// where every panel must be reachable with no script a page uses
 /// [`binder`], whose tabs are routes.
 #[must_use]
-pub fn keyboard_tabs(label: &str, prefix: &str, tabs: Vec<String>, panels: Vec<Html>) -> Html {
-    let buttons: String = tabs
+pub fn keyboard_tabs(label: &str, prefix: &str, tabs: &[String], panels: Vec<Html>) -> Html {
+    let buttons: Html = tabs
         .iter()
         .enumerate()
         .map(|(index, words)| {
             let on = index == 0;
-            format!(
+            Html::raw(format!(
                 "<button type=\"button\" role=\"tab\" id=\"{prefix}-tab-{index}\" class=\"fui-tab\" aria-controls=\"{prefix}-panel-{index}\" aria-selected=\"{on}\" tabindex=\"{}\">{}</button>",
                 if on { "0" } else { "-1" },
                 Html::text(words)
-            )
+            ))
         })
         .collect();
-    let panels: String = panels
+    let panels: Html = panels
         .into_iter()
         .enumerate()
         .map(|(index, body)| {
-            format!(
+            Html::raw(format!(
                 "<div role=\"tabpanel\" id=\"{prefix}-panel-{index}\" class=\"fui-tab-panel\" aria-labelledby=\"{prefix}-tab-{index}\"{} tabindex=\"0\">{body}</div>",
                 if index == 0 { "" } else { " hidden" }
-            )
+            ))
         })
         .collect();
     Html::raw(format!(
@@ -305,7 +320,12 @@ mod tests {
         let html = binder(&en, "Template views", tabs, "paths", Html::text("body"));
         let html = html.as_str();
         assert!(html.contains(r#"<a href="/t" class="fui-tab" data-tab="overview" data-fui-panel="panel-overview">"#), "{html}");
-        assert!(html.contains(r#"href="/t?tab=paths" class="fui-tab" aria-current="page" data-tab="paths">"#), "{html}");
+        assert!(
+            html.contains(
+                r#"href="/t?tab=paths" class="fui-tab" aria-current="page" data-tab="paths">"#
+            ),
+            "{html}"
+        );
         assert!(html.contains("12 nodes"), "{html}");
         assert!(html.contains("data-fui-tab-keys"), "{html}");
         assert!(!html.contains("fui-tabs-select"), "{html}");

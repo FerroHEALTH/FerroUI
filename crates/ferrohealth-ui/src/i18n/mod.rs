@@ -405,7 +405,6 @@ fn missing(id: &str) -> String {
     id.to_owned()
 }
 
-
 /// The marks around the name of a placeable a [`Phrase`] leaves open:
 /// Unicode private-use characters, which no catalog writes.
 const OPEN: char = '\u{E000}';
