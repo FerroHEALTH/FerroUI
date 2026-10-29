@@ -38,6 +38,7 @@ axum = ["dep:axum", "dep:http"]
 [dependencies]
 askama.workspace = true
 serde.workspace = true
+serde_json.workspace = true
 fluent-templates.workspace = true
 intl-memoizer.workspace = true
 form_urlencoded.workspace = true

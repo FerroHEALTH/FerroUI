@@ -21,6 +21,7 @@
 
 mod chrome;
 mod contrast;
+mod controls;
 mod dock;
 mod filter;
 mod kbd;

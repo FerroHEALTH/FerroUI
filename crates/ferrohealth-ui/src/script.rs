@@ -35,8 +35,20 @@ pub const LOADER: Module = Module {
 pub const MODULES: &[Module] = &[
     LOADER,
     Module {
+        file: "calendar.js",
+        text: include_str!("../scripts/calendar.js"),
+    },
+    Module {
         file: "copy.js",
         text: include_str!("../scripts/copy.js"),
+    },
+    Module {
+        file: "date.js",
+        text: include_str!("../scripts/date.js"),
+    },
+    Module {
+        file: "date_range.js",
+        text: include_str!("../scripts/date_range.js"),
     },
     Module {
         file: "dialog.js",
@@ -57,6 +69,10 @@ pub const MODULES: &[Module] = &[
     Module {
         file: "menu.js",
         text: include_str!("../scripts/menu.js"),
+    },
+    Module {
+        file: "picker.js",
+        text: include_str!("../scripts/picker.js"),
     },
     Module {
         file: "preference.js",
