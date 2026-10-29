@@ -130,6 +130,10 @@ pub const MODULES: &[Module] = &[
         file: "user_menu.js",
         text: include_str!("../scripts/user_menu.js"),
     },
+    Module {
+        file: "worklist.js",
+        text: include_str!("../scripts/worklist.js"),
+    },
 ];
 
 /// The module named `file`, if the library ships it.
