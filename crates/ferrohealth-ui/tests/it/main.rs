@@ -26,6 +26,7 @@ mod contrast;
 mod controls;
 mod dock;
 mod fields;
+mod figures;
 mod filter;
 mod kbd;
 mod markup;
