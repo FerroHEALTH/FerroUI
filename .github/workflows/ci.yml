@@ -498,7 +498,9 @@ jobs:
       # A VEX statement whose published argument names the wrong dependency
       # path: compared with the graph cargo resolves, in both directions.
       - name: Every VEX statement names the real dependency path
-        run: bash scripts/checks/vex-reachability.sh
+        run: |
+          bash scripts/checks/vex-reachability.sh --self-test
+          bash scripts/checks/vex-reachability.sh
 
   # The published Rust advisory VEX is exactly what deny.toml and
   # security/vex/rust-advisories.toml generate, and every hand-written
@@ -528,7 +530,9 @@ jobs:
           sudo install -m 0755 "$RUNNER_TEMP/yq" /usr/local/bin/yq
           yq --version
       - name: Every accepted advisory has a published VEX justification
-        run: bash scripts/checks/vex-advisories.sh
+        run: |
+          bash scripts/checks/vex-advisories.sh --self-test
+          bash scripts/checks/vex-advisories.sh
 
   # The vendored Lucide set is whole: every listed icon and its licence, and
   # no file the list does not name.

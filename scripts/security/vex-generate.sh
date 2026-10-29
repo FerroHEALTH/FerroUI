@@ -31,14 +31,15 @@
 #   --write   (default) overwrite security/vex/rust-advisories.openvex.json
 #   --stdout  print the document instead, changing nothing on disk
 #
-# VEX_DIR moves the VEX directory (default security/vex) and
+# VEX_DIR moves the VEX directory (default security/vex), VEX_GATE the gate
+# file (default deny.toml, which the guards' self-tests replace) and
 # VEX_REACHABILITY_KEY names the extension key (default ferroui:reachability).
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
 readonly VEX_DIR="${VEX_DIR:-security/vex}"
 readonly PROSE="$VEX_DIR/rust-advisories.toml"
-readonly GATE='deny.toml'
+readonly GATE="${VEX_GATE:-deny.toml}"
 readonly OUT="$VEX_DIR/rust-advisories.openvex.json"
 readonly REACHABILITY_KEY="${VEX_REACHABILITY_KEY:-ferroui:reachability}"
 
