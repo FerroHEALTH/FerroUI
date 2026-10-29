@@ -905,7 +905,11 @@ pub fn figures(chart: &LineChart, words: FiguresWords) -> Html {
     FiguresView {
         caption: caption.fill(&[("chart", &chart.label)]),
         x,
-        heads: chart.series.iter().map(|series| series.name.clone()).collect(),
+        heads: chart
+            .series
+            .iter()
+            .map(|series| series.name.clone())
+            .collect(),
         rows,
     }
     .html()

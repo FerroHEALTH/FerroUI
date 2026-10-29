@@ -268,14 +268,6 @@ pub fn line_html(line: &[Token]) -> String {
 /// Returns `text` in `language` as one string of HTML per line, each as
 /// [`line_html`] writes the line [`lines`] cuts, in one pass over the
 /// tokens.
-// TODO(#510): the code viewer reads it again in the documents pull request.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "the code viewer returns in a later pull request of #510"
-    )
-)]
 pub(crate) fn lines_html(language: Language, text: &str) -> Vec<String> {
     let mut out = vec![String::new()];
     for token in tokens(language, text) {

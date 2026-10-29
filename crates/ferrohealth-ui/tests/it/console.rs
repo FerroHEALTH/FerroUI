@@ -12,13 +12,13 @@ use ferrohealth_ui::table::model::{Noun, OpenWindow, Paging, Window};
 use ferrohealth_ui::table::pager::{Listing, link_open_pager, link_pager};
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::dialog::{Confirmation, confirm_dialog};
+use ferrohealth_ui::view::nav::{Entry, Group};
 use ferrohealth_ui::view::surface::{
     Crumb, Header, Mode, card_action, editor_heading, editor_title, titled_panel,
 };
-use ferrohealth_ui::view::nav::{Entry, Group};
 
-use crate::render::{en, html};
 use crate::markup::has;
+use crate::render::{en, html};
 
 fluent_templates::static_loader! {
     static CONSOLE = {
@@ -33,37 +33,48 @@ fn message(id: &'static str) -> Message {
     Message::new(&*CONSOLE, id)
 }
 
-
 #[test]
 fn a_listing_names_its_rows_by_the_consoles_noun_chosen_by_count() {
     let sets = Noun::new(message("value-sets"));
     let listing = || Listing::new(String::from("Value sets")).noun(sets);
     let page = html({
-        link_pager(&en(), listing(), Window::over(312, Paging::default()), &|_| {
-            String::new()
-        })
+        link_pager(
+            &en(),
+            listing(),
+            Window::over(312, Paging::default()),
+            &|_| String::new(),
+        )
     });
     assert!(page.contains("1-25 of 312 value sets"), "{page}");
     assert!(page.contains(r#"aria-label="Value sets""#), "{page}");
     let one = html({
-        link_pager(&en(), listing(), Window::over(1, Paging::default()), &|_| {
-            String::new()
-        })
+        link_pager(
+            &en(),
+            listing(),
+            Window::over(1, Paging::default()),
+            &|_| String::new(),
+        )
     });
     assert!(one.contains("1-1 of 1 value set<"), "{one}");
     let none = html({
-        link_pager(&en(), listing(), Window::over(0, Paging::default()), &|_| {
-            String::new()
-        })
+        link_pager(
+            &en(),
+            listing(),
+            Window::over(0, Paging::default()),
+            &|_| String::new(),
+        )
     });
     assert!(
         none.contains("No value sets"),
         "the empty sentence is the console's: {none}"
     );
     let open = html({
-        link_open_pager(&en(), listing(), OpenWindow::of(Paging::default(), 25), &|_| {
-            String::new()
-        })
+        link_open_pager(
+            &en(),
+            listing(),
+            OpenWindow::of(Paging::default(), 25),
+            &|_| String::new(),
+        )
     });
     assert!(
         open.contains("Value sets 1 to 25"),
@@ -126,7 +137,6 @@ fn the_card_header_action_is_a_link_with_its_words_then_an_arrow() {
             card_action("/members", String::from("All members")),
             Html::empty(),
         )
-        
     });
     assert!(
         panel
@@ -161,7 +171,8 @@ fn a_consoles_words_made_at_run_time_reach_every_label() {
         "a navigation entry's words"
     );
     let dialog = html({
-        confirm_dialog(&en(), 
+        confirm_dialog(
+            &en(),
             Confirmation {
                 id: "drop".into(),
                 title: format!("Drop {}?", "vitals").into(),
@@ -169,7 +180,6 @@ fn a_consoles_words_made_at_run_time_reach_every_label() {
             },
             Html::empty(),
         )
-        
     });
     assert!(dialog.contains("Drop vitals?"), "{dialog}");
 }
