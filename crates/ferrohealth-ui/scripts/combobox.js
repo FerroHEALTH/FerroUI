@@ -53,7 +53,7 @@ export function enhance(root) {
   const remote = root.getAttribute("data-fui-remote");
   const options = [...select.options]
     .filter((option) => option.value !== "")
-    .map((option) => ({ value: option.value, label: option.textContent, detail: option.getAttribute("data-detail") }));
+    .map((option) => ({ value: option.value, label: option.textContent, detail: option.getAttribute("data-detail"), other: option.hasAttribute("data-other") }));
   const chosenAt = options.findIndex((option) => option.value === select.value);
   const check = root.querySelector("template[data-fui-icons]");
   const state = {
@@ -141,6 +141,11 @@ export function enhance(root) {
       state.chosenLabel = option.label;
     }
     close();
+    // The hidden input says what was chosen, as a select's change does.
+    if (option) {
+      hidden.toggleAttribute("data-other", option.other);
+      hidden.dispatchEvent(new Event("change", { bubbles: true }));
+    }
   }
   function close() {
     state.open = false;

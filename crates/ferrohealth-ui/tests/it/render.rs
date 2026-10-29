@@ -2300,6 +2300,41 @@ fn the_select_button_shows_its_choice_and_each_option_works_with_no_webassembly(
 }
 
 #[test]
+fn a_combobox_option_that_asks_for_a_typed_value_is_marked_other() {
+    let combo = html(combobox(Combobox {
+        id: "pick-canonical",
+        name: "picked",
+        label: "Code system".into(),
+        placeholder: "Choose one".into(),
+        options: vec![
+            ComboOption::new("http://loinc.org", "LOINC"),
+            ComboOption::new("another", "Another canonical").other(),
+        ],
+        selected: None,
+        words: ComboboxWords {
+            no_match: Word::from("No match"),
+            more: Word::from("Type to narrow"),
+        },
+    }));
+    assert!(
+        has(
+            &combo,
+            "option",
+            &[("value", "another"), ("data-other", "")]
+        ),
+        "{combo}"
+    );
+    assert!(
+        tags(&combo, "option")
+            .iter()
+            .filter(|option| option.contains_key("data-other"))
+            .count()
+            == 1,
+        "only the other option is marked: {combo}"
+    );
+}
+
+#[test]
 fn the_combobox_and_picker_draw_their_native_floor_on_the_server() {
     let combo = html(combobox(Combobox {
         id: "choose-system",

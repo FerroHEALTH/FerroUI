@@ -42,6 +42,10 @@ pub struct ComboOption {
     pub label: String,
     /// A second, muted line, such as a canonical URL.
     pub detail: Option<String>,
+    /// Whether choosing it asks for a typed value instead, as the last
+    /// option of a pick-or-type field ([`crate::view::pick_or_type`]) does.
+    #[serde(default)]
+    pub other: bool,
 }
 
 impl ComboOption {
@@ -52,6 +56,7 @@ impl ComboOption {
             value: value.into(),
             label: label.into(),
             detail: None,
+            other: false,
         }
     }
 
@@ -60,6 +65,15 @@ impl ComboOption {
     pub fn detail(self, detail: impl Into<String>) -> Self {
         Self {
             detail: Some(detail.into()),
+            ..self
+        }
+    }
+
+    /// This option, marked as the one that asks for a typed value.
+    #[must_use]
+    pub fn other(self) -> Self {
+        Self {
+            other: true,
             ..self
         }
     }

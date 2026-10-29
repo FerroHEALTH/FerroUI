@@ -7,19 +7,25 @@
 // input and moves the focus there, unless the reader is stepping through
 // the closed select by arrow key (WCAG 2.2 SC 3.2.2). A pick-or-type field
 // swaps its picker for its text input when the picker's data-other option
-// is chosen. With no script both of a picker's controls show.
+// is chosen (a select's or a combobox's), and back on its control marked
+// data-fui-pick-back. With no script both of a picker's controls show.
 export function enhance(root) {
   const pick = root.querySelector(":scope > [data-side='pick']");
   const type = root.querySelector(":scope > [data-side='type']");
   if (pick && type) {
-    pick.addEventListener("change", (event) => {
-      const option = event.target.selectedOptions && event.target.selectedOptions[0];
-      if (!option || !option.hasAttribute("data-other")) return;
-      pick.hidden = true;
-      type.hidden = false;
-      const field = type.querySelector("input, textarea, select");
+    const back = root.querySelector("[data-fui-pick-back]");
+    const side = (typing) => {
+      pick.hidden = typing;
+      type.hidden = !typing;
+      if (back) back.hidden = !typing;
+      const field = (typing ? type : pick).querySelector("input:not([type='hidden']), textarea, select");
       if (field) field.focus();
+    };
+    pick.addEventListener("change", (event) => {
+      const option = event.target.selectedOptions ? event.target.selectedOptions[0] : event.target;
+      if (option && option.hasAttribute("data-other")) side(true);
     });
+    if (back) back.addEventListener("click", () => side(false));
     return;
   }
   const select = root.querySelector(":scope > select");

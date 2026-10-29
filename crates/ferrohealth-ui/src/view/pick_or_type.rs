@@ -12,7 +12,9 @@
 //! accessible name computation; HTML Living Standard, the `hidden`
 //! attribute). The console owns the value and the controls and says which
 //! shows; the field draws them as one, and the `picker` module shows the
-//! input when the picker's option marked `data-other` is chosen.
+//! input when the picker's option marked `data-other` is chosen (a
+//! combobox's [`crate::view::combobox::ComboOption::other`]), and the
+//! picker again on a control in `after` marked `data-fui-pick-back`.
 //! [`crate::view::picker`] is the whole widget, for a console that holds
 //! no controls of its own.
 
