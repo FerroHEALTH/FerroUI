@@ -8,6 +8,7 @@ pub mod code;
 pub mod dock;
 pub mod find;
 pub mod forms;
+pub mod overview;
 pub mod preferences;
 pub mod records;
 pub mod sign_in;
