@@ -16,6 +16,7 @@
 
 pub mod action;
 pub mod action_menu;
+pub mod browser;
 pub mod button;
 pub mod change;
 pub mod chart;
@@ -35,9 +36,11 @@ pub mod document;
 pub mod editor;
 pub mod empty;
 pub mod error_page;
+pub mod fanout;
 pub mod filter;
 pub mod flow;
 pub mod form;
+pub mod funnel;
 pub mod help;
 pub mod hl7v2;
 pub mod identifier;
@@ -62,6 +65,8 @@ pub mod replica;
 pub mod results;
 pub mod root_matrix;
 pub mod row_preview;
+pub mod scope;
+pub mod score;
 pub mod secret;
 pub mod segmented;
 pub mod shell;
