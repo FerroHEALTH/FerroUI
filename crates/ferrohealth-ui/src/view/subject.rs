@@ -61,8 +61,7 @@ fn on_off(on: bool, word: Word) -> Html {
 ///         queryable: true,
 ///         modifiable: false,
 ///     },
-/// )
-/// .to_string();
+/// ).to_string();
 /// assert!(html.contains("No external subject"));
 /// assert!(html.contains("Not modifiable"));
 /// ```

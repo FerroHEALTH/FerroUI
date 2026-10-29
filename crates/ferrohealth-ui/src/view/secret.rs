@@ -147,8 +147,7 @@ impl SecretField {
 /// let html = secret_state(
 ///     &Locale::english(),
 ///     &SecretState::Set(String::from("/run/secrets/db-url")),
-/// )
-/// .to_string();
+/// ).to_string();
 /// assert!(html.contains("<code>/run/secrets/db-url</code>"));
 /// ```
 #[must_use]

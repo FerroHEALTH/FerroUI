@@ -98,7 +98,7 @@ component rules are `.claude/rules/leptos-ui.md`; §14 is the Leptos way and
      full gate.
    - The guards: `bash scripts/checks/mod-order.sh`,
      `bash scripts/release/changelog.sh --check`,
-     `bash scripts/checks/leptos-rules.sh`, `bash scripts/checks/stray-literals.sh crates/ferrohealth-ui/src app/ferrohealth-ui-gallery/src` and `bash scripts/checks/comment-style.sh --all`.
+     `bash scripts/checks/leptos-rules.sh`, `bash scripts/checks/stray-literals.sh crates/ferrohealth-ui/src crates/ferrohealth-ui/templates app/ferrohealth-ui-gallery/src` and `bash scripts/checks/comment-style.sh --all`.
 10. **Look at it.** Never run the full screenshot capture. Capture only the
     pages you touched, over the release site bundle from
     `scripts/release/gallery-site.sh --release`:

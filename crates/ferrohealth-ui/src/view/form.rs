@@ -195,10 +195,8 @@ pub const ERROR: &str = "fui-help fui-error";
 /// use ferrohealth_ui::view::form::{ERROR, Field, INPUT, described_by, error_id};
 ///
 /// let id = "member-base";
-/// let input = Html::raw(format!(
-///     r#"<input id="{id}" name="base" class="{INPUT}" aria-describedby="{}">"#,
-///     described_by(id, true, true).unwrap_or_default()
-/// ));
+/// let described = described_by(id, true, true).unwrap_or_default();
+/// let input = Html::raw(format!(r#"<input id="{id}" name="base" class="{INPUT}" aria-describedby="{described}">"#));
 /// let html = Field::new(id, "Base URL of node-a")
 ///     .help("Where the gateway reaches the member.")
 ///     .after(Html::raw(format!(r#"<p id="{}" class="{ERROR}" aria-live="polite"></p>"#, error_id(id))))

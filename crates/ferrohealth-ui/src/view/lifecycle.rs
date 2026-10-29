@@ -123,8 +123,7 @@ pub struct Lifecycle {
 ///             Step::new(StepState::Current, "Apply", "yours, or any operator's"),
 ///         ],
 ///     },
-/// )
-/// .to_string();
+/// ).to_string();
 /// assert!(html.contains(r#"aria-current="step""#));
 /// ```
 #[must_use]
