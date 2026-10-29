@@ -266,7 +266,9 @@ async fn a_same_path_navigation_keeps_its_scroll() -> Result<(), Box<dyn Error>>
         window(browser, 1440, 900).await?;
         browser.goto(&gallery.url("/ferrobridge/overlays")).await?;
         browser.hydrated().await?;
-        let link = browser.element(By::Css("a[data-toast='info']")).await?;
+        let link = browser
+            .element(By::Css("a[data-delete='synthetic-007.model.yml']"))
+            .await?;
         link.scroll_into_view().await?;
         let before: f64 = browser
             .driver()
@@ -276,7 +278,7 @@ async fn a_same_path_navigation_keeps_its_scroll() -> Result<(), Box<dyn Error>>
         assert!(before > 0.0, "the link sits below the fold");
         link.click().await?;
         browser
-            .at(&gallery.url("/ferrobridge/overlays?toast=info"))
+            .at(&gallery.url("/ferrobridge/overlays?delete=synthetic-007.model.yml"))
             .await?;
         browser.hydrated().await?;
         until("the page opens where it was", async || {

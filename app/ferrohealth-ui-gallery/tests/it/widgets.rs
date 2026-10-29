@@ -402,11 +402,7 @@ async fn the_tree_walks_by_the_keyboard_and_reads_children_on_opening() -> Resul
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
         browser.goto(&gallery.url("/ferroehr/layouts")).await?;
-        let picked = browser.element(By::Id("run-value-set")).await?;
-        until("the page hydrates", async || {
-            Ok(!picked.is_displayed().await?)
-        })
-        .await?;
+        browser.hydrated().await?;
         let items = || {
             browser
                 .driver()
@@ -800,21 +796,17 @@ async fn address(browser: &Browser) -> Result<String, Box<dyn Error>> {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn the_tree_keeps_its_open_items_in_the_address_across_a_reload() -> Result<(), Box<dyn Error>>
-{
+async fn the_tree_keeps_its_folds_across_a_reload_and_reads_a_level_by_its_link()
+-> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
         return Ok(());
     }
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
         browser.goto(&gallery.url("/ferroterm/layouts")).await?;
-        let picked = browser.element(By::Id("run-value-set")).await?;
-        until("the page hydrates", async || {
-            Ok(!picked.is_displayed().await?)
-        })
-        .await?;
+        browser.hydrated().await?;
         assert!(open_item(browser, "Synthetic finding").await?);
-        // Closing by the toggle removes the item from the address.
+        // Closing by the toggle folds the level in place, and the session keeps it.
         let toggle = browser
             .element(By::Css("#gallery-tree > li:first-child .fui-tree-toggle"))
             .await?;
@@ -822,58 +814,37 @@ async fn the_tree_keeps_its_open_items_in_the_address_across_a_reload() -> Resul
             Ok(!open_item(browser, "Synthetic finding").await?)
         })
         .await?;
-        until("the closed item leaves the address", async || {
-            let url = address(browser).await?;
-            Ok(url.contains("open=") && !url.contains("SYN-100"))
+        browser.driver().refresh().await?;
+        browser.hydrated().await?;
+        until("the reload keeps the item closed", async || {
+            Ok(!open_item(browser, "Synthetic finding").await?)
         })
         .await?;
-        let closed = address(browser).await?;
-        browser.goto(&closed).await?;
         assert!(
-            !open_item(browser, "Synthetic finding").await?,
-            "the reload opened the closed item again ({closed})"
-        );
-        assert!(
-            browser
-                .driver()
-                .find_all(By::XPath(
-                    "//a[contains(., 'Synthetic finding of the arm')]"
-                ))
+            !browser
+                .element(By::XPath("//a[contains(., 'Synthetic finding of the arm')]"))
                 .await?
-                .is_empty(),
-            "a closed item's children show after the reload"
+                .is_displayed()
+                .await?,
+            "a closed item's children stay hidden after the reload"
         );
-        // Opening adds the item; the reload reads its children again.
-        let picked = browser.element(By::Id("run-value-set")).await?;
-        until("the page hydrates again", async || {
-            Ok(!picked.is_displayed().await?)
-        })
-        .await?;
+        // Opening a level not read yet follows its link, which reads it.
         let branch = browser
             .element(By::XPath(
                 "//ul[@id = 'gallery-tree']/li[2]//*[contains(@class, 'fui-tree-toggle')]",
             ))
             .await?;
-        press_until("the toggle opens the branch", &branch, async || {
-            open_item(browser, "Synthetic procedure").await
-        })
-        .await?;
+        browser.click_and_load(&branch).await?;
+        browser.hydrated().await?;
         until("the opened item joins the address", async || {
             Ok(address(browser).await?.contains("SYN-200"))
         })
         .await?;
-        let opened = address(browser).await?;
-        browser.goto(&opened).await?;
         assert!(open_item(browser, "Synthetic procedure").await?);
         browser
             .text("a", "Synthetic child, read on opening")
             .await?;
-        // Closing by the keyboard (Left) removes it again.
-        let picked = browser.element(By::Id("run-value-set")).await?;
-        until("the page hydrates a third time", async || {
-            Ok(!picked.is_displayed().await?)
-        })
-        .await?;
+        // Closing by the keyboard (Left) folds it in place, kept across a reload.
         let item = browser
             .element(By::XPath("//ul[@id = 'gallery-tree']/li[2]"))
             .await?;
@@ -886,11 +857,13 @@ async fn the_tree_keeps_its_open_items_in_the_address_across_a_reload() -> Resul
             Ok(!open_item(browser, "Synthetic procedure").await?)
         })
         .await?;
-        until("the branch leaves the address", async || {
-            Ok(!address(browser).await?.contains("SYN-200"))
+        browser.driver().refresh().await?;
+        browser.hydrated().await?;
+        until("the reload keeps the branch closed", async || {
+            Ok(!open_item(browser, "Synthetic procedure").await?)
         })
         .await?;
-        browser.console_clean("the tree's address").await
+        browser.console_clean("the tree's folds").await
     })
     .await
 }

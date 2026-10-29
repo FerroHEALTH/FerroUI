@@ -6,8 +6,11 @@
 // hidden; this folds a drawn level in place, walks the keys over the items
 // in sight with one tab stop, keeps the open fields of a form in step and
 // keeps the page's folds for the session. Opening a level not read yet
-// follows the toggle's link. The walk is the crate's in_sight and moved.
+// follows the toggle's link, and by the keyboard the focus returns to its
+// item on the page the link draws. The walk is the crate's in_sight and
+// moved.
 const KEY = "fui-tree:";
+const FOCUS = "fui-tree-focus:";
 
 // The move a key makes from the item at index `at` of the items `shown`
 // ({key, parent, expandable, open, link}), as the crate's moved.
@@ -51,6 +54,7 @@ export function enhance(root) {
   const fields = root.querySelector("[data-fui-open-fields]");
   const icons = root.querySelector("template[data-fui-icons]");
   const store = KEY + location.pathname + location.search + "#" + list.id;
+  const focusKey = FOCUS + location.pathname + "#" + list.id;
   const own = (item) => item.closest("[role='tree']") === list;
   const items = () => [...list.querySelectorAll("li[role='treeitem']")].filter(own);
   const groupOf = (item) => item.querySelector(":scope > ul[role='group']");
@@ -167,6 +171,15 @@ export function enhance(root) {
     } else close(item);
   }
   for (const toggle of root.querySelectorAll("button.fui-tree-toggle")) toggle.disabled = false;
+  let waiting = null;
+  try {
+    waiting = sessionStorage.getItem(focusKey);
+    sessionStorage.removeItem(focusKey);
+  } catch (_) {
+    waiting = null;
+  }
+  const returned = waiting && byKey(waiting);
+  if (returned) focusOn(returned);
 
   list.addEventListener("click", (event) => {
     const toggle = event.target.closest(".fui-tree-toggle");
@@ -195,7 +208,15 @@ export function enhance(root) {
       const target = byKey(step.open);
       const toggle = toggleOf(target);
       if (groupOf(target)) open(target);
-      else if (toggle && toggle.tagName === "A") toggle.click();
+      else if (toggle && toggle.tagName === "A") {
+        // The level loads with the page its link draws; the focus waits there.
+        try {
+          sessionStorage.setItem(focusKey, step.open);
+        } catch (_) {
+          // Storage refused: the page opens with the focus at its top.
+        }
+        toggle.click();
+      }
     } else if (step.follow) {
       const link = byKey(step.follow).querySelector(":scope > .fui-tree-row > a.fui-tree-label");
       if (link) link.click();
