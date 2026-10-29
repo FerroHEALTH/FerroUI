@@ -135,6 +135,10 @@ pub const MODULES: &[Module] = &[
         text: include_str!("../scripts/topology.js"),
     },
     Module {
+        file: "tree.js",
+        text: include_str!("../scripts/tree.js"),
+    },
+    Module {
         file: "upload.js",
         text: include_str!("../scripts/upload.js"),
     },

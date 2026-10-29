@@ -85,6 +85,7 @@ pub mod timeline;
 pub mod toast;
 pub mod topology;
 pub mod transform;
+pub mod tree;
 pub mod upload;
 pub mod version;
 pub mod versions;
