@@ -422,6 +422,28 @@ async fn a_secret_field_of_an_answer_form_appears_nowhere_on_the_page_it_draws()
     Ok(())
 }
 
+/// A form marks each of its secret fields under a name of its own, so two
+/// marks post no name twice, and neither value reaches the page (#503).
+#[tokio::test]
+async fn two_secret_fields_of_an_answer_form_appear_nowhere_on_the_page_it_draws()
+-> Result<(), Box<dyn Error>> {
+    let (parts, body) = count_words(
+        "note=two+words&pin=synthetic-pin-4712&ferroui_secret_70696e=pin\
+         &key=synthetic-key-4712&ferroui_secret_6b6579=key&ferroui_answer=%2Fferrobridge%2Fforms",
+    )
+    .await?;
+    assert_eq!(StatusCode::OK, parts.status);
+    assert!(
+        body.contains("<p id=\"note-answer\" class=\"fui-help\">The note has 2 words.</p>"),
+        "the function answered: {body}"
+    );
+    assert!(
+        !body.contains("synthetic-pin-4712") && !body.contains("synthetic-key-4712"),
+        "neither secret is in the page or its hydration data: {body}"
+    );
+    Ok(())
+}
+
 #[tokio::test]
 async fn the_forms_page_drawn_on_its_own_carries_no_answer() -> Result<(), Box<dyn Error>> {
     let (parts, body) = get("/ferrobridge/forms").await?;

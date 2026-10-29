@@ -47,8 +47,15 @@ pub const RETURN: &str = "ferroui_return";
 /// page it names ([`answer_field`]).
 pub const ANSWER: &str = "ferroui_answer";
 
-/// The name of the hidden field that marks another field of the form as
-/// secret ([`secret_mark`]): its value names that field.
+/// The name every secret mark starts with ([`secret_mark`]): a mark is a
+/// hidden field named `ferroui_secret_` and the hexadecimal UTF-8 bytes of
+/// the field it marks, its value that field's name.
+///
+/// Each mark has a name of its own, so a form may mark any number of fields
+/// and a hydrated `<ActionForm>` still reads it: `serde_qs` refuses a name
+/// posted twice (#503). A field marked twice posts its mark twice; mark
+/// each field once. A field named `ferroui_secret` alone, the mark of
+/// 0.5.7, is still read as a mark.
 pub const SECRET: &str = "ferroui_secret";
 
 /// The query keys `server_fn` writes an action's error under, which the
@@ -91,8 +98,10 @@ pub fn answer_field() -> impl IntoView {
 /// secret field to the server function and leaves it out of [`Posted`], so
 /// the page drawn with the answer carries its value neither in its markup
 /// nor in its hydration data. Draw one beside every input whose value the
-/// page must never show again; [`crate::view::secret::secret_field`] draws
-/// its own. No specification governs this: our own design (#499).
+/// page must never show again, once per field, as many as the form holds;
+/// each mark's name is its own ([`SECRET`]), so the hydrated form posts no
+/// name twice. [`crate::view::secret::secret_field`] draws its own. No
+/// specification governs this: our own design (#499, #503).
 ///
 /// ```
 /// use ferrohealth_ui::widget::action::secret_mark;
@@ -100,12 +109,43 @@ pub fn answer_field() -> impl IntoView {
 ///
 /// let html = Owner::new().with(|| secret_mark("token[value]").to_html());
 /// assert!(html.contains(r#"type="hidden""#));
-/// assert!(html.contains(r#"name="ferroui_secret""#));
+/// assert!(html.contains(r#"name="ferroui_secret_746f6b656e5b76616c75655d""#));
 /// assert!(html.contains(r#"value="token[value]""#));
 /// ```
 #[must_use]
 pub fn secret_mark(name: &str) -> AnyView {
-    view! { <input type="hidden" name=SECRET value=name.to_owned() /> }.into_any()
+    view! { <input type="hidden" name=mark_name(name) value=name.to_owned() /> }.into_any()
+}
+
+/// The name of the mark of the field `name`: [`SECRET`], an underscore and
+/// the field name's UTF-8 bytes in lower-case hexadecimal, which holds no
+/// character `serde_qs` reads as structure.
+fn mark_name(name: &str) -> String {
+    name.bytes().fold(format!("{SECRET}_"), |mut mark, byte| {
+        mark.push(hex_digit(byte >> 4));
+        mark.push(hex_digit(byte & 0x0f));
+        mark
+    })
+}
+
+/// The lower-case hexadecimal digit of the nibble `nibble`, 0 to 15.
+fn hex_digit(nibble: u8) -> char {
+    match nibble {
+        0..=9 => char::from(b'0' + nibble),
+        _ => char::from(b'a' + (nibble - 10)),
+    }
+}
+
+/// Whether the posted field `name` is a secret mark: [`SECRET`] alone, or
+/// [`SECRET`], an underscore and hexadecimal digits.
+#[cfg(not(target_arch = "wasm32"))]
+fn is_mark(name: &str) -> bool {
+    name.strip_prefix(SECRET).is_some_and(|rest| {
+        rest.is_empty()
+            || rest.strip_prefix('_').is_some_and(|hex| {
+                !hex.is_empty() && hex.bytes().all(|byte| byte.is_ascii_hexdigit())
+            })
+    })
 }
 
 /// The fields a plain post of an [`answer_field`] form carried, as the page
@@ -441,22 +481,22 @@ fn header(headers: &http::HeaderMap, name: http::header::HeaderName) -> Option<&
 }
 
 /// The fields of the form body `bytes` the page reads back: every field
-/// but [`ANSWER`], [`SECRET`] and each field a [`SECRET`] names.
+/// but [`ANSWER`], the secret marks and each field a mark names.
 #[cfg(not(target_arch = "wasm32"))]
 fn posted(bytes: &[u8]) -> Posted {
     let secret: std::collections::BTreeSet<String> = form_urlencoded::parse(bytes)
-        .filter(|(name, _)| name == SECRET)
+        .filter(|(name, _)| is_mark(name))
         .map(|(_, value)| value.into_owned())
         .collect();
     Posted {
         fields: form_urlencoded::parse(bytes)
-            .filter(|(name, _)| name != ANSWER && name != SECRET && !secret.contains(name.as_ref()))
+            .filter(|(name, _)| name != ANSWER && !is_mark(name) && !secret.contains(name.as_ref()))
             .map(|(name, value)| (name.into_owned(), value.into_owned()))
             .collect(),
     }
 }
 
-/// The form body `bytes` without its [`ANSWER`] and [`SECRET`] fields,
+/// The form body `bytes` without its [`ANSWER`] field and its secret marks,
 /// which are the page's and never the function's.
 #[cfg(not(target_arch = "wasm32"))]
 fn without_answer(bytes: &[u8]) -> Vec<u8> {
@@ -466,7 +506,7 @@ fn without_answer(bytes: &[u8]) -> Vec<u8> {
             !pair.is_empty()
                 && form_urlencoded::parse(pair)
                     .next()
-                    .is_none_or(|(name, _)| name != ANSWER && name != SECRET)
+                    .is_none_or(|(name, _)| name != ANSWER && !is_mark(&name))
         })
         .collect::<Vec<_>>()
         .join(&b'&')
@@ -608,6 +648,33 @@ mod answers {
         Ok(())
     }
 
+    /// A server function with two secret fields, which answers with what it
+    /// read.
+    #[cfg_attr(
+        not(target_arch = "wasm32"),
+        allow(
+            clippy::unused_async,
+            reason = "the server function macro wants the function async, and this one awaits nothing; the macro's expansion carries the lint"
+        )
+    )]
+    #[leptos::server(endpoint = "save_credentials")]
+    async fn save_credentials(
+        user: String,
+        password: String,
+        token: String,
+    ) -> Result<String, ServerFnError> {
+        Ok(format!("{user}|{password}|{token}"))
+    }
+
+    /// The form of two secret fields, each marked as `secret_mark` marks it.
+    fn two_secrets() -> String {
+        format!(
+            "user=u&password=synthetic-pass-3&{}=password&token=synthetic-token-5&{}=token",
+            super::mark_name("password"),
+            super::mark_name("token"),
+        )
+    }
+
     /// The page, drawing what it was handed as JSON with its own address.
     async fn page(request: Request) -> Response {
         let answered = request.extensions().get::<Answered>().cloned();
@@ -626,6 +693,10 @@ mod answers {
                 .route("/api/fail", post(fail))
                 .route("/api/leave", post(leave))
                 .route("/api/sign_out", post(leptos_axum::handle_server_fns))
+                .route(
+                    "/api/save_credentials",
+                    post(leptos_axum::handle_server_fns),
+                )
                 .route("/page", get(page)),
         )
     }
@@ -706,6 +777,72 @@ mod answers {
                 .contains("synthetic-secret-7"),
             "the posted fields the page carries hold no secret"
         );
+    }
+
+    #[test]
+    fn a_hydrated_form_reads_a_form_with_two_secret_marks() {
+        // NOTE: leptos 0.8 `FromFormData::from_form_data` reads the form with this call.
+        let read = serde_qs::Config::new(5, false)
+            .deserialize_str::<SaveCredentials>(&two_secrets())
+            .unwrap();
+        assert_eq!("synthetic-pass-3", read.password);
+        assert_eq!("synthetic-token-5", read.token);
+        assert!(
+            serde_qs::Config::new(5, false)
+                .deserialize_str::<SaveCredentials>(
+                    "user=u&password=p&ferroui_secret=password&token=t&ferroui_secret=token"
+                )
+                .is_err(),
+            "one name posted twice is what the hydrated form refused (#503)"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_call_from_the_page_with_two_secret_marks_reaches_the_function() {
+        let (parts, body) = send("/api/save_credentials", "*/*", &two_secrets())
+            .await
+            .unwrap();
+        assert_eq!(StatusCode::OK, parts.status);
+        assert_eq!(
+            Ok(String::from("u|synthetic-pass-3|synthetic-token-5")),
+            outcome::<String, ServerFnError, JsonEncoding>(true, body)
+        );
+    }
+
+    #[tokio::test]
+    async fn a_plain_post_with_two_secret_marks_keeps_both_out_of_the_page() {
+        let (parts, body) = send(
+            "/api/save_credentials",
+            HTML,
+            &format!("{}&ferroui_answer=%2Fpage", two_secrets()),
+        )
+        .await
+        .unwrap();
+        assert_eq!(StatusCode::OK, parts.status);
+        let (_, answered) = answered_of(&body).unwrap();
+        assert_eq!(
+            Ok(String::from("u|synthetic-pass-3|synthetic-token-5")),
+            outcome::<String, ServerFnError, JsonEncoding>(answered.ok, answered.body.clone()),
+            "the function reads both secrets"
+        );
+        assert_eq!(Some("u"), answered.posted.field("user"));
+        let carried = serde_json::to_string(&answered.posted).unwrap();
+        assert!(
+            !carried.contains("synthetic-pass-3") && !carried.contains("synthetic-token-5"),
+            "neither secret is in the posted fields: {carried}"
+        );
+        assert!(!carried.contains("ferroui_secret"), "nor a mark: {carried}");
+    }
+
+    #[test]
+    fn a_mark_is_named_by_the_field_it_marks() {
+        assert_eq!("ferroui_secret_70617373", super::mark_name("pass"));
+        assert!(super::is_mark("ferroui_secret_70617373"));
+        assert!(super::is_mark("ferroui_secret"), "the mark of 0.5.7");
+        assert!(!super::is_mark("ferroui_secret_"));
+        assert!(!super::is_mark("ferroui_secret_zz"));
+        assert!(!super::is_mark("ferroui_secrets"));
+        assert!(!super::is_mark("password"));
     }
 
     #[tokio::test]
