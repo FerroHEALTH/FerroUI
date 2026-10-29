@@ -1366,12 +1366,21 @@
     line-height: var(--leading-small);
   }
 
-  .fui-button > .fui-icon {
+  .fui-button > .fui-icon,
+  .fui-copy > .fui-button > :is([data-fui-ready], [data-fui-done]) > .fui-icon {
     height: var(--leading-body);
   }
 
-  .fui-button-small > .fui-icon {
+  .fui-button-small > .fui-icon,
+  .fui-copy > .fui-button-small > :is([data-fui-ready], [data-fui-done]) > .fui-icon {
     height: var(--leading-small);
+  }
+
+  /* The copy button lays each state's glyph and words (Copy, Copied) out in
+     its own row, so its gap spaces them as any button's; the base `[hidden]`
+     rule keeps the state it does not show hidden. */
+  .fui-copy > .fui-button > :is([data-fui-ready], [data-fui-done]) {
+    display: contents;
   }
 
   /* The segmented control, after FerroEHR's format selector: joined

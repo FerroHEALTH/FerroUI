@@ -160,7 +160,7 @@ const ANOTHER: &str = "another";
 
 /// One value picked from a short list in a select, or from a long one in a
 /// combobox, or typed behind the last option, each control with its own
-/// label, and a button back to the list.
+/// label, and each with a button back to the list.
 fn pick_or_typed(v: &Visit) -> Html {
     let select = h(format!(
         "<select id=\"pick-version-choice\" class=\"{SELECT}\" aria-describedby=\"{help}\"><option value=\"\">{}</option><option value=\"2.81\">2.81</option><option value=\"2.80\">2.80</option><option value=\"{ANOTHER}\" data-other>{}</option></select>",
@@ -214,9 +214,11 @@ fn pick_or_typed(v: &Visit) -> Html {
         )),
         typing: false,
         after: Some(h(format!(
-            "<p id=\"{}\" class=\"fui-help\">{}</p>",
+            "<p id=\"{}\" class=\"fui-help\">{}</p><button type=\"button\" id=\"pick-canonical-back\" class=\"{}\" data-fui-pick-back hidden>{}</button>",
             help_id("pick-canonical"),
-            t(v.tr(Msg::CodeSystemServerHoldsCanonical))
+            t(v.tr(Msg::CodeSystemServerHoldsCanonical)),
+            Variant::Ghost.small(),
+            label(Some(Glyph::ARROW_LEFT), v.tr(Msg::ChooseFromList))
         ))),
     });
     card(

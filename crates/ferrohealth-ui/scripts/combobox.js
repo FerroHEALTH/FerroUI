@@ -11,6 +11,8 @@
 // carries the select's name, so the form posts the same value either way.
 // Over a console's search (data-fui-remote) the typed words post under the
 // remote's name and the options the page arrived with show unfiltered.
+// A fui:choose event on the root puts it on the listed option of its
+// value, or on none, and says no change (a pick-or-type field's back).
 export const ROWS = 100;
 
 export function matches(option, needle) {
@@ -224,5 +226,13 @@ export function enhance(root) {
     }
   });
   input.addEventListener("blur", close);
+  root.addEventListener("fui:choose", (event) => {
+    const value = event.detail ? event.detail.value : "";
+    const option = options.find((option) => option.value === value && !option.other);
+    state.selected = option ? option.value : null;
+    state.chosenLabel = option ? option.label : null;
+    hidden.removeAttribute("data-other");
+    close();
+  });
   draw();
 }

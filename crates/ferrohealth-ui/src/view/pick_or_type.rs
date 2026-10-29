@@ -14,7 +14,9 @@
 //! shows; the field draws them as one, and the `picker` module shows the
 //! input when the picker's option marked `data-other` is chosen (a
 //! combobox's [`crate::view::combobox::ComboOption::other`]), and the
-//! picker again on a control in `after` marked `data-fui-pick-back`.
+//! picker again on a control in `after` marked `data-fui-pick-back`, on the
+//! listed option chosen before the other one or on its first, so choosing
+//! the other option again shows the input.
 //! [`crate::view::picker`] is the whole widget, for a console that holds
 //! no controls of its own.
 
