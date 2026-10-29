@@ -72,7 +72,7 @@ async fn raised_toasts(browser: &Browser, brand: Brand, theme: &str) -> Result<(
     let region = browser.element(By::Css(".fui-toasts")).await?;
     until("the region shows as many toasts as it holds", async || {
         Ok(region.find_all(By::Css(".fui-toast")).await?.len()
-            >= ferrohealth_ui::widget::toast::SHOWN_MAX)
+            >= ferrohealth_ui::view::toast::SHOWN_MAX)
     })
     .await?;
     shot_of(browser, brand, theme, "toasts", &region).await?;

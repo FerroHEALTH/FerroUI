@@ -385,7 +385,7 @@ async fn the_toasts_wait_under_the_pointer_show_a_few_and_stay_above_the_decisio
             .perform()
             .await?;
         tokio::time::sleep(std::time::Duration::from_millis(
-            ferrohealth_ui::widget::toast::DWELL_MS + 1500,
+            ferrohealth_ui::view::toast::DWELL_MS + 1500,
         ))
         .await;
         assert!(
@@ -415,7 +415,7 @@ async fn the_toasts_wait_under_the_pointer_show_a_few_and_stay_above_the_decisio
             .await?
             .len();
         assert_eq!(
-            ferrohealth_ui::widget::toast::SHOWN_MAX,
+            ferrohealth_ui::view::toast::SHOWN_MAX,
             shown,
             "the region shows a few toasts at once"
         );

@@ -70,7 +70,7 @@ fn confirm_and_toast(v: &Visit, dialog: &str, danger: bool) -> Html {
         )
     };
     h(format!(
-        "<a href=\"{}?toast={toast}\" id=\"confirm-{dialog}\" class=\"{class}\" data-fui-keep>{}{}</a>",
+        "<a href=\"{}?toast={toast}\" id=\"confirm-{dialog}\" class=\"{class}\" data-fui=\"keep\">{}{}</a>",
         t(page_path(v, "overlays")),
         icon(glyph, "16"),
         t(words)
@@ -412,7 +412,7 @@ fn modals(v: &Visit) -> Html {
             split(
                 h(format!("<code>{row}</code>")),
                 h(format!(
-                    "<a href=\"{}?delete={row}\" class=\"{}\" data-delete=\"{row}\" data-fui-keep>{}{}</a>",
+                    "<a href=\"{}?delete={row}\" class=\"{}\" data-delete=\"{row}\" data-fui=\"keep\">{}{}</a>",
                     t(&here),
                     Variant::Danger.small(),
                     icon(Glyph::TRASH, "14"),
@@ -434,7 +434,7 @@ fn modals(v: &Visit) -> Html {
             width: Width::Narrow,
             body: h(format!("<p>{}</p>", t(v.tr(Msg::FileGoesGoodRunningSet)))),
             actions: h(format!(
-                "<a href=\"{}?toast=row-deleted&amp;row={}\" id=\"confirm-delete-row\" class=\"{}\" data-fui-keep>{}{}</a>",
+                "<a href=\"{}?toast=row-deleted&amp;row={}\" id=\"confirm-delete-row\" class=\"{}\" data-fui=\"keep\">{}{}</a>",
                 t(&here),
                 t(&named),
                 Variant::Destructive.class(),
@@ -575,7 +575,7 @@ fn toasts(v: &Visit) -> Html {
     .into_iter()
     .map(|(tone, words)| {
         h(format!(
-            "<a href=\"{}?toast={}\" class=\"{}\" data-toast=\"{}\" data-fui-keep>{}</a>",
+            "<a href=\"{}?toast={}\" class=\"{}\" data-toast=\"{}\" data-fui=\"keep\">{}</a>",
             t(&here),
             tone.name(),
             Variant::Secondary.class(),

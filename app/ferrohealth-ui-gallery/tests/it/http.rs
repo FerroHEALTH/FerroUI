@@ -12,13 +12,9 @@ use ferrohealth_ui::style::{Brand, STYLESHEET};
 use http::{Request, StatusCode, header};
 use tower::ServiceExt as _;
 
-/// The gallery's service, its site bundle under a root no test reads.
+/// The gallery's service.
 fn gallery() -> axum::Router {
-    let addr = std::net::SocketAddr::from(([127, 0, 0, 1], 3000));
-    ferrohealth_ui_gallery::server::router(ferrohealth_ui_gallery::server::leptos_options(
-        "target/site",
-        addr,
-    ))
+    ferrohealth_ui_gallery::server::router()
 }
 
 /// What the gallery answers `request` with: its status, headers and body.
@@ -36,7 +32,12 @@ async fn get(path: &str) -> Result<(http::response::Parts, String), Box<dyn Erro
 
 #[tokio::test]
 async fn the_stylesheet_and_every_theme_are_served_as_css() -> Result<(), Box<dyn Error>> {
-    let (parts, body) = get("/ferrohealth-ui.css").await?;
+    let assets = format!(
+        "{}/{}",
+        ferrohealth_ui::serve::PREFIX,
+        ferrohealth_ui::serve::VERSION
+    );
+    let (parts, body) = get(&format!("{assets}/ferrohealth-ui.css")).await?;
     assert_eq!(StatusCode::OK, parts.status);
     assert_eq!(STYLESHEET, body);
     assert!(
@@ -45,13 +46,13 @@ async fn the_stylesheet_and_every_theme_are_served_as_css() -> Result<(), Box<dy
             .starts_with("text/css")
     );
     for brand in Brand::ALL {
-        let (parts, body) = get(&format!("/themes/{}.css", brand.key())).await?;
+        let (parts, body) = get(&format!("{assets}/themes/{}.css", brand.key())).await?;
         assert_eq!(StatusCode::OK, parts.status, "{brand:?}");
         assert_eq!(brand.theme(), body, "{brand:?}");
     }
-    let (parts, _) = get("/themes/../ferrohealth-ui.css").await?;
+    let (parts, _) = get(&format!("{assets}/themes/../ferrohealth-ui.css")).await?;
     assert_ne!(StatusCode::OK, parts.status);
-    let (parts, _) = get("/themes/unknown.css").await?;
+    let (parts, _) = get(&format!("{assets}/themes/unknown.css")).await?;
     assert_eq!(StatusCode::NOT_FOUND, parts.status);
     Ok(())
 }
@@ -265,9 +266,9 @@ async fn a_tab_your_preferences_lacks_answers_404() -> Result<(), Box<dyn Error>
     Ok(())
 }
 
-/// A row's danger confirmation is the `<ActionForm>` of its server
-/// function: with no WebAssembly it posts there as a plain form, and the
-/// function sends the browser back naming the member removed (#500).
+/// A row's danger confirmation is the form that posts the removal: it
+/// posts as a plain form, and the gallery sends the browser back naming the
+/// member removed (#500).
 #[tokio::test]
 async fn a_removal_dialog_is_its_actions_form_and_a_plain_post_of_it_removes_the_row()
 -> Result<(), Box<dyn Error>> {
@@ -279,7 +280,7 @@ async fn a_removal_dialog_is_its_actions_form_and_a_plain_post_of_it_removes_the
         .and_then(|rest| rest.split("</dialog>").next())
         .unwrap_or_default();
     assert!(
-        dialog.contains(r#"action="/api/remove_member""#)
+        dialog.contains(r#"action="/remove-member""#)
             && dialog.contains(r#"method="post""#)
             && dialog.contains(r#"class="fui-dialog-form""#),
         "the dialog's form is the action's form: {dialog}"
@@ -290,7 +291,7 @@ async fn a_removal_dialog_is_its_actions_form_and_a_plain_post_of_it_removes_the
             && dialog.contains(r#"type="submit""#),
         "the fields and the confirm sit inside it: {dialog}"
     );
-    let request = Request::post("/api/remove_member")
+    let request = Request::post("/remove-member")
         .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
         .header(header::ACCEPT, "text/html,application/xhtml+xml,*/*;q=0.8")
         .body(Body::from(
@@ -302,7 +303,7 @@ async fn a_removal_dialog_is_its_actions_form_and_a_plain_post_of_it_removes_the
         "/ferrofed/overlays?removed=node-b",
         parts.headers[header::LOCATION]
     );
-    let request = Request::post("/api/remove_member")
+    let request = Request::post("/remove-member")
         .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
         .header(header::ACCEPT, "*/*")
         .body(Body::from(
@@ -362,44 +363,10 @@ async fn an_export_riding_the_query_form_receives_the_query() -> Result<(), Box<
     Ok(())
 }
 
-/// What the gallery answers a plain form post of `body` to the
-/// `acknowledge` server function with, as a browser with no WebAssembly
-/// and no `Referer` sends it.
-async fn acknowledge(body: &str) -> Result<http::response::Parts, Box<dyn Error>> {
-    let request = Request::post("/api/acknowledge")
-        .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
-        .header(header::ACCEPT, "text/html,application/xhtml+xml,*/*;q=0.8")
-        .body(Body::from(body.to_owned()))?;
-    Ok(send(request).await?.0)
-}
-
-#[tokio::test]
-async fn a_plain_post_with_no_referer_returns_to_the_page_its_form_names()
--> Result<(), Box<dyn Error>> {
-    let parts = acknowledge("note=seen&ferroui_return=%2Fferropix%2Fforms%3Ftab%3Dtwo").await?;
-    assert_eq!(StatusCode::FOUND, parts.status);
-    assert_eq!("/ferropix/forms?tab=two", parts.headers[header::LOCATION]);
-    Ok(())
-}
-
-#[tokio::test]
-async fn a_failed_plain_post_returns_with_the_error_the_router_reads() -> Result<(), Box<dyn Error>>
-{
-    let parts = acknowledge("note=&ferroui_return=%2Fferropix%2Fforms").await?;
-    assert_eq!(StatusCode::FOUND, parts.status);
-    let location = parts.headers[header::LOCATION].to_str()?;
-    assert!(
-        location.starts_with("/ferropix/forms?__path=%2Fapi%2Facknowledge&__err="),
-        "{location}"
-    );
-    Ok(())
-}
-
-/// What the gallery answers a plain form post of `body` to the
-/// `count_words` server function with, as a browser with no WebAssembly
-/// sends it: its status, headers and body.
+/// What the gallery answers a plain form post of `body` to the forms page,
+/// which draws itself with the note's answer: its status, headers and body.
 async fn count_words(body: &str) -> Result<(http::response::Parts, String), Box<dyn Error>> {
-    let request = Request::post("/api/count_words")
+    let request = Request::post("/ferrobridge/forms")
         .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
         .header(header::ACCEPT, "text/html,application/xhtml+xml,*/*;q=0.8")
         .body(Body::from(body.to_owned()))?;
@@ -409,7 +376,7 @@ async fn count_words(body: &str) -> Result<(http::response::Parts, String), Box<
 #[tokio::test]
 async fn a_plain_post_of_an_answer_form_draws_its_page_with_the_answer_and_the_note()
 -> Result<(), Box<dyn Error>> {
-    let (parts, body) = count_words("note=two+words&ferroui_answer=%2Fferrobridge%2Fforms").await?;
+    let (parts, body) = count_words("note=two+words").await?;
     assert_eq!(StatusCode::OK, parts.status);
     assert_eq!("no-store", parts.headers[header::CACHE_CONTROL]);
     assert!(parts.headers.contains_key(header::CONTENT_SECURITY_POLICY));
@@ -427,8 +394,8 @@ async fn a_plain_post_of_an_answer_form_draws_its_page_with_the_answer_and_the_n
         "the posted note is kept in its field: {note}"
     );
     assert!(
-        body.contains("name=\"ferroui_answer\" value=\"/ferrobridge/forms\""),
-        "the page drawn names itself, not the function"
+        body.contains("<form method=\"post\" class=\"fui-form\" id=\"answer-form\">"),
+        "the form posts to the page it is drawn on"
     );
     Ok(())
 }
@@ -436,7 +403,7 @@ async fn a_plain_post_of_an_answer_form_draws_its_page_with_the_answer_and_the_n
 #[tokio::test]
 async fn a_refused_plain_post_of_an_answer_form_draws_the_refusal_and_keeps_the_note()
 -> Result<(), Box<dyn Error>> {
-    let (parts, body) = count_words("note=+&ferroui_answer=%2Fferrobridge%2Fforms").await?;
+    let (parts, body) = count_words("note=+").await?;
     assert_eq!(StatusCode::OK, parts.status);
     assert_eq!("no-store", parts.headers[header::CACHE_CONTROL]);
     assert!(
@@ -455,7 +422,7 @@ async fn a_secret_field_of_an_answer_form_appears_nowhere_on_the_page_it_draws()
 -> Result<(), Box<dyn Error>> {
     let (parts, body) = count_words(
         "note=two+words&pin=synthetic-pin-4711&ferroui_secret=pin\
-         &shown=synthetic-shown-4711&ferroui_answer=%2Fferrobridge%2Fforms",
+         &shown=synthetic-shown-4711",
     )
     .await?;
     assert_eq!(StatusCode::OK, parts.status);
@@ -481,7 +448,7 @@ async fn two_secret_fields_of_an_answer_form_appear_nowhere_on_the_page_it_draws
 -> Result<(), Box<dyn Error>> {
     let (parts, body) = count_words(
         "note=two+words&pin=synthetic-pin-4712&ferroui_secret_70696e=pin\
-         &key=synthetic-key-4712&ferroui_secret_6b6579=key&ferroui_answer=%2Fferrobridge%2Fforms",
+         &key=synthetic-key-4712&ferroui_secret_6b6579=key",
     )
     .await?;
     assert_eq!(StatusCode::OK, parts.status);
@@ -501,14 +468,17 @@ async fn the_forms_page_drawn_on_its_own_carries_no_answer() -> Result<(), Box<d
     let (parts, body) = get("/ferrobridge/forms").await?;
     assert_eq!(StatusCode::OK, parts.status);
     assert!(!body.contains("id=\"note-answer\""));
-    assert!(body.contains("name=\"ferroui_answer\" value=\"/ferrobridge/forms\""));
+    assert!(body.contains("<form method=\"post\" class=\"fui-form\" id=\"answer-form\">"));
     Ok(())
 }
 
 #[tokio::test]
 async fn a_return_field_naming_another_origin_is_never_followed() -> Result<(), Box<dyn Error>> {
     for field in ["%2F%2Fevil.example%2F", "https%3A%2F%2Fevil.example%2F"] {
-        let parts = acknowledge(&format!("note=seen&ferroui_return={field}")).await?;
+        let request = Request::post("/preference")
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .body(Body::from(format!("theme=dark&back={field}")))?;
+        let (parts, _) = send(request).await?;
         let location = parts
             .headers
             .get(header::LOCATION)
@@ -544,11 +514,11 @@ async fn the_session_route_reads_without_extending_extends_on_a_post_and_refuses
         parts.headers.get(header::SET_COOKIE).is_none(),
         "a read never extends"
     );
-    let read: ferrohealth_ui::widget::session::Left = serde_json::from_str(&body)?;
+    let read: ferrohealth_ui::view::session::Left = serde_json::from_str(&body)?;
     assert!((889..=890).contains(&read.idle), "{read:?}");
     let (parts, body) = send(ask("POST", &cookie)?).await?;
     assert_eq!(StatusCode::OK, parts.status, "{body}");
-    let extended: ferrohealth_ui::widget::session::Left = serde_json::from_str(&body)?;
+    let extended: ferrohealth_ui::view::session::Left = serde_json::from_str(&body)?;
     assert!(extended.idle >= 899, "{extended:?}");
     assert!(
         parts.headers[header::SET_COOKIE]

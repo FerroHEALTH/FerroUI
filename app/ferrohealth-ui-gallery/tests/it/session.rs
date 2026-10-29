@@ -10,7 +10,7 @@
 
 use std::error::Error;
 
-use ferrohealth_ui::widget::session::WARNING_ID;
+use ferrohealth_ui::view::session::WARNING_ID;
 use thirtyfour::prelude::*;
 
 use crate::browser::{Browser, until, with_browser};

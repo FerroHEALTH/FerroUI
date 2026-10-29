@@ -358,16 +358,12 @@ impl Browser {
         Ok(())
     }
 
-    /// Waits until the page has hydrated: the root element carries the
-    /// library's mark (`ferrohealth_ui::widget::hydration::HYDRATED`), so a
-    /// capture never shows a part the browser has yet to draw and a script
-    /// never changes the page before the hydration walk ends.
+    /// Waits until the page's script runs: the root element carries the
+    /// loader's mark (`ferrohealth_ui::script::MARK`), so a journey never
+    /// acts on a control before its module can answer.
     pub(crate) async fn hydrated(&self) -> Result<(), Box<dyn Error>> {
-        self.element(By::Css(format!(
-            "html[{}]",
-            ferrohealth_ui::widget::hydration::HYDRATED
-        )))
-        .await?;
+        self.element(By::Css(format!("html[{}]", ferrohealth_ui::script::MARK)))
+            .await?;
         Ok(())
     }
 

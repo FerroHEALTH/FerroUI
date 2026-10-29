@@ -83,12 +83,7 @@ impl Visit {
     /// The path with its query, as a link back to this very page.
     #[must_use]
     pub fn here(&self) -> String {
-        let query = self.query.to_string();
-        if query.is_empty() {
-            self.path.clone()
-        } else {
-            format!("{}?{query}", self.path)
-        }
+        format!("{}{}", self.path, self.query.to_query_string())
     }
 
     /// The gallery's message `msg` in the visit's locale.

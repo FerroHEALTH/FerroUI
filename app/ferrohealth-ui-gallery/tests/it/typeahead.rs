@@ -434,7 +434,7 @@ async fn a_submit_before_the_words_rest_leaves_the_panel_closed_over_the_page()
         browser
             .at(&gallery.url("/ferroterm/find?q=synthetic-00"))
             .await?;
-        tokio::time::sleep(ferrohealth_ui::widget::search::SETTLE * 5).await;
+        tokio::time::sleep(ferrohealth_ui::view::search::SETTLE * 5).await;
         let panel = browser
             .driver()
             .find(By::Id("gallery-search-panel"))
