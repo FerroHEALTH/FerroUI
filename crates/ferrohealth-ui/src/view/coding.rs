@@ -181,7 +181,10 @@ fn code_face(code: &str) -> String {
             broken(pieces(code, &[]))
         )
     } else {
-        format!("<code class=\"fui-coding-code\">{}</code>", Html::text(code))
+        format!(
+            "<code class=\"fui-coding-code\">{}</code>",
+            Html::text(code)
+        )
     }
 }
 
@@ -204,13 +207,7 @@ impl MoreCodes {
     /// The row of a list that shows `shown` of its `total` codes, reading
     /// `next` more at `href`, in `locale`.
     #[must_use]
-    pub fn of(
-        locale: &Locale,
-        shown: u32,
-        total: u32,
-        next: u32,
-        href: impl Into<String>,
-    ) -> Self {
+    pub fn of(locale: &Locale, shown: u32, total: u32, next: u32, href: impl Into<String>) -> Self {
         let rest = total.saturating_sub(shown);
         let link = if next >= rest {
             tr_with(locale, Text::CodesMoreRest, &[("count", rest.into())])
@@ -266,12 +263,21 @@ pub fn coding(locale: &Locale, coding: Coding, layout: Layout) -> Html {
         Some(href) => format!(
             "<a href=\"{}\"{} class=\"fui-row-link\">{words}</a>",
             Html::text(href),
-            if current { " aria-current=\"true\"" } else { "" }
+            if current {
+                " aria-current=\"true\""
+            } else {
+                ""
+            }
         ),
         None => words,
     };
     let system = system
-        .map(|system| format!("<span class=\"fui-coding-system\">{}</span>", Html::text(system)))
+        .map(|system| {
+            format!(
+                "<span class=\"fui-coding-system\">{}</span>",
+                Html::text(system)
+            )
+        })
         .unwrap_or_default();
     let mark = if inactive {
         String::from(inactive_mark(locale))

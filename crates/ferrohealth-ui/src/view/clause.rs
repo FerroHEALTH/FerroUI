@@ -35,10 +35,13 @@ pub enum ClauseKind {
 impl ClauseKind {
     /// The mark's word in the page's locale.
     fn word(self, locale: &Locale) -> Word {
-        tr(locale, match self {
-            Self::Include => Text::ClauseInclude,
-            Self::Exclude => Text::ClauseExclude,
-        })
+        tr(
+            locale,
+            match self {
+                Self::Include => Text::ClauseInclude,
+                Self::Exclude => Text::ClauseExclude,
+            },
+        )
     }
 
     /// The tone of the mark: the accent for an include, warn for an

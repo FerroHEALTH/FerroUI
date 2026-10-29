@@ -95,21 +95,24 @@ impl Relationship {
     /// The words of the relationship in the page's locale.
     #[must_use]
     pub fn words(self, locale: &Locale) -> Word {
-        tr(locale, match self {
-            Self::RelatedTo => Text::RelationRelated,
-            Self::Equivalent => Text::RelationEquivalent,
-            Self::Equal => Text::RelationEqual,
-            Self::Wider => Text::RelationTargetWider,
-            Self::Subsumes => Text::RelationSubsumes,
-            Self::Narrower => Text::RelationTargetNarrower,
-            Self::Specializes => Text::RelationSpecializes,
-            Self::Inexact => Text::RelationInexact,
-            Self::Disjoint => Text::RelationDisjoint,
-            Self::SourceNarrower => Text::RelationNarrower,
-            Self::SourceBroader => Text::RelationBroader,
-            Self::NotRelatedTo => Text::RelationNotRelated,
-            Self::Unmatched => Text::RelationNone,
-        })
+        tr(
+            locale,
+            match self {
+                Self::RelatedTo => Text::RelationRelated,
+                Self::Equivalent => Text::RelationEquivalent,
+                Self::Equal => Text::RelationEqual,
+                Self::Wider => Text::RelationTargetWider,
+                Self::Subsumes => Text::RelationSubsumes,
+                Self::Narrower => Text::RelationTargetNarrower,
+                Self::Specializes => Text::RelationSpecializes,
+                Self::Inexact => Text::RelationInexact,
+                Self::Disjoint => Text::RelationDisjoint,
+                Self::SourceNarrower => Text::RelationNarrower,
+                Self::SourceBroader => Text::RelationBroader,
+                Self::NotRelatedTo => Text::RelationNotRelated,
+                Self::Unmatched => Text::RelationNone,
+            },
+        )
     }
 }
 

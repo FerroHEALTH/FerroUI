@@ -83,6 +83,10 @@ pub const MODULES: &[Module] = &[
         text: include_str!("../scripts/highlight.js"),
     },
     Module {
+        file: "identifier.js",
+        text: include_str!("../scripts/identifier.js"),
+    },
+    Module {
         file: "keep.js",
         text: include_str!("../scripts/keep.js"),
     },
