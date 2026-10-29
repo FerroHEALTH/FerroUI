@@ -11,6 +11,42 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-30
+
+### Added
+
+- The combobox answers a `fui:choose` event on its root, which puts it on a
+  listed value, or on none, without a change event. A pick-or-type field's
+  back control uses it: back puts the picker on the listed option chosen
+  before the another option, or on its first, for a select and a combobox
+  picker alike (#517).
+
+### Changed
+
+- **Breaking:** the library renders server-side HTML from Askama templates
+  and depends on no Leptos crate. Every component is a function or a
+  struct that returns `Html`, which a console's own Askama template writes
+  unescaped with `{{ part }}`; a component that needs words takes the
+  request's `&Locale`. The shell writes the whole document, and the
+  interactive behaviour comes from small plain ES modules under
+  `/ferrohealth-ui/<version>/`, which the one loader `fui.js` imports for
+  each element that asks for one with `data-fui`. Every page works with the
+  modules refused. `serve::axum_router::router()` (the default `axum` feature) serves
+  the stylesheet, the brand themes and the modules. `docs/migration-0.6.md`
+  maps every removed item to its successor (#510).
+- The date picker's months view draws an up chevron after its year title,
+  as the design draws it, beside the down chevron of the days view's month
+  title. Both are hidden from assistive technology (#518).
+
+### Removed
+
+- **Breaking:** the `island` and `widget` modules, whose components now
+  live under `view` beside their script modules, and with them the
+  hydration layer: `widget::hydration`, `widget::prefetch`,
+  `widget::submit`, the answer mode of `widget::action` and the
+  `data-ferroui-hydrated` mark. A link is a link and a form posts as the
+  browser posts it (#510).
+
 ## [0.5.8] - 2026-10-29
 
 ### Added
@@ -2854,7 +2890,8 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.8...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.8...v0.6.0
 [0.5.8]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.7...v0.5.8
 [0.5.7]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.6...v0.5.7
 [0.5.6]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.5...v0.5.6
