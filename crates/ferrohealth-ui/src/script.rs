@@ -111,6 +111,10 @@ pub const MODULES: &[Module] = &[
         text: include_str!("../scripts/preference.js"),
     },
     Module {
+        file: "repeat.js",
+        text: include_str!("../scripts/repeat.js"),
+    },
+    Module {
         file: "shortcuts.js",
         text: include_str!("../scripts/shortcuts.js"),
     },

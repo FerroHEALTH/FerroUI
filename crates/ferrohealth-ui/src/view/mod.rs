@@ -57,6 +57,7 @@ pub mod popover;
 pub mod preferences;
 pub mod reading;
 pub mod refusal;
+pub mod repeat;
 pub mod replica;
 pub mod results;
 pub mod root_matrix;
