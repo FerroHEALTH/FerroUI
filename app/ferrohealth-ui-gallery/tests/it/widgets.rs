@@ -822,7 +822,9 @@ async fn the_tree_keeps_its_folds_across_a_reload_and_reads_a_level_by_its_link(
         .await?;
         assert!(
             !browser
-                .element(By::XPath("//a[contains(., 'Synthetic finding of the arm')]"))
+                .element(By::XPath(
+                    "//a[contains(., 'Synthetic finding of the arm')]"
+                ))
                 .await?
                 .is_displayed()
                 .await?,

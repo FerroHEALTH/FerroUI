@@ -90,7 +90,9 @@ fn confirm_and_toast(v: &Visit, dialog: &str, danger: bool) -> Html {
             v.tr(Msg::Reload),
         )
     };
-    let raised = told(v, toast).map(|flash| raises(&flash)).unwrap_or_default();
+    let raised = told(v, toast)
+        .map(|flash| raises(&flash))
+        .unwrap_or_default();
     h(format!(
         "<a href=\"{}?toast={toast}\" id=\"confirm-{dialog}\" class=\"{class}\"{raised} data-fui=\"keep\">{}{}</a>",
         t(page_path(v, "overlays")),

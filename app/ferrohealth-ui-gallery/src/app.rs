@@ -550,8 +550,7 @@ fn brand_shell(visit: &Visit, content: Html, toasts: Html) -> Html {
                 action: String::from(SIDEBAR_ROUTE),
                 back: back.clone(),
             }),
-            nest: None
-                .filter(|_: &ferrohealth_ui::view::nav::Nest| federation_entry(brand).is_empty()),
+            nest: crate::pages::federation::nest(visit, brand, back, federation_entry(brand)),
         },
     );
     let pill = status_pill(StatusPill {

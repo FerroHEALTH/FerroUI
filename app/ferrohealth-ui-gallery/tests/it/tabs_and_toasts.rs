@@ -373,9 +373,7 @@ async fn the_toasts_wait_under_the_pointer_show_a_few_and_stay_above_the_decisio
         browser.goto(&gallery.url("/ferrobridge/overlays")).await?;
         hydrated_toasts(browser).await?;
         dismiss_all(browser).await?;
-        let info = browser
-            .element(By::Css("a[data-toast='info']"))
-            .await?;
+        let info = browser.element(By::Css("a[data-toast='info']")).await?;
         info.click().await?;
         let toast = browser.element(By::Css(".fui-toast.fui-tone-info")).await?;
         browser
