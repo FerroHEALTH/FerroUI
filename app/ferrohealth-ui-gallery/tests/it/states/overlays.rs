@@ -141,11 +141,6 @@ pub(super) async fn overlays(
             "//button[@commandfor = 'how-reloading']",
             "how-reloading",
         ),
-        (
-            "modal-open",
-            "//button[@data-delete = 'synthetic-007.model.yml']",
-            "delete-row",
-        ),
         ("modal-wide", "//button[@id = 'open-rename']", "rename-file"),
         (
             "side-panel",
@@ -183,7 +178,39 @@ pub(super) async fn overlays(
         overlay(browser, brand, theme, state, By::XPath(opener), By::Id(id)).await?;
     }
     raised_toasts(browser, brand, theme).await?;
+    row_modal(browser, gallery, brand, theme).await?;
     phone_overlays(browser, brand, theme).await
+}
+
+/// A row's confirmation: its Delete link leads to the page with `?delete=`
+/// set, which the server draws with the confirmation open.
+async fn row_modal(
+    browser: &Browser,
+    gallery: &Gallery,
+    brand: Brand,
+    theme: &str,
+) -> Result<(), Box<dyn Error>> {
+    let row = "synthetic-007.model.yml";
+    let link = browser
+        .element(By::Css(format!("a[data-delete='{row}']")))
+        .await?;
+    press(browser, &link).await?;
+    browser
+        .at(&gallery.url(&format!("/{}/overlays?delete={row}", brand.key())))
+        .await?;
+    browser.hydrated().await?;
+    let target = browser.element(By::Id("delete-row")).await?;
+    until("modal-open opens", async || {
+        Ok(target.is_displayed().await?)
+    })
+    .await?;
+    away(browser).await?;
+    shot_of_view(browser, brand, theme, "modal-open").await?;
+    escape(browser).await?;
+    until("modal-open closes", async || {
+        Ok(!target.is_displayed().await?)
+    })
+    .await
 }
 
 /// The overlays that open differently on a phone, 390 px wide.

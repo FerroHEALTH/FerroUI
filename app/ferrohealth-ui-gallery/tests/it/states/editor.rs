@@ -26,7 +26,7 @@ pub(super) const STATES: &[&str] = &[
     "code-editor-draft-390",
     "code-editor-empty-390",
     "diagnostics-by-file-390",
-    "code-editor-no-wasm",
+    "code-editor-no-script",
 ];
 
 /// Opens the forms page afresh and waits for the code editor to be enhanced.
@@ -136,7 +136,7 @@ async fn no_script(
                 ".fui-editor-split:has(.fui-editor-stack.is-static)",
             ))
             .await?;
-        shot_of_unhydrated(browser, brand, theme, "code-editor-no-wasm", &split).await
+        shot_of_unhydrated(browser, brand, theme, "code-editor-no-script", &split).await
     }
     .await;
     cdp.send_raw("Network.setBlockedURLs", json!({ "urls": [] }))
