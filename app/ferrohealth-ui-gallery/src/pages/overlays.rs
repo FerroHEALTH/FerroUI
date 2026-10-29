@@ -17,7 +17,7 @@ use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::action::{ActionGroup, action_group};
 use ferrohealth_ui::view::button::{Variant, label};
 use ferrohealth_ui::view::dialog::{
-    ConfirmForm, Confirmation, Explanation, confirm_dialog, danger_dialog, danger_form_dialog,
+    Confirmation, DIALOG_FORM, Explanation, confirm_dialog, danger_action_dialog, danger_dialog,
     info_dialog,
 };
 use ferrohealth_ui::view::form::{INPUT, TEXTAREA, described_by, field, keyed_field};
@@ -99,16 +99,17 @@ fn confirmations() -> AnyView {
 /// A table whose every row's menu ends in Remove…, which opens a danger
 /// confirmation of its own beside it in the row's actions cell, each
 /// dialog's id made from its row. The
-/// confirmation asks for a required Reason inside the form it posts to
-/// [`crate::app::REMOVE_ROUTE`], which returns naming the member removed,
-/// and the list leaves that row out.
+/// confirmation asks for a required Reason inside the `<ActionForm>` of
+/// [`crate::acknowledge::remove_member`], which returns naming the member
+/// removed, and the list leaves that row out.
 fn member_removals() -> AnyView {
     let removed = use_query_map().with_untracked(|query| query.get("removed"));
     let back = page_path("overlays");
+    let remove = ServerAction::<crate::acknowledge::RemoveMember>::new();
     let rows = crate::data::MEMBERS
         .into_iter()
         .filter(|member| removed.as_deref() != Some(*member))
-        .map(|member| member_row(member, &back))
+        .map(|member| member_row(member, &back, remove))
         .collect_view();
     let said = removed
         .filter(|member| crate::data::MEMBERS.contains(&member.as_str()))
@@ -138,8 +139,13 @@ fn member_removals() -> AnyView {
 }
 
 /// The row of `member`: its name, and in its actions cell its menu with
-/// Remove… last and the confirmation that asks why, returning to `back`.
-fn member_row(member: &'static str, back: &str) -> AnyView {
+/// Remove… last and the confirmation that asks why and runs `remove`,
+/// returning to `back`.
+fn member_row(
+    member: &'static str,
+    back: &str,
+    remove: ServerAction<crate::acknowledge::RemoveMember>,
+) -> AnyView {
     let id = format!("remove-{member}");
     let reason = format!("{id}-reason");
     let named = [("member", Arg::from(member))];
@@ -167,16 +173,22 @@ fn member_row(member: &'static str, back: &str) -> AnyView {
         )}
     }
     .into_any();
-    let dialog = danger_form_dialog(
+    let dialog = danger_action_dialog(
         Confirmation {
             id: id.into(),
             title: tr_with(Msg::RemoveMemberTitle, &named).into(),
             message: tr_with(Msg::RemoveMemberBody, &named).into(),
         },
-        ConfirmForm {
-            action: String::from(crate::app::REMOVE_ROUTE),
-            fields,
+        fields,
+        move |parts| {
+            view! {
+                <ActionForm action=remove attr:class=DIALOG_FORM>
+                    {parts}
+                </ActionForm>
+            }
+            .into_any()
         },
+        Signal::derive(move || remove.value().with(|value| matches!(value, Some(Ok(()))))),
         view! {
             <button type="submit" class=Variant::Destructive.class()>
                 {label(Some(Glyph::TRASH), tr_with(Msg::RemoveMember, &named))}

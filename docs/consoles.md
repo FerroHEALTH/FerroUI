@@ -100,7 +100,18 @@ the browser, so a link or a form never reloads the document (FerroUI #410;
    gallery's `app/ferrohealth-ui-gallery/src/acknowledge.rs`). That is the
    redirect mode, right for an action whose outcome is the next page, such
    as a sign-out. An action whose answer is the point takes the answer mode
-   below.
+   below. A danger confirmation with fields, such as a removal that asks
+   for a Reason, is `view::dialog::danger_action_dialog(confirmation,
+   fields, form, done, confirm)`: `form` draws your `<ActionForm
+   action=… attr:class=view::dialog::DIALOG_FORM>` around the dialog's
+   parts, so once the page has hydrated the confirm runs the action in the
+   page, and the dialog closes when `done` turns true (for example
+   `Signal::derive(move || action.value().with(|v| matches!(v, Some(Ok(_)))))`).
+   With no WebAssembly the form posts to the server function's address as
+   a plain form (FerroUI #500; the gallery's overlays page and its
+   `remove_member`). Its fields carry `return_field()` or `answer_field()`
+   for that post, or the function redirects itself. `danger_form_dialog`
+   stays for a confirmation that posts to a plain route.
 
 ## An action that answers on its page
 
