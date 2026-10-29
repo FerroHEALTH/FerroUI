@@ -1,0 +1,125 @@
+// SPDX-FileCopyrightText: Cadasto B.V.
+// SPDX-License-Identifier: BUSL-1.1
+
+//! The OMOP row preview (B6): the rows one input becomes, table by table.
+//!
+//! Each table is a block headed by its name in the code face with its row
+//! count, then each row's column and value pairs, a hairline between rows.
+//! A concept that did not resolve shows as `0` with the warn mark and its
+//! words ([`RowValue::ConceptZero`]), so a missed mapping shows at a
+//! glance and never by colour alone (WCAG 2.2 SC 1.4.1). A column with
+//! no value reads `NULL` in the code face ([`RowValue::Null`]) and an
+//! empty text reads "empty text" in muted words, so the two never look
+//! alike. On a phone each column stacks over its value, so a value keeps
+//! the full width and an id breaks inside only where it alone is wider; a
+//! long value wraps inside its cell and is never cut off. No specification
+//! governs the preview: our own design.
+
+use crate::html::Html;
+use crate::i18n::{Locale, Text, tr, tr_with};
+use crate::icon::{Glyph, icon};
+
+/// One value of a previewed row.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RowValue {
+    /// A value as the engine would write it, such as `72.4` or
+    /// `3025315 · Body weight`.
+    Value(String),
+    /// A concept id that did not resolve, written as `0`.
+    ConceptZero,
+    /// No value: the column is written as NULL.
+    Null,
+}
+
+/// One column of a previewed row and its value.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RowField {
+    /// The column's name, such as `measurement_concept_id`.
+    pub column: String,
+    /// Its value.
+    pub value: RowValue,
+}
+
+/// One table of the preview and the rows it would take.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RowTable {
+    /// The table's name, such as `MEASUREMENT`.
+    pub name: String,
+    /// What follows the row count, muted, such as the mapping that writes
+    /// the rows.
+    pub detail: Option<String>,
+    /// The rows, each its columns in order.
+    pub rows: Vec<Vec<RowField>>,
+}
+
+/// Returns `value` as its cell shows it.
+fn value(locale: &Locale, value: RowValue) -> String {
+    match value {
+        RowValue::Value(value) if value.is_empty() => format!(
+            "<span class=\"fui-rowgraph-empty\">{}</span>",
+            tr(locale, Text::RowsEmpty)
+        ),
+        RowValue::Value(value) => String::from(Html::text(value)),
+        RowValue::Null => format!(
+            "<span class=\"fui-rowgraph-null\">{}</span>",
+            tr(locale, Text::RowsNull)
+        ),
+        RowValue::ConceptZero => format!(
+            "<span class=\"fui-concept-zero\">{}{}</span>",
+            icon(Glyph::TRIANGLE_ALERT, "12"),
+            tr(locale, Text::RowsConceptZero)
+        ),
+    }
+}
+
+/// Returns one row's columns and values.
+fn row(locale: &Locale, fields: Vec<RowField>) -> String {
+    let fields: String = fields
+        .into_iter()
+        .map(
+            |RowField {
+                 column,
+                 value: cell,
+             }| {
+                format!(
+                    "<div><dt>{}</dt><dd>{}</dd></div>",
+                    Html::text(column),
+                    value(locale, cell)
+                )
+            },
+        )
+        .collect::<Vec<_>>()
+        .concat();
+    format!("<dl class=\"fui-rowgraph-fields\">{fields}</dl>")
+}
+
+/// Returns one table: its name with its row count over its rows.
+fn table(locale: &Locale, table: RowTable) -> String {
+    let RowTable { name, detail, rows } = table;
+    let count = u32::try_from(rows.len()).unwrap_or(u32::MAX);
+    let mut note = tr_with(locale, Text::RowsCount, &[("count", count.into())]);
+    if let Some(detail) = detail {
+        note = note.map(|note| format!("{note} · {detail}"));
+    }
+    let rows: String = rows
+        .into_iter()
+        .map(|fields| row(locale, fields))
+        .collect::<Vec<_>>()
+        .concat();
+    format!(
+        "<section class=\"fui-rowgraph-table\"><h4 class=\"fui-rowgraph-name\">{} <span class=\"fui-muted\">{note}</span></h4>{rows}</section>",
+        Html::text(name)
+    )
+}
+
+/// Returns the preview of `tables`, each name a level-four heading under
+/// the answer pane's title.
+#[must_use]
+pub fn row_preview(locale: &Locale, tables: Vec<RowTable>) -> Html {
+    let tables: String = tables
+        .into_iter()
+        .map(|each| table(locale, each))
+        .collect::<Vec<_>>()
+        .concat();
+    Html::raw(format!("<div class=\"fui-rowgraph\">{tables}</div>"))
+}
