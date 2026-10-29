@@ -313,8 +313,9 @@ fn facts_across(v: &Visit) -> Html {
             ),
             (
                 v.tr(Msg::Uid),
-                h(String::from(
-                    "<code>711d7d49-0000-4a6a-a6b4-synthetic</code>",
+                h(format!(
+                    "<code>{}</code>",
+                    "711d7d49-0000-4a6a-a6b4-synthetic"
                 )),
             ),
         ]),
@@ -331,7 +332,7 @@ fn facts(v: &Visit) -> Html {
             (v.tr(Msg::Version), t("0.1.7")),
             (
                 v.tr(Msg::Commit),
-                h(String::from("<code>0123456789ab</code>")),
+                h(format!("<code>{}</code>", "0123456789ab")),
             ),
             (v.tr(Msg::Profile), or_none(&v.locale, String::new())),
             (v.tr(Msg::Licence), t(v.tr(Msg::BusinessSourceLicense11))),
@@ -517,7 +518,7 @@ fn segments(v: &Visit) -> Html {
         action: String::from("#segments"),
         back: String::from("/"),
     });
-    let shown = v.tr_with(Msg::ShownAs, &[("format", "JSON".into())]);
+    let shown = v.tr_with(Msg::ShownAs, &[("format", "json".to_uppercase().into())]);
     card(
         v.tr(Msg::SegmentedControls),
         Html::join([

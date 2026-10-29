@@ -208,7 +208,8 @@ fn pick_or_typed(v: &Visit) -> Html {
         })),
         typed_id: String::from("pick-canonical"),
         typed: h(format!(
-            "<input id=\"pick-canonical\" name=\"canonical\" type=\"url\" class=\"{INPUT}\" placeholder=\"http://example.org/fhir/CodeSystem/synthetic\" aria-describedby=\"{}\">",
+            "<input id=\"pick-canonical\" name=\"canonical\" type=\"url\" class=\"{INPUT}\" placeholder=\"{}\" aria-describedby=\"{}\">",
+            "http://example.org/fhir/CodeSystem/synthetic",
             help_id("pick-canonical")
         )),
         typing: false,

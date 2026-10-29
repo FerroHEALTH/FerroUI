@@ -602,29 +602,34 @@ fn hub_and_caller(v: &Visit, brand: Brand, asked: &Asked) -> (TopologyCard, Topo
     (hub, caller)
 }
 
+/// The organisations the topology draws in the state `asked`: each one's
+/// id, name, line, state and nodes.
+fn sources(v: &Visit, asked: &Asked) -> Vec<(String, String, String, FlowState, Vec<Part>)> {
+    if let Some(large) = asked.large {
+        many_organisations(v, large == 50)
+            .into_iter()
+            .map(|(id, name, state, nodes)| {
+                let line = v.tr(match state {
+                    FlowState::Up => Msg::FedNodesReachable,
+                    FlowState::Off => Msg::FedExcluded,
+                    _ => Msg::FedOneNotWell,
+                });
+                (id, name, line, state, nodes)
+            })
+            .collect()
+    } else {
+        organisations(v)
+            .into_iter()
+            .map(|(id, name, line, state, nodes)| {
+                (id.to_owned(), v.tr(name), v.tr(line), state, nodes)
+            })
+            .collect()
+    }
+}
+
 /// The topology of the synthetic federation in the state `asked`.
 fn federation_map(v: &Visit, brand: Brand, asked: &Asked) -> Html {
-    let sources: Vec<(String, String, String, FlowState, Vec<Part>)> =
-        if let Some(large) = asked.large {
-            many_organisations(v, large == 50)
-                .into_iter()
-                .map(|(id, name, state, nodes)| {
-                    let line = v.tr(match state {
-                        FlowState::Up => Msg::FedNodesReachable,
-                        FlowState::Off => Msg::FedExcluded,
-                        _ => Msg::FedOneNotWell,
-                    });
-                    (id, name, line, state, nodes)
-                })
-                .collect()
-        } else {
-            organisations(v)
-                .into_iter()
-                .map(|(id, name, line, state, nodes)| {
-                    (id.to_owned(), v.tr(name), v.tr(line), state, nodes)
-                })
-                .collect()
-        };
+    let sources = sources(v, asked);
     let states: Vec<FlowState> = sources
         .iter()
         .flat_map(|(_, _, _, _, nodes)| nodes.iter().map(|node| node.state))

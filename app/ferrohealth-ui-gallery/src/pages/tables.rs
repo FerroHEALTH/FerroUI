@@ -553,7 +553,9 @@ fn row_actions(v: &Visit) -> Html {
         .into_iter()
         .map(|member| {
             h(format!(
-                "<tr><th scope=\"row\"><code>synthetic-{member}</code></th><td data-label=\"{base}\"><code>https://{member}.example.org/</code></td><td data-label=\"{actions}\" class=\"{ACTIONS}\"><a href=\"#edit\" class=\"{}\">{}</a> <form method=\"post\" action=\"#remove\"><button type=\"submit\" class=\"{}\">{}</button></form></td></tr>",
+                "<tr><th scope=\"row\"><code>{}</code></th><td data-label=\"{base}\"><code>{}</code></td><td data-label=\"{actions}\" class=\"{ACTIONS}\"><a href=\"#edit\" class=\"{}\">{}</a> <form method=\"post\" action=\"#remove\"><button type=\"submit\" class=\"{}\">{}</button></form></td></tr>",
+                format!("synthetic-{member}"),
+                format!("https://{member}.example.org/"),
                 Variant::Secondary.small(),
                 t(v.tr(Msg::Edit)),
                 Variant::Danger.small(),
