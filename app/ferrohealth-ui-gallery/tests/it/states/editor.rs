@@ -109,12 +109,12 @@ pub(super) async fn editor(
     forms(browser, gallery, brand).await?;
     at_rest(browser, brand, theme, "-390").await?;
     window(browser, WIDTH, HEIGHT).await?;
-    no_wasm(browser, gallery, brand, theme).await
+    no_script(browser, gallery, brand, theme).await
 }
 
-/// The code editor with its WebAssembly withheld: the text area editable
-/// from the first paint, its own text drawn over the layer's gutter.
-async fn no_wasm(
+/// The code editor with its modules refused: the text area editable from
+/// the first paint, its own text drawn over the layer's gutter.
+async fn no_script(
     browser: &Browser,
     gallery: &Gallery,
     brand: Brand,
@@ -122,8 +122,11 @@ async fn no_wasm(
 ) -> Result<(), Box<dyn Error>> {
     let cdp = browser.driver().cdp();
     cdp.send_raw("Network.enable", json!({})).await?;
-    cdp.send_raw("Network.setBlockedURLs", json!({ "urls": ["*/pkg/*"] }))
-        .await?;
+    cdp.send_raw(
+        "Network.setBlockedURLs",
+        json!({ "urls": ["*/ferrohealth-ui/*/scripts/*"] }),
+    )
+    .await?;
     browser
         .goto(&gallery.url(&format!("/{}/forms", brand.key())))
         .await?;
@@ -146,7 +149,7 @@ async fn no_wasm(
         .console_errors()
         .await?
         .into_iter()
-        .filter(|entry| !entry.contains("/pkg/"))
+        .filter(|entry| !entry.contains("/scripts/"))
         .collect();
     if others.is_empty() {
         Ok(())

@@ -34,7 +34,7 @@ mod journeys;
 mod keys;
 mod menus;
 mod navigation;
-mod no_wasm;
+mod no_script;
 mod operations;
 mod painted;
 mod records;

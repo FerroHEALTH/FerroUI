@@ -11,8 +11,8 @@
 #                       the screenshots the gallery's tests list
 #   packages=...        the workspace packages a Rust change reaches (the
 #                       library reaches the gallery, which depends on it)
-#   gallery=true|false  the gallery's site bundle, its budget, its journeys
-#                       and its capture are reached
+#   gallery=true|false  the gallery's build, its journeys and its capture
+#                       are reached
 #   capture=true|false  the change can move a pixel the screenshot capture
 #                       draws: everything the gallery tier reaches but a
 #                       journey module that is no capture harness
@@ -249,7 +249,7 @@ self_test() {
   expect "the workflow reaches every set" '.github/workflows/ci.yml\n' "design=$every"
   expect "the workflow reaches the gallery" '.github/workflows/ci.yml\n' "gallery=true"
   expect "the lockfile reaches every journey" 'Cargo.lock\n' "journeys=all"
-  expect "the gallery build script reaches the gallery" 'scripts/release/gallery-site.sh\n' "gallery=true"
+  expect "the journey tools reach the gallery" 'scripts/release/journey-tools.sh\n' "gallery=true"
   expect "the screenshots reach the gallery's tests" 'docs/screenshots/ferrobridge/overview-light.png\n' "packages=ferrohealth-ui-gallery"
   expect "the screenshots skip the browser" 'docs/screenshots/ferrobridge/overview-light.png\n' "gallery=false"
   expect "a view reaches the capture" 'crates/ferrohealth-ui/src/view/toast.rs\n' "capture=true"

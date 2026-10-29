@@ -1,15 +1,16 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Every page with its WebAssembly withheld: its content is all there and
-//! its links and forms still lead where they lead.
+//! Every page with its script modules refused: its content is all there
+//! and its links and forms still lead where they lead.
 //!
-//! The browser is refused every file of the site bundle (`/pkg/`), so no
-//! island hydrates, as on a page whose WebAssembly has not loaded or will
-//! not. The interaction contract's third layer is what this holds:
-//! complete server-rendered HTML, and a link or a form behind every
-//! important action (no specification governs this: our own design). A
-//! refused bundle file is the one browser error a page may log here.
+//! The browser is refused every script module of the library
+//! (`/ferrohealth-ui/<version>/scripts/`), the loader among them, as on a
+//! page whose modules have not loaded or will not. The interaction
+//! contract's floor is what this holds: complete server-rendered HTML, and
+//! a link or a form behind every important action (no specification
+//! governs this: our own design). A refused module is the one browser error
+//! a page may log here.
 
 use std::error::Error;
 
@@ -22,42 +23,43 @@ use crate::journeys::{PAGES, SIGN_INS, window};
 use crate::journeys_enabled;
 use crate::stack::Gallery;
 
-/// Refuses the browser every file of the site bundle.
-async fn withhold_the_webassembly(browser: &Browser) -> Result<(), Box<dyn Error>> {
+/// The address pattern of the library's script modules.
+const MODULES: &str = "*/ferrohealth-ui/*/scripts/*";
+
+/// Refuses the browser every script module.
+async fn withhold_the_modules(browser: &Browser) -> Result<(), Box<dyn Error>> {
     let cdp = browser.driver().cdp();
     cdp.send_raw("Network.enable", json!({})).await?;
-    cdp.send_raw("Network.setBlockedURLs", json!({ "urls": ["*/pkg/*"] }))
+    cdp.send_raw("Network.setBlockedURLs", json!({ "urls": [MODULES] }))
         .await?;
     Ok(())
 }
 
-/// Fails on any browser error other than a refused bundle file, naming
-/// `step`.
-async fn only_the_bundle_refused(browser: &Browser, step: &str) -> Result<(), Box<dyn Error>> {
+/// Fails on any browser error other than a refused module, naming `step`.
+async fn only_the_modules_refused(browser: &Browser, step: &str) -> Result<(), Box<dyn Error>> {
     let others: Vec<String> = browser
         .console_errors()
         .await?
         .into_iter()
-        .filter(|entry| !entry.contains("/pkg/"))
+        .filter(|entry| !entry.contains("/scripts/"))
         .collect();
     if others.is_empty() {
         return Ok(());
     }
     Err(format!(
-        "the browser logged {} error(s) other than the withheld bundle during {step}:\n{}",
+        "the browser logged {} error(s) other than the withheld modules during {step}:\n{}",
         others.len(),
         others.join("\n")
     )
     .into())
 }
 
-/// Leaves the page for a blank one, so the island loader, which imports
-/// the bundle when the browser is next idle, logs its refusal before the
-/// journey ends or never; then fails on any error but a refused bundle file,
-/// naming `step`.
+/// Leaves the page for a blank one, so a refused module logs its refusal
+/// before the journey ends or never; then fails on any error but a refused
+/// module, naming `step`.
 async fn leave(browser: &Browser, step: &str) -> Result<(), Box<dyn Error>> {
     browser.goto("about:blank").await?;
-    only_the_bundle_refused(browser, step).await
+    only_the_modules_refused(browser, step).await
 }
 
 /// The trimmed text of the element `by` names, waiting for it.
@@ -152,7 +154,7 @@ async fn more_opens(browser: &Browser) -> Result<(), Box<dyn Error>> {
 }
 
 /// Checks that the side panel's opener is a link to its content's route,
-/// and the button that opens it in place waits for the WebAssembly.
+/// and the button that opens it in place waits for its module.
 async fn side_panel_floor(browser: &Browser) -> Result<(), Box<dyn Error>> {
     let link = browser
         .element(By::Css("main a[href$='/overlays/access']"))
@@ -165,7 +167,7 @@ async fn side_panel_floor(browser: &Browser) -> Result<(), Box<dyn Error>> {
         .await?;
     assert!(
         !button.is_displayed().await?,
-        "the panel's button waits for the WebAssembly"
+        "the panel's button waits for its module"
     );
     Ok(())
 }
@@ -181,7 +183,7 @@ async fn key_hint_floor(browser: &Browser) -> Result<(), Box<dyn Error>> {
     let hint = browser.element(By::Css("button.fui-key-hint")).await?;
     assert!(
         hint.attr("hidden").await?.is_some(),
-        "the key's copy button waits for the WebAssembly"
+        "the key's copy button waits for its module"
     );
     Ok(())
 }
@@ -189,10 +191,7 @@ async fn key_hint_floor(browser: &Browser) -> Result<(), Box<dyn Error>> {
 /// Checks that the Copy button `id` waits hidden, its text on the page.
 async fn copy_waits(browser: &Browser, id: &str) -> Result<(), Box<dyn Error>> {
     let copy = browser.element(By::Id(id)).await?;
-    assert!(
-        !copy.is_displayed().await?,
-        "{id} waits for the WebAssembly"
-    );
+    assert!(!copy.is_displayed().await?, "{id} waits for its module");
     Ok(())
 }
 
@@ -221,7 +220,7 @@ async fn colour_key(browser: &Browser) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-/// Checks the forms page's date fields with no WebAssembly: a date field
+/// Checks the forms page's date fields with no script: a date field
 /// is its typed text with the calendar disabled and saying to type the
 /// date (R23), and a range shows its From and To fields in its button's
 /// place (R22).
@@ -254,11 +253,11 @@ async fn date_fields(browser: &Browser) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-/// Checks the forms page with no WebAssembly: the combobox's native select,
+/// Checks the forms page with no script: the combobox's native select,
 /// the editor's text and the date fields.
 async fn forms_content(browser: &Browser) -> Result<(), Box<dyn Error>> {
-    // The combobox's native select stands until its island hydrates,
-    // so finding it proves the WebAssembly was withheld.
+    // The combobox's native select stands until its module runs,
+    // so finding it proves the modules were withheld.
     browser.element(By::Css("select#choose-system")).await?;
     let draft = browser.element(By::Id("gallery-draft")).await?;
     let held = draft.prop("value").await?.unwrap_or_default();
@@ -276,7 +275,7 @@ async fn forms_content(browser: &Browser) -> Result<(), Box<dyn Error>> {
     masked_field(browser).await
 }
 
-/// Checks the masked identifier with no WebAssembly: it stays masked, and
+/// Checks the masked identifier with no script: it stays masked, and
 /// its eye is disabled and says why.
 async fn masked_field(browser: &Browser) -> Result<(), Box<dyn Error>> {
     let input = browser.element(By::Id("edge-identifier")).await?;
@@ -309,7 +308,7 @@ async fn preferences_content(browser: &Browser, page: &str) -> Result<(), Box<dy
         .await?;
     assert!(
         save.is_displayed().await?,
-        "a preference posts through its Save button before the page hydrates"
+        "a preference posts through its Save button with no script"
     );
     if page == "/preferences/language" {
         browser
@@ -394,7 +393,7 @@ async fn file_line_opens_its_dialog(browser: &Browser) -> Result<(), Box<dyn Err
     .await
 }
 
-/// Checks what the page template at `page` must show with no WebAssembly.
+/// Checks what the page template at `page` must show with no script.
 async fn templates_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error>> {
     match page {
         "/templates/list" | "/templates/list-tabs" => {
@@ -456,7 +455,7 @@ async fn clinical_codings(browser: &Browser) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-/// Checks what the terminology page must show with no WebAssembly: the
+/// Checks what the terminology page must show with no script: the
 /// version select opens its menu of links, and every Remove and Add of the
 /// repeatable rows is a submit button of the form around it.
 async fn terminology_content(browser: &Browser) -> Result<(), Box<dyn Error>> {
@@ -498,7 +497,7 @@ async fn terminology_content(browser: &Browser) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-/// Checks what the overlays page must show with no WebAssembly: the More
+/// Checks what the overlays page must show with no script: the More
 /// menu and the side panel open, and the legend's opener waits hidden.
 async fn overlays_content(browser: &Browser) -> Result<(), Box<dyn Error>> {
     more_opens(browser).await?;
@@ -569,7 +568,7 @@ async fn overview_floor(browser: &Browser) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-/// Checks what a brand's page at `page` must show with no WebAssembly,
+/// Checks what a brand's page at `page` must show with no script,
 /// beyond its heading and its navigation.
 async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error>> {
     match page {
@@ -598,7 +597,7 @@ async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error
         "/configuration/provisioned" => crate::configuration::provisioned_floor(browser).await?,
         "/operations" => {
             // NOTE: leptos-ui.md §5: a text area carries its text in the server HTML, so
-            // Run posts the input with no WebAssembly.
+            // Run posts the input with no script.
             let input = browser.element(By::Id("pair-answered-input")).await?;
             assert!(
                 input
@@ -615,7 +614,7 @@ async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error
         }
         "/clinical" => {
             // NOTE: leptos-ui.md §15.8: At a time, the switch and the builder are links
-            // and forms, so each works with no WebAssembly.
+            // and forms, so each works with no script.
             let subject = text_of(browser, By::Css("#subject .fui-subject")).await?;
             assert!(
                 subject.contains("demo.hospital.mrn"),
@@ -664,14 +663,13 @@ async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn every_page_keeps_its_content_with_the_webassembly_withheld() -> Result<(), Box<dyn Error>>
-{
+async fn every_page_keeps_its_content_with_the_modules_refused() -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
         return Ok(());
     }
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
-        withhold_the_webassembly(browser).await?;
+        withhold_the_modules(browser).await?;
         browser.goto(&gallery.url("/")).await?;
         browser.text("p", "Choose a brand").await?;
         for brand in Brand::ALL {
@@ -679,7 +677,7 @@ async fn every_page_keeps_its_content_with_the_webassembly_withheld() -> Result<
                 .element(By::Css(format!("a[href='/{}']", brand.key())))
                 .await?;
         }
-        only_the_bundle_refused(browser, "the front page").await?;
+        only_the_modules_refused(browser, "the front page").await?;
         for brand in Brand::ALL {
             for &page in PAGES {
                 let path = format!("/{}{page}", brand.key());
@@ -697,7 +695,7 @@ async fn every_page_keeps_its_content_with_the_webassembly_withheld() -> Result<
                 );
                 browser.element(By::Css("footer")).await?;
                 page_content(browser, page).await?;
-                only_the_bundle_refused(browser, &path).await?;
+                only_the_modules_refused(browser, &path).await?;
             }
             for variant in SIGN_INS {
                 let path = format!("/sign-in/{}/{variant}", brand.key());
@@ -729,7 +727,7 @@ async fn every_page_keeps_its_content_with_the_webassembly_withheld() -> Result<
                         "{path} holds no password field"
                     );
                 }
-                only_the_bundle_refused(browser, &path).await?;
+                only_the_modules_refused(browser, &path).await?;
             }
         }
         // The page the gallery does not serve answers 404, which the browser
@@ -741,7 +739,7 @@ async fn every_page_keeps_its_content_with_the_webassembly_withheld() -> Result<
             .console_errors()
             .await?
             .into_iter()
-            .filter(|entry| !entry.contains("/pkg/") && !entry.contains("/nowhere - "))
+            .filter(|entry| !entry.contains("/scripts/") && !entry.contains("/nowhere - "))
             .collect();
         assert!(others.is_empty(), "the 404 page logged {others:?}");
         Ok(())
@@ -750,13 +748,13 @@ async fn every_page_keeps_its_content_with_the_webassembly_withheld() -> Result<
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn links_lead_on_with_the_webassembly_withheld() -> Result<(), Box<dyn Error>> {
+async fn links_lead_on_with_the_modules_refused() -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
         return Ok(());
     }
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
-        withhold_the_webassembly(browser).await?;
+        withhold_the_modules(browser).await?;
         // The navigation's links load their page and mark it.
         browser.goto(&gallery.url("/ferrobridge")).await?;
         browser.follow("Tables and paging").await?;
@@ -837,7 +835,7 @@ async fn links_lead_on_with_the_webassembly_withheld() -> Result<(), Box<dyn Err
     .await
 }
 
-/// The trees page with no WebAssembly: every tree draws its items, the
+/// The trees page with no script: every tree draws its items, the
 /// concept browser's toggles are links, and the edit's actions are submit
 /// buttons of its form.
 async fn trees_content(browser: &Browser) -> Result<(), Box<dyn Error>> {
@@ -952,13 +950,13 @@ async fn find_page_in_flow(browser: &Browser) -> Result<(), Box<dyn Error>> {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn forms_post_and_submit_with_the_webassembly_withheld() -> Result<(), Box<dyn Error>> {
+async fn forms_post_and_submit_with_the_modules_refused() -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
         return Ok(());
     }
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
-        withhold_the_webassembly(browser).await?;
+        withhold_the_modules(browser).await?;
         browser
             .driver()
             .cdp()
@@ -1050,14 +1048,14 @@ async fn forms_post_and_submit_with_the_webassembly_withheld() -> Result<(), Box
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn the_code_editor_posts_its_draft_unchanged_with_the_webassembly_withheld()
+async fn the_code_editor_posts_its_draft_unchanged_with_the_modules_refused()
 -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
         return Ok(());
     }
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
-        withhold_the_webassembly(browser).await?;
+        withhold_the_modules(browser).await?;
         browser.goto(&gallery.url("/ferrobridge/forms")).await?;
         let draft = browser.element(By::Id("gallery-mapping")).await?;
         assert_eq!(
@@ -1091,14 +1089,14 @@ async fn the_code_editor_posts_its_draft_unchanged_with_the_webassembly_withheld
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn an_action_answer_is_drawn_on_its_page_with_the_webassembly_withheld()
+async fn an_action_answer_is_drawn_on_its_page_with_the_modules_refused()
 -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
         return Ok(());
     }
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
-        withhold_the_webassembly(browser).await?;
+        withhold_the_modules(browser).await?;
         browser.goto(&gallery.url("/ferrobridge/forms")).await?;
         browser
             .element(By::Id("answer-note"))
@@ -1149,13 +1147,13 @@ async fn an_action_answer_is_drawn_on_its_page_with_the_webassembly_withheld()
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn popovers_open_with_the_webassembly_withheld() -> Result<(), Box<dyn Error>> {
+async fn popovers_open_with_the_modules_refused() -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
         return Ok(());
     }
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
-        withhold_the_webassembly(browser).await?;
+        withhold_the_modules(browser).await?;
         // The user menu is a popover the browser opens.
         browser.goto(&gallery.url("/ferrofed")).await?;
         browser
@@ -1221,14 +1219,14 @@ async fn popovers_open_with_the_webassembly_withheld() -> Result<(), Box<dyn Err
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn a_listing_filters_sorts_and_pages_with_the_webassembly_withheld()
--> Result<(), Box<dyn Error>> {
+async fn a_listing_filters_sorts_and_pages_with_the_modules_refused() -> Result<(), Box<dyn Error>>
+{
     if !journeys_enabled() {
         return Ok(());
     }
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
-        withhold_the_webassembly(browser).await?;
+        withhold_the_modules(browser).await?;
         browser.goto(&gallery.url("/ferropix/tables")).await?;
         let find = browser.element(By::Id("gallery-find")).await?;
         find.send_keys("synthetic-01").await?;
@@ -1276,13 +1274,13 @@ async fn a_listing_filters_sorts_and_pages_with_the_webassembly_withheld()
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn every_item_of_more_works_with_the_webassembly_withheld() -> Result<(), Box<dyn Error>> {
+async fn every_item_of_more_works_with_the_modules_refused() -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
         return Ok(());
     }
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
-        withhold_the_webassembly(browser).await?;
+        withhold_the_modules(browser).await?;
         // A form button inside the menu posts.
         browser.goto(&gallery.url("/ferrobridge")).await?;
         press(browser, By::Css("summary[aria-controls='overview-more']")).await?;
@@ -1333,14 +1331,14 @@ async fn every_item_of_more_works_with_the_webassembly_withheld() -> Result<(), 
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn the_skip_link_moves_the_focus_to_the_main_area_with_the_webassembly_withheld()
+async fn the_skip_link_moves_the_focus_to_the_main_area_with_the_modules_refused()
 -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
         return Ok(());
     }
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
-        withhold_the_webassembly(browser).await?;
+        withhold_the_modules(browser).await?;
         browser.goto(&gallery.url("/ferrobridge/tables")).await?;
         crate::skip::the_skip_link_reaches_main(browser).await?;
         leave(browser, "the skip link").await

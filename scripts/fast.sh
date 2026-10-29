@@ -12,8 +12,8 @@
 #   1. cargo fmt --all --check
 #   2. clippy -D warnings on the reached packages
 #   3. cargo nextest run and the doctests of the reached packages
-#   4. the journeys of the touched area, against the gallery built with the
-#      fast wasm-dev profile (the release bundle and its budget are CI's)
+#   4. the journeys of the touched area, against the gallery served
+#      in-process
 #   5. design/tools/check.sh for each design set the change reaches
 # The journeys and the design checks hold the machine-wide Chrome lock
 # (scripts/chrome-lock.sh), so parallel worktrees queue. It never runs the
@@ -133,9 +133,8 @@ step() {
 }
 skipped() { echo "fast: $1 skipped: $2"; }
 
-# The gallery tools and Chrome for Testing a fresh worktree lacks are taken
-# from the main checkout when it has them; gallery-site.sh checks their
-# digests either way.
+# Chrome for Testing a fresh worktree lacks is taken from the main checkout
+# when it has it.
 main_checkout="$(cd "$(git rev-parse --path-format=absolute --git-common-dir)/.." && pwd)"
 tools_from() {
   if [ -d "$root/target/$1" ]; then
@@ -160,11 +159,6 @@ fi
 if [ "$browser" = false ]; then
   skipped journeys "--no-browser"
 elif [ "$gallery" = true ] && [ -n "$journeys" ]; then
-  gallery_tools="$(tools_from gallery-tools)"
-  if [ -n "$gallery_tools" ] && [ ! -d "$root/target/gallery-tools" ]; then
-    PATH="$gallery_tools/bin:$PATH"
-    export PATH
-  fi
   journey_tools="$(tools_from journey-tools)"
   if [ -z "$journey_tools" ]; then
     step "journey tools" bash scripts/release/journey-tools.sh "$root/target/journey-tools"
@@ -180,7 +174,6 @@ elif [ "$gallery" = true ] && [ -n "$journeys" ]; then
       export FERROUI_CHROME="${FERROUI_CHROME:-$journey_tools/chrome-linux64/chrome}"
       ;;
   esac
-  step "gallery site (wasm-dev)" bash scripts/release/gallery-site.sh
   filter=()
   if [ "$journeys" != all ]; then filter=(-E "package(ferrohealth-ui-gallery) & $journeys"); fi
   step journeys bash scripts/chrome-lock.sh env FERROUI_JOURNEYS=1 cargo nextest run --locked -p ferrohealth-ui-gallery ${filter[@]+"${filter[@]}"}

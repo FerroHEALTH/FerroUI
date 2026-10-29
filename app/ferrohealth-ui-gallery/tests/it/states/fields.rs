@@ -119,8 +119,11 @@ async fn masked_states(
     browser.driver().action_chain().release().perform().await?;
     let cdp = browser.driver().cdp();
     cdp.send_raw("Network.enable", json!({})).await?;
-    cdp.send_raw("Network.setBlockedURLs", json!({ "urls": ["*/pkg/*"] }))
-        .await?;
+    cdp.send_raw(
+        "Network.setBlockedURLs",
+        json!({ "urls": ["*/ferrohealth-ui/*/scripts/*"] }),
+    )
+    .await?;
     browser
         .goto(&gallery.url(&format!("/{}/forms", brand.key())))
         .await?;
@@ -143,7 +146,7 @@ async fn masked_states(
         .console_errors()
         .await?
         .into_iter()
-        .filter(|entry| !entry.contains("/pkg/"))
+        .filter(|entry| !entry.contains("/scripts/"))
         .collect();
     if others.is_empty() {
         Ok(())

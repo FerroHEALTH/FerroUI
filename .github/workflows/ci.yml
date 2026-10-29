@@ -9,10 +9,10 @@
 #      for the root Cargo.toml after checkout, which hashFiles() at `if:` time
 #      cannot): fmt, clippy, nextest with the
 #      contrast test, rustdoc, cargo-deny, the publish dry run.
-#   3. The gallery tier runs when the change reaches the gallery: the release
-#      site bundle with its size budget and path check, then the browser
-#      journeys in two parts and, when the change can move a pixel, the
-#      screenshot capture in one job per brand, in Chrome for Testing.
+#   3. The gallery tier runs when the change reaches the gallery: the gallery
+#      built with cargo build, then the browser journeys in two parts and,
+#      when the change can move a pixel, the screenshot capture in one job
+#      per brand, in Chrome for Testing.
 #   4. The design tier builds the console design library's pages (design/)
 #      and runs its checks in headless Chrome, one job per design set the
 #      change reaches.
@@ -629,28 +629,19 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-rust
         with:
-          target: wasm32-unknown-unknown
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
       - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
         with:
-          tool: cargo-leptos@0.3.11,wasm-bindgen@0.2.129,cargo-nextest
-      - name: Install the Tailwind CSS CLI and wasm-opt
-        run: |
-          bash scripts/release/gallery-tools.sh "$RUNNER_TEMP/gallery-tools"
-          echo "$RUNNER_TEMP/gallery-tools/bin" >> "$GITHUB_PATH"
+          tool: cargo-nextest
       - name: Install Chrome and chromedriver
         id: chrome
         uses: browser-actions/setup-chrome@48ad923757ca74d66703209fe939badbdf80f2f4 # v2.2.0
         with:
           chrome-version: 155.0.8059.79
           install-chromedriver: true
-      - run: bash scripts/release/gallery-site.sh --release
-      # The sizes go to the job summary; the step fails above the budget of
-      # .claude/rules/leptos-ui.md §12.
-      - if: matrix.part == 'journeys' && startsWith(matrix.partition, '1/')
-        run: bash scripts/checks/gallery-bundle.sh
-      - if: matrix.part == 'journeys' && startsWith(matrix.partition, '1/')
-        run: bash scripts/checks/gallery-paths.sh
+      # The gallery is a server and its pages' script modules are the
+      # library's: a cargo build is the whole build.
+      - run: cargo build --locked -p ferrohealth-ui-gallery
       # Every test of the gallery's package, split by count into the parts
       # (nextest, --partition), so each part opens its share of the browsers.
       - name: Run the journeys
