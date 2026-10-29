@@ -22,7 +22,7 @@ pub(super) const STATES: &[&str] = &[
     "pick-or-type-combobox-typed",
     "masked-rest",
     "masked-held",
-    "masked-no-wasm",
+    "masked-no-script",
 ];
 
 /// The field shapes card with its error lines showing, and the two
@@ -135,7 +135,7 @@ async fn masked_states(
         .send_keys("123456782")
         .await?;
     let field = browser.element(masked_field()).await?;
-    let shot = shot_of_unhydrated(browser, brand, theme, "masked-no-wasm", &field).await;
+    let shot = shot_of_unhydrated(browser, brand, theme, "masked-no-script", &field).await;
     cdp.send_raw("Network.setBlockedURLs", json!({ "urls": [] }))
         .await?;
     shot?;

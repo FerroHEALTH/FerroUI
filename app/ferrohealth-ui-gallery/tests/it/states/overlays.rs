@@ -143,7 +143,7 @@ pub(super) async fn overlays(
         ),
         (
             "modal-open",
-            "//button[@data-delete = 'synthetic-007.model.yml']",
+            "//a[@data-delete = 'synthetic-007.model.yml']",
             "delete-row",
         ),
         ("modal-wide", "//button[@id = 'open-rename']", "rename-file"),
