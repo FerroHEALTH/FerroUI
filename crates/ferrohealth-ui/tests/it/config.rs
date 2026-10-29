@@ -440,6 +440,30 @@ fn an_unset_secret_offers_leave_unset_and_no_clear() {
     assert!(drawn.contains("not set"), "{drawn}");
 }
 
+/// The value input is marked secret, so an answer form's page never carries
+/// what was typed into it back to the browser (#499).
+#[test]
+fn a_secret_value_input_carries_its_secret_mark() {
+    let drawn = html(|| {
+        secret_field(
+            SecretField::new("client-secret", "Client secret", SecretState::Unset),
+            None,
+        )
+    });
+    assert!(
+        has(
+            &drawn,
+            "input",
+            &[
+                ("type", "hidden"),
+                ("name", "ferroui_secret"),
+                ("value", "client-secret[value]"),
+            ]
+        ),
+        "{drawn}"
+    );
+}
+
 #[test]
 fn a_file_choice_holds_its_path_and_clear_warns() {
     let file = html(|| {

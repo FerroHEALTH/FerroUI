@@ -395,6 +395,33 @@ async fn a_refused_plain_post_of_an_answer_form_draws_the_refusal_and_keeps_the_
     Ok(())
 }
 
+/// A field the form marks secret goes to the function alone: the page drawn
+/// with the answer carries it neither in its markup nor in its hydration
+/// data, where every other posted field crosses to the browser (#499).
+#[tokio::test]
+async fn a_secret_field_of_an_answer_form_appears_nowhere_on_the_page_it_draws()
+-> Result<(), Box<dyn Error>> {
+    let (parts, body) = count_words(
+        "note=two+words&pin=synthetic-pin-4711&ferroui_secret=pin\
+         &shown=synthetic-shown-4711&ferroui_answer=%2Fferrobridge%2Fforms",
+    )
+    .await?;
+    assert_eq!(StatusCode::OK, parts.status);
+    assert!(
+        body.contains("<p id=\"note-answer\" class=\"fui-help\">The note has 2 words.</p>"),
+        "the function answered: {body}"
+    );
+    assert!(
+        body.contains("synthetic-shown-4711"),
+        "an unmarked field crosses to the browser with the page"
+    );
+    assert!(
+        !body.contains("synthetic-pin-4711"),
+        "the secret is nowhere in the page or its hydration data: {body}"
+    );
+    Ok(())
+}
+
 #[tokio::test]
 async fn the_forms_page_drawn_on_its_own_carries_no_answer() -> Result<(), Box<dyn Error>> {
     let (parts, body) = get("/ferrobridge/forms").await?;

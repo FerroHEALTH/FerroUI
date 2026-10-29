@@ -25,7 +25,10 @@
 //! wrapped in [`draw_answers`], answers such a plain post with the page the
 //! field names, drawn with the function's answer, or its error, as the
 //! action's value, and [`answered`] hands the page the fields the form
-//! posted. With WebAssembly the action runs in the page as before.
+//! posted. A field the form marks with [`secret_mark`] goes to the function
+//! alone and never into those fields, so its value never crosses to the
+//! browser in the page's hydration data. With WebAssembly the action runs
+//! in the page as before.
 
 use leptos::prelude::*;
 use leptos::server_fn::codec::{Post, PostUrl};
@@ -43,6 +46,10 @@ pub const RETURN: &str = "ferroui_return";
 /// The name of the field that asks for a plain post's answer drawn on the
 /// page it names ([`answer_field`]).
 pub const ANSWER: &str = "ferroui_answer";
+
+/// The name of the hidden field that marks another field of the form as
+/// secret ([`secret_mark`]): its value names that field.
+pub const SECRET: &str = "ferroui_secret";
 
 /// The query keys `server_fn` writes an action's error under, which the
 /// router reads back into the action's value.
@@ -77,8 +84,33 @@ pub fn answer_field() -> impl IntoView {
     view! { <input type="hidden" name=ANSWER value=move || path.get() /> }
 }
 
+/// Returns the hidden field that marks the field `name` of a console's
+/// `<ActionForm>` as secret, such as a password or a key.
+///
+/// On a plain post of an [`answer_field`] form, [`draw_answers`] hands the
+/// secret field to the server function and leaves it out of [`Posted`], so
+/// the page drawn with the answer carries its value neither in its markup
+/// nor in its hydration data. Draw one beside every input whose value the
+/// page must never show again; [`crate::view::secret::secret_field`] draws
+/// its own. No specification governs this: our own design (#499).
+///
+/// ```
+/// use ferrohealth_ui::widget::action::secret_mark;
+/// use leptos::prelude::*;
+///
+/// let html = Owner::new().with(|| secret_mark("token[value]").to_html());
+/// assert!(html.contains(r#"type="hidden""#));
+/// assert!(html.contains(r#"name="ferroui_secret""#));
+/// assert!(html.contains(r#"value="token[value]""#));
+/// ```
+#[must_use]
+pub fn secret_mark(name: &str) -> AnyView {
+    view! { <input type="hidden" name=SECRET value=name.to_owned() /> }.into_any()
+}
+
 /// The fields a plain post of an [`answer_field`] form carried, as the page
-/// drawn with its answer reads them back.
+/// drawn with its answer reads them back: every field but the page's own
+/// and the secret ones ([`secret_mark`]).
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Posted {
     /// Each field's name and value, in the order the form posted them.
@@ -312,12 +344,7 @@ async fn answer_plain_post(
     let Some(page) = page else {
         return pass(router, Request::from_parts(parts, Body::from(bytes))).await;
     };
-    let posted = Posted {
-        fields: form_urlencoded::parse(&bytes)
-            .filter(|(name, _)| name != ANSWER)
-            .map(|(name, value)| (name.into_owned(), value.into_owned()))
-            .collect(),
-    };
+    let posted = posted(&bytes);
     let function = parts.uri.path().to_owned();
     let headers = parts.headers.clone();
     let extensions = parts.extensions.clone();
@@ -413,8 +440,24 @@ fn header(headers: &http::HeaderMap, name: http::header::HeaderName) -> Option<&
     headers.get(name).and_then(|value| value.to_str().ok())
 }
 
-/// The form body `bytes` without its [`ANSWER`] field, which is the page's
-/// and never the function's.
+/// The fields of the form body `bytes` the page reads back: every field
+/// but [`ANSWER`], [`SECRET`] and each field a [`SECRET`] names.
+#[cfg(not(target_arch = "wasm32"))]
+fn posted(bytes: &[u8]) -> Posted {
+    let secret: std::collections::BTreeSet<String> = form_urlencoded::parse(bytes)
+        .filter(|(name, _)| name == SECRET)
+        .map(|(_, value)| value.into_owned())
+        .collect();
+    Posted {
+        fields: form_urlencoded::parse(bytes)
+            .filter(|(name, _)| name != ANSWER && name != SECRET && !secret.contains(name.as_ref()))
+            .map(|(name, value)| (name.into_owned(), value.into_owned()))
+            .collect(),
+    }
+}
+
+/// The form body `bytes` without its [`ANSWER`] and [`SECRET`] fields,
+/// which are the page's and never the function's.
 #[cfg(not(target_arch = "wasm32"))]
 fn without_answer(bytes: &[u8]) -> Vec<u8> {
     bytes
@@ -423,7 +466,7 @@ fn without_answer(bytes: &[u8]) -> Vec<u8> {
             !pair.is_empty()
                 && form_urlencoded::parse(pair)
                     .next()
-                    .is_none_or(|(name, _)| name != ANSWER)
+                    .is_none_or(|(name, _)| name != ANSWER && name != SECRET)
         })
         .collect::<Vec<_>>()
         .join(&b'&')
@@ -633,6 +676,36 @@ mod answers {
         assert_eq!(Some("two words"), answered.posted.field("note"));
         assert_eq!(Some("é"), answered.posted.field("shown"));
         assert_eq!(None, answered.posted.field("ferroui_answer"));
+    }
+
+    #[tokio::test]
+    async fn a_secret_field_reaches_the_function_and_never_the_page() {
+        let (parts, body) = send(
+            "/api/check",
+            HTML,
+            "note=seen&token%5Bvalue%5D=synthetic-secret-7&ferroui_secret=token%5Bvalue%5D\
+             &ferroui_answer=%2Fpage",
+        )
+        .await
+        .unwrap();
+        assert_eq!(StatusCode::OK, parts.status);
+        let (_, answered) = answered_of(&body).unwrap();
+        assert_eq!(
+            Ok(String::from(
+                "*/*|note=seen&token%5Bvalue%5D=synthetic-secret-7"
+            )),
+            outcome::<String, ServerFnError, JsonEncoding>(answered.ok, answered.body.clone()),
+            "the function reads the secret, without the page's fields"
+        );
+        assert_eq!(Some("seen"), answered.posted.field("note"));
+        assert_eq!(None, answered.posted.field("token[value]"));
+        assert_eq!(None, answered.posted.field("ferroui_secret"));
+        assert!(
+            !serde_json::to_string(&answered.posted)
+                .unwrap()
+                .contains("synthetic-secret-7"),
+            "the posted fields the page carries hold no secret"
+        );
     }
 
     #[tokio::test]
