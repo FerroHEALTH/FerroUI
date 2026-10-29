@@ -11,6 +11,28 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.5.7] - 2026-10-29
+
+### Fixed
+
+- The FerroEHR console design names the party-relationship routes under
+  `/ferroehr/rest/extensions/v1/`, where FerroEHR 5.6.0 serves the routes
+  ITS-REST 1.1.0 does not define, in the refusals of the relationship pages (#493).
+- The search box drops the ask still waiting for the words to rest when
+  its form is submitted or one of its options is followed, so the panel no
+  longer opens again over the page the router draws in place (#494).
+
+### Security
+
+Shipped with functional changes because: FerroTERM and FerroFED wait on the search fix of the same release, and the leak was confirmed while that release was being cut, so one patch carries both.
+
+- A field an answer form marks with `widget::action::secret_mark`, a password
+  or a key, goes to the server function alone: the page `draw_answers` draws
+  with the answer leaves it out of `Posted`, so its value is no longer written
+  into the page's hydration data. `view::secret::secret_field` marks its value
+  input itself; a console marks its own secret inputs, `view::form::masked_input`
+  among them (GHSA-25wh-2jcm-gvpr) (#499).
+
 ## [0.5.6] - 2026-10-28
 
 ### Added
@@ -2801,7 +2823,8 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.6...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.7...HEAD
+[0.5.7]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.6...v0.5.7
 [0.5.6]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.5...v0.5.6
 [0.5.5]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.4...v0.5.5
 [0.5.4]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.3...v0.5.4
