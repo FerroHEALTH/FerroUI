@@ -3,430 +3,385 @@
 
 //! The overlays and the feedback.
 //!
-//! They are the confirmation dialogs, the modal
-//! dialog a signal opens, the side panel, a toast in every tone and the
-//! popover form. The user menu, which sets the theme, is in the top bar,
-//! and the drawer is the navigation on a narrow screen.
+//! They are the confirmation dialogs, the modal dialog a row's Delete
+//! opens, the side panel, a toast in every tone and the popover form. The
+//! user menu, which sets the theme, is in the top bar, and the drawer is
+//! the navigation on a narrow screen.
+//!
+//! An outcome arrives as a flash toast on the page drawn again, as a
+//! console answers an action: the address's `toast` names it, and a row's
+//! `delete` draws the row's confirmation open.
 
-use crate::locale::{Msg, Words, tr, tr_with};
-use ferrohealth_ui::i18n::{Arg, Word};
+use ferrohealth_ui::html::Html;
+use ferrohealth_ui::i18n::Arg;
 use ferrohealth_ui::icon::{Glyph, icon};
-use ferrohealth_ui::island::SidePanel;
 use ferrohealth_ui::table::view::{ACTIONS, Body, Column, DataTable, Sorting, data_table};
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::action::{ActionGroup, action_group};
+use ferrohealth_ui::view::action_menu::{
+    Act, Action, Choice, Item, Listbox, Menu, Pick, listbox, row_menu,
+};
 use ferrohealth_ui::view::button::{Variant, label};
 use ferrohealth_ui::view::dialog::{
-    Confirmation, DIALOG_FORM, Explanation, confirm_dialog, danger_action_dialog, danger_dialog,
-    info_dialog,
+    ConfirmForm, Confirmation, Explanation, Modal, Width, confirm_dialog, danger_dialog,
+    danger_form_dialog, info_dialog, modal_dialog,
 };
 use ferrohealth_ui::view::form::{INPUT, TEXTAREA, described_by, field, keyed_field};
 use ferrohealth_ui::view::kbd::{Shortcut, ShortcutGroup, kbd, shortcut_hint};
 use ferrohealth_ui::view::layout::divided_list;
 use ferrohealth_ui::view::popover::{PopoverForm, popover_form};
 use ferrohealth_ui::view::preferences::{Post, language_select};
+use ferrohealth_ui::view::shortcuts::{OPENS_LEGEND, shortcut_legend};
+use ferrohealth_ui::view::side_panel::{Opener, SidePanel, SidePanelWords, side_panel};
 use ferrohealth_ui::view::surface::{
     card, chip, cluster, definitions, grid, page_header, panel, split, stack,
 };
-use ferrohealth_ui::widget::action_menu::{
-    Act, Action, Choice, Item, Listbox, Menu, Pick, listbox, row_menu,
-};
-use ferrohealth_ui::widget::dialog::{Modal, ModalWords, Width, modal_dialog};
-use ferrohealth_ui::widget::shortcuts::LegendWords;
-use ferrohealth_ui::widget::side_panel::{Opener, SidePanelWords};
-use ferrohealth_ui::widget::toast::{Toast, ToastAction, ToastLink, raise};
-use leptos::prelude::*;
-use leptos_router::hooks::use_query_map;
+use ferrohealth_ui::view::toast::{Flash, ToastLink};
+
+use crate::app::{Page, REMOVE_ROUTE};
+use crate::locale::Msg;
+use crate::markup::{h, t};
+use crate::visit::Visit;
+
+/// The files a row of the modal dialogs' list names.
+const FILES: [&str; 2] = ["synthetic-007.model.yml", "synthetic-011.extension.yml"];
+
+/// The path of this brand's page `page`.
+fn page_path(v: &Visit, page: &str) -> String {
+    format!("/{}/{page}", v.brand.key())
+}
+
+/// The confirm of the confirmation dialog `dialog`, the danger one when
+/// `danger`: it leads to the page drawn again with the outcome's toast.
+fn confirm_and_toast(v: &Visit, dialog: &str, danger: bool) -> Html {
+    let (toast, class, glyph, words) = if danger {
+        (
+            "deleted",
+            Variant::Destructive.class(),
+            Glyph::TRASH,
+            v.tr(Msg::Delete),
+        )
+    } else {
+        (
+            "reloaded",
+            Variant::Primary.class(),
+            Glyph::REFRESH_CW,
+            v.tr(Msg::Reload),
+        )
+    };
+    h(format!(
+        "<a href=\"{}?toast={toast}\" id=\"confirm-{dialog}\" class=\"{class}\" data-fui-keep>{}{}</a>",
+        t(page_path(v, "overlays")),
+        icon(glyph, "16"),
+        t(words)
+    ))
+}
 
 /// The confirmation dialogs the title row opens with no script: the plain
-/// one its primary opens and the danger one More's delete opens, whose
-/// confirm, the island [`crate::islands::ConfirmAndToast`], raises a toast.
-fn confirmations() -> AnyView {
+/// one its primary opens and the danger one More's delete opens, each of
+/// whose confirms leads to its outcome's toast.
+fn confirmations(v: &Visit) -> Html {
     let plain = confirm_dialog(
+        &v.locale,
         Confirmation {
             id: "reload-set".into(),
-            title: tr(Msg::ReloadTheSet).into(),
-            message: tr(Msg::FilesDiskCompileReplaceRunning).into(),
+            title: v.tr(Msg::ReloadTheSet).into(),
+            message: v.tr(Msg::FilesDiskCompileReplaceRunning).into(),
         },
-        view! { <crate::islands::ConfirmAndToast dialog="reload-set".to_owned() danger=false words=confirm_words() /> },
-    )
-    .into_any();
+        confirm_and_toast(v, "reload-set", false),
+    );
     let danger = danger_dialog(
+        &v.locale,
         Confirmation {
             id: "delete-file".into(),
-            title: tr(Msg::DeleteTheFile).into(),
-            message: tr(Msg::SyntheticFileGoesGoodRunning).into(),
+            title: v.tr(Msg::DeleteTheFile).into(),
+            message: v.tr(Msg::SyntheticFileGoesGoodRunning).into(),
         },
-        view! { <crate::islands::ConfirmAndToast dialog="delete-file".to_owned() danger=true words=confirm_words() /> },
-    )
-    .into_any();
+        confirm_and_toast(v, "delete-file", true),
+    );
     let how = info_dialog(
+        &v.locale,
         Explanation {
             id: "how-reloading".into(),
-            title: tr(Msg::HowReloadingWorks).into(),
+            title: v.tr(Msg::HowReloadingWorks).into(),
         },
-        view! {
-            <p>{tr(Msg::ReloadingCompiles)}</p>
-            <p class="fui-small fui-muted">{tr(Msg::ReloadingKeeps)}</p>
-        },
-    )
-    .into_any();
+        h(format!(
+            "<p>{}</p><p class=\"fui-small fui-muted\">{}</p>",
+            t(v.tr(Msg::ReloadingCompiles)),
+            t(v.tr(Msg::ReloadingKeeps))
+        )),
+    );
     card(
-        tr(Msg::ConfirmationDialogs),
-        view! {
-            <p class="fui-muted">
-                {tr(Msg::OpenedTheirTriggerNoScript)}
-            </p>
-            {plain}
-            {danger}
-            <button
-                type="button"
-                class=Variant::Ghost.class()
-                command="show-modal"
-                commandfor="how-reloading"
-                aria-haspopup="dialog"
-            >
-                {icon(Glyph::INFO, "16")}
-                {tr(Msg::HowReloadingWorks)}
-            </button>
-            {how}
-            {member_removals()}
-        },
+        v.tr(Msg::ConfirmationDialogs),
+        h(format!(
+            "<p class=\"fui-muted\">{}</p>{plain}{danger}<button type=\"button\" class=\"{}\" command=\"show-modal\" commandfor=\"how-reloading\" aria-haspopup=\"dialog\">{}{}</button>{how}{}",
+            t(v.tr(Msg::OpenedTheirTriggerNoScript)),
+            Variant::Ghost.class(),
+            icon(Glyph::INFO, "16"),
+            t(v.tr(Msg::HowReloadingWorks)),
+            member_removals(v)
+        )),
     )
-    .into_any()
 }
 
 /// A table whose every row's menu ends in Remove…, which opens a danger
 /// confirmation of its own beside it in the row's actions cell, each
-/// dialog's id made from its row. The
-/// confirmation asks for a required Reason inside the `<ActionForm>` of
-/// [`crate::acknowledge::remove_member`], which returns naming the member
-/// removed, and the list leaves that row out.
-fn member_removals() -> AnyView {
-    let removed = use_query_map().with_untracked(|query| query.get("removed"));
-    let back = page_path("overlays");
-    let remove = ServerAction::<crate::acknowledge::RemoveMember>::new();
+/// dialog's id made from its row. The confirmation asks for a required
+/// Reason in the form it posts to the gallery's removal route, which
+/// returns naming the member removed, and the list leaves that row out.
+fn member_removals(v: &Visit) -> Html {
+    let removed = v.param("removed");
+    let back = page_path(v, "overlays");
     let rows = crate::data::MEMBERS
         .into_iter()
-        .filter(|member| removed.as_deref() != Some(*member))
-        .map(|member| member_row(member, &back, remove))
-        .collect_view();
+        .filter(|member| removed != Some(*member))
+        .map(|member| member_row(v, member, &back))
+        .collect();
     let said = removed
-        .filter(|member| crate::data::MEMBERS.contains(&member.as_str()))
+        .filter(|member| crate::data::MEMBERS.contains(member))
         .map(|member| {
-            view! {
-                <p class="fui-small fui-muted" id="member-removed">
-                    {tr_with(Msg::MemberRemoved, &[("member", Arg::from(member))])}
-                </p>
-            }
-        });
+            h(format!(
+                "<p class=\"fui-small fui-muted\" id=\"member-removed\">{}</p>",
+                t(v.tr_with(Msg::MemberRemoved, &[("member", Arg::from(member))]))
+            ))
+        })
+        .unwrap_or_default();
     let columns = [
-        Column::text("member", tr(Msg::Member)),
-        Column::text("actions", tr(Msg::Actions)),
+        Column::text("member", v.tr(Msg::Member)),
+        Column::text("actions", v.tr(Msg::Actions)),
     ];
-    view! {
-        <div id="member-removals">
-            {data_table(DataTable {
-                caption: &tr(Msg::RemoveMembers),
-                columns: &columns,
-                sorting: Sorting::default(),
-                body: Body::Rows(rows.into_any()),
-            })}
-        </div>
-        {said}
-    }
-    .into_any()
+    let table = data_table(DataTable {
+        caption: &v.tr(Msg::RemoveMembers),
+        columns: &columns,
+        sorting: Sorting::default(),
+        body: Body::Rows(rows),
+    });
+    h(format!("<div id=\"member-removals\">{table}</div>{said}"))
 }
 
 /// The row of `member`: its name, and in its actions cell its menu with
-/// Remove… last and the confirmation that asks why and runs `remove`,
+/// Remove… last and the confirmation that asks why and posts the removal,
 /// returning to `back`.
-fn member_row(
-    member: &'static str,
-    back: &str,
-    remove: ServerAction<crate::acknowledge::RemoveMember>,
-) -> AnyView {
+fn member_row(v: &Visit, member: &'static str, back: &str) -> Html {
     let id = format!("remove-{member}");
     let reason = format!("{id}-reason");
     let named = [("member", Arg::from(member))];
     let menu = Menu::new(
         format!("member-menu-{member}"),
-        tr_with(Msg::ActionsFor, &[("name", member.into())]),
+        v.tr_with(Msg::ActionsFor, &[("name", member.into())]),
         Vec::new(),
     )
     .destructive(vec![Item::new(Action::new(
         Some(Glyph::TRASH),
-        tr(Msg::Remove),
+        v.tr(Msg::Remove),
         Act::Dialog(id.clone()),
     ))]);
-    let described = described_by(&reason, true, false);
-    let fields = view! {
-        <input type="hidden" name="member" value=member />
-        <input type="hidden" name="back" value=back.to_owned() />
-        {keyed_field(
+    let described = described_by(&reason, true, false).unwrap_or_default();
+    let fields = Html::join([
+        h(format!(
+            "<input type=\"hidden\" name=\"member\" value=\"{member}\"><input type=\"hidden\" name=\"back\" value=\"{}\">",
+            t(back)
+        )),
+        keyed_field(
             reason.clone(),
-            tr(Msg::Reason),
-            Some(tr(Msg::ReasonKept)),
-            view! {
-                <textarea id=reason name="reason" class=TEXTAREA required aria-describedby=described></textarea>
-            },
-        )}
-    }
-    .into_any();
-    let dialog = danger_action_dialog(
+            v.tr(Msg::Reason),
+            Some(v.tr(Msg::ReasonKept)),
+            h(format!(
+                "<textarea id=\"{reason}\" name=\"reason\" class=\"{TEXTAREA}\" required aria-describedby=\"{described}\"></textarea>"
+            )),
+        ),
+    ]);
+    let dialog = danger_form_dialog(
+        &v.locale,
         Confirmation {
             id: id.into(),
-            title: tr_with(Msg::RemoveMemberTitle, &named).into(),
-            message: tr_with(Msg::RemoveMemberBody, &named).into(),
+            title: v.tr_with(Msg::RemoveMemberTitle, &named).into(),
+            message: v.tr_with(Msg::RemoveMemberBody, &named).into(),
         },
-        fields,
-        move |parts| {
-            view! {
-                <ActionForm action=remove attr:class=DIALOG_FORM>
-                    {parts}
-                </ActionForm>
-            }
-            .into_any()
+        ConfirmForm {
+            action: String::from(REMOVE_ROUTE),
+            fields,
         },
-        Signal::derive(move || remove.value().with(|value| matches!(value, Some(Ok(()))))),
-        view! {
-            <button type="submit" class=Variant::Destructive.class()>
-                {label(Some(Glyph::TRASH), tr_with(Msg::RemoveMember, &named))}
-            </button>
-        },
-    );
-    view! {
-        <tr>
-            <th scope="row"><code>{member}</code></th>
-            <td data-label=tr(Msg::Actions) class=ACTIONS>
-                {row_menu(menu)}
-                {dialog}
-            </td>
-        </tr>
-    }
-    .into_any()
-}
-
-/// The words of a confirm button's island.
-fn confirm_words() -> Words {
-    Words::of(&[
-        Msg::SyntheticFileWasDeleted,
-        Msg::Delete,
-        Msg::SetReloaded,
-        Msg::Reload,
-    ])
-}
-
-/// The confirm button of the confirmation dialog `dialog` in `words`, the
-/// danger one when `danger`: it raises a toast and closes the dialog.
-pub(crate) fn confirm_and_toast(dialog: String, danger: bool, words: &Words) -> AnyView {
-    let (said, class, glyph, words) = if danger {
-        (
-            words.get(Msg::SyntheticFileWasDeleted),
+        h(format!(
+            "<button type=\"submit\" class=\"{}\">{}</button>",
             Variant::Destructive.class(),
-            Glyph::TRASH,
-            words.get(Msg::Delete),
-        )
-    } else {
-        (
-            words.get(Msg::SetReloaded),
-            Variant::Primary.class(),
-            Glyph::REFRESH_CW,
-            words.get(Msg::Reload),
-        )
-    };
-    let id = format!("confirm-{dialog}");
-    view! {
-        <button
-            type="button"
-            id=id
-            class=class
-            command="close"
-            commandfor=dialog
-            on:click=move |_| raise(Toast::new(Tone::Ok, said.clone()))
-        >
-            {icon(glyph, "16")}
-            {words}
-        </button>
-    }
-    .into_any()
-}
-
-/// The path of this brand's page `page`.
-fn page_path(page: &str) -> String {
-    crate::app::route_brand().map_or_else(
-        || String::from("/"),
-        |brand| format!("/{}/{page}", brand.key()),
-    )
+            label(Some(Glyph::TRASH), v.tr_with(Msg::RemoveMember, &named))
+        )),
+    );
+    h(format!(
+        "<tr><th scope=\"row\"><code>{member}</code></th><td data-label=\"{}\" class=\"{ACTIONS}\">{}{dialog}</td></tr>",
+        t(v.tr(Msg::Actions)),
+        row_menu(&v.locale, &menu)
+    ))
 }
 
 /// A file's menu `id`, named `label`: a link, a disabled item with its
 /// reason, and the destructive delete last.
-fn file_menu(id: &str, label: String) -> Menu {
+fn file_menu(v: &Visit, id: &str, label: String) -> Menu {
     Menu::new(
         id,
         label,
         vec![
             Item::new(Action::new(
                 Some(Glyph::FILE_CODE),
-                tr(Msg::OpenTheDocument),
-                Act::Link(page_path("code")),
+                v.tr(Msg::OpenTheDocument),
+                Act::Link(page_path(v, "code")),
             )),
             Item::new(Action::new(
                 Some(Glyph::DOWNLOAD),
-                tr(Msg::DownloadTheFile),
-                Act::Link(page_path("code")),
+                v.tr(Msg::DownloadTheFile),
+                Act::Link(page_path(v, "code")),
             ))
-            .disabled(tr(Msg::ProvisionedReadOnly)),
+            .disabled(v.tr(Msg::ProvisionedReadOnly)),
         ],
     )
     .destructive(vec![Item::new(Action::new(
         Some(Glyph::TRASH),
-        tr(Msg::DeleteFile),
+        v.tr(Msg::DeleteFile),
         Act::Dialog(String::from("delete-file")),
     ))])
 }
 
 /// The title row's actions: Reload the set, which a confirmation follows,
 /// and More with the file's other actions, its delete last.
-fn overlays_actions() -> ActionGroup {
+fn overlays_actions(v: &Visit) -> ActionGroup {
     ActionGroup::primary(Action::new(
         Some(Glyph::REFRESH_CW),
-        tr(Msg::ReloadSet),
+        v.tr(Msg::ReloadSet),
         Act::Dialog(String::from("reload-set")),
     ))
-    .more(file_menu("overlays-more", tr(Msg::MoreActionsFile)))
+    .more(file_menu(v, "overlays-more", v.tr(Msg::MoreActionsFile)))
 }
 
 /// The action group's other shapes: a primary alone, a split primary with
 /// its variants, and More alone.
-fn action_groups() -> AnyView {
+fn action_groups(v: &Visit) -> Html {
     let alone = ActionGroup::primary(Action::new(
         Some(Glyph::FILE_CODE),
-        tr(Msg::OpenTheDocument),
-        Act::Link(page_path("code")),
+        v.tr(Msg::OpenTheDocument),
+        Act::Link(page_path(v, "code")),
     ));
     let split = ActionGroup::primary(Action::new(
         Some(Glyph::SAVE),
-        tr(Msg::Save),
-        Act::Link(page_path("forms")),
+        v.tr(Msg::Save),
+        Act::Link(page_path(v, "forms")),
     ))
     .variants(Menu::new(
         "save-variants",
-        tr(Msg::WaysToSave),
+        v.tr(Msg::WaysToSave),
         vec![
             Item::new(Action::new(
                 None,
-                tr(Msg::SaveAsDraft),
-                Act::Link(page_path("forms")),
+                v.tr(Msg::SaveAsDraft),
+                Act::Link(page_path(v, "forms")),
             )),
             Item::new(Action::new(
                 None,
-                tr(Msg::SaveAndReload),
-                Act::Link(page_path("forms")),
+                v.tr(Msg::SaveAndReload),
+                Act::Link(page_path(v, "forms")),
             )),
         ],
     ));
     let more = ActionGroup::more_only(Menu::new(
         "alone-more",
-        tr(Msg::MoreActionsSet),
+        v.tr(Msg::MoreActionsSet),
         vec![
             Item::new(Action::new(
                 Some(Glyph::FILE_CODE),
-                tr(Msg::OpenTheDocument),
-                Act::Link(page_path("code")),
+                v.tr(Msg::OpenTheDocument),
+                Act::Link(page_path(v, "code")),
             )),
             Item::new(Action::new(
                 Some(Glyph::COPY),
-                tr(Msg::CopyTheSetName),
+                v.tr(Msg::CopyTheSetName),
                 Act::Copy(String::from(crate::data::SET_NAME)),
             )),
         ],
     ));
     let beside = ActionGroup::primary(Action::new(
         Some(Glyph::PLAY),
-        tr(Msg::RunQuery),
-        Act::Link(page_path("forms")),
+        v.tr(Msg::RunQuery),
+        Act::Link(page_path(v, "forms")),
     ))
     .popover(PopoverForm {
         id: "save-query-beside".into(),
         variant: Variant::Secondary,
         glyph: Glyph::SAVE,
-        label: tr(Msg::SaveTheQuery).into(),
-        title: tr(Msg::SaveTheQueryToTheServer).into(),
-        body: view! {
-            <form method="get" action="#popover-form" class="fui-form">
-                {field(
-                    "beside-query-name",
-                    tr(Msg::Name),
-                    None,
-                    view! { <input id="beside-query-name" name="name" type="text" class=INPUT value="synthetic-vitals" /> },
-                )}
-                <div class="fui-dialog-actions">
-                    <button type="submit" class=Variant::Primary.class()>
-                        {label(Some(Glyph::SAVE), tr(Msg::Save))}
-                    </button>
-                </div>
-            </form>
-        }
-        .into_any(),
+        label: v.tr(Msg::SaveTheQuery).into(),
+        title: v.tr(Msg::SaveTheQueryToTheServer).into(),
+        body: h(format!(
+            "<form method=\"get\" action=\"#popover-form\" class=\"fui-form\">{}<div class=\"fui-dialog-actions\"><button type=\"submit\" class=\"{}\">{}</button></div></form>",
+            field(
+                "beside-query-name",
+                v.tr(Msg::Name),
+                None,
+                h(format!(
+                    "<input id=\"beside-query-name\" name=\"name\" type=\"text\" class=\"{INPUT}\" value=\"synthetic-vitals\">"
+                )),
+            ),
+            Variant::Primary.class(),
+            label(Some(Glyph::SAVE), v.tr(Msg::Save))
+        )),
     });
     card(
-        tr(Msg::ActionGroups),
+        v.tr(Msg::ActionGroups),
         definitions(vec![
-            (tr(Msg::APrimaryAlone), action_group(alone)),
-            (tr(Msg::APrimaryPopover), action_group(beside)),
-            (tr(Msg::ASplitPrimary), action_group(split)),
-            (tr(Msg::MoreAlone), action_group(more)),
+            (v.tr(Msg::APrimaryAlone), action_group(&v.locale, alone)),
+            (v.tr(Msg::APrimaryPopover), action_group(&v.locale, beside)),
+            (v.tr(Msg::ASplitPrimary), action_group(&v.locale, split)),
+            (v.tr(Msg::MoreAlone), action_group(&v.locale, more)),
         ]),
     )
-    .into_any()
 }
 
 /// A row menu per file, and the select buttons: the language, which posts,
 /// and the version, whose choices are links.
-fn menus() -> AnyView {
-    let rows = ["synthetic-007.model.yml", "synthetic-011.extension.yml"]
+fn menus(v: &Visit) -> Html {
+    let rows = FILES
         .into_iter()
         .enumerate()
         .map(|(at, row)| {
-            let label = tr_with(Msg::ActionsFor, &[("name", row.into())]);
+            let label = v.tr_with(Msg::ActionsFor, &[("name", row.into())]);
             split(
-                view! { <code>{row}</code> },
-                row_menu(file_menu(&format!("row-menu-{at}"), label)),
+                h(format!("<code>{row}</code>")),
+                row_menu(&v.locale, &file_menu(v, &format!("row-menu-{at}"), label)),
             )
-            .into_any()
         })
         .collect();
-    let here = page_path("overlays");
-    let version = listbox(Listbox {
-        id: String::from("version-list"),
-        label: tr(Msg::Version),
-        value: tr_with(
-            Msg::VersionLatestOf,
-            &[("version", "1.1.0".into()), ("count", 2.into())],
-        )
-        .into(),
-        choices: vec![
-            Choice {
-                label: String::from("1.1.0").into(),
-                note: Some(tr(Msg::Latest).into()),
-                lang: None,
-                selected: true,
-                pick: Pick::Link(format!("{here}?version=1.1.0")),
-            },
-            Choice {
-                label: String::from("1.0.0").into(),
-                note: None,
-                lang: None,
-                selected: false,
-                pick: Pick::Link(format!("{here}?version=1.0.0")),
-            },
-        ],
-    });
+    let here = page_path(v, "overlays");
+    let version = listbox(
+        &v.locale,
+        &Listbox {
+            id: String::from("version-list"),
+            label: v.tr(Msg::Version),
+            value: v
+                .tr_with(
+                    Msg::VersionLatestOf,
+                    &[("version", "1.1.0".into()), ("count", 2.into())],
+                )
+                .into(),
+            choices: vec![
+                Choice {
+                    label: String::from("1.1.0").into(),
+                    note: Some(v.tr(Msg::Latest).into()),
+                    lang: None,
+                    selected: true,
+                    pick: Pick::Link(format!("{here}?version=1.1.0")),
+                },
+                Choice {
+                    label: String::from("1.0.0").into(),
+                    note: None,
+                    lang: None,
+                    selected: false,
+                    pick: Pick::Link(format!("{here}?version=1.0.0")),
+                },
+            ],
+        },
+    );
     let language = language_select(
+        &v.locale,
         "language-list",
-        &crate::app::preferences_of(&crate::cookies::cookies_requested()).language,
+        &v.preferences.language,
         &crate::locale::choices(),
         &ferrohealth_ui::i18n::Locale::english(),
         &Post {
@@ -435,351 +390,254 @@ fn menus() -> AnyView {
         },
     );
     card(
-        tr(Msg::MenusAndSelects),
-        stack(view! {
-            {divided_list(Some(tr(Msg::Files).into()), rows)}
-            {definitions(vec![
-                (tr(Msg::Language), language),
-                (tr(Msg::Version), version),
-            ])}
-        }),
+        v.tr(Msg::MenusAndSelects),
+        stack(Html::join([
+            divided_list(Some(v.tr(Msg::Files).into()), rows),
+            definitions(vec![
+                (v.tr(Msg::Language), language),
+                (v.tr(Msg::Version), version),
+            ]),
+        ])),
     )
-    .into_any()
 }
 
-/// The modal dialogs a signal opens, drawn by the island
-/// [`crate::islands::ModalDialogs`].
-fn modals() -> AnyView {
-    card(
-        tr(Msg::ModalDialogs),
-        view! { <crate::islands::ModalDialogs words=modal_words() modal=ModalWords::of_page() /> },
-    )
-    .into_any()
-}
-
-/// The words of the modal dialogs' island.
-fn modal_words() -> Words {
-    Words::of(&[
-        Msg::Delete,
-        Msg::TheFile,
-        Msg::FileGoesGoodRunningSet,
-        Msg::Files,
-        Msg::RenameTheFile,
-        Msg::RenameFile,
-        Msg::NewName,
-        Msg::PathBelowFhirconnectOmocl,
-        Msg::Rename,
-    ])
-    .open(Msg::DeleteRow, &["row"])
-    .open(Msg::RowDeleted, &["row"])
-}
-
-/// The modal dialog a signal opens, in `words` and the dialogs' own
-/// `modal`: a row's Delete names the row, and a wide form.
-pub(crate) fn modal_dialogs(words: Words, modal: ModalWords) -> AnyView {
-    let words = StoredValue::new(words);
-    let pending = RwSignal::new(None::<&'static str>);
-    let renaming = RwSignal::new(false);
-    let rows = ["synthetic-007.model.yml", "synthetic-011.extension.yml"]
+/// The modal dialogs: a row's Delete leads to the page with the row's
+/// confirmation drawn open, naming the row, and Rename opens a wide form in
+/// place.
+fn modals(v: &Visit) -> Html {
+    let here = page_path(v, "overlays");
+    let rows = FILES
         .into_iter()
         .map(|row| {
             split(
-                view! { <code>{row}</code> },
-                view! {
-                    <button
-                        type="button"
-                        class=Variant::Danger.small()
-                        data-delete=row
-                        on:click=move |_| pending.set(Some(row))
-                    >
-                        {icon(Glyph::TRASH, "14")}
-                        {words.with_value(|words| words.get(Msg::Delete))}
-                    </button>
-                },
+                h(format!("<code>{row}</code>")),
+                h(format!(
+                    "<a href=\"{}?delete={row}\" class=\"{}\" data-delete=\"{row}\" data-fui-keep>{}{}</a>",
+                    t(&here),
+                    Variant::Danger.small(),
+                    icon(Glyph::TRASH, "14"),
+                    t(v.tr(Msg::Delete))
+                )),
             )
-            .into_any()
         })
         .collect();
+    let pending = v.param("delete").filter(|row| FILES.contains(row));
+    let named = pending.map_or_else(|| v.tr(Msg::TheFile), str::to_owned);
     let delete = modal_dialog(
+        &v.locale,
         Modal {
-            id: "delete-row",
-            title: Signal::derive(move || {
-                words.with_value(|words| {
-                    let row = pending
-                        .get()
-                        .map_or_else(|| words.get(Msg::TheFile), str::to_owned);
-                    Word::from(words.fill(Msg::DeleteRow, &[("row", &row)]))
-                })
-            }),
+            id: "delete-row".into(),
+            title: v
+                .tr_with(Msg::DeleteRow, &[("row", Arg::from(named.clone()))])
+                .into(),
             danger: true,
             width: Width::Narrow,
-            body: view! {
-                <p>{words.with_value(|words| words.get(Msg::FileGoesGoodRunningSet))}</p>
-            }
-            .into_any(),
-            actions: view! {
-                <button
-                    type="button"
-                    id="confirm-delete-row"
-                    class=Variant::Destructive.class()
-                    on:click=move |_| {
-                        if let Some(row) = pending.get_untracked() {
-                            let said = words.with_value(|words| words.fill(Msg::RowDeleted, &[("row", row)]));
-                            raise(Toast::new(Tone::Ok, said));
-                        }
-                        pending.set(None);
-                    }
-                >
-                    {icon(Glyph::TRASH, "16")}
-                    {words.with_value(|words| words.get(Msg::Delete))}
-                </button>
-            }
-            .into_any(),
-            words: modal.clone(),
+            body: h(format!("<p>{}</p>", t(v.tr(Msg::FileGoesGoodRunningSet)))),
+            actions: h(format!(
+                "<a href=\"{}?toast=row-deleted&amp;row={}\" id=\"confirm-delete-row\" class=\"{}\" data-fui-keep>{}{}</a>",
+                t(&here),
+                t(&named),
+                Variant::Destructive.class(),
+                icon(Glyph::TRASH, "16"),
+                t(v.tr(Msg::Delete))
+            )),
+            open: pending.is_some(),
+            cancel: Some(format!("{here}#modals")),
         },
-        Signal::derive(move || pending.get().is_some()),
-        Callback::new(move |()| pending.set(None)),
-    )
-    .into_any();
-    let rename = words.with_value(|words| rename_modal(renaming, words, modal));
-    let (files, rename_the_file) =
-        words.with_value(|words| (words.get(Msg::Files), words.get(Msg::RenameTheFile)));
-    view! {
-        {divided_list(Some(files.into()), rows)}
-        <button type="button" class=Variant::Secondary.class() id="open-rename" on:click=move |_| renaming.set(true)>
-            {label(Some(Glyph::PENCIL), rename_the_file)}
-        </button>
-        {delete}
-        {rename}
-    }
-    .into_any()
-}
-
-/// The wide modal form `renaming` opens, in `words` and `modal`.
-fn rename_modal(renaming: RwSignal<bool>, words: &Words, modal: ModalWords) -> AnyView {
-    let name = RwSignal::new(String::from("synthetic-007.model.yml"));
-    modal_dialog(
+    );
+    let rename = modal_dialog(
+        &v.locale,
         Modal {
-            id: "rename-file",
-            title: Signal::stored(Word::from(words.get(Msg::RenameFile))),
+            id: "rename-file".into(),
+            title: v.tr(Msg::RenameFile).into(),
             danger: false,
             width: Width::Wide,
             body: field(
                 "rename-name",
-                words.get(Msg::NewName),
-                Some(words.get(Msg::PathBelowFhirconnectOmocl)),
-                view! {
-                    <input
-                        id="rename-name"
-                        type="text"
-                        class=INPUT
-                        prop:value=move || name.get()
-                        on:input:target=move |event| name.set(event.target().value())
-                    />
-                },
-            )
-            .into_any(),
-            actions: view! {
-                <button type="button" class=Variant::Primary.class() on:click=move |_| renaming.set(false)>
-                    {icon(Glyph::SAVE, "16")}
-                    {words.get(Msg::Rename)}
-                </button>
-            }
-            .into_any(),
-            words: modal,
+                v.tr(Msg::NewName),
+                Some(v.tr(Msg::PathBelowFhirconnectOmocl)),
+                h(format!(
+                    "<input id=\"rename-name\" type=\"text\" class=\"{INPUT}\" value=\"synthetic-007.model.yml\">"
+                )),
+            ),
+            actions: h(format!(
+                "<button type=\"button\" class=\"{}\" command=\"close\" commandfor=\"rename-file\">{}{}</button>",
+                Variant::Primary.class(),
+                icon(Glyph::SAVE, "16"),
+                t(v.tr(Msg::Rename))
+            )),
+            open: false,
+            cancel: None,
         },
-        renaming.into(),
-        Callback::new(move |()| renaming.set(false)),
+    );
+    card(
+        v.tr(Msg::ModalDialogs),
+        h(format!(
+            "<div id=\"modals\">{}<button type=\"button\" class=\"{}\" id=\"open-rename\" command=\"show-modal\" commandfor=\"rename-file\" aria-haspopup=\"dialog\">{}</button>{delete}{rename}</div>",
+            divided_list(Some(v.tr(Msg::Files).into()), rows),
+            Variant::Secondary.class(),
+            label(Some(Glyph::PENCIL), v.tr(Msg::RenameTheFile))
+        )),
     )
-    .into_any()
 }
 
 /// The session's access, which the side panel holds and its own page
 /// shows.
-fn access_body() -> AnyView {
-    stack(view! {
-        {definitions(vec![
-            (tr(Msg::Signed), tr(Msg::SyntheticOperator).into_any()),
-            (tr(Msg::Method), tr(Msg::OpenidConnect).into_any()),
-            (tr(Msg::Policy), tr(Msg::OperatorScopeDecidesWhatConsole).into_any()),
-        ])}
-        <h3>{tr(Msg::Scopes)}</h3>
-        {cluster(
-            view! {
-                {chip("ferrobridge.operator")}
-                {chip("openid")}
-                {chip("profile")}
-            },
-        )}
-    })
-    .into_any()
-}
-
-/// The route of the access page of the brand whose page is drawn.
-fn access_route() -> String {
-    let root =
-        crate::app::route_brand().map_or_else(String::new, |brand| format!("/{}", brand.key()));
-    format!("{root}/overlays/access")
+fn access_body(v: &Visit) -> Html {
+    stack(Html::join([
+        definitions(vec![
+            (v.tr(Msg::Signed), t(v.tr(Msg::SyntheticOperator))),
+            (v.tr(Msg::Method), t(v.tr(Msg::OpenidConnect))),
+            (
+                v.tr(Msg::Policy),
+                t(v.tr(Msg::OperatorScopeDecidesWhatConsole)),
+            ),
+        ]),
+        h(format!("<h3>{}</h3>", t(v.tr(Msg::Scopes)))),
+        cluster(Html::join([
+            chip("ferrobridge.operator"),
+            chip("openid"),
+            chip("profile"),
+        ])),
+    ]))
 }
 
 /// The side panel a button opens, holding the session's access; with no
-/// WebAssembly its opener leads to the access page.
-fn side_panel_card() -> AnyView {
+/// script its opener leads to the access page.
+fn side_panel_card(v: &Visit) -> Html {
     let opener = Opener {
-        label: tr(Msg::ViewAccess),
+        label: v.tr(Msg::ViewAccess),
         glyph: Some(Glyph::SHIELD_CHECK),
         variant: Variant::Secondary,
-        href: access_route(),
+        href: page_path(v, "overlays/access"),
     };
     card(
-        tr(Msg::SidePanel),
-        view! {
-            <p class="fui-muted">{tr(Msg::ContentNoNavigationFromEnd)}</p>
-            <SidePanel
-                id=String::from("access")
-                title=tr(Msg::Access)
-                opener=opener
-                words=SidePanelWords::of_page()
-            >
-                {access_body()}
-            </SidePanel>
-        },
+        v.tr(Msg::SidePanel),
+        h(format!(
+            "<p class=\"fui-muted\">{}</p>{}",
+            t(v.tr(Msg::ContentNoNavigationFromEnd)),
+            side_panel(SidePanel {
+                id: String::from("access"),
+                title: v.tr(Msg::Access),
+                opener,
+                body: access_body(v),
+                words: SidePanelWords::of(&v.locale),
+            })
+        )),
     )
-    .into_any()
 }
 
-/// A button per tone that raises a toast in it, drawn by the island
-/// [`crate::islands::ToastButtons`].
-fn toasts() -> AnyView {
-    let words = Words::of(&[
-        Msg::Success,
-        Msg::SavedSetReloaded,
-        Msg::ThreeFilesCompiledFacadeServes,
-        Msg::OpenTheTables,
-        Msg::Information,
-        Msg::SetReloadsBackground,
-        Msg::Warning,
-        Msg::SetCompiled2Warnings,
-        Msg::TwoMappingsNameMissingPath,
-        Msg::Refusal,
-        Msg::SaveWasRefused412,
-        Msg::SomeoneSavedTheFileFirst,
-        Msg::TryAgain,
-    ]);
-    let tables = super::overview::brand_page("tables").unwrap_or_default();
-    card(
-        tr(Msg::Toasts),
-        view! { <crate::islands::ToastButtons words tables /> },
-    )
-    .into_any()
+/// The toast the address's `toast` names, as the action that led here
+/// answered it.
+fn flash(v: &Visit) -> Option<Flash> {
+    let tables = super::overview::brand_page(v, "tables");
+    let here = page_path(v, "overlays");
+    Some(match v.param("toast")? {
+        "ok" => Flash::new(Tone::Ok, v.tr(Msg::SavedSetReloaded))
+            .line(v.tr(Msg::ThreeFilesCompiledFacadeServes))
+            .action(ToastLink {
+                label: v.tr(Msg::OpenTheTables),
+                href: tables,
+            }),
+        "info" => Flash::new(Tone::Info, v.tr(Msg::SetReloadsBackground)),
+        "warn" => Flash::new(Tone::Warn, v.tr(Msg::SetCompiled2Warnings))
+            .line(v.tr(Msg::TwoMappingsNameMissingPath)),
+        "bad" => Flash::new(Tone::Bad, v.tr(Msg::SaveWasRefused412))
+            .line(v.tr(Msg::SomeoneSavedTheFileFirst))
+            .action(ToastLink {
+                label: v.tr(Msg::TryAgain),
+                href: format!("{here}?toast=ok"),
+            }),
+        "reloaded" => Flash::new(Tone::Ok, v.tr(Msg::SetReloaded)),
+        "deleted" => Flash::new(Tone::Ok, v.tr(Msg::SyntheticFileWasDeleted)),
+        "row-deleted" => {
+            let row = v.param("row").filter(|row| FILES.contains(row))?;
+            Flash::new(
+                Tone::Ok,
+                v.tr_with(Msg::RowDeleted, &[("row", Arg::from(row))]),
+            )
+        }
+        _ => return None,
+    })
 }
 
-/// A button per tone that raises a toast in it, in `words`: a title, a line
-/// under it where there is more to say, and an action, the success toast's
-/// leading to `tables` and the refusal's trying again.
-pub(crate) fn toast_buttons(words: &Words, tables: String) -> AnyView {
-    let saved = words.get(Msg::SavedSetReloaded);
-    let again = Toast::new(Tone::Ok, saved.clone());
-    let toasts = [
-        (
-            words.get(Msg::Success),
-            Toast::new(Tone::Ok, saved)
-                .line(words.get(Msg::ThreeFilesCompiledFacadeServes))
-                .action(ToastAction::Link(ToastLink {
-                    label: words.get(Msg::OpenTheTables),
-                    href: tables,
-                })),
-        ),
-        (
-            words.get(Msg::Information),
-            Toast::new(Tone::Info, words.get(Msg::SetReloadsBackground)),
-        ),
-        (
-            words.get(Msg::Warning),
-            Toast::new(Tone::Warn, words.get(Msg::SetCompiled2Warnings))
-                .line(words.get(Msg::TwoMappingsNameMissingPath)),
-        ),
-        (
-            words.get(Msg::Refusal),
-            Toast::new(Tone::Bad, words.get(Msg::SaveWasRefused412))
-                .line(words.get(Msg::SomeoneSavedTheFileFirst))
-                .action(ToastAction::Run {
-                    label: words.get(Msg::TryAgain),
-                    run: Callback::new(move |()| raise(again.clone())),
-                }),
-        ),
-    ];
-    let buttons = toasts
-        .into_iter()
-        .map(|(label_words, toast)| {
-            let tone = toast.tone;
-            view! {
-                <button
-                    type="button"
-                    class=Variant::Secondary.class()
-                    data-toast=tone.name()
-                    on:click=move |_| raise(toast.clone())
-                >
-                    {label(Some(Glyph::BELL), label_words)}
-                </button>
-            }
-        })
-        .collect_view();
-    cluster(buttons).into_any()
+/// A link per tone that leads to the page drawn again with a toast in it:
+/// a title, a line under it where there is more to say, and an action, the
+/// success toast's leading to the tables and the refusal's trying again.
+fn toasts(v: &Visit) -> Html {
+    let here = page_path(v, "overlays");
+    let buttons = [
+        (Tone::Ok, Msg::Success),
+        (Tone::Info, Msg::Information),
+        (Tone::Warn, Msg::Warning),
+        (Tone::Bad, Msg::Refusal),
+    ]
+    .into_iter()
+    .map(|(tone, words)| {
+        h(format!(
+            "<a href=\"{}?toast={}\" class=\"{}\" data-toast=\"{}\" data-fui-keep>{}</a>",
+            t(&here),
+            tone.name(),
+            Variant::Secondary.class(),
+            tone.name(),
+            label(Some(Glyph::BELL), v.tr(words))
+        ))
+    })
+    .collect();
+    card(v.tr(Msg::Toasts), cluster(buttons))
 }
 
 /// The popover form: Save the query, a small form that opens under its
 /// trigger and posts with no script.
-fn popover() -> AnyView {
-    let body = view! {
-        <form method="get" action="#popover-form" class="fui-form">
-            {field(
-                "query-name",
-                tr(Msg::Name),
-                None,
-                view! { <input id="query-name" name="name" type="text" class=INPUT value="synthetic-vitals" /> },
-            )}
-            {field(
-                "query-version",
-                tr(Msg::Version),
-                None,
-                view! { <input id="query-version" name="version" type="text" class=INPUT value="1.0.0" /> },
-            )}
-            <div class="fui-dialog-actions">
-                <button type="submit" class=Variant::Primary.class()>
-                    {label(Some(Glyph::SAVE), tr(Msg::Save))}
-                </button>
-            </div>
-        </form>
-    }
-    .into_any();
+fn popover(v: &Visit) -> Html {
+    let body = h(format!(
+        "<form method=\"get\" action=\"#popover-form\" class=\"fui-form\">{}{}<div class=\"fui-dialog-actions\"><button type=\"submit\" class=\"{}\">{}</button></div></form>",
+        field(
+            "query-name",
+            v.tr(Msg::Name),
+            None,
+            h(format!(
+                "<input id=\"query-name\" name=\"name\" type=\"text\" class=\"{INPUT}\" value=\"synthetic-vitals\">"
+            )),
+        ),
+        field(
+            "query-version",
+            v.tr(Msg::Version),
+            None,
+            h(format!(
+                "<input id=\"query-version\" name=\"version\" type=\"text\" class=\"{INPUT}\" value=\"1.0.0\">"
+            )),
+        ),
+        Variant::Primary.class(),
+        label(Some(Glyph::SAVE), v.tr(Msg::Save))
+    ));
     card(
-        tr(Msg::PopoverForm),
-        view! {
-            <p class="fui-muted" id="popover-form">{tr(Msg::PopoverFormOpensUnderTrigger)}</p>
-            {cluster(popover_form(PopoverForm {
+        v.tr(Msg::PopoverForm),
+        h(format!(
+            "<p class=\"fui-muted\" id=\"popover-form\">{}</p>{}",
+            t(v.tr(Msg::PopoverFormOpensUnderTrigger)),
+            cluster(popover_form(PopoverForm {
                 id: "save-query".into(),
                 variant: Variant::Secondary,
                 glyph: Glyph::SAVE,
-                label: tr(Msg::SaveTheQuery).into(),
-                title: tr(Msg::SaveTheQueryToTheServer).into(),
+                label: v.tr(Msg::SaveTheQuery).into(),
+                title: v.tr(Msg::SaveTheQueryToTheServer).into(),
                 body,
-            }))}
-        },
+            }))
+        )),
     )
-    .into_any()
 }
 
 /// The page's shortcuts, as the legend lists them: the ones the gallery
 /// binds, and a group of one.
-fn shortcut_groups() -> Vec<ShortcutGroup> {
+fn shortcut_groups(v: &Visit) -> Vec<ShortcutGroup> {
     let shortcut = |keys: &str, does: Msg| Shortcut {
         keys: String::from(keys),
-        does: tr(does),
+        does: v.tr(does),
     };
     vec![
         ShortcutGroup {
-            title: tr(Msg::ShortcutsEverywhere),
+            title: v.tr(Msg::ShortcutsEverywhere),
             shortcuts: vec![
                 shortcut("/", Msg::ShortcutFind),
                 shortcut("?", Msg::ShortcutShow),
@@ -787,126 +645,66 @@ fn shortcut_groups() -> Vec<ShortcutGroup> {
             ],
         },
         ShortcutGroup {
-            title: tr(Msg::ShortcutsSearch),
+            title: v.tr(Msg::ShortcutsSearch),
             shortcuts: vec![shortcut("Enter", Msg::ShortcutOpenFirst)],
         },
     ]
 }
 
-/// The keyboard shortcut legend, opened by the island
-/// [`crate::islands::ShortcutLegend`], and the hint a listing shows at its
-/// foot.
-fn shortcuts() -> AnyView {
+/// The keyboard shortcut legend, opened on `?` and by its button, which the
+/// `shortcuts` module shows as it runs, from 40 rem up, and the hint
+/// a listing shows at its foot.
+fn shortcuts(v: &Visit) -> Html {
     let hint = [
         Shortcut {
             keys: String::from("/"),
-            does: tr(Msg::ShortcutFind),
+            does: v.tr(Msg::ShortcutFind),
         },
         Shortcut {
             keys: String::from("?"),
-            does: tr(Msg::ShortcutShow),
+            does: v.tr(Msg::ShortcutShow),
         },
     ];
     card(
-        tr(Msg::KeyboardShortcuts),
-        view! {
-            <p class="fui-muted">{tr(Msg::ShortcutsCardIntro)}</p>
-            <crate::islands::ShortcutLegend
-                groups=shortcut_groups()
-                words=LegendWords::of_page()
-                opener=tr(Msg::KeyboardShortcuts)
-            />
-            {shortcut_hint(&hint)}
-        },
+        v.tr(Msg::KeyboardShortcuts),
+        h(format!(
+            "<p class=\"fui-muted\">{}</p><button type=\"button\" id=\"open-shortcuts\" class=\"fui-button fui-button-secondary fui-wide-only\" aria-keyshortcuts=\"?\" {OPENS_LEGEND} hidden>{}{}</button>{}{}",
+            t(v.tr(Msg::ShortcutsCardIntro)),
+            t(v.tr(Msg::KeyboardShortcuts)),
+            kbd("?"),
+            shortcut_legend(&v.locale, shortcut_groups(v)),
+            shortcut_hint(&v.locale, &hint)
+        )),
     )
-    .into_any()
-}
-
-/// The legend of `groups` in the words `words`, and the button `opener`
-/// that opens it: the library's legend opens on `?` outside a field and
-/// from a control marked to open it, the button among them, never in the
-/// phone layout. The button shows once the page has hydrated and from 40
-/// rem up.
-pub(crate) fn shortcut_legend_with(
-    groups: Vec<ShortcutGroup>,
-    words: LegendWords,
-    opener: String,
-) -> AnyView {
-    let hydrated = RwSignal::new(false);
-    Effect::new(move |_| hydrated.set(true));
-    view! {
-        <button
-            type="button"
-            id="open-shortcuts"
-            class="fui-button fui-button-secondary fui-wide-only"
-            aria-keyshortcuts="?"
-            data-ferroui-shortcuts=""
-            hidden=move || !hydrated.get()
-        >
-            {opener}
-            {kbd("?")}
-        </button>
-        <ferrohealth_ui::island::ShortcutLegend groups words />
-    }
-    .into_any()
 }
 
 /// The access page: the side panel's content as a page of its own, where
-/// the panel's opener leads with no WebAssembly.
-#[component]
-#[expect(
-    clippy::must_use_candidate,
-    reason = "the #[component] macro drops a #[must_use] from the function it writes"
-)]
-pub fn AccessPage() -> impl IntoView {
-    let header = page_header(tr(Msg::Access), None, ActionGroup::none()).into_any();
-    view! {
-        {super::title(tr(Msg::Access))}
-        {header}
-        {panel(access_body())}
-    }
+/// the panel's opener leads with no script.
+#[must_use]
+pub fn access(v: &Visit) -> Page {
+    let header = page_header(&v.locale, v.tr(Msg::Access), None, ActionGroup::none());
+    Page::shell(
+        v.tr(Msg::Access),
+        Html::join([header, panel(access_body(v))]),
+    )
 }
 
 /// The overlays page.
-#[component]
-#[expect(
-    clippy::must_use_candidate,
-    reason = "the #[component] macro drops a #[must_use] from the function it writes"
-)]
-pub fn OverlaysPage() -> impl IntoView {
+#[must_use]
+pub fn page(v: &Visit) -> Page {
     let header = page_header(
-        tr(Msg::OverlaysFeedback),
-        Some(tr(Msg::DialogsModalsSidePanelToasts)),
-        overlays_actions(),
-    )
-    .into_any();
-    let sections = (
-        confirmations(),
-        modals(),
-        side_panel_card(),
-        toasts(),
-        popover(),
-        shortcuts(),
+        &v.locale,
+        v.tr(Msg::OverlaysFeedback),
+        Some(v.tr(Msg::DialogsModalsSidePanelToasts)),
+        overlays_actions(v),
     );
-    let shapes = (action_groups(), menus());
-    view! {
-        {super::title(tr(Msg::OverlaysFeedback))}
-        {header}
-        {stack(view! {
-            {grid(view! {
-                {sections.0}
-                {sections.2}
-            })}
-            {grid(view! {
-                {shapes.0}
-                {shapes.1}
-            })}
-            {sections.1}
-            {grid(view! {
-                {sections.3}
-                {sections.4}
-            })}
-            {sections.5}
-        })}
-    }
+    let body = stack(Html::join([
+        grid(Html::join([confirmations(v), side_panel_card(v)])),
+        grid(Html::join([action_groups(v), menus(v)])),
+        modals(v),
+        grid(Html::join([toasts(v), popover(v)])),
+        shortcuts(v),
+    ]));
+    Page::shell(v.tr(Msg::OverlaysFeedback), Html::join([header, body]))
+        .with_flash(flash(v).into_iter().collect())
 }

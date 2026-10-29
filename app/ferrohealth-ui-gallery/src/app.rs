@@ -27,7 +27,7 @@ use ferrohealth_ui::view::shell::{
     Document, Footer, Shell, TopBar, centred, document, lockup, mark, shell, topbar,
 };
 use ferrohealth_ui::view::status::{Reach, StatusPill, banner, status_pill};
-use ferrohealth_ui::view::toast::toast_region;
+use ferrohealth_ui::view::toast::{Flash, toast_region};
 use ferrohealth_ui::view::version::{VersionSelect, version_select};
 
 use crate::locale::Msg;
@@ -160,34 +160,46 @@ pub struct Page {
     pub content: Html,
     /// The answer's status.
     pub status: http::StatusCode,
+    /// The toasts the page arrives with, such as the outcome of the action
+    /// that led to it.
+    pub flash: Vec<Flash>,
 }
 
 impl Page {
     /// A page in the brand's shell.
     #[must_use]
-    pub const fn shell(title: String, content: Html) -> Self {
+    pub fn shell(title: String, content: Html) -> Self {
         Self {
             title,
             frame: Frame::Shell,
             content,
             status: http::StatusCode::OK,
+            flash: Vec::new(),
         }
     }
 
     /// A page centred above the footer.
     #[must_use]
-    pub const fn centred(title: String, content: Html) -> Self {
+    pub fn centred(title: String, content: Html) -> Self {
         Self {
             title,
             frame: Frame::Centred,
             content,
             status: http::StatusCode::OK,
+            flash: Vec::new(),
         }
+    }
+
+    /// This page with the toasts `flash`.
+    #[must_use]
+    pub fn with_flash(mut self, flash: Vec<Flash>) -> Self {
+        self.flash = flash;
+        self
     }
 
     /// This page answered with `status`.
     #[must_use]
-    pub const fn with_status(mut self, status: http::StatusCode) -> Self {
+    pub fn with_status(mut self, status: http::StatusCode) -> Self {
         self.status = status;
         self
     }
@@ -231,7 +243,7 @@ pub fn title(visit: &Visit, name: &str) -> String {
 /// The whole document of `page` for `visit`.
 #[must_use]
 pub fn render(visit: &Visit, page: Page) -> Html {
-    let toasts = toast_region(&visit.locale, Vec::new());
+    let toasts = toast_region(&visit.locale, page.flash);
     let body = match page.frame {
         Frame::Shell => brand_shell(visit, page.content, toasts),
         Frame::Centred => centred(&visit.locale, page.content, toasts, footer(visit)),

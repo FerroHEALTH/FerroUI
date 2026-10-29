@@ -10,6 +10,8 @@ import { typing } from "./tabs.js";
 
 export function enhance(dialog) {
   const phone = () => window.matchMedia("(width < 40rem)").matches;
+  // A button that opens the legend works only here, so it shows from now.
+  for (const opener of document.querySelectorAll("button[data-fui-shortcuts][hidden]")) opener.hidden = false;
   window.addEventListener("keydown", (event) => {
     if (event.key !== "?" || event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return;
     if (typing(event) || phone() || dialog.open) return;

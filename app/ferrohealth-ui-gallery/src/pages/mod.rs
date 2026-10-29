@@ -14,6 +14,7 @@ pub mod find;
 pub mod forms;
 pub mod layouts;
 pub mod operations;
+pub mod overlays;
 pub mod overview;
 pub mod preferences;
 pub mod records;
