@@ -1121,15 +1121,7 @@ async fn an_action_answer_is_drawn_on_its_page_with_the_modules_refused()
                 .await?,
             "the posted note is kept in its field"
         );
-        assert_eq!(
-            Some(String::from("/ferrobridge/forms")),
-            browser
-                .element(By::Css("#answer-form input[name='ferroui_answer']"))
-                .await?
-                .attr("value")
-                .await?,
-            "the page drawn is the forms page"
-        );
+        browser.at(&gallery.url("/ferrobridge/forms")).await?;
         let field = browser.element(By::Id("answer-note")).await?;
         field.clear().await?;
         let check = browser

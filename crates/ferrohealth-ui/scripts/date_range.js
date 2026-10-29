@@ -65,7 +65,7 @@ function rangeField(root, config, words, button) {
       hovered = null;
       this.focused = n;
       reveal(n);
-      draw(false);
+      draw(true);
     },
     key(event) {
       const target = keyTarget(event, this.focused, config.first);
@@ -119,12 +119,39 @@ function rangeField(root, config, words, button) {
     } else head.append(element("span", { class: "fui-datepicker-navgap" }));
     return element("div", { class: "fui-datepicker-month" }, head, grid(config, state, y, m));
   }
+  // The frame, the status line and the buttons are made once as the panel
+  // opens, so a control the reader holds stays the same element; a draw
+  // redraws the presets and the two months.
+  let frame = null;
+  function build() {
+    const presets = element("div", { class: "fui-datepicker-presets", role: "group", "aria-label": text(words.ranges) });
+    const pair = element("div", { class: "fui-datepicker-pair" });
+    const said = element("p", { class: "fui-datepicker-status", role: "status", hidden: true });
+    const apply = element("button", { type: "button", class: "fui-button fui-button-primary fui-button-small", text: text(words.apply), onclick: () => {
+      close(false);
+      if (from.form) from.form.requestSubmit();
+    } });
+    panel.append(element("span", { class: "fui-datepicker-handle", "aria-hidden": "true" }), element("p", { class: "fui-datepicker-label", text: config.label }));
+    panel.append(element("div", { class: "fui-datepicker-body" }, presets, element("div", { class: "fui-datepicker-main" }, pair, said)));
+    panel.append(element("div", { class: "fui-datepicker-foot" },
+      element("div", { class: "fui-actions" }, element("button", { type: "button", class: "fui-button fui-button-ghost fui-button-small", text: text(words.clear), onclick: () => {
+        from.value = "";
+        to.value = "";
+        hovered = null;
+        draw(false);
+      } })),
+      element("div", { class: "fui-actions" },
+        element("button", { type: "button", class: "fui-button fui-button-secondary fui-button-small", text: text(words.cancel), onclick: () => close(true) }),
+        apply,
+      ),
+    ));
+    frame = { presets, pair, said, apply };
+  }
   function draw(focus) {
     if (!panel) return;
-    panel.replaceChildren();
+    if (!frame) build();
     panel.classList.toggle("is-start", Boolean(state.flip));
-    panel.append(element("span", { class: "fui-datepicker-handle", "aria-hidden": "true" }), element("p", { class: "fui-datepicker-label", text: config.label }));
-    const presets = element("div", { class: "fui-datepicker-presets", role: "group", "aria-label": text(words.ranges) }, config.presets.map(([span, label]) => {
+    frame.presets.replaceChildren(...config.presets.map(([span, label]) => {
       const pair = span ? [parseIso(span[0]), parseIso(span[1])] : null;
       const [a, b] = ends();
       return element("button", { type: "button", class: "fui-datepicker-preset", "aria-pressed": String(pair !== null && a === pair[0] && b === pair[1]), disabled: pair === null, text: label, onclick: () => {
@@ -139,28 +166,12 @@ function rangeField(root, config, words, button) {
     }));
     const later = state.shown;
     const earlier = stepMonth(later.y, later.m, -1) || later;
+    frame.pair.replaceChildren(month(earlier.y, earlier.m, "fui-icon-button", false), month(later.y, later.m, "fui-icon-button fui-datepicker-phone-prev", true));
     const said = status();
-    const main = element("div", { class: "fui-datepicker-main" },
-      element("div", { class: "fui-datepicker-pair" }, month(earlier.y, earlier.m, "fui-icon-button", false), month(later.y, later.m, "fui-icon-button fui-datepicker-phone-prev", true)),
-      element("p", { class: "fui-datepicker-status", role: "status", hidden: said === "", text: said }),
-    );
-    panel.append(element("div", { class: "fui-datepicker-body" }, presets, main));
+    frame.said.textContent = said;
+    frame.said.hidden = said === "";
     const [a, b] = ends();
-    panel.append(element("div", { class: "fui-datepicker-foot" },
-      element("div", { class: "fui-actions" }, element("button", { type: "button", class: "fui-button fui-button-ghost fui-button-small", text: text(words.clear), onclick: () => {
-        from.value = "";
-        to.value = "";
-        hovered = null;
-        draw(false);
-      } })),
-      element("div", { class: "fui-actions" },
-        element("button", { type: "button", class: "fui-button fui-button-secondary fui-button-small", text: text(words.cancel), onclick: () => close(true) }),
-        element("button", { type: "button", class: "fui-button fui-button-primary fui-button-small", disabled: (a !== null) !== (b !== null), text: text(words.apply), onclick: () => {
-          close(false);
-          if (from.form) from.form.requestSubmit();
-        } }),
-      ),
-    ));
+    frame.apply.disabled = (a !== null) !== (b !== null);
     if (focus) {
       const target = panel.querySelector("[data-day='" + iso(state.focused) + "']");
       if (target) requestAnimationFrame(() => target.focus());
@@ -172,6 +183,7 @@ function rangeField(root, config, words, button) {
     open = false;
     if (panel) panel.remove();
     panel = null;
+    frame = null;
     button.setAttribute("aria-expanded", "false");
     summary.textContent = summarize(from.value, to.value);
   }

@@ -1264,7 +1264,7 @@ fn dates(v: &Visit) -> Html {
         .into_iter()
         .map(|preset| RangePreset::of(&v.locale, preset))
         .collect(),
-        words: DateWords::of(&v.locale, false),
+        words: DateWords::of(&v.locale, false).counted(&v.locale),
     };
     card(
         v.tr(Msg::DateFields),
