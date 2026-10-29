@@ -8,7 +8,7 @@
 // behind the title, the quick choices or a time row. Cancel and Escape put
 // back what the field held when the picker opened; Apply keeps it.
 
-import { allows, arrow, dayName, element, fill, fromNumber, grid, iso, keyTarget, monthTitle, openingDay, pad, parseIso, parseMoment, picker, reaches, reason, stepMonth, text, config as read } from "./calendar.js";
+import { allows, arrow, dayName, element, fill, fromNumber, glyph, grid, iso, keyTarget, monthTitle, openingDay, pad, parseIso, parseMoment, picker, reaches, reason, stepMonth, text, config as read } from "./calendar.js";
 
 export function enhance(root) {
   const cfg = read(root, "data-fui-date");
@@ -150,7 +150,7 @@ function field(root, config, words, button) {
         element("button", { type: "button", class: "fui-datepicker-title", "aria-label": fill(text(words.choose_month), { title }), text: title, onclick: () => {
           months = true;
           draw(false);
-        } }),
+        } }, glyph(root, "chevron-down")),
         arrow(root, "chevron-right", text(words.next_month), "fui-icon-button", !later || !reaches(config.bounds, later.y, later.m), () => {
           state.shown = later;
           draw(false);
@@ -184,7 +184,7 @@ function field(root, config, words, button) {
         element("button", { type: "button", class: "fui-datepicker-title", "aria-label": text(words.back_to_days), text: String(shownYear), onclick: () => {
           months = false;
           draw(false);
-        } }),
+        } }, glyph(root, "chevron-up")),
         arrow(root, "chevron-right", text(words.next_year), "fui-icon-button", !reachesYear(shownYear + 1), () => {
           shownYear += 1;
           render();
