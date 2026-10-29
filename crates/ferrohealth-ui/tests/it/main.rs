@@ -20,6 +20,7 @@
 )]
 
 mod chrome;
+mod console;
 mod contrast;
 mod controls;
 mod dock;
