@@ -10,10 +10,7 @@
 #
 # The steps, each only when the change reaches it:
 #   1. cargo fmt --all --check
-#   2. clippy -D warnings on the reached packages, and the wasm32 runs of
-#      the CI clippy job when browser code changed; those run beside the
-#      host steps, in target/wasm-lint, so neither waits for the other's
-#      build lock
+#   2. clippy -D warnings on the reached packages
 #   3. cargo nextest run and the doctests of the reached packages
 #   4. the journeys of the touched area, against the gallery built with the
 #      fast wasm-dev profile (the release bundle and its budget are CI's)
@@ -67,7 +64,7 @@ self_test() {
     out="$(bash "$0" --change HEAD --dry-run 2>&1)" || die "self-test: a dry run of one commit failed: $out"
   fi
   out="$(bash "$0" --all --dry-run --no-browser 2>&1)"
-  case "$out" in *"clippy wasm32"*"cargo fmt --all --check"*"cargo clippy"*"cargo nextest run"*) ;; *) die "self-test: --all plans no full Rust tier: $out" ;; esac
+  case "$out" in *"cargo fmt --all --check"*"cargo clippy"*"cargo nextest run"*) ;; *) die "self-test: --all plans no full Rust tier: $out" ;; esac
   case "$out" in *"journeys"*"skipped"*) ;; *) die "self-test: --no-browser still plans the journeys: $out" ;; esac
   out="$(bash "$0" --all --dry-run 2>&1)"
   case "$out" in *"chrome-lock.sh"*"FERROUI_JOURNEYS=1"*"chrome-lock.sh"*"check.sh"*) ;; *) die "self-test: --all plans no locked journeys and design checks: $out" ;; esac
@@ -115,11 +112,10 @@ fi
 get() { printf '%s\n' "$plan" | sed -n "s/^$1=//p"; }
 rust="$(get rust)"
 packages="$(get packages)"
-wasm="$(get wasm)"
 gallery="$(get gallery)"
 journeys="$(get journeys)"
 design="$(get design)"
-echo "fast: ${base:+from $(git rev-parse --short "$base"), }packages: ${packages:-none}; wasm32: $wasm; journeys: ${journeys:-none}; design: ${design:-none}"
+echo "fast: ${base:+from $(git rev-parse --short "$base"), }packages: ${packages:-none}; journeys: ${journeys:-none}; design: ${design:-none}"
 
 failed=()
 step() {
@@ -152,31 +148,7 @@ tools_from() {
 pkg_args=()
 for package in $packages; do pkg_args+=(-p "$package"); done
 
-# The wasm32 clippy runs of the CI clippy job, in a target directory of
-# their own, so they build beside the host steps instead of after them.
-wasm_lint() {
-  local status=0
-  export CARGO_TARGET_DIR="$root/target/wasm-lint"
-  cargo clippy -p ferrohealth-ui --lib --locked --target wasm32-unknown-unknown --features leptos/hydrate -- -D warnings || status=1
-  cargo clippy -p ferrohealth-ui --lib --locked --target wasm32-unknown-unknown --features leptos/csr -- -D warnings || status=1
-  cargo clippy -p ferrohealth-ui-gallery --lib --locked --target wasm32-unknown-unknown -- -D warnings || status=1
-  return "$status"
-}
-
-wasm_pid=""
-wasm_start=$SECONDS
-wasm_log="$root/target/fast-wasm-lint.log"
 if [ "$rust" = true ]; then
-  if [ "$wasm" = true ]; then
-    echo "+ clippy wasm32 (leptos/hydrate, leptos/csr, the gallery) in target/wasm-lint, beside the host steps"
-    if [ "$dry" = false ]; then
-      mkdir -p "$root/target"
-      wasm_lint > "$wasm_log" 2>&1 &
-      wasm_pid=$!
-    fi
-  else
-    skipped "clippy wasm32" "no browser code changed"
-  fi
   step rustfmt cargo fmt --all --check
   step clippy cargo clippy ${pkg_args[@]+"${pkg_args[@]}"} --all-targets --locked -- -D warnings
   step nextest cargo nextest run ${pkg_args[@]+"${pkg_args[@]}"} --locked
@@ -184,19 +156,6 @@ if [ "$rust" = true ]; then
 else
   skipped "the Rust tier" "the change reaches no Rust input"
 fi
-
-# Waits for the wasm32 clippy runs and reports them as one step.
-wasm_wait() {
-  [ -n "$wasm_pid" ] || return 0
-  if wait "$wasm_pid"; then
-    echo "fast: clippy wasm32 passed in $((SECONDS - wasm_start))s"
-  else
-    cat "$wasm_log" >&2
-    echo "fast: clippy wasm32 FAILED after $((SECONDS - wasm_start))s" >&2
-    failed+=("clippy wasm32")
-  fi
-  wasm_pid=""
-}
 
 if [ "$browser" = false ]; then
   skipped journeys "--no-browser"
@@ -238,8 +197,6 @@ elif [ -n "$design" ]; then
 else
   skipped "design checks" "the change reaches no design set"
 fi
-
-wasm_wait
 
 if [ "${#failed[@]}" -gt 0 ]; then
   echo "fast: failed: ${failed[*]}" >&2

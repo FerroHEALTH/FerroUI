@@ -14,7 +14,7 @@ Closes #NNN
 ## Checklist
 
 - [ ] Accessibility decisions cite WCAG 2.2, WAI-ARIA 1.2 or the Authoring Practices, not memory and not another library.
-- [ ] Rust gates pass: `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings`, the wasm32 clippy runs, `cargo nextest run --workspace --locked`, `cargo doc` with `RUSTDOCFLAGS=-D warnings`, and `cargo deny check`.
+- [ ] Rust gates pass: `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo nextest run --workspace --locked`, `cargo doc` with `RUSTDOCFLAGS=-D warnings`, and `cargo deny check`.
 - [ ] I looked at every gallery screenshot a visible change moves (the `gallery-screenshots` artifact), and committed none: the refresh pull request does (`.claude/rules/parallel-prs.md`). New states are named below.
 - [ ] A new or changed component was compared with every console's version (`docs/qa/`), and the best one on its merits was restyled to the library's tokens; the winner and the reason are stated below.
 - [ ] Its interactive states (pointer, focus, open, each tone) are captured by their area's file under `tests/it/states/` in every brand, light and dark.

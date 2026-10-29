@@ -7,7 +7,7 @@
 #      change.
 #   2. The Rust tier runs when the workspace exists (the `detect` job looks
 #      for the root Cargo.toml after checkout, which hashFiles() at `if:` time
-#      cannot): fmt, clippy on the host and on wasm32, nextest with the
+#      cannot): fmt, clippy, nextest with the
 #      contrast test, rustdoc, cargo-deny, the publish dry run.
 #   3. The gallery tier runs when the change reaches the gallery: the release
 #      site bundle with its size budget and path check, then the browser
@@ -134,8 +134,8 @@ jobs:
           persist-credentials: false
       - run: bash scripts/checks/comment-style.sh --all
 
-  # No string a reader sees in a component outside the catalogs
-  # (.claude/rules/leptos-ui.md §13).
+  # No string a reader sees in a component outside the catalogs, in the
+  # Rust and in the templates.
   stray-literals:
     name: stray-literals
     runs-on: ubuntu-latest
@@ -148,10 +148,11 @@ jobs:
           persist-credentials: false
       - run: bash scripts/checks/stray-literals.sh crates/ferrohealth-ui/src crates/ferrohealth-ui/templates app/ferrohealth-ui-gallery/src
 
-  # The mechanical part of the Leptos rules (.claude/rules/leptos-ui.md
-  # §14 and §15), with its self-test.
-  leptos-rules:
-    name: leptos-rules
+  # The markup keeps a console's policy at script-src 'self' and
+  # style-src 'self': no style attribute or element, no inline script or
+  # handler, no javascript: URL; with its self-test.
+  markup-rules:
+    name: markup-rules
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -160,8 +161,23 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - run: bash scripts/checks/leptos-rules.sh --self-test
-      - run: bash scripts/checks/leptos-rules.sh
+      - run: bash scripts/checks/markup-rules.sh --self-test
+      - run: bash scripts/checks/markup-rules.sh crates/ferrohealth-ui/src crates/ferrohealth-ui/templates app/ferrohealth-ui-gallery/src
+
+  # The script modules within their budget, with no eval, no absolute URL
+  # and no fetch outside the two documented wires; with its self-test.
+  script-budget:
+    name: script-budget
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: bash scripts/checks/script-budget.sh --self-test
+      - run: bash scripts/checks/script-budget.sh
 
   # Every TODO(#N) names an open issue.
   todo-issues:
@@ -385,7 +401,7 @@ jobs:
       - run: cargo fmt --all --check
 
   clippy:
-    name: clippy (host and wasm32)
+    name: clippy
     needs: detect
     if: needs.detect.outputs.cargo == 'true'
     runs-on: ubuntu-latest
@@ -399,19 +415,11 @@ jobs:
       - uses: ./.github/actions/setup-rust
         with:
           components: clippy
-          target: wasm32-unknown-unknown
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
-      # The library compiles under every render mode a console turns on
-      # (.claude/rules/leptos-ui.md §2), so the browser target is linted
-      # under hydrate and under csr.
-      - run: cargo clippy -p ferrohealth-ui --lib --locked --target wasm32-unknown-unknown --features leptos/hydrate -- -D warnings
-      - run: cargo clippy -p ferrohealth-ui --lib --locked --target wasm32-unknown-unknown --features leptos/csr -- -D warnings
-      # The browser half builds at the lowest web-sys its manifest asks for,
-      # so the library never moves a console's wasm-bindgen.
-      - run: bash scripts/checks/browser-floor.sh
-      - if: needs.detect.outputs.gallery == 'true'
-        run: cargo clippy -p ferrohealth-ui-gallery --lib --locked --target wasm32-unknown-unknown -- -D warnings
+      # A console that serves the assets itself builds the library without
+      # its axum feature.
+      - run: cargo clippy -p ferrohealth-ui --all-targets --locked --no-default-features -- -D warnings
 
   test:
     name: nextest (with the contrast test)
@@ -777,7 +785,8 @@ jobs:
       - shellcheck
       - comment-style
       - stray-literals
-      - leptos-rules
+      - markup-rules
+      - script-budget
       - todo-issues
       - contribution-licence
       - guards

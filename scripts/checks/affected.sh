@@ -11,7 +11,6 @@
 #                       the screenshots the gallery's tests list
 #   packages=...        the workspace packages a Rust change reaches (the
 #                       library reaches the gallery, which depends on it)
-#   wasm=true|false     browser code changed, so the wasm32 clippy runs
 #   gallery=true|false  the gallery's site bundle, its budget, its journeys
 #                       and its capture are reached
 #   capture=true|false  the change can move a pixel the screenshot capture
@@ -81,12 +80,12 @@ words_of() {
 
 classify() {
   local all="$1" path stem dir module
-  local rust=false lib=false app=false wasm=false gallery=false capture=false
+  local rust=false lib=false app=false gallery=false capture=false
   local journeys_all=false page_wide=false design_all=false
   local words="" modules="" sets=""
 
   everything() {
-    rust=true lib=true app=true wasm=true gallery=true capture=true journeys_all=true design_all=true
+    rust=true lib=true app=true gallery=true capture=true journeys_all=true design_all=true
   }
 
   if [ "$all" = true ]; then everything; fi
@@ -98,16 +97,13 @@ classify() {
         everything
         ;;
       Cargo.toml | Cargo.lock | rust-toolchain.toml | .config/*)
-        rust=true lib=true app=true wasm=true gallery=true capture=true journeys_all=true
+        rust=true lib=true app=true gallery=true capture=true journeys_all=true
         ;;
       clippy.toml | rustfmt.toml | deny.toml)
         rust=true lib=true app=true
         ;;
       scripts/release/gallery-*.sh | scripts/release/journey-tools.sh | scripts/checks/gallery-*.sh)
         gallery=true capture=true journeys_all=true
-        ;;
-      scripts/checks/browser-floor.sh)
-        rust=true lib=true wasm=true
         ;;
       docs/screenshots/*)
         rust=true app=true
@@ -123,11 +119,18 @@ classify() {
       crates/ferrohealth-ui/tests/*)
         rust=true lib=true
         ;;
-      crates/ferrohealth-ui/src/view/* | crates/ferrohealth-ui/src/widget/* | crates/ferrohealth-ui/src/table/* | crates/ferrohealth-ui/src/highlight/* | app/ferrohealth-ui-gallery/src/pages/*)
-        rust=true app=true wasm=true gallery=true capture=true
+      crates/ferrohealth-ui/src/view/* | crates/ferrohealth-ui/src/table/* | crates/ferrohealth-ui/src/highlight/* | crates/ferrohealth-ui/scripts/*.js | crates/ferrohealth-ui/templates/*/* | app/ferrohealth-ui-gallery/src/pages/*)
+        rust=true app=true gallery=true capture=true
         case "$path" in app/*) ;; *) lib=true ;; esac
         stem="${path##*/}"
         stem="${stem%.rs}"
+        stem="${stem%.js}"
+        case "$path" in
+          crates/ferrohealth-ui/templates/*)
+            dir="${path%/*}"
+            stem="${dir##*/}"
+            ;;
+        esac
         if [ "$stem" = mod ]; then
           dir="${path%/mod.rs}"
           stem="${dir##*/}"
@@ -135,7 +138,7 @@ classify() {
         words="$words $(words_of "$stem")"
         ;;
       crates/*)
-        rust=true lib=true app=true wasm=true gallery=true capture=true journeys_all=true
+        rust=true lib=true app=true gallery=true capture=true journeys_all=true
         ;;
       app/ferrohealth-ui-gallery/tests/it/*/*)
         rust=true app=true gallery=true capture=true journeys_all=true
@@ -156,7 +159,7 @@ classify() {
         esac
         ;;
       app/*)
-        rust=true app=true wasm=true gallery=true capture=true journeys_all=true
+        rust=true app=true gallery=true capture=true journeys_all=true
         ;;
       design/consoles/*)
         dir="${path#design/consoles/}"
@@ -202,7 +205,6 @@ classify() {
 
   echo "rust=$rust"
   echo "packages=$packages"
-  echo "wasm=$wasm"
   echo "gallery=$gallery"
   echo "capture=$capture"
   echo "journeys=$journeys"
@@ -224,17 +226,18 @@ self_test() {
   expect "docs only reach nothing" 'README.md\ndesign/COMPONENTS.md\n' "rust=false"
   expect "docs only skip the gallery" 'README.md\ndesign/COMPONENTS.md\n' "gallery=false"
   expect "docs only skip the design" 'README.md\ndesign/COMPONENTS.md\n' "design="
-  expect "a widget reaches both packages" 'crates/ferrohealth-ui/src/widget/toast.rs\n' "packages=ferrohealth-ui ferrohealth-ui-gallery"
-  expect "a widget reaches wasm32" 'crates/ferrohealth-ui/src/widget/toast.rs\n' "wasm=true"
-  expect "a widget reaches its journeys" 'crates/ferrohealth-ui/src/widget/toast.rs\n' "journeys=test(/every_page_of_every_brand_loads|every_page_keeps_its_content|toast/)"
-  expect "a widget reaches no design set" 'crates/ferrohealth-ui/src/widget/toast.rs\n' "design="
+  expect "a view reaches both packages" 'crates/ferrohealth-ui/src/view/toast.rs\n' "packages=ferrohealth-ui ferrohealth-ui-gallery"
+  expect "a script module reaches its journeys" 'crates/ferrohealth-ui/scripts/menu.js\n' "journeys=test(/every_page_of_every_brand_loads|every_page_keeps_its_content|menu/)"
+  expect "a template reaches its area's journeys" 'crates/ferrohealth-ui/templates/toast/region.html\n' "journeys=test(/every_page_of_every_brand_loads|every_page_keeps_its_content|toast/)"
+  expect "a view reaches its journeys" 'crates/ferrohealth-ui/src/view/toast.rs\n' "journeys=test(/every_page_of_every_brand_loads|every_page_keeps_its_content|toast/)"
+  expect "a view reaches no design set" 'crates/ferrohealth-ui/src/view/toast.rs\n' "design="
   expect "a journey module runs whole" 'app/ferrohealth-ui-gallery/tests/it/widgets.rs\n' "journeys=test(/every_page_of_every_brand_loads|every_page_keeps_its_content|^widgets::/)"
   expect "the test harness runs every journey" 'app/ferrohealth-ui-gallery/tests/it/browser.rs\n' "journeys=all"
   expect "the gallery server runs every journey" 'app/ferrohealth-ui-gallery/tests/it/stack.rs\n' "journeys=all"
   expect "a journey module no list names runs whole" 'app/ferrohealth-ui-gallery/tests/it/dates.rs\n' "journeys=test(/every_page_of_every_brand_loads|every_page_keeps_its_content|^dates::/)"
   expect "a state area runs every journey" 'app/ferrohealth-ui-gallery/tests/it/states/overview.rs\n' "journeys=all"
   expect "the HTTP tests open no browser" 'app/ferrohealth-ui-gallery/tests/it/http.rs\n' "journeys="
-  expect "a library test skips the gallery's wasm" 'crates/ferrohealth-ui/tests/it/contrast.rs\n' "wasm=false"
+  expect "a library test skips the gallery" 'crates/ferrohealth-ui/tests/it/contrast.rs\n' "gallery=false"
   expect "the stylesheet reaches every set" 'crates/ferrohealth-ui/css/ferrohealth-ui.css\n' "design=$every"
   expect "the stylesheet reaches the page-wide journeys" 'crates/ferrohealth-ui/css/ferrohealth-ui.css\n' "journeys=test(/every_page_of_every_brand_loads|every_page_keeps_its_content|every_page|reflow|^painted::/)"
   expect "a crate theme reaches its brand's sets" 'crates/ferrohealth-ui/themes/ferrofed.css\n' "design=templates ferrofed"
@@ -249,7 +252,7 @@ self_test() {
   expect "the gallery build script reaches the gallery" 'scripts/release/gallery-site.sh\n' "gallery=true"
   expect "the screenshots reach the gallery's tests" 'docs/screenshots/ferrobridge/overview-light.png\n' "packages=ferrohealth-ui-gallery"
   expect "the screenshots skip the browser" 'docs/screenshots/ferrobridge/overview-light.png\n' "gallery=false"
-  expect "a widget reaches the capture" 'crates/ferrohealth-ui/src/widget/toast.rs\n' "capture=true"
+  expect "a view reaches the capture" 'crates/ferrohealth-ui/src/view/toast.rs\n' "capture=true"
   expect "a gallery page reaches the capture" 'app/ferrohealth-ui-gallery/src/pages/forms.rs\n' "capture=true"
   expect "a theme reaches the capture" 'crates/ferrohealth-ui/themes/ferrofed.css\n' "capture=true"
   expect "a state area reaches the capture" 'app/ferrohealth-ui-gallery/tests/it/states/overview.rs\n' "capture=true"
