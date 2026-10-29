@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 // The tree view (WAI-ARIA Authoring Practices 1.2, tree view). The server
-// draws the open items with their children; this folds a drawn level in
-// place, walks the keys over the items in sight with one tab stop, keeps
-// the open fields of a form in step and keeps the page's folds for the
-// session. Opening a level the server did not draw follows the toggle's
-// link. The walk is the crate's in_sight and moved.
+// draws the open items with their children and a closed level it read
+// hidden; this folds a drawn level in place, walks the keys over the items
+// in sight with one tab stop, keeps the open fields of a form in step and
+// keeps the page's folds for the session. Opening a level not read yet
+// follows the toggle's link. The walk is the crate's in_sight and moved.
 const KEY = "fui-tree:";
 
 // The move a key makes from the item at index `at` of the items `shown`
@@ -115,7 +115,11 @@ export function enhance(root) {
   }
   function close(item) {
     const group = groupOf(item);
-    if (group) group.hidden = true;
+    if (group) {
+      // The tab stop never hides in a closed level: it moves to the item.
+      if (group.querySelector("li[tabindex='0']")) for (const each of items()) each.tabIndex = each === item ? 0 : -1;
+      group.hidden = true;
+    }
     mark(item, false);
     keep(item.getAttribute("data-key"), false);
     sync();

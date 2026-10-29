@@ -269,9 +269,13 @@ fn a_concept_under_two_parents_draws_two_items_with_distinct_ids_and_one_selecti
         .filter_map(|item| item.get("id").map(String::as_str))
         .collect();
     assert_eq!(items.len(), ids.len(), "every item has its own id: {tree}");
+    let hidden = tree
+        .split("<ul role=\"group\" hidden class=\"fui-tree-group\">")
+        .skip(1)
+        .collect::<String>();
     assert_eq!(
         1,
-        tree.matches("Viral pneumonia").count(),
+        tree.matches("Viral pneumonia").count() - hidden.matches("Viral pneumonia").count(),
         "only the copy under the lung is open: {tree}"
     );
     let selected: Vec<_> = items
@@ -296,6 +300,73 @@ fn a_concept_under_two_parents_draws_two_items_with_distinct_ids_and_one_selecti
             .filter(|item| item.get("tabindex").is_some_and(|stop| stop == "0"))
             .count(),
         "one tab stop: {tree}"
+    );
+}
+
+#[test]
+fn a_closed_level_the_server_read_is_drawn_hidden_and_an_unread_one_is_not_drawn() {
+    let tree = drawn(TreeKind::Concept, false, concepts(), &["root"], None);
+    let groups: Vec<_> = tags(&tree, "ul")
+        .into_iter()
+        .filter(|group| group.get("role").is_some_and(|role| role == "group"))
+        .collect();
+    assert_eq!(
+        2,
+        groups.len(),
+        "the open root and the closed chest: {tree}"
+    );
+    assert!(
+        groups
+            .first()
+            .is_some_and(|group| !group.contains_key("hidden")),
+        "the open level is shown: {tree}"
+    );
+    assert!(
+        groups
+            .get(1)
+            .is_some_and(|group| group.contains_key("hidden")),
+        "the closed level the server read is hidden: {tree}"
+    );
+    assert!(
+        tree.contains("Cough"),
+        "the closed level holds its children, for the module to open in place: {tree}"
+    );
+    assert!(
+        !tree.contains("fui-tree-loading"),
+        "a closed unread level draws no group and opens by its link: {tree}"
+    );
+    let chest = tags(&tree, "li")
+        .into_iter()
+        .find(|item| item.get("data-key").is_some_and(|key| key == "root/chest"))
+        .unwrap_or_default();
+    assert_eq!("false", chest["aria-expanded"], "{tree}");
+    let fields: Vec<_> = tags(&tree, "input")
+        .into_iter()
+        .filter(|field| field.get("name").is_some_and(|name| name == "open"))
+        .collect();
+    assert_eq!(1, fields.len(), "only the open level posts: {tree}");
+}
+
+#[test]
+fn a_selection_in_a_closed_level_leaves_the_tab_stop_on_the_first_item() {
+    let tree = drawn(
+        TreeKind::Concept,
+        false,
+        concepts(),
+        &["root"],
+        Some("root/chest/cough"),
+    );
+    let stops: Vec<_> = tags(&tree, "li")
+        .into_iter()
+        .filter(|item| item.get("tabindex").is_some_and(|stop| stop == "0"))
+        .collect();
+    assert_eq!(1, stops.len(), "one tab stop: {tree}");
+    assert!(
+        stops
+            .first()
+            .and_then(|item| item.get("data-key"))
+            .is_some_and(|key| key == "root"),
+        "the hidden selection is no tab stop: {tree}"
     );
 }
 

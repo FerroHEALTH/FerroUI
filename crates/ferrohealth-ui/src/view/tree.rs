@@ -18,7 +18,8 @@
 //! a deep level scrolls sideways under the scroll cue.
 //!
 //! The server draws the tree as [`Tree`] holds it: the open items with
-//! their children, a closed item with none. A level is read by the
+//! their children, and a closed item with the children read so far in a
+//! hidden group, so the `tree` module opens it in place. A level is read by the
 //! console's server, one at a time: an item whose children are not read yet
 //! is [`Children::Unread`], and opening it follows its toggle's link, which
 //! the console answers with the level read; an open unread level shows its
@@ -27,8 +28,9 @@
 //! the page with the item opened or closed, so a tree folds with no script,
 //! and a tree in a form posts its open items as hidden fields. The `tree`
 //! module folds a drawn level in place, walks the keys, keeps the hidden
-//! fields in step and keeps the page's folds for the session; opening a
-//! level the server did not draw follows the toggle's link.
+//! fields in step and keeps the page's folds for the session, opening again
+//! on a reload a level the server drew closed; opening a level not read yet
+//! follows the toggle's link.
 //!
 //! An item's key is the console's data-derived id, never a position, and is
 //! unique among its siblings. The tree addresses an item by its path key
@@ -663,7 +665,8 @@ struct Drawing<'a> {
     tree: &'a Tree,
     /// The path keys of the items above the selected one.
     path: BTreeSet<String>,
-    /// The path key of the one tab stop: the selection, or the first item.
+    /// The path key of the one tab stop: the selection in sight, or the
+    /// first item.
     stop: Option<String>,
 }
 
@@ -836,9 +839,13 @@ fn items(drawing: &Drawing<'_>, nodes: &[TreeNode], parent: Option<&str>, level:
 fn item(drawing: &Drawing<'_>, node: &TreeNode, key: &str, level: u16) -> Html {
     let tree = drawing.tree;
     let open = node.opens() && tree.open.contains(key);
-    let children = open.then(|| {
+    // NOTE: no specification governs this: our own design; a closed level the
+    // server read is drawn hidden, so the `tree` module opens it in place.
+    let drawn = open || matches!(node.children, Children::Read { .. });
+    let children = drawn.then(|| {
         Html::raw(format!(
-            "<ul role=\"group\" class=\"fui-tree-group\">{}{}</ul>",
+            "<ul role=\"group\"{} class=\"fui-tree-group\">{}{}</ul>",
+            if open { "" } else { " hidden" },
             items(drawing, node.read(), Some(key), level.saturating_add(1)),
             level_end(&tree.words, node)
         ))
@@ -891,9 +898,16 @@ pub fn tree_view(tree: &Tree) -> Html {
         .unwrap_or_default()
         .into_iter()
         .collect();
+    // NOTE: WAI-ARIA APG 1.2 tree view, keyboard interaction; a selection in a
+    // closed level is hidden, so the tab stop falls to the first item.
     let stop = tree
         .selected
         .clone()
+        .filter(|key| {
+            in_sight(&tree.nodes, &tree.open)
+                .iter()
+                .any(|shown| &shown.key == key)
+        })
         .or_else(|| tree.nodes.first().map(|node| step(&node.key)));
     let drawing = Drawing { tree, path, stop };
     TreeView {
