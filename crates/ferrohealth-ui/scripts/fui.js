@@ -4,10 +4,13 @@
 // The loader: the one script a page loads. It marks the document, finds
 // every element that asks for a module (data-fui="<job>"), imports the
 // module from this file's own directory and hands the element to its
-// enhance(element), and does the same for an element added later. Every
-// page works without it; a module adds behaviour on top (FerroUI #510).
+// enhance(element), and does the same for an element added later. Once
+// every module the element asked for has enhanced it, the element is
+// marked data-fui-ready, the moment a journey waits for. Every page works
+// without it; a module adds behaviour on top (FerroUI #510, #523).
 const HOOK = "data-fui";
 const DONE = "data-fui-done";
+const READY = "data-fui-ready";
 const base = new URL(".", import.meta.url);
 const loaded = new Map();
 
@@ -22,11 +25,20 @@ function enhance(element) {
   if (element.hasAttribute(DONE)) return;
   element.setAttribute(DONE, "");
   const jobs = element.getAttribute(HOOK).split(/\s+/).filter(Boolean);
-  for (const job of jobs) {
+  const runs = jobs.map((job) =>
     moduleOf(job)
       .then((module) => module.enhance(element))
-      .catch((error) => console.error("fui: " + job + " refused", error));
-  }
+      .then(
+        () => true,
+        (error) => {
+          console.error("fui: " + job + " refused", error);
+          return false;
+        },
+      ),
+  );
+  Promise.all(runs).then((done) => {
+    if (done.every(Boolean)) element.setAttribute(READY, "");
+  });
 }
 
 function sweep(root) {

@@ -371,7 +371,11 @@ draws is a redirect to sign-in, and the search box leaves on its own `401`
   `view!`.
 - A journey that waited for `data-ferroui-hydrated` waits for the loader's
   mark, `html[data-fui-script]` (`script::MARK`), or for nothing when it
-  only reads the page.
+  only reads the page. The loader writes that mark before any module has
+  arrived, so a journey that drives a component whose module changes
+  nothing it can see first waits for the component's `data-fui-ready`
+  (`script::READY`), which the loader writes once every module the
+  component asked for has enhanced it.
 - The no-WebAssembly journey becomes a no-script journey: block
   `/ferrohealth-ui/<version>/scripts/` and hold every page to its content,
   links and forms, as the gallery's `tests/it/no_script.rs` does.

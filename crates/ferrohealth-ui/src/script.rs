@@ -9,8 +9,9 @@
 //! shell writes one `<script type="module">` for the loader ([`LOADER`]),
 //! which marks `<html data-fui-script>`, finds every element carrying
 //! `data-fui="<job>"`, imports `./<job>.js` from the same directory and
-//! calls its `enhance(element)`, and watches the document for elements
-//! added later. A page loads only the modules its components asked for,
+//! calls its `enhance(element)`, marks the element [`READY`] once every
+//! module it asked for has enhanced it, and watches the document for
+//! elements added later. A page loads only the modules its components asked for,
 //! with no bookkeeping in Rust: the attribute is the request. No inline
 //! script and no `eval`, so `script-src 'self'` holds
 //! (`scripts/checks/script-budget.sh`). No specification governs this: our
@@ -174,6 +175,11 @@ pub const HOOK: &str = "data-fui";
 /// stylesheet reads to show a control that needs script and a journey
 /// waits for.
 pub const MARK: &str = "data-fui-script";
+
+/// The attribute the loader writes on an element once every module its
+/// [`HOOK`] names has enhanced it, which a journey waits for before it
+/// drives the element (FerroUI #523).
+pub const READY: &str = "data-fui-ready";
 
 #[cfg(test)]
 mod tests {

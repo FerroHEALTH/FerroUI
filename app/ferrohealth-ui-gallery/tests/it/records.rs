@@ -8,6 +8,7 @@
 
 use std::error::Error;
 
+use ferrohealth_ui::script;
 use thirtyfour::prelude::*;
 
 use crate::browser::{Browser, until, with_browser};
@@ -195,8 +196,8 @@ async fn row_size(browser: &Browser, key: &str) -> Result<String, Box<dyn Error>
     Ok(format!("{:.0} by {:.0}", rect.width, rect.height))
 }
 
-/// Opens the forms page of `brand` and waits until the identifiers module
-/// has been enhanced, its Reveal a button.
+/// Opens the forms page of `brand` and waits until the identifier module
+/// has enhanced every identifier on it.
 pub(crate) async fn open_identifiers(
     browser: &Browser,
     gallery: &Gallery,
@@ -205,7 +206,33 @@ pub(crate) async fn open_identifiers(
     browser
         .goto(&gallery.url(&format!("/{brand}/forms")))
         .await?;
-    browser.hydrated().await
+    browser.hydrated().await?;
+    identifiers_ready(browser).await
+}
+
+/// Waits until the identifier module has enhanced every identifier of the
+/// page, which the loader marks [`script::READY`].
+///
+/// The loader's own mark ([`Browser::hydrated`]) is written before any
+/// module has arrived, so a Reveal pressed by the keyboard at that moment
+/// finds no listener, stores no focus to hand on, and the reveal page
+/// opens with the focus at its top (#523).
+async fn identifiers_ready(browser: &Browser) -> Result<(), Box<dyn Error>> {
+    let waiting = format!("[{}~='identifier']:not([{}])", script::HOOK, script::READY);
+    until(
+        "the identifier module has enhanced every identifier",
+        async || {
+            let left = browser
+                .driver()
+                .execute(
+                    "return document.querySelectorAll(arguments[0]).length;",
+                    vec![serde_json::Value::from(waiting.as_str())],
+                )
+                .await?;
+            Ok(left.json().as_u64() == Some(0))
+        },
+    )
+    .await
 }
 
 /// The Reveal of the identifier `key`: a link to the console's reveal page.
@@ -329,6 +356,7 @@ async fn the_focus_follows_reveal_hide_and_a_refusal_to_the_face_that_shows()
         })
         .await?;
         browser.hydrated().await?;
+        identifiers_ready(browser).await?;
         until("the focus moves to Hide once the value shows", async || {
             focus_is(browser, "#identifier-bsn button[aria-pressed='true']").await
         })
@@ -353,6 +381,7 @@ async fn the_focus_follows_reveal_hide_and_a_refusal_to_the_face_that_shows()
         })
         .await?;
         browser.hydrated().await?;
+        identifiers_ready(browser).await?;
         browser
             .text("span", "Not revealed: the hourly limit is reached")
             .await?;
