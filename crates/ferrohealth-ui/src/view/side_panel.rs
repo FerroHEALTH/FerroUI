@@ -16,6 +16,13 @@
 //! end; below that it is a sheet over the whole viewport. Its body is the
 //! server's, in the page whole, so a field in it keeps what was typed
 //! while it is closed.
+//!
+//! An opener can carry keys ([`side_panel_with_shortcut`]), announced on
+//! its button through `aria-keyshortcuts` and bound by the `keys` module
+//! from 40 rem up, outside a field. In a work-list row (R9,
+//! [`crate::view::worklist`]) the keys answer only while that row holds
+//! the focus, so `o` opens the focused row's panel; the panel opens over
+//! the row, and the browser returns the focus to the row when it closes.
 
 use askama::Template;
 use serde::{Deserialize, Serialize};
@@ -24,6 +31,7 @@ use crate::html::{Html, Render as _};
 use crate::i18n::{Locale, Text, Word, tr};
 use crate::icon::{Glyph, icon};
 use crate::view::button::Variant;
+use crate::view::kbd::aria_keys;
 
 /// What opens a side panel.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -77,6 +85,22 @@ impl SidePanelWords {
 /// `side_panel` module runs.
 #[must_use]
 pub fn side_panel(panel: SidePanel) -> Html {
+    drawn(panel, None)
+}
+
+/// Returns the side panel `panel` and its opener, whose button announces
+/// `shortcut` (such as `o`, or `o | d` for two keys) and asks the `keys`
+/// module to bind it.
+///
+/// A shortcut with no form in `aria-keyshortcuts` (keys pressed in turn,
+/// such as `g d`) draws the opener with no key.
+#[must_use]
+pub fn side_panel_with_shortcut(panel: SidePanel, shortcut: &str) -> Html {
+    drawn(panel, aria_keys(shortcut))
+}
+
+/// Returns `panel` with its opener announcing `keys`, if any.
+fn drawn(panel: SidePanel, keys: Option<String>) -> Html {
     let SidePanel {
         id,
         title,
@@ -91,6 +115,7 @@ pub fn side_panel(panel: SidePanel) -> Html {
         words: SidePanelWords { close },
     } = panel;
     PanelView {
+        keys,
         href,
         class: variant.class(),
         glyph: glyph.map(|glyph| icon(glyph, "16")).unwrap_or_default(),
@@ -106,10 +131,11 @@ pub fn side_panel(panel: SidePanel) -> Html {
 
 #[derive(Template)]
 #[template(
-    source = r#"<a href="{{ href }}" class="{{ class }}">{{ glyph }}{{ label }}</a><button type="button" command="show-modal" commandfor="{{ id }}" aria-controls="{{ id }}" aria-haspopup="dialog" hidden data-fui="side_panel" class="{{ class }}">{{ glyph }}{{ label }}</button><dialog id="{{ id }}" closedby="any" aria-labelledby="{{ id }}-title" data-fui="dialog" class="fui-side-panel"><div class="fui-side-panel-head"><h2 id="{{ id }}-title" class="fui-card-title">{{ title }}</h2><button type="button" command="close" commandfor="{{ id }}" aria-label="{{ close }}" class="fui-icon-button fui-side-panel-close">{{ x }}</button></div><div id="{{ id }}-body" class="fui-side-panel-body">{{ body }}</div></dialog>"#,
+    source = r#"<a href="{{ href }}" class="{{ class }}">{{ glyph }}{{ label }}</a><button type="button" command="show-modal" commandfor="{{ id }}" aria-controls="{{ id }}" aria-haspopup="dialog"{% if let Some(keys) = keys %} aria-keyshortcuts="{{ keys }}"{% endif %} hidden data-fui="side_panel{% if keys.is_some() %} keys{% endif %}" class="{{ class }}">{{ glyph }}{{ label }}</button><dialog id="{{ id }}" closedby="any" aria-labelledby="{{ id }}-title" data-fui="dialog" class="fui-side-panel"><div class="fui-side-panel-head"><h2 id="{{ id }}-title" class="fui-card-title">{{ title }}</h2><button type="button" command="close" commandfor="{{ id }}" aria-label="{{ close }}" class="fui-icon-button fui-side-panel-close">{{ x }}</button></div><div id="{{ id }}-body" class="fui-side-panel-body">{{ body }}</div></dialog>"#,
     ext = "html"
 )]
 struct PanelView {
+    keys: Option<String>,
     href: String,
     class: &'static str,
     glyph: Html,

@@ -18,6 +18,7 @@ use ferrohealth_ui::table::view::{
 };
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::action_menu::{self, Act, Action, Item, Menu};
+use ferrohealth_ui::view::button::Variant;
 use ferrohealth_ui::view::change::{Change, change_table};
 use ferrohealth_ui::view::compare::{
     Compare, CompareField, CompareRecord, Verdict, compare, compare_stacked,
@@ -27,8 +28,11 @@ use ferrohealth_ui::view::identifier::{
     identifier_list, identifier_static,
 };
 use ferrohealth_ui::view::kbd::{Shortcut, shortcut_hint};
+use ferrohealth_ui::view::side_panel::{
+    Opener, SidePanel, SidePanelWords, side_panel_with_shortcut,
+};
 use ferrohealth_ui::view::status::{BannerLink, badge, banner};
-use ferrohealth_ui::view::surface::{card, titled_panel};
+use ferrohealth_ui::view::surface::{card, definitions, titled_panel};
 use ferrohealth_ui::view::template::list::{HeadingCount, ListCard, list_card};
 use ferrohealth_ui::view::timeline::{Event, timeline};
 use ferrohealth_ui::view::worklist::{WorkRow, row, worklist, worklist_foot};
@@ -234,6 +238,33 @@ fn pair_menu(v: &Visit, pair: &Pair, open: &str) -> Html {
     )
 }
 
+/// The side panel that holds the pair `pair` at a glance, which its row's
+/// `o` opens while the row holds the focus (#530); with no script its
+/// opener leads to the pair's page, `open`.
+fn glance(v: &Visit, pair: &Pair, open: &str) -> Html {
+    let name = format!("{} · {}", pair.a, pair.b);
+    side_panel_with_shortcut(
+        SidePanel {
+            id: format!("{}-glance", pair.key),
+            title: v.tr_with(Msg::RecordsGlanceOf, &[("name", name.into())]),
+            opener: Opener {
+                label: v.tr(Msg::RecordsGlance),
+                glyph: Some(Glyph::EYE),
+                variant: Variant::Ghost,
+                href: open.to_owned(),
+            },
+            body: definitions(vec![
+                (v.tr(Msg::RecordsRecordA), t(&pair.a)),
+                (v.tr(Msg::RecordsRecordB), t(&pair.b)),
+                (v.tr(Msg::RecordsGrade), t(pair.grade)),
+                (v.tr(Msg::RecordsWaiting), t(&pair.wait)),
+            ]),
+            words: SidePanelWords::of(&v.locale),
+        },
+        "o",
+    )
+}
+
 /// The review queue as a work-list: a checkbox, both records, their
 /// domains, the grade and the wait per row, its order of three keys stated
 /// in the card's header row, the foot with the keys and the count.
@@ -276,7 +307,10 @@ pub fn worklist_section(v: &Visit) -> Html {
                 ),
                 cell(grade, badge(tone, pair.grade)),
                 cell(waiting, t(&pair.wait)),
-                menu_cell(pair_menu(v, pair, &open)),
+                menu_cell(Html::join([
+                    glance(v, pair, &open),
+                    pair_menu(v, pair, &open),
+                ])),
             ]);
             row(WorkRow {
                 key: &pair.key,
@@ -311,6 +345,10 @@ pub fn worklist_section(v: &Visit) -> Html {
             Shortcut {
                 keys: String::from("Enter"),
                 does: v.tr(Msg::RecordsOpen),
+            },
+            Shortcut {
+                keys: String::from("o"),
+                does: v.tr(Msg::RecordsGlanceKey),
             },
         ],
     );

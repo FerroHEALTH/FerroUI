@@ -15,6 +15,18 @@
 //! keys-and-words grid, the keys as printed on the keyboard
 //! ([`crate::view::kbd`]).
 //!
+//! The legend also loads the `keys` module ([`KEYS_JOB`]), which binds the
+//! keys every control of the page announces in `aria-keyshortcuts` (WAI-ARIA
+//! 1.2): a chord such as `Ctrl Enter` or `Ctrl s` presses its control from
+//! inside a field too, a single key such as `l` or `]` presses its control,
+//! or focuses it when it is a field, outside a field alone, and a control
+//! inside a work-list row answers only while its row holds the focus. A
+//! console's go-to pairs ([`GoTo`], drawn by [`shortcut_legend_with_go_to`])
+//! are a first key, then a letter, then a link of its navigation: the
+//! legend lists each as that link, which the module follows. The library's
+//! own controls that announce a key (a dock decision, Run, a keyed side
+//! panel opener) load the module themselves.
+//!
 //! A phone has no keyboard, so below 40 rem no shortcut shows or acts
 //! (family rule 6), and a control that opens the legend is hidden there. A
 //! single-key shortcut never acts while the person types ([`takes_text`]).
@@ -25,7 +37,7 @@ use askama::Template;
 use crate::html::{Html, Render as _};
 use crate::i18n::{Locale, Text, Word, tr};
 use crate::view::dialog::{Modal, Width, modal_with};
-use crate::view::kbd::{ShortcutGroup, shortcut_keys};
+use crate::view::kbd::{Shortcut, ShortcutGroup, shortcut_keys};
 
 /// The id of the legend's dialog; its heading is `shortcuts-title`.
 pub const LEGEND_ID: &str = "shortcuts";
@@ -34,6 +46,55 @@ pub const LEGEND_ID: &str = "shortcuts";
 /// following it, such as the user menu's Keyboard shortcuts link; with no
 /// script the link is followed.
 pub const OPENS_LEGEND: &str = "data-fui-shortcuts";
+
+/// The job of the module that binds the keys a control announces: a
+/// console's own control that announces a key on a page with no legend
+/// writes `data-fui="keys"` beside its `aria-keyshortcuts`.
+pub const KEYS_JOB: &str = "keys";
+
+/// One go-to pair: the letter after the first key, and the link of the
+/// navigation it follows.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GoToPair {
+    /// The second key, a letter such as `d`.
+    pub key: String,
+    /// Where it leads: the address of a link of the navigation.
+    pub href: String,
+    /// What it leads to, in the page's locale, such as "Dashboard".
+    pub does: String,
+}
+
+/// A console's go-to pairs: a first key such as `g`, then a letter, then
+/// a link of its navigation, listed in the legend under their title.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GoTo {
+    /// The group's title in the legend, in the page's locale, such as
+    /// "Go to".
+    pub title: String,
+    /// The first key of every pair, such as `g`.
+    pub lead: String,
+    /// The pairs, in the order the legend lists them.
+    pub pairs: Vec<GoToPair>,
+}
+
+impl GoTo {
+    /// The pairs as a group of shortcuts (`g d` and its words), for a
+    /// console's own page of its shortcuts.
+    #[must_use]
+    pub fn group(&self) -> ShortcutGroup {
+        ShortcutGroup {
+            title: self.title.clone(),
+            shortcuts: self
+                .pairs
+                .iter()
+                .map(|pair| Shortcut {
+                    keys: format!("{} {}", self.lead, pair.key),
+                    does: pair.does.clone(),
+                })
+                .collect(),
+        }
+    }
+}
 
 /// The attribute of the binder's tabs that the digit keys follow.
 pub const TAB_KEYS: &str = "data-fui-tab-keys";
@@ -83,12 +144,19 @@ struct GroupView {
     rows: Vec<(Html, String)>,
 }
 
+struct GoView {
+    lead: String,
+    title: String,
+    rows: Vec<(Html, String, String, String)>,
+}
+
 #[derive(Template)]
 #[template(path = "shortcuts/legend.html")]
 struct LegendBody {
     legend_id: &'static str,
     intro: Word,
     groups: Vec<GroupView>,
+    go: Option<GoView>,
 }
 
 /// Returns the legend of `groups`, drawn closed, which the `shortcuts`
@@ -97,7 +165,36 @@ struct LegendBody {
 /// A console draws it once on a page that has shortcuts.
 #[must_use]
 pub fn shortcut_legend(locale: &Locale, groups: Vec<ShortcutGroup>) -> Html {
+    legend(locale, groups, None)
+}
+
+/// Returns the legend of `groups` and, after them, the go-to pairs
+/// `go_to`, each listed as its link, which the `keys` module follows on
+/// the pair's keys.
+#[must_use]
+pub fn shortcut_legend_with_go_to(
+    locale: &Locale,
+    groups: Vec<ShortcutGroup>,
+    go_to: GoTo,
+) -> Html {
+    legend(locale, groups, Some(go_to))
+}
+
+/// Returns the legend of `groups` and `go_to`.
+fn legend(locale: &Locale, groups: Vec<ShortcutGroup>, go_to: Option<GoTo>) -> Html {
     let or = tr(locale, Text::KeysOr);
+    let go = go_to.map(|go_to| GoView {
+        rows: go_to
+            .pairs
+            .into_iter()
+            .map(|pair| {
+                let keys = shortcut_keys(&format!("{} {}", go_to.lead, pair.key), or.clone());
+                (keys, pair.href, pair.key.to_lowercase(), pair.does)
+            })
+            .collect(),
+        lead: go_to.lead.to_lowercase(),
+        title: go_to.title,
+    });
     let body = LegendBody {
         legend_id: LEGEND_ID,
         intro: tr(locale, Text::ShortcutsIntro),
@@ -112,6 +209,7 @@ pub fn shortcut_legend(locale: &Locale, groups: Vec<ShortcutGroup>) -> Html {
                     .collect(),
             })
             .collect(),
+        go,
     }
     .html();
     modal_with(
@@ -126,7 +224,7 @@ pub fn shortcut_legend(locale: &Locale, groups: Vec<ShortcutGroup>) -> Html {
             cancel: None,
         },
         tr(locale, Text::Close),
-        "dialog shortcuts",
+        "dialog shortcuts keys",
     )
 }
 
