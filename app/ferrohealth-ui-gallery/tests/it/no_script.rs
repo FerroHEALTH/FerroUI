@@ -27,7 +27,7 @@ use crate::stack::Gallery;
 const MODULES: &str = "*/ferrohealth-ui/*/scripts/*";
 
 /// Refuses the browser every script module.
-async fn withhold_the_modules(browser: &Browser) -> Result<(), Box<dyn Error>> {
+pub(crate) async fn withhold_the_modules(browser: &Browser) -> Result<(), Box<dyn Error>> {
     let cdp = browser.driver().cdp();
     cdp.send_raw("Network.enable", json!({})).await?;
     cdp.send_raw("Network.setBlockedURLs", json!({ "urls": [MODULES] }))
@@ -57,7 +57,7 @@ async fn only_the_modules_refused(browser: &Browser, step: &str) -> Result<(), B
 /// Leaves the page for a blank one, so a refused module logs its refusal
 /// before the journey ends or never; then fails on any error but a refused
 /// module, naming `step`.
-async fn leave(browser: &Browser, step: &str) -> Result<(), Box<dyn Error>> {
+pub(crate) async fn leave(browser: &Browser, step: &str) -> Result<(), Box<dyn Error>> {
     browser.goto("about:blank").await?;
     only_the_modules_refused(browser, step).await
 }

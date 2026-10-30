@@ -12,7 +12,8 @@
 //! `data-tab="keyboard"`, leaves the row below 40 rem (R3). A console never
 //! adds a tab: its own preferences go inside these three, after the
 //! library's rows ([`PreferencesPage::own`]), built with [`preference_row`]
-//! and [`select_preference`].
+//! and [`select_preference`], [`switch_preference`] or, for a text or a
+//! number the person types, [`typed_preference`].
 //!
 //! Each preference is its own cookie, set by a plain form post to the
 //! console's route, so the page works with no script; once the
@@ -282,6 +283,112 @@ struct SwitchView {
     name: String,
     label: String,
     on: bool,
+}
+
+/// The kind of field a typed preference is, with its bounds.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Typed {
+    /// A text field, such as a BCP 47 language tag, its length bounded
+    /// in characters (`minlength`, `maxlength`).
+    Text {
+        /// The fewest characters it takes, if any.
+        min_length: Option<u32>,
+        /// The most characters it takes, if any.
+        max_length: Option<u32>,
+    },
+    /// A whole number, such as a page size (`min`, `max`, `step`).
+    Number {
+        /// The smallest number it takes, if any.
+        min: Option<i64>,
+        /// The largest number it takes, if any.
+        max: Option<i64>,
+        /// The step between the numbers it takes, if not 1.
+        step: Option<u32>,
+    },
+}
+
+/// A preference typed into a text or a number field.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TypedPreference {
+    /// The field's id and the name it posts, the preference's cookie name.
+    pub name: String,
+    /// The kind of field, with its bounds.
+    pub kind: Typed,
+    /// The value in force, as the field shows it.
+    pub value: String,
+    /// The hint inside the empty field, such as "en-GB".
+    pub placeholder: Option<String>,
+    /// Where it posts.
+    pub post: Post,
+    /// Whether it was just kept, which gives its field the focus back.
+    pub saved: bool,
+}
+
+/// Returns a preference's text or number field in its form, posted
+/// through its Save button and, once the `preference` module runs, on
+/// change.
+///
+/// A field changes on Enter, or when the focus leaves it changed. The
+/// browser holds the value to the field's bounds before it posts (HTML
+/// Living Standard, constraint validation), and the console checks it
+/// again.
+#[must_use]
+pub fn typed_preference(locale: &Locale, typed: TypedPreference) -> Html {
+    let TypedPreference {
+        name,
+        kind,
+        value,
+        placeholder,
+        post,
+        saved,
+    } = typed;
+    let bound = |attribute: &str, value: Option<String>| {
+        value
+            .map(|value| format!(" {attribute}=\"{value}\""))
+            .unwrap_or_default()
+    };
+    let (kind, bounds) = match kind {
+        Typed::Text {
+            min_length,
+            max_length,
+        } => (
+            "text",
+            [
+                bound("minlength", min_length.map(|n| n.to_string())),
+                bound("maxlength", max_length.map(|n| n.to_string())),
+            ]
+            .concat(),
+        ),
+        Typed::Number { min, max, step } => (
+            "number",
+            [
+                bound("min", min.map(|n| n.to_string())),
+                bound("max", max.map(|n| n.to_string())),
+                bound("step", step.map(|n| n.to_string())),
+                String::from(" inputmode=\"numeric\""),
+            ]
+            .concat(),
+        ),
+    };
+    let control = TypedView {
+        name,
+        kind,
+        value,
+        placeholder,
+        bounds: Html::raw(bounds),
+    }
+    .html();
+    form(locale, post, saved, control)
+}
+
+#[derive(Template)]
+#[template(path = "preferences/preferences.html", block = "typed")]
+struct TypedView {
+    name: String,
+    kind: &'static str,
+    value: String,
+    placeholder: Option<String>,
+    bounds: Html,
 }
 
 /// Returns `control` in the form of one preference, posting to `post`.

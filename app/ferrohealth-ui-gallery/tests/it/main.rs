@@ -48,6 +48,7 @@ mod tabs_and_toasts;
 mod terminology;
 mod trees;
 mod typeahead;
+mod typed_preferences;
 mod typing;
 mod widgets;
 

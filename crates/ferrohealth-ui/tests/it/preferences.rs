@@ -11,7 +11,8 @@ use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::theme::{Density, Hints, Language, Motion, Preferences, Theme, WeekStart};
 use ferrohealth_ui::view::preferences::{
     Post, PreferenceRow, PreferencesPage, RESET_DIALOG, Section, SectionRoutes, SelectPreference,
-    SwitchPreference, preference_row, preferences_page, select_preference, switch_preference,
+    SwitchPreference, Typed, TypedPreference, preference_row, preferences_page, select_preference,
+    switch_preference, typed_preference,
 };
 
 use crate::markup::{has, tags};
@@ -454,4 +455,125 @@ fn a_switch_preference_posts_off_unless_it_is_on() {
         ),
         "{shown}"
     );
+}
+
+/// The typed preference `name` of `kind` holding `value`, `saved` or not.
+fn typed(name: &str, kind: Typed, value: &str, saved: bool) -> String {
+    html(typed_preference(
+        &en(),
+        TypedPreference {
+            name: String::from(name),
+            kind,
+            value: String::from(value),
+            placeholder: Some(String::from("en-GB")),
+            post: Post {
+                action: String::from("/preference"),
+                back: String::from("/preferences/language"),
+            },
+            saved,
+        },
+    ))
+}
+
+#[test]
+fn a_typed_preference_is_a_field_of_its_kind_in_the_same_plain_form_post() {
+    let shown = typed(
+        "concepts",
+        Typed::Text {
+            min_length: Some(2),
+            max_length: Some(35),
+        },
+        "nl-NL",
+        false,
+    );
+    assert!(
+        has(
+            &shown,
+            "form",
+            &[
+                ("method", "post"),
+                ("action", "/preference"),
+                ("data-fui", "preference")
+            ]
+        ),
+        "{shown}"
+    );
+    assert!(
+        has(
+            &shown,
+            "input",
+            &[
+                ("type", "hidden"),
+                ("name", "back"),
+                ("value", "/preferences/language")
+            ]
+        ),
+        "{shown}"
+    );
+    assert!(
+        has(
+            &shown,
+            "input",
+            &[
+                ("type", "text"),
+                ("id", "concepts"),
+                ("name", "concepts"),
+                ("value", "nl-NL"),
+                ("placeholder", "en-GB"),
+                ("minlength", "2"),
+                ("maxlength", "35"),
+            ]
+        ),
+        "{shown}"
+    );
+    assert!(
+        has(&shown, "button", &[("type", "submit")]),
+        "a Save button before the module runs: {shown}"
+    );
+    assert!(!shown.contains("data-fui-saved"), "{shown}");
+}
+
+#[test]
+fn a_number_preference_carries_its_bounds_and_its_saved_mark() {
+    let shown = typed(
+        "size",
+        Typed::Number {
+            min: Some(10),
+            max: Some(200),
+            step: None,
+        },
+        "50",
+        true,
+    );
+    let field = tags(&shown, "input")
+        .into_iter()
+        .find(|input| input.get("name").is_some_and(|name| name == "size"))
+        .expect("the field");
+    assert_eq!(Some("number"), field.get("type").map(String::as_str));
+    assert_eq!(Some("10"), field.get("min").map(String::as_str));
+    assert_eq!(Some("200"), field.get("max").map(String::as_str));
+    assert_eq!(Some("numeric"), field.get("inputmode").map(String::as_str));
+    assert!(
+        !field.contains_key("step"),
+        "no step unless one is set: {shown}"
+    );
+    assert!(
+        has(&shown, "form", &[("data-fui-saved", "")]),
+        "the row just kept gives its field the focus back: {shown}"
+    );
+}
+
+#[test]
+fn a_typed_preference_escapes_what_it_holds() {
+    let shown = typed(
+        "concepts",
+        Typed::Text {
+            min_length: None,
+            max_length: None,
+        },
+        "\"><script>",
+        false,
+    );
+    assert!(!shown.contains("<script>"), "{shown}");
+    assert!(!shown.contains("minlength"), "{shown}");
 }
