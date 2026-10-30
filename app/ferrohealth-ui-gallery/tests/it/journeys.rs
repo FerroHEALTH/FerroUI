@@ -1543,6 +1543,61 @@ async fn table_boxes_read_whole(browser: &Browser) -> Result<(), Box<dyn Error>>
     Ok(())
 }
 
+/// Asserts `inner` ends inside `outer`, as `what`.
+async fn ends_inside(
+    inner: &WebElement,
+    outer: &WebElement,
+    what: &str,
+) -> Result<(), Box<dyn Error>> {
+    let inner = inner.rect().await?;
+    let outer = outer.rect().await?;
+    assert!(
+        inner.x + inner.width <= outer.x + outer.width + 0.5,
+        "{what} at 320 px ({} past {})",
+        inner.x + inner.width,
+        outer.x + outer.width
+    );
+    Ok(())
+}
+
+/// Asserts a stacked card holds its long words at 320 px: a long
+/// identifier in a cell's code and a long link in a group row wrap inside
+/// the card (WCAG 2.2 SC 1.4.10).
+async fn long_words_stay_in_their_card(browser: &Browser) -> Result<(), Box<dyn Error>> {
+    let code = browser
+        .element(By::XPath(
+            "//td[@data-label]//code[contains(., 'ferrohealth_synthetic_journey_diagnose')]",
+        ))
+        .await?;
+    let cell = code.find(By::XPath("ancestor::td[1]")).await?;
+    ends_inside(&code, &cell, "a long code runs past its stacked cell").await?;
+    let link = browser
+        .element(By::XPath(
+            "//tr[contains(@class, 'fui-group-row')]/th/a[@href = '#context']",
+        ))
+        .await?;
+    let row = link.find(By::XPath("ancestor::tr[1]")).await?;
+    ends_inside(&link, &row, "a group row's link runs past its row").await
+}
+
+/// Asserts the dense options row's select keeps to its field at 320 px, its
+/// chosen value ending in an ellipsis as a plain select's does (WCAG 2.2 SC
+/// 1.4.10).
+async fn dense_select_keeps_to_its_field(browser: &Browser) -> Result<(), Box<dyn Error>> {
+    let select = browser.element(By::Css("#dense-template")).await?;
+    select
+        .find(By::Css("option[value^='synthetic.laboratory_test_result']"))
+        .await?
+        .click()
+        .await?;
+    let field = select
+        .find(By::XPath("ancestor::*[contains(@class, 'fui-field')][1]"))
+        .await?;
+    ends_inside(&select, &field, "a dense row's select runs past its field").await?;
+    assert_eq!("ellipsis", select.css_value("text-overflow").await?);
+    Ok(())
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn every_page_reflows_at_320_pixels_with_no_sideways_scroll() -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
@@ -1566,6 +1621,9 @@ async fn every_page_reflows_at_320_pixels_with_no_sideways_scroll() -> Result<()
                 metrics.css_content_size.width <= metrics.css_layout_viewport.client_width + 0.5,
                 "{path} scrolls sideways at 320 px: {metrics:?}"
             );
+            if page == "/operations" {
+                dense_select_keeps_to_its_field(browser).await?;
+            }
             if page == "/tables" {
                 table_boxes_read_whole(browser).await?;
                 let row = browser
@@ -1629,6 +1687,7 @@ async fn every_page_reflows_at_320_pixels_with_no_sideways_scroll() -> Result<()
                 assert_eq!("1px", paged.css_value("border-top-width").await?);
                 let second = browser.element(By::Css("tbody[data-page='2']")).await?;
                 assert_eq!("0px", second.css_value("margin-top").await?);
+                long_words_stay_in_their_card(browser).await?;
             }
         }
         browser.console_clean("the reflow").await

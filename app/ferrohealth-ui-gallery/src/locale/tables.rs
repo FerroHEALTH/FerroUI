@@ -16,6 +16,10 @@ messages! {
     Composition = "composition",
     /// `The concepts of a synthetic hierarchy, each a level under its parent`
     ConceptsSyntheticHierarchy = "concepts-synthetic-hierarchy",
+    /// `The synthetic diagnosis context the browser journeys walk`
+    ContextDiagnose = "context-diagnose",
+    /// `A context's models`
+    ContextModels = "context-models",
     /// `count`
     Count = "count",
     /// `Edit`
@@ -62,6 +66,10 @@ messages! {
     MappingFilesPagedUrl = "mapping-files-paged-url",
     /// `Members, each with an Edit link and a Remove form`
     MembersEachEditLinkRemove = "members-each-edit-link-remove",
+    /// `Model`
+    ModelColumn = "model-column",
+    /// `The models of a synthetic context, each with the file that holds it`
+    ModelsEachFile = "models-each-file",
     /// `name`
     NameLower = "name-lower",
     /// `No rows`

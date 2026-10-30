@@ -112,10 +112,15 @@ fn input_pane(v: &Visit, key: &'static str) -> TransformPane {
     }
 }
 
-/// The template select with the id `id`.
-fn template_field(v: &Visit, id: &'static str) -> Html {
+/// A template whose id is wider than a phone, offered by the dense row.
+const LONG_TEMPLATE: &str = "synthetic.laboratory_test_result_with_a_reference_range_panel.v1";
+
+/// The template select with the id `id`, offering `more` after the
+/// gallery's templates.
+fn template_field(v: &Visit, id: &'static str, more: &[&str]) -> Html {
     let options: Html = TEMPLATES
         .iter()
+        .chain(more)
         .map(|template| h(format!("<option value=\"{template}\">{template}</option>")))
         .collect();
     field(
@@ -263,6 +268,7 @@ fn template_for(v: &Visit, pair: Pair) -> Html {
             Pair::Answered => "pair-answered-template",
             Pair::Refused => "pair-refused-template",
         },
+        &[],
     )
 }
 
@@ -349,7 +355,7 @@ fn dense(v: &Visit) -> Html {
     let options = transform_options(
         Density::Dense,
         Html::join([
-            template_field(v, "dense-template"),
+            template_field(v, "dense-template", &[LONG_TEMPLATE]),
             format_field(v, "dense-format"),
             patient,
             checks,
@@ -451,7 +457,7 @@ fn rows(v: &Visit) -> Html {
         )));
     let options = transform_options(
         Density::Plain,
-        Html::join([template_field(v, "rows-template"), ehr]),
+        Html::join([template_field(v, "rows-template", &[]), ehr]),
         run(
             v,
             "rows-run",
