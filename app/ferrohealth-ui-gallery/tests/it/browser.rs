@@ -358,9 +358,11 @@ impl Browser {
         Ok(())
     }
 
-    /// Waits until the page's script runs: the root element carries the
-    /// loader's mark (`ferrohealth_ui::script::MARK`), so a journey never
-    /// acts on a control before its module can answer.
+    /// Waits until the page's loader runs: the root element carries its
+    /// mark (`ferrohealth_ui::script::MARK`). The loader writes it before
+    /// any module has arrived, so a journey that drives a control whose
+    /// module changes nothing it can see waits for the control's
+    /// `ferrohealth_ui::script::READY` too.
     pub(crate) async fn hydrated(&self) -> Result<(), Box<dyn Error>> {
         self.element(By::Css(format!("html[{}]", ferrohealth_ui::script::MARK)))
             .await?;
