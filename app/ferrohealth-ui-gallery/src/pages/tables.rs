@@ -10,7 +10,8 @@
 //! of several keys stated in its header row; a result set whose headers
 //! arrive at run time, a result whose pages are bodies of their own, the
 //! pagers of a listing with no stated total, the loading and empty tables,
-//! and a small table that fits a phone unstacked. Every listing works with
+//! a small table that fits a phone unstacked, and a context's models whose
+//! linked group row and long file name wrap inside a phone card. Every listing works with
 //! no script, and below 40rem every row is a line under a hairline.
 
 use ferrohealth_ui::html::Html;
@@ -574,6 +575,52 @@ fn row_actions(v: &Visit) -> Html {
     )
 }
 
+/// The columns of the table of a context's models.
+fn model_columns(v: &Visit) -> [Column; 2] {
+    [
+        Column::text("model", v.tr(Msg::ModelColumn)),
+        Column::text("file", v.tr(Msg::FileColumn)),
+    ]
+}
+
+/// A context's models under a group row that links the context, each model
+/// with its file: the context's name and one file name are wider than a
+/// phone, and a phone card wraps both inside the card.
+fn model_files(v: &Visit) -> Html {
+    let columns = model_columns(v);
+    let [_, file] = &columns;
+    let rows: Html = [
+        (
+            "diagnose",
+            "fhirconnect/ferrohealth_synthetic_journey_diagnose.model.yml",
+        ),
+        ("vitals", "fhirconnect/vitals.model.yml"),
+    ]
+    .into_iter()
+    .map(|(model, path)| {
+        h(format!(
+            "<tr>{}{}</tr>",
+            title_cell(None, h(format!("<code>{model}</code>")), None),
+            cell(file, h(format!("<code>{path}</code>"))),
+        ))
+    })
+    .collect();
+    let context = h(format!(
+        "<a href=\"#context\">{}</a>",
+        t(v.tr(Msg::ContextDiagnose))
+    ));
+    let group = group_row(&columns, context);
+    card(
+        v.tr(Msg::ContextModels),
+        data_table(DataTable {
+            caption: &v.tr(Msg::ModelsEachFile),
+            columns: &columns,
+            sorting: Sorting::default(),
+            body: Body::Bodies(h(format!("<tbody>{group}{rows}</tbody>"))),
+        }),
+    )
+}
+
 /// The rows a server with no total answers for `paging`: a full page until
 /// the last, which is short.
 fn open_rows(paging: Paging) -> u32 {
@@ -688,6 +735,7 @@ pub fn page(v: &Visit) -> Page {
         states(v),
         fitting(v),
         row_actions(v),
+        model_files(v),
         hierarchy(v),
         changes(v),
         super::records::compare_section(v),

@@ -2392,6 +2392,15 @@
       padding-inline: 0;
     }
 
+    /* A value never runs past its column: an item aligned to the start
+       takes at least its content's min-content width, which a code that
+       breaks only when it cannot fit its line (`break-word`) puts at its
+       whole length, so the value is held to its column and the code wraps
+       there (WCAG 2.2 SC 1.4.10). */
+    .fui-table-stack .fui-table tbody [data-label] > * {
+      max-width: 100%;
+    }
+
     /* A stacked row keeps its level in the card's heading, a default step
        per level, narrower than the wide table's loose one. */
     .fui-table-stack .fui-table tbody :is(td, th).fui-depth-1 {
@@ -13386,6 +13395,15 @@
     min-width: max-content;
   }
 
+  /* On a phone the field takes the row, so a select keeps to its field and
+     its chosen value ends in an ellipsis: `max-content` is its widest
+     option, wider than a phone (WCAG 2.2 SC 1.4.10). */
+  @media (width < 40rem) {
+    .fui-transform-options.is-dense .fui-select {
+      min-width: 0;
+    }
+  }
+
   /* Stacked rows on a phone (FerroTERM, for every console): a title cell
      with a second line wraps across the card, and an empty cell takes no
      line of its own. */
@@ -14707,6 +14725,12 @@
       margin: 0;
       background: none;
       padding: 0;
+    }
+
+    /* A group row's linked name wraps inside the card, where from 40 rem
+       it keeps its line (WCAG 2.2 SC 1.4.10). */
+    .fui-table-stack .fui-table tbody tr.fui-group-row > th a:not(.fui-button, .fui-tag) {
+      white-space: normal;
     }
   }
 
