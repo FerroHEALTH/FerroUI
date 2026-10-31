@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The journeys of the patient-record components: the work-list walked by
-//! the keyboard, the masked identifier revealed, hidden and refused, the
-//! stacked compare's choice and a timeline event's details, and the floor
-//! each keeps with its scripts withheld.
+//! the keyboard with each row's actions on its one line (#540), the masked
+//! identifier revealed, hidden and refused, the stacked compare's choice
+//! and a timeline event's details, and the floor each keeps with its
+//! scripts withheld.
 
 use std::error::Error;
 
@@ -181,6 +182,102 @@ async fn the_work_list_moves_its_focused_row_by_the_keys_and_opens_it() -> Resul
         focus_first_row(browser).await?;
         press(browser, Key::Enter).await?;
         browser.at(&gallery.url("/ferropix/layouts")).await?;
+        Ok(())
+    })
+    .await
+}
+
+/// The rows of the work-list whose glance opener and row menu do not share
+/// one line, or that stand taller than the two stacked, each with its height.
+async fn wrapped_rows(browser: &Browser) -> Result<Vec<String>, Box<dyn Error>> {
+    Ok(browser
+        .driver()
+        .execute(
+            r"return Array.from(document.querySelectorAll(arguments[0])).flatMap((row) => {
+                const opener = row.querySelector('td.fui-row-menu button[commandfor]').getBoundingClientRect();
+                const menu = row.querySelector('td.fui-row-menu summary').getBoundingClientRect();
+                const height = row.getBoundingClientRect().height;
+                const level = Math.abs(opener.top + opener.bottom - menu.top - menu.bottom) <= 2;
+                const one = level && opener.right <= menu.left && height < opener.height + menu.height;
+                return one ? [] : [row.getAttribute('data-key') + ' at ' + height + ' px'];
+              });",
+            vec![serde_json::to_value(ROWS)?],
+        )
+        .await?
+        .convert()?)
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_work_list_row_keeps_its_glance_opener_and_menu_on_one_line() -> Result<(), Box<dyn Error>>
+{
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        window(browser, 1440, 900).await?;
+        open_worklist(browser, &gallery).await?;
+        browser
+            .element(By::Css(
+                "button[commandfor='pair-20-glance'][data-fui-ready]",
+            ))
+            .await?;
+        let wrapped = wrapped_rows(browser).await?;
+        assert!(
+            wrapped.is_empty(),
+            "every row keeps its opener and its menu on one line at 1440 px: {wrapped:?}"
+        );
+        focus_first_row(browser).await?;
+        press(browser, Key::End).await?;
+        until("End moves to the last row", async || {
+            Ok(focused_row(browser).await? == "pair-20")
+        })
+        .await?;
+        assert!(
+            focused_row_in_view(browser).await?,
+            "the last row is in view, clear of the foot"
+        );
+        let shown = browser
+            .driver()
+            .execute(
+                "return document.activeElement.matches(':focus-visible');",
+                vec![],
+            )
+            .await?;
+        assert_eq!(
+            Some(true),
+            shown.json().as_bool(),
+            "the last row shows its focus ring"
+        );
+        let start = browser
+            .driver()
+            .execute(
+                "return getComputedStyle(document.getElementById('pair-20-glance')).textAlign;",
+                vec![],
+            )
+            .await?;
+        assert_eq!(
+            Some("start"),
+            start.json().as_str(),
+            "the glance opened from the row's actions starts its lines"
+        );
+        // The capture centres the queue's card, so the last row shows in it
+        // only while the rows keep their one line.
+        let centred = browser
+            .driver()
+            .execute(
+                "document.querySelector('.fui-list-card:has(.fui-worklist-grid)')\
+                   .scrollIntoView({block: 'center'}); \
+                 const row = document.activeElement.getBoundingClientRect(); \
+                 return row.top >= 0 && row.bottom <= document.documentElement.clientHeight;",
+                vec![],
+            )
+            .await?;
+        assert_eq!(
+            Some(true),
+            centred.json().as_bool(),
+            "the last row stays in view with the queue's card centred"
+        );
         Ok(())
     })
     .await
