@@ -283,6 +283,20 @@ fn a_phone_row_keeps_its_checkbox_on_its_first_line() {
 }
 
 #[test]
+fn a_phone_card_keeps_a_hierarchy_rows_level_in_its_heading() {
+    // design/COMPONENTS.md, § The table: a hierarchy row's stacked card keeps
+    // its level, one default space per level.
+    for level in 1..=8 {
+        assert!(
+            STYLESHEET.contains(&format!(
+                "    .fui-table-stack .fui-table tbody :is(td, th).fui-depth-{level} {{\n      padding-inline-start: calc({level} * var(--space-default));"
+            )),
+            "a stacked title cell at level {level} would lose its step"
+        );
+    }
+}
+
+#[test]
 fn a_keyboard_tabs_panel_is_the_sheet_its_tabs_open_into() {
     assert!(
         STYLESHEET.contains(

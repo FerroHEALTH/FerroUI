@@ -90,6 +90,20 @@ async fn every_page_of_every_brand_renders_with_its_theme_and_the_headers()
 }
 
 #[tokio::test]
+async fn the_tables_page_draws_a_hierarchy_rows_title_cell_at_its_depth()
+-> Result<(), Box<dyn Error>> {
+    let (parts, body) = get("/ferroterm/tables").await?;
+    assert_eq!(StatusCode::OK, parts.status);
+    for (level, code) in [(0, "root"), (2, "leaf-a1"), (8, "deep")] {
+        let cell = format!(
+            "<th scope=\"row\" class=\"fui-depth-{level}\" data-role=\"title\"><code>{code}</code></th>"
+        );
+        assert!(body.contains(&cell), "{cell}");
+    }
+    Ok(())
+}
+
+#[tokio::test]
 async fn a_path_the_gallery_does_not_serve_answers_404() -> Result<(), Box<dyn Error>> {
     let (parts, body) = get("/no/such/page").await?;
     assert_eq!(StatusCode::NOT_FOUND, parts.status);

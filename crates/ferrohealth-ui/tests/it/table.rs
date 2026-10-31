@@ -19,6 +19,7 @@ use ferrohealth_ui::table::pager::{Listing, PostTo, link_pager, post_open_pager,
 use ferrohealth_ui::table::view::{
     Body, Column, DataTable, EXCLUDED, Role, RowCheck, Sorting, cell, check_cell, count_cell,
     data_table, data_table_unstacked, data_table_wide, group_row, menu_cell, title_cell,
+    title_cell_at,
 };
 use ferrohealth_ui::view::template::list::{HeadingCount, ListCard, list_card};
 
@@ -436,6 +437,53 @@ fn a_row_menu_or_checkbox_header_names_its_column_for_assistive_technology_alone
     assert!(
         table.contains(r#"<span class="fui-sr-only">Actions</span>"#),
         "{table}"
+    );
+}
+
+#[test]
+fn a_title_cell_at_a_depth_carries_its_level_on_its_row_header() {
+    let cell = html(title_cell_at(
+        2,
+        Some("/templates/synthetic.v1"),
+        Html::text("synthetic.v1"),
+        Some(Html::text("release 1")),
+    ));
+    assert!(
+        has(
+            &cell,
+            "th",
+            &[
+                ("scope", "row"),
+                ("class", "fui-depth-2"),
+                ("data-role", "title")
+            ]
+        ),
+        "{cell}"
+    );
+    assert!(
+        has(
+            &cell,
+            "a",
+            &[
+                ("class", "fui-row-link"),
+                ("href", "/templates/synthetic.v1")
+            ]
+        ),
+        "{cell}"
+    );
+    assert!(
+        cell.contains("<span class=\"fui-row-sub\">release 1</span>"),
+        "{cell}"
+    );
+    let deepest = html(title_cell_at(12, None, Html::text("deep"), None));
+    assert!(
+        has(&deepest, "th", &[("class", "fui-depth-8")]),
+        "a level past the eighth holds the eighth's step: {deepest}"
+    );
+    let level = html(title_cell(None, Html::text("flat"), None));
+    assert_eq!(
+        level, "<th scope=\"row\" data-role=\"title\">flat</th>",
+        "a title cell with no depth draws as it did"
     );
 }
 

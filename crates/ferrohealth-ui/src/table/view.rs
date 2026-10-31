@@ -486,6 +486,23 @@ pub fn row_link(href: &str, name: Html) -> Html {
 /// line under it (HTML Living Standard, `th` with `scope="row"`).
 #[must_use]
 pub fn title_cell(href: Option<&str>, name: Html, sub: Option<Html>) -> Html {
+    title(None, href, name, sub)
+}
+
+/// Returns the cell that names a row `level` levels down a hierarchy: a
+/// [`title_cell`] with the [`depth`] class on its `<th>`.
+///
+/// The name steps in by a loose space per level, and in a phone's stacked
+/// card by a default space per level, so the card's heading keeps the level
+/// readable in the narrower width. Every level past the eighth takes the
+/// eighth's step.
+#[must_use]
+pub fn title_cell_at(level: u32, href: Option<&str>, name: Html, sub: Option<Html>) -> Html {
+    title(Some(depth(level)), href, name, sub)
+}
+
+/// Returns a row's title cell, its `<th>` carrying `class` when given.
+fn title(class: Option<&str>, href: Option<&str>, name: Html, sub: Option<Html>) -> Html {
     let name = match href {
         Some(href) => row_link(href, name),
         None => name,
@@ -494,8 +511,11 @@ pub fn title_cell(href: Option<&str>, name: Html, sub: Option<Html>) -> Html {
         .map(|sub| format!("<span class=\"fui-row-sub\">{sub}</span>"))
         .unwrap_or_default();
     let name = String::from(name);
+    let class = class
+        .map(|class| format!(" class=\"{class}\""))
+        .unwrap_or_default();
     Html::raw(format!(
-        "<th scope=\"row\" data-role=\"{}\">{name}{sub}</th>",
+        "<th scope=\"row\"{class} data-role=\"{}\">{name}{sub}</th>",
         Role::Title.key()
     ))
 }
