@@ -62,9 +62,9 @@ never publish under it.
   script budget (§12).
 - **`scripts/checks/markup-rules.sh` and `scripts/checks/script-budget.sh`
   enforce the mechanical part in CI:** no inline style, script or handler
-  in a template or the Rust, and every module within 16 KiB (160 KiB for
-  all) with no `eval`, no absolute URL and no `fetch` outside the two
-  wires.
+  in a template or the Rust, and every module within 16 KiB (144 KiB for
+  what one page loads, 72 KiB compressed for all) with no `eval`, no
+  absolute URL and no `fetch` outside the two wires.
 - **`/new-component`** walks a component from its COMPONENTS.md id to the
   gallery, the tests, the screenshots and the changelog.
 - **`/console-check`** reviews a diff against the console rules before a

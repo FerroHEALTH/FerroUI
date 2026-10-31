@@ -1,0 +1,57 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+# Every gallery page, by its path with the brand as `:brand`, and the jobs
+# its `data-fui` attributes name. scripts/checks/script-budget.sh measures
+# the modules each page loads from it (S2); the gallery's script_pages test
+# fails when it is no longer what the gallery draws, and prints the list to
+# write.
+/ toast
+/:brand drawer keep menu search tabs toast user_menu
+/:brand/charts chart drawer search toast user_menu
+/:brand/clinical chart date drawer identifier menu search toast user_menu
+/:brand/code copy document drawer search toast user_menu
+/:brand/configuration copy countdown drawer search toast user_menu
+/:brand/configuration/provisioned drawer search toast user_menu
+/:brand/federation drawer menu search toast topology user_menu
+/:brand/federation/consent drawer search toast user_menu
+/:brand/federation/identity drawer search toast user_menu
+/:brand/federation/node-a drawer search toast user_menu
+/:brand/federation/node-a-lab drawer search toast user_menu
+/:brand/federation/node-b drawer search toast user_menu
+/:brand/federation/node-c drawer search toast user_menu
+/:brand/federation/node-e drawer search toast user_menu
+/:brand/federation/oost drawer search toast user_menu
+/:brand/federation/pdqm drawer search toast user_menu
+/:brand/federation/pixm drawer search toast user_menu
+/:brand/federation/proefdorp drawer search toast user_menu
+/:brand/federation/registry drawer search toast user_menu
+/:brand/federation/self-description copy drawer search toast user_menu
+/:brand/federation/testmeer drawer search toast user_menu
+/:brand/federation/voorbeeldstad drawer search toast user_menu
+/:brand/find drawer search toast user_menu
+/:brand/forms combobox date date_range drawer editor filter identifier masked picker repeat search toast upload user_menu
+/:brand/layouts drawer keep picker search toast tree user_menu
+/:brand/operations copy drawer editor keys search toast user_menu
+/:brand/overlays dialog drawer keep keys menu search shortcuts side_panel toast user_menu
+/:brand/overlays/access drawer search toast user_menu
+/:brand/preferences drawer keep preference search tabs toast user_menu
+/:brand/preferences/keyboard drawer keep preference search tabs toast user_menu
+/:brand/preferences/language drawer keep menu preference search tabs toast user_menu
+/:brand/tables dialog drawer keys menu search side_panel toast user_menu worklist
+/:brand/templates/about copy drawer search toast user_menu
+/:brand/templates/detail drawer keep menu search tabs toast user_menu
+/:brand/templates/forbidden drawer search toast user_menu
+/:brand/templates/list drawer search toast user_menu
+/:brand/templates/list-empty drawer search toast user_menu
+/:brand/templates/list-many drawer menu search toast user_menu
+/:brand/templates/list-tabs drawer keep search tabs toast user_menu
+/:brand/templates/not-found drawer search toast user_menu
+/:brand/templates/settings copy drawer keep search tabs toast user_menu
+/:brand/templates/settings-managed copy drawer keep menu search tabs toast user_menu
+/:brand/terminology drawer menu repeat search toast user_menu
+/:brand/trees drawer keep search toast tree user_menu
+/fault/:brand toast
+/sign-in/:brand/basic toast
+/sign-in/:brand/expired toast
+/sign-in/:brand/provider toast
+/sign-in/:brand/redirecting toast

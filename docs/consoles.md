@@ -42,7 +42,8 @@ The library decides these, and a console takes them as they are:
 - **The accessibility of each part:** WCAG 2.2 AA contrast for every role
   pairing in every brand, light and dark, the focus ring, the Authoring
   Practices patterns, and reflow at 320 px.
-- **The script budget:** 16 KiB a module and 160 KiB for all of them
+- **The script budget:** 16 KiB a module, 144 KiB for the modules one
+  page loads, and 72 KiB for all of them compressed
   (`scripts/checks/script-budget.sh`).
 
 ## What the console owns
