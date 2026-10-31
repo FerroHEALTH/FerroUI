@@ -25,7 +25,7 @@ use ferrohealth_ui::table::pager::{
 };
 use ferrohealth_ui::table::view::{
     ACTIONS, Body, Column, DataTable, EXCLUDED, NUM, Role, RowCheck, Sorting, cell, check_cell,
-    count_cell, data_table, data_table_unstacked, depth, group_row, menu_cell, title_cell,
+    count_cell, data_table, data_table_unstacked, group_row, menu_cell, title_cell, title_cell_at,
 };
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::action::ActionGroup;
@@ -502,7 +502,7 @@ fn hierarchy_columns(v: &Visit) -> [Column; 2] {
     ]
 }
 
-/// A synthetic hierarchy, each concept's code cell stepped in by its level,
+/// A synthetic hierarchy, each concept's title cell stepped in by its level,
 /// one row past the deepest step to show that deeper levels hold it.
 fn hierarchy(v: &Visit) -> Html {
     let display = t(v.tr(Msg::Display));
@@ -519,8 +519,8 @@ fn hierarchy(v: &Visit) -> Html {
     .into_iter()
     .map(|(level, code, words)| {
         h(format!(
-            "<tr><th scope=\"row\" class=\"{}\"><code>{code}</code></th><td data-label=\"{display}\">{}</td></tr>",
-            depth(level),
+            "<tr>{}<td data-label=\"{display}\">{}</td></tr>",
+            title_cell_at(level, None, h(format!("<code>{code}</code>")), None),
             t(v.tr(words))
         ))
     })
