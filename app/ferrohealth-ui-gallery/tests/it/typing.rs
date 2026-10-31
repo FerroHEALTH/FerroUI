@@ -231,7 +231,6 @@ async fn a_key_typed_into_a_large_document_costs_what_it_costs_in_a_small_one()
             let ([small, large], last) = rounds(browser, id, unit).await?;
             // A text 32 times longer costs a little more per key for the copies of
             // the text, never 32 times more; the floor is three ticks of the clock.
-            eprintln!("PROBE {id}: small {small:.4} large {large:.4}");
             assert!(
                 large <= 5.0 * small.max(0.3),
                 "a key in {id} costs {large:.3} ms in 64 KB against {small:.3} ms in 2 KB"
@@ -256,16 +255,26 @@ const TYPED_BYTES: usize = 20 * 1024;
 const CHUNK: usize = 1024;
 
 /// The most a key of the typed document may cost, at the median, in
-/// milliseconds.
-const KEY_BUDGET: f64 = 1.0;
+/// milliseconds, script, style and layout together: over the whole
+/// document, and over the last [`CHUNK`] keys, typed into it at its full
+/// size. Before #531 a key cost 5 to 8 ms at the median and 10 to 11 ms at
+/// the full size; after it 1 to 2 ms at both.
+const KEY_BUDGET: f64 = 4.0;
 
-/// The most the editor may spend on the whole typed document, in
-/// milliseconds: the 10 s a console's harness gives one command.
-const DOCUMENT_BUDGET: f64 = 10_000.0;
+/// How many keys a console's harness sends in one command, which has 10 s
+/// to answer (FerroEHR's contribution journey).
+const COMMAND_KEYS: usize = 256;
+
+/// The most the slowest run of [`COMMAND_KEYS`] keys may cost the page, in
+/// milliseconds: a fifth of the 10 s the harness gives the command, the rest
+/// left to the driver's own work for each key.
+const COMMAND_BUDGET: f64 = 2_000.0;
 
 /// Types `text` at the end of the editor `id`, one key and one input event
 /// each, and returns the time each key took from the dispatch of its input
-/// event until the editor had taken it, before the browser draws.
+/// event until the editor had taken it and the browser had styled and laid
+/// out the page again, so a key's cost counts the restyle its changes to
+/// the layer cause as well as the editor's own script.
 async fn type_out(browser: &Browser, id: &str, text: &str) -> Result<Vec<f64>, Box<dyn Error>> {
     put(browser, id, "").await?;
     let keys: Vec<char> = text.chars().collect();
@@ -277,6 +286,7 @@ async fn type_out(browser: &Browser, id: &str, text: &str) -> Result<Vec<f64>, B
             .execute_async(
                 r"const done = arguments[arguments.length - 1];
                 const area = document.getElementById(arguments[0]);
+                const layer = area.previousElementSibling;
                 const keys = Array.from(arguments[1]);
                 const settle = () => new Promise((resolve) => {
                   const channel = new MessageChannel();
@@ -297,6 +307,9 @@ async fn type_out(browser: &Browser, id: &str, text: &str) -> Result<Vec<f64>, B
                     for (let turn = 0; turn < 16; turn += 1) {
                       await Promise.resolve();
                     }
+                    // Reading the layer's height makes the browser style and lay
+                    // out the page now, inside the time.
+                    void layer.offsetHeight;
                     times.push(performance.now() - heard);
                     await settle();
                   }
@@ -351,16 +364,23 @@ async fn a_composition_typed_key_by_key_stays_inside_its_budget() -> Result<(), 
                 "the layer of {id} draws the text area's text, line by line"
             );
             let key = median(&times);
-            let whole: f64 = times.iter().sum();
-            eprintln!("PROBE {id}: median {key:.4} ms, sum {whole:.0} ms, max {:.2}", times.iter().copied().fold(0.0, f64::max));
+            let full = median(times.get(times.len().saturating_sub(CHUNK)..).unwrap_or_default());
+            let command = times
+                .windows(COMMAND_KEYS)
+                .map(|keys| keys.iter().sum::<f64>())
+                .fold(0.0, f64::max);
             assert!(
                 key <= KEY_BUDGET,
                 "a key typed into {id} costs {key:.3} ms at the median, over {KEY_BUDGET} ms"
             );
             assert!(
-                whole <= DOCUMENT_BUDGET,
-                "typing {} bytes into {id} key by key costs {whole:.0} ms, over {DOCUMENT_BUDGET} ms",
+                full <= KEY_BUDGET,
+                "a key typed into {id} at {} bytes costs {full:.3} ms at the median, over {KEY_BUDGET} ms",
                 text.len()
+            );
+            assert!(
+                command <= COMMAND_BUDGET,
+                "the slowest {COMMAND_KEYS} keys typed into {id} cost {command:.0} ms, over {COMMAND_BUDGET} ms"
             );
         }
         browser.console_clean("typing a composition key by key").await

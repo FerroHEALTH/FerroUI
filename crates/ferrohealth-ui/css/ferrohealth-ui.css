@@ -2835,13 +2835,17 @@
 
   /* A row whose field carries a help line under its control aligns the
      fields by their tops, and its buttons and checkboxes sit one label
-     down, so each stays on the controls' line, not the help's. */
+     down, so each stays on the controls' line, not the help's. The
+     buttons find the field among their siblings: a :has() on the row
+     followed by a child selector without a class costs Chrome a style
+     pass that grows with the page on every change to the DOM (#531). */
   @media (width >= 30rem) {
     .fui-field-flow:has(> .fui-field > .fui-help) {
       align-items: flex-start;
     }
 
-    .fui-field-flow:has(> .fui-field > .fui-help) > :is(button, .fui-button, .fui-check) {
+    .fui-field-flow > .fui-field:has(> .fui-help) ~ :is(button, .fui-button, .fui-check),
+    .fui-field-flow > :is(button, .fui-button, .fui-check):has(~ .fui-field > .fui-help) {
       align-self: flex-start;
       margin-block-start: calc(var(--leading-body) + var(--space-tight));
     }
@@ -6285,26 +6289,27 @@
 
   /* On a wide screen the cells draw the focused row's ring: the raised
      checkbox and menu cells paint the current row's tint over an outline
-     on the row (WCAG 2.2 SC 2.4.7). */
+     on the row (WCAG 2.2 SC 2.4.7). The cells are named as td and th, so
+     no element outside a row is matched against the row's :has() (#531). */
   @media (width >= 40rem) {
     .fui-worklist .fui-table tbody tr:is(:focus-visible, :has(.fui-row-link:focus-visible)) {
       outline: none;
     }
 
-    .fui-worklist .fui-table tbody tr:is(:focus-visible, :has(.fui-row-link:focus-visible)) > * {
+    .fui-worklist .fui-table tbody tr:is(:focus-visible, :has(.fui-row-link:focus-visible)) > :is(td, th) {
       box-shadow:
         inset 0 2px 0 var(--focus),
         inset 0 -2px 0 var(--focus);
     }
 
-    .fui-worklist .fui-table tbody tr:is(:focus-visible, :has(.fui-row-link:focus-visible)) > :first-child {
+    .fui-worklist .fui-table tbody tr:is(:focus-visible, :has(.fui-row-link:focus-visible)) > :is(td, th):first-child {
       box-shadow:
         inset 2px 0 0 var(--focus),
         inset 0 2px 0 var(--focus),
         inset 0 -2px 0 var(--focus);
     }
 
-    .fui-worklist .fui-table tbody tr:is(:focus-visible, :has(.fui-row-link:focus-visible)) > :last-child {
+    .fui-worklist .fui-table tbody tr:is(:focus-visible, :has(.fui-row-link:focus-visible)) > :is(td, th):last-child {
       box-shadow:
         inset -2px 0 0 var(--focus),
         inset 0 2px 0 var(--focus),
