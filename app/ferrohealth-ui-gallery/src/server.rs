@@ -162,6 +162,19 @@ pub fn preference_value(name: &str, value: &str) -> Option<String> {
         )
     } else if name == "hide" {
         kept(["on", "off"].into_iter().find(|state| *state == value))
+    } else if name == "concepts" {
+        // NOTE: RFC 5646 section 2.1; a tag's subtags are letters and digits joined by hyphens.
+        let tag = (2..=35).contains(&value.len())
+            && value.split('-').all(|subtag| {
+                !subtag.is_empty() && subtag.chars().all(|c| c.is_ascii_alphanumeric())
+            });
+        tag.then(|| value.to_owned())
+    } else if name == "size" {
+        value
+            .parse::<u16>()
+            .ok()
+            .filter(|size| (10..=200).contains(size))
+            .map(|size| size.to_string())
     } else {
         None
     }
@@ -678,6 +691,21 @@ mod tests {
             "the server bounds a reveal"
         );
         assert_eq!(Some(String::from("off")), preference_value("hide", "off"));
+        assert_eq!(
+            Some(String::from("nl-NL")),
+            preference_value("concepts", "nl-NL")
+        );
+        assert_eq!(
+            None,
+            preference_value("concepts", "nl NL"),
+            "a tag has no space"
+        );
+        assert_eq!(Some(String::from("50")), preference_value("size", "50"));
+        assert_eq!(
+            None,
+            preference_value("size", "500"),
+            "the server bounds a page size"
+        );
         assert_eq!(None, preference_value("sidebar", "rail"), "no preference");
     }
 

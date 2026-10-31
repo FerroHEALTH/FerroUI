@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Your preferences: a row just saved, the reset confirmation open, and
-//! the three tabs on a phone.
+//! Your preferences: a row just saved, the reset confirmation open, a
+//! typed preference just saved with its field focused, and the three tabs
+//! on a phone.
 
 use std::error::Error;
 
@@ -20,6 +21,7 @@ pub(super) const STATES: &[&str] = &[
     "preferences-reset",
     "preferences-phone",
     "preferences-language-phone",
+    "preferences-typed-saved",
 ];
 
 /// A row just saved (FerroPIX's reveal duration, the density elsewhere),
@@ -54,6 +56,21 @@ pub(super) async fn preferences(
     })
     .await?;
     shot_of_view(browser, brand, theme, "preferences-reset").await?;
+    browser
+        .goto(&gallery.url(&format!("{root}/language?saved=size")))
+        .await?;
+    let size = browser.element(By::Id("size")).await?;
+    browser
+        .driver()
+        .execute(
+            "arguments[0].scrollIntoView({block: 'center'});",
+            vec![size.to_json()?],
+        )
+        .await?;
+    browser
+        .element(By::Css(".fui-setting-saved[role='status']"))
+        .await?;
+    shot_of_view(browser, brand, theme, "preferences-typed-saved").await?;
     window(browser, 390, HEIGHT).await?;
     for (path, state) in [
         (root.clone(), "preferences-phone"),

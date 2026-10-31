@@ -49,10 +49,12 @@ pub const RESET_ROUTE: &str = "/preferences/reset";
 /// the theme.
 pub const COOKIE_PREFIX: &str = "gallery-";
 
-/// The gallery's own preferences, shown in FerroPIX's Appearance as a
-/// console's own rows: how long a revealed identifier stays, and whether
-/// leaving the page hides it.
-pub const OWN_PREFERENCES: [&str; 2] = ["reveal", "hide"];
+/// The gallery's own preferences, shown as a console's own rows.
+///
+/// In FerroPIX's Appearance: how long a revealed identifier stays and
+/// whether leaving the page hides it. In Language and region: FerroTERM's
+/// language concepts are asked for in and the rows a listing shows.
+pub const OWN_PREFERENCES: [&str; 4] = ["reveal", "hide", "concepts", "size"];
 
 /// The path of the route a session listing's pager posts its page and size
 /// to.

@@ -114,6 +114,33 @@ the posted fields, and answers `200` (FerroUI #485, kept as a plain post in
   first heading after the form, so a screen reader hears it.
 - A reload asks to post again, as for any form that answers its own post.
 
+## Your own preferences
+
+Your own rows go inside the three tabs of Your preferences
+(`PreferencesPage::own`), each a `view::preferences::preference_row` around
+one control, its `control_id` the control's name. The control is a
+`select_preference`, a `switch_preference` or, for a value the person
+types, a `typed_preference` (FerroUI #527):
+
+```rust
+typed_preference(&locale, TypedPreference {
+    name: String::from("page-size"),
+    kind: Typed::Number { min: Some(10), max: Some(200), step: None },
+    value: String::from("25"),
+    placeholder: None,
+    post: post.clone(),
+    saved: saved == Some("page-size"),
+})
+```
+
+`Typed::Text { min_length, max_length }` draws a text field, such as a
+BCP 47 tag. Each is the same plain form as a select: with no script its
+Save button posts it, and once the `preference` module runs it posts when
+the field changes (on Enter, or when the focus leaves it changed), and the
+row you mark `saved` gives the field the focus back. The browser holds the
+value to its bounds before it posts; your route checks it again and keeps
+it in its cookie.
+
 ## The top bar's search
 
 The search box (`view::search::search_box`) is a form that submits to your

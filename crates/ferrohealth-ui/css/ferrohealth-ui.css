@@ -7297,6 +7297,16 @@
     min-width: 13rem;
   }
 
+  /* A typed preference: a text field as wide as a select, a number
+     field as wide as its digits. */
+  .fui-setting-input {
+    width: 13rem;
+  }
+
+  .fui-setting-input[type="number"] {
+    width: 8rem;
+  }
+
   .fui-setting-row .fui-setting-saved {
     animation: fui-saved-fade 2.4s ease-out forwards;
   }
@@ -7343,6 +7353,8 @@
     }
 
     .fui-setting-select,
+    .fui-setting-input,
+    .fui-setting-input[type="number"],
     .fui-select-anchor {
       width: 100%;
     }

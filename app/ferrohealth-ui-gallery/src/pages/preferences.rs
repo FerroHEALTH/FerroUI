@@ -4,8 +4,9 @@
 //! Your preferences, as a console draws it.
 //!
 //! The library's three tabs read the gallery's cookies, with FerroPIX's
-//! reveal settings in Appearance as a console's own rows, and the dates
-//! and the time zone in Language and region.
+//! reveal settings in Appearance as a console's own rows, and in Language
+//! and region FerroTERM's typed concept language and page size, then the
+//! dates and the time zone.
 //!
 //! The page is server HTML; each preference posts to the gallery's
 //! preference route, which keeps it in its cookie and returns with
@@ -16,8 +17,9 @@ use ferrohealth_ui::html::Html;
 use ferrohealth_ui::i18n::{Arg, Locale};
 use ferrohealth_ui::style::Brand;
 use ferrohealth_ui::view::preferences::{
-    Post, PreferenceRow, Section, SectionRoutes, SelectPreference, SwitchPreference,
-    preference_row, preferences_page, select_preference, switch_preference,
+    Post, PreferenceRow, Section, SectionRoutes, SelectPreference, SwitchPreference, Typed,
+    TypedPreference, preference_row, preferences_page, select_preference, switch_preference,
+    typed_preference,
 };
 
 use crate::app::{PREFERENCE_ROUTE, Page, RESET_ROUTE, own_of};
@@ -93,6 +95,61 @@ fn reveal_rows(v: &Visit, cookies: &str, post: &Post, saved: Option<&str>) -> Ve
     ]
 }
 
+/// FerroTERM's own rows in Language and region, drawn for every brand:
+/// the language concepts are asked for in, a text, and the rows a listing
+/// shows, a number.
+fn typed_rows(v: &Visit, cookies: &str, post: &Post, saved: Option<&str>) -> Vec<Html> {
+    let row = |name: &str, label: Msg, description: Msg, kind: Typed, value: &str, hint| {
+        let saved = saved == Some(name);
+        let control = typed_preference(
+            &v.locale,
+            TypedPreference {
+                name: String::from(name),
+                kind,
+                value: String::from(value),
+                placeholder: hint,
+                post: post.clone(),
+                saved,
+            },
+        );
+        preference_row(
+            &v.locale,
+            PreferenceRow {
+                label: v.tr(label).into(),
+                description: v.tr(description).into(),
+                control_id: Some(String::from(name)),
+                control,
+                saved,
+            },
+        )
+    };
+    vec![
+        row(
+            "concepts",
+            Msg::ConceptLanguage,
+            Msg::ConceptLanguageDesc,
+            Typed::Text {
+                min_length: Some(2),
+                max_length: Some(35),
+            },
+            own_of(cookies, "concepts").unwrap_or_default(),
+            Some(v.tr(Msg::ConceptLanguageHint)),
+        ),
+        row(
+            "size",
+            Msg::RowsPerPage,
+            Msg::RowsPerPageDesc,
+            Typed::Number {
+                min: Some(10),
+                max: Some(200),
+                step: None,
+            },
+            own_of(cookies, "size").unwrap_or("25"),
+            None,
+        ),
+    ]
+}
+
 /// The read-only facts of Language and region: how dates are written and
 /// the server's time zone.
 fn region_rows(v: &Visit) -> Vec<Html> {
@@ -142,7 +199,11 @@ pub fn page(v: &Visit) -> Page {
     };
     let own = match (section, brand) {
         (Section::Appearance, Brand::Pix) => reveal_rows(v, &v.cookies, &post, saved.as_deref()),
-        (Section::Language, _) => region_rows(v),
+        (Section::Language, _) => {
+            let mut rows = typed_rows(v, &v.cookies, &post, saved.as_deref());
+            rows.extend(region_rows(v));
+            rows
+        }
         _ => Vec::new(),
     };
     let page = preferences_page(

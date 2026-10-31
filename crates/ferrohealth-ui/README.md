@@ -172,7 +172,10 @@ you kept (`saved`), read them all with `theme::Preferences::read` as you
 render, and write `data-theme`, `data-density`, `data-motion` and
 `data-hints` on `<html>`. The library writes no cookie. Your own
 preferences go inside the three tabs (`own`), built with
-`preference_row`, `select_preference` and `switch_preference`.
+`preference_row`, `select_preference`, `switch_preference` and, for a
+value the person types, `typed_preference` (a text or a number field,
+`Typed::Text` or `Typed::Number` with its bounds), which posts in the same
+form when the field changes and gives its field the focus back once kept.
 
 ## Licence
 
