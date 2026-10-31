@@ -442,7 +442,9 @@ fn the_bar_docks_two_fields_stacks_on_a_phone_and_keeps_a_focused_control_clear(
     );
     // WCAG 2.2 SC 2.4.11: a control the keyboard reaches is never hidden under the bar.
     assert!(
-        STYLESHEET.contains("    html:has(.fui-dock) {\n      scroll-padding-bottom:"),
+        STYLESHEET.contains(
+            "    html:has(> :where(body) > :where(.fui-page) > :where(.fui-body) > :where(.fui-main) > .fui-dock, > :where(body) > :where(.fui-page) > :where(.fui-body) > :where(.fui-main) > :where(.fui-column) > .fui-dock) {\n      scroll-padding-bottom:"
+        ),
         "no scroll padding above the bar"
     );
     assert!(

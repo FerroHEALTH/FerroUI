@@ -693,6 +693,10 @@ mod tests {
         };
         let page = super::code_editor(&editor);
         assert!(page.as_str().contains(r#"aria-invalid="true""#), "{page}");
+        assert!(
+            page.as_str().contains(r#"class="fui-editor is-invalid""#),
+            "{page}"
+        );
         assert!(page.as_str().contains(r#"data-language="yaml""#), "{page}");
     }
 }

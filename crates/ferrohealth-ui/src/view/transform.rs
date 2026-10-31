@@ -177,7 +177,8 @@ pub struct TransformPane {
     pub state: Option<AnswerState>,
     /// The pane's own actions at its head's end, such as Copy.
     pub actions: Option<Html>,
-    /// What it holds: an editor, a code panel, or an [`Answer`].
+    /// What it holds, as the pane's own children: an editor, a code panel,
+    /// or an [`Answer`].
     pub body: Html,
 }
 

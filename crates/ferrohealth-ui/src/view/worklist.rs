@@ -73,6 +73,9 @@ pub fn row(row: WorkRow<'_>) -> Html {
 
 /// Returns the foot of a work-list: the shortcut hint at its start and the
 /// pager at its end, in view below the rows inside the card.
+///
+/// The card sits in the page's column, at most two levels down, where the
+/// stylesheet looks for its foot.
 #[must_use]
 pub fn worklist_foot(hint: Option<Html>, pager: Option<Html>) -> Html {
     Html::raw(format!(

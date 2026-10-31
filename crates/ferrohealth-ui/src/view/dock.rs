@@ -7,9 +7,10 @@
 //! It spans the main area beside the sidebar, never over it, on the raised
 //! ground with one top rule and no shadow or margin of its own; on a phone it
 //! docks to the window foot, clear of the safe area. A console draws it as the
-//! last part of its main area (the shell's dock). It takes up to two fields,
-//! a reason and a path, before the decisions; an editor's bar with no field
-//! puts its state line in the field's place. Below 40 rem each field takes
+//! last part of its main area (the shell's dock) or of the main area's
+//! column, the two places the stylesheet looks for it. It takes up to two
+//! fields, a reason and a path, before the decisions; an editor's bar with no
+//! field puts its state line in the field's place. Below 40 rem each field takes
 //! its rows and the decisions stack under them at full width, the primary
 //! first. Previous and next through a queue are never in the bar: they sit in
 //! the page header (R5).

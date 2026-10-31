@@ -297,7 +297,7 @@ fn the_phone_tab_select_replaces_the_row_only_once_it_works() {
     // NOTE: console-ui.md, the no-script floor: with no script the row of links is the floor.
     assert!(
         STYLESHEET.contains(
-            "    .fui-tabbed-many:has(.fui-tabs-select select:enabled) > .fui-tabs {\n      display: none;"
+            "    .fui-tabbed-many:has(> .fui-tabs-select > .fui-tabs-select-field > select:enabled, > .fui-tabs-select > select:enabled) > .fui-tabs {\n      display: none;"
         ),
         "the row would hide behind a select that cannot work yet"
     );
@@ -503,15 +503,46 @@ fn the_confirmation_dialog_scrolls_inside_the_viewport() {
 }
 
 #[test]
+fn no_has_rule_reads_the_whole_page() {
+    // NOTE: FerroUI #544: Chrome weighs a :has() over the page again on every change below it, an editor's every key.
+    for anchor in [":root:has(", "html:has(", "body:has("] {
+        for (at, _) in STYLESHEET.match_indices(anchor) {
+            if STYLESHEET[..at].ends_with('-') {
+                continue;
+            }
+            let rule = &STYLESHEET[at..];
+            let rule = &rule[..rule.find('{').unwrap_or(rule.len())];
+            assert!(
+                anchor == "html:has(" && rule[anchor.len()..].starts_with("> "),
+                "a rule reads the whole page: {rule}"
+            );
+        }
+    }
+}
+
+#[test]
+fn a_work_list_keeps_its_rows_clear_of_its_foot() {
+    // NOTE: WCAG 2.2 SC 2.4.11: a row the keys move to is not hidden under the sticky foot.
+    let rule = STYLESHEET
+        .split("\n    html:has(")
+        .find(|rule| rule.contains("> .fui-worklist > .fui-worklist-foot"))
+        .unwrap_or_default();
+    assert!(
+        rule.contains("{\n      scroll-padding-bottom: 7rem;"),
+        "a row the keys move to would pass under the foot: {rule}"
+    );
+}
+
+#[test]
 fn a_shown_toast_keeps_the_page_foot_clear() {
     assert!(
         STYLESHEET.contains(
-            "  :root:has(.fui-toasts > .fui-toast) .fui-main {\n    padding-block-end: 7rem;"
+            "  .fui-body:has(~ .fui-toasts > .fui-toast) > .fui-main {\n    padding-block-end: 7rem;"
         ),
         "a toast would cover the page's last row"
     );
     assert!(
-        STYLESHEET.contains("  :root:has(.fui-toasts > .fui-toast) .fui-page > .fui-footer {\n    padding-block-end: 7rem;"),
+        STYLESHEET.contains("  .fui-page > .fui-toasts:has(> .fui-toast) ~ .fui-footer,\n  .fui-page > .fui-footer:has(~ .fui-toasts > .fui-toast) {\n    padding-block-end: 7rem;"),
         "a toast would cover the footer"
     );
 }
@@ -676,7 +707,7 @@ fn the_toast_region_stays_above_the_decision_bar_and_scrolls() {
         "the decision bar names its anchor"
     );
     assert!(
-        rule("    :root:has(.fui-dock) .fui-toasts")
+        rule("    .fui-body:has(> :where(.fui-main) > .fui-dock, > :where(.fui-main) > :where(.fui-column) > .fui-dock) ~ .fui-toasts")
             .contains("position-anchor: --fui-dock;\n      inset-block-end: max(var(--space-loose), calc(anchor(top, var(--space-loose))"),
         "the region's foot is the decision bar's top"
     );
