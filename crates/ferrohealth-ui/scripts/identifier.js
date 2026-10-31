@@ -9,15 +9,9 @@
 // was on the value's controls (WCAG 2.2 SC 2.4.3). A Reveal followed by the
 // keyboard hands the focus, on the page the reveal draws, to Hide or, for a
 // refusal, back to Reveal.
+import { fill, grouped, text } from "./shared.js";
+
 const FOCUS = "fui-identifier-focus";
-const OPEN = "";
-const SHUT = "";
-const text = (word) => (word && typeof word === "object" ? word.en : word || "");
-const fill = (phrase, values) => {
-  let out = text(phrase);
-  for (const [name, value] of Object.entries(values)) out = out.split(OPEN + name + SHUT).join(String(value));
-  return out;
-};
 
 export function ticked(seconds) {
   return seconds > 1 ? seconds - 1 : 0;
@@ -57,11 +51,10 @@ export function enhance(root) {
   const live = root.querySelector(":scope > [role='status']");
   const value = root.querySelector(".fui-identifier-value");
   const hide = root.querySelector("[data-fui-hide]");
-  const grouped = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, words.group || ",");
   let left = total;
   function draw() {
     if (ring) ring.setAttribute("stroke-dashoffset", (34.56 * (1 - Math.min(left / total, 1))).toFixed(2));
-    if (count) count.textContent = fill(words.countdown, { count: grouped(left) });
+    if (count) count.textContent = fill(words.countdown, { count: grouped(left, words.group || ",") });
   }
   function drop() {
     clearInterval(timer);

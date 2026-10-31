@@ -7,18 +7,10 @@
 // is_shortcut, wants, targets, step, escaped and placed; a hit is drawn as
 // the crate's hit_body draws it.
 import { typing } from "./tabs.js";
+import { fill, text } from "./shared.js";
 
 export const SETTLE = 200;
 export const PER_GROUP = 5;
-const OPEN = "";
-const SHUT = "";
-const text = (word) => (word && typeof word === "object" ? word.en : word || "");
-
-function fill(phrase, values) {
-  let out = text(phrase);
-  for (const [name, value] of Object.entries(values)) out = out.split(OPEN + name + SHUT).join(String(value));
-  return out;
-}
 
 export function wants(words, from) {
   const held = [...words.trim()].length;

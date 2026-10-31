@@ -11,12 +11,11 @@
 // The plan, the messages and the address are the crate's plan, Message and
 // sign_in_address.
 import { clock, elapsed } from "./countdown.js";
+import { fill } from "./shared.js";
 
 export const WARN_FLOOR = 20;
 export const ACTIVITY_GAP = 60000;
 export const CHANNEL = "ferroui-session";
-const OPEN = "";
-const SHUT = "";
 let away = false;
 
 export function plan(left, warnAt) {
@@ -107,7 +106,7 @@ export function enhance(root) {
   const say = (seconds) => {
     if (!ends) return;
     const phrase = typeof endsPhrase === "object" && endsPhrase ? endsPhrase.en : endsPhrase;
-    ends.textContent = String(phrase).split(OPEN + "time" + SHUT).join(clock(seconds));
+    ends.textContent = fill(String(phrase), { time: clock(seconds) });
   };
   function leave(tellOthers) {
     if (leaving) return;

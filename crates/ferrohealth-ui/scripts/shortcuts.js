@@ -6,10 +6,9 @@
 // user menu's Keyboard shortcuts, never below 40 rem, where a phone has no
 // keyboard (family rule 6). With no script the control is a link to the
 // legend's page.
-import { typing } from "./tabs.js";
+import { phone, typing } from "./tabs.js";
 
 export function enhance(dialog) {
-  const phone = () => window.matchMedia("(width < 40rem)").matches;
   // A button that opens the legend works only here, so it shows from now.
   for (const opener of document.querySelectorAll("button[data-fui-shortcuts][hidden]")) opener.hidden = false;
   window.addEventListener("keydown", (event) => {

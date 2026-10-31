@@ -7,19 +7,7 @@
 // which then redraws as typed text does. The field names the file read,
 // says when it was the first of several dropped, and when bytes were no
 // UTF-8 text; a refused or unreadable file is said in the refusal line.
-const OPEN = "";
-const SHUT = "";
-const text = (word) => (word && typeof word === "object" ? word.en : word || "");
-
-function fill(phrase, values) {
-  let out = text(phrase);
-  for (const [name, value] of Object.entries(values)) out = out.split(OPEN + name + SHUT).join(String(value));
-  return out;
-}
-
-function grouped(number, group) {
-  return String(number).replace(/\B(?=(\d{3})+(?!\d))/g, group);
-}
+import { fill, grouped, text } from "./shared.js";
 
 // A size in its largest unit above one, as the crate's SizeWords::size.
 export function size(sizes, bytes) {

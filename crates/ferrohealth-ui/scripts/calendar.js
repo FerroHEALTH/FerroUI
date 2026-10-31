@@ -7,14 +7,7 @@
 // grid of a month with its keyboard path (WAI-ARIA Authoring Practices,
 // the date picker dialog pattern). No document is touched here but the
 // nodes it is asked to make.
-const OPEN = "";
-const SHUT = "";
-
-export function fill(phrase, values) {
-  let out = phrase;
-  for (const [name, value] of Object.entries(values)) out = out.split(OPEN + name + SHUT).join(String(value));
-  return out;
-}
+import { element, fill, text } from "./shared.js";
 
 // Days counted from 1970-01-01 (Howard Hinnant's days_from_civil), so a day
 // is one integer and stepping is addition.
@@ -121,7 +114,6 @@ export function reason(words, text, withTime, bounds) {
   return null;
 }
 
-export const text = (word) => (word && typeof word === "object" ? word.en : word || "");
 export const parseIso = (value) => (value ? parseDay(value, "Ymd").day ?? null : null);
 
 export function monthTitle(words, y, m) {
@@ -131,19 +123,6 @@ export function monthTitle(words, y, m) {
 export function dayName(words, n) {
   const { y, m, d } = fromNumber(n);
   return fill(text(words.day_name), { weekday: text(words.weekdays[weekday(n)]), day: d, month: text(words.months[m - 1]), year: y });
-}
-
-export function element(tag, props, ...children) {
-  const node = document.createElement(tag);
-  for (const [key, value] of Object.entries(props || {})) {
-    if (value === null || value === undefined || value === false) continue;
-    if (key === "class") node.className = value;
-    else if (key === "text") node.textContent = value;
-    else if (key.startsWith("on")) node.addEventListener(key.slice(2), value);
-    else node.setAttribute(key, value === true ? "" : value);
-  }
-  for (const child of children.flat()) if (child) node.append(child);
-  return node;
 }
 
 // The icon `name` from the field's own <template data-fui-icons>, which the
@@ -230,10 +209,44 @@ export function grid(config, state, y, m) {
   return table;
 }
 
+// A small button of the variant `kind` saying `word`.
+export function action(kind, word, press, disabled = false) {
+  return element("button", { type: "button", class: "fui-button fui-button-" + kind + " fui-button-small", disabled, text: text(word), onclick: press });
+}
+
+// The panel's handle, label, `body` and foot: the actions `left`, then
+// Cancel, which calls `cancel`, and `apply`.
+export function assemble(panel, config, body, left, cancel, apply) {
+  panel.append(element("span", { class: "fui-datepicker-handle", "aria-hidden": "true" }), element("p", { class: "fui-datepicker-label", text: config.label }));
+  panel.append(element("div", { class: "fui-datepicker-body" }, body));
+  panel.append(element("div", { class: "fui-datepicker-foot" },
+    element("div", { class: "fui-actions" }, left),
+    element("div", { class: "fui-actions" }, action("secondary", config.words.cancel, cancel), apply),
+  ));
+}
+
+// Moves the focus to the day `n` once the browser has drawn it.
+export function focusDay(panel, n) {
+  const target = panel.querySelector("[data-day='" + iso(n) + "']");
+  if (target) requestAnimationFrame(() => target.focus());
+}
+
+// A key on the grid of `state`: the day keyTarget names, when the bounds
+// allow it, takes the focus and is shown.
+export function stepKey(state, event, config, reveal, draw) {
+  const target = keyTarget(event, state.focused, config.first);
+  if (target === undefined) return;
+  event.preventDefault();
+  if (target !== null && allows(config.bounds, target)) {
+    state.focused = target;
+    reveal(target);
+    draw(true);
+  }
+}
+
 export function arrow(root, name, label, cls, blocked, press) {
   return element("button", { type: "button", "aria-label": label, disabled: blocked, class: cls, onclick: press }, glyph(root, name));
 }
-
 
 // The day a key moves the grid's focus to from `from`, for a week starting
 // on `first`, or undefined for a key the grid leaves alone: the arrows a day

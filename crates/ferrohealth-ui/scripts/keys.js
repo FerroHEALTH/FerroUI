@@ -9,11 +9,10 @@
 // its controls answer, and a chord leaves the focus in its field. A go-to
 // pair of the legend (data-fui-go, a first key then a letter) follows its
 // link. The legend's ? and the search's key are theirs.
-import { typing } from "./tabs.js";
+import { phone, typing } from "./tabs.js";
 
 const ACTS = "a[href], button, input, select, textarea, summary";
 const OWN = "[data-fui-shortcuts], form[data-fui-shortcut] *";
-const phone = () => window.matchMedia("(width < 40rem)").matches;
 
 export function parse(value) {
   return (value || "").trim().split(/\s+/).filter(Boolean).map((token) => {

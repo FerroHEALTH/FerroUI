@@ -13,6 +13,8 @@
 // remote's name and the options the page arrived with show unfiltered.
 // A fui:choose event on the root puts it on the listed option of its
 // value, or on none, and says no change (a pick-or-type field's back).
+import { element } from "./shared.js";
+
 export const ROWS = 100;
 
 export function matches(option, needle) {
@@ -35,18 +37,6 @@ export function shown(options, query, typing, remote) {
   return { places: all.slice(0, ROWS), more: all.length > ROWS };
 }
 
-function make(tag, props, ...children) {
-  const node = document.createElement(tag);
-  for (const [key, value] of Object.entries(props || {})) {
-    if (value === null || value === undefined || value === false) continue;
-    if (key === "class") node.className = value;
-    else if (key === "text") node.textContent = value;
-    else node.setAttribute(key, value === true ? "" : value);
-  }
-  for (const child of children) if (child) node.append(child);
-  return node;
-}
-
 export function enhance(root) {
   const select = root.querySelector("select");
   if (!select) return;
@@ -67,7 +57,7 @@ export function enhance(root) {
     active: null,
   };
   const listId = id + "-list";
-  const input = make("input", {
+  const input = element("input", {
     id,
     type: "text",
     role: "combobox",
@@ -80,9 +70,9 @@ export function enhance(root) {
     placeholder: root.getAttribute("data-fui-placeholder") || "",
     name: remote,
   });
-  const hidden = make("input", { type: "hidden", name });
-  const list = make("ul", { id: listId, role: "listbox", "aria-label": root.querySelector("label").textContent, class: "fui-combobox-list", hidden: true });
-  const box = make("div", { class: "fui-combobox-box" }, input, hidden, list);
+  const hidden = element("input", { type: "hidden", name });
+  const list = element("ul", { id: listId, role: "listbox", "aria-label": root.querySelector("label").textContent, class: "fui-combobox-list", hidden: true });
+  const box = element("div", { class: "fui-combobox-box" }, input, hidden, list);
   select.replaceWith(box);
 
   const view = () => shown(options, state.query, state.typing, Boolean(remote));
@@ -102,15 +92,15 @@ export function enhance(root) {
     places.forEach((place, row) => {
       const option = options[place];
       const chosen = option.value === state.selected;
-      const item = make("li", {
+      const item = element("li", {
         id: id + "-option-" + place,
         role: "option",
         class: "fui-combobox-option",
         "aria-selected": String(chosen),
         "data-active": state.active === row ? "true" : null,
       },
-      make("span", { class: "fui-combobox-text" }, make("span", { class: "fui-combobox-label", text: option.label }), option.detail ? make("span", { class: "fui-combobox-detail", text: option.detail }) : null),
-      make("span", { class: "fui-combobox-check", "aria-hidden": "true" }));
+      element("span", { class: "fui-combobox-text" }, element("span", { class: "fui-combobox-label", text: option.label }), option.detail ? element("span", { class: "fui-combobox-detail", text: option.detail }) : null),
+      element("span", { class: "fui-combobox-check", "aria-hidden": "true" }));
       if (chosen && check) {
         const svg = check.content.querySelector("svg");
         if (svg) item.lastChild.append(svg.cloneNode(true));
@@ -125,7 +115,7 @@ export function enhance(root) {
       item.addEventListener("click", () => choose(place));
       list.append(item);
     });
-    const empty = (text) => make("li", { class: "fui-combobox-empty", role: "option", "aria-disabled": "true", "aria-selected": "false", text });
+    const empty = (text) => element("li", { class: "fui-combobox-empty", role: "option", "aria-disabled": "true", "aria-selected": "false", text });
     if (places.length === 0) list.append(empty(root.getAttribute("data-fui-no-match") || ""));
     if (more) list.append(empty(root.getAttribute("data-fui-more") || ""));
     const active = state.open && state.active !== null ? places[state.active] : undefined;

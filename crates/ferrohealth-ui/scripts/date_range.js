@@ -7,7 +7,8 @@
 // (data-fui-range, JSON): the presets beside two months. Apply writes both
 // fields and submits the form.
 
-import { allows, arrow, element, fill, fromNumber, grid, iso, keyTarget, monthTitle, openingDay, parseIso, picker, reaches, stepMonth, text, config as read } from "./calendar.js";
+import { action, arrow, assemble, focusDay, fromNumber, grid, iso, monthTitle, openingDay, parseIso, picker, reaches, stepKey, stepMonth, config as read } from "./calendar.js";
+import { element, fill, text } from "./shared.js";
 
 export function enhance(root) {
   const cfg = read(root, "data-fui-range");
@@ -68,14 +69,7 @@ function rangeField(root, config, words, button) {
       draw(true);
     },
     key(event) {
-      const target = keyTarget(event, this.focused, config.first);
-      if (target === undefined) return;
-      event.preventDefault();
-      if (target !== null && allows(config.bounds, target)) {
-        this.focused = target;
-        reveal(target);
-        draw(true);
-      }
+      stepKey(this, event, config, reveal, draw);
     },
     close,
   };
@@ -127,24 +121,17 @@ function rangeField(root, config, words, button) {
     const presets = element("div", { class: "fui-datepicker-presets", role: "group", "aria-label": text(words.ranges) });
     const pair = element("div", { class: "fui-datepicker-pair" });
     const said = element("p", { class: "fui-datepicker-status", role: "status", hidden: true });
-    const apply = element("button", { type: "button", class: "fui-button fui-button-primary fui-button-small", text: text(words.apply), onclick: () => {
+    const apply = action("primary", words.apply, () => {
       close(false);
       if (from.form) from.form.requestSubmit();
-    } });
-    panel.append(element("span", { class: "fui-datepicker-handle", "aria-hidden": "true" }), element("p", { class: "fui-datepicker-label", text: config.label }));
-    panel.append(element("div", { class: "fui-datepicker-body" }, presets, element("div", { class: "fui-datepicker-main" }, pair, said)));
-    panel.append(element("div", { class: "fui-datepicker-foot" },
-      element("div", { class: "fui-actions" }, element("button", { type: "button", class: "fui-button fui-button-ghost fui-button-small", text: text(words.clear), onclick: () => {
-        from.value = "";
-        to.value = "";
-        hovered = null;
-        draw(false);
-      } })),
-      element("div", { class: "fui-actions" },
-        element("button", { type: "button", class: "fui-button fui-button-secondary fui-button-small", text: text(words.cancel), onclick: () => close(true) }),
-        apply,
-      ),
-    ));
+    });
+    const clear = action("ghost", words.clear, () => {
+      from.value = "";
+      to.value = "";
+      hovered = null;
+      draw(false);
+    });
+    assemble(panel, config, [presets, element("div", { class: "fui-datepicker-main" }, pair, said)], clear, () => close(true), apply);
     frame = { presets, pair, said, apply };
   }
   function draw(focus) {
@@ -172,10 +159,7 @@ function rangeField(root, config, words, button) {
     frame.said.hidden = said === "";
     const [a, b] = ends();
     frame.apply.disabled = (a !== null) !== (b !== null);
-    if (focus) {
-      const target = panel.querySelector("[data-day='" + iso(state.focused) + "']");
-      if (target) requestAnimationFrame(() => target.focus());
-    }
+    if (focus) focusDay(panel, state.focused);
   }
   function close(restore) {
     if (restore) [from.value, to.value] = saved;
