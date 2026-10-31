@@ -4101,6 +4101,8 @@
   /* A panel from the inline end, full height; below 40 rem a sheet over the
      whole viewport. Its edges are the viewport's, so it is sized to the
      layout viewport, scrollbar excluded, with nothing showing under it. */
+  /* The panel sets its own text, so one opened from a table cell, such as
+     a work-list row's actions, starts and wraps its lines (#540). */
   .fui-side-panel {
     width: auto;
     max-width: none;
@@ -4112,6 +4114,8 @@
     box-shadow: var(--shadow-overlay);
     padding: 0;
     color: var(--ink);
+    text-align: start;
+    white-space: normal;
   }
 
   .fui-side-panel[open] {
@@ -6341,11 +6345,30 @@
     accent-color: var(--accent);
   }
 
+  /* A row's actions, a glance opener beside the row menu, keep to the
+     row's one line; the menu they open wraps its own words (#540). */
   .fui-worklist .fui-table td.fui-row-menu {
     width: 1%;
     padding-block: 0;
     vertical-align: middle;
     text-align: end;
+    white-space: nowrap;
+  }
+
+  .fui-worklist .fui-table td.fui-row-menu .fui-menu {
+    white-space: normal;
+  }
+
+  /* A glance opener with a glyph shows the glyph alone in a work-list
+     row, its words kept as its name, so the row's names keep their line
+     with wider fonts too (#540). */
+  .fui-worklist .fui-table td.fui-row-menu .fui-icon + .fui-side-panel-words {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
   }
 
   /* The selection's own bar above the rows. */
@@ -14100,6 +14123,17 @@
     }
 
     .fui-worklist .fui-table-stack .fui-table tbody tr:has(> [data-role="title-2"]) > td.fui-row-menu {
+      position: static;
+    }
+
+    /* Actions with a side panel's opener beside the menu are wider than
+       the end of the first line keeps clear, so they stay in the line's
+       flow and the names before them shorten (#540). */
+    .fui-worklist .fui-table-stack .fui-table tbody tr:has(> td.fui-row-menu > .fui-side-panel) {
+      padding-inline-end: 0.25rem;
+    }
+
+    .fui-worklist .fui-table-stack .fui-table tbody tr > td.fui-row-menu:has(> .fui-side-panel) {
       position: static;
     }
   }
