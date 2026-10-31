@@ -188,7 +188,8 @@ async fn the_work_list_moves_its_focused_row_by_the_keys_and_opens_it() -> Resul
 }
 
 /// The rows of the work-list whose glance opener and row menu do not share
-/// one line, or that stand taller than the two stacked, each with its height.
+/// one line, or that stand taller than one line of them, each with its
+/// height and the height of each cell.
 async fn wrapped_rows(browser: &Browser) -> Result<Vec<String>, Box<dyn Error>> {
     Ok(browser
         .driver()
@@ -198,8 +199,9 @@ async fn wrapped_rows(browser: &Browser) -> Result<Vec<String>, Box<dyn Error>> 
                 const menu = row.querySelector('td.fui-row-menu summary').getBoundingClientRect();
                 const height = row.getBoundingClientRect().height;
                 const level = Math.abs(opener.top + opener.bottom - menu.top - menu.bottom) <= 2;
-                const one = level && opener.right <= menu.left && height < opener.height + menu.height;
-                return one ? [] : [row.getAttribute('data-key') + ' at ' + height + ' px'];
+                const one = level && opener.right <= menu.left && height < 1.5 * Math.max(opener.height, menu.height);
+                const tall = Array.from(row.cells).map((cell) => cell.getAttribute('data-role') + ' ' + cell.scrollHeight);
+                return one ? [] : [row.getAttribute('data-key') + ' at ' + height + ' px: ' + tall.join(', ')];
               });",
             vec![serde_json::to_value(ROWS)?],
         )
@@ -263,20 +265,22 @@ async fn a_work_list_row_keeps_its_glance_opener_and_menu_on_one_line() -> Resul
         );
         // The capture centres the queue's card, so the last row shows in it
         // only while the rows keep their one line.
-        let centred = browser
+        let [top, bottom, view, card]: [f64; 4] = browser
             .driver()
             .execute(
-                "document.querySelector('.fui-list-card:has(.fui-worklist-grid)')\
-                   .scrollIntoView({block: 'center'}); \
+                "const card = document.querySelector('.fui-list-card:has(.fui-worklist-grid)'); \
+                 card.scrollIntoView({block: 'center'}); \
                  const row = document.activeElement.getBoundingClientRect(); \
-                 return row.top >= 0 && row.bottom <= document.documentElement.clientHeight;",
+                 return [row.top, row.bottom, document.documentElement.clientHeight, \
+                   card.getBoundingClientRect().height];",
                 vec![],
             )
-            .await?;
-        assert_eq!(
-            Some(true),
-            centred.json().as_bool(),
-            "the last row stays in view with the queue's card centred"
+            .await?
+            .convert()?;
+        assert!(
+            top >= 0.0 && bottom <= view,
+            "the last row stays in view with the queue's card centred: \
+             the row spans {top} to {bottom} px of a {view} px window, the card {card} px"
         );
         Ok(())
     })
