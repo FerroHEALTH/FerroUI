@@ -5,11 +5,11 @@
 // whose text does not hold the words typed, ignoring case, and writes the
 // count of the rows kept at once and, after the typing pauses, into the
 // status region a screen reader hears (WCAG 2.2 SC 4.1.3).
-import { fill } from "./shared.js";
+import { fill, trim } from "./shared.js";
 export const SETTLE_MS = 600;
 
 export function keeps(words, texts) {
-  const wanted = words.trim().toLowerCase();
+  const wanted = trim(words).toLowerCase();
   return wanted === "" || texts.some((text) => text.toLowerCase().includes(wanted));
 }
 

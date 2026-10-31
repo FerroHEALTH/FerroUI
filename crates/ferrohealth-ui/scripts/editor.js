@@ -15,7 +15,7 @@
 // the caret there and gives the editor the focus.
 import { fits, linesHtml } from "./highlight.js";
 import { Highlight, RESUMABLE, patch } from "./rehighlight.js";
-import { fill, grouped, text } from "./shared.js";
+import { fill, grouped, text, trim, trimStart } from "./shared.js";
 
 // The grammars whose tokens never run past a line, which an edit
 // highlights again line by line: a key costs the lines it touches, not the
@@ -53,16 +53,20 @@ export function offsetOf(value, at) {
 
 // The grammar of a text, as the crate's Language::detect reads it.
 export function detect(value) {
-  const first = value.trimStart().charAt(0);
+  const first = trimStart(value).charAt(0);
   return first === "{" || first === "[" ? "json" : first === "<" ? "xml" : "plain";
 }
+
+// Whether the editor holds no text but white space, its panel then
+// drawn empty, as the crate's editor_panel draws it.
+export const blank = (value) => trim(value) === "";
 
 export function lineCount(value) {
   const body = value.endsWith("\n") ? value.slice(0, -1) : value;
   return body.split("\n").length;
 }
 
-function kinds(marks) {
+export function kinds(marks) {
   const out = new Map();
   for (const mark of marks) if (out.get(mark.line) !== "Error") out.set(mark.line, mark.kind);
   return out;
@@ -198,7 +202,7 @@ export function enhance(root) {
       state.classList.toggle("fui-editor-dirty", dirty);
       state.textContent = text(isNew ? words.new_file : dirty ? words.changed : words.unchanged);
     }
-    panel.classList.toggle("is-empty", area.value.trim() === "");
+    panel.classList.toggle("is-empty", blank(area.value));
   }
   area.addEventListener("input", () => {
     redraw();

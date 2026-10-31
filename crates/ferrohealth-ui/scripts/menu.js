@@ -8,6 +8,8 @@
 // walk the items, Escape closes it and returns the focus, a focus or a press
 // outside closes it, choosing an item closes it, the popup flips where it has
 // no room, the sheet's Cancel shows, and a copy item copies its text.
+import { trim, trimStart } from "./shared.js";
+
 const ITEMS = "[role='menuitem'], [role='menuitemradio'], [role='option']";
 
 export function moved(key, current, count) {
@@ -22,11 +24,11 @@ export function moved(key, current, count) {
 
 export function typed(letter, current, words) {
   letter = letter.toLowerCase();
-  if ([...letter].length !== 1 || !letter.trim()) return null;
+  if ([...letter].length !== 1 || !trim(letter)) return null;
   const start = current === null ? 0 : current + 1;
   for (let step = 0; step < words.length; step++) {
     const at = (start + step) % words.length;
-    if (words[at].trimStart().toLowerCase().startsWith(letter)) return at;
+    if (trimStart(words[at]).toLowerCase().startsWith(letter)) return at;
   }
   return null;
 }

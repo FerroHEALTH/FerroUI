@@ -21,9 +21,12 @@ export function size(sizes, bytes) {
 }
 
 // Why a file may not be read, or null when it may.
+// The extensions compare in ASCII case alone, as the crate's admit does.
+const lowerAscii = (value) => value.replace(/[A-Z]+/g, (letters) => letters.toLowerCase());
+
 export function refusal(words, accept, max, name, bytes) {
-  const lower = name.toLowerCase();
-  if (accept.length && !accept.some((kind) => lower.endsWith(kind.toLowerCase()))) return fill(words.refused_kind, { file: name });
+  const lower = lowerAscii(name);
+  if (accept.length && !accept.some((kind) => lower.endsWith(lowerAscii(kind)))) return fill(words.refused_kind, { file: name });
   if (bytes > max) return fill(words.refused_size, { file: name, size: size(words.sizes, bytes) });
   return null;
 }

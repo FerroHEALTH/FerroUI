@@ -89,7 +89,10 @@ The library has two parts:
   drew, written to do with the keyboard what the component's pattern in the
   Authoring Practices asks. A module answers the same as the Rust beside it
   where both decide (the tree's walk, a date's bounds, the highlighters),
-  and a journey holds the two to the same answer.
+  and a parity test holds the two to the same answer: it feeds the same
+  inputs to both copies and fails on any difference. Each pair and its
+  test is listed in `docs/consoles.md` § The logic written twice; a new
+  rule written in both languages lands with its row and its test.
 
 A word is an `i18n::Word`, drawn inside `<span lang="en">` when it fell
 back to English on a page in another language (WCAG 2.2 SC 3.1.2); a word

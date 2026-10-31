@@ -337,6 +337,49 @@ draft the user was typing through sign-in is yours, where your console has
 drafts. With no script nothing changes: your server redirects the next
 request to sign-in.
 
+## The logic written twice
+
+Some rules run on your server and again in the browser: the server draws a
+page with the Rust copy, and a script module changes it in place with its
+own copy. Since 0.6 the two copies are separate code, so FerroUI holds each
+pair to one answer with a parity test (#548): the test feeds the same inputs
+to both copies and fails on any difference. The Rust copy runs in the test,
+and the module's copy runs in the gallery's browser, imported from the page
+the way the loader imports it. The parity tests are journeys in
+`app/ferrohealth-ui-gallery/tests/it/parity*.rs`, and each test's name
+carries the words of both copies' files, so a change to either copy runs it
+in `scripts/fast.sh`. Where the two differed, the module now answers as the
+Rust copy does, because your server says the same thing when it refuses a
+posted value.
+
+| Rule | Rust copy | Module copy | Parity test |
+|---|---|---|---|
+| The YAML, JSON, XML, AQL and HL7 v2 tokens, the markup of each line, and the size past which a text is plain | `highlight::tokens`, `lines`, `line_html`, `MAX_HIGHLIGHT_BYTES` | `highlight.js`: `tokens`, `linesHtml`, `MAX_BYTES` | `parity::the_highlight_*`, `parity::a_highlight_*` |
+| The caret's line and column, the offset of a line and column, the grammar of a text, the line count, a line's mark, and the empty editor | `view::editor::caret_at`, `offset_of`, `mark_kind`, `MarkKind::class`, `editor_panel`; `highlight::Language::detect`; `view::code::line_count` | `editor.js`: `caretAt`, `offsetOf`, `detect`, `lineCount`, `kinds`, `lineClass`, `blank` | `parity::the_editor_*` |
+| A day as a number, its name and weekday, the month lengths, a month's steps and weeks, a typed day and time, the bounds | `calendar::Day`, `Month`, `Day::parse_in`, `Moment::parse_in`, `Bounds`, `leap`, `days_in` | `calendar.js`: `toNumber`, `fromNumber`, `iso`, `weekday`, `leap`, `daysIn`, `stepMonth`, `weeks`, `parseDay`, `parseMoment`, `allows`, `reaches` | `parity_dates::the_calendar_*` |
+| Why a typed date is refused, a month's title and a day's name | `view::date::DateWords::reason`, `month_title`, `day_name` | `calendar.js`: `reason`, `monthTitle`, `dayName` | `parity_dates::the_date_field_*`, `parity_dates::the_date_picker_*` |
+| A range's summary and status line | `view::date::range_summary`, `range_status` | `date_range.js`: `summary`, `status` | `parity_dates::the_date_range_*` |
+| The tree's items in sight and the move each key makes | `view::tree::in_sight`, `moved` | `tree.js`: `inSight`, `moved` | `parity_keys::the_tree_*` |
+| The tabs' arrows and digits | `view::tabs::moved`, `view::shortcuts::tab_at` | `tabs.js`: `moved`, `tabAt` | `parity_keys::the_tabs_*` |
+| The menu's and the listbox's arrows, a typed letter and the flip | `view::action_menu::moved`, `typed`, `flips`; `view::menu::step` | `menu.js`: `moved`, `typed`, `flips` (`user_menu.js` takes `moved`) | `parity_keys::the_menu_*` |
+| The work-list's keys and selection | `view::worklist::moved`, `selection` | `worklist.js`: `moved`, `selection` | `parity_keys::the_worklist_*` |
+| The topology's zoom steps, keys and List moves | `view::topology::STEPS`, `stepped`, `asked`, `moved` | `topology.js`: `STEPS`, `stepped`, `asked`, `moved` | `parity_keys::the_topology_*` |
+| The keys that hold the masked input's eye | `view::masked::holds` | `masked.js`: `holds` | `parity_keys::the_masked_*` |
+| The typeahead's words, matches, steps, Escape, panel side and options, and a hit's markup | `view::search::wants`, `runs`, `step`, `escaped`, `placed`, `targets`, `hit_body` | `search.js`: `wants`, `runs`, `step`, `escaped`, `placed`, `targets`, `hitBody` | `parity_words::the_search_*` |
+| The session's plan, its messages between tabs and the sign-in address | `view::session::plan`, `Left::after`, `Message`, `sign_in_address` | `session.js`: `plan`, `after`, `messageText`, `parseMessage`, `signInAddress` | `parity_words::the_session_*` |
+| A file's size in words, its refusal and its decoding | `view::upload::SizeWords::size`, `admit`, `Refused::sentence`, `decode` | `upload.js`: `size`, `refusal`, `decode` | `parity_words::the_upload_*` |
+| A phrase's open placeables and a count's digit groups | `i18n::Phrase::fill`, `i18n::number::Grouping::write` | `shared.js`: `fill`, `grouped` | `parity_words::the_shared_*` |
+| The countdown's clock, ring and set points | `view::countdown::clock`, `ring_offset`, `crossed`, `elapsed` | `countdown.js`: `clock`, `ringOffset`, `crossed`, `elapsed` | `parity_words::the_countdown_*` |
+| The reveal's count down | `view::identifier::ticked` | `identifier.js`: `ticked` | `parity_words::the_identifier_*` |
+| The options a combobox keeps and the rows a filter keeps | `view::combobox::ComboOption::matches`, `view::filter::keeps` | `combobox.js`: `matches`; `filter.js`: `keeps` | `parity_words::the_combobox_*` |
+| A new repeatable row's key | `view::repeat::fresh_key` | `repeat.js`: `freshKey` | `parity_words::the_repeat_*` |
+
+The modules trim white space as Rust's `str::trim` does (`shared.js`:
+`trim`, `trimStart`), so a byte order mark or a next line (U+0085) reads
+the same on both sides. A rule only a module holds, such as the editor's
+re-highlighting from the first changed line or the day a picker opens on,
+has no Rust copy and so no parity test; its journey holds it.
+
 ## Which document governs what
 
 | Question | Document |
