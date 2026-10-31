@@ -36,6 +36,10 @@ pub const LOADER: Module = Module {
 pub const MODULES: &[Module] = &[
     LOADER,
     Module {
+        file: "answer.js",
+        text: include_str!("../scripts/answer.js"),
+    },
+    Module {
         file: "calendar.js",
         text: include_str!("../scripts/calendar.js"),
     },

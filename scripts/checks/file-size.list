@@ -6,7 +6,7 @@
 # --update lowers and removes entries.
 app/ferrohealth-ui-gallery/src/pages/charts.rs 828
 app/ferrohealth-ui-gallery/src/pages/federation.rs 866
-app/ferrohealth-ui-gallery/src/pages/forms.rs 1521
+app/ferrohealth-ui-gallery/src/pages/forms.rs 1469
 crates/ferrohealth-ui/src/calendar.rs 923
 crates/ferrohealth-ui/src/view/chart.rs 1408
 crates/ferrohealth-ui/src/view/date.rs 846

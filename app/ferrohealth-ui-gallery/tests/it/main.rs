@@ -22,6 +22,7 @@
     reason = "test assertions"
 )]
 
+mod answer;
 mod browser;
 mod clinical;
 mod configuration;

@@ -116,6 +116,48 @@ the posted fields, and answers `200` (FerroUI #485, kept as a plain post in
   first heading after the form, so a screen reader hears it.
 - A reload asks to post again, as for any form that answers its own post.
 
+### Answered in place
+
+The same form can give its answer without loading the page again, and can
+check on your server as the user types (FerroUI #546). Draw the answer in
+an element of its own, outside the form, with a stable `id` and
+`aria-live="polite"`, on the page you draw for a `GET` and for the post
+alike, and mark the form:
+
+```rust
+let answer = view::answer::Answer::new("check-answer").with_settle(300);
+```
+
+```html
+<form method="post" action="/check"{{ answer.attributes() }}>…</form>
+<div id="check-answer" aria-live="polite">{{ result }}</div>
+```
+
+The `answer` module then posts the form with `fetch` to its own action and
+reads the page your route draws: it moves the content of the element with
+the region's id into the same element on the page in front of the user.
+That element stays where it is, so the focus stays where it was and a
+screen reader hears the new answer. `with_settle(ms)` also posts once a
+field has rested that long from typing; leave it out to post on submit
+alone. `with_region` names a second region the answer fills, and
+`with_job` another module of the same form. An answer to an older request
+is dropped.
+
+| | |
+|---|---|
+| Request | The form's own: its `method`, its `action` (the page's own address when it has none), its fields and the button pressed, `Accept: text/html`, the page's own cookies |
+| Answer | `200` with `text/html`: the whole page, as your route draws it for the post with no script, holding every region the form names |
+| A redirect | The browser follows it and the page loads where it ends, such as your sign-in page for a session that is over |
+| Any other status, another type, a page without the region, or no answer | On submit, the form posts as it does with no script and the whole page answers; a post while typing leaves the page as it is, and the next submit posts plainly |
+| With the modules refused | The form posts and the whole page answers, as today |
+
+Mark only a form whose post changes nothing: a check, a dry run, a load
+report. A post that changes state keeps post-redirect-get and is never
+marked. Your route draws the page for this post as for any other, so it
+checks the session and the CSRF token you check, and your
+Content-Security-Policy keeps `connect-src 'self'`. A form whose action is
+on another origin is left to post plainly.
+
 ## Your own preferences
 
 Your own rows go inside the three tabs of Your preferences

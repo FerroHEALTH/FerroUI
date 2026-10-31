@@ -131,9 +131,10 @@ choice, moves into the menu below it (`Choices`).
 
 No component writes a `style` attribute, a `<style>` element or an inline
 script, defines a route, or touches browser storage beyond what the tree
-and the scroll keep for the session. Two modules fetch, from routes you
-name: the search box's typeahead (`search`) and the session watch
-(`session`), each on the wire `docs/consoles.md` documents.
+and the scroll keep for the session. Three modules fetch, from routes you
+name: the search box's typeahead (`search`), the session watch
+(`session`) and a form answered in place (`answer`, `view::answer`), each
+on the wire `docs/consoles.md` documents.
 
 ## Locales
 

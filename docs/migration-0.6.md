@@ -388,9 +388,11 @@ draws is a redirect to sign-in, and the search box leaves on its own `401`
 - **No navigation in the page.** A link loads a document. A page that held
   state in memory across navigations (a draft in a signal) keeps it on the
   server or in the form it posts.
-- **No live re-check while typing that needs the server.** The editor
-  highlights as you type in the browser; a check that runs on the server
-  runs when the form posts.
+- **No live re-check while typing that needs the server, until 0.6.3.**
+  The editor highlights as you type in the browser; a check that runs on
+  the server runs when the form posts. From 0.6.3 a form marked
+  `view::answer::Answer` posts as you type and on submit and takes its
+  answer in place (`docs/consoles.md` § Answered in place).
 - **No toast from component code at run time.** A toast comes from the
   server as a `Flash`, or from a link or a button marked
   `view::toast::RAISES`.

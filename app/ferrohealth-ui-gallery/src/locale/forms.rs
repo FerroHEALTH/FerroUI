@@ -26,6 +26,16 @@ messages! {
     AllowedAudiences = "allowed-audiences",
     /// `Another version`
     AnotherVersion = "another-version",
+    /// `Archetype id`
+    ArchetypeId = "archetype-id",
+    /// `Checked on the server as you type, and when you press Check.`
+    ArchetypeIdCheckedAsYouType = "archetype-id-checked-as-you-type",
+    /// `The archetype id is empty.`
+    ArchetypeIdEmpty = "archetype-id-empty",
+    /// `Not an archetype id: …`
+    ArchetypeIdRefused = "archetype-id-refused",
+    /// `Well formed: the { $kind } archetype { $name }, version { $version }.`
+    ArchetypeIdWellFormed = "archetype-id-well-formed",
     /// `Ask these nodes`
     AskTheseNodes = "ask-these-nodes",
     /// `ATC`
@@ -48,6 +58,8 @@ messages! {
     CanonicalClauseWhatSaveNeeds = "canonical-clause-what-save-needs",
     /// `Check`
     Check = "check",
+    /// `An archetype id checked as you type`
+    CheckArchetypeId = "check-archetype-id",
     /// `Choose a code system`
     ChooseCodeSystem = "choose-code-system",
     /// `Choose from the list`

@@ -14,8 +14,9 @@
 #   S3  `eval(` or `new Function`, which `script-src 'self'` refuses;
 #   S4  an absolute URL (`http://`, `https://` or a protocol-relative `//`
 #       in a string): a module loads and asks only on the page's origin;
-#   S5  `fetch(` outside the two modules whose wire docs/consoles.md
-#       documents, the search box's typeahead and the session watch;
+#   S5  `fetch(` outside the three modules whose wire docs/consoles.md
+#       documents: the search box's typeahead, the session watch, and the
+#       form answered in place;
 #   S6  every module, each compressed by `gzip -9`, over 72 KiB together;
 #   S7  a job in the page list with no module, or a list with no page.
 #
@@ -35,7 +36,7 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 module_max=16384
 page_max=147456
 packed_max=73728
-fetchers="search.js session.js"
+fetchers="answer.js search.js session.js"
 
 # loads DIR JOB...: the modules a page with these jobs loads, one name per
 # line, the loader first; a job with no module is printed as `!job`.

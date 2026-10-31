@@ -165,7 +165,7 @@ jobs:
       - run: bash scripts/checks/markup-rules.sh crates/ferrohealth-ui/src crates/ferrohealth-ui/templates app/ferrohealth-ui-gallery/src
 
   # The script modules within their budget, with no eval, no absolute URL
-  # and no fetch outside the two documented wires; with its self-test.
+  # and no fetch outside the three documented wires; with its self-test.
   script-budget:
     name: script-budget
     runs-on: ubuntu-latest
