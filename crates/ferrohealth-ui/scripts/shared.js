@@ -8,6 +8,13 @@
 const OPEN = "";
 const SHUT = "";
 
+// White space as the crate's str::trim reads it (the Unicode White_Space
+// property), so a rule the crate runs too trims the same characters.
+const SPACE_START = /^\p{White_Space}+/u;
+const SPACE_END = /\p{White_Space}+$/u;
+export const trimStart = (value) => value.replace(SPACE_START, "");
+export const trim = (value) => trimStart(value).replace(SPACE_END, "");
+
 export const text = (word) => (word && typeof word === "object" ? word.en : word || "");
 
 export function fill(phrase, values) {

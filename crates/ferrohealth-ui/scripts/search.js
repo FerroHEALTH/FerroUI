@@ -7,13 +7,13 @@
 // is_shortcut, wants, targets, step, escaped and placed; a hit is drawn as
 // the crate's hit_body draws it.
 import { typing } from "./tabs.js";
-import { fill, text } from "./shared.js";
+import { fill, text, trim } from "./shared.js";
 
 export const SETTLE = 200;
 export const PER_GROUP = 5;
 
 export function wants(words, from) {
-  const held = [...words.trim()].length;
+  const held = [...trim(words)].length;
   return held > 0 && held >= from;
 }
 
@@ -47,7 +47,7 @@ export function targets(answer) {
 // The runs of `value`, each marked when it matches `query` without regard
 // to case, as the crate's runs.
 export function runs(value, query) {
-  const needle = [...query.trim()].flatMap((c) => [...c.toLowerCase()]);
+  const needle = [...trim(query)].flatMap((c) => [...c.toLowerCase()]);
   if (!needle.length) return [[value, false]];
   const chars = [...value];
   const out = [];
@@ -85,6 +85,21 @@ function el(tag, cls, ...children) {
   if (cls) node.className = cls;
   node.append(...children.filter((child) => child !== null && child !== undefined));
   return node;
+}
+
+function emphasised(value, query) {
+  return runs(value, query).map(([run, marked]) => (marked ? el("mark", "fui-search-match", run) : document.createTextNode(run)));
+}
+
+// What one hit shows, as the crate's hit_body draws it, its glyph from
+// `icon`.
+export function hitBody(hit, query, icon) {
+  let mark = null;
+  if (hit.mark && hit.mark.Dot) {
+    mark = el("span", "fui-dot fui-tone-" + String(hit.mark.Dot).toLowerCase());
+    mark.setAttribute("aria-hidden", "true");
+  } else if (hit.mark && hit.mark.Glyph) mark = icon(hit.mark.Glyph);
+  return [mark, el("span", "fui-hit-name", ...emphasised(hit.name, query)), el("span", "fui-small fui-muted fui-hit-line", ...emphasised(hit.line || "", query)), hit.tag ? el("span", "fui-tag", hit.tag) : null];
 }
 
 export function enhance(form) {
@@ -179,17 +194,6 @@ export function enhance(form) {
     options.push(node);
     return node;
   }
-  function emphasised(value, query) {
-    return runs(value, query).map(([run, marked]) => (marked ? el("mark", "fui-search-match", run) : document.createTextNode(run)));
-  }
-  function hitBody(hit, query) {
-    let mark = null;
-    if (hit.mark && hit.mark.Dot) {
-      mark = el("span", "fui-dot fui-tone-" + String(hit.mark.Dot).toLowerCase());
-      mark.setAttribute("aria-hidden", "true");
-    } else if (hit.mark && hit.mark.Glyph) mark = icon(hit.mark.Glyph);
-    return [mark, el("span", "fui-hit-name", ...emphasised(hit.name, query)), el("span", "fui-small fui-muted fui-hit-line", ...emphasised(hit.line || "", query)), hit.tag ? el("span", "fui-tag", hit.tag) : null];
-  }
   function status(cls, glyphName, words) {
     const row = el("p", "fui-search-results-status" + cls, glyphName ? icon(glyphName) : el("span", "fui-spinner-ring"), words);
     if (!glyphName) row.firstChild.setAttribute("aria-hidden", "true");
@@ -218,7 +222,7 @@ export function enhance(form) {
       const kind = el("div", "fui-search-results-group", group.kind);
       kind.id = id + "-kind-" + (index + 1);
       kind.setAttribute("role", "presentation");
-      const holder = el("div", null, kind, ...group.hits.slice(0, PER_GROUP).map((hit) => option(id + "-hit-" + ++at, "fui-hit", { hit: hit.href }, ...hitBody(hit, query))));
+      const holder = el("div", null, kind, ...group.hits.slice(0, PER_GROUP).map((hit) => option(id + "-hit-" + ++at, "fui-hit", { hit: hit.href }, ...hitBody(hit, query, icon))));
       holder.setAttribute("role", "group");
       holder.setAttribute("aria-labelledby", kind.id);
       return holder;

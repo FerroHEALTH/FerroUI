@@ -7,7 +7,7 @@
 // grid of a month with its keyboard path (WAI-ARIA Authoring Practices,
 // the date picker dialog pattern). No document is touched here but the
 // nodes it is asked to make.
-import { element, fill, text } from "./shared.js";
+import { element, fill, text, trim } from "./shared.js";
 
 // Days counted from 1970-01-01 (Howard Hinnant's days_from_civil), so a day
 // is one integer and stepping is addition.
@@ -39,6 +39,9 @@ export const iso = (n) => {
   const { y, m, d } = fromNumber(n);
   return pad(y, 4) + "-" + pad(m, 2) + "-" + pad(d, 2);
 };
+// The calendar's first and last days, 0001-01-01 and 9999-12-31.
+const FIRST = toNumber(1, 1, 1);
+const LAST = toNumber(9999, 12, 31);
 // Monday 0 to Sunday 6; 1970-01-01 was a Thursday.
 export const weekday = (n) => (((n + 3) % 7) + 7) % 7;
 
@@ -52,7 +55,7 @@ const digits = (text) => /^[0-9]+$/.test(text);
 // Reads a day as Day::parse_in reads it: YYYY-MM-DD always, and the page's
 // order (dmy or mdy) with one- or two-digit parts split by . / or -.
 export function parseDay(text, order) {
-  const t = text.trim();
+  const t = trim(text);
   const iso = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(t);
   if (iso) {
     const [y, m, d] = [Number(iso[1]), Number(iso[2]), Number(iso[3])];
@@ -79,7 +82,7 @@ export function parseDay(text, order) {
 // Reads a field's text as Moment::parse_in does: a day, and with a time
 // "YYYY-MM-DD HH:MM" (or a T for the space).
 export function parseMoment(text, withTime, order) {
-  const t = text.trim();
+  const t = trim(text);
   if (!withTime) return parseDay(t, order);
   const at = t.search(/[ T]/);
   if (at < 0) {
@@ -88,7 +91,7 @@ export function parseMoment(text, withTime, order) {
   }
   const parsed = parseDay(t.slice(0, at), order);
   if (parsed.error) return parsed;
-  const clock = /^([0-9]{2}):([0-9]{2})$/.exec(t.slice(at + 1).trim());
+  const clock = /^([0-9]{2}):([0-9]{2})$/.exec(trim(t.slice(at + 1)));
   if (!clock || Number(clock[1]) > 23 || Number(clock[2]) > 59) return { error: "time" };
   return { day: parsed.day, hour: Number(clock[1]), minute: Number(clock[2]) };
 }
@@ -99,7 +102,7 @@ export function allows(bounds, n) {
 
 // Why a typed text is no value the field takes, as DateWords::reason says.
 export function reason(words, text, withTime, bounds) {
-  const t = text.trim();
+  const t = trim(text);
   if (t === "") return null;
   const parsed = parseMoment(t, withTime, words.order);
   if (parsed.error === "format") return fill(words.not_format, { value: t });
@@ -140,8 +143,10 @@ export function weeks(y, m, first) {
   const back = (7 + weekday(start) - first) % 7;
   const end = toNumber(y, m, daysIn(y, m));
   const out = [];
-  for (let at = start - back; at <= end; at += 7) {
-    out.push([0, 1, 2, 3, 4, 5, 6].map((step) => at + step));
+  // NOTE: no specification governs this: our own design; at the calendar's
+  // ends a week keeps to its days, as the crate's Month::weeks does.
+  for (let at = start - back >= FIRST ? start - back : start; at <= end; at += 7) {
+    out.push([0, 1, 2, 3, 4, 5, 6].map((step) => (at + step <= LAST ? at + step : at)));
   }
   return out;
 }

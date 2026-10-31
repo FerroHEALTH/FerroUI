@@ -10,6 +10,26 @@
 import { action, arrow, assemble, focusDay, fromNumber, grid, iso, monthTitle, openingDay, parseIso, picker, reaches, stepKey, stepMonth, config as read } from "./calendar.js";
 import { element, fill, text } from "./shared.js";
 
+// The button's words for the range the fields `a` and `b` hold, as the
+// crate's range_summary.
+export function summary(words, a, b) {
+  const [x, y] = [parseIso(a), parseIso(b)];
+  return x !== null && y !== null ? fill(text(words.range_words), { from: iso(x), to: iso(y) }) : text(words.any);
+}
+
+// The picker's line for the fields `a` and `b`, as the crate's
+// range_status.
+export function status(words, a, b) {
+  const [first, last] = [parseIso(a), parseIso(b)];
+  if (first !== null && last !== null) {
+    const count = Math.abs(last - first) + 1;
+    const days = count <= words.day_counts.length ? text(words.day_counts[count - 1]) : null;
+    return days ? fill(text(words.range_full), { from: iso(first), to: iso(last), days }) : fill(text(words.range_words), { from: iso(first), to: iso(last) });
+  }
+  if (first !== null) return fill(text(words.range_half), { from: iso(first) });
+  return "";
+}
+
 export function enhance(root) {
   const cfg = read(root, "data-fui-range");
   if (cfg) rangeField(root, cfg, cfg.words, root.querySelector(":scope > button"));
@@ -18,16 +38,12 @@ export function enhance(root) {
 function rangeField(root, config, words, button) {
   const fields = root.querySelector(".fui-date-range-fields");
   const [from, to] = fields.querySelectorAll("input");
-  const summary = button.querySelector("[data-fui-summary]");
+  const named = button.querySelector("[data-fui-summary]");
   let saved = [from.value, to.value];
   let hovered = null;
   let open = false;
   let panel = null;
   const ends = () => [parseIso(from.value), parseIso(to.value)];
-  const summarize = (a, b) => {
-    const [x, y] = [parseIso(a), parseIso(b)];
-    return x !== null && y !== null ? fill(text(words.range_words), { from: iso(x), to: iso(y) }) : text(words.any);
-  };
   const state = {
     range: true,
     focused: openingDay(ends()[1] ?? ends()[0], config.today, config.bounds),
@@ -81,16 +97,6 @@ function rangeField(root, config, words, button) {
     if (!shown) state.shown = { y, m };
     else if (y * 12 + m > key(shown)) state.shown = { y, m };
     else if (earlier && y * 12 + m < key(earlier)) state.shown = stepMonth(y, m, 1) || { y, m };
-  }
-  function status() {
-    const [first, last] = ends();
-    if (first !== null && last !== null) {
-      const count = Math.abs(last - first) + 1;
-      const days = count <= words.day_counts.length ? text(words.day_counts[count - 1]) : null;
-      return days ? fill(text(words.range_full), { from: iso(first), to: iso(last), days }) : fill(text(words.range_words), { from: iso(first), to: iso(last) });
-    }
-    if (first !== null) return fill(text(words.range_half), { from: iso(first) });
-    return "";
   }
   function month(y, m, back, next) {
     const earlier = stepMonth(y, m, -1);
@@ -154,7 +160,7 @@ function rangeField(root, config, words, button) {
     const later = state.shown;
     const earlier = stepMonth(later.y, later.m, -1) || later;
     frame.pair.replaceChildren(month(earlier.y, earlier.m, "fui-icon-button", false), month(later.y, later.m, "fui-icon-button fui-datepicker-phone-prev", true));
-    const said = status();
+    const said = status(words, from.value, to.value);
     frame.said.textContent = said;
     frame.said.hidden = said === "";
     const [a, b] = ends();
@@ -169,7 +175,7 @@ function rangeField(root, config, words, button) {
     panel = null;
     frame = null;
     button.setAttribute("aria-expanded", "false");
-    summary.textContent = summarize(from.value, to.value);
+    named.textContent = summary(words, from.value, to.value);
   }
   fields.hidden = true;
   button.hidden = false;

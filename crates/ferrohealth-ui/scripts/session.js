@@ -34,7 +34,9 @@ export function messageText(message) {
 
 export function parseMessage(text) {
   const words = String(text).split(" ");
-  const whole = (word) => (/^\d+$/.test(word || "") ? Number(word) : null);
+  // A count is read as the crate's u32 parse reads it: an optional plus,
+  // ASCII digits, at most 4294967295.
+  const whole = (word) => (/^\+?[0-9]+$/.test(word || "") && Number(word) <= 4294967295 ? Number(word) : null);
   if (words[0] === "ended" && words.length === 1) return { ended: true };
   if (words[0] === "extended" && words.length === 3) {
     const idle = whole(words[1]);

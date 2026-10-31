@@ -48,6 +48,24 @@ export function moved(key, at, shown) {
   }
 }
 
+// The items of the tree `list` in sight, in document order, as the
+// crate's in_sight walks them.
+export function inSight(list) {
+  const own = (item) => item.closest("[role='tree']") === list;
+  return [...list.querySelectorAll("li[role='treeitem']")]
+    .filter((item) => own(item) && !item.parentElement.closest("ul[role='group'][hidden]"))
+    .map((item) => {
+      const parent = item.parentElement.closest("li[role='treeitem']");
+      return {
+        key: item.getAttribute("data-key"),
+        parent: parent && own(parent) ? parent.getAttribute("data-key") : null,
+        expandable: item.hasAttribute("aria-expanded"),
+        open: item.getAttribute("aria-expanded") === "true",
+        link: Boolean(item.querySelector(":scope > .fui-tree-row > a.fui-tree-label")),
+      };
+    });
+}
+
 export function enhance(root) {
   const list = root.querySelector("ul[role='tree']");
   if (!list) return;
@@ -58,7 +76,6 @@ export function enhance(root) {
   const own = (item) => item.closest("[role='tree']") === list;
   const items = () => [...list.querySelectorAll("li[role='treeitem']")].filter(own);
   const groupOf = (item) => item.querySelector(":scope > ul[role='group']");
-  const parentOf = (item) => item.parentElement.closest("li[role='treeitem']");
   const toggleOf = (item) => item.querySelector(":scope > .fui-tree-row > .fui-tree-toggle");
   const isOpen = (item) => item.getAttribute("aria-expanded") === "true";
   const byKey = (key) => items().find((item) => item.getAttribute("data-key") === key);
@@ -102,20 +119,6 @@ export function enhance(root) {
     const glyph = icons && icons.content.querySelector("[data-icon='" + (open ? "chevron-down" : "chevron-right") + "'] svg");
     const old = toggle.querySelector("svg");
     if (glyph && old) old.replaceWith(glyph.cloneNode(true));
-  }
-  function inSight() {
-    return items()
-      .filter((item) => !item.parentElement.closest("ul[role='group'][hidden]"))
-      .map((item) => {
-        const parent = parentOf(item);
-        return {
-          key: item.getAttribute("data-key"),
-          parent: parent && own(parent) ? parent.getAttribute("data-key") : null,
-          expandable: item.hasAttribute("aria-expanded"),
-          open: isOpen(item),
-          link: Boolean(item.querySelector(":scope > .fui-tree-row > a.fui-tree-label")),
-        };
-      });
   }
   function close(item) {
     const group = groupOf(item);
@@ -197,7 +200,7 @@ export function enhance(root) {
   list.addEventListener("keydown", (event) => {
     const item = event.target;
     if (item.getAttribute("role") !== "treeitem" || !own(item)) return;
-    const shown = inSight();
+    const shown = inSight(list);
     const at = shown.findIndex((each) => each.key === item.getAttribute("data-key"));
     const step = moved(event.key, at, shown);
     if (!step) return;
