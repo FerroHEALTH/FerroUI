@@ -1155,3 +1155,42 @@ fn a_filter_menu_in_the_find_form_draws_no_form_of_its_own() {
     );
     assert!(has(&menu, "button", &[("type", "submit")]), "{menu}");
 }
+
+/// The header row of a drawn table.
+fn header_row(table: &str) -> &str {
+    table
+        .split_once("<thead>")
+        .and_then(|(_, rest)| rest.split_once("</thead>"))
+        .map_or("", |(head, _)| head)
+}
+
+#[test]
+fn a_change_table_heads_its_key_column_as_the_console_names_it() {
+    use ferrohealth_ui::view::change::{Change, change_table, change_table_keyed};
+
+    let changes = [Change {
+        key: String::from("/content[openEHR-EHR-OBSERVATION.synthetic.v1]"),
+        from: Some(String::from("DV_TEXT")),
+        to: Some(String::from("DV_CODED_TEXT")),
+    }];
+    let keyed = html(change_table_keyed(
+        &en(),
+        "Release 2 against release 1",
+        "Path <b>",
+        &changes,
+    ));
+    let head = header_row(&keyed);
+    assert!(head.contains("Path &#60;b&#62;"), "{head}");
+    assert!(!head.contains("Setting"), "{head}");
+    let plain = html(change_table(&en(), "Staged against running", &changes));
+    let head = header_row(&plain);
+    assert!(
+        head.contains("Setting"),
+        "the default key column keeps its word: {head}"
+    );
+    assert_eq!(
+        plain.replace("Staged against running", "caption"),
+        html(change_table_keyed(&en(), "caption", "Setting", &changes)),
+        "the default draws as the keyed table with the library's word"
+    );
+}

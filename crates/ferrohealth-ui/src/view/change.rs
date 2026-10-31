@@ -5,6 +5,9 @@
 //! as a plan shows the difference between a running and a staged
 //! configuration.
 //!
+//! A console that compares something else names the key column itself
+//! ([`change_table_keyed`]).
+//!
 //! The value removed is marked "−" and the value added "+", in words as
 //! well as tone, and an absent value reads "not set", so a change never
 //! rides on colour alone.
@@ -24,10 +27,11 @@ pub struct Change {
     pub to: Option<String>,
 }
 
-/// The columns of a change table, named in the page's locale.
-fn columns(locale: &Locale) -> [Column; 3] {
+/// The columns of a change table, the key column headed `key` and the
+/// others named in the page's locale.
+fn columns(locale: &Locale, key: String) -> [Column; 3] {
     [
-        Column::owned("key", tr(locale, Text::ChangeSetting)),
+        Column::owned("key", key),
         Column::owned("from", tr(locale, Text::ChangeBefore)),
         Column::owned("to", tr(locale, Text::ChangeAfter)),
     ]
@@ -64,10 +68,24 @@ fn side(locale: &Locale, value: Option<&String>, sign: &'static str, removed: bo
     }
 }
 
-/// Returns the table of `changes` captioned `caption`; an empty list reads
-/// as a sentence.
+/// Returns the table of `changes` captioned `caption`, its key column
+/// headed by the library's word for a setting; an empty list reads as a
+/// sentence.
 #[must_use]
 pub fn change_table(locale: &Locale, caption: impl Into<String>, changes: &[Change]) -> Html {
+    change_table_keyed(locale, caption, tr(locale, Text::ChangeSetting), changes)
+}
+
+/// Returns the table of `changes` captioned `caption`, its key column
+/// headed `key` from the console's catalog (a path, a field), as
+/// [`change_table`] draws it; an empty list reads as a sentence.
+#[must_use]
+pub fn change_table_keyed(
+    locale: &Locale,
+    caption: impl Into<String>,
+    key: impl Into<String>,
+    changes: &[Change],
+) -> Html {
     let caption = caption.into();
     if changes.is_empty() {
         return Html::raw(format!(
@@ -90,7 +108,7 @@ pub fn change_table(locale: &Locale, caption: impl Into<String>, changes: &[Chan
         .collect();
     data_table(DataTable {
         caption: &caption,
-        columns: &columns(locale),
+        columns: &columns(locale, key.into()),
         sorting: Sorting::default(),
         body: Body::Rows(rows),
     })
