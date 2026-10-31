@@ -64,8 +64,9 @@ library lacks is a FerroUI issue (§ Asking for a component).
 ## How a console builds
 
 Every page is one document your server draws whole (FerroUI #510;
-`.claude/rules/console-ui.md` §1). Moving from 0.5 is
-[`docs/migration-0.6.md`](migration-0.6.md).
+`.claude/rules/console-ui.md` §1). Why, and what would reopen that
+decision, is [`docs/rendering-model.md`](rendering-model.md). Moving from
+0.5 is [`docs/migration-0.6.md`](migration-0.6.md).
 
 1. **The assets.** Mount `serve::axum_router::router()` at `serve::PREFIX`.
    It serves the stylesheet, the brand themes and the modules under
@@ -305,6 +306,7 @@ request to sign-in.
 | Your console's pages as designed | [`design/consoles/<console>/`](../design/consoles/) |
 | Integration: the assets, the document, a theme, locales, Your preferences | [`crates/ferrohealth-ui/README.md`](../crates/ferrohealth-ui/README.md) |
 | Moving a console from 0.5 | [`docs/migration-0.6.md`](migration-0.6.md) |
+| Why server-rendered HTML, the candidates weighed, and what would reopen it | [`docs/rendering-model.md`](rendering-model.md) |
 
 The sections of `.claude/rules/console-ui.md` a console reads most:
 
