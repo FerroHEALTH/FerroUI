@@ -463,6 +463,49 @@ async fn two_secret_fields_of_an_answer_form_appear_nowhere_on_the_page_it_draws
     Ok(())
 }
 
+/// The check answered in place posts to the forms page like the note, and
+/// the page draws its answer in the region the `answer` module takes from
+/// it, the id kept in its field and the note's form left as drawn (#546).
+#[tokio::test]
+async fn a_post_of_the_check_answered_in_place_draws_its_answer_in_its_region()
+-> Result<(), Box<dyn Error>> {
+    let (parts, body) = count_words("archetype=openEHR-EHR-OBSERVATION.blood_pressure.v2").await?;
+    assert_eq!(StatusCode::OK, parts.status);
+    assert!(
+        body.starts_with("<!doctype html>")
+            && parts.headers[header::CONTENT_TYPE]
+                .to_str()?
+                .starts_with("text/html"),
+        "the answer is a whole page the module reads"
+    );
+    assert!(
+        body.contains(
+            "<div id=\"check-answer\" aria-live=\"polite\"><p class=\"fui-help\">Well formed: the OBSERVATION archetype blood_pressure, version 2.</p></div>"
+        ),
+        "the answer is drawn in its region: {body}"
+    );
+    assert!(
+        body.contains(
+            "id=\"check-form\" data-fui=\"answer\" data-fui-answer=\"check-answer\" data-fui-settle=\"300\">"
+        ),
+        "the form asks for the module and names its region"
+    );
+    assert!(
+        body.contains("value=\"openEHR-EHR-OBSERVATION.blood_pressure.v2\""),
+        "the posted id is kept in its field"
+    );
+    assert!(
+        !body.contains("<input type=\"hidden\" name=\"archetype\""),
+        "the note's form carries nothing of the check"
+    );
+    let (_, refused) = count_words("archetype=blood_pressure").await?;
+    assert!(
+        refused.contains("<div id=\"check-answer\" aria-live=\"polite\"><p class=\"fui-help fui-error\">Not an archetype id"),
+        "a refusal is drawn in the region too: {refused}"
+    );
+    Ok(())
+}
+
 #[tokio::test]
 async fn the_forms_page_drawn_on_its_own_carries_no_answer() -> Result<(), Box<dyn Error>> {
     let (parts, body) = get("/ferrobridge/forms").await?;

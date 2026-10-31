@@ -45,11 +45,12 @@ never publish under it.
 - **No component** writes a `style` attribute, a `<style>` element or an
   inline script (a console keeps `style-src 'self'` and `script-src
   'self'`), defines a route, or touches browser storage beyond what the
-  tree and the scroll keep for the session. Two modules fetch, each on a
+  tree and the scroll keep for the session. Three modules fetch, each on a
   wire `docs/consoles.md` documents: the top bar's typeahead asks the
-  answer route the console names (`SearchBox::suggest`), and the session
+  answer route the console names (`SearchBox::suggest`), the session
   watch (`view::session`, #444) asks the console's session route what the
-  session has left. Theme persistence, URL policy and the routes are the
+  session has left, and a form marked `view::answer::Answer` (#546) posts
+  to its own action and takes its answer region from the page it returns. Theme persistence, URL policy and the routes are the
   console's.
 
 ## How a console builds on it
@@ -64,7 +65,7 @@ never publish under it.
   enforce the mechanical part in CI:** no inline style, script or handler
   in a template or the Rust, and every module within 16 KiB (144 KiB for
   what one page loads, 72 KiB compressed for all) with no `eval`, no
-  absolute URL and no `fetch` outside the two wires.
+  absolute URL and no `fetch` outside the three wires.
 - **`/new-component`** walks a component from its COMPONENTS.md id to the
   gallery, the tests, the screenshots and the changelog.
 - **`/console-check`** reviews a diff against the console rules before a

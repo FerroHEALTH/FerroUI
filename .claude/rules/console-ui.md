@@ -33,11 +33,13 @@ Authoring Practices (`spec-adherence.md`), never memory.
 - **The library holds no route and no state.** It defines no handler,
   reads no request and touches no browser storage beyond what the tree and
   the scroll keep for the session. Data arrives as arguments; theme
-  persistence, URL policy and the routes are each console's. Two modules
+  persistence, URL policy and the routes are each console's. Three modules
   fetch, each on a wire `docs/consoles.md` documents and from a route the
   console names: the top bar's typeahead (`search`) asks the answer route,
-  and the session watch (`session`) asks the session route what the
-  session has left, extending it only for the user's own input
+  the session watch (`session`) asks the session route what the session
+  has left, extending it only for the user's own input, and a form marked
+  for it (`answer`) posts to its own action and takes its answer region
+  from the page that route draws
   (`scripts/checks/script-budget.sh` refuses any other `fetch`).
 - **No patient identifier in a URL.** A listing that can show patient data
   keeps its page, size and sort out of the URL: its forms post them

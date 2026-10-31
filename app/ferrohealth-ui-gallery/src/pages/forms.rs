@@ -58,6 +58,8 @@ use crate::locale::{Msg, message};
 use crate::markup::{h, t};
 use crate::visit::Visit;
 
+mod answer;
+
 /// A query form: the nodes as checkbox chips, an option as a switch, and its
 /// actions at its foot.
 fn federated(v: &Visit) -> Html {
@@ -677,63 +679,6 @@ fn long_label(v: &Visit) -> Html {
             ),
             Variant::Secondary.class(),
             label(Some(Glyph::X), v.tr(Msg::Clear)),
-        )),
-    )
-}
-
-/// What the note of the action answered on its page says once posted: its
-/// word count, or the refusal of an empty note.
-fn counted(v: &Visit, note: &str) -> Result<String, String> {
-    let words = note.split_whitespace().count();
-    if words == 0 {
-        return Err(v.tr(Msg::AcknowledgeEmpty));
-    }
-    let count = u32::try_from(words).unwrap_or(u32::MAX);
-    Ok(v.tr_with(Msg::NoteWords, &[("count", Arg::from(count))]))
-}
-
-/// An action whose answer is drawn on its page: the form posts to the page,
-/// which draws itself again with the answer and the posted note kept in its
-/// field (#485).
-fn answered_action(v: &Visit, posted: Option<&Posted>) -> Html {
-    let note = posted.and_then(|posted| posted.field("note"));
-    let answer = note
-        .map(|note| match counted(v, note) {
-            Ok(count) => h(format!(
-                "<p id=\"note-answer\" class=\"fui-help\">{}</p>",
-                t(count)
-            )),
-            Err(refusal) => h(format!(
-                "<p id=\"note-answer\" class=\"{ERROR}\">{}</p>",
-                t(refusal)
-            )),
-        })
-        .unwrap_or_default();
-    // The form's other fields come back as posted, the secrets left out.
-    let kept: Html = posted
-        .map(Posted::fields)
-        .unwrap_or_default()
-        .iter()
-        .filter(|(name, _)| name != "note")
-        .map(|(name, value)| {
-            h(format!(
-                "<input type=\"hidden\" name=\"{}\" value=\"{}\">",
-                t(name),
-                t(value)
-            ))
-        })
-        .collect();
-    let input = h(format!(
-        "<input id=\"answer-note\" name=\"note\" type=\"text\" class=\"{INPUT}\" value=\"{}\">",
-        t(note.unwrap_or_default())
-    ));
-    card(
-        v.tr(Msg::ActionAnsweredOnPage),
-        h(format!(
-            "<form method=\"post\" class=\"{FORM}\" id=\"answer-form\">{kept}{}<button type=\"submit\" class=\"{}\">{}</button></form><div aria-live=\"polite\">{answer}</div>",
-            field("answer-note", v.tr(Msg::NoteToCheck), None, input),
-            Variant::Primary.class(),
-            label(Some(Glyph::CHECK), v.tr(Msg::Check)),
         )),
     )
 }
@@ -1492,7 +1437,10 @@ fn drawn(v: &Visit, posted: Option<&Posted>) -> Page {
         per_row(v),
         choosing(v),
         unlike,
-        answered_action(v, posted),
+        grid_start(Html::join([
+            answer::answered_action(v, posted),
+            answer::answered_in_place(v, posted),
+        ])),
         shaped,
         upload(v),
         editor(v),

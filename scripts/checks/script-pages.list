@@ -29,7 +29,7 @@
 /:brand/federation/testmeer drawer search toast user_menu
 /:brand/federation/voorbeeldstad drawer search toast user_menu
 /:brand/find drawer search toast user_menu
-/:brand/forms combobox date date_range drawer editor filter identifier masked picker repeat search toast upload user_menu
+/:brand/forms answer combobox date date_range drawer editor filter identifier masked picker repeat search toast upload user_menu
 /:brand/layouts drawer keep picker search toast tree user_menu
 /:brand/operations copy drawer editor keys search toast user_menu
 /:brand/overlays dialog drawer keep keys menu search shortcuts side_panel toast user_menu

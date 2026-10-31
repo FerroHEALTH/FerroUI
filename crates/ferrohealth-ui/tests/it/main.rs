@@ -19,6 +19,7 @@
     reason = "test assertions"
 )]
 
+mod answer;
 mod chrome;
 mod clinical;
 mod code;
