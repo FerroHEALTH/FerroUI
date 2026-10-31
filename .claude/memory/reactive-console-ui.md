@@ -29,3 +29,12 @@ and made every action a full page load, which was slow too.
 - Every page works with no script.
 - Judge a UI change by the interaction it gives, and hold it with the
   gallery's navigation journeys.
+
+**Confirmed 2026-10-31 (FerroUI #545):** a review weighed Leptos (full and
+islands), Dioxus, Yew, Sycamore, Datastar and htmx against the strict CSP
+and kept the model; the record is `docs/rendering-model.md`. Reopen it only
+for offline use, collaborative live editing, or a graphical canvas editor,
+and even then answer with one isolated widget on its own route with its own
+policy, never a framework for a whole console. Speculative prefetch stays
+off: a prefetch is an audited patient read nobody asked for, and the
+consoles send `no-store`.

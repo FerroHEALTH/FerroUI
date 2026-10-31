@@ -31,5 +31,5 @@
 - [Release closes milestone](release-closes-milestone.md): release.yml refuses
   a tag whose milestone is missing or not empty and closes it after every
   leg; check it after a manual or recovery release; owner 2026-10-19 (#124)
-- [Console UI mode](reactive-console-ui.md): owner 2026-10-29, server-rendered HTML with a little plain JavaScript, reversing the hydrated mode of 2026-10-25 (FerroUI #510)
+- [Console UI mode](reactive-console-ui.md): owner 2026-10-29, server-rendered HTML with a little plain JavaScript, reversing the hydrated mode of 2026-10-25 (FerroUI #510); confirmed 2026-10-31 with its reopen triggers (#545)
 - [Contribution licence attestation](contribution-licence-attestation.md): owner 2026-10-25, always tick the licence checkbox on PRs opened for the owner, never ask
