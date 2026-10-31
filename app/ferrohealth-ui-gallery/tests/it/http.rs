@@ -90,22 +90,6 @@ async fn every_page_of_every_brand_renders_with_its_theme_and_the_headers()
 }
 
 #[tokio::test]
-async fn the_timeline_heads_a_records_change_table_with_the_word_it_names()
--> Result<(), Box<dyn Error>> {
-    let (parts, body) = get("/ferropix/layouts").await?;
-    assert_eq!(StatusCode::OK, parts.status);
-    let (_, timeline) = body
-        .split_once("Version 3 against version 2")
-        .ok_or("the timeline draws its version's change table")?;
-    let (head, _) = timeline
-        .split_once("</thead>")
-        .ok_or("the change table has a header")?;
-    assert!(head.contains(">Field<"), "{head}");
-    assert!(!head.contains("Setting"), "{head}");
-    Ok(())
-}
-
-#[tokio::test]
 async fn a_path_the_gallery_does_not_serve_answers_404() -> Result<(), Box<dyn Error>> {
     let (parts, body) = get("/no/such/page").await?;
     assert_eq!(StatusCode::NOT_FOUND, parts.status);
@@ -644,5 +628,21 @@ async fn a_forms_page_left_while_it_streams_raises_no_server_panic() -> Result<(
         PANICS.load(std::sync::atomic::Ordering::SeqCst),
         "the server panicked while it drew the forms page"
     );
+    Ok(())
+}
+
+#[tokio::test]
+async fn the_timeline_heads_a_records_change_table_with_the_word_it_names()
+-> Result<(), Box<dyn Error>> {
+    let (parts, body) = get("/ferropix/layouts").await?;
+    assert_eq!(StatusCode::OK, parts.status);
+    let (_, timeline) = body
+        .split_once("Version 3 against version 2")
+        .ok_or("the timeline draws its version's change table")?;
+    let (head, _) = timeline
+        .split_once("</thead>")
+        .ok_or("the change table has a header")?;
+    assert!(head.contains(">Field<"), "{head}");
+    assert!(!head.contains("Setting"), "{head}");
     Ok(())
 }
