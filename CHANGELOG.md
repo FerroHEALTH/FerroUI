@@ -11,6 +11,129 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-10-31
+
+### Added
+
+- The loader marks an element `data-fui-ready` (`script::READY`) once every
+  module its `data-fui` names has enhanced it, so a console's journey can
+  wait for a component whose module changes nothing it can see before it
+  drives it by the keyboard; `html[data-fui-script]` is written before any
+  module arrives (#523).
+- The `keys` module binds every key a control announces in
+  `aria-keyshortcuts`, from 40 rem up: a chord such as Ctrl Enter
+  (`view::transform::Run::shortcut`) or Ctrl S (`view::dock::Decision::shortcut`)
+  presses its control from inside a field too, the one in the focused
+  field's form first, and a single key such as `l` or `]` presses its
+  control, or focuses a field such as the dock's reason
+  (`view::dock::DockField::shortcut`), outside a field alone. The dock's
+  and Run's keys load it themselves, and so does the shortcut legend; a
+  console's own control writes `data-fui="keys"` (`view::shortcuts::KEYS_JOB`)
+  on a page with no legend (#526).
+- `view::shortcuts::shortcut_legend_with_go_to` lists a console's go-to
+  pairs (`GoTo` with its first key and each `GoToPair` of a letter and a
+  link of the navigation) in their own group, each as the link the `keys`
+  module follows on the pair's keys; `GoTo::group` gives them as a
+  `ShortcutGroup` for a console's own shortcuts page (#526).
+- `view::preferences::typed_preference` draws a console's own typed
+  preference, a text or a number field (`Typed::Text` with its length
+  bounds, `Typed::Number` with its `min`, `max` and `step`) with its
+  placeholder, in the same plain form as `select_preference`: its Save
+  button posts it with no script, and once the `preference` module runs it
+  posts when the field changes and the row just saved gives the field the
+  focus back. The module sends one post when Enter both changes and
+  submits a field (#527).
+- `view::side_panel::side_panel_with_shortcut` draws a side panel whose
+  opener announces its keys, such as `o`: in a work-list row the `keys`
+  module opens the focused row's panel on that key, and the browser
+  returns the focus to the row when the panel closes (#530).
+- A form that answers on its page can answer in place: mark it with
+  `view::answer::Answer::new(region)` and the `answer` module posts it with
+  `fetch` to its own action and moves the answer region of the page that
+  route draws into the same region here, the focus kept and the answer
+  announced by the region's polite live region. `with_settle(ms)` also
+  posts once a field rests from typing, for a check on the server as you
+  type, and an answer to an older request is dropped. With the modules
+  refused, or on an answer that is no HTML page holding the region, the
+  form posts and the whole page answers as before. It is the third `fetch`
+  wire, in `docs/consoles.md` § Answered in place (#546).
+
+### Changed
+
+- The script modules take a phrase's words, a number's digit groups and a
+  new element from one module, `shared.js`, and the JSON and XML
+  highlighting after an edit moves from `highlight.js` to its own module,
+  `rehighlight.js`. A console that serves the modules from
+  `script::MODULES` serves both with no change (#541).
+- The script budget measures what a reader pays: 16 KiB a module as
+  before, 144 KiB for the modules any one page loads (the loader, the
+  page's jobs and their imports), and 72 KiB for every module compressed,
+  in place of 160 KiB for every module raw. The caps, their measurements
+  on the gallery's pages and their reasons are in
+  `.claude/rules/console-ui.md` §12 (#547).
+
+### Fixed
+
+- A long identifier in a `<code>` of a stacked table cell wraps inside the
+  cell at 320 px, so the page no longer scrolls sideways (WCAG 2.2 SC
+  1.4.10). A stacked cell's value is held to its column, where before it
+  took the code's whole length (#525).
+- A select in a dense options row keeps to its field below 40 rem, its
+  chosen value ending in an ellipsis, so a select whose longest option is
+  wider than the phone no longer scrolls the page sideways at 320 px (WCAG
+  2.2 SC 1.4.10) (#528).
+- A link in a stacked table's group row wraps inside the row below 40 rem,
+  so a name longer than the card no longer scrolls the page sideways at
+  320 px (WCAG 2.2 SC 1.4.10) (#529).
+- The code editor highlights a JSON or XML document again only from the
+  first line a key changes, up to the line where the highlighting is the
+  same as before, where before it highlighted the whole text on every key.
+  The stylesheet's rules for a focused work-list row and for a field row
+  with a help line select the same elements as before, written so Chrome
+  no longer restyles the editor's whole layer on every key. A key typed
+  into a 20 kB JSON or XML document now costs 1 to 2 ms at the median,
+  script, style and layout together, where it cost 5 to 8 ms, so typing an
+  openEHR composition into the editor no longer slows with its length (#531).
+- A work-list row keeps its actions, a glance opener beside the row menu,
+  on its one line, where since a row's own key (#530) the menu's `…`
+  wrapped under the opener and every row stood twice as tall. In the row
+  a glance opener with a glyph shows the glyph alone, its words kept as
+  its accessible name, so the record names keep their line with wider
+  fonts too. The side panel's opener writes its words in
+  `span.fui-side-panel-words`. A side panel opened from a table cell
+  starts and wraps its text, where it took the cell's end alignment (#540).
+- On a phone, a stacked work-list row whose actions hold a glance opener
+  keeps them in the first line's flow, where the opener drew over the
+  second record's name (#540).
+- A key that changes a line of the code editor updates that line's
+  element in place, so the browser no longer counts every line number
+  again, and the caret's line and column are read without walking the
+  text before the caret. A key typed at the end of a 20 kB XML document
+  costs the same as one in a short document, and in a 20 kB JSON document
+  in the operations page it costs about 1.8 ms, where it cost 2.6 to 3.8 ms
+  on the same machine (#541).
+- The stylesheet no longer looks for a decision bar, a toast, a work-list
+  foot or an open menu sheet anywhere in the page with `:has()`, which made
+  Chrome weigh the whole page again on every key typed into the code
+  editor. Each rule now looks only where the shell draws what it looks
+  for: the decision bar as the last part of the main area or of its
+  column, the work-list's card in the column at most two levels down, the
+  toast region beside the body, the menu sheets in the top bar and in a
+  transform pane's head, and the editor as a transform pane's own child.
+  A code editor with an error mark carries `is-invalid`, which draws its
+  red edge. A key typed at the end of a 20 kB XML document costs 0.2 ms at
+  the median where it cost 0.7 to 1.4 ms, and in a 20 kB JSON document 0.5
+  to 0.6 ms where it cost 0.9 to 1.0 ms, on the same machine (#544).
+- The script modules answer as the library's Rust does where both decide:
+  they trim white space as Rust's `str::trim` does (a typed date, the
+  editor's grammar and empty state, the typeahead's words, a menu's typed
+  letter, the filter), a date picker at the calendar's first or last month
+  keeps its weeks to the calendar's days, the session watch reads a count
+  between tabs as a `u32`, and the upload field compares a file's extension
+  in ASCII case alone. A parity test now feeds each rule written in both
+  languages the same inputs and fails on any difference; `docs/consoles.md`
+  lists every pair (#548).
+
 ## [0.6.0] - 2026-10-30
 
 ### Added
@@ -2890,7 +3013,8 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.2...HEAD
+[0.6.2]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.0...v0.6.2
 [0.6.0]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.8...v0.6.0
 [0.5.8]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.7...v0.5.8
 [0.5.7]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.6...v0.5.7

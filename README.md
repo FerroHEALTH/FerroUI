@@ -78,7 +78,7 @@ and FerroPIX are all built from FerroUI.
 Add the crate to an axum application, pinned exactly:
 
 ```sh
-cargo add ferrohealth-ui@=0.6.0
+cargo add ferrohealth-ui@=0.6.2
 ```
 
 The [crate README](crates/ferrohealth-ui/README.md) is the integration
