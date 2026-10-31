@@ -6,10 +6,11 @@
 //!
 //! A key is drawn as it is printed on the keyboard, in a `<kbd>` element
 //! (HTML Living Standard, the `kbd` element): a letter as a capital, an
-//! arrow as its arrow. The library binds no key itself; a console owns its
-//! listeners and the library draws the keys. Below 40 rem every key cap and
-//! hint is hidden, since a phone has no keyboard (family rule 6); the
-//! shortcut legend keeps its keys.
+//! arrow as its arrow. The `keys` module binds a key a control announces
+//! through [`aria_keys`] ([`crate::view::shortcuts`]), so a console writes
+//! no listener of its own. Below 40 rem every key cap and hint is hidden,
+//! since a phone has no keyboard (family rule 6); the shortcut legend keeps
+//! its keys.
 //!
 //! A shortcut's keys are written as words separated by spaces, each word a
 //! key pressed in turn or held together with a modifier (`g d`, `Ctrl s`),

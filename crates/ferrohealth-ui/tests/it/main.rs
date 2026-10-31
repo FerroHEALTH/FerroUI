@@ -42,6 +42,7 @@ mod render;
 mod search;
 mod session;
 mod shell;
+mod shortcuts;
 mod state;
 mod stylesheet;
 mod table;

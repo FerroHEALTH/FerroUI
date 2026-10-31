@@ -73,6 +73,7 @@ shortcut-open-first = Open the search's first answer
 shortcut-show = Show the keyboard shortcuts
 shortcuts-card-intro = Press ? outside a field, or the button, to open the legend over this page; the line under it is the hint a listing shows at its foot.
 shortcuts-everywhere = Everywhere
+shortcuts-go-to = Go to
 shortcuts-search = The search
 side-panel = Side panel
 signed = Signed in as

@@ -496,3 +496,25 @@ fn the_parsed_message_draws_a_block_per_segment_with_position_name_and_value() {
         "{parsed}"
     );
 }
+
+#[test]
+fn run_with_keys_asks_the_keys_module_and_run_without_asks_for_none() {
+    let ready = run(RunState::Ready);
+    assert!(
+        has(
+            &ready,
+            "button",
+            &[
+                ("id", "pg-run"),
+                ("aria-keyshortcuts", "Control+Enter"),
+                ("data-fui", "keys")
+            ]
+        ),
+        "{ready}"
+    );
+    let running = run(RunState::Running);
+    assert!(
+        !running.contains("data-fui"),
+        "a run in progress takes no key: {running}"
+    );
+}

@@ -144,6 +144,8 @@ messages! {
     ShortcutsCardIntro = "shortcuts-card-intro",
     /// `Everywhere`
     ShortcutsEverywhere = "shortcuts-everywhere",
+    /// `Go to`
+    ShortcutsGoTo = "shortcuts-go-to",
     /// `The search`
     ShortcutsSearch = "shortcuts-search",
     /// `Side panel`

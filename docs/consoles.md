@@ -210,6 +210,42 @@ JSON:
 A hit's `mark` is `{ "Glyph": "<lucide name>" }` or `{ "Dot": "Ok" }`
 (a `tone::Tone`); every field but `query` may be left out.
 
+## Keyboard shortcuts
+
+You write no key listener. Every shortcut is a control already on the
+screen that announces its keys in `aria-keyshortcuts` (WAI-ARIA 1.2), and
+the `keys` module presses it (FerroUI #526, #530). It runs from 40 rem up
+(family rule 6), never on the legend's `?` or the search box's own key.
+
+- **A chord** (`Ctrl Enter`, `Ctrl s`; Command on a Mac) presses its
+  control from inside a field too, and leaves the focus there. Set
+  `view::transform::Run::shortcut` for Run and `view::dock::Decision::shortcut`
+  for a docked decision; when two controls announce the same chord, the
+  one in the focused field's form wins.
+- **A single key** (`l`, `n`, `]`) presses its control, or moves the focus
+  to it when it is a field (`view::dock::DockField::shortcut`, `r`), and
+  only outside a field. A control that opens a dialog takes the focus
+  first, so the dialog returns it there.
+- **A row's key** reaches a control inside a work-list row only while that
+  row holds the focus. Draw the row's side panel with
+  `view::side_panel::side_panel_with_shortcut(panel, "o")`: `o` opens the
+  focused row's panel and the browser returns the focus to the row when
+  it closes. List the key in the work-list's hint and in the legend.
+- **Go-to pairs** are a first key, then a letter, then a link of your
+  navigation. Draw the legend with
+  `view::shortcuts::shortcut_legend_with_go_to(locale, groups, GoTo { title,
+  lead: "g".into(), pairs })`, each `GoToPair { key, href, does }`; the
+  legend lists each pair as its link and the module follows it.
+  `GoTo::group` gives the same pairs as a `ShortcutGroup` for your own
+  shortcuts page.
+
+The library's controls that announce a key load the module themselves, and
+so does the legend. Your own control (a page header's Previous and Next, a
+button that opens a dialog) writes `aria-keyshortcuts` through
+`view::kbd::aria_keys` and, on a page with no legend, `data-fui="keys"`
+(`view::shortcuts::KEYS_JOB`). With the modules refused nothing binds, and
+every control still works by the pointer and Tab.
+
 ## The session's end
 
 A signed-in page leaves for your sign-in page the moment its session ends,

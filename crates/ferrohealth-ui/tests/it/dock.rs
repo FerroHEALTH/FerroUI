@@ -450,3 +450,40 @@ fn the_bar_docks_two_fields_stacks_on_a_phone_and_keeps_a_focused_control_clear(
         "the card's action bar is gone"
     );
 }
+
+#[test]
+fn a_decision_or_a_field_that_announces_a_key_asks_the_keys_module_to_bind_it() {
+    let html = idle();
+    assert!(
+        has(
+            &html,
+            "button",
+            &[
+                ("value", "link"),
+                ("aria-keyshortcuts", "L"),
+                ("data-fui", "keys")
+            ]
+        ),
+        "{html}"
+    );
+    assert!(
+        has(
+            &html,
+            "input",
+            &[
+                ("id", "reason"),
+                ("aria-keyshortcuts", "R"),
+                ("data-fui", "keys")
+            ]
+        ),
+        "{html}"
+    );
+    let quiet = tags(&html, "button")
+        .into_iter()
+        .find(|button| button.get("value").map(String::as_str) == Some("not-a-match"))
+        .expect("Not a match");
+    assert!(
+        !quiet.contains_key("data-fui") && !quiet.contains_key("aria-keyshortcuts"),
+        "a decision with no key asks for no module: {html}"
+    );
+}

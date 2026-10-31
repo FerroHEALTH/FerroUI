@@ -40,6 +40,12 @@ messages! {
     RecordsFamilyName = "records-family-name",
     /// `Given names`
     RecordsGivenNames = "records-given-names",
+    /// `At a glance`
+    RecordsGlance = "records-glance",
+    /// `open at a glance`
+    RecordsGlanceKey = "records-glance-key",
+    /// `{ $name } at a glance`
+    RecordsGlanceOf = "records-glance-of",
     /// `Grade`
     RecordsGrade = "records-grade",
     /// `History of a synthetic person`

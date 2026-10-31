@@ -19,9 +19,12 @@
 //! decision says why as visible text in the bar, named by its
 //! `aria-describedby`, never only in a tooltip. A decision's shortcut is a
 //! quiet key cap after its label at wide widths, announced through
-//! `aria-keyshortcuts`; the console binds the key. The page keeps a focused
-//! control clear of the bar (WCAG 2.2 SC 2.4.11, the stylesheet's scroll
-//! padding). No specification governs the bar: our own design.
+//! `aria-keyshortcuts`, and the `keys` module binds it from 40 rem up: a
+//! single key such as `l` presses the decision outside a field, a chord
+//! such as `Ctrl s` from inside one too, and a field's key such as `r`
+//! moves the focus to it ([`crate::view::shortcuts`]). The page keeps a
+//! focused control clear of the bar (WCAG 2.2 SC 2.4.11, the stylesheet's
+//! scroll padding). No specification governs the bar: our own design.
 
 use askama::Template;
 
@@ -57,7 +60,7 @@ pub struct DockField {
     /// The hint inside the empty field, such as "Why you decided this".
     pub placeholder: String,
     /// The key that moves the focus to it, drawn after the label at wide
-    /// widths, such as `r`.
+    /// widths and bound by the `keys` module, such as `r`.
     pub shortcut: Option<String>,
     /// Why the server refused what it holds, drawn under it.
     pub error: Option<String>,
@@ -83,7 +86,8 @@ pub struct Decision {
     pub variant: Variant,
     /// The glyph before its label.
     pub glyph: Option<Glyph>,
-    /// Its key, drawn after the label at wide widths, such as `l`.
+    /// Its key, drawn after the label at wide widths and bound by the
+    /// `keys` module, such as `l` or `Ctrl s`.
     pub shortcut: Option<String>,
     /// Whether it can be taken now.
     pub state: DecisionState,

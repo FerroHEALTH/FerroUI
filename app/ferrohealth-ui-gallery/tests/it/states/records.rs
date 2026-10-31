@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The patient-record components: the work-list's focused row on the
-//! first, the last and a row the keys scrolled into view, the masked
+//! first, the last and a row the keys scrolled into view, the last row's
+//! glance its `o` opened, the masked
 //! identifiers revealed and refused, the reveal banner with its link, the
 //! stacked compare on its second record, and a timeline event opened.
 
@@ -20,6 +21,7 @@ pub(super) const STATES: &[&str] = &[
     "worklist-focus-first",
     "worklist-focus-scrolled",
     "worklist-focus-last",
+    "worklist-glance-open",
     "identifier-revealed",
     "reveal-banner",
     "compare-stacked-second",
@@ -79,6 +81,24 @@ pub(super) async fn records(
     shot_of_view(browser, brand, theme, "worklist-focus-scrolled").await?;
     key(browser, Key::End).await?;
     shot_of(browser, brand, theme, "worklist-focus-last", &card).await?;
+    // The focused row's `o` opens its glance (#530).
+    browser
+        .element(By::Css(
+            "button[commandfor='pair-20-glance'][data-fui-ready]",
+        ))
+        .await?;
+    key(browser, "o").await?;
+    let glance = browser.element(By::Id("pair-20-glance")).await?;
+    until("o opens the last row's glance", async || {
+        Ok(glance.is_displayed().await?)
+    })
+    .await?;
+    shot_of_view(browser, brand, theme, "worklist-glance-open").await?;
+    key(browser, Key::Escape).await?;
+    until("Escape closes the glance", async || {
+        Ok(!glance.is_displayed().await?)
+    })
+    .await?;
     let stacked = browser
         .element(By::Css("label[for='records-compare-stacked-read-1']"))
         .await?;

@@ -22,6 +22,12 @@
 //! the keys that make it one. A header checkbox selects every row and
 //! shows the mixed state while some are selected ([`selection`]); each
 //! selected row carries `aria-selected`.
+//!
+//! A row's own key reaches a control inside it, such as `o` on the opener
+//! of the row's side panel ([`crate::view::side_panel::side_panel_with_shortcut`]):
+//! the `keys` module, not this one, binds it, and only while that row holds
+//! the focus. The panel returns the focus to the row when it closes, and the
+//! shortcut hint at the foot ([`worklist_foot`]) and the legend can list it.
 
 use crate::html::Html;
 

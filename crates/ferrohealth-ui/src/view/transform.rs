@@ -95,8 +95,8 @@ pub struct Run {
     /// The glyph beside its label.
     pub glyph: Glyph,
     /// The keys that press it, drawn as key caps after the label and
-    /// announced through `aria-keyshortcuts`, such as `Ctrl Enter`; the
-    /// console binds them.
+    /// announced through `aria-keyshortcuts`, such as `Ctrl Enter`, which
+    /// the `keys` module binds from inside a field of Run's form too.
     pub shortcut: Option<String>,
     /// The operation it calls, its tooltip, such as "Runs $tofhir".
     pub operation: Option<String>,
@@ -137,7 +137,12 @@ pub fn run_button(run: Run) -> Html {
             let keys = shortcut
                 .as_deref()
                 .and_then(aria_keys)
-                .map(|keys| format!(" aria-keyshortcuts=\"{}\"", Html::text(keys)))
+                .map(|keys| {
+                    format!(
+                        " aria-keyshortcuts=\"{}\" data-fui=\"keys\"",
+                        Html::text(keys)
+                    )
+                })
                 .unwrap_or_default();
             let caps = shortcut.as_deref().map(kbd).unwrap_or_default();
             format!(

@@ -31,7 +31,7 @@ use ferrohealth_ui::view::kbd::{Shortcut, ShortcutGroup, kbd, shortcut_hint};
 use ferrohealth_ui::view::layout::divided_list;
 use ferrohealth_ui::view::popover::{PopoverForm, popover_form};
 use ferrohealth_ui::view::preferences::{Post, language_select};
-use ferrohealth_ui::view::shortcuts::{OPENS_LEGEND, shortcut_legend};
+use ferrohealth_ui::view::shortcuts::{GoTo, GoToPair, OPENS_LEGEND, shortcut_legend_with_go_to};
 use ferrohealth_ui::view::side_panel::{Opener, SidePanel, SidePanelWords, side_panel};
 use ferrohealth_ui::view::surface::{
     card, chip, cluster, definitions, grid, page_header, panel, split, stack,
@@ -694,6 +694,26 @@ fn shortcut_groups(v: &Visit) -> Vec<ShortcutGroup> {
     ]
 }
 
+/// The go-to pairs the legend lists after the groups: `g` then a letter
+/// follows a link of the gallery's navigation.
+fn go_to(v: &Visit) -> GoTo {
+    let key = v.brand.key();
+    let pair = |letter: &str, page: &str, does: Msg| GoToPair {
+        key: String::from(letter),
+        href: format!("/{key}{page}"),
+        does: v.tr(does),
+    };
+    GoTo {
+        title: v.tr(Msg::ShortcutsGoTo),
+        lead: String::from("g"),
+        pairs: vec![
+            pair("o", "", Msg::Overview),
+            pair("f", "/forms", Msg::FormsEditor),
+            pair("t", "/tables", Msg::TablesPaging),
+        ],
+    }
+}
+
 /// The keyboard shortcut legend, opened on `?` and by its button, which the
 /// `shortcuts` module shows as it runs, from 40 rem up, and the hint
 /// a listing shows at its foot.
@@ -715,7 +735,7 @@ fn shortcuts(v: &Visit) -> Html {
             t(v.tr(Msg::ShortcutsCardIntro)),
             t(v.tr(Msg::KeyboardShortcuts)),
             kbd("?"),
-            shortcut_legend(&v.locale, shortcut_groups(v)),
+            shortcut_legend_with_go_to(&v.locale, shortcut_groups(v), go_to(v)),
             shortcut_hint(&v.locale, &hint)
         )),
     )
