@@ -11,6 +11,5 @@ crates/ferrohealth-ui/src/calendar.rs 923
 crates/ferrohealth-ui/src/view/chart.rs 1408
 crates/ferrohealth-ui/src/view/date.rs 846
 crates/ferrohealth-ui/src/view/flow.rs 1730
-crates/ferrohealth-ui/src/view/preferences.rs 844
 crates/ferrohealth-ui/src/view/topology.rs 1326
 crates/ferrohealth-ui/src/view/tree.rs 1124

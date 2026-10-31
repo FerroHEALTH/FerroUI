@@ -116,6 +116,10 @@ pub const MODULES: &[Module] = &[
         text: include_str!("../scripts/preference.js"),
     },
     Module {
+        file: "rehighlight.js",
+        text: include_str!("../scripts/rehighlight.js"),
+    },
+    Module {
         file: "repeat.js",
         text: include_str!("../scripts/repeat.js"),
     },
@@ -126,6 +130,10 @@ pub const MODULES: &[Module] = &[
     Module {
         file: "session.js",
         text: include_str!("../scripts/session.js"),
+    },
+    Module {
+        file: "shared.js",
+        text: include_str!("../scripts/shared.js"),
     },
     Module {
         file: "shortcuts.js",

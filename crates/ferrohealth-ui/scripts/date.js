@@ -8,7 +8,8 @@
 // behind the title, the quick choices or a time row. Cancel and Escape put
 // back what the field held when the picker opened; Apply keeps it.
 
-import { allows, arrow, dayName, element, fill, fromNumber, glyph, grid, iso, keyTarget, monthTitle, openingDay, pad, parseIso, parseMoment, picker, reaches, reason, stepMonth, text, config as read } from "./calendar.js";
+import { action, allows, arrow, assemble, dayName, focusDay, fromNumber, glyph, grid, iso, monthTitle, openingDay, pad, parseIso, parseMoment, picker, reaches, reason, stepKey, stepMonth, config as read } from "./calendar.js";
+import { element, fill, text } from "./shared.js";
 
 export function enhance(root) {
   const cfg = read(root, "data-fui-date");
@@ -50,16 +51,8 @@ function field(root, config, words, button) {
       sync(true);
     },
     key(event) {
-      const target = keyTarget(event, this.focused, config.first);
-      if (target === undefined) return;
-      event.preventDefault();
-      if (target !== null && allows(config.bounds, target)) {
-        this.focused = target;
-        reveal(target);
-        draw(true);
-      }
+      stepKey(this, event, config, reveal, draw);
     },
-    hover() {},
     close,
   };
   function reveal(n) {
@@ -106,23 +99,14 @@ function field(root, config, words, button) {
       ));
     }
     main.append(said);
-    const apply = element("button", { type: "button", class: "fui-button fui-button-primary fui-button-small", text: text(words.apply), onclick: () => close(false) });
-    panel.append(element("span", { class: "fui-datepicker-handle", "aria-hidden": "true" }), element("p", { class: "fui-datepicker-label", text: config.label }));
-    panel.append(element("div", { class: "fui-datepicker-body" }, main));
-    panel.append(element("div", { class: "fui-datepicker-foot" },
-      element("div", { class: "fui-actions" },
-        element("button", { type: "button", class: "fui-button fui-button-ghost fui-button-small", disabled: !allows(config.bounds, config.today), text: text(words.today), onclick: () => state.choose(config.today) }),
-        element("button", { type: "button", class: "fui-button fui-button-ghost fui-button-small", text: text(words.clear), onclick: () => {
-          touched = true;
-          input.value = "";
-          sync();
-        } }),
-      ),
-      element("div", { class: "fui-actions" },
-        element("button", { type: "button", class: "fui-button fui-button-secondary fui-button-small", text: text(words.cancel), onclick: () => close(true) }),
-        apply,
-      ),
-    ));
+    const apply = action("primary", words.apply, () => close(false));
+    const today = action("ghost", words.today, () => state.choose(config.today), !allows(config.bounds, config.today));
+    const clear = action("ghost", words.clear, () => {
+      touched = true;
+      input.value = "";
+      sync();
+    });
+    assemble(panel, config, main, [today, clear], () => close(true), apply);
     frame = { main, anchor: main.firstChild, said, apply, drawn: [] };
   }
   function draw(focus) {
@@ -165,10 +149,7 @@ function field(root, config, words, button) {
     frame.said.textContent = said;
     frame.said.hidden = said === "";
     frame.apply.disabled = touched && reason(words, input.value, withTime, config.bounds) !== null;
-    if (focus) {
-      const target = panel.querySelector("[data-day='" + iso(state.focused) + "']");
-      if (target) requestAnimationFrame(() => target.focus());
-    }
+    if (focus) focusDay(panel, state.focused);
   }
   function monthChooser(year) {
     let shownYear = year;

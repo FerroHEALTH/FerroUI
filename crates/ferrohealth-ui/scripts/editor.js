@@ -6,49 +6,32 @@
 // the text and the reader sees it highlighted with no script. Here each
 // edit is highlighted again with the library's tokenizers written for the
 // browser (highlight.js): line by line for a grammar whose tokens keep to
-// their line, from the first changed line for JSON and XML (Highlight),
+// their line, from the first changed line for JSON and XML (rehighlight.js),
 // and the layer redraws only the lines whose highlighting or
 // mark changed. In a code editor the toolbar's line count,
 // the cursor's place, the changed state and the current marked line follow
 // the caret, and the diagnostics list beside it (ul[data-fui-for]) marks
 // the row of the line the cursor is on; following a row's line link moves
 // the caret there and gives the editor the focus.
-import { Highlight, RESUMABLE, fits, linesHtml, patch } from "./highlight.js";
+import { fits, linesHtml } from "./highlight.js";
+import { Highlight, RESUMABLE, patch } from "./rehighlight.js";
+import { fill, grouped, text } from "./shared.js";
 
 // The grammars whose tokens never run past a line, which an edit
 // highlights again line by line: a key costs the lines it touches, not the
 // document.
 const LINE_BY_LINE = new Set(["yaml", "plain"]);
 
-const OPEN = "";
-const SHUT = "";
-const text = (word) => (word && typeof word === "object" ? word.en : word || "");
-
-export function fill(phrase, values) {
-  let out = text(phrase);
-  for (const [name, value] of Object.entries(values)) out = out.split(OPEN + name + SHUT).join(String(value));
-  return out;
-}
-
-export function grouped(number, group) {
-  return String(number).replace(/\B(?=(\d{3})+(?!\d))/g, group);
-}
-
 // The caret's line and column (in characters) at an offset in UTF-16 code
 // units, as the crate's caret_at reads it.
 export function caretAt(value, offset) {
   let line = 1;
-  let column = 1;
-  let units = 0;
-  for (const c of value) {
-    if (units >= offset) break;
-    units += c.length;
-    if (c === "\n") {
-      line++;
-      column = 1;
-    } else column++;
+  let start = 0;
+  for (let at = value.indexOf("\n"); at !== -1 && at < offset; at = value.indexOf("\n", start)) {
+    line++;
+    start = at + 1;
   }
-  return { line, column };
+  return { line, column: [...value.slice(start, offset)].length + 1 };
 }
 
 // The offset of a line and column, as the crate's offset_of reads it.
@@ -121,10 +104,13 @@ export function enhance(root) {
   let current = root.hasAttribute("data-current") ? Number(root.getAttribute("data-current")) : null;
   if (stack) stack.classList.remove("is-static");
 
+  function named(line) {
+    const cls = lineClass(marked.get(line), line, current);
+    return "fui-code-line" + (cls ? " " + cls : "");
+  }
   function element(line, body) {
     const span = document.createElement("span");
-    const cls = lineClass(marked.get(line), line, current);
-    span.className = "fui-code-line" + (cls ? " " + cls : "");
+    span.className = named(line);
     span.id = prefix + line;
     span.innerHTML = body;
     return span;
@@ -132,10 +118,8 @@ export function enhance(root) {
   function relabel(from) {
     const all = layer.children;
     for (let at = from; at < all.length; at++) {
-      const line = at + 1;
-      const cls = lineClass(marked.get(line), line, current);
-      all[at].id = prefix + line;
-      all[at].className = "fui-code-line" + (cls ? " " + cls : "");
+      all[at].id = prefix + (at + 1);
+      all[at].className = named(at + 1);
     }
   }
   function redraw() {
@@ -158,9 +142,13 @@ export function enhance(root) {
     raw = lines;
     const p = patch(bodies, next);
     const all = layer.children;
-    for (let n = 0; n < p.removed; n++) if (all[p.head]) all[p.head].remove();
-    const after = layer.children[p.head] || null;
-    for (let n = 0; n < p.inserted; n++) layer.insertBefore(element(p.head + n + 1, next[p.head + n]), after);
+    // A line kept in place takes its new text: no numbered line comes or
+    // goes, so the browser counts no line number again.
+    const kept = Math.min(p.removed, p.inserted);
+    for (let n = 0; n < kept; n++) if (all[p.head + n]) all[p.head + n].innerHTML = next[p.head + n];
+    for (let n = kept; n < p.removed; n++) if (all[p.head + kept]) all[p.head + kept].remove();
+    const after = layer.children[p.head + kept] || null;
+    for (let n = kept; n < p.inserted; n++) layer.insertBefore(element(p.head + n + 1, next[p.head + n]), after);
     bodies = next;
     if (p.removed !== p.inserted) relabel(p.head + p.inserted);
   }
@@ -178,10 +166,7 @@ export function enhance(root) {
       for (const line of [before, now]) {
         if (line === null) continue;
         const span = layer.children[line - 1];
-        if (span) {
-          const cls = lineClass(marked.get(line), line, current);
-          span.className = "fui-code-line" + (cls ? " " + cls : "");
-        }
+        if (span) span.className = named(line);
       }
       if (list) {
         for (const row of list.querySelectorAll("li[data-line]")) {

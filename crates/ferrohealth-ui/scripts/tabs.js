@@ -36,7 +36,7 @@ export function typing(event) {
   return !["checkbox", "radio", "button", "submit", "reset", "range", "color", "file", "image"].includes(kind);
 }
 
-const phone = () => window.matchMedia("(width < 40rem)").matches;
+export const phone = () => window.matchMedia("(width < 40rem)").matches;
 let keysBound = false;
 
 function bindDigits() {

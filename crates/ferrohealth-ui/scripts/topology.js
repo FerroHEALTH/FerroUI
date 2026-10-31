@@ -8,16 +8,9 @@
 // disabled, and writes the zoom as the drawing's width and height
 // attributes, never a style. The steps, keys and moves are the crate's
 // stepped, asked and moved.
-const OPEN = "";
-const SHUT = "";
-const text = (word) => (word && typeof word === "object" ? word.en : word || "");
+import { fill as filled, text } from "./shared.js";
 const english = (word) => Boolean(word && typeof word === "object");
-
-function fill(phrase, values) {
-  let out = text(phrase);
-  for (const [name, value] of Object.entries(values)) out = out.split(OPEN + name + SHUT).join(String(value));
-  return english(phrase) ? { en: out } : out;
-}
+const fill = (phrase, values) => (english(phrase) ? { en: filled(phrase, values) } : filled(phrase, values));
 
 export const STEPS = [0.25, 0.33, 0.5, 0.67, 0.8, 1.0, 1.25, 1.5, 2.0];
 

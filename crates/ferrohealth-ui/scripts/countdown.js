@@ -6,9 +6,10 @@
 // the larger of the monotonic and the wall clock, so a sleep the monotonic
 // clock missed still counts and a clock set back adds nothing, and says the
 // time left in the polite live region at each set point and at the end.
+import { text } from "./shared.js";
+
 export const ANNOUNCE_AT = [60, 30, 10];
 const RING = 81.68;
-const text = (word) => (word && typeof word === "object" ? word.en : word || "");
 
 export function clock(seconds) {
   const hours = Math.floor(seconds / 3600);
