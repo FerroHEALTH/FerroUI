@@ -227,7 +227,7 @@ fn the_dock_stops_sticking_in_a_short_window() {
     assert!(
         body(
             &[LAYER, "@media (width >= 40rem) and (height >= 30rem)"],
-            "html:has(.fui-dock)"
+            "html:has(> :where(body) > :where(.fui-page) > :where(.fui-body) > :where(.fui-main) > .fui-dock, > :where(body) > :where(.fui-page) > :where(.fui-body) > :where(.fui-main) > :where(.fui-column) > .fui-dock)"
         )
         .contains("scroll-padding-bottom: 9rem;"),
         "a sticking bar hides the control the keyboard reaches"

@@ -3611,13 +3611,16 @@
   /* With a decision bar on the page (R4) the region's foot is the bar's top
      while the bar is on the screen, so a toast never covers the decisions;
      where the bar leaves no room the region keeps one toast's height at the
-     top of the screen. */
+     top of the screen. The bar is the main area's last part, in the shell's
+     dock or the column's foot, and the region follows the body, so the
+     :has() looks two levels down and never into the page, whose every
+     change it would otherwise weigh (#544). */
   @supports (anchor-name: --fui-dock) {
     .fui-dock {
       anchor-name: --fui-dock;
     }
 
-    :root:has(.fui-dock) .fui-toasts {
+    .fui-body:has(> :where(.fui-main) > .fui-dock, > :where(.fui-main) > :where(.fui-column) > .fui-dock) ~ .fui-toasts {
       position-anchor: --fui-dock;
       inset-block-end: max(var(--space-loose), calc(anchor(top, var(--space-loose)) + var(--space-default)));
       min-height: 4.5rem;
@@ -5489,9 +5492,11 @@
   }
 
   /* A row the keys move to is scrolled clear of the sticky foot
-     (WCAG 2.2 SC 2.4.11). */
+     (WCAG 2.2 SC 2.4.11). The work-list's card sits in the page's column,
+     at most two levels down, so the :has() stops there and never reads the
+     page below it, whose every change it would otherwise weigh (#544). */
   @media (width >= 40rem) {
-    html:has(.fui-worklist-foot) {
+    html:has(> :where(body) > :where(.fui-page) > :where(.fui-body) > :where(.fui-main) > :where(.fui-column) > .fui-worklist > .fui-worklist-foot, > :where(body) > :where(.fui-page) > :where(.fui-body) > :where(.fui-main) > :where(.fui-column) > * > .fui-worklist > .fui-worklist-foot, > :where(body) > :where(.fui-page) > :where(.fui-body) > :where(.fui-main) > :where(.fui-column) > * > * > .fui-worklist > .fui-worklist-foot) {
       scroll-padding-bottom: 7rem;
     }
   }
@@ -9163,7 +9168,7 @@
   }
 
   .fui-editor[aria-invalid="true"],
-  .fui-editor:has(> .fui-editor-stack > .fui-editor-input[aria-invalid="true"]) {
+  .fui-editor.is-invalid {
     border-color: var(--bad);
   }
 
@@ -11181,7 +11186,7 @@
   }
 
   @media (width < 40rem) {
-    .fui-tabbed-many:has(.fui-tabs-select select:enabled) > .fui-tabs {
+    .fui-tabbed-many:has(> .fui-tabs-select > .fui-tabs-select-field > select:enabled, > .fui-tabs-select > select:enabled) > .fui-tabs {
       display: none;
     }
 
@@ -11202,7 +11207,7 @@
       min-inline-size: 0;
     }
 
-    .fui-tabbed-many:has(.fui-tabs-select select:enabled) > .fui-tab-panel {
+    .fui-tabbed-many:has(> .fui-tabs-select > .fui-tabs-select-field > select:enabled, > .fui-tabs-select > select:enabled) > .fui-tab-panel {
       border-radius: var(--radius-card);
     }
   }
@@ -11895,8 +11900,10 @@
   }
 
   /* An editor stops at its most height, so a pane beside a taller answer
-     keeps the editor's ground to the pair's foot. */
-  .fui-transform-pane:has(.fui-editor) {
+     keeps the editor's ground to the pair's foot. The editor is the pane's
+     body, so the :has() reads the pane's children and never the editor's
+     lines, which change on every key (#544). */
+  .fui-transform-pane:has(> .fui-editor) {
     background: var(--surface-sunken);
   }
 
@@ -14694,9 +14701,11 @@
     overflow-wrap: anywhere;
   }
 
-  /* On a phone the toast region keeps clear of the page's last row. */
+  /* On a phone the toast region keeps clear of the page's last row. The
+     region follows the body in the shell, so the :has() reads the body's
+     later siblings and never the page (#544). */
   @media (width < 40rem) {
-    :root:has(.fui-toasts > .fui-toast) .fui-main {
+    .fui-body:has(~ .fui-toasts > .fui-toast) > .fui-main {
       padding-block-end: 7rem;
     }
   }
@@ -14890,13 +14899,16 @@
     overflow-wrap: normal !important;
   }
 
-  /* A bottom sheet stands above sticky pane heads. */
+  /* A bottom sheet stands above sticky pane heads. The sheets are the top
+     bar's menus and the heads' own; a :has() on the body would weigh every
+     change to the page (#544). */
   @media (width < 40rem) {
     .fui-menu.fui-menu-anchored.fui-menu-sheet {
       z-index: 90;
     }
 
-    body:has(.fui-menu-sheet:not(details:not([open]) *)) .fui-transform-head {
+    .fui-topbar:has(.fui-menu-sheet:not(details:not([open]) *)) ~ .fui-body .fui-transform-head,
+    .fui-transform-head:has(.fui-menu-sheet:not(details:not([open]) *)) {
       z-index: auto;
     }
 
@@ -14983,7 +14995,7 @@
   }
 
   /* The toast region keeps clear of the page's last row at every width. */
-  :root:has(.fui-toasts > .fui-toast) .fui-main {
+  .fui-body:has(~ .fui-toasts > .fui-toast) > .fui-main {
     padding-block-end: 7rem;
   }
 
@@ -15048,8 +15060,10 @@
 
   /* ---- Library items from the FerroFED and FerroPIX fixers (final pass) ---- */
 
-  /* R17: the toast region keeps clear of the footer too. */
-  :root:has(.fui-toasts > .fui-toast) .fui-page > .fui-footer {
+  /* R17: the toast region keeps clear of the footer too, its sibling on
+     either side in the page. */
+  .fui-page > .fui-toasts:has(> .fui-toast) ~ .fui-footer,
+  .fui-page > .fui-footer:has(~ .fui-toasts > .fui-toast) {
     padding-block-end: 7rem;
   }
 
@@ -15490,9 +15504,10 @@
   }
 
   /* A control the keyboard reaches is scrolled clear of the bar (WCAG 2.2
-     SC 2.4.11): the bar's height with a field and its line, and a gap. */
+     SC 2.4.11): the bar's height with a field and its line, and a gap. The
+     :has() follows the shell down to the main area and stops there (#544). */
   @media (width >= 40rem) and (height >= 30rem) {
-    html:has(.fui-dock) {
+    html:has(> :where(body) > :where(.fui-page) > :where(.fui-body) > :where(.fui-main) > .fui-dock, > :where(body) > :where(.fui-page) > :where(.fui-body) > :where(.fui-main) > :where(.fui-column) > .fui-dock) {
       scroll-padding-bottom: 9rem;
     }
   }
@@ -15543,7 +15558,7 @@
   }
 
   @media (width < 40rem) and (height >= 40rem) {
-    html:has(.fui-dock) {
+    html:has(> :where(body) > :where(.fui-page) > :where(.fui-body) > :where(.fui-main) > .fui-dock, > :where(body) > :where(.fui-page) > :where(.fui-body) > :where(.fui-main) > :where(.fui-column) > .fui-dock) {
       scroll-padding-bottom: 16rem;
     }
   }
