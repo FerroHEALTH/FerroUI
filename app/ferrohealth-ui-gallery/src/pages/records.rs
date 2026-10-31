@@ -19,7 +19,7 @@ use ferrohealth_ui::table::view::{
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::action_menu::{self, Act, Action, Item, Menu};
 use ferrohealth_ui::view::button::Variant;
-use ferrohealth_ui::view::change::{Change, change_table};
+use ferrohealth_ui::view::change::{Change, change_table_keyed};
 use ferrohealth_ui::view::compare::{
     Compare, CompareField, CompareRecord, Verdict, compare, compare_stacked,
 };
@@ -419,7 +419,12 @@ fn events(v: &Visit) -> Vec<Event> {
             title: v.tr(Msg::RecordsEventVersion),
             identifiers: Vec::new(),
             reason: Some(v.tr(Msg::RecordsReasonVersion)),
-            body: Some(change_table(&v.locale, caption.clone(), &diff)),
+            body: Some(change_table_keyed(
+                &v.locale,
+                caption.clone(),
+                v.tr(Msg::RecordsField),
+                &diff,
+            )),
         },
         Event {
             key: String::from("merged"),

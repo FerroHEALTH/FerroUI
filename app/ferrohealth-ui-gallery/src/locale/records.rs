@@ -38,6 +38,8 @@ messages! {
     RecordsEventVersion = "records-event-version",
     /// `Family name`
     RecordsFamilyName = "records-family-name",
+    /// `Field`
+    RecordsField = "records-field",
     /// `Given names`
     RecordsGivenNames = "records-given-names",
     /// `At a glance`
