@@ -10,11 +10,16 @@ export function enhance(form) {
   const save = form.querySelector("button[type='submit']");
   if (save) save.hidden = true;
   form.addEventListener("change", () => form.requestSubmit());
-  // Enter in a typed field changes it and submits it too: one post goes.
+  // Enter in a typed field changes it and submits it in the same task: one
+  // post goes, and a later task, or the page the back button restores,
+  // posts again.
   let sent = false;
   form.addEventListener("submit", (event) => {
     if (sent) event.preventDefault();
     sent = true;
+    setTimeout(() => {
+      sent = false;
+    });
   });
   if (form.hasAttribute("data-fui-saved")) {
     const control = form.querySelector("input:checked, select, input[type='checkbox'], input.fui-setting-input");
