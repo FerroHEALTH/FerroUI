@@ -272,13 +272,13 @@ async fn a_highlight_text_past_the_limit_is_plain_in_the_editor_code_too()
     // limit one byte off draws it differently; the multi-byte ones are under
     // the limit in UTF-16 units and at it or past it in UTF-8 bytes.
     let number = |bytes: usize| format!("[1, {}]", "2".repeat(bytes - 5));
-    let accented = |bytes: usize| format!("[\"{}\"]", "\u{e9}".repeat((bytes - 4) / 2));
+    let accented = |bytes: usize| format!("[\"{}\"]", "\u{e9}".repeat((bytes - 4).div_euclid(2)));
     let documents = [
         number(limit),
         number(limit + 1),
         accented(limit),
         format!("{}a", accented(limit)),
-        format!("[\"{}\"]", "\u{1f600}".repeat(limit / 4)),
+        format!("[\"{}\"]", "\u{1f600}".repeat(limit.div_euclid(4))),
     ];
     let mut cases = Vec::new();
     for document in &documents {
