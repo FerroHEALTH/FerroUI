@@ -300,7 +300,8 @@ fn words() -> Vec<DateWords> {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn the_date_field_says_why_a_typed_text_is_refused_alike() -> Result<(), Box<dyn Error>> {
+async fn the_date_field_and_the_calendar_say_why_a_typed_text_is_refused_alike()
+-> Result<(), Box<dyn Error>> {
     let mut cases = Vec::new();
     for words in words() {
         let wire = serde_json::to_value(&words)?;
@@ -327,7 +328,8 @@ async fn the_date_field_says_why_a_typed_text_is_refused_alike() -> Result<(), B
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn the_date_picker_names_a_month_and_a_day_alike() -> Result<(), Box<dyn Error>> {
+async fn the_date_picker_and_the_calendar_name_a_month_and_a_day_alike()
+-> Result<(), Box<dyn Error>> {
     let english = Locale::english();
     let words = DateWords::of(&english, false);
     let wire = serde_json::to_value(&words)?;

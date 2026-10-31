@@ -157,6 +157,7 @@ classify() {
           browser | main | stack) journeys_all=true capture=true ;;
           http | script_pages) ;;
           screenshots) capture=true ;;
+          parity) modules="$modules parity parity_dates parity_keys parity_words" ;;
           states) capture=true modules="$modules $module" ;;
           *) modules="$modules $module" ;;
         esac
@@ -239,6 +240,7 @@ self_test() {
   expect "the gallery server runs every journey" 'app/ferrohealth-ui-gallery/tests/it/stack.rs\n' "journeys=all"
   expect "a journey module no list names runs whole" 'app/ferrohealth-ui-gallery/tests/it/dates.rs\n' "journeys=test(/every_page_of_every_brand_loads|every_page_keeps_its_content|^dates::/)"
   expect "a state area runs every journey" 'app/ferrohealth-ui-gallery/tests/it/states/overview.rs\n' "journeys=all"
+  expect "the parity harness runs every parity test" 'app/ferrohealth-ui-gallery/tests/it/parity.rs\n' "journeys=test(/every_page_of_every_brand_loads|every_page_keeps_its_content|^parity::|^parity_dates::|^parity_keys::|^parity_words::/)"
   expect "the HTTP tests open no browser" 'app/ferrohealth-ui-gallery/tests/it/http.rs\n' "journeys="
   expect "the page-list test opens no browser" 'app/ferrohealth-ui-gallery/tests/it/script_pages.rs\n' "journeys="
   expect "the page list reaches the gallery's tests" 'scripts/checks/script-pages.list\n' "packages=ferrohealth-ui-gallery"

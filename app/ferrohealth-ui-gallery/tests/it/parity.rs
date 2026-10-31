@@ -268,12 +268,17 @@ async fn the_highlight_markup_of_the_editor_code_is_the_rust_markup() -> Result<
 async fn a_highlight_text_past_the_limit_is_plain_in_the_editor_code_too()
 -> Result<(), Box<dyn Error>> {
     let limit = ferrohealth_ui::highlight::MAX_HIGHLIGHT_BYTES;
+    // Each document reads as several tokens when it is highlighted, so a
+    // limit one byte off draws it differently; the multi-byte ones are under
+    // the limit in UTF-16 units and at it or past it in UTF-8 bytes.
+    let number = |bytes: usize| format!("[1, {}]", "2".repeat(bytes - 5));
+    let accented = |bytes: usize| format!("[\"{}\"]", "\u{e9}".repeat((bytes - 4) / 2));
     let documents = [
-        "a".repeat(limit),
-        "a".repeat(limit + 1),
-        "\u{e9}".repeat(limit / 2),
-        format!("{}a", "\u{e9}".repeat(limit / 2)),
-        "\u{1f600}".repeat(limit / 4 + 1),
+        number(limit),
+        number(limit + 1),
+        accented(limit),
+        format!("{}a", accented(limit)),
+        format!("[\"{}\"]", "\u{1f600}".repeat(limit / 4)),
     ];
     let mut cases = Vec::new();
     for document in &documents {

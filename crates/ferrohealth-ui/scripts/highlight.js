@@ -5,8 +5,8 @@
 // AQL and HL7 v2, each one linear pass over the characters of its input,
 // the texts of its tokens joined being the input exactly. Each follows the
 // Rust tokenizer of the same name in the crate's highlight module token for
-// token; a journey holds the two to the same tokens over the gallery's
-// samples. A text past MAX_BYTES (UTF-8) is one plain token, as there.
+// token; the gallery's parity tests hold the two to the same tokens and
+// markup over a corpus. A text past MAX_BYTES (UTF-8) is one plain token.
 export const MAX_BYTES = 512 * 1024;
 
 const CLASS = {
