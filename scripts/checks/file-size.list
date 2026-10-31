@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+# The hand-written files under app/*/src/ and crates/*/src/ over the
+# budget of 800 lines that scripts/checks/file-size.sh admits, each
+# with the length it may not pass. An entry may fall and never rise;
+# --update lowers and removes entries.
+app/ferrohealth-ui-gallery/src/pages/charts.rs 828
+app/ferrohealth-ui-gallery/src/pages/federation.rs 866
+app/ferrohealth-ui-gallery/src/pages/forms.rs 1521
+crates/ferrohealth-ui/src/calendar.rs 923
+crates/ferrohealth-ui/src/view/chart.rs 1408
+crates/ferrohealth-ui/src/view/date.rs 846
+crates/ferrohealth-ui/src/view/flow.rs 1730
+crates/ferrohealth-ui/src/view/preferences.rs 844
+crates/ferrohealth-ui/src/view/topology.rs 1326
+crates/ferrohealth-ui/src/view/tree.rs 1124

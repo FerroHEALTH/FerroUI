@@ -98,7 +98,15 @@ never publish under it.
   assembles the fragments), `checks/` (the committed guards, the markup
   check `markup-rules.sh`, the script budget, the change classifier
   `affected.sh`, and the changelog, screenshot-path and module-order guards
-  among them), `gh/` (the tracker helpers).
+  among them, and the two that hold code to one owner,
+  `.claude/rules/rust-style.md` § Code is written once: `duplication.sh`,
+  the ratchet on the duplicated lines jscpd measures in the Rust, the
+  script modules and the templates, with its count in `duplication.count`,
+  its block keys in `duplication-baseline.txt` and jscpd pinned in
+  `docs/VERSIONS.md`, and `file-size.sh`, the 800-line budget per
+  hand-written Rust file, also run per edit, with the files over it in
+  `file-size.list`, which may shrink and never grow), `gh/` (the tracker
+  helpers).
 - `changelog.d/`: the changelog fragments, one file per entry, assembled
   into `CHANGELOG.md` by the release pull request (`docs/release.md`).
 - `.github/`: CI with a single required `conclusion` job, CodeQL, Scorecard,

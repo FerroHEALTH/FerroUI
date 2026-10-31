@@ -26,12 +26,79 @@ components for how a problem was solved, never port one blindly.
 
 ## File and module size
 
-A hand-written Rust file is at most 1000 lines, and a file over 750 lines is
-split into a module folder before it grows further. The shape of a split is
-a folder `<name>/mod.rs` holding the module doc, the `mod` declarations and
-the items every child shares, with one child file per concern. A split never
-creates a test file under `src/`, adds no `pub use`, and moves code without
-changing behaviour.
+A hand-written Rust file is at most 800 lines, its inline test module
+included, and `scripts/checks/file-size.sh` holds the budget (Code is
+written once, below). A file near the budget is split into a module folder
+before it grows past it. The shape of a split is a folder `<name>/mod.rs`
+holding the module doc, the `mod` declarations and the items every child
+shares, with one child file per concern. A split never creates a test file
+under `src/`, adds no `pub use`, and moves code without changing behaviour.
+
+## Code is written once
+
+No specification governs this: our own design (#536, ported from
+VernumBOEK's and FerroEHR's rule of the same name).
+
+- **Share knowledge and decisions, never text that only looks alike.** Two
+  copies that change for the same reason (one interaction rule, one markup
+  rule, one security rule) move to one owner in the same change. Two pieces
+  with different reasons to change stay apart, however alike they read.
+- **The owner is the module that owns the concern.** Across crates it is the
+  crate lower in the layering (`ferrohealth-ui` below the gallery). Within
+  the library it is the module whose component or part of the shell the code
+  serves, and for the script modules the module the others import from
+  (`calendar.js` for the pickers). It is never a `util`, `utils`, `helpers`
+  or `common` module, whose name says nothing about what it holds, and never
+  a function that takes a flag to choose between two behaviours.
+- **One copy is fine, two are looked at, three are extracted.**
+- **The ratchet measures it.** `scripts/checks/duplication.sh` runs jscpd
+  (pinned by version and image digest in `docs/VERSIONS.md`, CI tools) over
+  the Rust under `app/*/src/` and `crates/*/src/`, the script modules under
+  `crates/*/scripts/` and the templates under `crates/*/templates/` in the
+  `duplication` CI job, and holds the total of duplicated lines to the count
+  in `scripts/checks/duplication.count`. A rise fails and names both places
+  of each new block. A fall fails too, until you run
+  `scripts/checks/duplication.sh --update` and commit the lower count with
+  `scripts/checks/duplication-baseline.txt`, the guard's own key of every
+  counted block: its two paths and the sha256 of the lines at each, with no
+  line number, so a change that leaves a block's lines alone leaves its key
+  alone. `--update` never raises the count; a rise that has to stay is a
+  hand edit of the file in a change that says why. Locally the guard takes a
+  `jscpd` on `PATH` of the pinned version, then the pinned image through
+  docker or podman, then the release binary
+  `scripts/checks/duplication.sh --install` puts under `target/tools/`.
+- **The threshold is 50 tokens over at least 5 lines**, jscpd's own
+  defaults, within one format (`rust`, `javascript`, `markup`). The scan
+  leaves out the `use` declarations and the modules' `import` statements, a
+  file that opens with `// @generated`, a file from its first column-one
+  `#[cfg(test)]` line on (the inline test module), and `tests/`. Measured on
+  2026-10-31 at `4f897abe` with those exclusions, over 213 files and 60,344
+  lines (175 Rust files, 31 script modules and the 7 templates jscpd finds
+  tokens in):
+
+  | Threshold | Blocks | Duplicated lines | Blocks across two files | Blocks in the gallery | Blocks in the script modules |
+  | --- | --- | --- | --- | --- | --- |
+  | 50 tokens, 5 lines | 36 | 307 | 19 | 13 | 10 |
+  | 70 tokens, 5 lines | 8 | 87 | 5 | 1 | 4 |
+  | 100 tokens, 5 lines | 1 | 21 | 1 | 0 | 0 |
+
+  At 50 tokens the Rust carries 225 of the lines, the script modules 82 and
+  the templates none. Raising the threshold drops the short blocks (a tone's
+  glyph in the notice and the toast, the date and range pickers' key
+  handling, the gallery's specimen rows written side by side) and keeps only
+  the flow and topology cards' label text, yet each short block is code
+  written twice as well, so 50 it is. Raising the threshold is a change
+  to this section and to the guard together, with the table measured again.
+- **A hand-written Rust file carries at most 800 lines**, its inline test
+  module included. `scripts/checks/file-size.sh` measures every tracked `.rs`
+  file under `app/*/src/` and `crates/*/src/` that does not open with
+  `// @generated`, in the `file-size` CI job and per edit through
+  `.claude/hooks/rust_fmt_clippy.sh`. The 10 files over the budget when the
+  guard landed (3,416 lines over it in all) stand in
+  `scripts/checks/file-size.list` with their length; a listed file may shrink
+  and never grow, and a shrink fails until `--update` lowers its entry, so
+  the list only tightens. A file over the budget is split by concern. The
+  script modules keep their own byte budget (`scripts/checks/script-budget.sh`).
 
 ## Comments and documentation
 

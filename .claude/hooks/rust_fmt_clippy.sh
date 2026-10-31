@@ -8,7 +8,8 @@
 # For an edited .rs file: format it with rustfmt (never blocks, since rustfmt
 # failing to parse a draft is expected), then run the comment-style guard
 # (.claude/rules/comments.md), which CAN block (exit 2) to feed its findings
-# back as a correction.
+# back as a correction, and the file-size guard (scripts/checks/file-size.sh),
+# which blocks the same way.
 #
 # For an edited .sh file: run shellcheck when it is available (never installs
 # it; skips silently when absent).
@@ -59,6 +60,16 @@ fi
 # form, NOTE and essay budgets. Exit 2 feeds the findings back as a correction.
 if [ -x "$repo_root/scripts/checks/comment-style.sh" ]; then
   findings="$("$repo_root/scripts/checks/comment-style.sh" --files "$file_path" 2>&1)" || {
+    printf '%s\n' "$findings" >&2
+    exit 2
+  }
+fi
+
+# File-size guard (.claude/rules/rust-style.md, Code is written once): a
+# hand-written file stays within 800 lines, and a listed file never grows
+# past its entry. It runs after rustfmt, so it counts the formatted file.
+if [ -x "$repo_root/scripts/checks/file-size.sh" ]; then
+  findings="$("$repo_root/scripts/checks/file-size.sh" --files "$file_path" 2>&1)" || {
     printf '%s\n' "$findings" >&2
     exit 2
   }
