@@ -22,8 +22,6 @@
   button alone (and both together), FerroEHR's card the reference design
 - [Signed commits and the merge queue](merge-queue-signed.md): `main` takes
   only signed commits through pull requests and the merge queue
-- [PR licence box](pr-licence-box.md): tick the contribution-licence box in
-  every pull request body; the owner's standing consent
 - [Release tag](release-tag.md): the tag is signed on the merge commit and the
   crates-io environment waits for the owner's approval
 - [All consoles in lockstep](ferroui.md): every release rolls out to all five
@@ -32,4 +30,3 @@
   a tag whose milestone is missing or not empty and closes it after every
   leg; check it after a manual or recovery release; owner 2026-10-19 (#124)
 - [Console UI mode](reactive-console-ui.md): owner 2026-10-29, server-rendered HTML with a little plain JavaScript, reversing the hydrated mode of 2026-10-25 (FerroUI #510); confirmed 2026-10-31 with its reopen triggers (#545)
-- [Contribution licence attestation](contribution-licence-attestation.md): owner 2026-10-25, always tick the licence checkbox on PRs opened for the owner, never ask

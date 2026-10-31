@@ -91,10 +91,9 @@ A compile cache makes a fresh worktree's first build much faster. sccache
 works (`build.rustc-wrapper` in your own `~/.cargo/config.toml`); the
 repository neither needs nor configures one.
 - `.github/workflows/pr-guards.yml`: `ci.yml` runs on `opened`, `synchronize`
-  and `reopened` only, so a commit gets one run; when `no-changelog`,
-  `screenshots` or the description changes, this waits for the CI run on
-  the head commit to complete and re-runs `guards` or
-  `contribution-licence`, which re-runs `conclusion` with it. A
+  and `reopened` only, so a commit gets one run; when `no-changelog` or
+  `screenshots` changes, this waits for the CI run on the head commit to
+  complete and re-runs `guards`, which re-runs `conclusion` with it. A
   `screenshots` label added after `detect` started also re-runs `detect`
   and every job after it, so the run captures the states and checks the
   pixels; `detect` reads the label from the API when it runs, so a pull
