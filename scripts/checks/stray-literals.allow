@@ -60,3 +60,5 @@ allow ^extended \{\} \{\}$                # the session message one tab sends th
 allow ^0123456789ABCDEF$                 # the hex digits of a percent-encoded return address
 allow ^<html><head><title>502 Bad Gateway   # the synthetic upstream error document the error page draws as code
 allow ^<\?xml version=                  # an XML declaration in a sample document the editor draws as code
+allow ^[^a-z]* data-fui(-answer|-settle)?=[^a-z]*$   # the data attributes the answer region writes into its markup
+allow ^openEHR-EHR-$                    # the openEHR archetype id prefix, the same in every language
