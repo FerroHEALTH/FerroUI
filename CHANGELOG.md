@@ -11,6 +11,21 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.6.3] - 2026-10-31
+
+### Added
+
+- `table::view::title_cell_at(level, href, name, sub)` draws a row's title
+  cell `level` levels down a hierarchy, as `title_cell` draws it with the
+  `fui-depth-N` class on its `<th>`, so a console indents a row under its
+  parent (a template's earlier releases under the newest) without writing
+  the row header itself. On a phone the stacked card's heading keeps the
+  level, one default space per level; past the eighth level the step holds (#559).
+- `view::change::change_table_keyed(locale, caption, key, changes)` draws a
+  change table whose key column the console names from its own catalog (a
+  path, a field), for a comparison of something other than a configuration.
+  `change_table` keeps its "Setting" header and draws as before (#560).
+
 ## [0.6.2] - 2026-10-31
 
 ### Added
@@ -3013,7 +3028,8 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.2...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.3...HEAD
+[0.6.3]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.0...v0.6.2
 [0.6.0]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.8...v0.6.0
 [0.5.8]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.7...v0.5.8
