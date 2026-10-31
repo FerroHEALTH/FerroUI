@@ -102,6 +102,9 @@ classify() {
       clippy.toml | rustfmt.toml | deny.toml)
         rust=true lib=true app=true
         ;;
+      scripts/checks/script-pages.list)
+        rust=true app=true
+        ;;
       scripts/release/gallery-*.sh | scripts/release/journey-tools.sh | scripts/checks/gallery-*.sh)
         gallery=true capture=true journeys_all=true
         ;;
@@ -145,14 +148,14 @@ classify() {
         ;;
       app/ferrohealth-ui-gallery/tests/it/*.rs)
         # Every module of tests/it/ is a journey module that runs whole, but
-        # the harness every journey uses and the two that open no browser,
+        # the harness every journey uses and the ones that open no browser,
         # so a new module needs no line here.
         rust=true app=true gallery=true
         module="${path##*/}"
         module="${module%.rs}"
         case "$module" in
           browser | main | stack) journeys_all=true capture=true ;;
-          http) ;;
+          http | script_pages) ;;
           screenshots) capture=true ;;
           states) capture=true modules="$modules $module" ;;
           *) modules="$modules $module" ;;
@@ -237,6 +240,8 @@ self_test() {
   expect "a journey module no list names runs whole" 'app/ferrohealth-ui-gallery/tests/it/dates.rs\n' "journeys=test(/every_page_of_every_brand_loads|every_page_keeps_its_content|^dates::/)"
   expect "a state area runs every journey" 'app/ferrohealth-ui-gallery/tests/it/states/overview.rs\n' "journeys=all"
   expect "the HTTP tests open no browser" 'app/ferrohealth-ui-gallery/tests/it/http.rs\n' "journeys="
+  expect "the page-list test opens no browser" 'app/ferrohealth-ui-gallery/tests/it/script_pages.rs\n' "journeys="
+  expect "the page list reaches the gallery's tests" 'scripts/checks/script-pages.list\n' "packages=ferrohealth-ui-gallery"
   expect "a library test skips the gallery" 'crates/ferrohealth-ui/tests/it/contrast.rs\n' "gallery=false"
   expect "the stylesheet reaches every set" 'crates/ferrohealth-ui/css/ferrohealth-ui.css\n' "design=$every"
   expect "the stylesheet reaches the page-wide journeys" 'crates/ferrohealth-ui/css/ferrohealth-ui.css\n' "journeys=test(/every_page_of_every_brand_loads|every_page_keeps_its_content|every_page|reflow|^painted::/)"

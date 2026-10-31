@@ -39,6 +39,7 @@ mod operations;
 mod painted;
 mod records;
 mod screenshots;
+mod script_pages;
 mod session;
 mod shortcut_keys;
 mod skip;

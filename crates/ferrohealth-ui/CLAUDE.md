@@ -53,7 +53,8 @@ paints whole, with no WebAssembly to load before a click works.
   its children as `Html`.
 - `scripts/`: the modules, vendored in the crate as text
   ([`script::MODULES`](src/script.rs)), each within the budget
-  `scripts/checks/script-budget.sh` holds (16 KiB, 160 KiB for all).
+  `scripts/checks/script-budget.sh` holds (16 KiB, 144 KiB for what one
+  page loads, 72 KiB compressed for all).
 - `serve`: under the default `axum` feature, the router a console mounts at
   `serve::PREFIX` for the stylesheet, the themes and the modules, with long
   cache headers; `serve::Assets` the paths the shell writes. A console with

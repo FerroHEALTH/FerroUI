@@ -72,8 +72,9 @@ Every component follows one interaction contract (owner's rulings of
    The gallery's navigation journeys hold it: a tab switch loads no
    document and moves no layout, a tree's folds survive a reload, and a
    same-path link keeps the scroll.
-5. **Each module stays small:** at most 16 KiB, 160 KiB for all, no `eval`,
-   no absolute URL (`scripts/checks/script-budget.sh`).
+5. **Each module stays small:** at most 16 KiB, no `eval`, no absolute
+   URL, within the page and compressed caps of §12
+   (`scripts/checks/script-budget.sh`).
 
 The library has two parts:
 
@@ -285,9 +286,26 @@ The library is held to the best console's quality, not to "it renders".
 ## 12. Script budget
 
 The modules are vendored in the crate and served with long cache headers
-under `/ferrohealth-ui/<version>/scripts/`. `scripts/checks/script-budget.sh`
-fails a module over 16 KiB or all of them over 160 KiB. A change that
-needs more splits the module or moves the work to the server.
+under `/ferrohealth-ui/<version>/scripts/`. A reader pays for the modules
+the page in front of them loads, so the budget is measured per page, not
+over every module (FerroUI #547). `scripts/checks/script-budget.sh` holds
+three caps. No specification governs them: our own design.
+
+| Cap | Limit | Measured on 2026-10-31 | Why this limit |
+|---|---|---|---|
+| One module (S1) | 16 KiB | `highlight.js`, 13 798 bytes | A module is one job; past 16 KiB it holds two, and it splits |
+| The modules one page loads (S2) | 144 KiB | `/:brand/forms`, 129 814 bytes; then `/:brand/operations`, 77 955; a signed-in page with only the shell, 42 656; a sign-in page, 6 495 | The forms page shows every form part at once, the most any page asks for; the cap leaves it room for one more module of the full 16 KiB |
+| Every module, compressed (S6) | 72 KiB | 59 745 bytes by `gzip -9` (163 756 raw) | What a reader fetches once, cached for a year, after visiting every page; it grows with every module, wherever it loads, and leaves room for about two more full modules |
+
+What one page loads is the loader `fui.js`, the module of every job the
+page's line in `scripts/checks/script-pages.list` names, and every module
+those import, statically or with `import()`. The list holds every gallery
+page and its jobs; the gallery's `script_pages` test walks the gallery and
+fails when the list is no longer what it draws, and prints the list to
+write. `script-budget.sh --report` prints what each page loads. A change
+that needs more splits the module, loads it only where it is used, or
+moves the work to the server; raising a cap is a decision recorded here
+with its new measurement.
 
 ## 13. Strings and locales
 
