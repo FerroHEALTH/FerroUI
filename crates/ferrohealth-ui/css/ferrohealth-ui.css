@@ -6359,6 +6359,18 @@
     white-space: normal;
   }
 
+  /* A glance opener with a glyph shows the glyph alone in a work-list
+     row, its words kept as its name, so the row's names keep their line
+     with wider fonts too (#540). */
+  .fui-worklist .fui-table td.fui-row-menu .fui-icon + .fui-side-panel-words {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
   /* The selection's own bar above the rows. */
   .fui-selection-bar {
     display: flex;
