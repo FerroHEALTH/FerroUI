@@ -25,4 +25,4 @@ its wording was adapted for a library and is for the owner to confirm.
 - Vendored material keeps its upstream terms (Lucide is ISC), recorded in its
   `PROVENANCE.md`; `deny.toml` admits the dependency licences.
 - A contribution is licensed under the same terms (CONTRIBUTING.md §
-  Licensing of contributions); the pull request box records it.
+  Licensing of contributions); opening the pull request accepts them.

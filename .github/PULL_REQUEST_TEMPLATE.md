@@ -7,10 +7,6 @@
 
 Closes #NNN
 
-## Licensing of contributions
-
-- [ ] I accept the terms in [CONTRIBUTING.md § Licensing of contributions](../CONTRIBUTING.md#licensing-of-contributions): I have the right to submit this work, I license it under the project licence of the version it lands in, and I grant the Licensor the relicensing right stated there.
-
 ## Checklist
 
 - [ ] Accessibility decisions cite WCAG 2.2, WAI-ARIA 1.2 or the Authoring Practices, not memory and not another library.

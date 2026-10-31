@@ -1,15 +1,14 @@
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 
-# Re-runs a pull-request guard of ci.yml when the label or the description it
-# reads changes (#377).
+# Re-runs a pull-request guard of ci.yml when the label it reads changes
+# (#377).
 #
-# ci.yml runs on `opened`, `synchronize` and `reopened` only. A label or
-# description event would start a second run on the same commit, the
+# ci.yml runs on `opened`, `synchronize` and `reopened` only. A label event
+# would start a second run on the same commit, the
 # concurrency group would cancel the first, and that run's `conclusion`, the
 # required check, would report a failure. The guards read their escape labels
-# and the description from the API when they run instead. When one of those
-# changes, this job waits for the CI run on the head commit to complete and
+# from the API when they run instead. When one of those changes, this job waits for the CI run on the head commit to complete and
 # re-runs each guard whose verdict may no longer hold. The `screenshots`
 # label also re-runs `detect`, which reads it, when that job started before
 # the label was added, so the run captures the states and checks the pixels
@@ -27,12 +26,12 @@ name: PR guards
 on:
   pull_request:
     branches: [main]
-    types: [labeled, unlabeled, edited]
+    types: [labeled, unlabeled]
 
 concurrency:
   # One group per pull request and label, so two labels added together each
   # get their guard re-run; toggling the same label again supersedes.
-  group: pr-guards-${{ github.event.pull_request.number }}-${{ github.event.label.name || 'description' }}
+  group: pr-guards-${{ github.event.pull_request.number }}-${{ github.event.label.name }}
   cancel-in-progress: true
 
 permissions: {}
@@ -40,9 +39,7 @@ permissions: {}
 jobs:
   rerun:
     name: pr-guards
-    if: >-
-      contains(fromJSON('["no-changelog", "screenshots"]'), github.event.label.name)
-      || (github.event.action == 'edited' && github.event.changes.body != null)
+    if: contains(fromJSON('["no-changelog", "screenshots"]'), github.event.label.name)
     runs-on: ubuntu-latest
     timeout-minutes: 90
     permissions:
@@ -63,12 +60,11 @@ jobs:
             *:no-changelog) guards=(guards) ;;
             labeled:screenshots) guards=(detect guards) ;;
             unlabeled:screenshots) guards=(guards) ;;
-            edited:) guards=(contribution-licence) ;;
             *) echo "::error::no guard reads ${ACTION} ${LABEL}"; exit 1 ;;
           esac
 
           # A label added can only turn a failure into a pass and a label
-          # removed only a pass into a failure; a new description can do both.
+          # removed only a pass into a failure.
           # `detect` holds the plan it read when it started, so it is stale
           # when it started before the label was added.
           stale() {
@@ -77,7 +73,7 @@ jobs:
               return
             fi
             case "${ACTION}:$2" in
-              labeled:failure | unlabeled:success | edited:success | edited:failure) return 0 ;;
+              labeled:failure | unlabeled:success) return 0 ;;
               *) return 1 ;;
             esac
           }
