@@ -155,6 +155,7 @@ pub(crate) fn dock(v: &Visit) -> Option<Html> {
         value: String::from("discard"),
         label: v.tr(Msg::DockDiscard),
         glyph: Some(Glyph::X),
+        shortcut: Some(String::from("d")),
         state: if held {
             DecisionState::Held
         } else {

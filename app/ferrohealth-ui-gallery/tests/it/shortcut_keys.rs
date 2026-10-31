@@ -3,7 +3,8 @@
 
 //! The keys the `keys` module binds (#526, #530): a chord a control
 //! announces pressed from inside a field (Run's Ctrl Enter, the dock's
-//! Ctrl S), a single key outside one (the dock's reason on `r`), a go-to
+//! Ctrl S), a single key outside one (the dock's reason on `r`, Discard on
+//! `d`), a go-to
 //! pair of the legend, and a work-list row's `o` that opens the focused
 //! row's side panel and returns the focus to the row; none below 40 rem,
 //! nothing with the modules refused, and the work-list reflowed at 320 px.
@@ -181,7 +182,23 @@ async fn ctrl_s_saves_through_the_dock_and_r_moves_to_its_reason() -> Result<(),
                 .contains("decision=save"))
         })
         .await?;
-        // A phone has no keyboard: r is no shortcut there (family rule 6).
+        // A single key presses its decision outside a field.
+        browser
+            .goto(&gallery.url("/ferroehr/forms?dock=idle"))
+            .await?;
+        ready(browser, "#gallery-dock button[value='discard']").await?;
+        blur(browser).await?;
+        press(browser, "d").await?;
+        until("d presses Discard", async || {
+            Ok(browser
+                .driver()
+                .current_url()
+                .await?
+                .as_str()
+                .contains("decision=discard"))
+        })
+        .await?;
+        // A phone has no keyboard: r and d are no shortcuts there (family rule 6).
         window(browser, 390, 844).await?;
         browser
             .goto(&gallery.url("/ferroehr/forms?dock=idle"))
@@ -194,7 +211,81 @@ async fn ctrl_s_saves_through_the_dock_and_r_moves_to_its_reason() -> Result<(),
             focused(browser).await?,
             "no key below 40 rem"
         );
+        blur(browser).await?;
+        press(browser, "d").await?;
+        assert!(
+            !browser
+                .driver()
+                .current_url()
+                .await?
+                .as_str()
+                .contains("decision="),
+            "no decision below 40 rem"
+        );
         browser.console_clean("the dock's keys").await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn with_the_modules_refused_the_dock_s_keys_do_nothing_and_its_save_still_posts()
+-> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        let cdp = browser.driver().cdp();
+        cdp.send_raw("Network.enable", json!({})).await?;
+        cdp.send_raw(
+            "Network.setBlockedURLs",
+            json!({ "urls": ["*/ferrohealth-ui/*/scripts/*"] }),
+        )
+        .await?;
+        window(browser, 1440, 900).await?;
+        browser
+            .goto(&gallery.url("/ferroehr/forms?dock=idle"))
+            .await?;
+        let save = browser
+            .element(By::Css("#gallery-dock button[value='save']"))
+            .await?;
+        assert_eq!(
+            Some(String::from("Control+S")),
+            save.attr("aria-keyshortcuts").await?,
+            "the key is announced with no script"
+        );
+        blur(browser).await?;
+        press(browser, "r").await?;
+        assert_ne!("dock-reason", focused(browser).await?, "no module, no key");
+        press(browser, "d").await?;
+        assert!(
+            !browser
+                .driver()
+                .current_url()
+                .await?
+                .as_str()
+                .contains("decision="),
+            "no module, no decision by key"
+        );
+        save.click().await?;
+        until("Save posts by the pointer", async || {
+            Ok(browser
+                .driver()
+                .current_url()
+                .await?
+                .as_str()
+                .contains("decision=save"))
+        })
+        .await?;
+        browser.goto("about:blank").await?;
+        let others: Vec<String> = browser
+            .console_errors()
+            .await?
+            .into_iter()
+            .filter(|entry| !entry.contains("/scripts/"))
+            .collect();
+        assert!(others.is_empty(), "{others:?}");
+        Ok(())
     })
     .await
 }
