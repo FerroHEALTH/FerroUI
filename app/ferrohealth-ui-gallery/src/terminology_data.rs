@@ -9,6 +9,8 @@
 //! server sends, so it stays here beside its code; the page's own words are
 //! in its catalog. Nothing here is clinical data.
 
+use ferrohealth_ui::view::mapping::Relationship;
+
 /// The synthetic findings code system's name.
 pub const FINDINGS: &str = "Synthetic clinical findings";
 
@@ -109,11 +111,11 @@ pub const CODE_SYSTEMS: &str = "15";
 /// The security service each root declares.
 pub const SECURITY: &str = "SMART-on-FHIR";
 
-/// One mapping of the synthetic concept map: the source, the R4
-/// equivalence, the target and the comment.
+/// One mapping of the synthetic concept map: the source, its relationship
+/// to the target, the target and the comment.
 pub type Mapped = (
     &'static str,
-    &'static str,
+    Relationship,
     Option<&'static str>,
     Option<&'static str>,
 );
@@ -121,6 +123,7 @@ pub type Mapped = (
 /// The legacy codes and their displays.
 pub const LEGACY_CODES: &[(&str, &str)] = &[
     ("LF-01", "Cough, any"),
+    ("LF-03", "Wheeze on breathing out"),
     ("LF-04", "Chest complaint"),
     ("LF-06", "Raised temperature"),
     ("LF-07", "Feeling unwell"),
@@ -136,18 +139,23 @@ pub fn legacy_display(code: &str) -> String {
 }
 
 /// The mappings of the synthetic concept map.
+///
+/// They read as an R5 `ConceptMap` does, from the source to the target,
+/// and carry the relationship with the longest words the catalog holds,
+/// so a narrow card shows them wrapping.
 pub const MAPPINGS: &[Mapped] = &[
-    ("LF-01", "equivalent", Some("SF-1210"), None),
+    ("LF-01", Relationship::Equivalent, Some("SF-1210"), None),
+    ("LF-03", Relationship::SourceNarrower, Some("SF-1220"), None),
     (
         "LF-04",
-        "narrower",
+        Relationship::SourceBroader,
         Some("SF-1220"),
         Some("Only the wheeze part of the old code survives."),
     ),
-    ("LF-06", "equivalent", Some("SF-1310"), None),
+    ("LF-06", Relationship::Equivalent, Some("SF-1310"), None),
     (
         "LF-07",
-        "unmatched",
+        Relationship::Unmatched,
         None,
         Some("No synthetic code carries this meaning."),
     ),
