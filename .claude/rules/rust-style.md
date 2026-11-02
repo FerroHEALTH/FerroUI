@@ -57,9 +57,12 @@ VernumBOEK's and FerroEHR's rule of the same name).
   `crates/*/scripts/` and the templates under `crates/*/templates/` in the
   `duplication` CI job, and holds the total of duplicated lines to the count
   in `scripts/checks/duplication.count`. A rise fails and names both places
-  of each new block. A fall fails too, until you run
-  `scripts/checks/duplication.sh --update` and commit the lower count with
-  `scripts/checks/duplication-baseline.txt`, the guard's own key of every
+  of each new block. A fall passes with a note, so your pull request leaves
+  `scripts/checks/duplication.count` and
+  `scripts/checks/duplication-baseline.txt` alone; the daily
+  `.github/workflows/ratchet-tighten.yml` runs `--update` on `main` and
+  pushes the lower count to `chore/ratchet-tighten`, whose pull request a
+  maintainer opens. The baseline is the guard's own key of every
   counted block: its two paths and the sha256 of the lines at each, with no
   line number, so a change that leaves a block's lines alone leaves its key
   alone. `--update` never raises the count; a rise that has to stay is a
@@ -96,8 +99,9 @@ VernumBOEK's and FerroEHR's rule of the same name).
   `.claude/hooks/rust_fmt_clippy.sh`. The 10 files over the budget when the
   guard landed (3,416 lines over it in all) stand in
   `scripts/checks/file-size.list` with their length; a listed file may shrink
-  and never grow, and a shrink fails until `--update` lowers its entry, so
-  the list only tightens. A file over the budget is split by concern. The
+  and never grow. A shrink, a listed file back within the budget and a
+  listed file gone pass with a note, and the same daily workflow lowers or
+  removes the entry, so the list only tightens. A file over the budget is split by concern. The
   script modules keep their own byte budget (`scripts/checks/script-budget.sh`).
 
 ## Comments and documentation

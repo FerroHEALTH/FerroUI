@@ -106,8 +106,9 @@ never publish under it.
   its block keys in `duplication-baseline.txt` and jscpd pinned in
   `docs/VERSIONS.md`, and `file-size.sh`, the 800-line budget per
   hand-written Rust file, also run per edit, with the files over it in
-  `file-size.list`, which may shrink and never grow), `gh/` (the tracker
-  helpers).
+  `file-size.list`, which may shrink and never grow; both pass a fall, and
+  `.github/workflows/ratchet-tighten.yml` lowers the counts on `main`),
+  `gh/` (the tracker helpers).
 - `changelog.d/`: the changelog fragments, one file per entry, assembled
   into `CHANGELOG.md` by the release pull request (`docs/release.md`).
 - `.github/`: CI with a single required `conclusion` job, CodeQL, Scorecard,
