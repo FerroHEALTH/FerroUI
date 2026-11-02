@@ -27,10 +27,12 @@
 # fingerprint of a block moves when other files change: it is both places of
 # the block, each as its path and the sha256 of the text of its lines read
 # from the file, the two sorted, with no line number in it. A rise fails and
-# names the new blocks by both places; a fall fails too, until the count is
-# lowered with --update, so the ratchet only tightens. --update never raises
-# the count: a rise that has to stay is a hand edit of duplication.count in a
-# change that says why.
+# names the new blocks by both places. A fall passes with a one-line note, so
+# a pull request that removes duplication touches neither file and conflicts
+# with no other one; the scheduled ratchet-tighten workflow runs --update on
+# main and pushes the one branch that lowers the count (#566). --update
+# never raises the count: a rise that has to stay is a hand edit of
+# duplication.count in a change that says why.
 #
 # The pins are read from docs/VERSIONS.md, the one place they live. The
 # detector is a jscpd on PATH that answers the pinned version, else the
@@ -48,7 +50,7 @@
 #   scripts/checks/duplication.sh --install    # fetch the pinned release binary into target/tools/
 #   scripts/checks/duplication.sh --self-test  # the detector order, a rise, a fall, an unchanged count, a move
 #
-# Exit 0 = the count holds, 1 = it rose or fell, 2 = usage, a missing pin or
+# Exit 0 = the count held or fell, 1 = it rose, 2 = usage, a missing pin or
 # no detector.
 #
 # No specification governs this: our own design. The flags are jscpd's own
@@ -356,9 +358,8 @@ ratchet() {
     return 1
   fi
   if [[ "$total" -lt "$count" ]]; then
-    echo "duplication: the duplicated lines fell from $count to $total. Run $0 --update and commit"
-    echo "$count_file and $baseline, so the ratchet holds the lower count."
-    return 1
+    echo "duplication: OK, the duplicated lines fell from $count to $total; the scheduled ratchet-tighten workflow records the lower count."
+    return 0
   fi
   if [[ -n "$new" ]]; then
     echo "duplication: OK ($total duplicated lines, as $count_file records), and $(grep -c '' <<<"$new") blocks"
@@ -606,11 +607,12 @@ if [[ "${1:-}" == "--self-test" ]]; then
     fail "a rise in the script modules was not named by both places: $(cat "$work/answer")"
   rm "$tree/crates/demo/scripts/three.js" "$tree/crates/demo/scripts/four.js"
 
-  # A fall: fails until --update lowers the count, which then holds.
+  # A fall: passes with a note, and --update lowers the count, which then holds.
   block second_moved >"$tree/app/demo/src/one.rs"
   printf 'pub fn empty() {}\n' >"$tree/crates/other/src/two.rs"
-  [[ "$(run check)" == 1 ]] || fail "a fall passed without a lower count"
+  [[ "$(run check)" == 0 ]] || fail "a fall was refused: $(cat "$work/answer")"
   grep -q 'fell from' "$work/answer" || fail "a fall was not reported as one: $(cat "$work/answer")"
+  [[ "$(committed_count "$count_file")" == "$first" ]] || fail "a check wrote the count file"
   [[ "$(run update)" == 0 ]] || fail "--update refused a fall: $(cat "$work/answer")"
   [[ "$(committed_count "$count_file")" == 0 ]] || fail "--update did not record the lower count"
   [[ "$(run check)" == 0 ]] || fail "the lowered count was refused: $(cat "$work/answer")"
