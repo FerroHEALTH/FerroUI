@@ -11,6 +11,19 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.6.4] - 2026-11-03
+
+### Fixed
+
+- A mapping row's relationship words wrap inside their cell below 40 rem,
+  the arrow on their first line, so the longest words ("narrower than the
+  target") no longer draw past their box on a 320 px screen (WCAG 2.2 SC
+  1.4.10) (#569).
+- The top bar's search submit drops its word from the layout below 40 rem
+  and in a squeezed search, where it was clipped into a 1 px box that its
+  word ran past on a 320 px screen; the button keeps its name in
+  `aria-label` (WCAG 2.2 SC 1.4.10) (#570).
+
 ## [0.6.3] - 2026-10-31
 
 ### Added
@@ -3028,7 +3041,8 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.3...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.4...HEAD
+[0.6.4]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.0...v0.6.2
 [0.6.0]: https://github.com/FerroHEALTH/FerroUI/compare/v0.5.8...v0.6.0
