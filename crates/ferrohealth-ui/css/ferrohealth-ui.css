@@ -13302,6 +13302,18 @@
     .fui-table-stack td.fui-relation-cell {
       padding-block: 0;
     }
+
+    /* A card is as wide as the phone, so the words wrap inside their box
+       and the arrow keeps to their first line (WCAG 2.2 SC 1.4.10). */
+    .fui-relation {
+      align-items: flex-start;
+      white-space: normal;
+    }
+
+    .fui-relation > .fui-icon {
+      flex: none;
+      margin-block-start: 0.1875rem;
+    }
   }
 
   /* ---- Editor parts (FerroTERM, for every console): what an editor page

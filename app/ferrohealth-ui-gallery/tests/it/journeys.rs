@@ -1598,6 +1598,47 @@ async fn dense_select_keeps_to_its_field(browser: &Browser) -> Result<(), Box<dy
     Ok(())
 }
 
+/// Asserts a mapping row's relationship words wrap inside their box and
+/// their cell at 320 px, the longest words the catalog carries among them
+/// (WCAG 2.2 SC 1.4.10).
+async fn relationship_words_wrap_inside_their_cell(
+    browser: &Browser,
+) -> Result<(), Box<dyn Error>> {
+    // A text range measures the words themselves, which a nowrap box draws
+    // past its own edge with nothing wider than the page.
+    let rows: Vec<(String, f64, f64, f64, f64)> = measure(
+        browser,
+        "return [...document.querySelectorAll('td.fui-relation-cell .fui-relation')].map(box => {
+           const range = document.createRange();
+           range.selectNodeContents(box);
+           const words = range.getBoundingClientRect();
+           const own = box.getBoundingClientRect();
+           const cell = box.closest('td').getBoundingClientRect();
+           return [box.textContent, words.right, own.right, cell.right, own.height];
+         });",
+    )
+    .await?;
+    for (words, end, own, cell, _) in &rows {
+        assert!(
+            end <= &(own + 0.5),
+            "{words:?} end at {end}, past their box at {own}"
+        );
+        assert!(
+            own <= &(cell + 0.5),
+            "{words:?} box ends at {own}, past its cell at {cell}"
+        );
+    }
+    let longest = rows
+        .iter()
+        .find(|row| row.0 == "narrower than the target")
+        .ok_or("no mapping row carries the longest relationship words")?;
+    assert!(
+        longest.4 > 24.0,
+        "the longest words fit one line, so the row no longer tests the wrap: {longest:?}"
+    );
+    Ok(())
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn every_page_reflows_at_320_pixels_with_no_sideways_scroll() -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
@@ -1623,6 +1664,9 @@ async fn every_page_reflows_at_320_pixels_with_no_sideways_scroll() -> Result<()
             );
             if page == "/operations" {
                 dense_select_keeps_to_its_field(browser).await?;
+            }
+            if page == "/terminology" {
+                relationship_words_wrap_inside_their_cell(browser).await?;
             }
             if page == "/tables" {
                 table_boxes_read_whole(browser).await?;

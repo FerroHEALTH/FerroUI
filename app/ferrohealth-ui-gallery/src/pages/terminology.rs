@@ -535,10 +535,10 @@ fn matrix(v: &Visit) -> Html {
 
 /// A mapping of the synthetic concept map.
 fn mapping(row: &crate::terminology_data::Mapped) -> Mapping {
-    let (source, equivalence, target, comment) = *row;
+    let (source, relationship, target, comment) = *row;
     Mapping {
         source: Coding::new(source, legacy_display(source)),
-        relationship: Relationship::from_r4(equivalence).unwrap_or(Relationship::Unmatched),
+        relationship,
         target: target.map(finding),
         comment: comment.map(str::to_owned),
     }
