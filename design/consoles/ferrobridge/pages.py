@@ -5,7 +5,7 @@ the contact sheet shows them, each a resting screen followed by its
 interactive states. (number, slug, title, route, caption); the slug is the
 page's file name. The structure is the approved information architecture:
 Dashboard; the Mapping set with its files, the editor and the Playground;
-the faces (FHIR facade, HL7 v2, OMOP ETL) and the Connections; and a
+the faces (FHIR facade, HL7 v2, OMOP ETL), the Events and the Connections; and a
 Configuration that holds only what has no object home. The planned and
 proposed screens are a group of their own, unreachable from the live pages."""
 
@@ -118,6 +118,12 @@ GROUPS = [
     ('omop', 'OMOP ETL', [
         ('17', 'omop', 'OMOP ETL: Overview', '/omop', 'Tabs Overview and Settings. What a run reads, maps and writes, linked to the CDR, the OMOCL files and the CDM database, and how runs are started.'),
         ('17.5', 'omop-settings', 'OMOP ETL: Settings', '/omop/settings', '[etl] and [etl.visits] in T3 rows: concepts by name with their id as a hint, the queries behind a disclosure.'),
+    ]),
+    ('events', 'Events', [
+        ('20', 'events', 'Events', '/events', 'T2 with no tabs, read-only apart from Replay: each change-feed consumer with its source, reader and position, its state and what it published since start; the last failure; the parked events; the AMQP exchange, the routing-key grammar and the bound queues. The topology changes in the configuration.'),
+        ('20.1', 'events-degraded', 'Events, a consumer degraded', '/events', 'A poisoned event stalled fhir-notify past its bound of passes, so it is parked: the consumer reads Degraded, the last failure gives its cause, and the parked row carries a Replay form. No envelope body is shown.'),
+        ('20.2', 'events-replayed', 'Events, replay requested', '/events', "Replay posts to the page, which draws it again with the bridge's answer once, above the sections; the row reads Replay requested until the consumer offers the event again."),
+        ('20.3', 'events-off', 'Events, off', '/events', 'No consumer runs: the badge says Off and one quiet line leads to the running configuration.'),
     ]),
     ('connections', 'Connections', [
         ('18', 'connections', 'Connections', '/connections', 'T1 with three rows, so no toolbar: the CDR, the terminology server and the CDM database, their address, credentials, the lanes that use each, and the state from the readiness indicators.'),
