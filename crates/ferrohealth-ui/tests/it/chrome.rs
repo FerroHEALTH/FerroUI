@@ -191,8 +191,12 @@ fn a_squeezed_search_gives_up_its_word_then_its_key_cap() {
             &[LAYER, "@container fui-search (width < 22rem)"],
             ".fui-search-word"
         )
-        .contains("clip-path: inset(50%);"),
+        .contains("display: none;"),
         "the submit keeps its word while the field shrinks to a letter"
+    );
+    assert!(
+        body(&[LAYER, "@media (width < 40rem)"], ".fui-search-word").contains("display: none;"),
+        "the submit keeps its word on a phone"
     );
     assert!(
         body(

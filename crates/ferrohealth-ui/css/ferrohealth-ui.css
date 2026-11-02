@@ -5648,37 +5648,22 @@
     }
 
     .fui-search-word {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      margin: -1px;
-      padding: 0;
-      overflow: hidden;
-      clip-path: inset(50%);
-      white-space: nowrap;
-      border: 0;
+      display: none;
     }
   }
 
   /* The control measures itself, so a field squeezed by a long operator's
      name keeps room for its words: the submit gives up its word first (its
-     name stays in aria-label), then the key cap goes. The box sizes from
-     its row, never from its content, so the containment moves nothing. */
+     name stays in aria-label, so the word takes no layout and never runs
+     past a clipped box), then the key cap goes. The box sizes from its
+     row, never from its content, so the containment moves nothing. */
   .fui-search {
     container: fui-search / inline-size;
   }
 
   @container fui-search (width < 22rem) {
     .fui-search-word {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      margin: -1px;
-      padding: 0;
-      overflow: hidden;
-      clip-path: inset(50%);
-      white-space: nowrap;
-      border: 0;
+      display: none;
     }
   }
 

@@ -1560,6 +1560,43 @@ async fn ends_inside(
     Ok(())
 }
 
+/// Asserts every word the top bar draws ends inside its own box at 320 px,
+/// measured as a text range, which sees words a clipped box lays out past
+/// its edge with nothing wider than the page (WCAG 2.2 SC 1.4.10). Words a
+/// visually hidden box keeps for assistive technology (`fui-sr-only`, and
+/// `fui-roomy-text` below 64 rem), and an ellipsis, are meant to clip.
+async fn top_bar_words_stay_in_their_boxes(
+    browser: &Browser,
+    path: &str,
+) -> Result<(), Box<dyn Error>> {
+    let past: Vec<String> = measure(
+        browser,
+        "const out = [];
+         for (const box of document.querySelectorAll('.fui-topbar *')) {
+           const style = getComputedStyle(box);
+           if (box.closest('.fui-sr-only, .fui-roomy-text') || style.textOverflow === 'ellipsis') continue;
+           const own = box.getBoundingClientRect();
+           if (own.width === 0 && own.height === 0) continue;
+           for (const node of box.childNodes) {
+             if (node.nodeType !== 3 || !node.textContent.trim()) continue;
+             const range = document.createRange();
+             range.selectNodeContents(node);
+             const words = range.getBoundingClientRect();
+             if (words.right > own.right + 0.5) {
+               out.push(`${box.className}: ${node.textContent.trim()} ends at ${words.right}, past ${own.right}`);
+             }
+           }
+         }
+         return out;",
+    )
+    .await?;
+    assert!(
+        past.is_empty(),
+        "{path}: top bar words past their box at 320 px: {past:?}"
+    );
+    Ok(())
+}
+
 /// Asserts a stacked card holds its long words at 320 px: a long
 /// identifier in a cell's code and a long link in a group row wrap inside
 /// the card (WCAG 2.2 SC 1.4.10).
@@ -1662,6 +1699,7 @@ async fn every_page_reflows_at_320_pixels_with_no_sideways_scroll() -> Result<()
                 metrics.css_content_size.width <= metrics.css_layout_viewport.client_width + 0.5,
                 "{path} scrolls sideways at 320 px: {metrics:?}"
             );
+            top_bar_words_stay_in_their_boxes(browser, &path).await?;
             if page == "/operations" {
                 dense_select_keeps_to_its_field(browser).await?;
             }
