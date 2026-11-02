@@ -852,6 +852,7 @@ NAV = [
         ("facade", "FHIR facade", "flame", "facade.html", None),
         ("hl7v2", "HL7 v2", "message-square", "hl7v2.html", None),
         ("omop", "OMOP ETL", "table-2", "omop.html", None),
+        ("events", "Events", "activity", "events.html", None),
         ("connections", "Connections", "plug", "connections.html", None),
     ]),
     ("console", "Console", [

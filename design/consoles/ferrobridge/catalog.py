@@ -4,6 +4,7 @@
 function that draws it, read by design/tools/build.py."""
 import pg_config as c
 import pg_edit as ed
+import pg_events as ev
 import pg_faces as f
 import pg_maps as m
 import pg_people as p
@@ -46,6 +47,7 @@ PAGES = {
     "hl7v2": f.page_hl7v2, "hl7v2-conceptmaps": f.page_hl7v2_conceptmaps, "hl7v2-settings": f.page_hl7v2_settings, "hl7v2-off": f.page_hl7v2_off,
     "omop": f.page_omop, "omop-runs": f.page_omop_runs, "omop-run": f.page_omop_run, "omop-run-refusals": f.page_omop_run_refusals, "omop-run-failed": f.page_omop_run_failed,
     "omop-runs-empty": f.page_omop_empty, "omop-settings": f.page_omop_settings,
+    "events": ev.page_events, "events-degraded": ev.page_events_degraded, "events-replayed": ev.page_events_replayed, "events-off": ev.page_events_off,
     "connections": f.page_connections, "connections-attention": f.page_connections_attention, "connection": f.page_connection,
     "connection-settings": f.page_connection_settings, "connection-terminology": f.page_connection_terminology,
     "connection-terminology-settings": f.page_connection_terminology_settings, "connection-cdm": f.page_connection_cdm, "connection-cdm-settings": f.page_connection_cdm_settings,
