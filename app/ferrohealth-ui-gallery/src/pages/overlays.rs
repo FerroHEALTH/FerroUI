@@ -75,10 +75,10 @@ fn page_path(v: &Visit, page: &str) -> String {
     format!("/{}/{page}", v.brand.key())
 }
 
-/// The confirm of the confirmation dialog `dialog`, the danger one when
-/// `danger`: it leads to the page drawn again with the outcome's toast.
-fn confirm_and_toast(v: &Visit, dialog: &str, danger: bool) -> Html {
-    let (toast, class, glyph, words) = if danger {
+/// The confirm of the confirmation dialog `dialog` whose stakes are
+/// `stakes`: it leads to the page drawn again with the outcome's toast.
+fn confirm_and_toast(v: &Visit, dialog: &str, stakes: Stakes) -> Html {
+    let (toast, class, glyph, words) = if stakes == Stakes::Danger {
         (
             "deleted",
             Variant::Destructive.class(),
@@ -117,7 +117,7 @@ fn confirmations(v: &Visit) -> Html {
         },
         Stakes::Plain,
         None,
-        confirm_and_toast(v, "reload-set", false),
+        confirm_and_toast(v, "reload-set", Stakes::Plain),
     );
     let danger = confirm_dialog(
         &v.locale,
@@ -128,7 +128,7 @@ fn confirmations(v: &Visit) -> Html {
         },
         Stakes::Danger,
         None,
-        confirm_and_toast(v, "delete-file", true),
+        confirm_and_toast(v, "delete-file", Stakes::Danger),
     );
     let how = info_dialog(
         &v.locale,
@@ -462,7 +462,7 @@ fn modals(v: &Visit) -> Html {
             title: v
                 .tr_with(Msg::DeleteRow, &[("row", Arg::from(named.clone()))])
                 .into(),
-            danger: true,
+            stakes: Stakes::Danger,
             width: Width::Narrow,
             body: h(format!("<p>{}</p>", t(v.tr(Msg::FileGoesGoodRunningSet)))),
             actions: h(format!(
@@ -488,7 +488,7 @@ fn modals(v: &Visit) -> Html {
         Modal {
             id: "rename-file".into(),
             title: v.tr(Msg::RenameFile).into(),
-            danger: false,
+            stakes: Stakes::Plain,
             width: Width::Wide,
             body: field(
                 "rename-name",

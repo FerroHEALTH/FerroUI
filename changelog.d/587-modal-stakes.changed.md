@@ -1,0 +1,1 @@
+- `view::dialog::Modal` takes `stakes: Stakes` in place of `danger: bool`, the same choice the confirmation dialog takes, so each console writes `stakes: Stakes::Danger` or `Stakes::Plain` at its next pin. The drawn HTML is unchanged.

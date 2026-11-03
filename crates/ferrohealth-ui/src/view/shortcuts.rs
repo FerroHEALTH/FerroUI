@@ -36,7 +36,7 @@ use askama::Template;
 
 use crate::html::{Html, Render as _};
 use crate::i18n::{Locale, Text, Word, tr};
-use crate::view::dialog::{Modal, Width, modal_with};
+use crate::view::dialog::{Modal, Stakes, Width, modal_with};
 use crate::view::kbd::{Shortcut, ShortcutGroup, shortcut_keys};
 
 /// The id of the legend's dialog; its heading is `shortcuts-title`.
@@ -202,7 +202,7 @@ pub fn shortcut_legend(locale: &Locale, groups: Vec<ShortcutGroup>, go_to: Optio
         Modal {
             id: LEGEND_ID.into(),
             title: tr(locale, Text::KeyboardShortcuts),
-            danger: false,
+            stakes: Stakes::Plain,
             width: Width::Wide,
             body,
             actions: Html::empty(),
