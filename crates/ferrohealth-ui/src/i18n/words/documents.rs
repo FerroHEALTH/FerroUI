@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The library's words of the document pane, the code viewer, the copy
-//! button and the upload field.
+//! The library's words of the document pane, the code viewer, the line
+//! diff, the copy button and the upload field.
 
 use crate::i18n::Text;
 
@@ -25,6 +25,16 @@ texts! {
     CopySaidCopied = "copy-said-copied",
     /// The announcement of a refused copy.
     CopySaidRefused = "copy-said-refused",
+    /// The word before an added line of a line diff, for assistive
+    /// technology.
+    DiffAdded = "diff-added",
+    /// A line diff with no line in it.
+    DiffNone = "diff-none",
+    /// The accessible name of a line diff's box: `$file` is its name.
+    DiffRegion = "diff-region",
+    /// The word before a removed line of a line diff, for assistive
+    /// technology.
+    DiffRemoved = "diff-removed",
     /// The document pane's copy button.
     DocumentCopy = "document-copy",
     /// The accessible name of the format choice.

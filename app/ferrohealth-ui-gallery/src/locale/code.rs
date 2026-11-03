@@ -42,6 +42,10 @@ messages! {
     Resource = "resource",
     /// `A resource, JSON`
     ResourceJson = "resource-json",
+    /// `Revision 8 against the running one`
+    RevisionAgainstRunning = "revision-against-running",
+    /// `The files revision 8 changes, by their digests`
+    RevisionFilesCaption = "revision-files-caption",
     /// `A synthetic measurement`
     SyntheticMeasurement = "synthetic-measurement",
     /// `The mapping file`

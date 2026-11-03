@@ -5,14 +5,18 @@
 //!
 //! It holds the document pane with its format links and its views, the
 //! code viewer with a long line, a current line and two findings under
-//! their lines, and a viewer in each of the four languages, under a header
-//! with a breadcrumb trail and a title in the code face.
+//! their lines, a viewer in each of the four languages, and a revision's
+//! changed files with one file's line diff, under a header with a
+//! breadcrumb trail and a title in the code face.
 
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::html::Html;
+use ferrohealth_ui::table::change::{Change, change_table};
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::code::{Code, CodeHead, Digest, Gravity, LineDiagnostic, code_card};
 use ferrohealth_ui::view::document::{Document, DocumentView, document_pane};
+use ferrohealth_ui::view::layout::{Arrangement, Gap, stack_at};
+use ferrohealth_ui::view::line_diff::line_diff;
 use ferrohealth_ui::view::surface::{Crumb, Header, card, definitions, page_heading, page_meta};
 
 use crate::data::{
@@ -22,7 +26,6 @@ use crate::data::{
 use crate::locale::Msg;
 use crate::page::Page;
 use crate::visit::Visit;
-use ferrohealth_ui::view::layout::{Arrangement, Gap, stack_at};
 
 /// The id prefix of the viewer's lines.
 const LINES: &str = "file-L";
@@ -155,6 +158,59 @@ fn languages(v: &Visit) -> Html {
     )
 }
 
+/// A synthetic revision of the mapping file against the one that runs, as
+/// a unified diff: a changed version, a longer profile URL and one more
+/// archetype.
+const REVISION_DIFF: &str = "--- a/fhirconnect/gallery.context.yml
++++ b/fhirconnect/gallery.context.yml
+@@ -2,6 +2,6 @@ type: context
+ type: context
+ metadata:
+   name: gallery.context
+-  version: 1.2.0
++  version: 1.3.0
+ spec:
+   system: FHIR
+@@ -10,3 +10,4 @@ context:
+   profile:
+-    url: \"http://example.org/fhir/StructureDefinition/gallery-weight\"
++    url: \"http://example.org/fhir/StructureDefinition/gallery-weight-with-device-and-position\"
+   archetypes:
++    - \"CLUSTER.body_position.v1\"
+";
+
+/// A revision's changed files by their digests, its first column headed
+/// File, and the line diff of the one changed in place.
+fn revision(v: &Visit) -> Html {
+    let changes = [
+        Change {
+            key: String::from(MAPPING_PATH),
+            from: Some(String::from("5712e3f7…f2e0e3fa")),
+            to: Some(String::from("9a03c1d2…7b44e810")),
+        },
+        Change {
+            key: String::from("fhirconnect/gallery-device.model.yml"),
+            from: None,
+            to: Some(String::from("c81f02aa…19e6d3b5")),
+        },
+    ];
+    card(
+        v.tr(Msg::RevisionAgainstRunning),
+        stack_at(
+            Gap::Default,
+            Html::join([
+                change_table(
+                    &v.locale,
+                    v.tr(Msg::RevisionFilesCaption),
+                    Some(v.tr(Msg::FileColumn)),
+                    &changes,
+                ),
+                line_diff(&v.locale, MAPPING_PATH, REVISION_DIFF),
+            ]),
+        ),
+    )
+}
+
 /// The page's subtitle with inline markup: the resource type in bold and
 /// the template id as a code link to its page.
 fn subtitle(v: &Visit, root: &str) -> Html {
@@ -192,7 +248,12 @@ pub fn page(v: &Visit) -> Page {
     let meta = page_meta(Some(v.tr(Msg::AnsweredSyntheticReplicaGallery1)));
     let body = stack_at(
         Gap::Loose,
-        Html::join([document(v, &here, xml), viewer(v), languages(v)]),
+        Html::join([
+            document(v, &here, xml),
+            viewer(v),
+            languages(v),
+            revision(v),
+        ]),
     );
     Page::shell(v.tr(Msg::CodeDocuments), Html::join([header, meta, body]))
 }

@@ -174,6 +174,7 @@ GROUPS = [
         ('P10', 'playground-omop-answered', 'openEHR → OMOP rows, answered (proposed)', '/playground/omop', 'B6: the record graph table by table, concept 0 marked in shape, colour and word; nothing written.'),
         ('P11', 'playground-hl7v2', 'HL7 v2 → FHIR (proposed)', '/playground/hl7v2', "Proposed: a dry run of the HL7 v2 face on one message. Idle, the message in B8's raw view with its delimiters marked."),
         ('P12', 'playground-hl7v2-answered', 'HL7 v2 → FHIR, answered (proposed)', '/playground/hl7v2', 'The message Bundle the guide maps it to, the acknowledgment it would send, and B8: the message as read, segment by segment, each field by position and name.'),
+        ('P13', 'mappings-revision', 'A revision against the running set (planned #609)', '/mappings/revisions/{id}', 'The files a revision changes by their digests (the change table, its first column headed File), then one changed file as B11, a unified diff.'),
     ]),
 ]
 

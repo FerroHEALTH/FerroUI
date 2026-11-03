@@ -5,8 +5,8 @@
 //! as a plan shows the difference between a running and a staged
 //! configuration.
 //!
-//! A console that compares something else names the key column itself
-//! ([`change_table_keyed`]).
+//! A console that compares something else (files, fields) names the key
+//! column itself.
 //!
 //! The value removed is marked "−" and the value added "+", in words as
 //! well as tone, and an absent value reads "not set", so a change never
@@ -68,22 +68,16 @@ fn side(locale: &Locale, value: Option<&String>, sign: &'static str, removed: bo
     }
 }
 
-/// Returns the table of `changes` captioned `caption`, its key column
-/// headed by the library's word for a setting; an empty list reads as a
-/// sentence.
+/// Returns the table of `changes` captioned `caption`.
+///
+/// Its key column is headed `key` from the console's catalog (a file, a
+/// path, a field) or, with `None`, by the library's word for a setting. An
+/// empty list reads as a sentence.
 #[must_use]
-pub fn change_table(locale: &Locale, caption: impl Into<String>, changes: &[Change]) -> Html {
-    change_table_keyed(locale, caption, tr(locale, Text::ChangeSetting), changes)
-}
-
-/// Returns the table of `changes` captioned `caption`, its key column
-/// headed `key` from the console's catalog (a path, a field), as
-/// [`change_table`] draws it; an empty list reads as a sentence.
-#[must_use]
-pub fn change_table_keyed(
+pub fn change_table(
     locale: &Locale,
     caption: impl Into<String>,
-    key: impl Into<String>,
+    key: Option<String>,
     changes: &[Change],
 ) -> Html {
     let caption = caption.into();
@@ -108,7 +102,10 @@ pub fn change_table_keyed(
         .collect();
     data_table(DataTable::new(
         &caption,
-        &columns(locale, key.into()),
+        &columns(
+            locale,
+            key.unwrap_or_else(|| tr(locale, Text::ChangeSetting).text().to_owned()),
+        ),
         Body::Rows(rows),
     ))
 }

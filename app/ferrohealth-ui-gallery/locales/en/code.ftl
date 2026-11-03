@@ -22,5 +22,7 @@ owner-console = console
 query-aql = A query, AQL
 resource = Resource
 resource-json = A resource, JSON
+revision-against-running = Revision 8 against the running one
+revision-files-caption = The files revision 8 changes, by their digests
 synthetic-measurement = A synthetic measurement
 the-mapping-file = The mapping file

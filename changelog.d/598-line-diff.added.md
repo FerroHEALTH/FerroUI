@@ -1,0 +1,1 @@
+- `view::line_diff::line_diff(locale, file, diff)` draws one file's unified diff (B11) in the code viewer's box: each line with its numbers before and after, a removed line marked "−" on the bad tone's ground and an added line "+" on the ok tone's, each with its word for a screen reader, the hunk heads as muted rows, and long lines scrolling sideways inside the box (#598).

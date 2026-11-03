@@ -34,6 +34,7 @@ mod fields;
 mod figures;
 mod filter;
 mod kbd;
+mod line_diff;
 mod locale;
 mod markup;
 mod operations;

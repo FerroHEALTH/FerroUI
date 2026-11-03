@@ -142,6 +142,41 @@ def codeview(path, text, diags=(), current=None, lang="fhirconnect", owner="cons
             f'<pre>{code_lines(text, diags, current)}</pre></div></div>')
 
 
+def linediff(path, diff):
+    """B11: one file's change as a unified diff, in B1's box: the numbers
+    before and after, the sign, and a word for a screen reader."""
+    out, before, after, in_hunk = "", 1, 1, False
+    def num(n):
+        return f'<span aria-hidden="true" class="fui-diff-num">{n}</span>'
+    def row(cls, b, a, sign, word, text):
+        said = f'<span class="fui-sr-only">{word} </span>' if word else ""
+        return (f'<span class="{cls}">{num(b)}{num(a)}<span aria-hidden="true" class="fui-diff-sign">{sign}</span>'
+                f'<span class="fui-diff-text">{said}{e(text)}</span></span>')
+    for line in diff.split("\n"):
+        if not line:
+            continue
+        if not in_hunk and line.startswith(("diff ", "index ", "--- ", "+++ ")):
+            continue
+        if line.startswith("@@"):
+            m = re.match(r"@@ -(\d+)(?:,\d+)? \+(\d+)", line)
+            if m:
+                before, after = int(m.group(1)), int(m.group(2))
+            in_hunk = True
+            out += f'<span class="fui-diff-hunk"><span class="fui-diff-text">{e(line)}</span></span>'
+        elif line.startswith("-"):
+            out += row("fui-diff-line fui-diff-removed", before, "", "\u2212", "removed", line[1:])
+            before += 1
+        elif line.startswith("+"):
+            out += row("fui-diff-line fui-diff-added", "", after, "+", "added", line[1:])
+            after += 1
+        else:
+            out += row("fui-diff-line", before, after, "", "", line[1:] if line.startswith(" ") else line)
+            before += 1
+            after += 1
+    return (f'<div role="region" aria-label="{e(path)}, its removed and added lines" tabindex="0" '
+            f'class="fui-code-panel fui-linediff fui-scroll-cue"><pre>{out}</pre></div>')
+
+
 def diag_item(d, current=False, href=None, file_in_where=False):
     sev, code, path, line, col, msg, mapping = d
     tone, g, w = SEV[sev]

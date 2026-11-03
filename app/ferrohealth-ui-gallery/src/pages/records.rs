@@ -11,7 +11,7 @@
 
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
-use ferrohealth_ui::table::change::{Change, change_table_keyed};
+use ferrohealth_ui::table::change::{Change, change_table};
 use ferrohealth_ui::table::model::{Direction, Sort};
 use ferrohealth_ui::table::view::{
     Body, Column, DataTable, Role, RowCheck, Sorting, cell, check_cell, data_table, menu_cell,
@@ -419,10 +419,10 @@ fn events(v: &Visit) -> Vec<Event> {
             title: v.tr(Msg::RecordsEventVersion),
             identifiers: Vec::new(),
             reason: Some(v.tr(Msg::RecordsReasonVersion)),
-            body: Some(change_table_keyed(
+            body: Some(change_table(
                 &v.locale,
                 caption.clone(),
-                v.tr(Msg::RecordsField),
+                Some(v.tr(Msg::RecordsField)),
                 &diff,
             )),
         },

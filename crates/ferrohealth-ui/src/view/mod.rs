@@ -48,6 +48,7 @@ pub mod identifier;
 pub mod kbd;
 pub mod layout;
 pub mod lifecycle;
+pub mod line_diff;
 pub mod load_report;
 pub mod masked;
 pub mod menu;

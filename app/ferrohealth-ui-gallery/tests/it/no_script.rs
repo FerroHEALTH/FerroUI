@@ -591,6 +591,16 @@ async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error
             assert!(!shown.is_empty(), "the document pane shows its document");
             document_views(browser).await?;
             copy_waits(browser, "file-copy").await?;
+            let removed = browser
+                .element(By::Css(".fui-linediff .fui-diff-removed"))
+                .await?
+                .prop("textContent")
+                .await?
+                .unwrap_or_default();
+            assert!(
+                removed.contains("removed") && removed.contains("version: 1.2.0"),
+                "the line diff draws its removed line and its word: {removed}"
+            );
         }
         "/configuration" => crate::configuration::config_floor(browser).await?,
         "/find" => find_page_in_flow(browser).await?,
