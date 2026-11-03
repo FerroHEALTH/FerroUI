@@ -31,9 +31,8 @@ use ferrohealth_ui::view::surface::{
     panel_sections_card, section_intro, split,
 };
 use ferrohealth_ui::view::template::list::HeadingCount;
-use ferrohealth_ui::view::tree::{
-    Children, Tree, TreeKind, TreeNode, TreeWords, path_key, tree_view,
-};
+use ferrohealth_ui::view::tree::path::path_key;
+use ferrohealth_ui::view::tree::{Children, Tree, TreeKind, TreeNode, TreeWords, tree_view};
 
 use crate::app::Page;
 use crate::locale::Msg;

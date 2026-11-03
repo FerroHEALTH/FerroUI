@@ -17,7 +17,8 @@ use std::cmp::Ordering;
 use crate::html::Html;
 use crate::i18n::{Locale, Text, Word, tr, tr_with};
 use crate::tone::Tone;
-use crate::view::chart::{nice_step, proportion};
+use crate::view::chart::proportion;
+use crate::view::chart::scale::nice_step;
 use crate::view::status::pill;
 
 /// One compared field's part of a score.
