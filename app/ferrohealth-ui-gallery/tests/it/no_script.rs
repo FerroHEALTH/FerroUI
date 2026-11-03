@@ -585,6 +585,16 @@ async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error
                 .await?;
             assert_eq!(25, rows.len(), "the first table shows its page");
             crate::records::worklist_floor(browser).await?;
+            let was = browser
+                .element(By::Css("del.fui-change-plain"))
+                .await?
+                .prop("textContent")
+                .await?
+                .unwrap_or_default();
+            assert!(
+                was.contains("was") && was.contains("30s"),
+                "a plain change says the value before and its word: {was}"
+            );
         }
         "/code" => {
             let shown = text_of(browser, By::Id("document-highlighted")).await?;

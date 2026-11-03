@@ -26,6 +26,7 @@ hierarchy-leaf-a2 = Another leaf of branch A
 hierarchy-leaf-b1x = A leaf of that twig
 hierarchy-root = Root of the hierarchy
 hierarchy-twig-b1 = A twig of branch B
+history-row-changes = What a history row says changed
 http-example-org-fhir-structuredefinition = http://example.org/fhir/StructureDefinition/ferrohealth-synthetic-journey-diagnose
 indicator = Indicator
 kind = Kind

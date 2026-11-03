@@ -6,7 +6,9 @@
 //! configuration.
 //!
 //! A console that compares something else (files, fields) names the key
-//! column itself.
+//! column itself. A history row says its change in prose instead
+//! ([`plain_change`]): the value before struck through, then the value
+//! after.
 //!
 //! The value removed is marked "−" and the value added "+", in words as
 //! well as tone, and an absent value reads "not set", so a change never
@@ -108,4 +110,59 @@ pub fn change_table(
         ),
         Body::Rows(rows),
     ))
+}
+
+/// Returns the change from `before` to `after` in prose, as a history row
+/// says it.
+///
+/// The value before is a `del`, struck through after "−" and the word
+/// "was", and the value after an `ins` after "+" and "now". A side that is
+/// `None` is left out.
+#[must_use]
+pub fn plain_change(locale: &Locale, before: Option<&str>, after: Option<&str>) -> Html {
+    let was = before.map(|value| {
+        format!(
+            "<del class=\"fui-change fui-change-removed fui-change-plain\"><span class=\"fui-change-sign\" aria-hidden=\"true\">\u{2212}</span><span class=\"fui-sr-only\">{} </span><span class=\"fui-change-text\">{}</span></del>",
+            tr(locale, Text::ChangeWas),
+            Html::text(value)
+        )
+    });
+    let now = after.map(|value| {
+        format!(
+            "<ins class=\"fui-change fui-change-added fui-change-plain\"><span class=\"fui-change-sign\" aria-hidden=\"true\">+</span><span class=\"fui-sr-only\">{} </span>{}</ins>",
+            tr(locale, Text::ChangeNow),
+            Html::text(value)
+        )
+    });
+    Html::raw(
+        [was, now]
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>()
+            .join(" "),
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::plain_change;
+    use crate::i18n::Locale;
+
+    #[test]
+    fn a_plain_change_leaves_out_the_side_it_does_not_have() {
+        let locale = Locale::default();
+        let both = String::from(plain_change(&locale, Some("a"), Some("b")));
+        assert!(both.contains("</del> <ins "), "{both}");
+        let removed = String::from(plain_change(&locale, Some("a"), None));
+        assert!(
+            removed.starts_with("<del ") && !removed.contains("<ins"),
+            "{removed}"
+        );
+        let added = String::from(plain_change(&locale, None, Some("b")));
+        assert!(
+            added.starts_with("<ins ") && !added.contains("<del"),
+            "{added}"
+        );
+        assert_eq!("", String::from(plain_change(&locale, None, None)));
+    }
 }

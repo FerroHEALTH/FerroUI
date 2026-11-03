@@ -1,0 +1,1 @@
+- `table::change::plain_change(locale, before, after)` writes a history row's change in prose, as the design draws it (R22): the value before struck through as a `del` after "−" and the word "was", the value after as an `ins` after "+" and "now", and a side that is `None` left out (#602).

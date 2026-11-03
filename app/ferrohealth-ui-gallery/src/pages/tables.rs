@@ -16,7 +16,7 @@
 
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
-use ferrohealth_ui::table::change::{Change, change_table};
+use ferrohealth_ui::table::change::{Change, change_table, plain_change};
 use ferrohealth_ui::table::filter::{Find, find_form};
 use ferrohealth_ui::table::model::{
     Direction, Noun, OpenWindow, Paging, Sizes, Sort, StateSource, Window, fields, href,
@@ -36,7 +36,7 @@ use ferrohealth_ui::view::empty::empty_quiet;
 use ferrohealth_ui::view::filter::keeps;
 use ferrohealth_ui::view::layout::{Gap, stack_at};
 use ferrohealth_ui::view::status::badge;
-use ferrohealth_ui::view::surface::{card, page_header, titled_panel};
+use ferrohealth_ui::view::surface::{card, definitions, page_header, titled_panel};
 use ferrohealth_ui::view::template::list::{HeadingCount, ListCard, list_card};
 use ferrohealth_ui::view::time::timestamp;
 
@@ -717,6 +717,28 @@ fn changes(v: &Visit) -> Html {
     )
 }
 
+/// The same three changes as a history row says them, in prose: a value
+/// changed, one added and one removed.
+fn history_changes(v: &Visit) -> Html {
+    card(
+        v.tr(Msg::HistoryRowChanges),
+        definitions(vec![
+            (
+                String::from("routing.timeout"),
+                plain_change(&v.locale, Some("30s"), Some("45s")),
+            ),
+            (
+                String::from("members.node-c"),
+                plain_change(&v.locale, None, Some("https://node-c.example.org/")),
+            ),
+            (
+                String::from("members.node-b"),
+                plain_change(&v.locale, Some("https://node-b.example.org/"), None),
+            ),
+        ]),
+    )
+}
+
 /// The tables page.
 #[must_use]
 pub fn page(v: &Visit) -> Page {
@@ -741,6 +763,7 @@ pub fn page(v: &Visit) -> Page {
             model_files(v),
             hierarchy(v),
             changes(v),
+            history_changes(v),
             super::records::compare_section(v),
             super::records::worklist_section(v),
         ]),
