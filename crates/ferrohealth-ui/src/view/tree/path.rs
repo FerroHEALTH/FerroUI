@@ -90,7 +90,7 @@ pub(super) fn below(parent: Option<&str>, key: &str) -> String {
 /// # Examples
 ///
 /// ```
-/// use ferrohealth_ui::view::tree::path_key;
+/// use ferrohealth_ui::view::tree::path::path_key;
 ///
 /// assert_eq!("SF-1000", path_key(&["SF-1000"]));
 /// assert_eq!("SF-1000/SF-1200", path_key(&["SF-1000", "SF-1200"]));
