@@ -18,6 +18,7 @@ use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::action_menu::{Act, Action};
 use ferrohealth_ui::view::button::{Variant, label};
 use ferrohealth_ui::view::countdown::Countdown;
+use ferrohealth_ui::view::layout::{Gap, stack_at};
 use ferrohealth_ui::view::lifecycle::{
     Lifecycle, PendingCard, Step, StepState, lifecycle, pending_card, trial_actions,
 };
@@ -39,7 +40,6 @@ use crate::data::{
 use crate::locale::Msg;
 use crate::page::Page;
 use crate::visit::Visit;
-use ferrohealth_ui::view::layout::{Gap, stack_at};
 
 /// The address of a page of the gallery's current brand, after `root`.
 fn at(root: &str, path: &str) -> String {

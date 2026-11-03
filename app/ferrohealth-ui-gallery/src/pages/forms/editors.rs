@@ -21,6 +21,7 @@ use ferrohealth_ui::view::editor::{
 };
 use ferrohealth_ui::view::filter::{ROW_TEXT, TableFilter, table_filter};
 use ferrohealth_ui::view::form::Field;
+use ferrohealth_ui::view::layout::{Gap, stack_at};
 use ferrohealth_ui::view::status::badge;
 use ferrohealth_ui::view::surface::{
     Container, Crumb, Header, Mode, SectionHead, card, editor_heading, panel_section,
@@ -38,7 +39,6 @@ use crate::request::DRAFT_ROUTE;
 use crate::visit::Visit;
 
 use super::inputs::DRAFT;
-use ferrohealth_ui::view::layout::{Gap, stack_at};
 
 /// The extensions the upload field takes.
 const UPLOAD_ACCEPT: &[&str] = &[".opt", ".xml"];

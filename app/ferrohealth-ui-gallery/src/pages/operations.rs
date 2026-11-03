@@ -18,6 +18,7 @@ use ferrohealth_ui::view::copy::copy_button;
 use ferrohealth_ui::view::editor::{Editor, code_editor};
 use ferrohealth_ui::view::form::{Field, INPUT, SELECT, field};
 use ferrohealth_ui::view::hl7v2::{Hl7Field, Hl7Segment, hl7v2_raw, hl7v2_segments};
+use ferrohealth_ui::view::layout::{Gap, stack_at};
 use ferrohealth_ui::view::load_report::{Arrival, Count, LoadReport, Outcome, load_report};
 use ferrohealth_ui::view::refusal::{Issue, Refusal, Severity, refusal};
 use ferrohealth_ui::view::row_preview::{RowField, RowTable, RowValue, row_preview};
@@ -37,7 +38,6 @@ use crate::data::{
 use crate::locale::Msg;
 use crate::page::Page;
 use crate::visit::Visit;
-use ferrohealth_ui::view::layout::{Gap, stack_at};
 
 /// The state of a transform pair the page shows.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

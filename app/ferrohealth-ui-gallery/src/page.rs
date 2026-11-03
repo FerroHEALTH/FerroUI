@@ -5,14 +5,15 @@
 //! gallery's version, its footer, the document title, a brand's glyph and
 //! the page for a path the gallery does not serve.
 
-use crate::locale::Msg;
-use crate::visit::Visit;
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::{Glyph, icon};
 use ferrohealth_ui::style::Brand;
 use ferrohealth_ui::view::empty::empty_state;
 use ferrohealth_ui::view::shell::Footer;
 use ferrohealth_ui::view::toast::Flash;
+
+use crate::locale::Msg;
+use crate::visit::Visit;
 
 /// The gallery's version.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
