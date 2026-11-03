@@ -16,10 +16,16 @@ texts! {
     ChangeNone = "change-none",
     /// A side of a change that holds no value.
     ChangeNotSet = "change-not-set",
+    /// The word before the value after in a plain change, for assistive
+    /// technology.
+    ChangeNow = "change-now",
     /// The hidden word before a removed value.
     ChangeRemoved = "change-removed",
     /// The change table's setting column.
     ChangeSetting = "change-setting",
+    /// The word before the value before in a plain change, for assistive
+    /// technology.
+    ChangeWas = "change-was",
     /// The button that applies a filter menu's checked choices.
     FilterMenuShow = "filter-menu-show",
     /// A filter menu's button while it keeps `$shown` of its `$total`

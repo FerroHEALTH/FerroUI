@@ -1188,3 +1188,15 @@ fn a_change_table_heads_its_key_column_as_the_console_names_it() {
         "the default draws as the keyed table with the library's word"
     );
 }
+
+#[test]
+fn a_plain_change_says_both_values_in_prose_each_with_its_sign_and_word() {
+    use ferrohealth_ui::table::change::plain_change;
+
+    let page = html(plain_change(&en(), Some("a <b>"), Some("c & d")));
+    assert_eq!(
+        "<del class=\"fui-change fui-change-removed fui-change-plain\"><span class=\"fui-change-sign\" aria-hidden=\"true\">\u{2212}</span><span class=\"fui-sr-only\">was </span><span class=\"fui-change-text\">a &#60;b&#62;</span></del> <ins class=\"fui-change fui-change-added fui-change-plain\"><span class=\"fui-change-sign\" aria-hidden=\"true\">+</span><span class=\"fui-sr-only\">now </span>c &#38; d</ins>",
+        page,
+        "the design's plain change, escaped"
+    );
+}

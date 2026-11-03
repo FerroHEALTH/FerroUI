@@ -67,6 +67,22 @@ async fn text_of(browser: &Browser, by: By) -> Result<String, Box<dyn Error>> {
     Ok(browser.element(by).await?.text().await?.trim().to_owned())
 }
 
+/// The tables page's plain change says the value before and its word in
+/// the server HTML.
+async fn plain_change_floor(browser: &Browser) -> Result<(), Box<dyn Error>> {
+    let was = browser
+        .element(By::Css("del.fui-change-plain"))
+        .await?
+        .prop("textContent")
+        .await?
+        .unwrap_or_default();
+    assert!(
+        was.contains("was") && was.contains("30s"),
+        "a plain change says the value before and its word: {was}"
+    );
+    Ok(())
+}
+
 /// Reaches each view of the code page's document pane through its link,
 /// and its other format through the format's link.
 async fn document_views(browser: &Browser) -> Result<(), Box<dyn Error>> {
@@ -585,6 +601,7 @@ async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error
                 .await?;
             assert_eq!(25, rows.len(), "the first table shows its page");
             crate::records::worklist_floor(browser).await?;
+            plain_change_floor(browser).await?;
         }
         "/code" => {
             let shown = text_of(browser, By::Id("document-highlighted")).await?;

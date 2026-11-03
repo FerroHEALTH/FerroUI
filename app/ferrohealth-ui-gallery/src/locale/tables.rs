@@ -50,6 +50,8 @@ messages! {
     HierarchyRoot = "hierarchy-root",
     /// `A twig of branch B`
     HierarchyTwigB1 = "hierarchy-twig-b1",
+    /// `What a history row says changed`
+    HistoryRowChanges = "history-row-changes",
     /// `http://example.org/fhir/StructureDefinition/ferrohealth-synthetic-journey-diagnose`
     HttpExampleOrgFhirStructuredefinition = "http-example-org-fhir-structuredefinition",
     /// `Indicator`
