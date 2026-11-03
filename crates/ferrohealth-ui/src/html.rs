@@ -125,6 +125,19 @@ impl Extend<Html> for Html {
     }
 }
 
+/// `body` between the markup `open` and `close`, both the library's own.
+pub(crate) fn wrap(open: &str, body: Html, close: &str) -> Html {
+    let mut out = String::from(open);
+    out.push_str(&String::from(body));
+    out.push_str(close);
+    Html::raw(out)
+}
+
+/// `body` in a `div` of the library's classes `class`.
+pub(crate) fn div(class: &str, body: Html) -> Html {
+    wrap(&format!("<div class=\"{class}\">"), body, "</div>")
+}
+
 /// Writes `text` into `out` with the five characters HTML reserves
 /// escaped, so it reads as text in an element or an attribute, in the
 /// entities Askama's own escaper writes, so a page escapes one way.

@@ -4,26 +4,18 @@
 //! The page layouts a screen is built from.
 //!
 //! They are three reading panes, a list beside the item it opens, a form
-//! beside its answer, a stack at each step of space, a divided list, and a
+//! beside its answer, a stack at each step of space, the grids, the
+//! cluster and the split ([`Arrangement`], [`split`]), a divided list, and a
 //! row of fields with columns of its own.
 //!
 //! Each lays its parts side by side from 64 rem (a row of fields from
 //! 40 rem) and one above the other below it, so a page reflows at 320 px
 //! with no sideways scroll (WCAG 2.2 SC 1.4.10). Pure CSS, no script, no
-//! style attribute. The simpler layouts (the stack, the grid, the cluster,
-//! the split) are in [`crate::view::surface`].
+//! style attribute.
 
 use std::borrow::Cow;
 
-use crate::html::Html;
-
-/// `body` between the markup `open` and `close`, both the library's own.
-fn wrap(open: &str, body: Html, close: &str) -> Html {
-    let mut out = String::from(open);
-    out.push_str(&String::from(body));
-    out.push_str(close);
-    Html::raw(out)
-}
+use crate::html::{Html, div, wrap};
 
 /// `items` each between `open` and `close`.
 fn each(items: Vec<Html>, open: &str, close: &str) -> String {
@@ -62,7 +54,54 @@ impl Gap {
 /// Returns `body` one part under the other, `gap` apart.
 #[must_use]
 pub fn stack_at(gap: Gap, body: Html) -> Html {
-    wrap(&format!("<div class=\"{}\">", gap.stack()), body, "</div>")
+    div(gap.stack(), body)
+}
+
+/// A box that lays a console's children out, each the classes of the
+/// stylesheet that place them.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Arrangement {
+    /// A grid of columns at least 16 rem wide that share the whole row.
+    Grid,
+    /// The [`Arrangement::Grid`], each card at its own height rather than
+    /// stretched to its row's tallest: for cards of unlike length side by
+    /// side.
+    GridStart,
+    /// The grid of stat cards a dashboard opens with, closer together.
+    StatGrid,
+    /// A wrapping row, centred on the cross axis.
+    Cluster,
+    /// The row of Add buttons under a list of rows in a section.
+    AddRow,
+}
+
+impl Arrangement {
+    /// Returns `children` laid out in this box: a `div` of its classes.
+    #[must_use]
+    pub fn wrap(self, children: Html) -> Html {
+        div(self.class(), children)
+    }
+
+    /// The classes of the box.
+    const fn class(self) -> &'static str {
+        match self {
+            Self::Grid => "fui-grid",
+            Self::GridStart => "fui-grid fui-grid-start",
+            Self::StatGrid => "fui-grid fui-grid-stats",
+            Self::Cluster => "fui-cluster",
+            Self::AddRow => "fui-cluster fui-add-row",
+        }
+    }
+}
+
+/// Returns `start` and `end` on one wrapping row, `start` at the start and
+/// `end` at the end: a header line with its actions.
+#[must_use]
+pub fn split(start: Html, end: Html) -> Html {
+    Html::join([
+        wrap("<div class=\"fui-split\"><div>", start, "</div>"),
+        wrap("<div class=\"fui-cluster\">", end, "</div></div>"),
+    ])
 }
 
 /// One reading pane: its accessible name and its content.
@@ -182,7 +221,7 @@ impl FieldRow {
 /// column, level with the controls.
 #[must_use]
 pub fn field_row(row: FieldRow, body: Html) -> Html {
-    wrap(&format!("<div class=\"{}\">", row.class()), body, "</div>")
+    div(row.class(), body)
 }
 
 /// Returns [`field_row`] with the id `id`, for a row a console adds,

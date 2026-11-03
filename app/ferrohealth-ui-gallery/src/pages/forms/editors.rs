@@ -38,6 +38,7 @@ use crate::request::DRAFT_ROUTE;
 use crate::visit::Visit;
 
 use super::inputs::DRAFT;
+use ferrohealth_ui::view::layout::{Gap, stack_at};
 
 /// The extensions the upload field takes.
 const UPLOAD_ACCEPT: &[&str] = &[".opt", ".xml"];
@@ -455,10 +456,13 @@ pub(super) fn editor_headers(v: &Visit) -> Html {
     };
     card(
         v.tr(Msg::EditorHeaders),
-        Container::Stack.wrap(Html::raw(format!(
-            "<div data-editor-mode=\"new\">{}</div><div data-editor-mode=\"edit\">{}</div>",
-            header(Mode::Creating),
-            header(Mode::Editing(String::from("synthetic-007.model.yml")))
-        ))),
+        stack_at(
+            Gap::Loose,
+            Html::raw(format!(
+                "<div data-editor-mode=\"new\">{}</div><div data-editor-mode=\"edit\">{}</div>",
+                header(Mode::Creating),
+                header(Mode::Editing(String::from("synthetic-007.model.yml")))
+            )),
+        ),
     )
 }

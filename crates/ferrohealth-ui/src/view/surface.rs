@@ -6,13 +6,14 @@
 //! They are the page header with its trail and meta line, the editor's
 //! header, the card and the panel with its header action, the sections of a
 //! tab panel (B10), the stat card, the definition grids, the well, the chip,
-//! the disclosure, and the stack, grid, cluster and split that lay them out.
+//! the disclosure, each in the box [`Container`] draws. The layouts that
+//! place them are in [`crate::view::layout`].
 
 use std::borrow::Cow;
 
 use askama::Template;
 
-use crate::html::{Html, Render as _};
+use crate::html::{Html, Render as _, div, wrap};
 use crate::i18n::{Locale, Message, Text, Word, tr};
 use crate::icon::{Glyph, icon};
 use crate::view::action::{ActionGroup, action_group};
@@ -245,14 +246,6 @@ pub fn editor_heading(
         Trail::Parent,
         action_group(locale, actions),
     )
-}
-
-/// `body` between the markup `open` and `close`, both the library's own.
-fn wrap(open: &str, body: Html, close: &str) -> Html {
-    let mut out = String::from(open);
-    out.push_str(&String::from(body));
-    out.push_str(close);
-    Html::raw(out)
 }
 
 /// Returns the small muted line under a page's header that says who
@@ -595,38 +588,10 @@ pub fn disclosure(summary: impl Into<String>, body: Html) -> Html {
     .html()
 }
 
-#[derive(Template)]
-#[template(path = "surface/surface.html", block = "split")]
-struct Split {
-    start: Html,
-    end: Html,
-}
-
-/// Returns `start` and `end` on one wrapping row, `start` at the start and
-/// `end` at the end: a header line with its actions.
-#[must_use]
-pub fn split(start: Html, end: Html) -> Html {
-    Split { start, end }.html()
-}
-
-/// A box the library draws around a console's children, each the classes
-/// of the stylesheet that lay them out.
+/// A surface the library draws around a console's children, each the
+/// classes of the stylesheet that draw it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Container {
-    /// One above the other with the loose gap between.
-    Stack,
-    /// A grid of columns at least 16 rem wide that share the whole row.
-    Grid,
-    /// The [`Container::Grid`], each card at its own height rather than
-    /// stretched to its row's tallest: for cards of unlike length side by
-    /// side.
-    GridStart,
-    /// The grid of stat cards a dashboard opens with, closer together.
-    StatGrid,
-    /// A wrapping row, centred on the cross axis.
-    Cluster,
-    /// The row of Add buttons under a list of rows in a section.
-    AddRow,
     /// A card with no heading of its own.
     Card,
     /// The card's padding, for a panel's prose.
@@ -643,22 +608,12 @@ impl Container {
     /// Returns `children` in this box: a `div` of its classes.
     #[must_use]
     pub fn wrap(self, children: Html) -> Html {
-        wrap(
-            &format!("<div class=\"{}\">", self.class()),
-            children,
-            "</div>",
-        )
+        div(self.class(), children)
     }
 
     /// The classes of the box.
     const fn class(self) -> &'static str {
         match self {
-            Self::Stack => "fui-stack",
-            Self::Grid => "fui-grid",
-            Self::GridStart => "fui-grid fui-grid-start",
-            Self::StatGrid => "fui-grid fui-grid-stats",
-            Self::Cluster => "fui-cluster",
-            Self::AddRow => "fui-cluster fui-add-row",
             Self::Card => "fui-card",
             Self::PanelBody => "fui-panel-body",
             Self::PanelSections => "fui-panel",

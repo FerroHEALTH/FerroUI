@@ -37,6 +37,7 @@ use crate::data::{
 use crate::locale::Msg;
 use crate::page::Page;
 use crate::visit::Visit;
+use ferrohealth_ui::view::layout::{Gap, stack_at};
 
 /// The state of a transform pair the page shows.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -331,7 +332,7 @@ fn load_reports(v: &Visit, root: &str) -> Html {
     titled_panel(
         v.tr(Msg::OpLoadReport),
         Html::empty(),
-        Container::PanelBody.wrap(Container::Stack.wrap(reports)),
+        Container::PanelBody.wrap(stack_at(Gap::Loose, reports)),
     )
 }
 
@@ -577,12 +578,9 @@ pub fn page(v: &Visit) -> Page {
         .into_iter()
         .map(|pair| pair_panel(v, pair))
         .collect();
-    let body = Container::Stack.wrap(Html::join([
-        load_reports(v, &root),
-        pairs,
-        dense(v),
-        rows(v),
-        message(v),
-    ]));
+    let body = stack_at(
+        Gap::Loose,
+        Html::join([load_reports(v, &root), pairs, dense(v), rows(v), message(v)]),
+    );
     Page::shell(v.tr(Msg::Operations), Html::join([header, body]))
 }

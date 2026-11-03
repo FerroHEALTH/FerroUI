@@ -30,7 +30,7 @@ use ferrohealth_ui::view::form::{ERROR, Field, INPUT, SELECT, error_id};
 use ferrohealth_ui::view::repeat::{Fields, ROW, Repeat, RepeatAdd, RepeatRow, RowEnd, repeat};
 use ferrohealth_ui::view::root_matrix::{MatrixRoot, MatrixRow, RootMatrix, root_matrix};
 use ferrohealth_ui::view::surface::{
-    Container, Crumb, Header, SectionHead, card, definitions, page_heading, panel_section,
+    Crumb, Header, SectionHead, card, definitions, page_heading, panel_section,
     panel_sections_card, section_intro,
 };
 use ferrohealth_ui::view::template::list::HeadingCount;
@@ -44,6 +44,7 @@ use crate::terminology_data::{
     URN_CANONICAL, VALUE_SETS, VERSIONED_UID, WHEEZE, base, display, legacy_display,
 };
 use crate::visit::Visit;
+use ferrohealth_ui::view::layout::{Arrangement, Gap, stack_at};
 
 /// The id of the version select's menu.
 const VERSION_MENU: &str = "fhir-version";
@@ -448,7 +449,7 @@ fn composer(v: &Visit) -> Html {
             Html::text(v.tr(words))
         ))
     };
-    let adds = Container::AddRow.wrap(Html::join([
+    let adds = Arrangement::AddRow.wrap(Html::join([
         add("include", Msg::TmAddInclude),
         add("exclude", Msg::TmAddExclude),
     ]));
@@ -761,13 +762,16 @@ pub fn page(v: &Visit) -> Page {
         },
         ActionGroup::default(),
     );
-    let body = Container::Stack.wrap(Html::join([
-        codings(v),
-        clauses_read(v),
-        composer(v),
-        matrix(v),
-        mappings(v),
-        map_editor(v),
-    ]));
+    let body = stack_at(
+        Gap::Loose,
+        Html::join([
+            codings(v),
+            clauses_read(v),
+            composer(v),
+            matrix(v),
+            mappings(v),
+            map_editor(v),
+        ]),
+    );
     Page::shell(v.tr(Msg::Terminology), Html::join([header, body]))
 }

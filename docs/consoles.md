@@ -108,7 +108,7 @@ fixed argument.
 
 | Component | Call |
 | --- | --- |
-| The boxes around your children | `view::surface::Container::Stack.wrap(children)`, or `Grid`, `GridStart`, `StatGrid`, `Cluster`, `AddRow`, `Card`, `PanelBody`, `PanelSections` or `Well` |
+| The boxes around your children | `view::layout::stack_at(Gap::Loose, children)`, `view::layout::Arrangement::Grid.wrap(children)` or `GridStart`, `StatGrid`, `Cluster` and `AddRow`, `view::layout::split(start, end)`, and the surfaces `view::surface::Container::Card.wrap(children)` or `PanelBody`, `PanelSections` and `Well` |
 | A data table | `table::view::data_table(DataTable::new(caption, columns, body))`, with `.with_sorting(sorting)` and `.with_shape(Shape::Wide)` or `Shape::Unstacked`; the shape is the field `DataTable::shape` |
 | A row's title cell | `table::view::title_cell(level, href, name, sub)`, `level` `None` in a flat table |
 | A confirmation | `view::dialog::confirm_dialog(locale, confirmation, Stakes::Plain, form, confirm)`, `Stakes::Danger` for an action that cannot be undone, `form` `Some(ConfirmForm { .. })` when it posts fields |

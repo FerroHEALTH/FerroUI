@@ -35,8 +35,7 @@ use ferrohealth_ui::view::results::{Export, ResultsPane, SHOWN, Shown, Switch, r
 use ferrohealth_ui::view::scope::{Grant, ScopeGrant, scope_grants};
 use ferrohealth_ui::view::subject::{Subject, SubjectLine, subject_line};
 use ferrohealth_ui::view::surface::{
-    Container, Crumb, Header, SectionHead, page_heading, panel_section, panel_sections_card,
-    titled_panel,
+    Crumb, Header, SectionHead, page_heading, panel_section, panel_sections_card, titled_panel,
 };
 use ferrohealth_ui::view::template::list::HeadingCount;
 use ferrohealth_ui::view::time::{relative, timestamp};
@@ -51,6 +50,7 @@ use crate::clinical_data::{
 use crate::locale::Msg;
 use crate::page::Page;
 use crate::visit::Visit;
+use ferrohealth_ui::view::layout::{Gap, stack_at};
 
 /// The seconds a revealed subject shows.
 const REVEAL_SECONDS: u32 = 30;
@@ -734,13 +734,16 @@ pub fn page(v: &Visit) -> Page {
         },
         ActionGroup::default(),
     );
-    let body = Container::Stack.wrap(Html::join([
-        subjects(v, brand),
-        histories(v, brand),
-        composition(v),
-        builder(v, brand),
-        results(v, brand),
-        scopes(v),
-    ]));
+    let body = stack_at(
+        Gap::Loose,
+        Html::join([
+            subjects(v, brand),
+            histories(v, brand),
+            composition(v),
+            builder(v, brand),
+            results(v, brand),
+            scopes(v),
+        ]),
+    );
     Page::shell(v.tr(Msg::ClinicalRecords), Html::join([header, body]))
 }

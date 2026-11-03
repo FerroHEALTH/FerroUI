@@ -23,7 +23,7 @@ use ferrohealth_ui::view::browser::{
 use ferrohealth_ui::view::coding::{Coding, Layout, coding, inactive_mark};
 use ferrohealth_ui::view::path::archetype;
 use ferrohealth_ui::view::surface::{
-    Container, Crumb, Header, SectionHead, definitions, page_heading, panel_section, section_intro,
+    Crumb, Header, SectionHead, definitions, page_heading, panel_section, section_intro,
     titled_panel,
 };
 use ferrohealth_ui::view::tree::path::path_key;
@@ -41,6 +41,7 @@ use crate::trees_data::{
     TEMPLATE, TEMPLATE_OPEN, TEMPLATE_SELECTED, reason_code,
 };
 use crate::visit::Visit;
+use ferrohealth_ui::view::layout::{Gap, stack_at};
 
 /// The key of the brand the route names, FerroTERM's for none.
 fn brand_key(v: &Visit) -> String {
@@ -615,12 +616,15 @@ pub fn page(v: &Visit) -> Page {
         },
         ActionGroup::default(),
     );
-    let body = Container::Stack.wrap(Html::join([
-        deep_browser(v),
-        long_browser(v),
-        flat_browser(v),
-        directories(v),
-        path_browser(v),
-    ]));
+    let body = stack_at(
+        Gap::Loose,
+        Html::join([
+            deep_browser(v),
+            long_browser(v),
+            flat_browser(v),
+            directories(v),
+            path_browser(v),
+        ]),
+    );
     Page::shell(v.tr(Msg::Trees), Html::join([header, body]))
 }

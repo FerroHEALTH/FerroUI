@@ -34,6 +34,7 @@ use ferrohealth_ui::view::form::{
     keyed_check_field, keyed_field,
 };
 use ferrohealth_ui::view::help::{HelpWords, explained_check_field, help_switch};
+use ferrohealth_ui::view::layout::Arrangement;
 use ferrohealth_ui::view::pick_or_type::{PickOrType, Picker, pick_or_type};
 use ferrohealth_ui::view::picker::{self, picker_field};
 use ferrohealth_ui::view::popover::{PopoverForm, popover_form};
@@ -514,7 +515,7 @@ fn panel_sections_draw_a_heading_row_with_its_count_and_no_card_of_their_own() {
                 }),
                 Html::join([
                     section_intro("One <sentence>."),
-                    Container::AddRow.wrap(Html::raw(String::from(
+                    Arrangement::AddRow.wrap(Html::raw(String::from(
                         r#"<button type="button">Add</button>"#,
                     ))),
                 ]),
@@ -987,12 +988,12 @@ fn the_surfaces_render_and_none_writes_a_style_attribute() {
 
 #[test]
 fn a_start_grid_writes_the_start_class_and_the_grid_does_not() {
-    let start = html(Container::GridStart.wrap(Html::raw(String::from("<p>a</p>"))));
+    let start = html(Arrangement::GridStart.wrap(Html::raw(String::from("<p>a</p>"))));
     assert!(
         start.contains(r#"class="fui-grid fui-grid-start""#),
         "{start}"
     );
-    let plain = html(Container::Grid.wrap(Html::raw(String::from("<p>a</p>"))));
+    let plain = html(Arrangement::Grid.wrap(Html::raw(String::from("<p>a</p>"))));
     assert!(plain.contains(r#"class="fui-grid""#), "{plain}");
 }
 
