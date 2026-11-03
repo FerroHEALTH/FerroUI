@@ -15,7 +15,7 @@
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::i18n::Arg;
 use ferrohealth_ui::icon::{Glyph, icon};
-use ferrohealth_ui::table::view::{ACTIONS, Body, Column, DataTable, Sorting, data_table};
+use ferrohealth_ui::table::view::{ACTIONS, Body, Column, DataTable, data_table};
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::action::{ActionGroup, action_group};
 use ferrohealth_ui::view::action_menu::{
@@ -23,19 +23,17 @@ use ferrohealth_ui::view::action_menu::{
 };
 use ferrohealth_ui::view::button::{Variant, label};
 use ferrohealth_ui::view::dialog::{
-    ConfirmForm, Confirmation, Explanation, Modal, Width, confirm_dialog, danger_dialog,
-    danger_form_dialog, info_dialog, modal_dialog,
+    ConfirmForm, Confirmation, Explanation, Modal, Stakes, Width, confirm_dialog, info_dialog,
+    modal_dialog,
 };
 use ferrohealth_ui::view::form::{INPUT, TEXTAREA, described_by, field, keyed_field};
 use ferrohealth_ui::view::kbd::{Shortcut, ShortcutGroup, kbd, shortcut_hint};
 use ferrohealth_ui::view::layout::divided_list;
 use ferrohealth_ui::view::popover::{PopoverForm, popover_form};
 use ferrohealth_ui::view::preferences::{Post, language_select};
-use ferrohealth_ui::view::shortcuts::{GoTo, GoToPair, OPENS_LEGEND, shortcut_legend_with_go_to};
+use ferrohealth_ui::view::shortcuts::{GoTo, GoToPair, OPENS_LEGEND, shortcut_legend};
 use ferrohealth_ui::view::side_panel::{Opener, SidePanel, SidePanelWords, side_panel};
-use ferrohealth_ui::view::surface::{
-    card, chip, cluster, definitions, grid, page_header, panel, split, stack,
-};
+use ferrohealth_ui::view::surface::{Container, card, chip, definitions, page_header, split};
 use ferrohealth_ui::view::toast::{Flash, RAISES, ToastLink};
 
 use crate::app::{Page, REMOVE_ROUTE};
@@ -117,15 +115,19 @@ fn confirmations(v: &Visit) -> Html {
             title: v.tr(Msg::ReloadTheSet).into(),
             message: v.tr(Msg::FilesDiskCompileReplaceRunning).into(),
         },
+        Stakes::Plain,
+        None,
         confirm_and_toast(v, "reload-set", false),
     );
-    let danger = danger_dialog(
+    let danger = confirm_dialog(
         &v.locale,
         Confirmation {
             id: "delete-file".into(),
             title: v.tr(Msg::DeleteTheFile).into(),
             message: v.tr(Msg::SyntheticFileGoesGoodRunning).into(),
         },
+        Stakes::Danger,
+        None,
         confirm_and_toast(v, "delete-file", true),
     );
     let how = info_dialog(
@@ -139,6 +141,7 @@ fn confirmations(v: &Visit) -> Html {
             t(v.tr(Msg::ReloadingCompiles)),
             t(v.tr(Msg::ReloadingKeeps))
         )),
+        Width::Wide,
     );
     card(
         v.tr(Msg::ConfirmationDialogs),
@@ -179,12 +182,11 @@ fn member_removals(v: &Visit) -> Html {
         Column::text("member", v.tr(Msg::Member)),
         Column::text("actions", v.tr(Msg::Actions)),
     ];
-    let table = data_table(DataTable {
-        caption: &v.tr(Msg::RemoveMembers),
-        columns: &columns,
-        sorting: Sorting::default(),
-        body: Body::Rows(rows),
-    });
+    let table = data_table(DataTable::new(
+        &v.tr(Msg::RemoveMembers),
+        &columns,
+        Body::Rows(rows),
+    ));
     h(format!("<div id=\"member-removals\">{table}</div>{said}"))
 }
 
@@ -220,17 +222,18 @@ fn member_row(v: &Visit, member: &'static str, back: &str) -> Html {
             )),
         ),
     ]);
-    let dialog = danger_form_dialog(
+    let dialog = confirm_dialog(
         &v.locale,
         Confirmation {
             id: id.into(),
             title: v.tr_with(Msg::RemoveMemberTitle, &named).into(),
             message: v.tr_with(Msg::RemoveMemberBody, &named).into(),
         },
-        ConfirmForm {
+        Stakes::Danger,
+        Some(ConfirmForm {
             action: String::from(REMOVE_ROUTE),
             fields,
-        },
+        }),
         h(format!(
             "<button type=\"submit\" class=\"{}\">{}</button>",
             Variant::Destructive.class(),
@@ -412,7 +415,7 @@ fn menus(v: &Visit) -> Html {
         "language-list",
         &v.preferences.language,
         &crate::locale::choices(),
-        &ferrohealth_ui::i18n::Locale::english(),
+        &ferrohealth_ui::i18n::Locale::default(),
         &Post {
             action: String::from(crate::app::PREFERENCE_ROUTE),
             back: here.clone(),
@@ -420,7 +423,7 @@ fn menus(v: &Visit) -> Html {
     );
     card(
         v.tr(Msg::MenusAndSelects),
-        stack(Html::join([
+        Container::Stack.wrap(Html::join([
             divided_list(Some(v.tr(Msg::Files).into()), rows),
             definitions(vec![
                 (v.tr(Msg::Language), language),
@@ -519,7 +522,7 @@ fn modals(v: &Visit) -> Html {
 /// The session's access, which the side panel holds and its own page
 /// shows.
 fn access_body(v: &Visit) -> Html {
-    stack(Html::join([
+    Container::Stack.wrap(Html::join([
         definitions(vec![
             (v.tr(Msg::Signed), t(v.tr(Msg::SyntheticOperator))),
             (v.tr(Msg::Method), t(v.tr(Msg::OpenidConnect))),
@@ -529,7 +532,7 @@ fn access_body(v: &Visit) -> Html {
             ),
         ]),
         h(format!("<h3>{}</h3>", t(v.tr(Msg::Scopes)))),
-        cluster(Html::join([
+        Container::Cluster.wrap(Html::join([
             chip("ferrobridge.operator"),
             chip("openid"),
             chip("profile"),
@@ -551,13 +554,16 @@ fn side_panel_card(v: &Visit) -> Html {
         h(format!(
             "<p class=\"fui-muted\">{}</p>{}",
             t(v.tr(Msg::ContentNoNavigationFromEnd)),
-            side_panel(SidePanel {
-                id: String::from("access"),
-                title: v.tr(Msg::Access),
-                opener,
-                body: access_body(v),
-                words: SidePanelWords::of(&v.locale),
-            })
+            side_panel(
+                SidePanel {
+                    id: String::from("access"),
+                    title: v.tr(Msg::Access),
+                    opener,
+                    body: access_body(v),
+                    words: SidePanelWords::of(&v.locale),
+                },
+                None
+            )
         )),
     )
 }
@@ -627,7 +633,7 @@ fn toasts(v: &Visit) -> Html {
         ))
     })
     .collect();
-    card(v.tr(Msg::Toasts), cluster(buttons))
+    card(v.tr(Msg::Toasts), Container::Cluster.wrap(buttons))
 }
 
 /// The popover form: Save the query, a small form that opens under its
@@ -659,7 +665,7 @@ fn popover(v: &Visit) -> Html {
         h(format!(
             "<p class=\"fui-muted\" id=\"popover-form\">{}</p>{}",
             t(v.tr(Msg::PopoverFormOpensUnderTrigger)),
-            cluster(popover_form(PopoverForm {
+            Container::Cluster.wrap(popover_form(PopoverForm {
                 id: "save-query".into(),
                 variant: Variant::Secondary,
                 glyph: Glyph::SAVE,
@@ -735,7 +741,7 @@ fn shortcuts(v: &Visit) -> Html {
             t(v.tr(Msg::ShortcutsCardIntro)),
             t(v.tr(Msg::KeyboardShortcuts)),
             kbd("?"),
-            shortcut_legend_with_go_to(&v.locale, shortcut_groups(v), go_to(v)),
+            shortcut_legend(&v.locale, shortcut_groups(v), Some(go_to(v))),
             shortcut_hint(&v.locale, &hint)
         )),
     )
@@ -745,10 +751,10 @@ fn shortcuts(v: &Visit) -> Html {
 /// the panel's opener leads with no script.
 #[must_use]
 pub fn access(v: &Visit) -> Page {
-    let header = page_header(&v.locale, v.tr(Msg::Access), None, ActionGroup::none());
+    let header = page_header(&v.locale, v.tr(Msg::Access), None, ActionGroup::default());
     Page::shell(
         v.tr(Msg::Access),
-        Html::join([header, panel(access_body(v))]),
+        Html::join([header, Container::Card.wrap(access_body(v))]),
     )
 }
 
@@ -761,11 +767,11 @@ pub fn page(v: &Visit) -> Page {
         Some(v.tr(Msg::DialogsModalsSidePanelToasts)),
         overlays_actions(v),
     );
-    let body = stack(Html::join([
-        grid(Html::join([confirmations(v), side_panel_card(v)])),
-        grid(Html::join([action_groups(v), menus(v)])),
+    let body = Container::Stack.wrap(Html::join([
+        Container::Grid.wrap(Html::join([confirmations(v), side_panel_card(v)])),
+        Container::Grid.wrap(Html::join([action_groups(v), menus(v)])),
         modals(v),
-        grid(Html::join([toasts(v), popover(v)])),
+        Container::Grid.wrap(Html::join([toasts(v), popover(v)])),
         shortcuts(v),
     ]));
     Page::shell(v.tr(Msg::OverlaysFeedback), Html::join([header, body]))

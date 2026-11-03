@@ -201,16 +201,10 @@ impl Paging {
         Self::read_within(query.get_str(PAGE_KEY), query.get_str(SIZE_KEY), sizes)
     }
 
-    /// This paging written into `query`: the first page and the default size
-    /// are written as their absence, so the first page's URL is the plain
-    /// path.
-    pub fn write(self, query: &mut Query) {
-        self.write_within(query, Sizes::STANDARD);
-    }
-
-    /// This paging written into `query`, the size `sizes.default` written
-    /// as its absence.
-    pub fn write_within(self, query: &mut Query, sizes: Sizes) {
+    /// This paging written into `query` under the console's `sizes`: the
+    /// first page and the size `sizes.default` are written as their absence,
+    /// so the first page's URL is the plain path.
+    pub fn write(self, query: &mut Query, sizes: Sizes) {
         if self.page <= 1 {
             query.remove(PAGE_KEY);
         } else {
@@ -605,7 +599,7 @@ mod tests {
     use crate::query::Query;
 
     fn en() -> Locale {
-        Locale::english()
+        Locale::default()
     }
 
     use super::{
@@ -669,7 +663,7 @@ mod tests {
         );
         assert_eq!((0, 1000, 4), (window.start, window.end, window.pages));
         let mut query = Query::new();
-        Paging { page: 1, size: 100 }.write_within(&mut query, sizes);
+        Paging { page: 1, size: 100 }.write(&mut query, sizes);
         assert_eq!("/l", href("/l", &query), "the default is its absence");
     }
 
@@ -749,9 +743,9 @@ mod tests {
     fn a_default_is_written_as_its_absence_and_other_keys_are_kept() {
         let mut query = Query::new();
         query.insert("filter", String::from("a b&c"));
-        Paging::default().write(&mut query);
+        Paging::default().write(&mut query, Sizes::STANDARD);
         assert_eq!("/list?filter=a+b%26c", href("/list", &query));
-        Paging { page: 2, size: 50 }.write(&mut query);
+        Paging { page: 2, size: 50 }.write(&mut query, Sizes::STANDARD);
         let link = href("/list", &query);
         assert!(
             link.contains("page=2") && link.contains("size=50"),

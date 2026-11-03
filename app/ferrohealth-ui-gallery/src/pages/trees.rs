@@ -23,7 +23,7 @@ use ferrohealth_ui::view::browser::{
 use ferrohealth_ui::view::coding::{Coding, Layout, coding, inactive_mark};
 use ferrohealth_ui::view::path::archetype;
 use ferrohealth_ui::view::surface::{
-    Crumb, Header, SectionHead, definitions, page_heading, panel_section, section_intro, stack,
+    Container, Crumb, Header, SectionHead, definitions, page_heading, panel_section, section_intro,
     titled_panel,
 };
 use ferrohealth_ui::view::tree::{
@@ -610,9 +610,9 @@ pub fn page(v: &Visit) -> Page {
             mono: false,
             badge: None,
         },
-        ActionGroup::none(),
+        ActionGroup::default(),
     );
-    let body = stack(Html::join([
+    let body = Container::Stack.wrap(Html::join([
         deep_browser(v),
         long_browser(v),
         flat_browser(v),

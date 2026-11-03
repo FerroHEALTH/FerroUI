@@ -21,16 +21,14 @@ use ferrohealth_ui::view::action_menu::{self, Act, Action, Item, Menu};
 use ferrohealth_ui::view::button::Variant;
 use ferrohealth_ui::view::change::{Change, change_table_keyed};
 use ferrohealth_ui::view::compare::{
-    Compare, CompareField, CompareRecord, Verdict, compare, compare_stacked,
+    Compare, CompareField, CompareRecord, Presentation, Verdict, compare,
 };
 use ferrohealth_ui::view::identifier::{
     Domain, Identifier, IdentifierWords, KEEP, Masked, Reveal, Revealed, identifier,
     identifier_list, identifier_static,
 };
 use ferrohealth_ui::view::kbd::{Shortcut, shortcut_hint};
-use ferrohealth_ui::view::side_panel::{
-    Opener, SidePanel, SidePanelWords, side_panel_with_shortcut,
-};
+use ferrohealth_ui::view::side_panel::{Opener, SidePanel, SidePanelWords, side_panel};
 use ferrohealth_ui::view::status::{BannerLink, badge, banner};
 use ferrohealth_ui::view::surface::{card, definitions, titled_panel};
 use ferrohealth_ui::view::template::list::{HeadingCount, ListCard, list_card};
@@ -132,14 +130,14 @@ pub fn compare_section(v: &Visit) -> Html {
         verdict: &verdict,
         differ_first: true,
     };
-    let wide = compare(&v.locale, table);
-    let stacked = compare_stacked(
+    let wide = compare(&v.locale, table, Presentation::Table);
+    let stacked = compare(
         &v.locale,
         Compare {
             id: "records-compare-stacked",
             ..table
         },
-        0,
+        Presentation::Stacked { shown: 0 },
     );
     let agreeing = &others[..1];
     let agree_caption = v.tr(Msg::RecordsCompareCaptionAgree);
@@ -161,6 +159,7 @@ pub fn compare_section(v: &Visit) -> Html {
             verdict: &agree,
             differ_first: false,
         },
+        Presentation::Table,
     );
     Html::join([
         card(v.tr(Msg::RecordsCompare), wide),
@@ -243,7 +242,7 @@ fn pair_menu(v: &Visit, pair: &Pair, open: &str) -> Html {
 /// opener leads to the pair's page, `open`.
 fn glance(v: &Visit, pair: &Pair, open: &str) -> Html {
     let name = format!("{} · {}", pair.a, pair.b);
-    side_panel_with_shortcut(
+    side_panel(
         SidePanel {
             id: format!("{}-glance", pair.key),
             title: v.tr_with(Msg::RecordsGlanceOf, &[("name", name.into())]),
@@ -261,7 +260,7 @@ fn glance(v: &Visit, pair: &Pair, open: &str) -> Html {
             ]),
             words: SidePanelWords::of(&v.locale),
         },
-        "o",
+        Some("o"),
     )
 }
 
@@ -299,7 +298,7 @@ pub fn worklist_section(v: &Visit) -> Html {
                     form: None,
                     checked: index == 3 || index == 4,
                 }),
-                title_cell(Some(&open), t(&pair.a), None),
+                title_cell(None, Some(&open), t(&pair.a), None),
                 cell(b, t(&pair.b)),
                 cell(
                     domains,
@@ -325,16 +324,18 @@ pub fn worklist_section(v: &Visit) -> Html {
         column: String::from("grade"),
         direction: Direction::Descending,
     };
-    let table = data_table(DataTable {
-        caption: &v.tr(Msg::RecordsCandidatesCaption),
-        columns: &columns,
-        sorting: Sorting {
+    let table = data_table(
+        DataTable::new(
+            &v.tr(Msg::RecordsCandidatesCaption),
+            &columns,
+            Body::Rows(rows),
+        )
+        .with_sorting(Sorting {
             sort: Some(&sort),
             stated: Some(&order),
             ..Sorting::default()
-        },
-        body: Body::Rows(rows),
-    });
+        }),
+    );
     let hint = shortcut_hint(
         &v.locale,
         &[

@@ -24,7 +24,7 @@ use crate::i18n::{Locale, Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::tone::Tone;
 use crate::view::button::{Variant, label};
-use crate::view::dialog::{Explanation, explain};
+use crate::view::dialog::{Explanation, Width, info_dialog};
 
 /// The state of a card or an edge, drawn as a shape, a colour and a word.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -180,14 +180,14 @@ pub fn rule_dialog(locale: &Locale, rule: FlowRule) -> Html {
         "<p class=\"fui-small fui-muted\">{}</p>",
         Html::text(note)
     )));
-    explain(
+    info_dialog(
         locale,
         Explanation {
             id,
             title: tr(locale, Text::FlowRuleTitle),
         },
         body,
-        false,
+        Width::Narrow,
     )
 }
 
@@ -1640,7 +1640,7 @@ mod tests {
             .iter()
             .map(|lane| lane.cards.iter().map(|card| card.id.as_str()).collect())
             .collect();
-        let en = Locale::english();
+        let en = Locale::default();
         let planned = plan(&en, &flow);
         let drawn: Vec<Vec<&str>> = planned
             .lanes
@@ -1670,7 +1670,7 @@ mod tests {
                 )
             })
             .collect();
-        let en = Locale::english();
+        let en = Locale::default();
         let planned = plan(&en, &flow);
         for (lane, shown) in flow.lanes.iter().zip(&planned.lanes) {
             let ids: Vec<&str> = shown.lanes_ids();
@@ -1685,7 +1685,7 @@ mod tests {
             open: false,
             toggle: String::from("?open=all"),
         }));
-        let en = Locale::english();
+        let en = Locale::default();
         let planned = plan(&en, &flow);
         let callers = planned.lanes.first().expect("the callers lane");
         let ids = callers.lanes_ids();

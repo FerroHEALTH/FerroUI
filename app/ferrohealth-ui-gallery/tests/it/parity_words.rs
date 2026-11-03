@@ -356,7 +356,7 @@ const ACCEPT: &[&[&str]] = &[&[], &[".json"], &[".json", ".YAML", ".xml"], &[".k
 
 #[tokio::test(flavor = "multi_thread")]
 async fn the_upload_field_sizes_and_refuses_a_file_alike() -> Result<(), Box<dyn Error>> {
-    let english = Locale::english();
+    let english = Locale::default();
     let mut cases = Vec::new();
     for accept in ACCEPT {
         let words = UploadWords::of(&english, accept, 1024 * 1024);

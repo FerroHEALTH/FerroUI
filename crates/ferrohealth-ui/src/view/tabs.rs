@@ -315,7 +315,7 @@ mod tests {
 
     #[test]
     fn a_binder_marks_the_current_tab_and_names_an_in_page_panel() {
-        let en = Locale::english();
+        let en = Locale::default();
         let tabs = vec![
             Tab::new("overview", "/t", "Overview").panel("panel-overview"),
             Tab::new("paths", "/t?tab=paths", "Paths").count(12, "12 nodes"),

@@ -32,7 +32,7 @@ use ferrohealth_ui::view::results::{Export, ResultsPane, SHOWN, Shown, Switch, r
 use ferrohealth_ui::view::scope::{Grant, ScopeGrant, scope_grants};
 use ferrohealth_ui::view::subject::{Subject, SubjectLine, subject_line};
 use ferrohealth_ui::view::surface::{
-    Crumb, Header, SectionHead, page_heading, panel_section, panel_sections_card, stack,
+    Container, Crumb, Header, SectionHead, page_heading, panel_section, panel_sections_card,
     titled_panel,
 };
 use ferrohealth_ui::view::template::list::HeadingCount;
@@ -509,19 +509,14 @@ fn answer_table(v: &Visit) -> Html {
             let [_, high_column, low_column] = &columns;
             h(format!(
                 "<tr>{}{}{}</tr>",
-                title_cell(None, h(format!("<code>{}</code>", row.at)), None),
+                title_cell(None, None, h(format!("<code>{}</code>", row.at)), None),
                 cell(high_column, t(row.systolic.to_string())),
                 cell(low_column, t(row.diastolic.to_string())),
             ))
         })
         .collect();
     let caption = v.tr(Msg::ClResultsTitle);
-    data_table(DataTable {
-        caption: &caption,
-        columns: &columns,
-        sorting: ferrohealth_ui::table::view::Sorting::default(),
-        body: Body::Rows(rows),
-    })
+    data_table(DataTable::new(&caption, &columns, Body::Rows(rows)))
 }
 
 /// The day and the short month of `row`, such as "21 Oct".
@@ -733,9 +728,9 @@ pub fn page(v: &Visit) -> Page {
             mono: false,
             badge: None,
         },
-        ActionGroup::none(),
+        ActionGroup::default(),
     );
-    let body = stack(Html::join([
+    let body = Container::Stack.wrap(Html::join([
         subjects(v, brand),
         histories(v, brand),
         composition(v),

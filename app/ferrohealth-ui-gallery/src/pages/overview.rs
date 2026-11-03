@@ -12,7 +12,7 @@ use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::action_menu::{Act, Action, Item, Menu};
 use ferrohealth_ui::view::button::{Variant, label, link_button};
-use ferrohealth_ui::view::empty::{Busy, busy, empty_quiet, empty_state, skeleton, spinner};
+use ferrohealth_ui::view::empty::{Busy, busy, empty_quiet, empty_state, skeleton};
 use ferrohealth_ui::view::layout::divided_list;
 use ferrohealth_ui::view::notice::{Announce, notice, notice_text};
 use ferrohealth_ui::view::refusal::{Issue, Refusal, Severity, fault, refusal};
@@ -22,9 +22,8 @@ use ferrohealth_ui::view::segmented::{
 use ferrohealth_ui::view::state::{Mark, state};
 use ferrohealth_ui::view::status::{badge, banner, pill, status};
 use ferrohealth_ui::view::surface::{
-    Stat, card, card_action, chip, cluster, definitions, disclosure, facts_row, grid, link_card,
-    link_card_glyph, or_none, page_header, stack, stat_card, stat_card_marked, stat_grid,
-    titled_panel, well,
+    Container, Stat, card, card_action, chip, definitions, disclosure, facts_row, link_card,
+    link_card_glyph, or_none, page_header, stat_card, stat_card_marked, titled_panel,
 };
 use ferrohealth_ui::view::tabs::{Tab, binder, keyboard_tabs, tab_panels};
 use ferrohealth_ui::view::tag::{Tag, tag};
@@ -133,7 +132,7 @@ fn stats(v: &Visit) -> Html {
         },
         pill(Tone::Warn, &v.tr(Msg::Revision3Pending)),
     );
-    stat_grid(Html::join([plain, marked, pending]))
+    Container::StatGrid.wrap(Html::join([plain, marked, pending]))
 }
 
 /// The buttons, each variant in both sizes, disabled, as a link, and an
@@ -145,7 +144,7 @@ fn buttons(v: &Visit) -> Html {
             h(format!(
                 "<button type=\"button\" class=\"{}\" data-variant=\"{}\">{}</button>",
                 variant.class(),
-                t(variant.name(&Locale::english()).text()),
+                t(variant.name(&Locale::default()).text()),
                 label(Some(Glyph::PLAY), variant.name(&v.locale))
             ))
         })
@@ -169,14 +168,14 @@ fn buttons(v: &Visit) -> Html {
     card(
         v.tr(Msg::Buttons),
         Html::join([
-            cluster(full),
-            cluster(h(format!(
-                "{small}<button type=\"button\" class=\"{}\" disabled>{}</button>{link}<button type=\"button\" class=\"fui-icon-button\" aria-label=\"{}\">{}</button>",
-                Variant::Primary.class(),
-                label(Some(Glyph::SAVE), v.tr(Msg::Disabled)),
-                t(v.tr(Msg::Settings)),
-                icon(Glyph::SETTINGS, "16")
-            ))),
+            Container::Cluster.wrap(full),
+            Container::Cluster.wrap(h(format!(
+                    "{small}<button type=\"button\" class=\"{}\" disabled>{}</button>{link}<button type=\"button\" class=\"fui-icon-button\" aria-label=\"{}\">{}</button>",
+                    Variant::Primary.class(),
+                    label(Some(Glyph::SAVE), v.tr(Msg::Disabled)),
+                    t(v.tr(Msg::Settings)),
+                    icon(Glyph::SETTINGS, "16")
+                ))),
         ]),
     )
 }
@@ -234,12 +233,12 @@ fn marks_card(v: &Visit) -> Html {
     card(
         v.tr(Msg::Status),
         Html::join([
-            cluster(pills),
-            cluster(badges),
-            cluster(chips),
-            cluster(tags),
-            cluster(statuses),
-            cluster(states),
+            Container::Cluster.wrap(pills),
+            Container::Cluster.wrap(badges),
+            Container::Cluster.wrap(chips),
+            Container::Cluster.wrap(tags),
+            Container::Cluster.wrap(statuses),
+            Container::Cluster.wrap(states),
         ]),
     )
 }
@@ -253,7 +252,7 @@ fn notices_card(v: &Visit) -> Html {
     ));
     card(
         v.tr(Msg::Notices),
-        stack(Html::join([
+        Container::Stack.wrap(Html::join([
             notice_text(
                 Tone::Warn,
                 Announce::Status,
@@ -386,7 +385,7 @@ fn facts(v: &Visit) -> Html {
                 v.tr(Msg::WhatBridgeAnsweredJson),
                 muted(Msg::RawDocumentFoldedUntilAsked),
             ),
-            well(h(format!(
+            Container::Well.wrap(h(format!(
                 "<p class=\"fui-small\">{}</p>",
                 t(v.tr(Msg::WellSetsPassageApartInside))
             ))),
@@ -397,11 +396,11 @@ fn facts(v: &Visit) -> Html {
         v.tr(Msg::StagedChanges),
         muted(Msg::ThreeChangesWaitAppliedRunning),
     );
-    let pair = grid(Html::join([
+    let pair = Container::Grid.wrap(Html::join([
         grid_card,
-        stack(Html::join([folded, linked, operation, path, listed])),
+        Container::Stack.wrap(Html::join([folded, linked, operation, path, listed])),
     ]));
-    stack(Html::join([row, pair]))
+    Container::Stack.wrap(Html::join([row, pair]))
 }
 
 /// The panel of a binder: one sentence.
@@ -475,7 +474,7 @@ fn tab_sets(v: &Visit) -> Html {
     );
     card(
         v.tr(Msg::Tabs),
-        stack(Html::join([
+        Container::Stack.wrap(Html::join([
             views,
             record,
             preferences,
@@ -522,7 +521,7 @@ fn segments(v: &Visit) -> Html {
     card(
         v.tr(Msg::SegmentedControls),
         Html::join([
-            cluster(Html::join([chosen, as_links, posted])),
+            Container::Cluster.wrap(Html::join([chosen, as_links, posted])),
             h(format!("<p class=\"fui-muted\">{}</p>", t(shown))),
         ]),
     )
@@ -559,7 +558,7 @@ fn refusals(v: &Visit) -> Html {
     };
     card(
         v.tr(Msg::RefusalFault),
-        stack(Html::join([
+        Container::Stack.wrap(Html::join([
             refusal(&v.locale, &answered),
             refusal(&v.locale, &unreadable),
             refusal(&v.locale, &silent),
@@ -595,19 +594,22 @@ fn states(v: &Visit) -> Html {
     );
     let loading = card(
         v.tr(Msg::Loading),
-        stack(Html::join([
-            busy(v.tr(Msg::ReadingCapabilityStatement), Busy::Section),
-            spinner(v.tr(Msg::AskingBridge)),
-            h(format!(
-                "<p class=\"fui-cluster\"><button type=\"button\" class=\"{}\" disabled>{}</button>{}</p>",
-                Variant::Primary.class(),
-                label(Some(Glyph::LOG_IN), v.tr(Msg::SignIn)),
-                busy(v.tr(Msg::Signing), Busy::Control)
-            )),
-            skeleton(4, v.tr(Msg::LoadingFiles)),
-        ])),
+        Container::Stack.wrap(Html::join([
+                busy(v.tr(Msg::ReadingCapabilityStatement), Busy::Section),
+                busy(v.tr(Msg::AskingBridge), Busy::Inline),
+                h(format!(
+                    "<p class=\"fui-cluster\"><button type=\"button\" class=\"{}\" disabled>{}</button>{}</p>",
+                    Variant::Primary.class(),
+                    label(Some(Glyph::LOG_IN), v.tr(Msg::SignIn)),
+                    busy(v.tr(Msg::Signing), Busy::Control)
+                )),
+                skeleton(4, v.tr(Msg::LoadingFiles)),
+            ])),
     );
-    stack(Html::join([grid(Html::join([empty, quiet])), loading]))
+    Container::Stack.wrap(Html::join([
+        Container::Grid.wrap(Html::join([empty, quiet])),
+        loading,
+    ]))
 }
 
 /// Every icon the library vendors, each with its name.
@@ -621,7 +623,7 @@ fn icons(v: &Visit) -> Html {
             ))
         })
         .collect();
-    card(v.tr(Msg::Icons), cluster(all))
+    card(v.tr(Msg::Icons), Container::Cluster.wrap(all))
 }
 
 /// The overview page.
@@ -633,10 +635,10 @@ pub fn page(v: &Visit) -> Page {
         Some(v.tr(Msg::EveryStaticViewLibraryBrand)),
         overview_actions(v),
     );
-    let body = stack(Html::join([
-        stack(Html::join([stats(v), preview(v)])),
+    let body = Container::Stack.wrap(Html::join([
+        Container::Stack.wrap(Html::join([stats(v), preview(v)])),
         buttons(v),
-        stack(Html::join([
+        Container::Stack.wrap(Html::join([
             marks_card(v),
             notices_card(v),
             banners_card(v),

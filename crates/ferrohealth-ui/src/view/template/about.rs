@@ -134,7 +134,7 @@ pub fn about_page(locale: &Locale, page: AboutPage) -> Html {
         self_description,
         replica,
     } = page;
-    let heading = page_heading(locale, header, ActionGroup::none());
+    let heading = page_heading(locale, header, ActionGroup::default());
     let replica = replica
         .map(|replica| replica_line(locale, replica))
         .unwrap_or_default();

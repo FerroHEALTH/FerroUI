@@ -14,7 +14,7 @@
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::{Glyph, icon};
 use ferrohealth_ui::table::view::{
-    Body, Column, DataTable, Role, Sorting, data_table, group_row, title_cell,
+    Body, Column, DataTable, Role, data_table, group_row, title_cell,
 };
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::button::Variant;
@@ -30,8 +30,8 @@ use ferrohealth_ui::view::mapping::{
 use ferrohealth_ui::view::repeat::{Fields, ROW, Repeat, RepeatAdd, RepeatRow, RowEnd, repeat};
 use ferrohealth_ui::view::root_matrix::{MatrixRoot, MatrixRow, RootMatrix, root_matrix};
 use ferrohealth_ui::view::surface::{
-    Crumb, Header, SectionHead, add_row, card, definitions, page_heading, panel_section,
-    panel_sections_card, section_intro, stack,
+    Container, Crumb, Header, SectionHead, card, definitions, page_heading, panel_section,
+    panel_sections_card, section_intro,
 };
 use ferrohealth_ui::view::template::list::HeadingCount;
 use ferrohealth_ui::view::version::{VersionRoot, VersionSelect};
@@ -134,17 +134,12 @@ fn codings(v: &Visit) -> Html {
     let rows = VALUE_SETS
         .iter()
         .map(|(title, url)| {
-            let head = title_cell(Some("#codings"), t(title), Some(canonical(url)));
+            let head = title_cell(None, Some("#codings"), t(title), Some(canonical(url)));
             h(format!("<tr>{head}</tr>"))
         })
         .collect();
     let caption = v.tr(Msg::TmValueSets);
-    let table = data_table(DataTable {
-        caption: &caption,
-        columns: &columns,
-        sorting: Sorting::default(),
-        body: Body::Rows(rows),
-    });
+    let table = data_table(DataTable::new(&caption, &columns, Body::Rows(rows)));
     h(format!(
         "<div id=\"codings\">{}</div>",
         card(v.tr(Msg::TmCodings), Html::join([forms, table]))
@@ -449,7 +444,7 @@ fn composer(v: &Visit) -> Html {
             t(v.tr(words))
         ))
     };
-    let adds = add_row(Html::join([
+    let adds = Container::AddRow.wrap(Html::join([
         add("include", Msg::TmAddInclude),
         add("exclude", Msg::TmAddExclude),
     ]));
@@ -557,12 +552,11 @@ fn mappings(v: &Visit) -> Html {
         .map(|row| mapping_row(&v.locale, &columns, mapping(row)))
         .collect();
     let caption = v.tr(Msg::TmMappings);
-    let table = data_table(DataTable {
-        caption: &caption,
-        columns: &columns,
-        sorting: Sorting::default(),
-        body: Body::Bodies(h(format!("<tbody>{group} {rows}</tbody>"))),
-    });
+    let table = data_table(DataTable::new(
+        &caption,
+        &columns,
+        Body::Bodies(h(format!("<tbody>{group} {rows}</tbody>"))),
+    ));
     let section = panel_section(
         &v.locale,
         Some(SectionHead {
@@ -753,9 +747,9 @@ pub fn page(v: &Visit) -> Page {
             mono: false,
             badge: None,
         },
-        ActionGroup::none(),
+        ActionGroup::default(),
     );
-    let body = stack(Html::join([
+    let body = Container::Stack.wrap(Html::join([
         codings(v),
         clauses_read(v),
         composer(v),

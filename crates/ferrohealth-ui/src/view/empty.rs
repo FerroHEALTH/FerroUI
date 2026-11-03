@@ -56,14 +56,6 @@ pub fn empty_quiet(glyph: Glyph, title: impl Into<String>, line: impl Into<Strin
     .html()
 }
 
-/// Returns the busy indicator a section shows while its answer arrives: a
-/// turning ring beside the words `label`, announced politely; the ring
-/// stands still for a reader who asks for less motion.
-#[must_use]
-pub fn spinner(label: impl Into<String>) -> Html {
-    busy(label, Busy::Inline)
-}
-
 /// Where a busy mark sits, which sets its size and whether its words show.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Busy {

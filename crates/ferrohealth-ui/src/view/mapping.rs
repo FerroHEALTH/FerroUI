@@ -177,7 +177,7 @@ pub fn mapping_row(locale: &Locale, columns: &[Column], mapping: Mapping) -> Htm
     } else {
         Relationship::Unmatched
     };
-    let head = title_cell(None, coding(locale, source, Layout::Stacked), None);
+    let head = title_cell(None, None, coding(locale, source, Layout::Stacked), None);
     let related = columns
         .get(1)
         .map(|column| {

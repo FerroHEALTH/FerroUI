@@ -602,18 +602,20 @@ fn the_read_only_state_names_the_reference_alone() {
     let set = html(secret_state(
         &en(),
         &SecretState::Set(String::from("/run/secrets/db-url")),
+        None,
     ));
     assert!(has(&set, "span", &[("class", "fui-secret-now")]), "{set}");
     assert!(
         set.contains("set, read from <code>/run/secrets/db-url</code>"),
         "{set}"
     );
-    let redacted = html(secret_state(&en(), &SecretState::Redacted));
+    let redacted = html(secret_state(&en(), &SecretState::Redacted, None));
     assert!(redacted.contains("set, not shown"), "{redacted}");
     assert!(!redacted.contains("<code>"), "{redacted}");
     let escaped = html(secret_state(
         &en(),
         &SecretState::Set(String::from("/a<b>")),
+        None,
     ));
     assert!(escaped.contains("<code>/a&#60;b&#62;</code>"), "{escaped}");
 }

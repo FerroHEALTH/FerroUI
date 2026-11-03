@@ -93,12 +93,36 @@ decision, is [`docs/rendering-model.md`](rendering-model.md). Moving from
    of yours. A route whose outcome is the next page redirects with
    `303 See Other` and names the outcome, and the next page draws it as a
    `view::toast::Flash` in `view::toast::toast_region`. A danger
-   confirmation with fields is `view::dialog::danger_form_dialog(locale,
-   confirmation, ConfirmForm { action, fields }, confirm)`, a `<dialog>`
-   whose form posts to `action`.
+   confirmation with fields is `view::dialog::confirm_dialog(locale,
+   confirmation, Stakes::Danger, Some(ConfirmForm { action, fields }),
+   confirm)`, a `<dialog>` whose form posts to `action`.
 6. **The policy.** `default-src 'self'; script-src 'self'; style-src
    'self'`. The loader takes a nonce (`Document::nonce`) only when your own
    policy needs one.
+
+## One function per component, its form an argument
+
+A component draws its forms through one function, and the form is an
+argument you pass (FerroUI #579): the library keeps no second name for a
+fixed argument.
+
+| Component | Call |
+| --- | --- |
+| The boxes around your children | `view::surface::Container::Stack.wrap(children)`, or `Grid`, `GridStart`, `StatGrid`, `Cluster`, `AddRow`, `Card`, `PanelBody`, `PanelSections` or `Well` |
+| A data table | `table::view::data_table(DataTable::new(caption, columns, body))`, with `.with_sorting(sorting)` and `.with_shape(Shape::Wide)` or `Shape::Unstacked`; the shape is the field `DataTable::shape` |
+| A row's title cell | `table::view::title_cell(level, href, name, sub)`, `level` `None` in a flat table |
+| A confirmation | `view::dialog::confirm_dialog(locale, confirmation, Stakes::Plain, form, confirm)`, `Stakes::Danger` for an action that cannot be undone, `form` `Some(ConfirmForm { .. })` when it posts fields |
+| An informational dialog | `view::dialog::info_dialog(locale, explanation, body, Width::Wide)` |
+| A record compare | `view::compare::compare(locale, table, Presentation::Table)`, `Stacked { shown }` or `Pair { shown }` |
+| A combobox with run-time ids | `view::combobox::keyed_combobox(combo)`, `combo.remote` `Some` over your search |
+| A side panel | `view::side_panel::side_panel(panel, shortcut)` |
+| The shortcut legend | `view::shortcuts::shortcut_legend(locale, groups, go_to)` |
+| A secret's state | `view::secret::secret_state(locale, state, id)` |
+| The busy mark | `view::empty::busy(label, Busy::Inline)` or `Busy::Section` |
+| A checkbox beside its label | `view::form::check(id, label, checkbox)` |
+| A typed moment | `calendar::Moment::parse(text, with_time, DateOrder::Ymd)` |
+| A paging in a query | `table::model::Paging::write(query, Sizes::STANDARD)` |
+| The English locale, an empty action group | `Locale::default()`, `ActionGroup::default()` |
 
 ## An action that answers on its page
 
@@ -272,13 +296,13 @@ the `keys` module presses it (FerroUI #526, #530). It runs from 40 rem up
   first, so the dialog returns it there.
 - **A row's key** reaches a control inside a work-list row only while that
   row holds the focus. Draw the row's side panel with
-  `view::side_panel::side_panel_with_shortcut(panel, "o")`: `o` opens the
+  `view::side_panel::side_panel(panel, Some("o"))`: `o` opens the
   focused row's panel and the browser returns the focus to the row when
   it closes. List the key in the work-list's hint and in the legend.
 - **Go-to pairs** are a first key, then a letter, then a link of your
   navigation. Draw the legend with
-  `view::shortcuts::shortcut_legend_with_go_to(locale, groups, GoTo { title,
-  lead: "g".into(), pairs })`, each `GoToPair { key, href, does }`; the
+  `view::shortcuts::shortcut_legend(locale, groups, Some(GoTo { title,
+  lead: "g".into(), pairs }))`, each `GoToPair { key, href, does }`; the
   legend lists each pair as its link and the module follows it.
   `GoTo::group` gives the same pairs as a `ShortcutGroup` for your own
   shortcuts page.

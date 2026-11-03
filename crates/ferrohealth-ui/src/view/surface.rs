@@ -61,7 +61,7 @@ pub struct Header {
 
 /// How a page's trail ends.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Trail {
+pub(crate) enum Trail {
     /// With the page itself, the current crumb, after its ancestors.
     Here,
     /// With the thing an editor edits or the list a new thing joins, so
@@ -81,12 +81,6 @@ enum Trail {
 #[must_use]
 pub fn page_heading(locale: &Locale, header: Header, actions: ActionGroup) -> Html {
     heading(locale, header, Trail::Here, action_group(locale, actions))
-}
-
-/// Returns the header [`page_heading`] draws, with `steps` (the previous
-/// and next of a queue, R5) at the far end in place of an action group.
-pub(crate) fn stepped_heading(locale: &Locale, header: Header, steps: Html) -> Html {
-    heading(locale, header, Trail::Here, steps)
 }
 
 #[derive(Template)]
@@ -130,7 +124,7 @@ struct HeadingView {
 }
 
 /// The header [`page_heading`] and [`editor_heading`] draw.
-fn heading(locale: &Locale, header: Header, trail: Trail, actions: Html) -> Html {
+pub(crate) fn heading(locale: &Locale, header: Header, trail: Trail, actions: Html) -> Html {
     let Header {
         title,
         subtitle,
@@ -297,12 +291,6 @@ pub fn wide_card(title: impl Into<String>, body: Html) -> Html {
     )
 }
 
-/// Returns a card holding `body` with no heading of its own.
-#[must_use]
-pub fn panel(body: Html) -> Html {
-    wrap("<div class=\"fui-card\">", body, "</div>")
-}
-
 #[derive(Template)]
 #[template(path = "surface/surface.html", block = "titled_panel")]
 struct TitledPanel {
@@ -317,7 +305,7 @@ struct TitledPanel {
 /// [`panel_section`]s, never a card in the panel.
 ///
 /// `title` and `actions` sit over `body`, which runs to the card's edges (a table, a list). Pass a
-/// `body` with its own padding through [`panel_body`] when it is prose.
+/// `body` with its own padding through [`Container::PanelBody`] when it is prose.
 #[must_use]
 pub fn titled_panel(title: impl Into<String>, actions: Html, body: Html) -> Html {
     TitledPanel {
@@ -354,12 +342,6 @@ pub fn card_action(href: impl Into<String>, label: impl Into<String>) -> Html {
     .html()
 }
 
-/// Returns `body` with the card's padding, for a panel's prose.
-#[must_use]
-pub fn panel_body(body: Html) -> Html {
-    wrap("<div class=\"fui-panel-body\">", body, "</div>")
-}
-
 /// What a panel section's heading row shows.
 #[derive(Debug, Default)]
 pub struct SectionHead {
@@ -370,16 +352,6 @@ pub struct SectionHead {
     pub count: Option<HeadingCount>,
     /// The section's actions at the row's end.
     pub actions: Option<Html>,
-}
-
-/// Returns the parts of a tab panel, `sections` drawn by [`panel_section`],
-/// one above the other with a hairline between (B10).
-///
-/// The tab panel is their one frame: no part is a card inside it, on a
-/// desktop or on a phone.
-#[must_use]
-pub fn panel_sections(sections: Html) -> Html {
-    wrap("<div class=\"fui-panel\">", sections, "</div>")
 }
 
 /// Returns `sections` drawn by [`panel_section`] in a card of their own,
@@ -445,12 +417,6 @@ pub fn section_intro(sentence: impl Into<String>) -> Html {
         Html::text(sentence.into()),
         "</p>",
     )
-}
-
-/// Returns the row of Add buttons under a list of rows in a section.
-#[must_use]
-pub fn add_row(buttons: Html) -> Html {
-    wrap("<div class=\"fui-cluster fui-add-row\">", buttons, "</div>")
 }
 
 /// Returns a file beside its diagnostics in a tab panel: `file`, a
@@ -626,12 +592,6 @@ fn linked(href: String, glyph: Option<Glyph>, title: String, body: Html) -> Html
     .html()
 }
 
-/// Returns `body` in a well: a sunken box set apart inside a card.
-#[must_use]
-pub fn well(body: Html) -> Html {
-    wrap("<div class=\"fui-well\">", body, "</div>")
-}
-
 #[derive(Template)]
 #[template(path = "surface/surface.html", block = "disclosure")]
 struct Disclosure {
@@ -649,47 +609,6 @@ pub fn disclosure(summary: impl Into<String>, body: Html) -> Html {
     .html()
 }
 
-/// Returns `children` one above the other with the loose gap between.
-#[must_use]
-pub fn stack(children: Html) -> Html {
-    wrap("<div class=\"fui-stack\">", children, "</div>")
-}
-
-/// Returns `children` in a grid of columns at least 16 rem wide that share
-/// the whole row.
-#[must_use]
-pub fn grid(children: Html) -> Html {
-    wrap("<div class=\"fui-grid\">", children, "</div>")
-}
-
-/// Returns `children` in the grid [`grid`] draws, each card at its own
-/// height rather than stretched to its row's tallest: for cards of unlike
-/// length side by side.
-#[must_use]
-pub fn grid_start(children: Html) -> Html {
-    wrap(
-        "<div class=\"fui-grid fui-grid-start\">",
-        children,
-        "</div>",
-    )
-}
-
-/// Returns stat cards in the grid a dashboard opens with, closer together.
-#[must_use]
-pub fn stat_grid(children: Html) -> Html {
-    wrap(
-        "<div class=\"fui-grid fui-grid-stats\">",
-        children,
-        "</div>",
-    )
-}
-
-/// Returns `children` in a wrapping row, centred on the cross axis.
-#[must_use]
-pub fn cluster(children: Html) -> Html {
-    wrap("<div class=\"fui-cluster\">", children, "</div>")
-}
-
 #[derive(Template)]
 #[template(path = "surface/surface.html", block = "split")]
 struct Split {
@@ -702,4 +621,62 @@ struct Split {
 #[must_use]
 pub fn split(start: Html, end: Html) -> Html {
     Split { start, end }.html()
+}
+
+/// A box the library draws around a console's children, each the classes
+/// of the stylesheet that lay them out.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Container {
+    /// One above the other with the loose gap between.
+    Stack,
+    /// A grid of columns at least 16 rem wide that share the whole row.
+    Grid,
+    /// The [`Container::Grid`], each card at its own height rather than
+    /// stretched to its row's tallest: for cards of unlike length side by
+    /// side.
+    GridStart,
+    /// The grid of stat cards a dashboard opens with, closer together.
+    StatGrid,
+    /// A wrapping row, centred on the cross axis.
+    Cluster,
+    /// The row of Add buttons under a list of rows in a section.
+    AddRow,
+    /// A card with no heading of its own.
+    Card,
+    /// The card's padding, for a panel's prose.
+    PanelBody,
+    /// The parts of a tab panel, each drawn by [`panel_section`], one above
+    /// the other with a hairline between (B10). The tab panel is their one
+    /// frame: no part is a card inside it, on a desktop or on a phone.
+    PanelSections,
+    /// A well: a sunken box set apart inside a card.
+    Well,
+}
+
+impl Container {
+    /// Returns `children` in this box: a `div` of its classes.
+    #[must_use]
+    pub fn wrap(self, children: Html) -> Html {
+        wrap(
+            &format!("<div class=\"{}\">", self.class()),
+            children,
+            "</div>",
+        )
+    }
+
+    /// The classes of the box.
+    const fn class(self) -> &'static str {
+        match self {
+            Self::Stack => "fui-stack",
+            Self::Grid => "fui-grid",
+            Self::GridStart => "fui-grid fui-grid-start",
+            Self::StatGrid => "fui-grid fui-grid-stats",
+            Self::Cluster => "fui-cluster",
+            Self::AddRow => "fui-cluster fui-add-row",
+            Self::Card => "fui-card",
+            Self::PanelBody => "fui-panel-body",
+            Self::PanelSections => "fui-panel",
+            Self::Well => "fui-well",
+        }
+    }
 }

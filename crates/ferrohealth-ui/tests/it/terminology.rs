@@ -7,7 +7,7 @@
 
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::style::STYLESHEET;
-use ferrohealth_ui::table::view::{Body, DataTable, Sorting, data_table};
+use ferrohealth_ui::table::view::{Body, DataTable, data_table};
 use ferrohealth_ui::view::clause::{
     Clause, ClauseCode, ClauseIssue, ClauseKind, clause, clause_codes, clauses,
 };
@@ -695,12 +695,7 @@ fn a_mapping_row_reads_source_relationship_target_and_comment() {
                 },
             ),
         ]);
-        data_table(DataTable {
-            caption: "Every mapping",
-            columns: &columns,
-            sorting: Sorting::default(),
-            body: Body::Rows(rows),
-        })
+        data_table(DataTable::new("Every mapping", &columns, Body::Rows(rows)))
     });
     let headers: Vec<String> = ["Source", "Relationship", "Target", "Comment"]
         .iter()

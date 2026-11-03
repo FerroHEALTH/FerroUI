@@ -339,7 +339,7 @@ mod tests {
         };
         assert_eq!(
             "The terminology server did not answer.",
-            refusal_title(&Locale::english(), &none)
+            refusal_title(&Locale::default(), &none)
         );
         let answered = Refusal {
             status: Some(404),
@@ -347,7 +347,7 @@ mod tests {
         };
         assert_eq!(
             "404: The terminology server did not answer.",
-            refusal_title(&Locale::english(), &answered)
+            refusal_title(&Locale::default(), &answered)
         );
     }
 
@@ -359,7 +359,7 @@ mod tests {
         };
         assert_eq!(
             Some("No answer:"),
-            refusal_lead(&Locale::english(), &none)
+            refusal_lead(&Locale::default(), &none)
                 .as_ref()
                 .map(Word::text)
         );
@@ -367,7 +367,7 @@ mod tests {
             status: Some(503),
             ..none
         };
-        assert_eq!(None, refusal_lead(&Locale::english(), &answered));
+        assert_eq!(None, refusal_lead(&Locale::default(), &answered));
     }
 
     #[test]

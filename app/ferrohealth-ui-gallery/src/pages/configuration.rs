@@ -12,9 +12,7 @@
 
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
-use ferrohealth_ui::table::view::{
-    Body, Column, DataTable, Role, Sorting, cell, data_table, title_cell,
-};
+use ferrohealth_ui::table::view::{Body, Column, DataTable, Role, cell, data_table, title_cell};
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::action_menu::{Act, Action};
@@ -27,8 +25,8 @@ use ferrohealth_ui::view::secret::{
     SecretChoice, SecretField, SecretState, secret_field, secret_state,
 };
 use ferrohealth_ui::view::surface::{
-    Crumb, Header, SectionHead, card, card_action, page_heading, panel_section,
-    panel_sections_card, stack,
+    Container, Crumb, Header, SectionHead, card, card_action, page_heading, panel_section,
+    panel_sections_card,
 };
 use ferrohealth_ui::view::tag::{Tag, tag};
 use ferrohealth_ui::view::template::detail::{DetailPage, detail_page};
@@ -314,7 +312,7 @@ fn read_only(v: &Visit, root: &str) -> Html {
             Setting {
                 label: v.tr(name),
                 description: v.tr(description),
-                value: secret_state(&v.locale, &state),
+                value: secret_state(&v.locale, &state, None),
                 keys: vec![String::from(key)],
                 next_start: false,
                 source: None,
@@ -358,6 +356,7 @@ fn provenance(v: &Visit, root: &str) -> Html {
             h(format!(
                 "<tr>{}{}{}</tr>",
                 title_cell(
+                    None,
                     href,
                     h(format!("<span class=\"fui-mono\">{file}</span>")),
                     None
@@ -371,12 +370,7 @@ fn provenance(v: &Visit, root: &str) -> Html {
         })
         .collect();
     let caption = v.tr(Msg::CfMappingFiles);
-    let table = data_table(DataTable {
-        caption: &caption,
-        columns: &columns,
-        sorting: Sorting::default(),
-        body: Body::Rows(rows),
-    });
+    let table = data_table(DataTable::new(&caption, &columns, Body::Rows(rows)));
     h(format!(
         "<section class=\"fui-card fui-panel\" id=\"provenance\"><div class=\"fui-panel-head\"><h2 class=\"fui-card-title\">{}</h2><div class=\"fui-actions\">{}</div></div>{table}</section>",
         t(v.tr(Msg::CfProvenance)),
@@ -396,9 +390,9 @@ pub fn page(v: &Visit) -> Page {
             crumbs: vec![Crumb::new(v.tr(Msg::Gallery), root.clone())],
             ..Header::default()
         },
-        ActionGroup::none(),
+        ActionGroup::default(),
     );
-    let body = stack(Html::join([
+    let body = Container::Stack.wrap(Html::join([
         pending(v, &root),
         lifecycles(v),
         secrets(v),
@@ -431,7 +425,7 @@ pub fn provisioned(v: &Visit) -> Page {
                         .view(),
                 ),
             },
-            actions: ActionGroup::none(),
+            actions: ActionGroup::default(),
             stepper: None,
             tabs: None,
             body: card(

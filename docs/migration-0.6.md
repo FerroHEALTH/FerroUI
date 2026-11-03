@@ -256,7 +256,7 @@ library does not choose where the flash travels.
 | `<ActionForm>` and `ServerAction` | `<form method="post">` to a route of yours |
 | `widget::action::{return_field, RETURN, plain_return, with_error}` | the route redirects where it means to; the `no-referrer` workaround is gone |
 | `widget::toast::raise` from a component | a `Flash` for `view::toast::toast_region`, or a link marked `view::toast::RAISES` that the `toast` module raises in place |
-| `view::dialog::danger_action_dialog(confirmation, fields, form, done, confirm)` | `view::dialog::danger_form_dialog(locale, confirmation, ConfirmForm { action, fields }, confirm)`: the dialog's form posts to `action` |
+| `view::dialog::danger_action_dialog(confirmation, fields, form, done, confirm)` | `view::dialog::confirm_dialog(locale, confirmation, Stakes::Danger, Some(ConfirmForm { action, fields }), confirm)`: the dialog's form posts to `action` |
 
 ### 5. A form whose answer is the point
 
@@ -367,7 +367,7 @@ draws is a redirect to sign-in, and the search box leaves on its own `401`
 ### 8. Tests
 
 - A test of a component renders it to a string and asserts on the markup:
-  `component(&Locale::english(), ..).as_str()`. There is no `Owner` and no
+  `component(&Locale::default(), ..).as_str()`. There is no `Owner` and no
   `view!`.
 - A journey that waited for `data-ferroui-hydrated` waits for the loader's
   mark, `html[data-fui-script]` (`script::MARK`), or for nothing when it

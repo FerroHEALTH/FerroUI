@@ -443,7 +443,7 @@ impl ScopeGrant {
     /// use ferrohealth_ui::i18n::Locale;
     /// use ferrohealth_ui::view::scope::{Grant, ScopeGrant};
     ///
-    /// let en = Locale::english();
+    /// let en = Locale::default();
     /// let read = ScopeGrant::read(&en, "fhirUser", |_| (String::new(), false));
     /// assert!(matches!(read.grant, Grant::Request(_)));
     /// let read = ScopeGrant::read(&en, "patient/Observation.rs", |_| ("Observations".into(), false));

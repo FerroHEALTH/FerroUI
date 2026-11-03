@@ -228,7 +228,7 @@ mod tests {
 
     fn drawn(nodes: Vec<FanoutNode>) -> String {
         fanout(
-            &Locale::english(),
+            &Locale::default(),
             &Fanout {
                 label: String::from("What each node did"),
                 line: String::from("0 of 2 nodes asked"),

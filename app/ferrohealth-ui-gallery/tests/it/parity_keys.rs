@@ -55,7 +55,7 @@ fn nodes() -> Vec<TreeNode> {
                     TreeNode::new("cough", "Cough").href("/c/cough"),
                     TreeNode::new("wheeze", "Wheeze"),
                 ],
-                More::of(&Locale::english(), 2, 9, 2, "/more"),
+                More::of(&Locale::default(), 2, 9, 2, "/more"),
             ),
             TreeNode::new("unread", "Unread")
                 .toggle_href("/open?unread")
@@ -102,7 +102,7 @@ fn shown_json(shown: &[Shown]) -> Value {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn the_tree_items_in_sight_are_the_items_drawn_in_sight() -> Result<(), Box<dyn Error>> {
-    let english = Locale::english();
+    let english = Locale::default();
     let mut cases = Vec::new();
     for open in opens() {
         for kind in [TreeKind::Concept, TreeKind::Folder, TreeKind::Path] {

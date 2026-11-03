@@ -235,7 +235,7 @@ async fn the_calendar_reads_a_typed_day_and_time_alike() -> Result<(), Box<dyn E
     for text in TYPED {
         for (order, key) in ORDERS {
             for with_time in [false, true] {
-                let parsed = read(Moment::parse_in(text, with_time, order));
+                let parsed = read(Moment::parse(text, with_time, order));
                 cases.push((json!([text, with_time, key]), parsed));
             }
             let day = read(Day::parse_in(text, order).map(|day| Moment { day, time: None }));
@@ -287,7 +287,7 @@ async fn the_calendar_bounds_allow_and_reach_alike() -> Result<(), Box<dyn Error
 
 /// The date words in English, in each of the orders, with the day counts.
 fn words() -> Vec<DateWords> {
-    let english = Locale::english();
+    let english = Locale::default();
     ORDERS
         .iter()
         .flat_map(|(order, _)| {
@@ -330,7 +330,7 @@ async fn the_date_field_and_the_calendar_say_why_a_typed_text_is_refused_alike()
 #[tokio::test(flavor = "multi_thread")]
 async fn the_date_picker_and_the_calendar_name_a_month_and_a_day_alike()
 -> Result<(), Box<dyn Error>> {
-    let english = Locale::english();
+    let english = Locale::default();
     let words = DateWords::of(&english, false);
     let wire = serde_json::to_value(&words)?;
     let cases = days()
@@ -355,7 +355,7 @@ async fn the_date_picker_and_the_calendar_name_a_month_and_a_day_alike()
 
 #[tokio::test(flavor = "multi_thread")]
 async fn the_date_range_summary_and_status_read_alike() -> Result<(), Box<dyn Error>> {
-    let english = Locale::english();
+    let english = Locale::default();
     let words = DateWords::of(&english, false).counted(&english);
     let wire = serde_json::to_value(&words)?;
     let ends = [

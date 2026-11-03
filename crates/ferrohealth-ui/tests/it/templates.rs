@@ -253,7 +253,7 @@ fn the_trail_turns_into_a_back_link_and_the_badge_sits_beside_the_title() {
                 badge: Some(pill(Tone::Ok, "Reachable")),
                 ..Header::default()
             },
-            ActionGroup::none(),
+            ActionGroup::default(),
         )
     });
     assert!(
@@ -283,7 +283,7 @@ fn a_detail_page_puts_its_one_section_under_binder_tabs() {
             &en(),
             DetailPage {
                 header: header("Locatie Noord"),
-                actions: ActionGroup::none(),
+                actions: ActionGroup::default(),
                 stepper: None,
                 tabs: Some(row()),
                 body: Html::raw(String::from("<p>Overview</p>")),
@@ -299,7 +299,7 @@ fn a_detail_page_puts_its_one_section_under_binder_tabs() {
             &en(),
             DetailPage {
                 header: header("Locatie Noord"),
-                actions: ActionGroup::none(),
+                actions: ActionGroup::default(),
                 stepper: None,
                 tabs: None,
                 body: Html::raw(String::from("<p>Overview</p>")),
@@ -384,7 +384,7 @@ fn file_page(settings: Vec<Setting>) -> String {
             &en(),
             SettingsPage {
                 header: header("Configuration"),
-                actions: ActionGroup::none(),
+                actions: ActionGroup::default(),
                 source: Source::File {
                     file: String::from("ferrobridge.toml"),
                     how: How::Page(String::from("#")),
@@ -510,7 +510,7 @@ fn a_file_only_configuration_says_where_it_is_set_and_has_no_badge_or_marker() {
                     ))),
                     ..header("Configuration")
                 },
-                actions: ActionGroup::none(),
+                actions: ActionGroup::default(),
                 source: Source::File {
                     file: String::from("ferrobridge.toml"),
                     how: How::Page(String::from("/configuration/how")),
@@ -547,7 +547,7 @@ fn a_file_line_opens_the_informational_dialog_with_no_script() {
             &en(),
             SettingsPage {
                 header: header("Configuration"),
-                actions: ActionGroup::none(),
+                actions: ActionGroup::default(),
                 source: Source::File {
                     file: String::from("ferrobridge.toml"),
                     how: How::Dialog("how-configuration".into()),
@@ -589,7 +589,7 @@ fn a_setting_names_its_key_with_a_labelled_copy_button() {
             &en(),
             SettingsPage {
                 header: header("Configuration"),
-                actions: ActionGroup::none(),
+                actions: ActionGroup::default(),
                 source: Source::File {
                     file: String::from("ferrobridge.toml"),
                     how: How::Page(String::from("#")),
@@ -639,7 +639,7 @@ fn a_managed_configuration_shows_its_badge_revision_intro_and_marker() {
             &en(),
             SettingsPage {
                 header: header("Settings"),
-                actions: ActionGroup::none(),
+                actions: ActionGroup::default(),
                 source: Source::Managed(Box::new(Managed {
                     badge: Html::raw(String::from(
                         r#"<span class="fui-mode-badge">Managed</span>"#,

@@ -133,18 +133,18 @@ const fn accent(letter: char) -> char {
 pub fn gallery_locale(tag: &str) -> Locale {
     if tag == PSEUDO_TAG {
         Locale::parse(PSEUDO_TAG).map_or_else(
-            |_| Locale::english(),
+            |_| Locale::default(),
             |locale| locale.with_catalog(&CATALOG),
         )
     } else {
-        Locale::english()
+        Locale::default()
     }
 }
 
 /// The locales the gallery's language switch offers.
 #[must_use]
 pub fn choices() -> Vec<Locale> {
-    vec![Locale::english(), gallery_locale(PSEUDO_TAG)]
+    vec![Locale::default(), gallery_locale(PSEUDO_TAG)]
 }
 
 /// A string the gallery draws, by its message in the catalog. Each message

@@ -241,6 +241,35 @@ pub struct DataTable<'a> {
     pub sorting: Sorting<'a>,
     /// The body.
     pub body: Body,
+    /// How it meets a narrow page.
+    pub shape: Shape,
+}
+
+impl<'a> DataTable<'a> {
+    /// The table captioned `caption` over `columns` holding `body`, with no
+    /// sortable column and its rows stacked below 40rem.
+    #[must_use]
+    pub fn new(caption: &'a str, columns: &'a [Column], body: Body) -> Self {
+        Self {
+            caption,
+            columns,
+            sorting: Sorting::default(),
+            body,
+            shape: Shape::Stacked,
+        }
+    }
+
+    /// This table, its sortable headers sorting by `sorting`.
+    #[must_use]
+    pub fn with_sorting(self, sorting: Sorting<'a>) -> Self {
+        Self { sorting, ..self }
+    }
+
+    /// This table in the shape `shape`.
+    #[must_use]
+    pub fn with_shape(self, shape: Shape) -> Self {
+        Self { shape, ..self }
+    }
 }
 
 /// The hidden fields of a form: `fields` without the keys in `dropped`.
@@ -401,39 +430,31 @@ struct TableView {
     body: Html,
 }
 
-/// Returns the data table `table`, its rows stacked below 40rem.
-///
-/// Every body cell that carries `data-label` (its column's name) shows the
-/// name beside its value, and the cell with none (the row's name) heads the
-/// row, so a phone shows every column with no sideways scroll
-/// (WCAG 2.2 SC 1.4.10).
+/// How a data table meets a narrow page.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Shape {
+    /// Its rows stacked below 40rem: every body cell that carries
+    /// `data-label` (its column's name) shows the name beside its value, and
+    /// the cell with none (the row's name) heads the row, so a phone shows
+    /// every column with no sideways scroll (WCAG 2.2 SC 1.4.10).
+    Stacked,
+    /// In a box that scrolls sideways at every width, its rows stacked below
+    /// 40rem: the table of a column set no console bounds, such as a query's
+    /// result set, which never widens the page (WCAG 2.2 SC 1.4.10).
+    Wide,
+    /// A grid at every width: the opt-out for a small table that fits a
+    /// phone as it is.
+    Unstacked,
+}
+
+/// Returns the data table `table` in its shape; a table with a mono column
+/// scrolls sideways as [`Shape::Wide`] does.
 #[must_use]
 pub fn data_table(table: DataTable<'_>) -> Html {
-    drawn(table, true, false)
-}
-
-/// Returns the data table `table` in a box that scrolls sideways at every
-/// width, its rows stacked below 40rem.
-///
-/// It is the table of a column set no console bounds, such as a query's
-/// result set, which never widens the page (WCAG 2.2 SC 1.4.10).
-#[must_use]
-pub fn data_table_wide(table: DataTable<'_>) -> Html {
-    drawn(table, true, true)
-}
-
-/// Returns the data table `table` as a grid at every width: the opt-out for
-/// a small table that fits a phone as it is.
-#[must_use]
-pub fn data_table_unstacked(table: DataTable<'_>) -> Html {
-    drawn(table, false, false)
-}
-
-/// The table the three forms draw.
-fn drawn(table: DataTable<'_>, stacked: bool, wide: bool) -> Html {
-    let wide = wide || table.columns.iter().any(|column| column.mono);
+    let shape = table.shape;
+    let wide = shape == Shape::Wide || table.columns.iter().any(|column| column.mono);
     let mut classes = vec!["fui-table-scroll"];
-    if stacked {
+    if shape != Shape::Unstacked {
         classes.push("fui-table-stack");
     }
     if wide {
@@ -484,25 +505,14 @@ pub fn row_link(href: &str, name: Html) -> Html {
 /// Returns the cell that names a row: its row header, the name a
 /// [`row_link`] to `href` when the row opens, and `sub` a quiet second
 /// line under it (HTML Living Standard, `th` with `scope="row"`).
-#[must_use]
-pub fn title_cell(href: Option<&str>, name: Html, sub: Option<Html>) -> Html {
-    title(None, href, name, sub)
-}
-
-/// Returns the cell that names a row `level` levels down a hierarchy: a
-/// [`title_cell`] with the [`depth`] class on its `<th>`.
 ///
-/// The name steps in by a loose space per level, and in a phone's stacked
-/// card by a default space per level, so the card's heading keeps the level
-/// readable in the narrower width. Every level past the eighth takes the
-/// eighth's step.
+/// A row `level` levels down a hierarchy carries the [`depth`] class on its
+/// `<th>`: the name steps in by a loose space per level, and in a phone's
+/// stacked card by a default space per level, so the card's heading keeps
+/// the level readable in the narrower width. Every level past the eighth
+/// takes the eighth's step. A row of a flat table has no `level`.
 #[must_use]
-pub fn title_cell_at(level: u32, href: Option<&str>, name: Html, sub: Option<Html>) -> Html {
-    title(Some(depth(level)), href, name, sub)
-}
-
-/// Returns a row's title cell, its `<th>` carrying `class` when given.
-fn title(class: Option<&str>, href: Option<&str>, name: Html, sub: Option<Html>) -> Html {
+pub fn title_cell(level: Option<u32>, href: Option<&str>, name: Html, sub: Option<Html>) -> Html {
     let name = match href {
         Some(href) => row_link(href, name),
         None => name,
@@ -511,8 +521,8 @@ fn title(class: Option<&str>, href: Option<&str>, name: Html, sub: Option<Html>)
         .map(|sub| format!("<span class=\"fui-row-sub\">{sub}</span>"))
         .unwrap_or_default();
     let name = String::from(name);
-    let class = class
-        .map(|class| format!(" class=\"{class}\""))
+    let class = level
+        .map(|level| format!(" class=\"{}\"", depth(level)))
         .unwrap_or_default();
     Html::raw(format!(
         "<th scope=\"row\"{class} data-role=\"{}\">{name}{sub}</th>",

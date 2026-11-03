@@ -18,7 +18,7 @@
 //! posts.
 //!
 //! A confirmation that needs the reader's words, such as the required
-//! Reason a removal keeps with the revision, is [`danger_form_dialog`]: the
+//! Reason a removal keeps with the revision, is a [`confirm_dialog`] with a form: the
 //! console's fields sit between the sentence and the actions, and the
 //! whole dialog is the one form its confirm posts, so the fields post with
 //! it and the browser holds a required field before the post. A row
@@ -82,39 +82,34 @@ struct ConfirmView {
     confirm: Html,
 }
 
-/// Returns the dialog asking `confirmation`, with Cancel and `confirm`.
-#[must_use]
-pub fn confirm_dialog(locale: &Locale, confirmation: Confirmation, confirm: Html) -> Html {
-    frame(locale, confirmation, false, None, confirm)
+/// What a confirmation risks.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Stakes {
+    /// An action that can be undone or changed again.
+    Plain,
+    /// An action that cannot be undone, such as a delete: the bad tone's
+    /// glyph sits beside its question, and its confirm is a
+    /// [`Variant::Destructive`] button, solid, so the destructive step is
+    /// unmistakable.
+    Danger,
 }
 
-/// Returns the dialog asking `confirmation` about an action that cannot be
-/// undone, such as a delete.
+/// Returns the dialog asking `confirmation` about an action whose stakes
+/// are `stakes`, with Cancel and `confirm`.
 ///
-/// The bad tone's glyph sits beside its question, over Cancel and
-/// `confirm`, a [`Variant::Destructive`] button: solid, so the destructive
-/// step is unmistakable.
-#[must_use]
-pub fn danger_dialog(locale: &Locale, confirmation: Confirmation, confirm: Html) -> Html {
-    frame(locale, confirmation, true, None, confirm)
-}
-
-/// Returns the dialog asking `confirmation` about an action that cannot be
-/// undone and needs the reader's words, such as a removal with a required
-/// Reason.
-///
-/// It is [`danger_dialog`] with `form`'s fields between its sentence and
-/// its actions, inside one `POST` form to `form.action`, so `confirm`, a
-/// submit button, posts the fields with it. Its trigger, such as a row
-/// menu's Remove… ([`crate::view::action_menu::Act::Dialog`]), opens it
-/// with no script, and the focus moves to its first field.
+/// With `form`, its fields sit between the sentence and the actions,
+/// inside one `POST` form to `form.action`, so `confirm`, a submit button,
+/// posts the fields with it: a removal with a required Reason, say. Its
+/// trigger, such as a row menu's Remove…
+/// ([`crate::view::action_menu::Act::Dialog`]), opens it with no script,
+/// and the focus moves to its first field.
 ///
 /// # Examples
 ///
 /// ```
 /// use ferrohealth_ui::html::Html;
 /// use ferrohealth_ui::i18n::Locale;
-/// use ferrohealth_ui::view::dialog::{Confirmation, ConfirmForm, danger_form_dialog};
+/// use ferrohealth_ui::view::dialog::{Confirmation, ConfirmForm, Stakes, confirm_dialog};
 ///
 /// let question = Confirmation {
 ///     id: format!("remove-{}", "node-b").into(),
@@ -126,29 +121,18 @@ pub fn danger_dialog(locale: &Locale, confirmation: Confirmation, confirm: Html)
 ///     fields: Html::raw(String::from(r#"<textarea name="reason" required></textarea>"#)),
 /// };
 /// let remove = Html::raw(String::from(r#"<button type="submit">Remove</button>"#));
-/// let dialog = danger_form_dialog(&Locale::english(), question, form, remove);
+/// let dialog = confirm_dialog(&Locale::default(), question, Stakes::Danger, Some(form), remove);
 /// assert!(dialog.as_str().contains(r#"action="/members/node-b/remove""#));
 /// ```
 #[must_use]
-pub fn danger_form_dialog(
+pub fn confirm_dialog(
     locale: &Locale,
     confirmation: Confirmation,
-    form: ConfirmForm,
-    confirm: Html,
-) -> Html {
-    frame(locale, confirmation, true, Some(form), confirm)
-}
-
-/// Returns the dialog asking `confirmation`, in the danger form when
-/// `danger`, with `form`'s fields inside the form it posts when it has
-/// one, then Cancel and `confirm`.
-fn frame(
-    locale: &Locale,
-    confirmation: Confirmation,
-    danger: bool,
+    stakes: Stakes,
     form: Option<ConfirmForm>,
     confirm: Html,
 ) -> Html {
+    let danger = stakes == Stakes::Danger;
     let Confirmation { id, title, message } = confirmation;
     let (action, fields) = form.map_or((None, Html::empty()), |form| {
         (Some(form.action), form.fields)
@@ -202,27 +186,22 @@ struct ExplainView {
 }
 
 /// Returns the dialog explaining `explanation` with `body`, a few
-/// paragraphs, and Close as its one action.
+/// paragraphs, `width` wide, and Close as its one action.
 ///
-/// It is 48 rem wide, so two short columns of prose fit side by side, and
-/// Close takes the focus as it opens: the dialog asks nothing (WAI-ARIA
-/// Authoring Practices, the dialog (modal) pattern, initial focus).
+/// [`Width::Wide`] fits two short columns of prose side by side, as a page
+/// of explanation such as "How configuration works" takes; a short rule,
+/// such as a flow's edge rule ([`crate::view::flow::rule_dialog`]), keeps
+/// the dialog's own width. Close takes the focus as it opens: the dialog
+/// asks nothing (WAI-ARIA Authoring Practices, the dialog (modal) pattern,
+/// initial focus).
 #[must_use]
-pub fn info_dialog(locale: &Locale, explanation: Explanation, body: Html) -> Html {
-    explain(locale, explanation, body, true)
-}
-
-/// Returns the informational dialog explaining `explanation` with `body`,
-/// 48 rem wide when `wide` and at the dialog's own width otherwise, such
-/// as a flow's short edge rule ([`crate::view::flow::rule_dialog`]).
-pub(crate) fn explain(locale: &Locale, explanation: Explanation, body: Html, wide: bool) -> Html {
+pub fn info_dialog(locale: &Locale, explanation: Explanation, body: Html, width: Width) -> Html {
     let Explanation { id, title } = explanation;
     ExplainView {
         id,
-        class: if wide {
-            "fui-dialog fui-dialog-wide"
-        } else {
-            "fui-dialog"
+        class: match width {
+            Width::Wide => "fui-dialog fui-dialog-wide",
+            Width::Narrow => "fui-dialog",
         },
         glyph: icon(Glyph::INFO, "18"),
         title,

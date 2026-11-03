@@ -14,7 +14,7 @@ use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::code::{Code, CodeHead, Digest, Gravity, LineDiagnostic, code_card};
 use ferrohealth_ui::view::document::{Document, DocumentView, document_pane};
 use ferrohealth_ui::view::surface::{
-    Crumb, Header, card, definitions, grid, page_heading, page_meta, stack,
+    Container, Crumb, Header, card, definitions, page_heading, page_meta,
 };
 
 use crate::app::Page;
@@ -94,7 +94,7 @@ fn viewer(v: &Visit) -> Html {
             ],
         },
     );
-    stack(Html::join([
+    Container::Stack.wrap(Html::join([
         Html::raw(format!(
             "<p>{} <a href=\"#{LINES}13\">{}</a>.</p>",
             Html::text(v.tr(Msg::DiagnosticLinksLine)),
@@ -138,12 +138,12 @@ fn each(v: &Visit, title: &str, label: Msg, language: Language, text: &str) -> H
 /// A viewer in each language, named by its file.
 fn languages(v: &Visit) -> Html {
     let [yaml, json, xml, aql] = FILE_NAMES;
-    stack(Html::join([
-        grid(Html::join([
+    Container::Stack.wrap(Html::join([
+        Container::Grid.wrap(Html::join([
             each(v, yaml, Msg::MappingFileYaml, Language::Yaml, YAML),
             each(v, json, Msg::ResourceJson, Language::Json, JSON),
         ])),
-        grid(Html::join([
+        Container::Grid.wrap(Html::join([
             each(v, xml, Msg::CompositionXml, Language::Xml, XML),
             each(v, aql, Msg::QueryAql, Language::Aql, AQL),
         ])),
@@ -182,10 +182,10 @@ pub fn page(v: &Visit) -> Page {
             mono: true,
             badge: None,
         },
-        ActionGroup::none(),
+        ActionGroup::default(),
     );
     let meta = page_meta(Some(v.tr(Msg::AnsweredSyntheticReplicaGallery1)));
-    let body = stack(Html::join([
+    let body = Container::Stack.wrap(Html::join([
         document(v, &here, xml),
         viewer(v),
         languages(v),

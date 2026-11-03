@@ -125,7 +125,7 @@ fn a_reference_page_draws_the_replica_line_under_its_header() {
                     title: Word::from("Self-description"),
                     ..Header::default()
                 },
-                actions: ActionGroup::none(),
+                actions: ActionGroup::default(),
                 source: Source::File {
                     file: String::from("ferrofed.toml"),
                     how: How::Page(String::from("/how")),

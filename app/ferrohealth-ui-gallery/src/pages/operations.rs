@@ -22,7 +22,7 @@ use ferrohealth_ui::view::load_report::{Arrival, Count, LoadReport, Outcome, loa
 use ferrohealth_ui::view::refusal::{Issue, Refusal, Severity, refusal};
 use ferrohealth_ui::view::row_preview::{RowField, RowTable, RowValue, row_preview};
 use ferrohealth_ui::view::surface::{
-    Crumb, Header, SectionHead, page_heading, panel_body, panel_section, stack, titled_panel,
+    Container, Crumb, Header, SectionHead, page_heading, panel_section, titled_panel,
 };
 use ferrohealth_ui::view::template::list::HeadingCount;
 use ferrohealth_ui::view::transform::{
@@ -332,7 +332,7 @@ fn load_reports(v: &Visit, root: &str) -> Html {
     titled_panel(
         v.tr(Msg::OpLoadReport),
         Html::empty(),
-        panel_body(stack(reports)),
+        Container::PanelBody.wrap(Container::Stack.wrap(reports)),
     )
 }
 
@@ -572,13 +572,13 @@ pub fn page(v: &Visit) -> Page {
             mono: false,
             badge: None,
         },
-        ActionGroup::none(),
+        ActionGroup::default(),
     );
     let pairs: Html = [Pair::Waiting, Pair::Running, Pair::Answered, Pair::Refused]
         .into_iter()
         .map(|pair| pair_panel(v, pair))
         .collect();
-    let body = stack(Html::join([
+    let body = Container::Stack.wrap(Html::join([
         load_reports(v, &root),
         pairs,
         dense(v),

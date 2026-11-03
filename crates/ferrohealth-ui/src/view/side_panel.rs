@@ -17,7 +17,7 @@
 //! server's, in the page whole, so a field in it keeps what was typed
 //! while it is closed.
 //!
-//! An opener can carry keys ([`side_panel_with_shortcut`]), announced on
+//! An opener can carry keys ([`side_panel`] with a shortcut), announced on
 //! its button through `aria-keyshortcuts` and bound by the `keys` module
 //! from 40 rem up, outside a field. In a work-list row (R9,
 //! [`crate::view::worklist`]) the keys answer only while that row holds
@@ -83,24 +83,14 @@ impl SidePanelWords {
 /// Returns the side panel `panel` and its opener: a link to the content's
 /// route with no script, and the button that opens it once the
 /// `side_panel` module runs.
-#[must_use]
-pub fn side_panel(panel: SidePanel) -> Html {
-    drawn(panel, None)
-}
-
-/// Returns the side panel `panel` and its opener, whose button announces
-/// `shortcut` (such as `o`, or `o | d` for two keys) and asks the `keys`
-/// module to bind it.
 ///
-/// A shortcut with no form in `aria-keyshortcuts` (keys pressed in turn,
-/// such as `g d`) draws the opener with no key.
+/// With `shortcut` (such as `o`, or `o | d` for two keys), the button
+/// announces it and asks the `keys` module to bind it. A shortcut with no
+/// form in `aria-keyshortcuts` (keys pressed in turn, such as `g d`) draws
+/// the opener with no key.
 #[must_use]
-pub fn side_panel_with_shortcut(panel: SidePanel, shortcut: &str) -> Html {
-    drawn(panel, aria_keys(shortcut))
-}
-
-/// Returns `panel` with its opener announcing `keys`, if any.
-fn drawn(panel: SidePanel, keys: Option<String>) -> Html {
+pub fn side_panel(panel: SidePanel, shortcut: Option<&str>) -> Html {
+    let keys = shortcut.and_then(aria_keys);
     let SidePanel {
         id,
         title,

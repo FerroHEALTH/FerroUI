@@ -86,6 +86,7 @@ fn the_legend_is_a_dialog_listing_each_group_of_keys_and_words() {
                 shortcuts: vec![shortcut("m", "Merge into…")],
             },
         ],
+        None,
     )
     .to_string();
     assert!(

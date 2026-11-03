@@ -42,12 +42,6 @@ pub struct ActionGroup {
 }
 
 impl ActionGroup {
-    /// The group with no action, which draws nothing.
-    #[must_use]
-    pub fn none() -> Self {
-        Self::default()
-    }
-
     /// The group of the primary action `action` alone.
     #[must_use]
     pub fn primary(action: Action) -> Self {

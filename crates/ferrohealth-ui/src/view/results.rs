@@ -225,7 +225,7 @@ fn exports(locale: &Locale, csv: Export, json: Export, available: bool) -> Html 
 }
 
 /// Returns the results pane `pane`, a part of a tab panel
-/// ([`crate::view::surface::panel_sections`]).
+/// ([`crate::view::surface::Container::PanelSections`]).
 ///
 /// An answer with no row offers no chart and its exports disabled, and one
 /// with no numeric column offers no chart; the pane says why in a quiet
