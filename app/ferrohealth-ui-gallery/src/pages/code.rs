@@ -20,8 +20,8 @@ use ferrohealth_ui::view::line_diff::line_diff;
 use ferrohealth_ui::view::surface::{Crumb, Header, card, definitions, page_heading, page_meta};
 
 use crate::data::{
-    AQL, FHIRCONNECT, FILE_NAMES, FINDING_CODES, JSON, MAPPING, MAPPING_DIGEST, MAPPING_PATH, XML,
-    YAML,
+    AQL, FHIRCONNECT, FILE_NAMES, FINDING_CODES, JSON, MAPPING, MAPPING_DIGEST, MAPPING_PATH,
+    REVISION_DIFF, XML, YAML,
 };
 use crate::locale::Msg;
 use crate::page::Page;
@@ -157,27 +157,6 @@ fn languages(v: &Visit) -> Html {
         ]),
     )
 }
-
-/// A synthetic revision of the mapping file against the one that runs, as
-/// a unified diff: a changed version, a longer profile URL and one more
-/// archetype.
-const REVISION_DIFF: &str = "--- a/fhirconnect/gallery.context.yml
-+++ b/fhirconnect/gallery.context.yml
-@@ -2,6 +2,6 @@ type: context
- type: context
- metadata:
-   name: gallery.context
--  version: 1.2.0
-+  version: 1.3.0
- spec:
-   system: FHIR
-@@ -10,3 +10,4 @@ context:
-   profile:
--    url: \"http://example.org/fhir/StructureDefinition/gallery-weight\"
-+    url: \"http://example.org/fhir/StructureDefinition/gallery-weight-with-device-and-position\"
-   archetypes:
-+    - \"CLUSTER.body_position.v1\"
-";
 
 /// A revision's changed files by their digests, its first column headed
 /// File, and the line diff of the one changed in place.

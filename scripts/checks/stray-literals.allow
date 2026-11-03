@@ -18,6 +18,7 @@ allow ^Ferro(BRIDGE|FED|EHR|TERM|PIX)$ # product names, the same in every langua
 allow ^Cadasto B\.V\.$                  # the maker's legal name
 allow ^(start|middle|end)$              # SVG text-anchor keywords
 allow ^%2F$                             # a tree's path key: the percent-encoded separator inside a key
+allow ^(diff|index) $                   # the unified diff's file headers the line diff leaves out
 allow ^(public, max-age=31536000, immutable|text/(css|javascript); charset=utf-8)$   # the HTTP header values the asset routes answer with
 allow ^\{\}-L$                         # an editor line's id
 allow ^dialog shortcuts keys$           # the script modules an element asks the loader for
