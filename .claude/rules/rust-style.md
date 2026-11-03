@@ -53,8 +53,8 @@ VernumBOEK's and FerroEHR's rule of the same name).
 - **One copy is fine, two are looked at, three are extracted.**
 - **The ratchet measures it.** `scripts/checks/duplication.sh` runs jscpd
   (pinned by version and image digest in `docs/VERSIONS.md`, CI tools) over
-  the Rust under `app/*/src/` and `crates/*/src/`, the script modules under
-  `crates/*/scripts/` and the templates under `crates/*/templates/` in the
+  the Rust under `app/*/src/`, `crates/*/src/` and `tools/*/src/`, the script
+  modules under `crates/*/scripts/` and the templates under `crates/*/templates/` in the
   `duplication` CI job, and holds the total of duplicated lines to the count
   in `scripts/checks/duplication.count`. A rise fails and names both places
   of each new block. A fall passes with a note, so your pull request leaves
@@ -94,8 +94,8 @@ VernumBOEK's and FerroEHR's rule of the same name).
   to this section and to the guard together, with the table measured again.
 - **A hand-written Rust file carries at most 800 lines**, its inline test
   module included. `scripts/checks/file-size.sh` measures every tracked `.rs`
-  file under `app/*/src/` and `crates/*/src/` that does not open with
-  `// @generated`, in the `file-size` CI job and per edit through
+  file under `app/*/src/`, `crates/*/src/` and `tools/*/src/` that does not
+  open with `// @generated`, in the `file-size` CI job and per edit through
   `.claude/hooks/rust_fmt_clippy.sh`. The 10 files over the budget when the
   guard landed (3,416 lines over it in all) stand in
   `scripts/checks/file-size.list` with their length; a listed file may shrink

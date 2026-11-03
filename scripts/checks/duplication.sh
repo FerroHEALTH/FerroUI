@@ -5,9 +5,9 @@
 # and never rise (#536, after VernumBOEK's and FerroEHR's guard).
 #
 # jscpd (docs/VERSIONS.md, CI tools) tokenizes every .rs file under
-# app/*/src/ and crates/*/src/, the script modules under crates/*/scripts/
-# (its `javascript` format) and the templates under crates/*/templates/ (its
-# `markup` format), and reports each block of at least MIN_TOKENS tokens over
+# app/*/src/, crates/*/src/ and tools/*/src/ (tools/ since #586), the script
+# modules under crates/*/scripts/ (its `javascript` format) and the templates
+# under crates/*/templates/ (its `markup` format), and reports each block of at least MIN_TOKENS tokens over
 # at least MIN_LINES lines that stands in two places, within one format. The
 # threshold is our own design, measured and recorded in
 # .claude/rules/rust-style.md, "Code is written once". The scan leaves out:
@@ -145,11 +145,11 @@ detect() {
   local tree="$1" out="$2" kind
   local -a roots=() flags=()
   local candidate
-  for candidate in "$tree"/app/*/src "$tree"/crates/*/src "$tree"/crates/*/scripts "$tree"/crates/*/templates; do
+  for candidate in "$tree"/app/*/src "$tree"/crates/*/src "$tree"/tools/*/src "$tree"/crates/*/scripts "$tree"/crates/*/templates; do
     [[ -d "$candidate" ]] && roots+=("${candidate#"$tree"/}")
   done
   if [[ "${#roots[@]}" -eq 0 ]]; then
-    echo "duplication: no app/*/src, crates/*/src, crates/*/scripts or crates/*/templates under $tree" >&2
+    echo "duplication: no app/*/src, crates/*/src, tools/*/src, crates/*/scripts or crates/*/templates under $tree" >&2
     return 2
   fi
   kind="$(detector_kind)"
@@ -290,7 +290,8 @@ write_count() {
     printf '# SPDX-FileCopyrightText: Cadasto B.V.\n'
     printf '# SPDX-License-Identifier: BUSL-1.1\n'
     printf '# The duplicated lines scripts/checks/duplication.sh measures in\n'
-    printf '# app/*/src/, crates/*/src/, crates/*/scripts/ and crates/*/templates/.\n'
+    printf '# app/*/src/, crates/*/src/, tools/*/src/, crates/*/scripts/ and\n'
+    printf '# crates/*/templates/.\n'
     printf '# It may fall and never rise; --update writes a lower one, and a higher\n'
     printf '# one is a hand edit that says why.\n'
     printf '%s\n' "$2"

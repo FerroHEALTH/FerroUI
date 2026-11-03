@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
-# File-size ratchet: a hand-written source file under app/*/src/ or
-# crates/*/src/ carries at most 800 lines, its inline test module included
-# (#536, after VernumBOEK's and FerroEHR's guard).
+# File-size ratchet: a hand-written source file under app/*/src/,
+# crates/*/src/ or tools/*/src/ carries at most 800 lines, its inline test
+# module included (#536, after VernumBOEK's and FerroEHR's guard; tools/ since
+# #586).
 #
 # The budget is .claude/rules/rust-style.md, "Code is written once", and no
 # specification governs the number: our own design. A file over it stands in
@@ -42,7 +43,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 
 readonly BUDGET=800
 readonly LIST_FILE=scripts/checks/file-size.list
-readonly SCOPE='^(app|crates)/[^/[:space:]]+/src/[^[:space:]]+\.rs$'
+readonly SCOPE='^(app|crates|tools)/[^/[:space:]]+/src/[^[:space:]]+\.rs$'
 
 # The path of $1 inside the checkout that holds it, so a file edited in a
 # worktree under .claude/worktrees/ is measured by where it stands in its own
@@ -123,7 +124,7 @@ measured_of() {
     [[ -f "$tree/$path" ]] || continue
     generated "$tree/$path" && continue
     printf '%s %s\n' "$path" "$(lines_of "$tree/$path")"
-  done < <(git -C "$tree" ls-files -- 'app/*.rs' 'crates/*.rs')
+  done < <(git -C "$tree" ls-files -- 'app/*.rs' 'crates/*.rs' 'tools/*.rs')
 }
 
 # Joins the entries $1 with the measure $2 and prints one verdict per path,
@@ -162,9 +163,9 @@ write_list() {
   {
     printf '# SPDX-FileCopyrightText: Cadasto B.V.\n'
     printf '# SPDX-License-Identifier: BUSL-1.1\n'
-    printf '# The hand-written files under app/*/src/ and crates/*/src/ over the\n'
-    printf '# budget of %s lines that scripts/checks/file-size.sh admits, each\n' "$BUDGET"
-    printf '# with the length it may not pass. An entry may fall and never rise;\n'
+    printf '# The hand-written files under app/*/src/, crates/*/src/ and tools/*/src/\n'
+    printf '# over the budget of %s lines that scripts/checks/file-size.sh admits,\n' "$BUDGET"
+    printf '# each with the length it may not pass. An entry may fall and never rise;\n'
     printf '# --update lowers and removes entries.\n'
     if [[ -n "$2" ]]; then
       printf '%s\n' "$2"
@@ -266,7 +267,7 @@ self_test() {
   tree="$work/tree"
   list="$work/file-size.list"
   mkdir -p "$tree/app/demo/src/views" "$tree/app/demo/tests/it" "$tree/crates/demo/src" "$tree/crates/other/src" \
-    "$tree/fuzz/fuzz_targets"
+    "$tree/tools/demo/src" "$tree/fuzz/fuzz_targets"
   git -c init.defaultBranch=main init -q "$tree"
 
   fail() {
@@ -306,9 +307,9 @@ crates/demo/src/deep.rs 820"
   grep -q '3 listed over the budget of 800 lines, 170 lines over it' "$work/answer" ||
     fail "the tree run did not count the three listed files: $(cat "$work/answer")"
 
-  # A file over the budget that the list does not carry, in each of the three roots.
+  # A file over the budget that the list does not carry, in each of the roots.
   local place
-  for place in app/demo/src/grown.rs crates/demo/src/grown.rs crates/other/src/grown.rs; do
+  for place in app/demo/src/grown.rs crates/demo/src/grown.rs crates/other/src/grown.rs tools/demo/src/grown.rs; do
     lines "$tree/$place" 801
     git -C "$tree" add -- "$place"
     [[ "$(run check)" == 1 ]] || fail "an unlisted file of 801 lines at $place passed"
