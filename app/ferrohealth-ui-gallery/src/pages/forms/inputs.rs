@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The forms page's fields: the federated search, the field shapes, pick or type, the inline and per-row forms.
+//! The forms page's fields: the federated search, the field shapes, pick or
+//! type, the inline and per-row forms.
 
 use ferrohealth_ui::calendar::Bounds;
 use ferrohealth_ui::html::Html;

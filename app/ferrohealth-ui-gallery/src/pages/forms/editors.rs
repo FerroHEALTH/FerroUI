@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The forms page's editors: the upload, the highlighted editor, the mapping editors, the diagnostics, the filter and the editor headers.
+//! The forms page's editors: the upload, the highlighted editor, the mapping
+//! editors, the diagnostics, the filter and the editor headers.
 
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::html::Html;

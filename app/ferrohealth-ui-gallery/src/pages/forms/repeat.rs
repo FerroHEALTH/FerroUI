@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The forms page's repeated rows: the edge parts and the endpoints with their profiles.
+//! The forms page's repeated rows: the edge parts and the endpoints with
+//! their profiles.
 
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::i18n::Arg;

@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The forms page's pickers: the clause and system pickers, the choices, the grouped fields, the nested reveal and the long label.
+//! The forms page's pickers: the clause and system pickers, the choices, the
+//! grouped fields, the nested reveal and the long label.
 
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::i18n::Arg;
