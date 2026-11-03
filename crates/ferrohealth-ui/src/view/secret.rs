@@ -138,25 +138,22 @@ impl SecretField {
 }
 
 /// Returns the state `state` with its glyph, in `locale`: by reference,
-/// in the muted words a settings row or a secret field's head draws.
+/// in the muted words a settings row or a secret field's head draws, with
+/// the id `id` when it has one.
 ///
 /// ```
 /// use ferrohealth_ui::i18n::Locale;
 /// use ferrohealth_ui::view::secret::{SecretState, secret_state};
 ///
 /// let html = secret_state(
-///     &Locale::english(),
+///     &Locale::default(),
 ///     &SecretState::Set(String::from("/run/secrets/db-url")),
+///     None,
 /// ).to_string();
 /// assert!(html.contains("<code>/run/secrets/db-url</code>"));
 /// ```
 #[must_use]
-pub fn secret_state(locale: &Locale, state: &SecretState) -> Html {
-    state_view(locale, state, None)
-}
-
-/// The state [`secret_state`] draws, with the id `id` when it has one.
-fn state_view(locale: &Locale, state: &SecretState, id: Option<&str>) -> Html {
+pub fn secret_state(locale: &Locale, state: &SecretState, id: Option<&str>) -> Html {
     let (glyph, words) = match state {
         SecretState::Set(file) => (Glyph::LOCK, around(locale, Text::SecretSet, file)),
         SecretState::Redacted => (Glyph::LOCK, tr(locale, Text::SecretRedacted).into()),
@@ -308,7 +305,7 @@ pub fn secret_field(locale: &Locale, field: &SecretField, hint: Option<Html>) ->
         id,
         label,
         hint,
-        now: state_view(locale, state, Some(&now_id)),
+        now: secret_state(locale, state, Some(&now_id)),
         mode: format!("{id}[mode]"),
         segments,
         parts,

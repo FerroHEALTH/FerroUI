@@ -114,7 +114,7 @@ pub fn draw(visit: &Visit) -> Drawn {
         Page::Fault => pages::templates::fault(visit),
         Page::Template => pages::templates::page(visit),
         Page::Overview => pages::overview::page(visit),
-        Page::Forms => pages::forms::page(visit),
+        Page::Forms => pages::forms::page(visit, None),
         Page::Tables => pages::tables::page(visit),
         Page::Code => pages::code::page(visit),
         Page::Configuration => pages::configuration::page(visit),
@@ -139,7 +139,7 @@ pub fn draw(visit: &Visit) -> Drawn {
 #[must_use]
 pub fn posted(visit: &Visit, body: &str) -> Option<Drawn> {
     match Page::of(&visit.path)? {
-        Page::Forms => Some(crate::pages::forms::posted(visit, body)),
+        Page::Forms => Some(crate::pages::forms::page(visit, Some(body))),
         _ => None,
     }
 }

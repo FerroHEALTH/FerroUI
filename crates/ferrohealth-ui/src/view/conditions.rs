@@ -26,9 +26,7 @@ use crate::html::Html;
 use crate::i18n::{Arg, Locale, Text, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::view::button::Variant;
-use crate::view::form::{
-    Field, INPUT, Inner, SELECT, described_with_unit, keyed_check, keyed_field,
-};
+use crate::view::form::{Field, INPUT, Inner, SELECT, check, described_with_unit, keyed_field};
 
 /// The name the submit button that removes a condition posts, its value
 /// the condition's key.
@@ -291,7 +289,7 @@ fn group_view(locale: &Locale, group: ConditionGroup, depth: u32) -> String {
     } = group;
     let nested = depth > 0;
     let not_id = format!("{key}-not");
-    let negation = keyed_check(
+    let negation = check(
         &not_id,
         tr(locale, Text::CondNot),
         Html::raw(format!(

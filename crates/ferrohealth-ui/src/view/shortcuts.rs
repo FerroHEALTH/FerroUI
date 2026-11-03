@@ -21,7 +21,7 @@
 //! inside a field too, a single key such as `l` or `]` presses its control,
 //! or focuses it when it is a field, outside a field alone, and a control
 //! inside a work-list row answers only while its row holds the focus. A
-//! console's go-to pairs ([`GoTo`], drawn by [`shortcut_legend_with_go_to`])
+//! console's go-to pairs ([`GoTo`], drawn by [`shortcut_legend`])
 //! are a first key, then a letter, then a link of its navigation: the
 //! legend lists each as that link, which the module follows. The library's
 //! own controls that announce a key (a dock decision, Run, a keyed side
@@ -162,26 +162,12 @@ struct LegendBody {
 /// Returns the legend of `groups`, drawn closed, which the `shortcuts`
 /// module opens as a modal and Close closes.
 ///
+/// After them come the go-to pairs `go_to` when there are any, each listed
+/// as its link, which the `keys` module follows on the pair's keys.
+///
 /// A console draws it once on a page that has shortcuts.
 #[must_use]
-pub fn shortcut_legend(locale: &Locale, groups: Vec<ShortcutGroup>) -> Html {
-    legend(locale, groups, None)
-}
-
-/// Returns the legend of `groups` and, after them, the go-to pairs
-/// `go_to`, each listed as its link, which the `keys` module follows on
-/// the pair's keys.
-#[must_use]
-pub fn shortcut_legend_with_go_to(
-    locale: &Locale,
-    groups: Vec<ShortcutGroup>,
-    go_to: GoTo,
-) -> Html {
-    legend(locale, groups, Some(go_to))
-}
-
-/// Returns the legend of `groups` and `go_to`.
-fn legend(locale: &Locale, groups: Vec<ShortcutGroup>, go_to: Option<GoTo>) -> Html {
+pub fn shortcut_legend(locale: &Locale, groups: Vec<ShortcutGroup>, go_to: Option<GoTo>) -> Html {
     let or = tr(locale, Text::KeysOr);
     let go = go_to.map(|go_to| GoView {
         rows: go_to

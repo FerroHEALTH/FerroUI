@@ -14,7 +14,7 @@
 
 use crate::html::Html;
 use crate::i18n::{Locale, Text, tr};
-use crate::table::view::{Body, Column, DataTable, Sorting, data_table};
+use crate::table::view::{Body, Column, DataTable, data_table};
 
 /// One setting's change.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -106,10 +106,9 @@ pub fn change_table_keyed(
             ))
         })
         .collect();
-    data_table(DataTable {
-        caption: &caption,
-        columns: &columns(locale, key.into()),
-        sorting: Sorting::default(),
-        body: Body::Rows(rows),
-    })
+    data_table(DataTable::new(
+        &caption,
+        &columns(locale, key.into()),
+        Body::Rows(rows),
+    ))
 }

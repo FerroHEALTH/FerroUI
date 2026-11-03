@@ -55,7 +55,7 @@ fn on_off(on: bool, word: Word) -> Html {
 /// use ferrohealth_ui::view::subject::{Subject, SubjectLine, subject_line};
 ///
 /// let html = subject_line(
-///     &Locale::english(),
+///     &Locale::default(),
 ///     SubjectLine {
 ///         subject: Subject::None,
 ///         queryable: true,

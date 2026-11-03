@@ -6,10 +6,10 @@
 //! work-list. Every value here is invented and follows no national scheme.
 
 use ferrohealth_ui::html::Html;
-use ferrohealth_ui::table::view::{Body, Column, DataTable, Role, Sorting, cell, data_table};
+use ferrohealth_ui::table::view::{Body, Column, DataTable, Role, cell, data_table};
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::compare::{
-    Compare, CompareField, CompareRecord, Verdict, compare, compare_pair, compare_stacked,
+    Compare, CompareField, CompareRecord, Presentation, Verdict, compare,
 };
 use ferrohealth_ui::view::identifier::{
     Domain, Identifier, IdentifierWords, Masked, Reveal, identifier, identifier_list,
@@ -84,9 +84,9 @@ fn drawn(count: usize, differ_first: bool, stacked: bool) -> String {
             differ_first,
         };
         if stacked {
-            compare_stacked(&en(), table, 1)
+            compare(&en(), table, Presentation::Stacked { shown: 1 })
         } else {
-            compare(&en(), table)
+            compare(&en(), table, Presentation::Table)
         }
     })
 }
@@ -202,6 +202,7 @@ fn a_compare_whose_fields_all_agree_says_so_in_its_caption() {
                 verdict: &|_, _| Verdict::Agree,
                 differ_first: true,
             },
+            Presentation::Table,
         )
     });
     assert!(
@@ -259,7 +260,7 @@ fn the_stacked_form_is_a_radio_choice_with_every_mark_at_its_line_end() {
         let fields = fields();
         let leading = record("a", "Source A", &[Some("x"), None, Some("z")]);
         let others = [record("b", "Source B", &[Some("x"), Some("y"), Some("w")])];
-        compare_pair(
+        compare(
             &en(),
             Compare {
                 id: "pair",
@@ -270,7 +271,7 @@ fn the_stacked_form_is_a_radio_choice_with_every_mark_at_its_line_end() {
                 verdict: &verdict,
                 differ_first: false,
             },
-            0,
+            Presentation::Pair { shown: 0 },
         )
     });
     assert!(pair.contains("fui-compare-wide"), "{pair}");
@@ -297,6 +298,7 @@ fn a_compare_escapes_what_it_is_given() {
                 verdict: &|_, _| Verdict::Absent,
                 differ_first: false,
             },
+            Presentation::Table,
         )
     });
     assert!(
@@ -321,7 +323,7 @@ fn stacked_of(count: usize, shown: usize) -> String {
                 )
             })
             .collect();
-        compare_stacked(
+        compare(
             &en(),
             Compare {
                 id: "many",
@@ -332,7 +334,7 @@ fn stacked_of(count: usize, shown: usize) -> String {
                 verdict: &verdict,
                 differ_first: false,
             },
-            shown,
+            Presentation::Stacked { shown },
         )
     })
 }
@@ -735,12 +737,7 @@ fn queue() -> String {
                 })
             })
             .collect::<Html>();
-        let table = data_table(DataTable {
-            caption: "Queue",
-            columns: &columns,
-            sorting: Sorting::default(),
-            body: Body::Rows(rows),
-        });
+        let table = data_table(DataTable::new("Queue", &columns, Body::Rows(rows)));
         worklist(table).then(worklist_foot(None, None))
     })
 }

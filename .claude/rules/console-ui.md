@@ -170,7 +170,7 @@ sticky top bar, inside the scroll padding (SC 2.4.11); below 64rem, where a
 table can be wider than its card, it scrolls sideways inside the card,
 never the page (SC 1.4.10), and gives up the sticky header, which an
 overflow box would hold to itself. A table no console bounds
-(`data_table_wide`, or any table with a code header) keeps its scroll box
+(`data_table` with `Shape::Wide`, or any table with a code header) keeps its scroll box
 at every width and gives up the sticky header, so a query's result set
 never widens the page. Pure CSS, no script.
 

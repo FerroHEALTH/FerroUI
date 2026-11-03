@@ -43,8 +43,8 @@ use ferrohealth_ui::view::repeat::{Fields, ROW, Repeat, RepeatAdd, RepeatRow, Ro
 use ferrohealth_ui::view::segmented::choice_reveal;
 use ferrohealth_ui::view::status::badge;
 use ferrohealth_ui::view::surface::{
-    Crumb, Header, Mode, SectionHead, card, editor_heading, grid, grid_start, page_header,
-    panel_section, panel_sections_card, stack, well,
+    Container, Crumb, Header, Mode, SectionHead, card, editor_heading, page_header, panel_section,
+    panel_sections_card,
 };
 use ferrohealth_ui::view::template::list::HeadingCount;
 use ferrohealth_ui::view::upload::{Sending, Upload, UploadWords, upload_field};
@@ -207,6 +207,7 @@ fn pick_or_typed(v: &Visit) -> Html {
             selected: None,
             described_by: Some(help_id("pick-canonical")),
             words: ComboboxWords::of(&v.locale),
+            remote: None,
         })),
         typed_id: String::from("pick-canonical"),
         typed: h(format!(
@@ -483,6 +484,7 @@ fn clause_picker(v: &Visit, place: u8) -> Html {
         selected: None,
         words: ComboboxWords::of(&v.locale),
         id,
+        remote: None,
     })
 }
 
@@ -497,6 +499,7 @@ fn system_picker(v: &Visit) -> Html {
         selected: Some(String::from("snomed")),
         described_by: None,
         words: ComboboxWords::of(&v.locale),
+        remote: None,
     })
 }
 
@@ -1086,7 +1089,7 @@ fn editor_headers(v: &Visit) -> Html {
         if let Mode::Editing(name) = &mode {
             crumbs.push(Crumb::new(name.clone(), String::from("#")));
         }
-        well(editor_heading(
+        Container::Well.wrap(editor_heading(
             &v.locale,
             message(Msg::FileEditor),
             &mode,
@@ -1094,12 +1097,12 @@ fn editor_headers(v: &Visit) -> Html {
                 crumbs,
                 ..Header::default()
             },
-            ActionGroup::none(),
+            ActionGroup::default(),
         ))
     };
     card(
         v.tr(Msg::EditorHeaders),
-        stack(h(format!(
+        Container::Stack.wrap(h(format!(
             "<div data-editor-mode=\"new\">{}</div><div data-editor-mode=\"edit\">{}</div>",
             header(Mode::Creating),
             header(Mode::Editing(String::from("synthetic-007.model.yml")))
@@ -1412,23 +1415,27 @@ fn endpoints(v: &Visit) -> Html {
     )
 }
 
-/// The forms page, with the answer to `posted` when the page was posted to.
-fn drawn(v: &Visit, posted: Option<&Posted>) -> Page {
+/// The forms page, drawn again with the answer to the form body `posted`
+/// when the page was posted to.
+#[must_use]
+pub fn page(v: &Visit, posted: Option<&str>) -> Page {
+    let posted = posted.map(Posted::read);
+    let posted = posted.as_ref();
     let header = page_header(
         &v.locale,
         v.tr(Msg::FormsEditor),
         Some(v.tr(Msg::FieldsGroupedFieldsUploadField)),
-        ActionGroup::none(),
+        ActionGroup::default(),
     );
-    let pair = grid(Html::join([
+    let pair = Container::Grid.wrap(Html::join([
         fields(v),
-        stack(Html::join([grouped(v), federated(v)])),
+        Container::Stack.wrap(Html::join([grouped(v), federated(v)])),
     ]));
     // Cards of unlike length side by side, each at its own height.
-    let unlike = grid_start(Html::join([long_label(v), nested_reveal(v)]));
-    let dated = grid_start(Html::join([dates(v), edge_parts(v)]));
-    let shaped = grid_start(Html::join([shapes(v), pick_or_typed(v)]));
-    let body = stack(Html::join([
+    let unlike = Container::GridStart.wrap(Html::join([long_label(v), nested_reveal(v)]));
+    let dated = Container::GridStart.wrap(Html::join([dates(v), edge_parts(v)]));
+    let shaped = Container::GridStart.wrap(Html::join([shapes(v), pick_or_typed(v)]));
+    let body = Container::Stack.wrap(Html::join([
         pair,
         dated,
         endpoints(v),
@@ -1437,7 +1444,7 @@ fn drawn(v: &Visit, posted: Option<&Posted>) -> Page {
         per_row(v),
         choosing(v),
         unlike,
-        grid_start(Html::join([
+        Container::GridStart.wrap(Html::join([
             answer::answered_action(v, posted),
             answer::answered_in_place(v, posted),
         ])),
@@ -1454,16 +1461,4 @@ fn drawn(v: &Visit, posted: Option<&Posted>) -> Page {
     ]));
     let dock = super::dock::dock(v).unwrap_or_default();
     Page::shell(v.tr(Msg::FormsEditor), Html::join([header, body, dock]))
-}
-
-/// The forms page.
-#[must_use]
-pub fn page(v: &Visit) -> Page {
-    drawn(v, None)
-}
-
-/// The forms page drawn again with the answer to the form body `body`.
-#[must_use]
-pub fn posted(v: &Visit, body: &str) -> Page {
-    drawn(v, Some(&Posted::read(body)))
 }

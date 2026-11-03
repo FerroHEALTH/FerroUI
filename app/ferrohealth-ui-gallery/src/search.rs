@@ -147,7 +147,7 @@ mod tests {
 
     #[test]
     fn the_answer_holds_the_names_that_hold_the_words() {
-        let en = ferrohealth_ui::i18n::Locale::english();
+        let en = ferrohealth_ui::i18n::Locale::default();
         let found = answer(&en, Brand::Bridge, " SYNTHETIC-00 ");
         assert_eq!("SYNTHETIC-00", found.query);
         assert_eq!(9, found.total(), "synthetic-001 to synthetic-009");

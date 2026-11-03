@@ -115,7 +115,7 @@ pub struct Lifecycle {
 /// use ferrohealth_ui::view::lifecycle::{Lifecycle, Step, StepState, lifecycle};
 ///
 /// let html = lifecycle(
-///     &Locale::english(),
+///     &Locale::default(),
 ///     Lifecycle {
 ///         label: String::from("Where this revision stands"),
 ///         steps: vec![

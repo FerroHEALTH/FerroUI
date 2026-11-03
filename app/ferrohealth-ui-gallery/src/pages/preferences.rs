@@ -217,7 +217,7 @@ pub fn page(v: &Visit) -> Page {
             saved,
             accent: accent(v, brand),
             languages: crate::locale::choices(),
-            browser: Locale::english(),
+            browser: Locale::default(),
             week_from_language: Weekday::Monday,
             shortcuts: Some(format!("/{}/overlays", brand.key())),
             reset: String::from(RESET_ROUTE),

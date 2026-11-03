@@ -23,14 +23,14 @@ use ferrohealth_ui::view::code::{
 use ferrohealth_ui::view::combobox::{ComboOption, Combobox, ComboboxWords, combobox};
 use ferrohealth_ui::view::copy::{CopySource, CopyWords, copy_from};
 use ferrohealth_ui::view::dialog::{
-    ConfirmForm, Confirmation, Explanation, confirm_dialog, danger_form_dialog, info_dialog,
+    ConfirmForm, Confirmation, Explanation, Stakes, Width, confirm_dialog, info_dialog,
 };
 use ferrohealth_ui::view::document::DocumentView;
 use ferrohealth_ui::view::document::{Document, document_pane};
 use ferrohealth_ui::view::editor::{Editor, code_editor};
 use ferrohealth_ui::view::empty::{empty_state, skeleton};
 use ferrohealth_ui::view::form::{
-    ERROR, Field, INPUT, SELECT, action_field, described_by, error_id, field, help_id, keyed_check,
+    ERROR, Field, INPUT, SELECT, action_field, check, described_by, error_id, field, help_id,
     keyed_check_field, keyed_field,
 };
 use ferrohealth_ui::view::help::{HelpWords, explained_check_field, help_switch};
@@ -41,8 +41,8 @@ use ferrohealth_ui::view::refusal::{Issue, Refusal, Severity, refusal};
 use ferrohealth_ui::view::shell::{Footer, footer, lockup, mark};
 use ferrohealth_ui::view::side_panel::{Opener, SidePanel, SidePanelWords, side_panel};
 use ferrohealth_ui::view::surface::{
-    Header, SectionHead, Stat, add_row, definitions, page_header, page_heading, panel_section,
-    panel_sections, section_intro, source_split, stat_card,
+    Container, Header, SectionHead, Stat, definitions, page_header, page_heading, panel_section,
+    section_intro, source_split, stat_card,
 };
 use ferrohealth_ui::view::tabs::{Tab, binder};
 use ferrohealth_ui::view::tabs::{keyboard_tabs, tab_panels};
@@ -53,7 +53,7 @@ use crate::markup::{has, tags};
 
 /// The locale every render test draws in.
 pub(crate) fn en() -> Locale {
-    Locale::english()
+    Locale::default()
 }
 
 /// The markup `view` renders, as a string a test reads.
@@ -170,7 +170,7 @@ fn a_page_header_carries_a_subtitle_with_inline_markup_in_the_subtitle_style() {
                 ))),
                 ..Header::default()
             },
-            ActionGroup::none(),
+            ActionGroup::default(),
         )
     });
     assert!(
@@ -191,7 +191,7 @@ fn a_page_header_carries_a_subtitle_with_inline_markup_in_the_subtitle_style() {
                 subtitle: Some(Word::from("Every mapping file the bridge serves.")),
                 ..Header::default()
             },
-            ActionGroup::none(),
+            ActionGroup::default(),
         )
     });
     assert!(
@@ -214,6 +214,8 @@ fn each_row_gives_its_confirmation_and_popover_form_an_id_of_its_own() {
                         title: Word::from("Remove it?"),
                         message: Word::from("It leaves the federation."),
                     },
+                    Stakes::Plain,
+                    None,
                     Html::default(),
                 );
                 let popover = popover_form(PopoverForm {
@@ -432,6 +434,7 @@ fn an_informational_dialog_explains_and_offers_only_close() {
                 title: Word::from("How <configuration> works"),
             },
             Html::raw(String::from("<p>Read at start.</p>")),
+            Width::Wide,
         )
     });
     assert!(
@@ -501,7 +504,7 @@ fn a_heading_counts_the_items_it_shows_of_a_larger_set() {
 #[test]
 fn panel_sections_draw_a_heading_row_with_its_count_and_no_card_of_their_own() {
     let panel = html({
-        panel_sections(Html::join([
+        Container::PanelSections.wrap(Html::join([
             panel_section(
                 &en(),
                 Some(SectionHead {
@@ -511,7 +514,7 @@ fn panel_sections_draw_a_heading_row_with_its_count_and_no_card_of_their_own() {
                 }),
                 Html::join([
                     section_intro("One <sentence>."),
-                    add_row(Html::raw(String::from(
+                    Container::AddRow.wrap(Html::raw(String::from(
                         r#"<button type="button">Add</button>"#,
                     ))),
                 ]),
@@ -574,7 +577,12 @@ fn panel_sections_draw_a_heading_row_with_its_count_and_no_card_of_their_own() {
 
 #[test]
 fn a_page_heading_in_the_body_face_writes_no_class_on_its_title() {
-    let plain = html(page_header(&en(), "Dashboard", None, ActionGroup::none()));
+    let plain = html(page_header(
+        &en(),
+        "Dashboard",
+        None,
+        ActionGroup::default(),
+    ));
     assert!(plain.contains("<h1>Dashboard</h1>"), "{plain}");
     let mono = html({
         page_heading(
@@ -584,7 +592,7 @@ fn a_page_heading_in_the_body_face_writes_no_class_on_its_title() {
                 mono: true,
                 ..Header::default()
             },
-            ActionGroup::none(),
+            ActionGroup::default(),
         )
     });
     assert!(
@@ -947,6 +955,8 @@ fn the_surfaces_render_and_none_writes_a_style_attribute() {
                     title: "Delete it?".into(),
                     message: "It goes for good.".into(),
                 },
+                Stakes::Plain,
+                None,
                 Html::default(),
             ),
             footer(
@@ -977,16 +987,12 @@ fn the_surfaces_render_and_none_writes_a_style_attribute() {
 
 #[test]
 fn a_start_grid_writes_the_start_class_and_the_grid_does_not() {
-    let start = html(ferrohealth_ui::view::surface::grid_start(Html::raw(
-        String::from("<p>a</p>"),
-    )));
+    let start = html(Container::GridStart.wrap(Html::raw(String::from("<p>a</p>"))));
     assert!(
         start.contains(r#"class="fui-grid fui-grid-start""#),
         "{start}"
     );
-    let plain = html(ferrohealth_ui::view::surface::grid(Html::raw(
-        String::from("<p>a</p>"),
-    )));
+    let plain = html(Container::Grid.wrap(Html::raw(String::from("<p>a</p>"))));
     assert!(plain.contains(r#"class="fui-grid""#), "{plain}");
 }
 
@@ -1096,7 +1102,7 @@ fn a_field_with_an_id_made_per_row_names_its_own_control_and_help() {
     }
     let checks = html({
         Html::join([
-            keyed_check(
+            check(
                 "keep-2",
                 "Keep",
                 Html::raw(String::from(r#"<input type="checkbox" id="keep-2">"#)),
@@ -2095,7 +2101,7 @@ fn a_split_primary_carries_its_variants_and_more_alone_has_no_primary() {
     let alone = html(action_group(&en(), ActionGroup::more_only(file_menu())));
     assert!(!alone.contains("fui-button-primary"), "{alone}");
     assert!(alone.contains("fui-more"), "{alone}");
-    let none = html(action_group(&en(), ActionGroup::none()));
+    let none = html(action_group(&en(), ActionGroup::default()));
     assert!(!none.contains("<div"), "{none}");
     let empty = html(action_group(
         &en(),
@@ -2186,7 +2192,7 @@ fn a_popover_form_sits_beside_the_primary_before_more() {
         has(&page, "dialog", &[("id", "save"), ("class", "fui-popover")]),
         "{page}"
     );
-    let alone = html(action_group(&en(), ActionGroup::none().popover(save())));
+    let alone = html(action_group(&en(), ActionGroup::default().popover(save())));
     assert!(
         alone.contains("fui-action-group"),
         "a popover alone draws: {alone}"
@@ -2458,20 +2464,23 @@ fn the_copy_buttons_states_are_its_own_children_with_the_glyph_first() {
 
 #[test]
 fn the_side_panel_opens_from_a_link_to_its_route_until_its_module_runs() {
-    let panel = html(side_panel(SidePanel {
-        id: String::from("access"),
-        title: String::from("Access <now>"),
-        opener: Opener {
-            label: String::from("View access"),
-            glyph: Some(Glyph::SHIELD_CHECK),
-            variant: Variant::Secondary,
-            href: String::from("/session/access"),
+    let panel = html(side_panel(
+        SidePanel {
+            id: String::from("access"),
+            title: String::from("Access <now>"),
+            opener: Opener {
+                label: String::from("View access"),
+                glyph: Some(Glyph::SHIELD_CHECK),
+                variant: Variant::Secondary,
+                href: String::from("/session/access"),
+            },
+            body: Html::raw(String::from("<p>Signed in as a synthetic operator.</p>")),
+            words: SidePanelWords {
+                close: Word::from("Close"),
+            },
         },
-        body: Html::raw(String::from("<p>Signed in as a synthetic operator.</p>")),
-        words: SidePanelWords {
-            close: Word::from("Close"),
-        },
-    }));
+        None,
+    ));
     let links = tags(&panel, "a");
     let link = links
         .iter()
@@ -2549,19 +2558,20 @@ fn removal_row(member: &str) -> Html {
         "Remove",
         Act::Dialog(id.clone()),
     ))]);
-    let dialog = danger_form_dialog(
+    let dialog = confirm_dialog(
         &en(),
         Confirmation {
             id: id.into(),
             title: format!("Remove {member}?").into(),
             message: String::from("Its endpoints go with it.").into(),
         },
-        ConfirmForm {
+        Stakes::Danger,
+        Some(ConfirmForm {
             action: format!("/members/{member}/remove"),
             fields: Html::raw(format!(
                 r#"<input type="hidden" name="member" value="{member}"><textarea id="reason" name="reason" required></textarea>"#
             )),
-        },
+        }),
         Html::raw(format!(
             r#"<button type="submit" class="{}">Remove</button>"#,
             Variant::Destructive.class()
@@ -2640,13 +2650,15 @@ fn a_danger_confirmation_holds_the_consoles_fields_inside_the_form_it_posts() {
 #[test]
 fn a_danger_confirmation_with_no_fields_draws_no_form_of_its_own() {
     let shown = html({
-        ferrohealth_ui::view::dialog::danger_dialog(
+        confirm_dialog(
             &en(),
             Confirmation {
                 id: "delete".into(),
                 title: "Delete it?".into(),
                 message: "It goes for good.".into(),
             },
+            Stakes::Danger,
+            None,
             Html::default(),
         )
     });

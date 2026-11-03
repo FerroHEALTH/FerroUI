@@ -17,9 +17,8 @@ use ferrohealth_ui::table::model::{
 };
 use ferrohealth_ui::table::pager::{Listing, PostTo, link_pager, post_open_pager, post_pager};
 use ferrohealth_ui::table::view::{
-    Body, Column, DataTable, EXCLUDED, Role, RowCheck, Sorting, cell, check_cell, count_cell,
-    data_table, data_table_unstacked, data_table_wide, group_row, menu_cell, title_cell,
-    title_cell_at,
+    Body, Column, DataTable, EXCLUDED, Role, RowCheck, Shape, Sorting, cell, check_cell,
+    count_cell, data_table, group_row, menu_cell, title_cell,
 };
 use ferrohealth_ui::view::template::list::{HeadingCount, ListCard, list_card};
 
@@ -57,17 +56,19 @@ fn the_data_table_marks_its_sort_and_the_pager_names_an_unavailable_step() {
     ];
     let sort = Sort::read(Some("name"), Some("asc"), &["name"]);
     let table = html({
-        data_table(DataTable {
-            caption: "Mapping files",
-            columns: &columns,
-            sorting: Sorting {
+        data_table(
+            DataTable::new(
+                "Mapping files",
+                &columns,
+                Body::Rows(Html::raw(String::from(
+                    r#"<tr><td>a</td><td class="fui-num">1</td></tr>"#,
+                ))),
+            )
+            .with_sorting(Sorting {
                 sort: sort.as_ref(),
                 ..Sorting::default()
-            },
-            body: Body::Rows(Html::raw(String::from(
-                r#"<tr><td>a</td><td class="fui-num">1</td></tr>"#,
-            ))),
-        })
+            }),
+        )
     });
     assert!(table.contains(r#"aria-sort="ascending""#), "{table}");
     assert!(table.contains("<tbody>"), "{table}");
@@ -85,14 +86,11 @@ fn the_data_table_marks_its_sort_and_the_pager_names_an_unavailable_step() {
     assert_eq!(2, pager.matches("(unavailable)").count(), "{pager}");
     assert!(pager.contains(r#"href="/files?page=2""#), "{pager}");
     assert!(pager.contains("Page 1 of 2"), "{pager}");
-    let loading = html({
-        data_table(DataTable {
-            caption: "Loading",
-            columns: &columns,
-            sorting: Sorting::default(),
-            body: Body::Loading(2),
-        })
-    });
+    let loading = html(data_table(DataTable::new(
+        "Loading",
+        &columns,
+        Body::Loading(2),
+    )));
     assert!(loading.contains(r#"aria-busy="true""#), "{loading}");
 }
 
@@ -132,25 +130,19 @@ fn a_data_table_stacks_on_a_phone_unless_it_opts_out() {
             r#"<tr><td>a</td><td data-label="Kind">model</td></tr>"#,
         ))
     };
-    let table = html({
-        data_table(DataTable {
-            caption: "Files",
-            columns: &columns,
-            sorting: Sorting::default(),
-            body: Body::Rows(rows()),
-        })
-    });
+    let table = html(data_table(DataTable::new(
+        "Files",
+        &columns,
+        Body::Rows(rows()),
+    )));
     assert!(
         table.contains(r#"class="fui-table-scroll fui-table-stack""#),
         "{table}"
     );
     let fitting = html({
-        data_table_unstacked(DataTable {
-            caption: "Files",
-            columns: &columns,
-            sorting: Sorting::default(),
-            body: Body::Rows(rows()),
-        })
+        data_table(
+            DataTable::new("Files", &columns, Body::Rows(rows())).with_shape(Shape::Unstacked),
+        )
     });
     assert!(fitting.contains(r#"class="fui-table-scroll""#), "{fitting}");
     assert!(!fitting.contains("fui-table-stack"), "{fitting}");
@@ -160,14 +152,13 @@ fn a_data_table_stacks_on_a_phone_unless_it_opts_out() {
 fn a_table_of_several_bodies_writes_them_as_they_are_under_its_header() {
     let columns = [Column::text("uid", "Uid"), Column::text("rate", "Rate")];
     let table = html({
-        data_table(DataTable {
-            caption: "Pages",
-            columns: &columns,
-            sorting: Sorting::default(),
-            body: Body::Bodies(Html::raw(String::from(
+        data_table(DataTable::new(
+            "Pages",
+            &columns,
+            Body::Bodies(Html::raw(String::from(
                 r#"<tbody data-page="1"><tr><td>a</td><td data-label="Rate">1</td></tr></tbody><tbody data-page="2"><tr><td>b</td><td data-label="Rate">2</td></tr></tbody>"#,
             ))),
-        })
+        ))
     });
     assert_eq!(table.matches("<tbody").count(), 2, "{table}");
     assert!(
@@ -189,14 +180,13 @@ fn a_header_title_rides_its_header_alone_sortable_or_not() {
         Column::text("rate", "Rate"),
     ];
     let table = html({
-        data_table(DataTable {
-            caption: "Results",
-            columns: &columns,
-            sorting: Sorting::default(),
-            body: Body::Rows(Html::raw(String::from(
+        data_table(DataTable::new(
+            "Results",
+            &columns,
+            Body::Rows(Html::raw(String::from(
                 "<tr><td>a</td><td>b</td><td>1</td></tr>",
             ))),
-        })
+        ))
     });
     assert!(
         has(
@@ -236,15 +226,17 @@ fn a_plain_header_writes_no_class_and_a_sortable_one_carries_its_sort_beside_the
     ];
     let sort = Sort::read(Some("rows"), Some("desc"), &["rows"]);
     let table = html({
-        data_table(DataTable {
-            caption: "Files",
-            columns: &columns,
-            sorting: Sorting {
+        data_table(
+            DataTable::new(
+                "Files",
+                &columns,
+                Body::Rows(Html::raw(String::from("<tr><td>a</td><td>1</td></tr>"))),
+            )
+            .with_sorting(Sorting {
                 sort: sort.as_ref(),
                 ..Sorting::default()
-            },
-            body: Body::Rows(Html::raw(String::from("<tr><td>a</td><td>1</td></tr>"))),
-        })
+            }),
+        )
     });
     let headers = tags(&table, "th");
     assert_eq!(2, headers.len(), "{table}");
@@ -278,16 +270,18 @@ fn a_sortable_header_is_a_button_in_a_get_form_that_carries_the_rest_of_the_quer
     let sort = Sort::read(Some("name"), Some("asc"), &["name"]);
     let fields = query();
     let table = html({
-        data_table(DataTable {
-            caption: "Files",
-            columns: &columns,
-            sorting: Sorting {
+        data_table(
+            DataTable::new(
+                "Files",
+                &columns,
+                Body::Rows(Html::raw(String::from("<tr><td>a</td><td>1</td></tr>"))),
+            )
+            .with_sorting(Sorting {
                 sort: sort.as_ref(),
                 fields: &fields,
                 ..Sorting::default()
-            },
-            body: Body::Rows(Html::raw(String::from("<tr><td>a</td><td>1</td></tr>"))),
-        })
+            }),
+        )
     });
     // design/COMPONENTS.md, § The table: a sort is a button, never a link.
     assert!(!table.contains("<a "), "no link sorts: {table}");
@@ -349,16 +343,18 @@ fn a_sortable_header_is_a_button_in_a_get_form_that_carries_the_rest_of_the_quer
 fn a_session_listing_posts_its_sort_to_the_consoles_action() {
     let columns = [Column::text("name", "Name").sortable()];
     let table = html({
-        data_table(DataTable {
-            caption: "Patients",
-            columns: &columns,
-            sorting: Sorting {
+        data_table(
+            DataTable::new(
+                "Patients",
+                &columns,
+                Body::Rows(Html::raw(String::from("<tr><td>a</td></tr>"))),
+            )
+            .with_sorting(Sorting {
                 source: StateSource::Session,
                 action: Some("/listing/sort"),
                 ..Sorting::default()
-            },
-            body: Body::Rows(Html::raw(String::from("<tr><td>a</td></tr>"))),
-        })
+            }),
+        )
     });
     assert!(
         has(
@@ -386,16 +382,18 @@ fn a_stated_order_rides_the_header_of_the_column_that_leads_it() {
         direction: Direction::Descending,
     };
     let table = html({
-        data_table(DataTable {
-            caption: "Candidates",
-            columns: &columns,
-            sorting: Sorting {
+        data_table(
+            DataTable::new(
+                "Candidates",
+                &columns,
+                Body::Rows(Html::raw(String::from("<tr><td>a</td><td>b</td></tr>"))),
+            )
+            .with_sorting(Sorting {
                 sort: Some(&sort),
                 stated: Some("Sorted by grade, then score"),
                 ..Sorting::default()
-            },
-            body: Body::Rows(Html::raw(String::from("<tr><td>a</td><td>b</td></tr>"))),
-        })
+            }),
+        )
     });
     assert!(
         has(
@@ -421,14 +419,11 @@ fn a_row_menu_or_checkbox_header_names_its_column_for_assistive_technology_alone
         Column::text("select", "Selected").role(Role::Check),
         Column::text("actions", "Actions").role(Role::Menu),
     ];
-    let table = html({
-        data_table(DataTable {
-            caption: "Files",
-            columns: &columns,
-            sorting: Sorting::default(),
-            body: Body::Rows(Html::empty()),
-        })
-    });
+    let table = html(data_table(DataTable::new(
+        "Files",
+        &columns,
+        Body::Rows(Html::empty()),
+    )));
     assert!(has(&table, "th", &[("class", "fui-row-check")]), "{table}");
     assert!(
         table.contains(r#"<span class="fui-sr-only">Selected</span>"#),
@@ -442,8 +437,8 @@ fn a_row_menu_or_checkbox_header_names_its_column_for_assistive_technology_alone
 
 #[test]
 fn a_title_cell_at_a_depth_carries_its_level_on_its_row_header() {
-    let cell = html(title_cell_at(
-        2,
+    let cell = html(title_cell(
+        Some(2),
         Some("/templates/synthetic.v1"),
         Html::text("synthetic.v1"),
         Some(Html::text("release 1")),
@@ -475,12 +470,12 @@ fn a_title_cell_at_a_depth_carries_its_level_on_its_row_header() {
         cell.contains("<span class=\"fui-row-sub\">release 1</span>"),
         "{cell}"
     );
-    let deepest = html(title_cell_at(12, None, Html::text("deep"), None));
+    let deepest = html(title_cell(Some(12), None, Html::text("deep"), None));
     assert!(
         has(&deepest, "th", &[("class", "fui-depth-8")]),
         "a level past the eighth holds the eighth's step: {deepest}"
     );
-    let level = html(title_cell(None, Html::text("flat"), None));
+    let level = html(title_cell(None, None, Html::text("flat"), None));
     assert_eq!(
         level, "<th scope=\"row\" data-role=\"title\">flat</th>",
         "a title cell with no depth draws as it did"
@@ -495,6 +490,7 @@ fn the_cells_write_their_label_and_role_and_the_name_is_the_rows_target() {
     let rows = html(
         Html::raw(format!("<tr class=\"{EXCLUDED}\">"))
             .then(title_cell(
+                None,
                 Some("/files/a?b=<c>"),
                 Html::text("synthetic <a>"),
                 Some(Html::text("quiet")),
@@ -960,12 +956,10 @@ fn the_link_pager_still_pages_by_links() {
 fn an_unstacked_table_keeps_its_sort_form() {
     let columns = [Column::text("name", "Name").sortable()];
     let table = html({
-        data_table_unstacked(DataTable {
-            caption: "Files",
-            columns: &columns,
-            sorting: Sorting::default(),
-            body: Body::Rows(Html::empty()),
-        })
+        data_table(
+            DataTable::new("Files", &columns, Body::Rows(Html::empty()))
+                .with_shape(Shape::Unstacked),
+        )
     });
     assert!(table.contains("fui-sort-form"), "{table}");
 }
@@ -979,25 +973,17 @@ fn a_table_no_console_bounds_keeps_its_scroll_box_at_every_width() {
         ))
     };
     let wide = html({
-        data_table_wide(DataTable {
-            caption: "Result",
-            columns: &columns,
-            sorting: Sorting::default(),
-            body: Body::Rows(rows()),
-        })
+        data_table(DataTable::new("Result", &columns, Body::Rows(rows())).with_shape(Shape::Wide))
     });
     assert!(
         wide.contains(r#"class="fui-table-scroll fui-table-stack fui-table-wide""#),
         "WCAG 2.2 SC 1.4.10: the table scrolls in its box, never the page: {wide}"
     );
-    let plain = html({
-        data_table(DataTable {
-            caption: "Files",
-            columns: &columns,
-            sorting: Sorting::default(),
-            body: Body::Rows(rows()),
-        })
-    });
+    let plain = html(data_table(DataTable::new(
+        "Files",
+        &columns,
+        Body::Rows(rows()),
+    )));
     assert!(!plain.contains("fui-table-wide"), "{plain}");
 }
 
@@ -1009,12 +995,11 @@ fn a_query_column_makes_a_wide_table_and_its_header_breaks_like_a_path() {
     )
     .mono()];
     let table = html({
-        data_table(DataTable {
-            caption: "Result",
-            columns: &columns,
-            sorting: Sorting::default(),
-            body: Body::Rows(Html::raw(String::from("<tr><td>120</td></tr>"))),
-        })
+        data_table(DataTable::new(
+            "Result",
+            &columns,
+            Body::Rows(Html::raw(String::from("<tr><td>120</td></tr>"))),
+        ))
     });
     assert!(table.contains("fui-table-wide"), "{table}");
     assert!(

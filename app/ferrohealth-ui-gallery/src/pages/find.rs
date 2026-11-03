@@ -40,7 +40,7 @@ pub fn page(v: &Visit) -> Page {
             crumbs: vec![Crumb::new(v.tr(Msg::Gallery), root)],
             ..Header::default()
         },
-        ActionGroup::none(),
+        ActionGroup::default(),
     );
     let results = find_results(&v.locale, &crate::search::answer(&v.locale, brand, &typed));
     Page::shell(v.tr(Msg::FindTitle), Html::join([header, results]))

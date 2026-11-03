@@ -14,15 +14,17 @@ use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::table::filter::{FilterChoice, FilterMenu, MenuForm, filter_menu};
 use ferrohealth_ui::table::model::{Paging, Window};
 use ferrohealth_ui::table::pager::{Listing, link_pager};
-use ferrohealth_ui::table::view::{Body, Column, DataTable, Role, Sorting, data_table};
+use ferrohealth_ui::table::view::{Body, Column, DataTable, Role, data_table};
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::action_menu::{Act, Action, Item, Menu};
 use ferrohealth_ui::view::button::{Variant, label, link_button};
-use ferrohealth_ui::view::dialog::{Confirmation, Explanation, danger_dialog, info_dialog};
+use ferrohealth_ui::view::dialog::{
+    Confirmation, Explanation, Stakes, Width, confirm_dialog, info_dialog,
+};
 use ferrohealth_ui::view::error_page::{Detail, ErrorPage, Status, Way, error_page};
 use ferrohealth_ui::view::status::{badge, pill};
-use ferrohealth_ui::view::surface::{Crumb, Header, card, facts_row, grid_start};
+use ferrohealth_ui::view::surface::{Container, Crumb, Header, card, facts_row};
 use ferrohealth_ui::view::tabs::{Tab, TabRow};
 use ferrohealth_ui::view::template::about::{
     AboutPage, Link, Manufacturer, SelfDescription, about_page,
@@ -137,12 +139,11 @@ fn columns(v: &Visit) -> [Column; 4] {
 /// The table of `rows`.
 fn table(v: &Visit, rows: &[Location]) -> Html {
     let body = rows.iter().map(|row| location_row(v, row)).collect();
-    data_table(DataTable {
-        caption: &v.tr(Msg::Locations),
-        columns: &columns(v),
-        sorting: Sorting::default(),
-        body: Body::Rows(body),
-    })
+    data_table(DataTable::new(
+        &v.tr(Msg::Locations),
+        &columns(v),
+        Body::Rows(body),
+    ))
 }
 
 /// The card of the short list, with its tabs when `tabs`.
@@ -334,7 +335,7 @@ fn detail(v: &Visit) -> Html {
             next: Some(at(v, "detail")),
         },
     );
-    let body = grid_start(Html::join([
+    let body = Container::GridStart.wrap(Html::join([
         card(v.tr(Msg::LocationWordTitle), facts),
         card(v.tr(Msg::QueueSteps), steps),
     ]));
@@ -398,13 +399,15 @@ fn location_actions(v: &Visit) -> ActionGroup {
 /// The confirmation the detail page's delete opens; its confirm leads back
 /// to the list, as a console's would post and redirect.
 fn delete_location(v: &Visit) -> Html {
-    danger_dialog(
+    confirm_dialog(
         &v.locale,
         Confirmation {
             id: "delete-location".into(),
             title: v.tr(Msg::DeleteTheLocation).into(),
             message: v.tr(Msg::DeleteLocationBody).into(),
         },
+        Stakes::Danger,
+        None,
         link_button(
             at(v, "list"),
             Variant::Destructive,
@@ -508,7 +511,7 @@ fn settings_file(v: &Visit) -> Html {
         &v.locale,
         SettingsPage {
             header: settings_header(v),
-            actions: ActionGroup::none(),
+            actions: ActionGroup::default(),
             source: Source::File {
                 file: String::from(CONFIG_FILE),
                 how: How::Dialog("how-configuration".into()),
@@ -529,6 +532,7 @@ fn settings_file(v: &Visit) -> Html {
             Html::text(v.tr(Msg::HowConfigReads)),
             Html::text(v.tr(Msg::HowConfigChange))
         )),
+        Width::Wide,
     );
     Html::join([page, how])
 }

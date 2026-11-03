@@ -183,7 +183,7 @@ fn a_word_that_falls_back_to_english_is_marked_english() {
 
 #[test]
 fn a_date_is_typed_in_the_order_its_pages_language_writes() {
-    let english = DateWords::of(&Locale::english(), false);
+    let english = DateWords::of(&Locale::default(), false);
     assert_eq!(
         ferrohealth_ui::calendar::DateOrder::Ymd,
         english.order,

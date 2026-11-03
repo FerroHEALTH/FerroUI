@@ -11,7 +11,7 @@ use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::table::model::{Noun, OpenWindow, Paging, Window};
 use ferrohealth_ui::table::pager::{Listing, link_open_pager, link_pager};
 use ferrohealth_ui::view::action::ActionGroup;
-use ferrohealth_ui::view::dialog::{Confirmation, confirm_dialog};
+use ferrohealth_ui::view::dialog::{Confirmation, Stakes, confirm_dialog};
 use ferrohealth_ui::view::nav::{Entry, Group};
 use ferrohealth_ui::view::surface::{
     Crumb, Header, Mode, card_action, editor_heading, editor_title, titled_panel,
@@ -92,7 +92,13 @@ fn an_editor_says_new_when_it_creates_and_edit_when_it_edits() {
             mono: true,
             ..Header::default()
         };
-        editor_heading(&en(), editor, &Mode::Creating, header, ActionGroup::none())
+        editor_heading(
+            &en(),
+            editor,
+            &Mode::Creating,
+            header,
+            ActionGroup::default(),
+        )
     });
     assert!(creating.contains("<h1>New mapping file</h1>"), "{creating}");
     assert!(
@@ -110,7 +116,7 @@ fn an_editor_says_new_when_it_creates_and_edit_when_it_edits() {
             mono: true,
             ..Header::default()
         };
-        editor_heading(&en(), editor, &editing, header, ActionGroup::none())
+        editor_heading(&en(), editor, &editing, header, ActionGroup::default())
     });
     assert!(
         changing.contains("<h1>Edit</h1>"),
@@ -178,6 +184,8 @@ fn a_consoles_words_made_at_run_time_reach_every_label() {
                 title: format!("Drop {}?", "vitals").into(),
                 message: String::from("The file goes for good.").into(),
             },
+            Stakes::Plain,
+            None,
             Html::empty(),
         )
     });

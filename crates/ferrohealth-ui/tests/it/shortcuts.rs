@@ -10,12 +10,8 @@ use ferrohealth_ui::i18n::Word;
 use ferrohealth_ui::script;
 use ferrohealth_ui::view::button::Variant;
 use ferrohealth_ui::view::kbd::{Shortcut, ShortcutGroup};
-use ferrohealth_ui::view::shortcuts::{
-    GoTo, GoToPair, KEYS_JOB, shortcut_legend, shortcut_legend_with_go_to,
-};
-use ferrohealth_ui::view::side_panel::{
-    Opener, SidePanel, SidePanelWords, side_panel, side_panel_with_shortcut,
-};
+use ferrohealth_ui::view::shortcuts::{GoTo, GoToPair, KEYS_JOB, shortcut_legend};
+use ferrohealth_ui::view::side_panel::{Opener, SidePanel, SidePanelWords, side_panel};
 
 use crate::markup::{has, tags};
 use crate::render::{en, html};
@@ -62,7 +58,7 @@ fn the_keys_module_ships_under_its_job() {
 
 #[test]
 fn every_legend_loads_the_keys_module_beside_its_own() {
-    let legend = html(shortcut_legend(&en(), groups()));
+    let legend = html(shortcut_legend(&en(), groups(), None));
     assert!(
         has(
             &legend,
@@ -79,7 +75,7 @@ fn every_legend_loads_the_keys_module_beside_its_own() {
 
 #[test]
 fn the_go_to_pairs_follow_the_groups_each_listed_as_its_link() {
-    let legend = html(shortcut_legend_with_go_to(&en(), groups(), go_to()));
+    let legend = html(shortcut_legend(&en(), groups(), Some(go_to())));
     assert_eq!(2, tags(&legend, "section").len(), "{legend}");
     assert!(
         has(
@@ -143,10 +139,7 @@ fn panel(keys: Option<&str>) -> String {
             close: Word::from("Close"),
         },
     };
-    html(match keys {
-        Some(keys) => side_panel_with_shortcut(panel, keys),
-        None => side_panel(panel),
-    })
+    html(side_panel(panel, keys))
 }
 
 #[test]

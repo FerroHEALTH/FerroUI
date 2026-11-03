@@ -18,7 +18,7 @@
 //! A console chooses the locale once per request: it builds a [`Locale`]
 //! from its configuration or the request, hands it to every component that
 //! draws words of its own, and writes [`Locale::tag`] as `<html lang>` (WCAG
-//! 2.2 SC 3.1.1); [`Locale::english`] renders in English. A script module
+//! 2.2 SC 3.1.1); [`Locale::default`] renders in English. A script module
 //! never looks a word up: the server resolves each word it draws, through a
 //! component's `*Words::of(locale)` or a [`Phrase`] for a sentence around a
 //! value the browser learns, and writes them into the page, so the browser
@@ -175,7 +175,7 @@ impl std::error::Error for UnknownLanguage {
 
 /// The locale a page renders in: a language, the library catalog that
 /// serves it, and the console's catalogs for a language the library does
-/// not ship.
+/// not ship. Its default is English, the reference locale.
 #[derive(Clone)]
 pub struct Locale {
     language: LanguageIdentifier,
@@ -234,12 +234,6 @@ impl Default for Locale {
 }
 
 impl Locale {
-    /// English, the reference locale.
-    #[must_use]
-    pub fn english() -> Self {
-        Self::default()
-    }
-
     /// The locale of the language `language`, served by the library's
     /// catalog that matches it best: its own, or the catalog of its bare
     /// language (`en` serves `en-GB`).

@@ -293,7 +293,7 @@ impl DateWords {
         if text.is_empty() {
             return None;
         }
-        let moment = match Moment::parse_in(text, with_time, self.order) {
+        let moment = match Moment::parse(text, with_time, self.order) {
             Ok(moment) => moment,
             Err(NotADay::Format) => return Some(self.not_format.fill(&[("value", text)])),
             Err(NotADay::Time) => return Some(self.not_a_time.fill(&[("value", text)])),
@@ -727,7 +727,7 @@ mod tests {
     }
 
     fn words(with_time: bool) -> DateWords {
-        let en = Locale::english();
+        let en = Locale::default();
         DateWords::of(&en, with_time).counted(&en)
     }
 

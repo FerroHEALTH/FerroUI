@@ -370,7 +370,7 @@ mod tests {
     use crate::i18n::Locale;
 
     fn en() -> Locale {
-        Locale::english()
+        Locale::default()
     }
 
     const ACCEPT: &[&str] = &[".opt", ".xml"];

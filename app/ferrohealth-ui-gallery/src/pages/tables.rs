@@ -18,14 +18,14 @@ use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::table::filter::{Find, find_form};
 use ferrohealth_ui::table::model::{
-    Direction, Noun, OpenWindow, Paging, Sort, StateSource, Window, fields, href,
+    Direction, Noun, OpenWindow, Paging, Sizes, Sort, StateSource, Window, fields, href,
 };
 use ferrohealth_ui::table::pager::{
     Listing, PostTo, link_open_pager, link_pager, post_open_pager, post_pager,
 };
 use ferrohealth_ui::table::view::{
-    ACTIONS, Body, Column, DataTable, EXCLUDED, NUM, Role, RowCheck, Sorting, cell, check_cell,
-    count_cell, data_table, data_table_unstacked, group_row, menu_cell, title_cell, title_cell_at,
+    ACTIONS, Body, Column, DataTable, EXCLUDED, NUM, Role, RowCheck, Shape, Sorting, cell,
+    check_cell, count_cell, data_table, group_row, menu_cell, title_cell,
 };
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::action::ActionGroup;
@@ -35,7 +35,7 @@ use ferrohealth_ui::view::change::{Change, change_table};
 use ferrohealth_ui::view::empty::empty_quiet;
 use ferrohealth_ui::view::filter::keeps;
 use ferrohealth_ui::view::status::badge;
-use ferrohealth_ui::view::surface::{card, page_header, stack, titled_panel};
+use ferrohealth_ui::view::surface::{Container, card, page_header, titled_panel};
 use ferrohealth_ui::view::template::list::{HeadingCount, ListCard, list_card};
 use ferrohealth_ui::view::time::timestamp;
 
@@ -135,6 +135,7 @@ fn row(v: &Visit, row: &Row, columns: &[Column; 6]) -> Html {
     h(format!(
         "<tr{class}>{}{}{}{}{}{}</tr>",
         title_cell(
+            None,
             Some("code"),
             h(format!("<code>{}</code>", t(&row.name))),
             Some(sub)
@@ -175,7 +176,7 @@ fn url_table(v: &Visit) -> Html {
     let carried = fields(query);
     let page_href = |paging: Paging| {
         let mut query = query.clone();
-        paging.write(&mut query);
+        paging.write(&mut query, Sizes::STANDARD);
         href(path, &query)
     };
     let label = v.tr(Msg::FindFile);
@@ -191,16 +192,15 @@ fn url_table(v: &Visit) -> Html {
         },
         Html::empty(),
     );
-    let table = data_table(DataTable {
-        caption: &v.tr(Msg::MappingFilesPagedUrl),
-        columns: &columns,
-        sorting: Sorting {
-            sort: sort.as_ref(),
-            fields: &carried,
-            ..Sorting::default()
-        },
-        body: Body::Rows(body),
-    });
+    let table = data_table(
+        DataTable::new(&v.tr(Msg::MappingFilesPagedUrl), &columns, Body::Rows(body)).with_sorting(
+            Sorting {
+                sort: sort.as_ref(),
+                fields: &carried,
+                ..Sorting::default()
+            },
+        ),
+    );
     let pager = link_pager(
         &v.locale,
         Listing::new(v.tr(Msg::PagesMappingFiles))
@@ -243,12 +243,11 @@ fn session_table(v: &Visit) -> Html {
         (String::from("listing"), String::from("files")),
         (String::from("back"), back),
     ];
-    let table = data_table(DataTable {
-        caption: &v.tr(Msg::MappingFilesPagedPage),
-        columns: &columns,
-        sorting: Sorting::default(),
-        body: Body::Rows(body),
-    });
+    let table = data_table(DataTable::new(
+        &v.tr(Msg::MappingFilesPagedPage),
+        &columns,
+        Body::Rows(body),
+    ));
     let pager = post_pager(
         &v.locale,
         Listing::new(v.tr(Msg::PagesMappingFilesPage)).noun(files()),
@@ -332,6 +331,7 @@ fn review_list(v: &Visit) -> Html {
                             checked: each.lines % 2 == 0,
                         }),
                         title_cell(
+                            None,
                             Some("code"),
                             h(format!("<code>{}</code>", t(&each.name))),
                             None
@@ -353,16 +353,15 @@ fn review_list(v: &Visit) -> Html {
         column: String::from("state"),
         direction: Direction::Descending,
     };
-    let table = data_table(DataTable {
-        caption: &v.tr(Msg::ReviewCaption),
-        columns: &columns,
-        sorting: Sorting {
-            sort: Some(&sort),
-            stated: Some(&order),
-            ..Sorting::default()
-        },
-        body: Body::Bodies(bodies),
-    });
+    let table = data_table(
+        DataTable::new(&v.tr(Msg::ReviewCaption), &columns, Body::Bodies(bodies)).with_sorting(
+            Sorting {
+                sort: Some(&sort),
+                stated: Some(&order),
+                ..Sorting::default()
+            },
+        ),
+    );
     list_card(
         &v.locale,
         ListCard {
@@ -407,12 +406,11 @@ fn result_set(v: &Visit) -> Html {
     let body = rows.chain([long]).collect();
     card(
         v.tr(Msg::ResultSet),
-        data_table(DataTable {
-            caption: &v.tr(Msg::RowsSyntheticQueryAnswered),
-            columns: &columns,
-            sorting: Sorting::default(),
-            body: Body::Rows(body),
-        }),
+        data_table(DataTable::new(
+            &v.tr(Msg::RowsSyntheticQueryAnswered),
+            &columns,
+            Body::Rows(body),
+        )),
     )
 }
 
@@ -450,12 +448,11 @@ fn result_pages(v: &Visit) -> Html {
         .collect();
     card(
         v.tr(Msg::ResultPages),
-        data_table(DataTable {
-            caption: &v.tr(Msg::SyntheticQuerySRowsBody),
-            columns: &paged_columns(v),
-            sorting: Sorting::default(),
-            body: Body::Bodies(bodies),
-        }),
+        data_table(DataTable::new(
+            &v.tr(Msg::SyntheticQuerySRowsBody),
+            &paged_columns(v),
+            Body::Bodies(bodies),
+        )),
     )
 }
 
@@ -485,12 +482,14 @@ fn fitting(v: &Visit) -> Html {
     .collect();
     card(
         v.tr(Msg::FitsPhone),
-        data_table_unstacked(DataTable {
-            caption: &v.tr(Msg::HealthIndicatorsUnstackedEveryWidth),
-            columns: &fitting_columns(v),
-            sorting: Sorting::default(),
-            body: Body::Rows(rows),
-        }),
+        data_table(
+            DataTable::new(
+                &v.tr(Msg::HealthIndicatorsUnstackedEveryWidth),
+                &fitting_columns(v),
+                Body::Rows(rows),
+            )
+            .with_shape(Shape::Unstacked),
+        ),
     )
 }
 
@@ -520,19 +519,18 @@ fn hierarchy(v: &Visit) -> Html {
     .map(|(level, code, words)| {
         h(format!(
             "<tr>{}<td data-label=\"{display}\">{}</td></tr>",
-            title_cell_at(level, None, h(format!("<code>{code}</code>")), None),
+            title_cell(Some(level), None, h(format!("<code>{code}</code>")), None),
             t(v.tr(words))
         ))
     })
     .collect();
     card(
         v.tr(Msg::HierarchyInTable),
-        data_table(DataTable {
-            caption: &v.tr(Msg::ConceptsSyntheticHierarchy),
-            columns: &hierarchy_columns(v),
-            sorting: Sorting::default(),
-            body: Body::Rows(rows),
-        }),
+        data_table(DataTable::new(
+            &v.tr(Msg::ConceptsSyntheticHierarchy),
+            &hierarchy_columns(v),
+            Body::Rows(rows),
+        )),
     )
 }
 
@@ -566,12 +564,11 @@ fn row_actions(v: &Visit) -> Html {
         .collect();
     card(
         v.tr(Msg::RowActions),
-        data_table(DataTable {
-            caption: &v.tr(Msg::MembersEachEditLinkRemove),
-            columns: &acted_columns(v),
-            sorting: Sorting::default(),
-            body: Body::Rows(rows),
-        }),
+        data_table(DataTable::new(
+            &v.tr(Msg::MembersEachEditLinkRemove),
+            &acted_columns(v),
+            Body::Rows(rows),
+        )),
     )
 }
 
@@ -600,7 +597,7 @@ fn model_files(v: &Visit) -> Html {
     .map(|(model, path)| {
         h(format!(
             "<tr>{}{}</tr>",
-            title_cell(None, h(format!("<code>{model}</code>")), None),
+            title_cell(None, None, h(format!("<code>{model}</code>")), None),
             cell(file, h(format!("<code>{path}</code>"))),
         ))
     })
@@ -612,12 +609,11 @@ fn model_files(v: &Visit) -> Html {
     let group = group_row(&columns, context);
     card(
         v.tr(Msg::ContextModels),
-        data_table(DataTable {
-            caption: &v.tr(Msg::ModelsEachFile),
-            columns: &columns,
-            sorting: Sorting::default(),
-            body: Body::Bodies(h(format!("<tbody>{group}{rows}</tbody>"))),
-        }),
+        data_table(DataTable::new(
+            &v.tr(Msg::ModelsEachFile),
+            &columns,
+            Body::Bodies(h(format!("<tbody>{group}{rows}</tbody>"))),
+        )),
     )
 }
 
@@ -663,22 +659,20 @@ fn open_listing(v: &Visit) -> Html {
 
 /// The table while it loads, and the table with no row.
 fn states(v: &Visit) -> Html {
-    let loading = data_table(DataTable {
-        caption: &v.tr(Msg::Loading),
-        columns: &plain_columns(v),
-        sorting: Sorting::default(),
-        body: Body::Loading(3),
-    });
-    let empty = data_table(DataTable {
-        caption: &v.tr(Msg::NoRows),
-        columns: &plain_columns(v),
-        sorting: Sorting::default(),
-        body: Body::Empty(empty_quiet(
+    let loading = data_table(DataTable::new(
+        &v.tr(Msg::Loading),
+        &plain_columns(v),
+        Body::Loading(3),
+    ));
+    let empty = data_table(DataTable::new(
+        &v.tr(Msg::NoRows),
+        &plain_columns(v),
+        Body::Empty(empty_quiet(
             Glyph::INBOX,
             v.tr(Msg::NoMappingFile),
             v.tr(Msg::BridgeServesNoMappingFile),
         )),
-    });
+    ));
     card(v.tr(Msg::LoadingEmpty), Html::join([loading, empty]))
 }
 
@@ -723,9 +717,9 @@ pub fn page(v: &Visit) -> Page {
         &v.locale,
         v.tr(Msg::TablesPaging),
         Some(v.tr(Msg::OneTablePagerModelUrl)),
-        ActionGroup::none(),
+        ActionGroup::default(),
     );
-    let body = stack(Html::join([
+    let body = Container::Stack.wrap(Html::join([
         url_table(v),
         session_table(v),
         review_list(v),

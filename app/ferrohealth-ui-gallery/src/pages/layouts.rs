@@ -27,7 +27,7 @@ use ferrohealth_ui::view::layout::{
 use ferrohealth_ui::view::picker::{Picker, picker_field};
 use ferrohealth_ui::view::status::pill;
 use ferrohealth_ui::view::surface::{
-    SectionHead, add_row, card, definitions, or_none, page_header, panel_section,
+    Container, SectionHead, card, definitions, or_none, page_header, panel_section,
     panel_sections_card, section_intro, split,
 };
 use ferrohealth_ui::view::template::list::HeadingCount;
@@ -634,7 +634,7 @@ fn sections_panel(v: &Visit) -> Html {
         Html::join([
             section_intro(v.tr(Msg::PanelSectionsIntro)),
             divided_list(None, steps),
-            add_row(h(format!(
+            Container::AddRow.wrap(h(format!(
                 "<button type=\"button\" class=\"{}\">{}</button>",
                 Variant::Ghost.small(),
                 t(v.tr(Msg::AddStep))
@@ -673,7 +673,7 @@ pub fn page(v: &Visit) -> Page {
         &v.locale,
         v.tr(Msg::Layouts),
         Some(v.tr(Msg::ThreePanesTreeListBeside)),
-        ActionGroup::none(),
+        ActionGroup::default(),
     );
     let body = stack_at(
         Gap::Loose,

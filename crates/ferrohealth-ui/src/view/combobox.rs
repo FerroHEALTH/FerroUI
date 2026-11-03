@@ -18,7 +18,7 @@
 //! list keeps the plain styled select (`view::form::SELECT`).
 //!
 //! A list too long to send to the browser whole, such as a code system's
-//! concepts, takes a [`Remote`] ([`searched_combobox`]): the typed words
+//! concepts, takes a [`Remote`] ([`KeyedCombobox::remote`]): the typed words
 //! post with the console's form under the remote's name, and the page the
 //! console answers with holds the options its own search found, which the
 //! combobox shows unfiltered; the library fetches nothing.
@@ -171,6 +171,9 @@ pub struct KeyedCombobox {
     pub described_by: Option<String>,
     /// The words it draws itself ([`ComboboxWords::of`]).
     pub words: ComboboxWords,
+    /// The console's search it runs over, if any: its `options` are then
+    /// what the search found for `remote.query`, the chosen one among them.
+    pub remote: Option<Remote>,
 }
 
 impl From<Combobox> for KeyedCombobox {
@@ -184,6 +187,7 @@ impl From<Combobox> for KeyedCombobox {
             selected: combo.selected,
             described_by: None,
             words: combo.words,
+            remote: None,
         }
     }
 }
@@ -192,21 +196,6 @@ impl From<Combobox> for KeyedCombobox {
 #[must_use]
 pub fn combobox(combo: Combobox) -> Html {
     keyed_combobox(KeyedCombobox::from(combo))
-}
-
-/// Returns the combobox `combo`, whose ids are made at run time.
-#[must_use]
-pub fn keyed_combobox(combo: KeyedCombobox) -> Html {
-    drawn(combo, None)
-}
-
-/// Returns the combobox `combo` over the console's search `remote`.
-///
-/// Its `options` are what the console's search found for `remote.query`,
-/// the chosen one among them.
-#[must_use]
-pub fn searched_combobox(combo: KeyedCombobox, remote: Remote) -> Html {
-    drawn(combo, Some(remote))
 }
 
 #[derive(Template)]
@@ -227,10 +216,13 @@ struct ComboboxView {
     check: Html,
 }
 
-/// Returns the combobox `combo`, over `remote` when it has one: the native
-/// select with its options, which the `combobox` module turns into the
-/// combobox.
-fn drawn(combo: KeyedCombobox, remote: Option<Remote>) -> Html {
+/// Returns the combobox `combo`, whose ids are made at run time.
+///
+/// It is the native select with its options, over the console's search
+/// when it has one (`combo.remote`), which the `combobox` module turns into
+/// the combobox.
+#[must_use]
+pub fn keyed_combobox(combo: KeyedCombobox) -> Html {
     let KeyedCombobox {
         id,
         name,
@@ -240,6 +232,7 @@ fn drawn(combo: KeyedCombobox, remote: Option<Remote>) -> Html {
         selected,
         described_by,
         words: ComboboxWords { no_match, more },
+        remote,
     } = combo;
     let (remote, query) = remote.map_or((None, String::new()), |remote| {
         (Some(remote.param), remote.query)

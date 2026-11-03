@@ -10,7 +10,7 @@ app/ferrohealth-ui-gallery/src/pages/forms.rs: page -> drawn(v, None)
 app/ferrohealth-ui-gallery/src/pages/terminology.rs: select -> refused_select(id, name, options, chosen, false)
 crates/ferrohealth-ui/src/calendar.rs: Moment::parse -> Self::parse_in(text, with_time, DateOrder::Ymd)
 crates/ferrohealth-ui/src/i18n/mod.rs: Locale::english -> Self::default()
-crates/ferrohealth-ui/src/icon.rs: icon -> icon_classed(glyph, size, "")
+crates/ferrohealth-ui/src/icon.rs: icon -> icon_classed(glyph, size, "")	the icon every component and console draws beside its word (164 calls); icon_classed is its one classed form, and an empty class there would put the argument back in 164 calls
 crates/ferrohealth-ui/src/table/model.rs: Paging::write -> self.write_within(query, Sizes::STANDARD)
 crates/ferrohealth-ui/src/table/view.rs: data_table -> drawn(table, true, false)
 crates/ferrohealth-ui/src/table/view.rs: data_table_unstacked -> drawn(table, false, false)
@@ -39,4 +39,4 @@ crates/ferrohealth-ui/src/view/surface.rs: stack -> wrap("<div class=\"fui-stack
 crates/ferrohealth-ui/src/view/surface.rs: stat_grid -> wrap("<div class=\"fui-grid fui-grid-stats\">", children, "</div>", )
 crates/ferrohealth-ui/src/view/surface.rs: stepped_heading -> heading(locale, header, Trail::Here, steps)
 crates/ferrohealth-ui/src/view/surface.rs: well -> wrap("<div class=\"fui-well\">", body, "</div>")
-crates/ferrohealth-ui/src/view/versions.rs: at_time_label -> tr(locale, Text::VersionsAtTime)
+crates/ferrohealth-ui/src/view/versions.rs: at_time_label -> tr(locale, Text::VersionsAtTime)	the one way a console reads the library's At a time word for its own date field; the catalog (tr, Text) stays the crate's own

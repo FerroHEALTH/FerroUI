@@ -41,7 +41,7 @@ let app: axum::Router = axum::Router::new()
     .nest(PREFIX, axum_router::router());
 
 let page = document(Document {
-    locale: Locale::english(),
+    locale: Locale::default(),
     preferences: Preferences::default(),
     title: String::from("Templates · FerroBRIDGE"),
     assets: Assets::of(Brand::Bridge),

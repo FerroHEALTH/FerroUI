@@ -149,6 +149,7 @@ fn row(locale: &Locale, version: Version, columns: &[Column; 5]) -> String {
         contribution_column,
     ] = columns;
     let name = title_cell(
+        None,
         href.as_deref(),
         version_cell(locale, &number, standing),
         None,
@@ -213,12 +214,7 @@ pub fn version_history(locale: &Locale, history: VersionHistory) -> Html {
                 .concat(),
         ))
     };
-    let table = data_table(DataTable {
-        caption: &caption,
-        columns: &columns,
-        sorting: crate::table::view::Sorting::default(),
-        body,
-    });
+    let table = data_table(DataTable::new(&caption, &columns, body));
     table.then(at.map(|at| at_time(locale, at)).unwrap_or_default())
 }
 

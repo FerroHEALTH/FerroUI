@@ -39,7 +39,7 @@ use crate::theme::{Hints, Language, Preference, Preferences, WeekStart};
 use crate::view::action::ActionGroup;
 use crate::view::action_menu::{Choice, Listbox, Pick, listbox};
 use crate::view::button::{Variant, label};
-use crate::view::dialog::{Confirmation, confirm_dialog};
+use crate::view::dialog::{Confirmation, Stakes, confirm_dialog};
 use crate::view::surface::{Header, page_heading};
 use crate::view::tabs::{Tab, TabRow, joined};
 
@@ -679,7 +679,7 @@ pub fn preferences_page(locale: &Locale, page: PreferencesPage) -> Html {
             subtitle: Some(tr(locale, Text::PreferencesIntro)),
             ..Header::default()
         },
-        ActionGroup::none(),
+        ActionGroup::default(),
     );
     let Post { back, .. } = post;
     PageView {
@@ -726,6 +726,8 @@ fn reset_dialog(locale: &Locale, reset: &str, back: &str) -> Html {
             title: tr(locale, Text::PreferencesResetTitle),
             message: tr(locale, Text::PreferencesResetBody),
         },
+        Stakes::Plain,
+        None,
         confirm,
     )
 }

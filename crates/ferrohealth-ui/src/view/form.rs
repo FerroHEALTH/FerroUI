@@ -405,13 +405,7 @@ pub fn field_flow(body: Html) -> Html {
 /// Returns the checkbox `checkbox`, whose id is `id`, beside its label
 /// `label` on one row, the box clear of the words.
 #[must_use]
-pub fn check(id: &'static str, label: impl Into<Word>, checkbox: Html) -> Html {
-    keyed_check(id, label, checkbox)
-}
-
-/// Returns [`check`] for a checkbox whose id is made at run time.
-#[must_use]
-pub fn keyed_check(id: &str, label: impl Into<Word>, checkbox: Html) -> Html {
+pub fn check(id: &str, label: impl Into<Word>, checkbox: Html) -> Html {
     let label: Word = label.into();
     let checkbox = String::from(checkbox);
     Html::raw(format!(

@@ -17,7 +17,7 @@ use crate::i18n::{Locale, Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::view::action::ActionGroup;
 use crate::view::button::Variant;
-use crate::view::surface::{Header, page_heading, stepped_heading};
+use crate::view::surface::{Header, Trail, heading, page_heading};
 use crate::view::tabs::{TabRow, joined};
 
 /// What a detail page shows.
@@ -49,7 +49,7 @@ pub fn detail_page(locale: &Locale, page: DetailPage) -> Html {
         body,
     } = page;
     let heading = match steps {
-        Some(steps) => stepped_heading(locale, header, stepper(locale, steps)),
+        Some(steps) => heading(locale, header, Trail::Here, stepper(locale, steps)),
         None => page_heading(locale, header, actions),
     };
     let section = match tabs {

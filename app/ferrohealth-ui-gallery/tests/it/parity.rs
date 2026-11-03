@@ -425,7 +425,7 @@ async fn the_editor_marks_a_line_alike() -> Result<(), Box<dyn Error>> {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn the_editor_panel_is_empty_alike() -> Result<(), Box<dyn Error>> {
-    let english = Locale::english();
+    let english = Locale::default();
     let mut cases = Vec::new();
     for text in TEXTS
         .iter()

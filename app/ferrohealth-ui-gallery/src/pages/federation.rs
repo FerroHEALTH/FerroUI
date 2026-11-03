@@ -24,7 +24,7 @@ use ferrohealth_ui::view::fanout::{Answer, Fanout, FanoutNode, fanout};
 use ferrohealth_ui::view::flow::FlowState;
 use ferrohealth_ui::view::nav::{Nest, NestItem};
 use ferrohealth_ui::view::replica::Replica;
-use ferrohealth_ui::view::surface::{Crumb, Header, card, page_header, page_heading, stack};
+use ferrohealth_ui::view::surface::{Container, Crumb, Header, card, page_header, page_heading};
 use ferrohealth_ui::view::template::settings::{How, Setting, SettingsPage, Source, settings_page};
 use ferrohealth_ui::view::topology::{
     ClusterLink, QuickLook, RowAction, StatusCount, StatusMenu, Topology, TopologyCallers,
@@ -727,10 +727,10 @@ pub fn page(v: &Visit) -> Page {
         &v.locale,
         v.tr(Msg::Federation),
         Some(v.tr(Msg::FedSubtitle)),
-        ActionGroup::none(),
+        ActionGroup::default(),
     );
     let map = card(v.tr(Msg::FedTopology), federation_map(v, brand, &asked));
-    let body = stack(Html::join([
+    let body = Container::Stack.wrap(Html::join([
         map,
         outcome(v, 0),
         outcome(v, 1),
@@ -792,7 +792,7 @@ fn self_description(v: &Visit, brand: Brand) -> Html {
                 crumbs: vec![Crumb::new(v.tr(Msg::Federation), home(brand))],
                 ..Header::default()
             },
-            actions: ActionGroup::none(),
+            actions: ActionGroup::default(),
             source: Source::File {
                 file: String::from("ferrofed.toml"),
                 how: How::Page(home(brand)),
@@ -852,7 +852,7 @@ pub fn part(v: &Visit) -> Page {
                 mono: !organisation,
                 badge: None,
             },
-            ActionGroup::none(),
+            ActionGroup::default(),
         );
         Html::join([
             heading,

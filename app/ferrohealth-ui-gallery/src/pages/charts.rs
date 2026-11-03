@@ -26,7 +26,7 @@ use ferrohealth_ui::view::flow::{
 };
 use ferrohealth_ui::view::funnel::{Bar, Funnel, FunnelPart, bar_list, funnel};
 use ferrohealth_ui::view::score::{Contribution, Score, Threshold, score_bar, score_breakdown};
-use ferrohealth_ui::view::surface::{card, definitions, page_header, stack, titled_panel};
+use ferrohealth_ui::view::surface::{Container, card, definitions, page_header, titled_panel};
 
 use crate::app::Page;
 use crate::locale::Msg;
@@ -269,7 +269,7 @@ fn run_report(v: &Visit, refused: bool) -> Html {
         )),
         bar_list(&v.tr(Msg::RunBarlistLabel), &bars),
     ]);
-    card(v.tr(title), stack(body))
+    card(v.tr(title), Container::Stack.wrap(body))
 }
 
 /// A card of a flow.
@@ -800,7 +800,7 @@ pub fn page(v: &Visit) -> Page {
         &v.locale,
         v.tr(Msg::Charts),
         Some(v.tr(Msg::DrawnSvgServerScaledCard)),
-        ActionGroup::none(),
+        ActionGroup::default(),
     );
     let open: Vec<String> = v
         .param("open")
@@ -809,7 +809,7 @@ pub fn page(v: &Visit) -> Page {
         .filter(|lane| !lane.is_empty())
         .map(str::to_owned)
         .collect();
-    let body = stack(Html::join([
+    let body = Container::Stack.wrap(Html::join([
         lines(v),
         many_lines(v),
         activity(v),

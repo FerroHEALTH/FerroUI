@@ -13,7 +13,7 @@ use ferrohealth_ui::table::pager::link_pager;
 use ferrohealth_ui::theme::Language;
 use ferrohealth_ui::view::copy::CopyWords;
 use ferrohealth_ui::view::diagnostics::Position;
-use ferrohealth_ui::view::dialog::{Confirmation, confirm_dialog};
+use ferrohealth_ui::view::dialog::{Confirmation, Stakes, confirm_dialog};
 use ferrohealth_ui::view::editor::{Editor, EditorWords, Opened, Panel, editor_panel};
 use ferrohealth_ui::view::error_page::Status;
 use ferrohealth_ui::view::identifier::{
@@ -62,7 +62,7 @@ fn pager(locale: &Locale) -> Html {
 
 #[test]
 fn a_throwaway_catalog_changes_a_components_words_with_no_code_change() {
-    let english = render(Some(Locale::english()), pager);
+    let english = render(Some(Locale::default()), pager);
     for words in [
         "First",
         "Next",
@@ -94,7 +94,7 @@ fn a_throwaway_catalog_changes_a_components_words_with_no_code_change() {
 #[test]
 fn a_page_that_provides_no_locale_draws_english() {
     let none = render(None, pager);
-    assert_eq!(render(Some(Locale::english()), pager), none);
+    assert_eq!(render(Some(Locale::default()), pager), none);
     let dialog = |locale: &Locale| {
         confirm_dialog(
             locale,
@@ -103,6 +103,8 @@ fn a_page_that_provides_no_locale_draws_english() {
                 title: "Drop the query?".into(),
                 message: "The stored query is removed.".into(),
             },
+            Stakes::Plain,
+            None,
             Html::default(),
         )
     };
@@ -130,8 +132,8 @@ fn the_language_select_names_each_choice_in_its_own_language() {
         &throwaway(),
         "language-list",
         &Language::Chosen(String::from("qaa")),
-        &[Locale::english(), throwaway()],
-        &Locale::english(),
+        &[Locale::default(), throwaway()],
+        &Locale::default(),
         &post,
     )
     .into();
@@ -190,7 +192,7 @@ fn the_footer_draws_its_version_as_data_in_every_locale() {
         version: "0.1.8".into(),
         about: "/about".into(),
     };
-    for locale in [Locale::english(), throwaway()] {
+    for locale in [Locale::default(), throwaway()] {
         let page = render(Some(locale), |locale| footer(locale, text.clone()));
         assert!(page.contains("FerroUI Gallery"), "{page}");
         assert!(
@@ -216,7 +218,7 @@ fn large_pager(locale: &Locale) -> Html {
 
 #[test]
 fn a_number_a_message_takes_is_grouped_in_the_marks_of_the_page_language() {
-    let english = render(Some(Locale::english()), large_pager);
+    let english = render(Some(Locale::default()), large_pager);
     assert!(
         english.contains("299,951-300,000 of 312,000 rows"),
         "{english}"
@@ -238,7 +240,7 @@ fn a_count_drawn_outside_a_message_is_grouped_in_the_page_language() {
             HeadingCount::All(4_000_000_000),
         )
     };
-    let english = render(Some(Locale::english()), count);
+    let english = render(Some(Locale::default()), count);
     assert!(english.contains("· 4,000,000,000"), "{english}");
     let throwaway = render(Some(throwaway()), count);
     assert!(throwaway.contains("· 4.000.000.000"), "{throwaway}");
@@ -281,7 +283,7 @@ fn identifier_shown(locale: &Locale, seconds: u32) -> Html {
 
 #[test]
 fn a_script_module_groups_the_counts_it_learns_in_the_browser() {
-    let english = render(Some(Locale::english()), |locale| editor_of(locale, 1234));
+    let english = render(Some(Locale::default()), |locale| editor_of(locale, 1234));
     assert!(english.contains("YAML · 1,234 lines"), "{english}");
     let qaa = render(Some(throwaway()), |locale| editor_of(locale, 1234));
     assert!(
@@ -289,7 +291,7 @@ fn a_script_module_groups_the_counts_it_learns_in_the_browser() {
         "the line count is grouped by the page's mark: {qaa}"
     );
     let size = |locale: Locale| String::from(SizeWords::of(&locale).size(1023));
-    assert_eq!("1,023 bytes", size(Locale::english()));
+    assert_eq!("1,023 bytes", size(Locale::default()));
     assert_eq!(
         "1.023 bytes",
         size(throwaway()),
@@ -334,8 +336,8 @@ fn a_library_word_that_falls_back_to_english_is_marked_english() {
             locale,
             "language-list",
             &Language::Browser,
-            &[Locale::english()],
-            &Locale::english(),
+            &[Locale::default()],
+            &Locale::default(),
             &post,
         )
     };
@@ -366,7 +368,7 @@ fn a_library_word_that_falls_back_to_english_is_marked_english() {
         ),
     ];
     for (family, view, word) in families {
-        let english = render(Some(Locale::english()), view);
+        let english = render(Some(Locale::default()), view);
         assert!(english.contains(word), "{family}: {english}");
         assert!(
             !english.contains(r#"<span lang="en">"#) && !english.contains("&#34;en&#34;:"),

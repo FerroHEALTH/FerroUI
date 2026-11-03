@@ -203,7 +203,7 @@ mod tests {
 
     #[test]
     fn a_bad_toast_is_an_alert_with_a_native_dismiss() {
-        let html = toast_region(&Locale::english(), vec![Flash::new(Tone::Bad, "Nope")]);
+        let html = toast_region(&Locale::default(), vec![Flash::new(Tone::Bad, "Nope")]);
         let html = html.as_str();
         assert!(
             html.contains(r#"class="fui-toast fui-tone-bad" role="alert">"#),

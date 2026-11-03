@@ -573,22 +573,13 @@ pub struct Moment {
 
 impl Moment {
     /// Reads `text` as a field reads it: `YYYY-MM-DD`, or with `with_time`
-    /// `YYYY-MM-DD HH:MM` (a `T` in place of the space too).
+    /// `YYYY-MM-DD HH:MM` (a `T` in place of the space too), its date in
+    /// `order` ([`Day::parse_in`]; [`DateOrder::Ymd`] for the form above).
     ///
     /// # Errors
     ///
     /// [`NotADay`] says why the text is no such value.
-    pub fn parse(text: &str, with_time: bool) -> Result<Self, NotADay> {
-        Self::parse_in(text, with_time, DateOrder::Ymd)
-    }
-
-    /// Reads `text` as [`Moment::parse`] does, its date also in `order`
-    /// ([`Day::parse_in`]).
-    ///
-    /// # Errors
-    ///
-    /// [`NotADay`] says why the text is no such value.
-    pub fn parse_in(text: &str, with_time: bool, order: DateOrder) -> Result<Self, NotADay> {
+    pub fn parse(text: &str, with_time: bool, order: DateOrder) -> Result<Self, NotADay> {
         let text = text.trim();
         if !with_time {
             return Day::parse_in(text, order).map(|day| Self { day, time: None });
@@ -748,7 +739,7 @@ mod tests {
         );
         assert_eq!(Some(DateOrder::Dmy), DateOrder::parse("dmy"));
         assert_eq!(None, DateOrder::parse("day first"));
-        let moment = Moment::parse_in("23.10.2026 14:30", true, DateOrder::Dmy).expect("a moment");
+        let moment = Moment::parse("23.10.2026 14:30", true, DateOrder::Dmy).expect("a moment");
         assert_eq!("2026-10-23 14:30", moment.to_string());
     }
 
@@ -838,22 +829,31 @@ mod tests {
 
     #[test]
     fn a_moment_takes_a_time_only_where_the_field_asks_for_one() {
-        let moment = Moment::parse("2026-10-14 08:30", true).expect("a moment");
+        let moment = Moment::parse("2026-10-14 08:30", true, DateOrder::Ymd).expect("a moment");
         assert_eq!(Some(Clock::new(8, 30).expect("a time")), moment.time);
         assert_eq!("2026-10-14 08:30", moment.to_string());
-        assert_eq!(Ok(moment), Moment::parse("2026-10-14T08:30", true));
-        assert_eq!(Err(NotADay::Time), Moment::parse("2026-10-14 24:00", true));
-        assert_eq!(Err(NotADay::Format), Moment::parse("2026-10-14", true));
+        assert_eq!(
+            Ok(moment),
+            Moment::parse("2026-10-14T08:30", true, DateOrder::Ymd)
+        );
+        assert_eq!(
+            Err(NotADay::Time),
+            Moment::parse("2026-10-14 24:00", true, DateOrder::Ymd)
+        );
+        assert_eq!(
+            Err(NotADay::Format),
+            Moment::parse("2026-10-14", true, DateOrder::Ymd)
+        );
         assert_eq!(
             Err(NotADay::Day {
                 year: 2026,
                 month: 10
             }),
-            Moment::parse("2026-10-41", true)
+            Moment::parse("2026-10-41", true, DateOrder::Ymd)
         );
         assert_eq!(
             Err(NotADay::Format),
-            Moment::parse("2026-10-14 08:30", false)
+            Moment::parse("2026-10-14 08:30", false, DateOrder::Ymd)
         );
     }
 

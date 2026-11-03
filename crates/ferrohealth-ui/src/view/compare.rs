@@ -291,20 +291,58 @@ fn head(locale: &Locale, record: &CompareRecord, leading: bool) -> String {
     )
 }
 
-/// Returns the compare `table` as a table: the field names down the first
-/// column, the leading record next, every other record marked against it.
-///
-/// It shows at every width, scrolling sideways inside its card when the
-/// card is narrower than its columns, the field and the leading record held
-/// in view. A caption whose fields all agree says so.
-#[must_use]
-pub fn compare(locale: &Locale, table: Compare<'_>) -> Html {
-    drawn_table(locale, &table, false)
+/// How a compare shows its records.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Presentation {
+    /// As a table: the field names down the first column, the leading
+    /// record next, every other record marked against it. It shows at every
+    /// width, scrolling sideways inside its card when the card is narrower
+    /// than its columns, the field and the leading record held in view. A
+    /// caption whose fields all agree says so.
+    Table,
+    /// One record at a time, for a phone. A choice of the other records
+    /// leads, `shown` chosen first (the last record when `shown` is past the
+    /// end), and the chosen record's fields follow, marked against the
+    /// leading record, whose value follows each one that differs.
+    ///
+    /// The choice is a native radio group the stylesheet answers, so it
+    /// works with no script. Past [`STACKED_MAX`] other records every record
+    /// is a native disclosure instead, `shown` open, so every record is
+    /// offered with no script. Every mark sits at the end of its value's
+    /// line, so the marks read as one column.
+    Stacked {
+        /// The record the stacked form reads first.
+        shown: usize,
+    },
+    /// The table from 64 rem and the stacked form below it.
+    Pair {
+        /// The record the stacked form reads first.
+        shown: usize,
+    },
 }
 
-/// The table [`compare`] and [`compare_pair`] draw; `pair` hides it below
-/// 64 rem, where the stacked form takes its place.
-fn drawn_table(locale: &Locale, table: &Compare<'_>, pair: bool) -> Html {
+/// Returns the compare `table` in the presentation `presentation`.
+#[must_use]
+pub fn compare(locale: &Locale, table: Compare<'_>, presentation: Presentation) -> Html {
+    match presentation {
+        Presentation::Table => drawn_table(locale, &table, "fui-table-scroll fui-compare-scroll"),
+        Presentation::Stacked { shown } => stacked(
+            locale,
+            &table,
+            shown,
+            "fui-compare-stacked fui-compare-alone",
+        ),
+        Presentation::Pair { shown } => drawn_table(
+            locale,
+            &table,
+            "fui-table-scroll fui-compare-scroll fui-compare-wide",
+        )
+        .then(stacked(locale, &table, shown, "fui-compare-stacked")),
+    }
+}
+
+/// The table, in a box of the classes `class`.
+fn drawn_table(locale: &Locale, table: &Compare<'_>, class: &str) -> Html {
     let rows = rows(table);
     let caption = caption(locale, table, &rows);
     let heads: String = std::iter::once(head(locale, table.leading, true))
@@ -335,11 +373,6 @@ fn drawn_table(locale: &Locale, table: &Compare<'_>, pair: bool) -> Html {
         })
         .collect::<Vec<_>>()
         .concat();
-    let class = if pair {
-        "fui-table-scroll fui-compare-scroll fui-compare-wide"
-    } else {
-        "fui-table-scroll fui-compare-scroll"
-    };
     Html::raw(format!(
         "<div role=\"region\" aria-label=\"{}\" tabindex=\"0\" class=\"{class}\"><table class=\"fui-compare\"><caption>{caption}</caption><colgroup><col class=\"fui-compare-col-field\"><col class=\"fui-compare-col\">{columns}</colgroup><thead><tr><th scope=\"col\">{}</th>{heads}</tr></thead><tbody>{body}</tbody></table></div>",
         Html::text(caption.text()),
@@ -351,40 +384,11 @@ fn drawn_table(locale: &Locale, table: &Compare<'_>, pair: bool) -> Html {
 /// each record is a disclosure of its own.
 pub const STACKED_MAX: usize = crate::view::segmented::REVEAL_MAX;
 
-/// Returns the compare `table` one record at a time, for a phone.
-///
-/// A choice of the other records leads, `shown` chosen first (the last
-/// record when `shown` is past the end), and the chosen record's fields
-/// follow, marked against the leading record, whose value follows each one
-/// that differs.
-///
-/// The choice is a native radio group the stylesheet answers, so it works
-/// with no script. Past [`STACKED_MAX`] other records every record is a
-/// native disclosure instead, `shown` open, so every record is offered
-/// with no script. Every mark sits at the end of its value's line, so the
-/// marks read as one column.
-#[must_use]
-pub fn compare_stacked(locale: &Locale, table: Compare<'_>, shown: usize) -> Html {
-    stacked(locale, &table, shown, false)
-}
-
-/// Returns the compare `table` as the table from 64 rem and the stacked
-/// form below it, `shown` the record the stacked form reads first.
-#[must_use]
-pub fn compare_pair(locale: &Locale, table: Compare<'_>, shown: usize) -> Html {
-    drawn_table(locale, &table, true).then(stacked(locale, &table, shown, true))
-}
-
-/// The stacked form; `pair` hides it from 64 rem, where the table shows.
-fn stacked(locale: &Locale, table: &Compare<'_>, shown: usize, pair: bool) -> Html {
+/// The stacked form, in a box of the classes `class`.
+fn stacked(locale: &Locale, table: &Compare<'_>, shown: usize, class: &str) -> Html {
     let rows = rows(table);
     let shown = shown.min(table.others.len().saturating_sub(1));
     let name = format!("{}-read", table.id);
-    let class = if pair {
-        "fui-compare-stacked"
-    } else {
-        "fui-compare-stacked fui-compare-alone"
-    };
     if table.others.is_empty() {
         let none = tr_with(
             locale,

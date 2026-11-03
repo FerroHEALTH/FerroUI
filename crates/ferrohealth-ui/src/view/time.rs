@@ -359,7 +359,7 @@ fn ago(locale: &Locale, then: &Parsed, now: &Parsed) -> Option<Word> {
 /// use ferrohealth_ui::i18n::Locale;
 /// use ferrohealth_ui::view::time::relative_reading;
 ///
-/// let (en, now) = (Locale::english(), "2026-10-21T09:42:11Z");
+/// let (en, now) = (Locale::default(), "2026-10-21T09:42:11Z");
 /// assert_eq!("13 s ago", relative_reading(&en, "2026-10-21T09:41:58Z", now));
 /// assert_eq!("yesterday", relative_reading(&en, "2026-10-20T23:30:00Z", now));
 /// ```
@@ -508,11 +508,11 @@ mod tests {
     use crate::i18n::Locale;
 
     fn reading(raw: &str) -> String {
-        super::reading(&Locale::english(), raw)
+        super::reading(&Locale::default(), raw)
     }
 
     fn relative_reading(raw: &str, now: &str) -> String {
-        super::relative_reading(&Locale::english(), raw, now)
+        super::relative_reading(&Locale::default(), raw, now)
     }
 
     /// The console's clock in the tests: the mockups' now.

@@ -402,7 +402,7 @@ mod tests {
 
     #[test]
     fn the_document_writes_the_locale_the_preferences_and_the_assets() {
-        let en = Locale::english();
+        let en = Locale::default();
         let body = centred(&en, Html::text("hello"), Html::empty(), footer());
         let html = document(Document {
             locale: en,
@@ -440,7 +440,7 @@ mod tests {
 
     #[test]
     fn the_shell_holds_its_parts_in_order() {
-        let en = Locale::english();
+        let en = Locale::default();
         let bar = topbar(
             &en,
             TopBar {
