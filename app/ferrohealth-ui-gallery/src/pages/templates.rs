@@ -24,7 +24,7 @@ use ferrohealth_ui::view::dialog::{
 use ferrohealth_ui::view::error_page::{Detail, ErrorPage, Status, Way, error_page};
 use ferrohealth_ui::view::filter_menu::{FilterChoice, FilterMenu, MenuForm, filter_menu};
 use ferrohealth_ui::view::status::{badge, pill};
-use ferrohealth_ui::view::surface::{Container, Crumb, Header, card, facts_row};
+use ferrohealth_ui::view::surface::{Crumb, Header, card, facts_row};
 use ferrohealth_ui::view::tabs::{Tab, TabRow};
 use ferrohealth_ui::view::template::about::{
     AboutPage, Link, Manufacturer, SelfDescription, about_page,
@@ -45,6 +45,7 @@ use crate::data::{
 use crate::locale::Msg;
 use crate::page::Page;
 use crate::visit::Visit;
+use ferrohealth_ui::view::layout::Arrangement;
 
 /// The variants the template pages show, as their routes name them.
 pub const VARIANTS: [&str; 10] = [
@@ -335,7 +336,7 @@ fn detail(v: &Visit) -> Html {
             next: Some(at(v, "detail")),
         },
     );
-    let body = Container::GridStart.wrap(Html::join([
+    let body = Arrangement::GridStart.wrap(Html::join([
         card(v.tr(Msg::LocationWordTitle), facts),
         card(v.tr(Msg::QueueSteps), steps),
     ]));

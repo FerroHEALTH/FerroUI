@@ -21,14 +21,14 @@ use ferrohealth_ui::view::code::{Code, CodeHead, Gravity, LineDiagnostic, code_s
 use ferrohealth_ui::view::form::{FORM, INPUT, MEDIUM, NARROW, PROSE, SELECT, field, help_id};
 use ferrohealth_ui::view::help::{HelpWords, explained_check_field, explained_field, help_switch};
 use ferrohealth_ui::view::layout::{
-    FieldRow, Gap, Pane, bullet_list, divided_list, field_row, main_aside, master_detail, stack_at,
-    three_panes, tile_list,
+    Arrangement, FieldRow, Gap, Pane, bullet_list, divided_list, field_row, main_aside,
+    master_detail, split, stack_at, three_panes, tile_list,
 };
 use ferrohealth_ui::view::picker::{Picker, picker_field};
 use ferrohealth_ui::view::status::pill;
 use ferrohealth_ui::view::surface::{
-    Container, SectionHead, card, definitions, or_none, page_header, panel_section,
-    panel_sections_card, section_intro, split,
+    SectionHead, card, definitions, or_none, page_header, panel_section, panel_sections_card,
+    section_intro,
 };
 use ferrohealth_ui::view::template::list::HeadingCount;
 use ferrohealth_ui::view::tree::path::path_key;
@@ -641,7 +641,7 @@ fn sections_panel(v: &Visit) -> Html {
         Html::join([
             section_intro(v.tr(Msg::PanelSectionsIntro)),
             divided_list(None, steps),
-            Container::AddRow.wrap(Html::raw(format!(
+            Arrangement::AddRow.wrap(Html::raw(format!(
                 "<button type=\"button\" class=\"{}\">{}</button>",
                 Variant::Ghost.small(),
                 Html::text(v.tr(Msg::AddStep))

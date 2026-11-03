@@ -28,12 +28,12 @@ use ferrohealth_ui::view::dialog::{
 };
 use ferrohealth_ui::view::form::{INPUT, TEXTAREA, described_by, field, keyed_field};
 use ferrohealth_ui::view::kbd::{Shortcut, ShortcutGroup, kbd, shortcut_hint};
-use ferrohealth_ui::view::layout::divided_list;
+use ferrohealth_ui::view::layout::{Arrangement, Gap, divided_list, split, stack_at};
 use ferrohealth_ui::view::popover::{PopoverForm, popover_form};
 use ferrohealth_ui::view::preferences::{Post, language_select};
 use ferrohealth_ui::view::shortcuts::{GoTo, GoToPair, OPENS_LEGEND, shortcut_legend};
 use ferrohealth_ui::view::side_panel::{Opener, SidePanel, SidePanelWords, side_panel};
-use ferrohealth_ui::view::surface::{Container, card, chip, definitions, page_header, split};
+use ferrohealth_ui::view::surface::{Container, card, chip, definitions, page_header};
 use ferrohealth_ui::view::toast::{Flash, RAISES, ToastLink};
 
 use crate::locale::Msg;
@@ -423,13 +423,16 @@ fn menus(v: &Visit) -> Html {
     );
     card(
         v.tr(Msg::MenusAndSelects),
-        Container::Stack.wrap(Html::join([
-            divided_list(Some(v.tr(Msg::Files).into()), rows),
-            definitions(vec![
-                (v.tr(Msg::Language), language),
-                (v.tr(Msg::Version), version),
+        stack_at(
+            Gap::Loose,
+            Html::join([
+                divided_list(Some(v.tr(Msg::Files).into()), rows),
+                definitions(vec![
+                    (v.tr(Msg::Language), language),
+                    (v.tr(Msg::Version), version),
+                ]),
             ]),
-        ])),
+        ),
     )
 }
 
@@ -525,22 +528,25 @@ fn modals(v: &Visit) -> Html {
 /// The session's access, which the side panel holds and its own page
 /// shows.
 fn access_body(v: &Visit) -> Html {
-    Container::Stack.wrap(Html::join([
-        definitions(vec![
-            (v.tr(Msg::Signed), Html::text(v.tr(Msg::SyntheticOperator))),
-            (v.tr(Msg::Method), Html::text(v.tr(Msg::OpenidConnect))),
-            (
-                v.tr(Msg::Policy),
-                Html::text(v.tr(Msg::OperatorScopeDecidesWhatConsole)),
-            ),
+    stack_at(
+        Gap::Loose,
+        Html::join([
+            definitions(vec![
+                (v.tr(Msg::Signed), Html::text(v.tr(Msg::SyntheticOperator))),
+                (v.tr(Msg::Method), Html::text(v.tr(Msg::OpenidConnect))),
+                (
+                    v.tr(Msg::Policy),
+                    Html::text(v.tr(Msg::OperatorScopeDecidesWhatConsole)),
+                ),
+            ]),
+            Html::raw(format!("<h3>{}</h3>", Html::text(v.tr(Msg::Scopes)))),
+            Arrangement::Cluster.wrap(Html::join([
+                chip("ferrobridge.operator"),
+                chip("openid"),
+                chip("profile"),
+            ])),
         ]),
-        Html::raw(format!("<h3>{}</h3>", Html::text(v.tr(Msg::Scopes)))),
-        Container::Cluster.wrap(Html::join([
-            chip("ferrobridge.operator"),
-            chip("openid"),
-            chip("profile"),
-        ])),
-    ]))
+    )
 }
 
 /// The side panel a button opens, holding the session's access; with no
@@ -636,7 +642,7 @@ fn toasts(v: &Visit) -> Html {
         ))
     })
     .collect();
-    card(v.tr(Msg::Toasts), Container::Cluster.wrap(buttons))
+    card(v.tr(Msg::Toasts), Arrangement::Cluster.wrap(buttons))
 }
 
 /// The popover form: Save the query, a small form that opens under its
@@ -668,7 +674,7 @@ fn popover(v: &Visit) -> Html {
         Html::raw(format!(
             "<p class=\"fui-muted\" id=\"popover-form\">{}</p>{}",
             Html::text(v.tr(Msg::PopoverFormOpensUnderTrigger)),
-            Container::Cluster.wrap(popover_form(PopoverForm {
+            Arrangement::Cluster.wrap(popover_form(PopoverForm {
                 id: "save-query".into(),
                 variant: Variant::Secondary,
                 glyph: Glyph::SAVE,
@@ -770,13 +776,16 @@ pub fn page(v: &Visit) -> Page {
         Some(v.tr(Msg::DialogsModalsSidePanelToasts)),
         overlays_actions(v),
     );
-    let body = Container::Stack.wrap(Html::join([
-        Container::Grid.wrap(Html::join([confirmations(v), side_panel_card(v)])),
-        Container::Grid.wrap(Html::join([action_groups(v), menus(v)])),
-        modals(v),
-        Container::Grid.wrap(Html::join([toasts(v), popover(v)])),
-        shortcuts(v),
-    ]));
+    let body = stack_at(
+        Gap::Loose,
+        Html::join([
+            Arrangement::Grid.wrap(Html::join([confirmations(v), side_panel_card(v)])),
+            Arrangement::Grid.wrap(Html::join([action_groups(v), menus(v)])),
+            modals(v),
+            Arrangement::Grid.wrap(Html::join([toasts(v), popover(v)])),
+            shortcuts(v),
+        ]),
+    );
     Page::shell(v.tr(Msg::OverlaysFeedback), Html::join([header, body]))
         .with_flash(flash(v).into_iter().collect())
 }

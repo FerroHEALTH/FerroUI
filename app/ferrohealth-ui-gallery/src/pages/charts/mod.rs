@@ -19,12 +19,13 @@ mod scores;
 
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::view::action::ActionGroup;
-use ferrohealth_ui::view::surface::{Container, page_header};
+use ferrohealth_ui::view::surface::page_header;
 
 use crate::locale::Msg;
 use crate::page::Page;
 use crate::visit::Visit;
 
+use ferrohealth_ui::view::layout::{Gap, stack_at};
 use flows::{bridge_flow, busy_flow};
 use lines::{lines, many_lines};
 use reports::{activity, run_report, tiny_report};
@@ -46,20 +47,23 @@ pub fn page(v: &Visit) -> Page {
         .filter(|lane| !lane.is_empty())
         .map(str::to_owned)
         .collect();
-    let body = Container::Stack.wrap(Html::join([
-        lines(v),
-        many_lines(v),
-        activity(v),
-        run_report(v, true),
-        run_report(v, false),
-        tiny_report(v),
-        bridge_flow(v, false),
-        bridge_flow(v, true),
-        busy_flow(v, &open),
-        breakdown(v, false),
-        breakdown(v, true),
-        close_breakdown(v),
-        score_cells(v),
-    ]));
+    let body = stack_at(
+        Gap::Loose,
+        Html::join([
+            lines(v),
+            many_lines(v),
+            activity(v),
+            run_report(v, true),
+            run_report(v, false),
+            tiny_report(v),
+            bridge_flow(v, false),
+            bridge_flow(v, true),
+            busy_flow(v, &open),
+            breakdown(v, false),
+            breakdown(v, true),
+            close_breakdown(v),
+            score_cells(v),
+        ]),
+    );
     Page::shell(v.tr(Msg::Charts), Html::join([header, body]))
 }

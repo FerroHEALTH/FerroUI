@@ -13,9 +13,7 @@ use ferrohealth_ui::html::Html;
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::code::{Code, CodeHead, Digest, Gravity, LineDiagnostic, code_card};
 use ferrohealth_ui::view::document::{Document, DocumentView, document_pane};
-use ferrohealth_ui::view::surface::{
-    Container, Crumb, Header, card, definitions, page_heading, page_meta,
-};
+use ferrohealth_ui::view::surface::{Crumb, Header, card, definitions, page_heading, page_meta};
 
 use crate::data::{
     AQL, FHIRCONNECT, FILE_NAMES, FINDING_CODES, JSON, MAPPING, MAPPING_DIGEST, MAPPING_PATH, XML,
@@ -24,6 +22,7 @@ use crate::data::{
 use crate::locale::Msg;
 use crate::page::Page;
 use crate::visit::Visit;
+use ferrohealth_ui::view::layout::{Arrangement, Gap, stack_at};
 
 /// The id prefix of the viewer's lines.
 const LINES: &str = "file-L";
@@ -94,14 +93,17 @@ fn viewer(v: &Visit) -> Html {
             ],
         },
     );
-    Container::Stack.wrap(Html::join([
-        Html::raw(format!(
-            "<p>{} <a href=\"#{LINES}13\">{}</a>.</p>",
-            Html::text(v.tr(Msg::DiagnosticLinksLine)),
-            Html::text(v.tr(Msg::Line13))
-        )),
-        viewer,
-    ]))
+    stack_at(
+        Gap::Loose,
+        Html::join([
+            Html::raw(format!(
+                "<p>{} <a href=\"#{LINES}13\">{}</a>.</p>",
+                Html::text(v.tr(Msg::DiagnosticLinksLine)),
+                Html::text(v.tr(Msg::Line13))
+            )),
+            viewer,
+        ]),
+    )
 }
 
 /// The tag of a viewer in `language`.
@@ -138,16 +140,19 @@ fn each(v: &Visit, title: &str, label: Msg, language: Language, text: &str) -> H
 /// A viewer in each language, named by its file.
 fn languages(v: &Visit) -> Html {
     let [yaml, json, xml, aql] = FILE_NAMES;
-    Container::Stack.wrap(Html::join([
-        Container::Grid.wrap(Html::join([
-            each(v, yaml, Msg::MappingFileYaml, Language::Yaml, YAML),
-            each(v, json, Msg::ResourceJson, Language::Json, JSON),
-        ])),
-        Container::Grid.wrap(Html::join([
-            each(v, xml, Msg::CompositionXml, Language::Xml, XML),
-            each(v, aql, Msg::QueryAql, Language::Aql, AQL),
-        ])),
-    ]))
+    stack_at(
+        Gap::Loose,
+        Html::join([
+            Arrangement::Grid.wrap(Html::join([
+                each(v, yaml, Msg::MappingFileYaml, Language::Yaml, YAML),
+                each(v, json, Msg::ResourceJson, Language::Json, JSON),
+            ])),
+            Arrangement::Grid.wrap(Html::join([
+                each(v, xml, Msg::CompositionXml, Language::Xml, XML),
+                each(v, aql, Msg::QueryAql, Language::Aql, AQL),
+            ])),
+        ]),
+    )
 }
 
 /// The page's subtitle with inline markup: the resource type in bold and
@@ -185,10 +190,9 @@ pub fn page(v: &Visit) -> Page {
         ActionGroup::default(),
     );
     let meta = page_meta(Some(v.tr(Msg::AnsweredSyntheticReplicaGallery1)));
-    let body = Container::Stack.wrap(Html::join([
-        document(v, &here, xml),
-        viewer(v),
-        languages(v),
-    ]));
+    let body = stack_at(
+        Gap::Loose,
+        Html::join([document(v, &here, xml), viewer(v), languages(v)]),
+    );
     Page::shell(v.tr(Msg::CodeDocuments), Html::join([header, meta, body]))
 }

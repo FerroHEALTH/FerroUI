@@ -13,7 +13,7 @@ use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::action_menu::{Act, Action, Item, Menu};
 use ferrohealth_ui::view::button::{Variant, label, link_button};
 use ferrohealth_ui::view::empty::{Busy, busy, empty_quiet, empty_state, skeleton};
-use ferrohealth_ui::view::layout::divided_list;
+use ferrohealth_ui::view::layout::{Arrangement, Gap, divided_list, stack_at};
 use ferrohealth_ui::view::notice::{Announce, notice, notice_text};
 use ferrohealth_ui::view::refusal::{Issue, Refusal, Severity, fault, refusal};
 use ferrohealth_ui::view::segmented::{
@@ -131,7 +131,7 @@ fn stats(v: &Visit) -> Html {
         },
         pill(Tone::Warn, &v.tr(Msg::Revision3Pending)),
     );
-    Container::StatGrid.wrap(Html::join([plain, marked, pending]))
+    Arrangement::StatGrid.wrap(Html::join([plain, marked, pending]))
 }
 
 /// The buttons, each variant in both sizes, disabled, as a link, and an
@@ -167,8 +167,8 @@ fn buttons(v: &Visit) -> Html {
     card(
         v.tr(Msg::Buttons),
         Html::join([
-            Container::Cluster.wrap(full),
-            Container::Cluster.wrap(Html::raw(format!(
+            Arrangement::Cluster.wrap(full),
+            Arrangement::Cluster.wrap(Html::raw(format!(
                     "{small}<button type=\"button\" class=\"{}\" disabled>{}</button>{link}<button type=\"button\" class=\"fui-icon-button\" aria-label=\"{}\">{}</button>",
                     Variant::Primary.class(),
                     label(Some(Glyph::SAVE), v.tr(Msg::Disabled)),
@@ -232,12 +232,12 @@ fn marks_card(v: &Visit) -> Html {
     card(
         v.tr(Msg::Status),
         Html::join([
-            Container::Cluster.wrap(pills),
-            Container::Cluster.wrap(badges),
-            Container::Cluster.wrap(chips),
-            Container::Cluster.wrap(tags),
-            Container::Cluster.wrap(statuses),
-            Container::Cluster.wrap(states),
+            Arrangement::Cluster.wrap(pills),
+            Arrangement::Cluster.wrap(badges),
+            Arrangement::Cluster.wrap(chips),
+            Arrangement::Cluster.wrap(tags),
+            Arrangement::Cluster.wrap(statuses),
+            Arrangement::Cluster.wrap(states),
         ]),
     )
 }
@@ -251,25 +251,28 @@ fn notices_card(v: &Visit) -> Html {
     ));
     card(
         v.tr(Msg::Notices),
-        Container::Stack.wrap(Html::join([
-            notice_text(
-                Tone::Warn,
-                Announce::Status,
-                v.tr(Msg::SmartConfigurationReturnedButNot),
-            ),
-            notice_text(
-                Tone::Info,
-                Announce::Status,
-                v.tr(Msg::SmartNotEnabledSyntheticServer),
-            ),
-            notice_text(
-                Tone::Ok,
-                Announce::Status,
-                v.tr(Msg::SetCompiledReplacedRunningOne),
-            ),
-            notice(Tone::Neutral, Announce::Status, None, deleted),
-            notice_text(Tone::Bad, Announce::Alert, v.tr(Msg::SaveRefusedIssues)),
-        ])),
+        stack_at(
+            Gap::Loose,
+            Html::join([
+                notice_text(
+                    Tone::Warn,
+                    Announce::Status,
+                    v.tr(Msg::SmartConfigurationReturnedButNot),
+                ),
+                notice_text(
+                    Tone::Info,
+                    Announce::Status,
+                    v.tr(Msg::SmartNotEnabledSyntheticServer),
+                ),
+                notice_text(
+                    Tone::Ok,
+                    Announce::Status,
+                    v.tr(Msg::SetCompiledReplacedRunningOne),
+                ),
+                notice(Tone::Neutral, Announce::Status, None, deleted),
+                notice_text(Tone::Bad, Announce::Alert, v.tr(Msg::SaveRefusedIssues)),
+            ]),
+        ),
     )
 }
 
@@ -409,11 +412,14 @@ fn facts(v: &Visit) -> Html {
         v.tr(Msg::StagedChanges),
         muted(Msg::ThreeChangesWaitAppliedRunning),
     );
-    let pair = Container::Grid.wrap(Html::join([
+    let pair = Arrangement::Grid.wrap(Html::join([
         grid_card,
-        Container::Stack.wrap(Html::join([folded, linked, operation, path, listed])),
+        stack_at(
+            Gap::Loose,
+            Html::join([folded, linked, operation, path, listed]),
+        ),
     ]));
-    Container::Stack.wrap(Html::join([row, pair]))
+    stack_at(Gap::Loose, Html::join([row, pair]))
 }
 
 /// The panel of a binder: one sentence.
@@ -487,16 +493,19 @@ fn tab_sets(v: &Visit) -> Html {
     );
     card(
         v.tr(Msg::Tabs),
-        Container::Stack.wrap(Html::join([
-            views,
-            record,
-            preferences,
-            Html::raw(format!(
-                "<p class=\"fui-muted\">{}</p>",
-                Html::text(v.tr(Msg::KeyboardTabsLeftRightHome))
-            )),
-            keyboard,
-        ])),
+        stack_at(
+            Gap::Loose,
+            Html::join([
+                views,
+                record,
+                preferences,
+                Html::raw(format!(
+                    "<p class=\"fui-muted\">{}</p>",
+                    Html::text(v.tr(Msg::KeyboardTabsLeftRightHome))
+                )),
+                keyboard,
+            ]),
+        ),
     )
 }
 
@@ -534,7 +543,7 @@ fn segments(v: &Visit) -> Html {
     card(
         v.tr(Msg::SegmentedControls),
         Html::join([
-            Container::Cluster.wrap(Html::join([chosen, as_links, posted])),
+            Arrangement::Cluster.wrap(Html::join([chosen, as_links, posted])),
             Html::raw(format!("<p class=\"fui-muted\">{}</p>", Html::text(shown))),
         ]),
     )
@@ -571,12 +580,15 @@ fn refusals(v: &Visit) -> Html {
     };
     card(
         v.tr(Msg::RefusalFault),
-        Container::Stack.wrap(Html::join([
-            refusal(&v.locale, &answered),
-            refusal(&v.locale, &unreadable),
-            refusal(&v.locale, &silent),
-            fault(v.tr(Msg::ConsoleCannotReachBridge)),
-        ])),
+        stack_at(
+            Gap::Loose,
+            Html::join([
+                refusal(&v.locale, &answered),
+                refusal(&v.locale, &unreadable),
+                refusal(&v.locale, &silent),
+                fault(v.tr(Msg::ConsoleCannotReachBridge)),
+            ]),
+        ),
     )
 }
 
@@ -607,7 +619,9 @@ fn states(v: &Visit) -> Html {
     );
     let loading = card(
         v.tr(Msg::Loading),
-        Container::Stack.wrap(Html::join([
+        stack_at(
+            Gap::Loose,
+            Html::join([
                 busy(v.tr(Msg::ReadingCapabilityStatement), Busy::Section),
                 busy(v.tr(Msg::AskingBridge), Busy::Inline),
                 Html::raw(format!(
@@ -617,12 +631,13 @@ fn states(v: &Visit) -> Html {
                     busy(v.tr(Msg::Signing), Busy::Control)
                 )),
                 skeleton(4, v.tr(Msg::LoadingFiles)),
-            ])),
+            ]),
+        ),
     );
-    Container::Stack.wrap(Html::join([
-        Container::Grid.wrap(Html::join([empty, quiet])),
-        loading,
-    ]))
+    stack_at(
+        Gap::Loose,
+        Html::join([Arrangement::Grid.wrap(Html::join([empty, quiet])), loading]),
+    )
 }
 
 /// Every icon the library vendors, each with its name.
@@ -636,7 +651,7 @@ fn icons(v: &Visit) -> Html {
             ))
         })
         .collect();
-    card(v.tr(Msg::Icons), Container::Cluster.wrap(all))
+    card(v.tr(Msg::Icons), Arrangement::Cluster.wrap(all))
 }
 
 /// The overview page.
@@ -648,20 +663,22 @@ pub fn page(v: &Visit) -> Page {
         Some(v.tr(Msg::EveryStaticViewLibraryBrand)),
         overview_actions(v),
     );
-    let body = Container::Stack.wrap(Html::join([
-        Container::Stack.wrap(Html::join([stats(v), preview(v)])),
-        buttons(v),
-        Container::Stack.wrap(Html::join([
-            marks_card(v),
-            notices_card(v),
-            banners_card(v),
-        ])),
-        facts(v),
-        tab_sets(v),
-        segments(v),
-        refusals(v),
-        states(v),
-        icons(v),
-    ]));
+    let body = stack_at(
+        Gap::Loose,
+        Html::join([
+            stack_at(Gap::Loose, Html::join([stats(v), preview(v)])),
+            buttons(v),
+            stack_at(
+                Gap::Loose,
+                Html::join([marks_card(v), notices_card(v), banners_card(v)]),
+            ),
+            facts(v),
+            tab_sets(v),
+            segments(v),
+            refusals(v),
+            states(v),
+            icons(v),
+        ]),
+    );
     Page::shell(v.tr(Msg::Overview), Html::join([header, body]))
 }

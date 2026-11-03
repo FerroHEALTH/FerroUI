@@ -35,7 +35,7 @@ use ferrohealth_ui::view::button::Variant;
 use ferrohealth_ui::view::empty::empty_quiet;
 use ferrohealth_ui::view::filter::keeps;
 use ferrohealth_ui::view::status::badge;
-use ferrohealth_ui::view::surface::{Container, card, page_header, titled_panel};
+use ferrohealth_ui::view::surface::{card, page_header, titled_panel};
 use ferrohealth_ui::view::template::list::{HeadingCount, ListCard, list_card};
 use ferrohealth_ui::view::time::timestamp;
 
@@ -44,6 +44,7 @@ use crate::locale::{Msg, message};
 use crate::page::Page;
 use crate::request::{PAGING_ROUTE, paging_of};
 use crate::visit::Visit;
+use ferrohealth_ui::view::layout::{Gap, stack_at};
 
 /// What the gallery's rows are, named from its catalog.
 fn files() -> Noun {
@@ -724,21 +725,24 @@ pub fn page(v: &Visit) -> Page {
         Some(v.tr(Msg::OneTablePagerModelUrl)),
         ActionGroup::default(),
     );
-    let body = Container::Stack.wrap(Html::join([
-        url_table(v),
-        session_table(v),
-        review_list(v),
-        result_set(v),
-        result_pages(v),
-        open_listing(v),
-        states(v),
-        fitting(v),
-        row_actions(v),
-        model_files(v),
-        hierarchy(v),
-        changes(v),
-        super::records::compare_section(v),
-        super::records::worklist_section(v),
-    ]));
+    let body = stack_at(
+        Gap::Loose,
+        Html::join([
+            url_table(v),
+            session_table(v),
+            review_list(v),
+            result_set(v),
+            result_pages(v),
+            open_listing(v),
+            states(v),
+            fitting(v),
+            row_actions(v),
+            model_files(v),
+            hierarchy(v),
+            changes(v),
+            super::records::compare_section(v),
+            super::records::worklist_section(v),
+        ]),
+    );
     Page::shell(v.tr(Msg::TablesPaging), Html::join([header, body]))
 }

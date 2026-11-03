@@ -25,8 +25,7 @@ use ferrohealth_ui::view::secret::{
     SecretChoice, SecretField, SecretState, secret_field, secret_state,
 };
 use ferrohealth_ui::view::surface::{
-    Container, Crumb, Header, SectionHead, card, card_action, page_heading, panel_section,
-    panel_sections_card,
+    Crumb, Header, SectionHead, card, card_action, page_heading, panel_section, panel_sections_card,
 };
 use ferrohealth_ui::view::tag::{Tag, tag};
 use ferrohealth_ui::view::template::detail::{DetailPage, detail_page};
@@ -40,6 +39,7 @@ use crate::data::{
 use crate::locale::Msg;
 use crate::page::Page;
 use crate::visit::Visit;
+use ferrohealth_ui::view::layout::{Gap, stack_at};
 
 /// The address of a page of the gallery's current brand, after `root`.
 fn at(root: &str, path: &str) -> String {
@@ -391,13 +391,16 @@ pub fn page(v: &Visit) -> Page {
         },
         ActionGroup::default(),
     );
-    let body = Container::Stack.wrap(Html::join([
-        pending(v, &root),
-        lifecycles(v),
-        secrets(v),
-        read_only(v, &root),
-        provenance(v, &root),
-    ]));
+    let body = stack_at(
+        Gap::Loose,
+        Html::join([
+            pending(v, &root),
+            lifecycles(v),
+            secrets(v),
+            read_only(v, &root),
+            provenance(v, &root),
+        ]),
+    );
     Page::shell(v.tr(Msg::Configuration), Html::join([header, body]))
 }
 
