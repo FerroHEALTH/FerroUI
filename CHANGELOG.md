@@ -26,6 +26,10 @@ and this project adheres to
 - The component functions that only fixed an argument of another are gone; each console calls the general function with the argument at its next pin. `view::surface::stack`: call `view::layout::stack_at(Gap::Loose, children)`. `view::surface::grid`, `grid_start`, `stat_grid`, `cluster` and `add_row`: call `wrap` on the `view::layout::Arrangement` of the same name. `view::surface::panel`, `panel_body`, `panel_sections` and `well`: call `wrap` on the `view::surface::Container` of the same name (`Container::Card.wrap(body)` for `panel`). `table::view::data_table_wide` and `data_table_unstacked`: call `data_table` on a table `with_shape(Shape::Wide)` or `Shape::Unstacked`. `table::view::title_cell_at`: call `title_cell(Some(level), ..)`. `view::dialog::danger_dialog` and `danger_form_dialog`: call `confirm_dialog` with `Stakes::Danger` and the form. `view::compare::compare_stacked` and `compare_pair`: call `compare` with `Presentation::Stacked { shown }` or `Presentation::Pair { shown }`. `view::combobox::searched_combobox`: call `keyed_combobox` with `KeyedCombobox::remote` set. `view::side_panel::side_panel_with_shortcut`: call `side_panel(panel, Some(shortcut))`. `view::shortcuts::shortcut_legend_with_go_to`: call `shortcut_legend(locale, groups, Some(go_to))`. `view::empty::spinner`: call `busy(label, Busy::Inline)`. `view::form::keyed_check`: call `check`, which takes the id as `&str`. `calendar::Moment::parse_in`: call `Moment::parse`. `table::model::Paging::write_within`: call `Paging::write`. `i18n::Locale::english`: call `Locale::default()`, which is English. `view::action::ActionGroup::none`: call `ActionGroup::default()` (#579).
 - Four public functions no console called are gone: `view::search::answer_id` and `hit_id`, `i18n::message_ids` and `view::surface::wide_card` (#580).
 
+### Fixed
+
+- The combobox's input is not spell-checked, like every other text input the library draws, so the browser no longer underlines a choice such as "SNOMED CT" as a misspelling (#596).
+
 ## [0.6.4] - 2026-11-03
 
 ### Fixed
