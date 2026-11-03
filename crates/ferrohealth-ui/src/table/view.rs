@@ -24,7 +24,9 @@ use askama::Template;
 use crate::html::{Html, Render as _};
 use crate::i18n::{Locale, Word};
 use crate::icon::{Glyph, icon};
-use crate::table::model::{Noun, ORDER_KEY, PAGE_KEY, SORT_KEY, Sort, StateSource};
+use crate::query::{ORDER_KEY, PAGE_KEY, SORT_KEY};
+use crate::table::model::{Noun, Sort, StateSource};
+use crate::view::form::hidden_fields;
 use crate::view::path::path;
 
 /// Where a column's cells sit in the compact phone row of a list card.
@@ -270,21 +272,6 @@ impl<'a> DataTable<'a> {
     pub fn with_shape(self, shape: Shape) -> Self {
         Self { shape, ..self }
     }
-}
-
-/// The hidden fields of a form: `fields` without the keys in `dropped`.
-pub(crate) fn hidden_fields(fields: &[(String, String)], dropped: &[&str]) -> Html {
-    fields
-        .iter()
-        .filter(|(name, _)| !dropped.contains(&name.as_str()))
-        .map(|(name, value)| {
-            Html::raw(format!(
-                "<input type=\"hidden\" name=\"{}\" value=\"{}\">",
-                Html::text(name),
-                Html::text(value)
-            ))
-        })
-        .collect()
 }
 
 /// The `method` of a form for a listing that keeps its state in `source`.

@@ -5,7 +5,7 @@
 //! input, so each is parsed defensively and clamped, and every sum
 //! saturates. No specification governs paging: our own design.
 
-use crate::query::Query;
+use crate::query::{ORDER_KEY, PAGE_KEY, Query, SIZE_KEY, SORT_KEY};
 
 use crate::i18n::{Locale, Message, Text, Word, tr, tr_with};
 
@@ -18,18 +18,6 @@ pub const SIZES: [u32; 3] = [25, 50, 100];
 /// The largest size a request may name: a hand-typed `?size=100000` never
 /// renders a hundred thousand rows into one page.
 pub const MAX_SIZE: u32 = 200;
-
-/// The query key of the 1-based page.
-pub const PAGE_KEY: &str = "page";
-
-/// The query key of the page size.
-pub const SIZE_KEY: &str = "size";
-
-/// The query key of the sorted column.
-pub const SORT_KEY: &str = "sort";
-
-/// The query key of the sort's direction.
-pub const ORDER_KEY: &str = "order";
 
 /// What a listing names its rows by: "value set", "value sets".
 ///

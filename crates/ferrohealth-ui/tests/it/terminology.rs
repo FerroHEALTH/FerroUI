@@ -7,15 +7,15 @@
 
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::style::STYLESHEET;
+use ferrohealth_ui::table::mapping::{
+    MapElement, Mapping, Relationship, map_element, map_elements, mapping_columns, mapping_row,
+    relation,
+};
 use ferrohealth_ui::table::view::{Body, DataTable, data_table};
 use ferrohealth_ui::view::clause::{
     Clause, ClauseCode, ClauseIssue, ClauseKind, clause, clause_codes, clauses,
 };
 use ferrohealth_ui::view::coding::{Coding, Layout, MoreCodes, canonical, coding, inactive_mark};
-use ferrohealth_ui::view::mapping::{
-    MapElement, Mapping, Relationship, map_element, map_elements, mapping_columns, mapping_row,
-    relation,
-};
 use ferrohealth_ui::view::repeat::{Fields, ROW, Repeat, RepeatAdd, RepeatRow, RowEnd, repeat};
 use ferrohealth_ui::view::root_matrix::{MatrixRoot, MatrixRow, RootMatrix, root_matrix};
 use ferrohealth_ui::view::version::{VersionRoot, VersionSelect, version_select};

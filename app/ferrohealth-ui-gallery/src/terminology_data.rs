@@ -9,7 +9,7 @@
 //! server sends, so it stays here beside its code; the page's own words are
 //! in its catalog. Nothing here is clinical data.
 
-use ferrohealth_ui::view::mapping::Relationship;
+use ferrohealth_ui::table::mapping::Relationship;
 
 /// The synthetic findings code system's name.
 pub const FINDINGS: &str = "Synthetic clinical findings";

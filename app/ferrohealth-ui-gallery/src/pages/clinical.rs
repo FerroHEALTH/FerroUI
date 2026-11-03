@@ -13,6 +13,9 @@
 
 use ferrohealth_ui::calendar::{Bounds, Day, Weekday};
 use ferrohealth_ui::html::Html;
+use ferrohealth_ui::table::versions::{
+    AtTime, Standing, Version, VersionHistory, at_time_label, older_version, version_history,
+};
 use ferrohealth_ui::table::view::{Body, Column, DataTable, Role, cell, data_table, title_cell};
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::chart::{ACCENT, INFO, LineChart, Series};
@@ -37,9 +40,6 @@ use ferrohealth_ui::view::surface::{
 };
 use ferrohealth_ui::view::template::list::HeadingCount;
 use ferrohealth_ui::view::time::{relative, timestamp};
-use ferrohealth_ui::view::versions::{
-    AtTime, Standing, Version, VersionHistory, at_time_label, older_version, version_history,
-};
 
 use crate::app::Page;
 use crate::clinical_data::{

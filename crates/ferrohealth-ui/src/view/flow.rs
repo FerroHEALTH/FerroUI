@@ -20,7 +20,7 @@ use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::html::Html;
-use crate::i18n::{Locale, Text, Word, tr, tr_with};
+use crate::i18n::{Arg, Locale, Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
 use crate::tone::Tone;
 use crate::view::button::{Variant, label};
@@ -1061,28 +1061,23 @@ pub(crate) fn dot(state: FlowState, x: f64, y: f64) -> Html {
     })
 }
 
-/// The accessible name of `card`.
-fn card_name(locale: &Locale, card: &FlowCard) -> String {
-    String::from(if card.hub {
-        tr_with(
-            locale,
-            Text::FlowHub,
-            &[
-                ("title", card.name.clone().into()),
-                ("note", card.line.clone().into()),
-            ],
-        )
+/// The accessible name of a card of a flow or a topology, titled `name`
+/// over the note `line`: a hub's without its state `state`.
+pub(crate) fn card_label(
+    locale: &Locale,
+    name: &str,
+    line: &str,
+    state: FlowState,
+    hub: bool,
+) -> String {
+    let mut args = vec![("title", Arg::from(name)), ("note", Arg::from(line))];
+    let text = if hub {
+        Text::FlowHub
     } else {
-        tr_with(
-            locale,
-            Text::FlowCard,
-            &[
-                ("title", card.name.clone().into()),
-                ("note", card.line.clone().into()),
-                ("status", card.state.word(locale).into()),
-            ],
-        )
-    })
+        args.push(("status", state.word(locale).into()));
+        Text::FlowCard
+    };
+    String::from(tr_with(locale, text, &args))
 }
 
 /// One card as a drawing draws it.
@@ -1261,7 +1256,7 @@ fn card_view(card: &FlowCard, place: Place, scene: Scene<'_, '_>) -> Html {
         line: card.line.clone(),
         state: card.state,
         href: card.href.clone(),
-        label: card_name(locale, card),
+        label: card_label(locale, &card.name, &card.line, card.state, card.hub),
         hub: card.hub,
         mono: false,
         selected: false,

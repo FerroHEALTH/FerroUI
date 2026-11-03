@@ -8,10 +8,10 @@ use std::collections::BTreeSet;
 
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::style::STYLESHEET;
-use ferrohealth_ui::table::filter::Find;
+use ferrohealth_ui::table::filter::{Find, browser_find};
 use ferrohealth_ui::table::model::StateSource;
 use ferrohealth_ui::view::browser::{
-    BrowserPane, Heading, Panes, PathNode, browser, browser_find, match_list, pane_body, path_node,
+    BrowserPane, Heading, Panes, PathNode, browser, match_list, pane_body, path_node,
 };
 use ferrohealth_ui::view::coding::{Coding, Layout, MoreCodes, coding};
 use ferrohealth_ui::view::path::{archetype, path};

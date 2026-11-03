@@ -265,19 +265,6 @@ impl SearchAnswer {
     }
 }
 
-/// The id of the panel's list of hits under the search box `id`.
-#[must_use]
-pub fn answer_id(id: &str) -> String {
-    format!("{id}-results")
-}
-
-/// The id of the `place`th hit, from 1, of the panel under the search box
-/// `id`.
-#[must_use]
-pub fn hit_id(id: &str, place: u32) -> String {
-    format!("{id}-hit-{place}")
-}
-
 /// The runs of `text`, each marked when it is a match of `query` without
 /// regard to case; the runs joined are `text`.
 #[must_use]

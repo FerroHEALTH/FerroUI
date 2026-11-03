@@ -37,11 +37,11 @@ use serde::{Deserialize, Serialize};
 use crate::html::{Html, Render as _};
 use crate::i18n::{Arg, Locale, Phrase, Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
-use crate::table::filter::{FilterChoice, FilterMenu, MenuForm, filter_menu};
 use crate::view::button::Variant;
+use crate::view::filter_menu::{FilterChoice, FilterMenu, MenuForm, filter_menu};
 use crate::view::flow::{
-    CardDrawing, FlowState, LabelAt, Place, card_drawing, curve, edge_line, ends, line_sample,
-    path_drawing, units,
+    CardDrawing, FlowState, LabelAt, Place, card_drawing, card_label, curve, edge_line, ends,
+    line_sample, path_drawing, units,
 };
 
 /// One card of a topology: the hub, a caller, a group or a child.
@@ -620,30 +620,6 @@ fn edge(edge: Edge<'_>, on_path: bool) -> Html {
     }
 }
 
-/// The accessible name of `card` in `locale`, the hub's without a state.
-fn card_name(locale: &Locale, card: &TopologyCard, hub: bool) -> String {
-    String::from(if hub {
-        tr_with(
-            locale,
-            Text::FlowHub,
-            &[
-                ("title", card.name.clone().into()),
-                ("note", card.line.clone().into()),
-            ],
-        )
-    } else {
-        tr_with(
-            locale,
-            Text::FlowCard,
-            &[
-                ("title", card.name.clone().into()),
-                ("note", card.line.clone().into()),
-                ("status", card.state.word(locale).into()),
-            ],
-        )
-    })
-}
-
 /// The controls at a card's end: its quick look, and a group's collapse.
 fn controls(
     locale: &Locale,
@@ -734,7 +710,7 @@ fn card_view(locale: &Locale, laid: &Laid<'_>, selected: Option<&str>) -> Html {
         line: card.line.clone(),
         state: card.state,
         href: card.href.clone(),
-        label: card_name(locale, card, hub),
+        label: card_label(locale, &card.name, &card.line, card.state, hub),
         hub,
         mono: card.mono,
         selected: selected == Some(card.id.as_str()),

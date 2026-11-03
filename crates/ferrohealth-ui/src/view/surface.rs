@@ -277,20 +277,6 @@ pub fn card(title: impl Into<String>, body: Html) -> Html {
     )
 }
 
-/// Returns a card titled `title` holding `body` that spans the whole row of
-/// the grid it sits in.
-#[must_use]
-pub fn wide_card(title: impl Into<String>, body: Html) -> Html {
-    wrap(
-        &format!(
-            "<section class=\"fui-card fui-card-wide\"><h2 class=\"fui-card-title\">{}</h2>",
-            Html::text(title.into())
-        ),
-        body,
-        "</section>",
-    )
-}
-
 #[derive(Template)]
 #[template(path = "surface/surface.html", block = "titled_panel")]
 struct TitledPanel {

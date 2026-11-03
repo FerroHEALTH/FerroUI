@@ -30,6 +30,7 @@ use askama::Template;
 use crate::html::{Html, Render as _};
 use crate::i18n::{Arg, Locale, Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
+use crate::view::form::hidden_fields;
 
 /// The ellipsis after the words of an action a confirmation follows.
 // NOTE: COMPONENTS.md family rule 7: a destructive action whose
@@ -281,20 +282,6 @@ impl Trigger {
     }
 }
 
-/// Returns the hidden inputs of a plain form, one per field.
-fn hidden_fields(fields: &[(String, String)]) -> Html {
-    fields
-        .iter()
-        .map(|(name, value)| {
-            Html::raw(format!(
-                "<input type=\"hidden\" name=\"{}\" value=\"{}\">",
-                Html::text(name),
-                Html::text(value)
-            ))
-        })
-        .collect()
-}
-
 /// Returns the inside of an item: its icon, its words and its second line.
 fn item_inside(glyph: Option<Glyph>, words: &str, line: Option<&str>) -> String {
     let line = line.map_or(String::new(), |line| {
@@ -338,7 +325,7 @@ fn item(item: &Item, danger: bool) -> Html {
         Act::Post { action, fields } => format!(
             "<form method=\"post\" action=\"{}\" class=\"fui-menu-form\">{}<button type=\"submit\" role=\"menuitem\" class=\"{class}\">{inside}</button></form>",
             Html::text(action),
-            hidden_fields(fields)
+            hidden_fields(fields, &[])
         ),
         Act::Submit(form) => format!(
             "<button type=\"submit\" form=\"{}\" role=\"menuitem\" class=\"{class}\">{inside}</button>",
@@ -424,7 +411,7 @@ pub fn options(choices: &[Choice]) -> Html {
                 Pick::Post { action, fields } => format!(
                     "<form method=\"post\" action=\"{}\" class=\"fui-menu-form\">{}<button type=\"submit\" role=\"option\"{lang} aria-selected=\"{}\" class=\"fui-listbox-option\">{inside}</button></form>",
                     Html::text(action),
-                    hidden_fields(fields),
+                    hidden_fields(fields, &[]),
                     choice.selected
                 ),
             })

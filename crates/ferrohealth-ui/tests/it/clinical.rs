@@ -7,6 +7,9 @@
 
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::style::STYLESHEET;
+use ferrohealth_ui::table::versions::{
+    AtTime, Standing, Version, VersionHistory, older_version, version_cell, version_history,
+};
 use ferrohealth_ui::view::conditions::{
     ADD_CONDITION, ADD_GROUP, Choice, Condition, ConditionGroup, Match, Operand, REMOVE,
     REMOVE_GROUP, condition_groups,
@@ -18,9 +21,6 @@ use ferrohealth_ui::view::scope::{
     Compartment, Grant, Operation, Operations, Request, Scope, ScopeError, ScopeGrant, scope_grants,
 };
 use ferrohealth_ui::view::subject::{Subject, SubjectLine, subject_line};
-use ferrohealth_ui::view::versions::{
-    AtTime, Standing, Version, VersionHistory, older_version, version_cell, version_history,
-};
 
 use crate::markup::{has, tags};
 use crate::render::{en, html};

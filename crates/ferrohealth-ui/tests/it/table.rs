@@ -9,9 +9,7 @@
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::i18n::Message;
 use ferrohealth_ui::icon::Glyph;
-use ferrohealth_ui::table::filter::{
-    FilterChoice, FilterMenu, Find, MenuForm, filter_menu, find_form,
-};
+use ferrohealth_ui::table::filter::{Find, find_form};
 use ferrohealth_ui::table::model::{
     Direction, Noun, OpenWindow, Paging, Sort, StateSource, Window,
 };
@@ -20,6 +18,7 @@ use ferrohealth_ui::table::view::{
     Body, Column, DataTable, EXCLUDED, Role, RowCheck, Shape, Sorting, cell, check_cell,
     count_cell, data_table, group_row, menu_cell, title_cell,
 };
+use ferrohealth_ui::view::filter_menu::{FilterChoice, FilterMenu, MenuForm, filter_menu};
 use ferrohealth_ui::view::template::list::{HeadingCount, ListCard, list_card};
 
 use crate::markup::{has, tags};
@@ -1151,7 +1150,7 @@ fn header_row(table: &str) -> &str {
 
 #[test]
 fn a_change_table_heads_its_key_column_as_the_console_names_it() {
-    use ferrohealth_ui::view::change::{Change, change_table, change_table_keyed};
+    use ferrohealth_ui::table::change::{Change, change_table, change_table_keyed};
 
     let changes = [Change {
         key: String::from("/content[openEHR-EHR-OBSERVATION.synthetic.v1]"),
