@@ -19,6 +19,7 @@ mod repeat;
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::form::Posted;
+use ferrohealth_ui::view::layout::{Arrangement, Gap, stack_at};
 use ferrohealth_ui::view::surface::page_header;
 
 use crate::locale::Msg;
@@ -30,7 +31,6 @@ use editors::{
     diagnostics_of_files, diagnostics_real_size, editor, editor_headers, filter, mapping_editor,
     new_mapping, upload,
 };
-use ferrohealth_ui::view::layout::{Arrangement, Gap, stack_at};
 use inputs::{federated, fields, inline, per_row, pick_or_typed, shapes};
 use pickers::{choosing, grouped, long_label, nested_reveal};
 use repeat::{edge_parts, endpoints};

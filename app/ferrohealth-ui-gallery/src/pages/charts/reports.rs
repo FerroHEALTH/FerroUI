@@ -7,11 +7,11 @@ use ferrohealth_ui::html::Html;
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::chart::{ActivityChart, activity_chart};
 use ferrohealth_ui::view::funnel::{Bar, Funnel, FunnelPart, bar_list, funnel};
+use ferrohealth_ui::view::layout::{Gap, stack_at};
 use ferrohealth_ui::view::surface::card;
 
 use crate::locale::Msg;
 use crate::visit::Visit;
-use ferrohealth_ui::view::layout::{Gap, stack_at};
 
 /// The activity line of thirty synthetic days.
 pub(super) fn activity(v: &Visit) -> Html {

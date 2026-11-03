@@ -19,13 +19,13 @@ mod scores;
 
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::view::action::ActionGroup;
+use ferrohealth_ui::view::layout::{Gap, stack_at};
 use ferrohealth_ui::view::surface::page_header;
 
 use crate::locale::Msg;
 use crate::page::Page;
 use crate::visit::Visit;
 
-use ferrohealth_ui::view::layout::{Gap, stack_at};
 use flows::{bridge_flow, busy_flow};
 use lines::{lines, many_lines};
 use reports::{activity, run_report, tiny_report};

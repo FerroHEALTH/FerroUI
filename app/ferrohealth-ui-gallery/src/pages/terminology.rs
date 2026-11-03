@@ -27,6 +27,7 @@ use ferrohealth_ui::view::clause::{
 };
 use ferrohealth_ui::view::coding::{Coding, Layout, MoreCodes, canonical, coding};
 use ferrohealth_ui::view::form::{ERROR, Field, INPUT, SELECT, error_id};
+use ferrohealth_ui::view::layout::{Arrangement, Gap, stack_at};
 use ferrohealth_ui::view::repeat::{Fields, ROW, Repeat, RepeatAdd, RepeatRow, RowEnd, repeat};
 use ferrohealth_ui::view::root_matrix::{MatrixRoot, MatrixRow, RootMatrix, root_matrix};
 use ferrohealth_ui::view::surface::{
@@ -44,7 +45,6 @@ use crate::terminology_data::{
     URN_CANONICAL, VALUE_SETS, VERSIONED_UID, WHEEZE, base, display, legacy_display,
 };
 use crate::visit::Visit;
-use ferrohealth_ui::view::layout::{Arrangement, Gap, stack_at};
 
 /// The id of the version select's menu.
 const VERSION_MENU: &str = "fhir-version";

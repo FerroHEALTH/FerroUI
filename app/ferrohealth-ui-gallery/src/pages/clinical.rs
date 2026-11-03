@@ -30,6 +30,7 @@ use ferrohealth_ui::view::identifier::{
     Domain, Identifier, IdentifierWords, KEEP, Masked, Reveal, Revealed, identifier,
     identifier_static,
 };
+use ferrohealth_ui::view::layout::{Gap, stack_at};
 use ferrohealth_ui::view::reading::{Element, Level, Reading, Section, Value, reading};
 use ferrohealth_ui::view::results::{Export, ResultsPane, SHOWN, Shown, Switch, results_pane};
 use ferrohealth_ui::view::scope::{Grant, ScopeGrant, scope_grants};
@@ -50,7 +51,6 @@ use crate::clinical_data::{
 use crate::locale::Msg;
 use crate::page::Page;
 use crate::visit::Visit;
-use ferrohealth_ui::view::layout::{Gap, stack_at};
 
 /// The seconds a revealed subject shows.
 const REVEAL_SECONDS: u32 = 30;

@@ -21,6 +21,7 @@ use ferrohealth_ui::view::browser::{
     BrowserPane, Heading, Panes, PathNode, browser, match_list, pane_body, path_node,
 };
 use ferrohealth_ui::view::coding::{Coding, Layout, coding, inactive_mark};
+use ferrohealth_ui::view::layout::{Gap, stack_at};
 use ferrohealth_ui::view::path::archetype;
 use ferrohealth_ui::view::surface::{
     Crumb, Header, SectionHead, definitions, page_heading, panel_section, section_intro,
@@ -41,7 +42,6 @@ use crate::trees_data::{
     TEMPLATE, TEMPLATE_OPEN, TEMPLATE_SELECTED, reason_code,
 };
 use crate::visit::Visit;
-use ferrohealth_ui::view::layout::{Gap, stack_at};
 
 /// The key of the brand the route names, FerroTERM's for none.
 fn brand_key(v: &Visit) -> String {
