@@ -11,6 +11,21 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.6.6] - 2026-11-03
+
+### Added
+
+- `view::line_diff::line_diff(locale, file, diff)` draws one file's unified diff (B11) in the code viewer's box: each line with its numbers before and after, a removed line marked "−" on the bad tone's ground and an added line "+" on the ok tone's, each with its word for a screen reader, the hunk heads as muted rows, and long lines scrolling sideways inside the box (#598).
+- `table::change::plain_change(locale, before, after)` writes a history row's change in prose, as the design draws it (R22): the value before struck through as a `del` after "−" and the word "was", the value after as an `ins` after "+" and "now", and a side that is `None` left out (#602).
+
+### Changed
+
+- `table::change::change_table(locale, caption, key, changes)` takes its key column's heading as `key`, `None` keeping the library's "Setting", and `change_table_keyed` is gone: a console calls `change_table` with `Some(heading)`, such as "File" for a revision's changed files (#598).
+
+### Fixed
+
+- A date picker moves the focus to the chosen day at once when it draws its grid again, so a key pressed right after a day is clicked, such as Escape, reaches the picker and no longer falls to the page (#599).
+
 ## [0.6.5] - 2026-11-03
 
 ### Changed
@@ -3060,7 +3075,8 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.5...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.6...HEAD
+[0.6.6]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.5...v0.6.6
 [0.6.5]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.2...v0.6.3
