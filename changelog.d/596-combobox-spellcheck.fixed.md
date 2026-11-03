@@ -1,0 +1,1 @@
+- The combobox's input is not spell-checked, like every other text input the library draws, so the browser no longer underlines a choice such as "SNOMED CT" as a misspelling (#596).
