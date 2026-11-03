@@ -120,7 +120,8 @@ repository neither needs nor configures one.
   run unless `publish` is set, sharing `scripts/release/publish-crates.sh`
   with the release lane.
 - `.github/workflows/ratchet-tighten.yml`: daily and on dispatch, on `main`
-  only. The ratchet guards (`duplication.sh`, `file-size.sh`) pass a fall,
+  only. The ratchet guards (`duplication.sh`, `file-size.sh`,
+  `forwarders.sh`) pass a fall,
   so a pull request never rewrites their files; this lane runs each guard's
   `--update` and commits the lowered files through the Git Data API (signed
   by GitHub, every body sent with `gh api --input`) to

@@ -80,12 +80,12 @@ words_of() {
 
 classify() {
   local all="$1" path stem dir module
-  local rust=false lib=false app=false gallery=false capture=false
+  local rust=false lib=false app=false tool=false gallery=false capture=false
   local journeys_all=false page_wide=false design_all=false
   local words="" modules="" sets=""
 
   everything() {
-    rust=true lib=true app=true gallery=true capture=true journeys_all=true design_all=true
+    rust=true lib=true app=true tool=true gallery=true capture=true journeys_all=true design_all=true
   }
 
   if [ "$all" = true ]; then everything; fi
@@ -97,10 +97,10 @@ classify() {
         everything
         ;;
       Cargo.toml | Cargo.lock | rust-toolchain.toml | .config/*)
-        rust=true lib=true app=true gallery=true capture=true journeys_all=true
+        rust=true lib=true app=true tool=true gallery=true capture=true journeys_all=true
         ;;
       clippy.toml | rustfmt.toml | deny.toml)
-        rust=true lib=true app=true
+        rust=true lib=true app=true tool=true
         ;;
       scripts/checks/script-pages.list)
         rust=true app=true
@@ -165,6 +165,9 @@ classify() {
       app/*)
         rust=true app=true gallery=true capture=true journeys_all=true
         ;;
+      tools/*)
+        rust=true tool=true
+        ;;
       design/consoles/*)
         dir="${path#design/consoles/}"
         sets="$sets ${dir%%/*}"
@@ -184,6 +187,7 @@ classify() {
   if [ "$rust" = true ]; then
     if [ "$lib" = true ]; then packages="ferrohealth-ui"; fi
     if [ "$app" = true ]; then packages="${packages:+$packages }ferrohealth-ui-gallery"; fi
+    if [ "$tool" = true ]; then packages="${packages:+$packages }forwarders"; fi
   fi
 
   local journeys=""
@@ -245,6 +249,9 @@ self_test() {
   expect "the page-list test opens no browser" 'app/ferrohealth-ui-gallery/tests/it/script_pages.rs\n' "journeys="
   expect "the page list reaches the gallery's tests" 'scripts/checks/script-pages.list\n' "packages=ferrohealth-ui-gallery"
   expect "a library test skips the gallery" 'crates/ferrohealth-ui/tests/it/contrast.rs\n' "gallery=false"
+  expect "a tool reaches only its own package" 'tools/forwarders/src/detect.rs\n' "packages=forwarders"
+  expect "a tool skips the gallery" 'tools/forwarders/src/detect.rs\n' "gallery=false"
+  expect "the manifest reaches the tool" 'Cargo.toml\n' "packages=ferrohealth-ui ferrohealth-ui-gallery forwarders"
   expect "the stylesheet reaches every set" 'crates/ferrohealth-ui/css/ferrohealth-ui.css\n' "design=$every"
   expect "the stylesheet reaches the page-wide journeys" 'crates/ferrohealth-ui/css/ferrohealth-ui.css\n' "journeys=test(/every_page_of_every_brand_loads|every_page_keeps_its_content|every_page|reflow|^painted::/)"
   expect "a crate theme reaches its brand's sets" 'crates/ferrohealth-ui/themes/ferrofed.css\n' "design=templates ferrofed"

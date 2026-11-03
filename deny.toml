@@ -35,6 +35,7 @@ confidence-threshold = 0.9
 exceptions = [
   { allow = ["BUSL-1.1"], crate = "ferrohealth-ui" },
   { allow = ["BUSL-1.1"], crate = "ferrohealth-ui-gallery" },
+  { allow = ["BUSL-1.1"], crate = "forwarders" },
 ]
 
 [bans]

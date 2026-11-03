@@ -99,16 +99,23 @@ never publish under it.
   assembles the fragments), `checks/` (the committed guards, the markup
   check `markup-rules.sh`, the script budget, the change classifier
   `affected.sh`, and the changelog, screenshot-path and module-order guards
-  among them, and the two that hold code to one owner,
-  `.claude/rules/rust-style.md` § Code is written once: `duplication.sh`,
+  among them, and the three that hold code to one owner,
+  `.claude/rules/rust-style.md` § Code is written once and § No function
+  only forwards to another: `duplication.sh`,
   the ratchet on the duplicated lines jscpd measures in the Rust, the
   script modules and the templates, with its count in `duplication.count`,
   its block keys in `duplication-baseline.txt` and jscpd pinned in
   `docs/VERSIONS.md`, and `file-size.sh`, the 800-line budget per
   hand-written Rust file, also run per edit, with the files over it in
-  `file-size.list`, which may shrink and never grow; both pass a fall, and
+  `file-size.list`, which may shrink and never grow, and `forwarders.sh`,
+  the ratchet on the functions whose whole body forwards to one call, also
+  run per edit, with its count in `forwarders.count` and its keys in
+  `forwarders-baseline.txt`; all three pass a fall, and
   `.github/workflows/ratchet-tighten.yml` lowers the counts on `main`),
   `gh/` (the tracker helpers).
+- `tools/forwarders`: the forwarder ratchet's detector (`publish = false`),
+  which parses the hand-written Rust with `syn` and depends on no workspace
+  crate.
 - `changelog.d/`: the changelog fragments, one file per entry, assembled
   into `CHANGELOG.md` by the release pull request (`docs/release.md`).
 - `.github/`: CI with a single required `conclusion` job, CodeQL, Scorecard,
