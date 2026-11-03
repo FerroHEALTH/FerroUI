@@ -126,7 +126,7 @@ pub fn watch(visit: &Visit) -> Option<Html> {
             &visit.locale,
             SESSION_ROUTE,
             format!("/sign-in/{}/expired", brand.key()),
-            format!("{}/{}", crate::app::SIGN_OUT_ROUTE, brand.key()),
+            format!("{}/{}", crate::request::SIGN_OUT_ROUTE, brand.key()),
             left,
         )
     };

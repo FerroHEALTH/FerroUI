@@ -20,7 +20,6 @@ use ferrohealth_ui::view::pick_or_type::{PickOrType, Picker, pick_or_type};
 use ferrohealth_ui::view::surface::card;
 
 use crate::locale::Msg;
-use crate::markup::{h, t};
 use crate::visit::Visit;
 
 use super::dates::{date, today};
@@ -33,13 +32,13 @@ pub(super) fn federated(v: &Visit) -> Html {
         .map(|node| (String::from(node), format!("synthetic-{node}")))
         .collect();
     let checked = [String::from("node-a"), String::from("node-c")];
-    let partial = h(format!(
+    let partial = Html::raw(format!(
         "<input id=\"query-partial\" name=\"partial\" type=\"checkbox\" role=\"switch\" class=\"{SWITCH}\" checked aria-describedby=\"{}\">",
         help_id("query-partial")
     ));
     card(
         v.tr(Msg::FederatedQuery),
-        h(format!(
+        Html::raw(format!(
             "<form method=\"post\" action=\"#\" class=\"{FORM}\">{}{}<div class=\"fui-cluster\"><button type=\"button\" class=\"{}\">{}</button><button type=\"button\" class=\"{}\">{}</button></div></form>",
             chip_choices("nodes", v.tr(Msg::AskTheseNodes), nodes, &checked),
             check_field(
@@ -62,7 +61,7 @@ pub(super) fn federated(v: &Visit) -> Html {
 pub(super) fn shapes(v: &Visit) -> Html {
     let member = "synthetic-node-a";
     let base = "shape-base";
-    let base_input = h(format!(
+    let base_input = Html::raw(format!(
         "<input id=\"{base}\" name=\"base\" type=\"url\" class=\"{INPUT}\" value=\"node-a.example.org\" aria-invalid=\"true\" aria-describedby=\"{}\">",
         described_by(base, true, true).unwrap_or_default()
     ));
@@ -71,10 +70,10 @@ pub(super) fn shapes(v: &Visit) -> Html {
         v.tr_with(Msg::BaseUrlOf, &[("member", member.into())]),
     )
     .help(v.tr(Msg::WhereGatewayReachesMember))
-    .after(h(format!(
+    .after(Html::raw(format!(
         "<p id=\"{}\" class=\"{ERROR}\" aria-live=\"polite\">{}</p>",
         error_id(base),
-        t(v.tr(Msg::AddressMustAbsoluteStartingHttps))
+        Html::text(v.tr(Msg::AddressMustAbsoluteStartingHttps))
     )))
     .view(base_input);
     let rows: Html = ["urn:example:alpha", "urn:example:beta"]
@@ -82,17 +81,17 @@ pub(super) fn shapes(v: &Visit) -> Html {
         .zip(1_u32..)
         .map(|(value, place)| {
             let id = format!("shape-value-{place}");
-            let input = h(format!(
+            let input = Html::raw(format!(
                 "<input id=\"{id}\" name=\"values\" type=\"text\" class=\"{INPUT} fui-mono\" value=\"{value}\">"
             ));
             field_row(
                 FieldRow::WithActions,
                 Html::join([
                     Field::new(id, v.tr(Msg::Value)).label_hidden().view(input),
-                    h(format!(
+                    Html::raw(format!(
                         "<button type=\"button\" class=\"{}\" aria-label=\"{}\">{}</button>",
                         Variant::Ghost.class(),
-                        t(v.tr_with(Msg::RemoveValue, &[("value", value.into())])),
+                        Html::text(v.tr_with(Msg::RemoveValue, &[("value", value.into())])),
                         label(Some(Glyph::TRASH), v.tr(Msg::Remove))
                     )),
                 ]),
@@ -101,23 +100,23 @@ pub(super) fn shapes(v: &Visit) -> Html {
         .collect();
     let add = "shape-add";
     let adding = action_field(
-        h(format!(
+        Html::raw(format!(
             "<button type=\"button\" id=\"{add}\" class=\"{}\" aria-describedby=\"{}\">{}</button>",
             Variant::Secondary.class(),
             error_id(add),
             label(Some(Glyph::PLUS), v.tr(Msg::AddValue))
         )),
-        h(format!(
+        Html::raw(format!(
             "<p id=\"{}\" class=\"{ERROR}\" aria-live=\"polite\">{}</p>",
             error_id(add),
-            t(v.tr(Msg::TenValuesMost))
+            Html::text(v.tr(Msg::TenValuesMost))
         )),
     );
     card(
         v.tr(Msg::FieldShapes),
-        h(format!(
+        Html::raw(format!(
             "<form method=\"post\" action=\"#\" class=\"{FORM}\">{base_field}<fieldset class=\"fui-fieldset\"><legend class=\"fui-label\">{}</legend><div class=\"fui-stack\">{rows}</div>{adding}</fieldset></form>",
-            t(v.tr(Msg::AllowedAudiences))
+            Html::text(v.tr(Msg::AllowedAudiences))
         )),
     )
 }
@@ -129,10 +128,10 @@ const ANOTHER: &str = "another";
 /// combobox, or typed behind the last option, each control with its own
 /// label, and each with a button back to the list.
 pub(super) fn pick_or_typed(v: &Visit) -> Html {
-    let select = h(format!(
+    let select = Html::raw(format!(
         "<select id=\"pick-version-choice\" class=\"{SELECT}\" aria-describedby=\"{help}\"><option value=\"\">{}</option><option value=\"2.81\">2.81</option><option value=\"2.80\">2.80</option><option value=\"{ANOTHER}\" data-other>{}</option></select>",
-        t(v.tr(Msg::OneServerResolves)),
-        t(v.tr(Msg::AnotherVersion)),
+        Html::text(v.tr(Msg::OneServerResolves)),
+        Html::text(v.tr(Msg::AnotherVersion)),
         help = help_id("pick-version"),
     ));
     let version = pick_or_type(PickOrType {
@@ -142,15 +141,15 @@ pub(super) fn pick_or_typed(v: &Visit) -> Html {
             control: select,
         },
         typed_id: String::from("pick-version"),
-        typed: h(format!(
+        typed: Html::raw(format!(
             "<input id=\"pick-version\" name=\"version\" type=\"text\" class=\"{INPUT}\" placeholder=\"2.79\" aria-describedby=\"{}\">",
             help_id("pick-version")
         )),
         typing: false,
-        after: Some(h(format!(
+        after: Some(Html::raw(format!(
             "<p id=\"{}\" class=\"fui-help\">{}</p><button type=\"button\" id=\"pick-version-back\" class=\"{}\" data-fui-pick-back hidden>{}</button>",
             help_id("pick-version"),
-            t(v.tr(Msg::VersionServerHoldsAnotherOne)),
+            Html::text(v.tr(Msg::VersionServerHoldsAnotherOne)),
             Variant::Ghost.small(),
             label(Some(Glyph::ARROW_LEFT), v.tr(Msg::ChooseFromList))
         ))),
@@ -175,23 +174,23 @@ pub(super) fn pick_or_typed(v: &Visit) -> Html {
             remote: None,
         })),
         typed_id: String::from("pick-canonical"),
-        typed: h(format!(
+        typed: Html::raw(format!(
             "<input id=\"pick-canonical\" name=\"canonical\" type=\"url\" class=\"{INPUT}\" placeholder=\"{}\" aria-describedby=\"{}\">",
             "http://example.org/fhir/CodeSystem/synthetic",
             help_id("pick-canonical")
         )),
         typing: false,
-        after: Some(h(format!(
+        after: Some(Html::raw(format!(
             "<p id=\"{}\" class=\"fui-help\">{}</p><button type=\"button\" id=\"pick-canonical-back\" class=\"{}\" data-fui-pick-back hidden>{}</button>",
             help_id("pick-canonical"),
-            t(v.tr(Msg::CodeSystemServerHoldsCanonical)),
+            Html::text(v.tr(Msg::CodeSystemServerHoldsCanonical)),
             Variant::Ghost.small(),
             label(Some(Glyph::ARROW_LEFT), v.tr(Msg::ChooseFromList))
         ))),
     });
     card(
         v.tr(Msg::PickType),
-        h(format!(
+        Html::raw(format!(
             "<form method=\"post\" action=\"#\" class=\"{FORM}\">{version} {canonical}</form>"
         )),
     )
@@ -202,16 +201,16 @@ pub(super) const DRAFT: &str = "gallery-draft";
 
 /// The fields, the select, the text area and the checkbox row.
 pub(super) fn fields(v: &Visit) -> Html {
-    let reason = h(format!(
+    let reason = Html::raw(format!(
         "<input id=\"form-reason\" name=\"reason\" type=\"text\" class=\"{INPUT}\" maxlength=\"200\" aria-describedby=\"{}\">",
         help_id("form-reason")
     ));
-    let format = h(format!(
+    let format = Html::raw(format!(
         "<select id=\"form-format\" name=\"format\" class=\"{SELECT}\"><option value=\"canonical\">{}</option><option value=\"flat\">{}</option></select>",
-        t(v.tr(Msg::Canonical)),
-        t(v.tr(Msg::Flat))
+        Html::text(v.tr(Msg::Canonical)),
+        Html::text(v.tr(Msg::Flat))
     ));
-    let bundle = h(format!(
+    let bundle = Html::raw(format!(
         "<textarea id=\"form-bundle\" name=\"bundle\" rows=\"4\" class=\"{TEXTAREA}\"></textarea>"
     ));
     let until = date_field(date(
@@ -225,12 +224,12 @@ pub(super) fn fields(v: &Visit) -> Html {
             latest: None,
         },
     ));
-    let confirm = h(String::from(
+    let confirm = Html::raw(String::from(
         "<input id=\"form-confirm\" name=\"confirmed\" type=\"checkbox\">",
     ));
     card(
         v.tr(Msg::Fields),
-        h(format!(
+        Html::raw(format!(
             "<form method=\"post\" action=\"#\" class=\"{FORM}\">{}{}{}{until}{}<button type=\"button\" class=\"{}\">{}</button></form>",
             field(
                 "form-reason",
@@ -249,10 +248,10 @@ pub(super) fn fields(v: &Visit) -> Html {
 
 /// A button of `variant` saying `words`, disabled when `disabled`.
 pub(super) fn button(variant: &str, words: &str, disabled: bool) -> Html {
-    h(format!(
+    Html::raw(format!(
         "<button type=\"button\" class=\"{variant}\"{}>{}</button>",
         if disabled { " disabled" } else { "" },
-        t(words)
+        Html::text(words)
     ))
 }
 
@@ -260,19 +259,19 @@ pub(super) fn button(variant: &str, words: &str, disabled: bool) -> Html {
 /// beside text inputs, and the button variants enabled and disabled.
 pub(super) fn inline(v: &Visit) -> Html {
     let text = |id: &str, name: &str, placeholder: &str| {
-        h(format!(
+        Html::raw(format!(
             "<input id=\"{id}\" name=\"{name}\" type=\"text\" class=\"{INPUT}\" placeholder=\"{}\">",
-            t(placeholder)
+            Html::text(placeholder)
         ))
     };
     let ehr = text("row-ehr", "ehr", &v.tr(Msg::EhrIdUuidBlankLets));
     let subject = text("row-subject", "subject", &v.tr(Msg::ExternalSubjectId));
     let namespace = text("row-namespace", "namespace", &v.tr(Msg::Namespace));
     let path = text("row-path", "path", "/context/start_time/value");
-    let version = h(format!(
+    let version = Html::raw(format!(
         "<select id=\"row-version\" name=\"version\" class=\"{SELECT}\"><option value=\"latest\">{}</option><option value=\"1\">{}</option></select>",
-        t(v.tr(Msg::Latest)),
-        t(v.tr(Msg::Version1))
+        Html::text(v.tr(Msg::Latest)),
+        Html::text(v.tr(Msg::Version1))
     ));
     let at = date_field(DateField {
         with_time: true,
@@ -324,7 +323,7 @@ pub(super) fn inline(v: &Visit) -> Html {
     ]);
     card(
         v.tr(Msg::FieldsRow),
-        h(format!(
+        Html::raw(format!(
             "<div class=\"{FORM}\">{first}{second}<div class=\"fui-cluster\">{variants}</div><div class=\"fui-cluster\">{disabled}</div></div>"
         )),
     )
@@ -349,23 +348,23 @@ pub(super) fn per_row(v: &Visit) -> Html {
                 search.clone(),
                 v.tr(Msg::FindCodeCodeSystem),
                 Some(v.tr(Msg::TwoLettersMore)),
-                h(format!(
+                Html::raw(format!(
                     "<input id=\"{search}\" name=\"search-{key}\" type=\"search\" class=\"{INPUT}\" placeholder=\"{}\" aria-describedby=\"{search_help}\">",
-                    t(v.tr(Msg::BloodPressure))
+                    Html::text(v.tr(Msg::BloodPressure))
                 )),
             );
             let switch = keyed_check_field(
                 inactive.clone(),
                 v.tr(Msg::IncludeInactiveCodes),
                 v.tr(Msg::CodesSystemRetiredStillMatch),
-                h(format!(
+                Html::raw(format!(
                     "<input type=\"checkbox\" role=\"switch\" id=\"{inactive}\" name=\"inactive-{key}\" class=\"{SWITCH}\" aria-describedby=\"{inactive_help}\">"
                 )),
             );
-            h(format!(
+            Html::raw(format!(
                 "<fieldset class=\"fui-fieldset\"><legend>{} {}</legend>{}{switch}</fieldset>",
-                t(verb),
-                t(v.tr(Msg::Codes)),
+                Html::text(verb),
+                Html::text(v.tr(Msg::Codes)),
                 field_flow(Html::join([
                     find,
                     button(Variant::Secondary.class(), &v.tr(Msg::Add), false)
@@ -375,6 +374,6 @@ pub(super) fn per_row(v: &Visit) -> Html {
         .collect();
     card(
         v.tr(Msg::FieldsPerRow),
-        h(format!("<div class=\"{FORM}\">{rows}</div>")),
+        Html::raw(format!("<div class=\"{FORM}\">{rows}</div>")),
     )
 }

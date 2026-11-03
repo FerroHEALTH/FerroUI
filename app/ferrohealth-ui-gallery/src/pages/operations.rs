@@ -30,13 +30,12 @@ use ferrohealth_ui::view::transform::{
     run_button, transform_options, transform_pair,
 };
 
-use crate::app::Page;
 use crate::data::{
     EHR_ID, FLAT, HL7_MESSAGE, HL7_SEGMENTS, HL7_VERSION, JSON, OMOP_TABLES, OMOP_VERSION,
     PAIR_REQUEST, PAIR_TAGS, RUN_KEYS, RUN_OPERATION, TEMPLATES,
 };
 use crate::locale::Msg;
-use crate::markup::{h, t};
+use crate::page::Page;
 use crate::visit::Visit;
 
 /// The state of a transform pair the page shows.
@@ -90,9 +89,9 @@ fn pair_input(key: &str, label: &str) -> Html {
         marks: Vec::new(),
         editable: true,
     });
-    h(format!(
+    Html::raw(format!(
         "<label for=\"{id}\" class=\"fui-sr-only\">{}</label>{editor}",
-        t(label)
+        Html::text(label)
     ))
 }
 
@@ -103,7 +102,7 @@ fn input_pane(v: &Visit, key: &'static str) -> TransformPane {
         title: v.tr(Msg::OpComposition),
         tags: vec![String::from(flat)],
         state: None,
-        actions: Some(h(format!(
+        actions: Some(Html::raw(format!(
             "<button type=\"reset\" class=\"{}\">{}</button>",
             Variant::Ghost.small(),
             label(Some(Glyph::X), v.tr(Msg::OpClear))
@@ -121,13 +120,13 @@ fn template_field(v: &Visit, id: &'static str, more: &[&str]) -> Html {
     let options: Html = TEMPLATES
         .iter()
         .chain(more)
-        .map(|template| h(format!("<option value=\"{template}\">{template}</option>")))
+        .map(|template| Html::raw(format!("<option value=\"{template}\">{template}</option>")))
         .collect();
     field(
         id,
         v.tr(Msg::OpTemplate),
         None,
-        h(format!(
+        Html::raw(format!(
             "<select id=\"{id}\" name=\"template\" class=\"{SELECT}\">{options}</select>"
         )),
     )
@@ -140,9 +139,9 @@ fn format_field(v: &Visit, id: &'static str) -> Html {
         id,
         v.tr(Msg::OpFormat),
         None,
-        h(format!(
+        Html::raw(format!(
             "<select id=\"{id}\" name=\"format\" class=\"{SELECT}\"><option value=\"canonical\">{}</option><option value=\"flat\" selected>{flat}</option></select>",
-            t(v.tr(Msg::OpCanonical))
+            Html::text(v.tr(Msg::OpCanonical))
         )),
     )
 }
@@ -239,7 +238,7 @@ fn pair_panel(v: &Visit, pair: Pair) -> Html {
     titled_panel(
         v.tr(pair.title()),
         Html::empty(),
-        h(format!(
+        Html::raw(format!(
             "<form method=\"post\" action=\"#\">{options}{pair_view}</form>"
         )),
     )
@@ -315,14 +314,14 @@ fn load_reports(v: &Visit, root: &str) -> Html {
                     } else {
                         Arrival::AfterAction
                     },
-                    title: t(v.tr(title)),
+                    title: Html::text(v.tr(title)),
                     counts,
                     action: with_action.then(|| {
-                        h(format!(
+                        Html::raw(format!(
                             "<a href=\"{}\" class=\"{}\">{}</a>",
-                            t(&mappings),
+                            Html::text(&mappings),
                             Variant::Secondary.small(),
-                            t(v.tr(action))
+                            Html::text(v.tr(action))
                         ))
                     }),
                 })
@@ -343,14 +342,14 @@ fn dense(v: &Visit) -> Html {
         "dense-patient",
         v.tr(Msg::OpPatient),
         None,
-        h(format!(
+        Html::raw(format!(
             "<input id=\"dense-patient\" name=\"patient\" class=\"{INPUT}\" value=\"SYN-0042\">"
         )),
     );
-    let checks = field_checks(h(format!(
+    let checks = field_checks(Html::raw(format!(
         "<div class=\"fui-check\"><input id=\"dense-active\" name=\"active\" type=\"checkbox\" checked><label for=\"dense-active\">{}</label></div><div class=\"fui-check\"><input id=\"dense-designations\" name=\"designations\" type=\"checkbox\"><label for=\"dense-designations\">{}</label></div>",
-        t(v.tr(Msg::OpActiveOnly)),
-        t(v.tr(Msg::OpIncludeDesignations))
+        Html::text(v.tr(Msg::OpActiveOnly)),
+        Html::text(v.tr(Msg::OpIncludeDesignations))
     )));
     let options = transform_options(
         Density::Dense,
@@ -374,7 +373,7 @@ fn dense(v: &Visit) -> Html {
         load_report(LoadReport {
             outcome: Outcome::Ok,
             arrival: Arrival::WithPage,
-            title: t(v.tr(Msg::OpConvertedOne)),
+            title: Html::text(v.tr(Msg::OpConvertedOne)),
             counts: Vec::new(),
             action: None,
         }),
@@ -410,7 +409,7 @@ fn dense(v: &Visit) -> Html {
     titled_panel(
         v.tr(Msg::OpDense),
         Html::empty(),
-        h(format!(
+        Html::raw(format!(
             "<form method=\"post\" action=\"#\">{options}{verdict}{asked}</form>"
         )),
     )
@@ -452,7 +451,7 @@ fn rows(v: &Visit) -> Html {
     };
     let ehr = Field::new("rows-ehr", v.tr(Msg::OpEhrId))
         .holds_id()
-        .view(h(format!(
+        .view(Html::raw(format!(
             "<input id=\"rows-ehr\" name=\"ehr\" class=\"{INPUT} fui-mono\" value=\"{EHR_ID}\" spellcheck=\"false\">"
         )));
     let options = transform_options(
@@ -470,7 +469,7 @@ fn rows(v: &Visit) -> Html {
     titled_panel(
         v.tr(Msg::OpOmopRows),
         Html::empty(),
-        h(format!(
+        Html::raw(format!(
             "<form method=\"post\" action=\"#\">{options}{pair}</form>"
         )),
     )
@@ -538,9 +537,9 @@ fn message(v: &Visit) -> Html {
         "hl7-charset",
         v.tr(Msg::OpCharacterSet),
         None,
-        h(format!(
+        Html::raw(format!(
             "<select id=\"hl7-charset\" name=\"charset\" class=\"{SELECT}\"><option value=\"ascii\">{}</option></select>",
-            t(v.tr(Msg::OpCharacterSetAscii))
+            Html::text(v.tr(Msg::OpCharacterSetAscii))
         )),
     );
     let options = transform_options(
@@ -552,7 +551,7 @@ fn message(v: &Visit) -> Html {
     titled_panel(
         v.tr(Msg::OpHl7Message),
         Html::empty(),
-        h(format!(
+        Html::raw(format!(
             "<form method=\"post\" action=\"#\">{options}{pair}{read}</form>"
         )),
     )

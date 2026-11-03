@@ -36,9 +36,9 @@ use ferrohealth_ui::view::side_panel::{Opener, SidePanel, SidePanelWords, side_p
 use ferrohealth_ui::view::surface::{Container, card, chip, definitions, page_header, split};
 use ferrohealth_ui::view::toast::{Flash, RAISES, ToastLink};
 
-use crate::app::{Page, REMOVE_ROUTE};
 use crate::locale::Msg;
-use crate::markup::{h, t};
+use crate::page::Page;
+use crate::request::REMOVE_ROUTE;
 use crate::visit::Visit;
 
 /// The files a row of the modal dialogs' list names.
@@ -50,7 +50,7 @@ fn raises(flash: &Flash) -> String {
     let line = flash
         .line
         .as_ref()
-        .map(|line| format!(" data-fui-toast-line=\"{}\"", t(line)))
+        .map(|line| format!(" data-fui-toast-line=\"{}\"", Html::text(line)))
         .unwrap_or_default();
     let action = flash
         .action
@@ -58,14 +58,14 @@ fn raises(flash: &Flash) -> String {
         .map(|action| {
             format!(
                 " data-fui-toast-action=\"{}\" data-fui-toast-href=\"{}\"",
-                t(&action.label),
-                t(&action.href)
+                Html::text(&action.label),
+                Html::text(&action.href)
             )
         })
         .unwrap_or_default();
     format!(
         " data-fui-toast-title=\"{}\" {RAISES}=\"{}\"{line}{action}",
-        t(&flash.title),
+        Html::text(&flash.title),
         flash.tone.name()
     )
 }
@@ -96,11 +96,11 @@ fn confirm_and_toast(v: &Visit, dialog: &str, stakes: Stakes) -> Html {
     let raised = told(v, toast)
         .map(|flash| raises(&flash))
         .unwrap_or_default();
-    h(format!(
+    Html::raw(format!(
         "<a href=\"{}?toast={toast}\" id=\"confirm-{dialog}\" class=\"{class}\"{raised} data-fui=\"keep\">{}{}</a>",
-        t(page_path(v, "overlays")),
+        Html::text(page_path(v, "overlays")),
         icon(glyph, "16"),
-        t(words)
+        Html::text(words)
     ))
 }
 
@@ -136,21 +136,21 @@ fn confirmations(v: &Visit) -> Html {
             id: "how-reloading".into(),
             title: v.tr(Msg::HowReloadingWorks).into(),
         },
-        h(format!(
+        Html::raw(format!(
             "<p>{}</p><p class=\"fui-small fui-muted\">{}</p>",
-            t(v.tr(Msg::ReloadingCompiles)),
-            t(v.tr(Msg::ReloadingKeeps))
+            Html::text(v.tr(Msg::ReloadingCompiles)),
+            Html::text(v.tr(Msg::ReloadingKeeps))
         )),
         Width::Wide,
     );
     card(
         v.tr(Msg::ConfirmationDialogs),
-        h(format!(
+        Html::raw(format!(
             "<p class=\"fui-muted\">{}</p>{plain}{danger}<button type=\"button\" class=\"{}\" command=\"show-modal\" commandfor=\"how-reloading\" aria-haspopup=\"dialog\">{}{}</button>{how}{}",
-            t(v.tr(Msg::OpenedTheirTriggerNoScript)),
+            Html::text(v.tr(Msg::OpenedTheirTriggerNoScript)),
             Variant::Ghost.class(),
             icon(Glyph::INFO, "16"),
-            t(v.tr(Msg::HowReloadingWorks)),
+            Html::text(v.tr(Msg::HowReloadingWorks)),
             member_removals(v)
         )),
     )
@@ -172,9 +172,9 @@ fn member_removals(v: &Visit) -> Html {
     let said = removed
         .filter(|member| crate::data::MEMBERS.contains(member))
         .map(|member| {
-            h(format!(
+            Html::raw(format!(
                 "<p class=\"fui-small fui-muted\" id=\"member-removed\">{}</p>",
-                t(v.tr_with(Msg::MemberRemoved, &[("member", Arg::from(member))]))
+                Html::text(v.tr_with(Msg::MemberRemoved, &[("member", Arg::from(member))]))
             ))
         })
         .unwrap_or_default();
@@ -187,7 +187,7 @@ fn member_removals(v: &Visit) -> Html {
         &columns,
         Body::Rows(rows),
     ));
-    h(format!("<div id=\"member-removals\">{table}</div>{said}"))
+    Html::raw(format!("<div id=\"member-removals\">{table}</div>{said}"))
 }
 
 /// The row of `member`: its name, and in its actions cell its menu with
@@ -209,15 +209,15 @@ fn member_row(v: &Visit, member: &'static str, back: &str) -> Html {
     ))]);
     let described = described_by(&reason, true, false).unwrap_or_default();
     let fields = Html::join([
-        h(format!(
+        Html::raw(format!(
             "<input type=\"hidden\" name=\"member\" value=\"{member}\"><input type=\"hidden\" name=\"back\" value=\"{}\">",
-            t(back)
+            Html::text(back)
         )),
         keyed_field(
             reason.clone(),
             v.tr(Msg::Reason),
             Some(v.tr(Msg::ReasonKept)),
-            h(format!(
+            Html::raw(format!(
                 "<textarea id=\"{reason}\" name=\"reason\" class=\"{TEXTAREA}\" required aria-describedby=\"{described}\"></textarea>"
             )),
         ),
@@ -234,15 +234,15 @@ fn member_row(v: &Visit, member: &'static str, back: &str) -> Html {
             action: String::from(REMOVE_ROUTE),
             fields,
         }),
-        h(format!(
+        Html::raw(format!(
             "<button type=\"submit\" class=\"{}\">{}</button>",
             Variant::Destructive.class(),
             label(Some(Glyph::TRASH), v.tr_with(Msg::RemoveMember, &named))
         )),
     );
-    h(format!(
+    Html::raw(format!(
         "<tr><th scope=\"row\"><code>{member}</code></th><td data-label=\"{}\" class=\"{ACTIONS}\">{}{dialog}</td></tr>",
-        t(v.tr(Msg::Actions)),
+        Html::text(v.tr(Msg::Actions)),
         row_menu(&v.locale, &menu)
     ))
 }
@@ -341,13 +341,13 @@ fn action_groups(v: &Visit) -> Html {
         glyph: Glyph::SAVE,
         label: v.tr(Msg::SaveTheQuery).into(),
         title: v.tr(Msg::SaveTheQueryToTheServer).into(),
-        body: h(format!(
+        body: Html::raw(format!(
             "<form method=\"get\" action=\"#popover-form\" class=\"fui-form\">{}<div class=\"fui-dialog-actions\"><button type=\"submit\" class=\"{}\">{}</button></div></form>",
             field(
                 "beside-query-name",
                 v.tr(Msg::Name),
                 None,
-                h(format!(
+                Html::raw(format!(
                     "<input id=\"beside-query-name\" name=\"name\" type=\"text\" class=\"{INPUT}\" value=\"synthetic-vitals\">"
                 )),
             ),
@@ -375,7 +375,7 @@ fn menus(v: &Visit) -> Html {
         .map(|(at, row)| {
             let label = v.tr_with(Msg::ActionsFor, &[("name", row.into())]);
             split(
-                h(format!("<code>{row}</code>")),
+                Html::raw(format!("<code>{row}</code>")),
                 row_menu(&v.locale, &file_menu(v, &format!("row-menu-{at}"), label)),
             )
         })
@@ -417,7 +417,7 @@ fn menus(v: &Visit) -> Html {
         &crate::locale::choices(),
         &ferrohealth_ui::i18n::Locale::default(),
         &Post {
-            action: String::from(crate::app::PREFERENCE_ROUTE),
+            action: String::from(crate::request::PREFERENCE_ROUTE),
             back: here.clone(),
         },
     );
@@ -442,13 +442,13 @@ fn modals(v: &Visit) -> Html {
         .into_iter()
         .map(|row| {
             split(
-                h(format!("<code>{row}</code>")),
-                h(format!(
+                Html::raw(format!("<code>{row}</code>")),
+                Html::raw(format!(
                     "<a href=\"{}?delete={row}\" class=\"{}\" data-delete=\"{row}\" data-fui=\"keep\">{}{}</a>",
-                    t(&here),
+                    Html::text(&here),
                     Variant::Danger.small(),
                     icon(Glyph::TRASH, "14"),
-                    t(v.tr(Msg::Delete))
+                    Html::text(v.tr(Msg::Delete))
                 )),
             )
         })
@@ -464,11 +464,14 @@ fn modals(v: &Visit) -> Html {
                 .into(),
             stakes: Stakes::Danger,
             width: Width::Narrow,
-            body: h(format!("<p>{}</p>", t(v.tr(Msg::FileGoesGoodRunningSet)))),
-            actions: h(format!(
+            body: Html::raw(format!(
+                "<p>{}</p>",
+                Html::text(v.tr(Msg::FileGoesGoodRunningSet))
+            )),
+            actions: Html::raw(format!(
                 "<a href=\"{}?toast=row-deleted&amp;row={}\" id=\"confirm-delete-row\" class=\"{}\"{} data-fui=\"keep\">{}{}</a>",
-                t(&here),
-                t(&named),
+                Html::text(&here),
+                Html::text(&named),
                 Variant::Destructive.class(),
                 pending
                     .map(|row| raises(&Flash::new(
@@ -477,7 +480,7 @@ fn modals(v: &Visit) -> Html {
                     )))
                     .unwrap_or_default(),
                 icon(Glyph::TRASH, "16"),
-                t(v.tr(Msg::Delete))
+                Html::text(v.tr(Msg::Delete))
             )),
             open: pending.is_some(),
             cancel: Some(format!("{here}#modals")),
@@ -494,15 +497,15 @@ fn modals(v: &Visit) -> Html {
                 "rename-name",
                 v.tr(Msg::NewName),
                 Some(v.tr(Msg::PathBelowFhirconnectOmocl)),
-                h(format!(
+                Html::raw(format!(
                     "<input id=\"rename-name\" type=\"text\" class=\"{INPUT}\" value=\"synthetic-007.model.yml\">"
                 )),
             ),
-            actions: h(format!(
+            actions: Html::raw(format!(
                 "<button type=\"button\" class=\"{}\" command=\"close\" commandfor=\"rename-file\">{}{}</button>",
                 Variant::Primary.class(),
                 icon(Glyph::SAVE, "16"),
-                t(v.tr(Msg::Rename))
+                Html::text(v.tr(Msg::Rename))
             )),
             open: false,
             cancel: None,
@@ -510,7 +513,7 @@ fn modals(v: &Visit) -> Html {
     );
     card(
         v.tr(Msg::ModalDialogs),
-        h(format!(
+        Html::raw(format!(
             "<div id=\"modals\">{}<button type=\"button\" class=\"{}\" id=\"open-rename\" command=\"show-modal\" commandfor=\"rename-file\" aria-haspopup=\"dialog\">{}</button>{delete}{rename}</div>",
             divided_list(Some(v.tr(Msg::Files).into()), rows),
             Variant::Secondary.class(),
@@ -524,14 +527,14 @@ fn modals(v: &Visit) -> Html {
 fn access_body(v: &Visit) -> Html {
     Container::Stack.wrap(Html::join([
         definitions(vec![
-            (v.tr(Msg::Signed), t(v.tr(Msg::SyntheticOperator))),
-            (v.tr(Msg::Method), t(v.tr(Msg::OpenidConnect))),
+            (v.tr(Msg::Signed), Html::text(v.tr(Msg::SyntheticOperator))),
+            (v.tr(Msg::Method), Html::text(v.tr(Msg::OpenidConnect))),
             (
                 v.tr(Msg::Policy),
-                t(v.tr(Msg::OperatorScopeDecidesWhatConsole)),
+                Html::text(v.tr(Msg::OperatorScopeDecidesWhatConsole)),
             ),
         ]),
-        h(format!("<h3>{}</h3>", t(v.tr(Msg::Scopes)))),
+        Html::raw(format!("<h3>{}</h3>", Html::text(v.tr(Msg::Scopes)))),
         Container::Cluster.wrap(Html::join([
             chip("ferrobridge.operator"),
             chip("openid"),
@@ -551,9 +554,9 @@ fn side_panel_card(v: &Visit) -> Html {
     };
     card(
         v.tr(Msg::SidePanel),
-        h(format!(
+        Html::raw(format!(
             "<p class=\"fui-muted\">{}</p>{}",
-            t(v.tr(Msg::ContentNoNavigationFromEnd)),
+            Html::text(v.tr(Msg::ContentNoNavigationFromEnd)),
             side_panel(
                 SidePanel {
                     id: String::from("access"),
@@ -623,9 +626,9 @@ fn toasts(v: &Visit) -> Html {
         let raised = told(v, tone.name())
             .map(|flash| raises(&flash))
             .unwrap_or_default();
-        h(format!(
+        Html::raw(format!(
             "<a href=\"{}?toast={}\" class=\"{}\" data-toast=\"{}\"{raised} data-fui=\"keep\">{}</a>",
-            t(&here),
+            Html::text(&here),
             tone.name(),
             Variant::Secondary.class(),
             tone.name(),
@@ -639,13 +642,13 @@ fn toasts(v: &Visit) -> Html {
 /// The popover form: Save the query, a small form that opens under its
 /// trigger and posts with no script.
 fn popover(v: &Visit) -> Html {
-    let body = h(format!(
+    let body = Html::raw(format!(
         "<form method=\"get\" action=\"#popover-form\" class=\"fui-form\">{}{}<div class=\"fui-dialog-actions\"><button type=\"submit\" class=\"{}\">{}</button></div></form>",
         field(
             "query-name",
             v.tr(Msg::Name),
             None,
-            h(format!(
+            Html::raw(format!(
                 "<input id=\"query-name\" name=\"name\" type=\"text\" class=\"{INPUT}\" value=\"synthetic-vitals\">"
             )),
         ),
@@ -653,7 +656,7 @@ fn popover(v: &Visit) -> Html {
             "query-version",
             v.tr(Msg::Version),
             None,
-            h(format!(
+            Html::raw(format!(
                 "<input id=\"query-version\" name=\"version\" type=\"text\" class=\"{INPUT}\" value=\"1.0.0\">"
             )),
         ),
@@ -662,9 +665,9 @@ fn popover(v: &Visit) -> Html {
     ));
     card(
         v.tr(Msg::PopoverForm),
-        h(format!(
+        Html::raw(format!(
             "<p class=\"fui-muted\" id=\"popover-form\">{}</p>{}",
-            t(v.tr(Msg::PopoverFormOpensUnderTrigger)),
+            Html::text(v.tr(Msg::PopoverFormOpensUnderTrigger)),
             Container::Cluster.wrap(popover_form(PopoverForm {
                 id: "save-query".into(),
                 variant: Variant::Secondary,
@@ -736,10 +739,10 @@ fn shortcuts(v: &Visit) -> Html {
     ];
     card(
         v.tr(Msg::KeyboardShortcuts),
-        h(format!(
+        Html::raw(format!(
             "<p class=\"fui-muted\">{}</p><button type=\"button\" id=\"open-shortcuts\" class=\"fui-button fui-button-secondary fui-wide-only\" aria-keyshortcuts=\"?\" {OPENS_LEGEND} hidden>{}{}</button>{}{}",
-            t(v.tr(Msg::ShortcutsCardIntro)),
-            t(v.tr(Msg::KeyboardShortcuts)),
+            Html::text(v.tr(Msg::ShortcutsCardIntro)),
+            Html::text(v.tr(Msg::KeyboardShortcuts)),
             kbd("?"),
             shortcut_legend(&v.locale, shortcut_groups(v), Some(go_to(v))),
             shortcut_hint(&v.locale, &hint)

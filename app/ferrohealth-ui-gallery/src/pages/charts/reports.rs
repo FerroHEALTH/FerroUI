@@ -10,7 +10,6 @@ use ferrohealth_ui::view::funnel::{Bar, Funnel, FunnelPart, bar_list, funnel};
 use ferrohealth_ui::view::surface::{Container, card};
 
 use crate::locale::Msg;
-use crate::markup::{h, t};
 use crate::visit::Visit;
 
 /// The activity line of thirty synthetic days.
@@ -122,9 +121,9 @@ pub(super) fn run_report(v: &Visit, refused: bool) -> Html {
             label,
             parts,
         }),
-        h(format!(
+        Html::raw(format!(
             "<h3 class=\"fui-small fui-muted\">{}</h3>",
-            t(v.tr(Msg::RunRowsPerTable))
+            Html::text(v.tr(Msg::RunRowsPerTable))
         )),
         bar_list(&v.tr(Msg::RunBarlistLabel), &bars),
     ]);

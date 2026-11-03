@@ -22,8 +22,9 @@ use ferrohealth_ui::view::preferences::{
     typed_preference,
 };
 
-use crate::app::{PREFERENCE_ROUTE, Page, RESET_ROUTE, own_of};
 use crate::locale::Msg;
+use crate::page::Page;
+use crate::request::{PREFERENCE_ROUTE, RESET_ROUTE, own_of};
 use crate::visit::Visit;
 
 /// The name of the brand's accent, which its theme cards name.
@@ -183,7 +184,7 @@ pub fn page(v: &Visit) -> Page {
         .segment(2)
         .map_or(Some(Section::Appearance), Section::parse)
     else {
-        return crate::app::not_found(v);
+        return crate::page::not_found(v);
     };
     let brand = v.brand;
     let root = format!("/{}/preferences", brand.key());

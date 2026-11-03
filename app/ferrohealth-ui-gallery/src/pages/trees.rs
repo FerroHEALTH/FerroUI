@@ -31,9 +31,8 @@ use ferrohealth_ui::view::tree::{
     Edit, Mark, More, Tree, TreeKind, TreeNode, TreeWords, tree_view,
 };
 
-use crate::app::Page;
 use crate::locale::Msg;
-use crate::markup::{h, t};
+use crate::page::Page;
 use crate::trees_data::{
     COUNTRIES, COUNTRIES_VERSION, Concept, FINDINGS, FINDINGS_MATCHED, FINDINGS_OPEN,
     FINDINGS_SELECTED, FINDINGS_SYSTEM, FINDINGS_TOP, FINDINGS_VERSION, NATIONAL_CHEST,
@@ -175,9 +174,9 @@ fn search_pane(
     if matches.is_empty() {
         return BrowserPane::new(
             v.tr(Msg::TreesSearch),
-            pane_body(h(format!(
+            pane_body(Html::raw(format!(
                 "{field}<p class=\"fui-small fui-muted\">{}</p>",
-                t(v.tr(Msg::TreesSearchToSee))
+                Html::text(v.tr(Msg::TreesSearchToSee))
             ))),
         );
     }
@@ -185,9 +184,9 @@ fn search_pane(
     BrowserPane::new(
         v.tr(Msg::TreesSearch),
         Html::join([
-            pane_body(h(format!(
+            pane_body(Html::raw(format!(
                 "{field}<p class=\"fui-small fui-muted\" role=\"status\">{}</p>",
-                t(count)
+                Html::text(count)
             ))),
             match_list(&v.tr(Msg::TreesMatched), matches),
         ]),
@@ -212,11 +211,11 @@ fn concept_pane(
     };
     BrowserPane::new(
         v.tr(Msg::TreesTheConcept),
-        pane_body(h(format!(
+        pane_body(Html::raw(format!(
             "<h3 class=\"fui-concept-title\">{}</h3><p class=\"fui-small fui-muted\"><code>{}</code> · {} {mark}</p>{}",
-            t(display),
-            t(code),
-            t(read),
+            Html::text(display),
+            Html::text(code),
+            Html::text(read),
             definitions(facts)
         ))),
     )
@@ -269,7 +268,7 @@ fn deep_browser(v: &Visit) -> Html {
         .and_then(|(_, parent)| finding(parent));
     let mut facts = vec![(
         v.tr(Msg::TreesSystem),
-        h(format!("<code>{FINDINGS_SYSTEM}</code>")),
+        Html::raw(format!("<code>{FINDINGS_SYSTEM}</code>")),
     )];
     if let Some((code, display, _)) = parent {
         facts.push((
@@ -279,7 +278,10 @@ fn deep_browser(v: &Visit) -> Html {
     }
     let children = children_of(&concept);
     if !children.is_empty() {
-        facts.push((v.tr(Msg::TreesChildren), t(children.len().to_string())));
+        facts.push((
+            v.tr(Msg::TreesChildren),
+            Html::text(children.len().to_string()),
+        ));
     }
     titled_panel(
         v.tr(Msg::TreesDeepPath),
@@ -349,9 +351,9 @@ fn long_browser(v: &Visit) -> Html {
                 false,
             ),
         ),
-        (v.tr(Msg::TreesChildren), t(total.to_string())),
+        (v.tr(Msg::TreesChildren), Html::text(total.to_string())),
     ];
-    h(format!(
+    Html::raw(format!(
         "<div id=\"trees-long\">{}</div>",
         titled_panel(
             v.tr(Msg::TreesLongLevel),
@@ -386,8 +388,8 @@ fn flat_browser(v: &Visit) -> Html {
         })
         .collect();
     let (code, words) = COUNTRIES[0];
-    let facts = vec![(v.tr(Msg::TreesDisplay), t(v.tr(words)))];
-    h(format!(
+    let facts = vec![(v.tr(Msg::TreesDisplay), Html::text(v.tr(words)))];
+    Html::raw(format!(
         "<div id=\"trees-flat\">{}</div>",
         titled_panel(
             v.tr(Msg::TreesFlatSystem),
@@ -500,15 +502,15 @@ fn directories(v: &Visit) -> Html {
             count: None,
             actions: None,
         }),
-        h(format!(
+        Html::raw(format!(
             "{}<form method=\"get\" action=\"#trees-directory-edit\">{}</form>",
             section_intro(v.tr(Msg::TreesChangesStay)),
             folder_tree(v, "trees-directory-edit", true)
         )),
     );
-    h(format!(
+    Html::raw(format!(
         "<section id=\"trees-directory\" class=\"fui-card fui-panel\" aria-label=\"{}\">{read}{edit}</section>",
-        t(v.tr(Msg::TreesDirectory))
+        Html::text(v.tr(Msg::TreesDirectory))
     ))
 }
 

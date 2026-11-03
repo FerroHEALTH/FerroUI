@@ -12,7 +12,6 @@ use ferrohealth_ui::view::flow::{
 use ferrohealth_ui::view::surface::titled_panel;
 
 use crate::locale::Msg;
-use crate::markup::h;
 use crate::visit::Visit;
 
 /// A card of a flow.
@@ -421,7 +420,7 @@ pub(super) fn busy_flow(v: &Visit, open: &[String]) -> Html {
             foot: v.tr(Msg::FlowBusyFoot),
         },
     );
-    h(format!(
+    Html::raw(format!(
         "<div id=\"busy-flow\">{}</div>",
         titled_panel(v.tr(Msg::FlowBusyTitle), Html::empty(), drawn)
     ))

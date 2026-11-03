@@ -15,6 +15,7 @@ use ferrohealth_ui::style::Brand;
 use ferrohealth_ui::theme::Preferences;
 
 use crate::locale::{Msg, gallery_locale, tr_in};
+use crate::request::COOKIE_PREFIX;
 
 /// One request, as a page reads it.
 #[derive(Debug, Clone)]
@@ -38,13 +39,13 @@ impl Visit {
     /// `?`, possibly empty) and the `Cookie` header value `cookies`.
     #[must_use]
     pub fn new(path: &str, query: &str, cookies: &str) -> Self {
-        let preferences = crate::app::preferences_of(cookies);
+        let preferences = Preferences::read(cookies, COOKIE_PREFIX);
         let locale = gallery_locale(preferences.language.tag().unwrap_or_default());
         Self {
             path: path.to_owned(),
             query: Query::parse(query),
             cookies: cookies.to_owned(),
-            brand: crate::app::brand_of(path),
+            brand: crate::request::brand_of(path),
             preferences,
             locale,
         }

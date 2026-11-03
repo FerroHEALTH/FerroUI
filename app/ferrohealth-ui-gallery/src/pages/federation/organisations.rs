@@ -8,8 +8,8 @@ use ferrohealth_ui::style::Brand;
 use ferrohealth_ui::view::flow::FlowState;
 use ferrohealth_ui::view::topology::{RowAction, TopologyCard, TopologyGroup};
 
-use crate::app::PROBE_ROUTE;
 use crate::locale::Msg;
+use crate::request::PROBE_ROUTE;
 use crate::visit::Visit;
 
 use super::asked::Asked;

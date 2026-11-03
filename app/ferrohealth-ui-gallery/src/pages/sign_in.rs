@@ -14,8 +14,8 @@ use ferrohealth_ui::view::session::session_ended;
 use ferrohealth_ui::view::shell::{lockup_plain, mark};
 use ferrohealth_ui::view::sign_in::{Basic, Notice, Provider, Retry, SignIn, State, sign_in};
 
-use crate::app::{Page, brand_glyph};
 use crate::locale::Msg;
+use crate::page::{Page, brand_glyph};
 use crate::visit::Visit;
 
 /// Every state of the sign-in page the gallery draws, by the key its path

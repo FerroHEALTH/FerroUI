@@ -28,9 +28,8 @@ use ferrohealth_ui::view::replica::Replica;
 use ferrohealth_ui::view::surface::{Container, Crumb, Header, card, page_header, page_heading};
 use ferrohealth_ui::view::template::settings::{How, Setting, SettingsPage, Source, settings_page};
 
-use crate::app::Page;
 use crate::locale::Msg;
-use crate::markup::{h, t};
+use crate::page::Page;
 use crate::visit::Visit;
 
 use asked::asked;
@@ -118,7 +117,7 @@ fn self_description(v: &Visit, brand: Brand) -> Html {
     let setting = |label: Msg, description: Msg, value: &str, key: &str| Setting {
         label: v.tr(label),
         description: v.tr(description),
-        value: h(format!("<code>{}</code>", t(value))),
+        value: Html::raw(format!("<code>{}</code>", Html::text(value))),
         keys: vec![key.to_owned()],
         next_start: false,
         source: None,
@@ -198,7 +197,7 @@ pub fn part(v: &Visit) -> Page {
             heading,
             card(
                 v.tr(Msg::FedInsideTitle),
-                h(format!("<p>{}</p>", t(v.tr(Msg::FedInsideBody)))),
+                Html::raw(format!("<p>{}</p>", Html::text(v.tr(Msg::FedInsideBody)))),
             ),
         ])
     };

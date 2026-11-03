@@ -209,7 +209,7 @@ async fn sign_out_in_one_tab_ends_every_tab() -> Result<(), Box<dyn Error>> {
         let sign_out = browser
             .element(By::Css(format!(
                 "form[action='{}/ferrobridge'] button[type='submit']",
-                ferrohealth_ui_gallery::app::SIGN_OUT_ROUTE
+                ferrohealth_ui_gallery::request::SIGN_OUT_ROUTE
             )))
             .await?;
         browser

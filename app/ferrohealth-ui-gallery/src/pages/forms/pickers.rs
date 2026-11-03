@@ -16,7 +16,6 @@ use ferrohealth_ui::view::segmented::choice_reveal;
 use ferrohealth_ui::view::surface::card;
 
 use crate::locale::Msg;
-use crate::markup::{h, t};
 use crate::visit::Visit;
 
 use super::inputs::button;
@@ -26,10 +25,10 @@ use super::inputs::button;
 fn clause_pickers(v: &Visit) -> Html {
     (1_u8..=2)
         .map(|place| {
-            h(format!(
+            Html::raw(format!(
                 "<div class=\"fui-field\">{}<p id=\"clause-{place}-system-help\" class=\"fui-help\">{}</p></div>",
                 clause_picker(v, place),
-                t(v.tr(Msg::SystemClauseDrawsCodesFrom))
+                Html::text(v.tr(Msg::SystemClauseDrawsCodesFrom))
             ))
         })
         .collect()
@@ -114,20 +113,20 @@ fn system_picker(v: &Visit) -> Html {
 /// with its heading, a checkbox on the controls' line, and a disabled save
 /// that names its reason.
 pub(super) fn choosing(v: &Visit) -> Html {
-    let code = h(format!(
+    let code = Html::raw(format!(
         "<input id=\"choose-code\" name=\"code\" type=\"text\" class=\"{INPUT}\" placeholder=\"22298006\">"
     ));
-    let active = h(String::from(
+    let active = Html::raw(String::from(
         "<input id=\"choose-active\" name=\"active\" type=\"checkbox\" checked>",
     ));
     card(
         v.tr(Msg::Combobox),
-        h(format!(
+        Html::raw(format!(
             "<div class=\"{FORM}\">{}<fieldset class=\"fui-fieldset\"><legend class=\"fui-sr-only\">{}</legend>{}</fieldset><fieldset class=\"fui-fieldset\"><legend>{}</legend>{}</fieldset><div class=\"fui-cluster\"><button type=\"button\" class=\"{}\" disabled aria-describedby=\"choose-save-why\">{}</button><button type=\"button\" class=\"{}\">{}</button></div><p id=\"choose-save-why\" class=\"fui-help\">{}</p></div>",
             system_picker(v),
-            t(v.tr(Msg::Clauses)),
+            Html::text(v.tr(Msg::Clauses)),
             clause_pickers(v),
-            t(v.tr(Msg::TheCode)),
+            Html::text(v.tr(Msg::TheCode)),
             field_flow(Html::join([
                 field("choose-code", v.tr(Msg::Code), None, code),
                 check("choose-active", v.tr(Msg::ActiveConceptsOnly), active),
@@ -136,7 +135,7 @@ pub(super) fn choosing(v: &Visit) -> Html {
             label(Some(Glyph::SAVE), v.tr(Msg::SaveValueSet)),
             Variant::Danger.small(),
             label(Some(Glyph::TRASH), v.tr(Msg::RemoveClause)),
-            t(v.tr(Msg::CanonicalClauseWhatSaveNeeds)),
+            Html::text(v.tr(Msg::CanonicalClauseWhatSaveNeeds)),
         )),
     )
 }
@@ -149,7 +148,7 @@ pub(super) fn grouped(v: &Visit) -> Html {
             "member-name",
             v.tr(Msg::Member),
             None,
-            h(format!(
+            Html::raw(format!(
                 "<input id=\"member-name\" type=\"text\" class=\"{INPUT}\" value=\"synthetic-node-a\">"
             )),
         ),
@@ -157,7 +156,7 @@ pub(super) fn grouped(v: &Visit) -> Html {
             "member-base",
             v.tr(Msg::BaseUrl),
             None,
-            h(format!(
+            Html::raw(format!(
                 "<input id=\"member-base\" type=\"text\" class=\"{INPUT}\" value=\"https://node-a.example.org/\">"
             )),
         ),
@@ -167,18 +166,18 @@ pub(super) fn grouped(v: &Visit) -> Html {
             "member-system",
             v.tr(Msg::CodeSystem),
             None,
-            h(format!(
+            Html::raw(format!(
                 "<select id=\"member-system\" name=\"system\" class=\"{SELECT}\" disabled><option value=\"\">{}</option></select>",
-                t(v.tr(Msg::ChooseMemberFirst))
+                Html::text(v.tr(Msg::ChooseMemberFirst))
             )),
         ),
         field(
             "member-code",
             v.tr(Msg::FindCodeCodeSystem),
             None,
-            h(format!(
+            Html::raw(format!(
                 "<input id=\"member-code\" name=\"code\" type=\"search\" class=\"{INPUT}\" disabled placeholder=\"{}\">",
-                t(v.tr(Msg::ChooseCodeSystem))
+                Html::text(v.tr(Msg::ChooseCodeSystem))
             )),
         ),
         button(Variant::Secondary.class(), &v.tr(Msg::Search), true),
@@ -198,7 +197,7 @@ pub(super) fn grouped(v: &Visit) -> Html {
                 "member-secret",
                 v.tr(Msg::NewSecret),
                 None,
-                h(format!(
+                Html::raw(format!(
                     "<input id=\"member-secret\" name=\"secret-value\" type=\"password\" class=\"{INPUT}\" autocomplete=\"new-password\">"
                 )),
             ),
@@ -211,9 +210,9 @@ pub(super) fn grouped(v: &Visit) -> Html {
     );
     card(
         v.tr(Msg::GroupedFields),
-        h(format!(
+        Html::raw(format!(
             "<form method=\"post\" action=\"#\" class=\"{FORM}\"><fieldset class=\"fui-fieldset fui-well\"><legend>{}</legend>{pair}{flow}</fieldset>{reveal}</form>",
-            t(v.tr(Msg::FederationMember))
+            Html::text(v.tr(Msg::FederationMember))
         )),
     )
 }
@@ -232,19 +231,19 @@ pub(super) fn nested_reveal(v: &Visit) -> Html {
                 "grant-secret-value",
                 v.tr(Msg::NewSecret),
                 None,
-                h(format!(
+                Html::raw(format!(
                     "<input id=\"grant-secret-value\" type=\"password\" class=\"{INPUT}\" autocomplete=\"new-password\">"
                 )),
             ),
         ],
     );
-    let client = h(format!(
+    let client = Html::raw(format!(
         "<div class=\"fui-stack\">{}{secret}</div>",
         field(
             "grant-client-id",
             v.tr(Msg::ClientId),
             None,
-            h(format!(
+            Html::raw(format!(
                 "<input id=\"grant-client-id\" type=\"text\" class=\"{INPUT}\" value=\"synthetic-client\">"
             )),
         )
@@ -253,13 +252,13 @@ pub(super) fn nested_reveal(v: &Visit) -> Html {
         "grant-token-value",
         v.tr(Msg::TokenLabel),
         None,
-        h(format!(
+        Html::raw(format!(
             "<input id=\"grant-token-value\" type=\"password\" class=\"{INPUT}\" autocomplete=\"off\">"
         )),
     );
     card(
         v.tr(Msg::RevealInsideReveal),
-        h(format!(
+        Html::raw(format!(
             "<form method=\"post\" action=\"#\" class=\"{FORM}\">{}</form>",
             choice_reveal(
                 "grant",
@@ -280,7 +279,7 @@ pub(super) fn nested_reveal(v: &Visit) -> Html {
 pub(super) fn long_label(v: &Visit) -> Html {
     card(
         v.tr(Msg::LongButtonLabel),
-        h(format!(
+        Html::raw(format!(
             "<div class=\"fui-cluster\"><button type=\"button\" id=\"long-label\" class=\"{}\">{}</button><button type=\"button\" class=\"{}\">{}</button></div>",
             Variant::Primary.class(),
             label(

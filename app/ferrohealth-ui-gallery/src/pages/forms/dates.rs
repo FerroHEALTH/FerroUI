@@ -14,7 +14,6 @@ use ferrohealth_ui::view::form::{FIELD_FLOW, FORM};
 use ferrohealth_ui::view::surface::card;
 
 use crate::locale::Msg;
-use crate::markup::{h, t};
 use crate::visit::Visit;
 
 /// The day the gallery takes as today, so every capture draws the same
@@ -132,13 +131,13 @@ pub(super) fn dates(v: &Visit) -> Html {
     };
     card(
         v.tr(Msg::DateFields),
-        h(format!(
+        Html::raw(format!(
             "<div class=\"{FORM}\">{}{}<form method=\"get\" action=\"#date-range\" id=\"date-range\" class=\"{FIELD_FLOW}\">{}<button type=\"submit\" class=\"{}\">{}</button></form></div>",
             date_field(from),
             date_field(defer),
             date_range(range),
             Variant::Secondary.class(),
-            t(v.tr(Msg::ShowActions)),
+            Html::text(v.tr(Msg::ShowActions)),
         )),
     )
 }

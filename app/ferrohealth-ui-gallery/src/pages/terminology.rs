@@ -36,9 +36,8 @@ use ferrohealth_ui::view::surface::{
 use ferrohealth_ui::view::template::list::HeadingCount;
 use ferrohealth_ui::view::version::{VersionRoot, VersionSelect};
 
-use crate::app::Page;
 use crate::locale::Msg;
-use crate::markup::{h, t};
+use crate::page::Page;
 use crate::terminology_data::{
     ABDOMEN, BALLOT_ROOT, CHEST, CODE_SYSTEMS, COUGH, DEFAULT_ROOT, FEVER, FINDINGS, LEGACY,
     LEGACY_CHEST, LEGACY_COUGH, LONG_CANONICAL, MALAISE, MAPPINGS, ROOTS, SECURITY, SOFTWARE,
@@ -134,13 +133,18 @@ fn codings(v: &Visit) -> Html {
     let rows = VALUE_SETS
         .iter()
         .map(|(title, url)| {
-            let head = title_cell(None, Some("#codings"), t(title), Some(canonical(url)));
-            h(format!("<tr>{head}</tr>"))
+            let head = title_cell(
+                None,
+                Some("#codings"),
+                Html::text(title),
+                Some(canonical(url)),
+            );
+            Html::raw(format!("<tr>{head}</tr>"))
         })
         .collect();
     let caption = v.tr(Msg::TmValueSets);
     let table = data_table(DataTable::new(&caption, &columns, Body::Rows(rows)));
-    h(format!(
+    Html::raw(format!(
         "<div id=\"codings\">{}</div>",
         card(v.tr(Msg::TmCodings), Html::join([forms, table]))
     ))
@@ -161,9 +165,9 @@ fn clauses_read(v: &Visit) -> Html {
         &v.locale,
         Clause {
             kind: ClauseKind::Include,
-            title: h(format!("<a href=\"#codings\">{}</a>", t(&source))),
+            title: Html::raw(format!("<a href=\"#codings\">{}</a>", Html::text(&source))),
             source: source.clone(),
-            sentence: t(v.tr_with(
+            sentence: Html::text(v.tr_with(
                 Msg::TmIncludesBelow,
                 &[("value", CHEST.into()), ("name", display(CHEST).into())],
             )),
@@ -176,11 +180,11 @@ fn clauses_read(v: &Visit) -> Html {
         &v.locale,
         Clause {
             kind: ClauseKind::Exclude,
-            title: h(format!("<a href=\"#codings\">{}</a>", t(&source))),
+            title: Html::raw(format!("<a href=\"#codings\">{}</a>", Html::text(&source))),
             source: source.clone(),
-            sentence: h(format!(
+            sentence: Html::raw(format!(
                 "{} {}",
-                t(v.tr_with(Msg::TmExcludesCodes, &[("count", 1.into())])),
+                Html::text(v.tr_with(Msg::TmExcludesCodes, &[("count", 1.into())])),
                 coding(&v.locale, finding(WHEEZE), Layout::Inline)
             )),
             body: None,
@@ -192,9 +196,9 @@ fn clauses_read(v: &Visit) -> Html {
         &v.locale,
         Clause {
             kind: ClauseKind::Include,
-            title: t(&source),
+            title: Html::text(&source),
             source,
-            sentence: t(v.tr_with(Msg::TmIncludesCodes, &[("count", LISTED.into())])),
+            sentence: Html::text(v.tr_with(Msg::TmIncludesCodes, &[("count", LISTED.into())])),
             body: Some(clause_codes(
                 &v.locale,
                 [COUGH, FEVER, MALAISE]
@@ -226,13 +230,9 @@ fn clauses_read(v: &Visit) -> Html {
     panel_sections_card(v.tr(Msg::TmValueSet), section)
 }
 
-/// A select of `options`, each its value and words, `chosen` selected.
-fn select(id: &str, name: &str, options: Vec<(String, String)>, chosen: &str) -> Html {
-    refused_select(id, name, options, chosen, false)
-}
-
-/// [`select`], refused with its error line when `refused`.
-fn refused_select(
+/// A select of `options`, each its value and words, `chosen` selected, and
+/// refused with its error line when `refused`.
+fn select(
     id: &str,
     name: &str,
     options: Vec<(String, String)>,
@@ -243,10 +243,10 @@ fn refused_select(
         .into_iter()
         .map(|(value, words)| {
             let selected = if value == chosen { " selected" } else { "" };
-            h(format!(
+            Html::raw(format!(
                 "<option value=\"{}\"{selected}>{}</option>",
-                t(value),
-                t(words)
+                Html::text(value),
+                Html::text(words)
             ))
         })
         .collect();
@@ -258,10 +258,10 @@ fn refused_select(
     } else {
         String::new()
     };
-    h(format!(
+    Html::raw(format!(
         "<select id=\"{}\" name=\"{}\" class=\"{SELECT}\"{refusal}>{options}</select>",
-        t(id),
-        t(name)
+        Html::text(id),
+        Html::text(name)
     ))
 }
 
@@ -280,6 +280,7 @@ fn filter_row(v: &Visit, key: &str, value: &str) -> RepeatRow {
                 (String::from("inactive"), v.tr(Msg::TmPropInactive)),
             ],
             "concept",
+false,
         )),
         Field::new(operator.clone(), v.tr(Msg::TmOperator)).view(select(
             &operator,
@@ -290,10 +291,11 @@ fn filter_row(v: &Visit, key: &str, value: &str) -> RepeatRow {
                 (String::from("="), v.tr(Msg::TmOpEquals)),
             ],
             "is-a",
+false,
         )),
-        Field::new(typed.clone(), v.tr(Msg::TmValue)).view(h(format!(
+        Field::new(typed.clone(), v.tr(Msg::TmValue)).view(Html::raw(format!(
             "<input id=\"{typed}\" name=\"filter[{key}][value]\" type=\"text\" class=\"{INPUT} fui-mono\" value=\"{}\">",
-            t(value)
+            Html::text(value)
         ))),
     ]);
     RepeatRow {
@@ -311,20 +313,20 @@ fn filter_row(v: &Visit, key: &str, value: &str) -> RepeatRow {
 
 /// The Remove of a code of a clause in the composer.
 fn remove_code(v: &Visit, code: &str) -> Html {
-    let label = t(v.tr_with(Msg::TmRemoveCode, &[("value", code.to_owned().into())]));
-    h(format!(
+    let label = Html::text(v.tr_with(Msg::TmRemoveCode, &[("value", code.to_owned().into())]));
+    Html::raw(format!(
         "<button type=\"submit\" class=\"fui-icon-button\" name=\"remove-code\" value=\"{}\" formnovalidate aria-label=\"{label}\" title=\"{label}\">{}</button>",
-        t(code),
+        Html::text(code),
         icon(Glyph::X, "16")
     ))
 }
 
 /// The Remove of a whole clause in the composer.
 fn remove_clause(v: &Visit, key: &str) -> Html {
-    let label = t(v.tr(Msg::TmRemoveClause));
-    h(format!(
+    let label = Html::text(v.tr(Msg::TmRemoveClause));
+    Html::raw(format!(
         "<button type=\"submit\" class=\"fui-icon-button\" name=\"remove-clause\" value=\"{}\" formnovalidate aria-label=\"{label}\" title=\"{label}\">{}</button>",
-        t(key),
+        Html::text(key),
         icon(Glyph::TRASH, "16")
     ))
 }
@@ -340,12 +342,14 @@ fn source_fields(v: &Visit, key: &str) -> Html {
             &format!("clause[{key}][system]"),
             vec![(String::from("sf"), FINDINGS.to_owned())],
             "sf",
+            false,
         )),
         Field::new(version.clone(), v.tr(Msg::TmVersion)).view(select(
             &version,
             &format!("clause[{key}][version]"),
             vec![(String::from("3"), v.tr(Msg::TmVersionDefault))],
             "3",
+            false,
         )),
     ]))
 }
@@ -374,9 +378,9 @@ fn composed_include(v: &Visit) -> Html {
         &v.locale,
         Clause {
             kind: ClauseKind::Include,
-            title: t(&source),
+            title: Html::text(&source),
             source: source.clone(),
-            sentence: t(v.tr_with(
+            sentence: Html::text(v.tr_with(
                 Msg::TmIncludesBelow,
                 &[("value", CHEST.into()), ("name", display(CHEST).into())],
             )),
@@ -413,11 +417,11 @@ fn composer(v: &Visit) -> Html {
         &v.locale,
         Clause {
             kind: ClauseKind::Exclude,
-            title: t(&source),
+            title: Html::text(&source),
             source,
-            sentence: h(format!(
+            sentence: Html::raw(format!(
                 "{} {}",
-                t(v.tr_with(Msg::TmExcludesCodes, &[("count", 1.into())])),
+                Html::text(v.tr_with(Msg::TmExcludesCodes, &[("count", 1.into())])),
                 coding(&v.locale, finding(WHEEZE), Layout::Inline)
             )),
             body: Some(Html::join([
@@ -437,11 +441,11 @@ fn composer(v: &Visit) -> Html {
         },
     );
     let add = |value: &str, words: Msg| {
-        h(format!(
+        Html::raw(format!(
             "<button type=\"submit\" class=\"{}\" name=\"add-clause\" value=\"{value}\">{}{}</button>",
             Variant::Ghost.small(),
             icon(Glyph::PLUS, "16"),
-            t(v.tr(words))
+            Html::text(v.tr(words))
         ))
     };
     let adds = Container::AddRow.wrap(Html::join([
@@ -461,7 +465,7 @@ fn composer(v: &Visit) -> Html {
             adds,
         ]),
     );
-    h(format!(
+    Html::raw(format!(
         "<form method=\"post\" action=\"#\" id=\"value-set-composer\">{}</form>",
         panel_sections_card(v.tr(Msg::TmEditValueSet), section)
     ))
@@ -477,33 +481,39 @@ fn matrix(v: &Visit) -> Html {
             answered: *answered,
         })
         .collect();
-    let same =
-        |value: &str| -> Vec<Option<Html>> { ROOTS.iter().map(|_| Some(t(value))).collect() };
+    let same = |value: &str| -> Vec<Option<Html>> {
+        ROOTS.iter().map(|_| Some(Html::text(value))).collect()
+    };
     let rows = vec![
         MatrixRow {
-            name: t(v.tr(Msg::TmSoftware)),
+            name: Html::text(v.tr(Msg::TmSoftware)),
             cells: same(SOFTWARE),
         },
         MatrixRow {
-            name: t(v.tr(Msg::TmBase)),
+            name: Html::text(v.tr(Msg::TmBase)),
             cells: ROOTS
                 .iter()
-                .map(|(name, _, _)| Some(h(format!("<code>{}</code>", t(base(name))))))
+                .map(|(name, _, _)| {
+                    Some(Html::raw(format!(
+                        "<code>{}</code>",
+                        Html::text(base(name))
+                    )))
+                })
                 .collect(),
         },
         MatrixRow {
-            name: t(v.tr(Msg::TmCodeSystems)),
+            name: Html::text(v.tr(Msg::TmCodeSystems)),
             cells: same(CODE_SYSTEMS),
         },
         MatrixRow {
-            name: t(v.tr(Msg::TmSecurity)),
+            name: Html::text(v.tr(Msg::TmSecurity)),
             cells: same(SECURITY),
         },
         MatrixRow {
-            name: t(v.tr(Msg::TmServes)),
+            name: Html::text(v.tr(Msg::TmServes)),
             cells: ROOTS
                 .iter()
-                .map(|(name, _, _)| (*name == BALLOT_ROOT).then(|| t(v.tr(Msg::TmBallot))))
+                .map(|(name, _, _)| (*name == BALLOT_ROOT).then(|| Html::text(v.tr(Msg::TmBallot))))
                 .collect(),
         },
     ];
@@ -546,7 +556,7 @@ fn mappings(v: &Visit) -> Html {
         Msg::TmGroup,
         &[("name", LEGACY.into()), ("value", FINDINGS.into())],
     );
-    let group = group_row(&columns, t(heading));
+    let group = group_row(&columns, Html::text(heading));
     let rows: Html = MAPPINGS
         .iter()
         .map(|row| mapping_row(&v.locale, &columns, mapping(row)))
@@ -555,7 +565,7 @@ fn mappings(v: &Visit) -> Html {
     let table = data_table(DataTable::new(
         &caption,
         &columns,
-        Body::Bodies(h(format!("<tbody>{group} {rows}</tbody>"))),
+        Body::Bodies(Html::raw(format!("<tbody>{group} {rows}</tbody>"))),
     ));
     let section = panel_section(
         &v.locale,
@@ -608,7 +618,7 @@ fn target_row(v: &Visit, source: &str, key: &str, target: Target, missing: bool)
     let comment_id = format!("target-{source}-{key}-comment");
     let name = |part: &str| format!("target[{source}][{key}][{part}]");
     let chosen = if missing { "" } else { relationship };
-    let relation = refused_select(
+    let relation = select(
         &relationship_id,
         &name("relationship"),
         relationship_options(v),
@@ -616,17 +626,17 @@ fn target_row(v: &Visit, source: &str, key: &str, target: Target, missing: bool)
         missing,
     );
     let fields = Html::join([
-        Field::new(target_id.clone(), v.tr(Msg::TmTargetCode)).view(h(format!(
+        Field::new(target_id.clone(), v.tr(Msg::TmTargetCode)).view(Html::raw(format!(
             "<input id=\"{target_id}\" name=\"{}\" type=\"text\" class=\"{INPUT} fui-mono\" value=\"{}\">",
-            t(name("code")),
-            t(code)
+            Html::text(name("code")),
+            Html::text(code)
         ))),
         Field::new(relationship_id.clone(), v.tr(Msg::TmRelationship)).view(relation),
-        Field::new(comment_id.clone(), v.tr(Msg::TmComment)).view(h(format!(
+        Field::new(comment_id.clone(), v.tr(Msg::TmComment)).view(Html::raw(format!(
             "<input id=\"{comment_id}\" name=\"{}\" type=\"text\" class=\"{INPUT}\" value=\"{}\" placeholder=\"{}\">",
-            t(name("comment")),
-            t(comment),
-            t(v.tr(Msg::TmOptional))
+            Html::text(name("comment")),
+            Html::text(comment),
+            Html::text(v.tr(Msg::TmOptional))
         ))),
     ]);
     let after = missing.then(|| {
@@ -634,10 +644,10 @@ fn target_row(v: &Visit, source: &str, key: &str, target: Target, missing: bool)
             Msg::TmChooseRelationship,
             &[("value", code.to_owned().into())],
         );
-        h(format!(
+        Html::raw(format!(
             "<p id=\"{}\" class=\"{ERROR}\">{}</p>",
             error_id(&relationship_id),
-            t(line)
+            Html::text(line)
         ))
     });
     RepeatRow {
@@ -677,10 +687,10 @@ fn element(v: &Visit, source: &str, target: Target, missing: bool) -> Html {
         empty: v.tr(Msg::TmNoTargets),
         form: None,
     });
-    let remove = t(v.tr_with(Msg::TmRemoveSource, &[("value", source.to_owned().into())]));
-    let actions = h(format!(
+    let remove = Html::text(v.tr_with(Msg::TmRemoveSource, &[("value", source.to_owned().into())]));
+    let actions = Html::raw(format!(
         "<button type=\"submit\" class=\"fui-icon-button\" name=\"remove-source\" value=\"{}\" formnovalidate aria-label=\"{remove}\" title=\"{remove}\">{}</button>",
-        t(source),
+        Html::text(source),
         icon(Glyph::TRASH, "16")
     ));
     map_element(
@@ -703,12 +713,14 @@ fn map_editor(v: &Visit) -> Html {
             "group[source]",
             vec![(String::from("legacy"), LEGACY.to_owned())],
             "legacy",
+            false,
         )),
         Field::new("group-target", v.tr(Msg::TmTargetSystem)).view(select(
             "group-target",
             "group[target]",
             vec![(String::from("sf"), FINDINGS.to_owned())],
             "sf",
+            false,
         )),
     ]));
     let elements = map_elements(Html::join([
@@ -727,7 +739,7 @@ fn map_editor(v: &Visit) -> Html {
         }),
         Html::join([fields, clause_part(v.tr(Msg::TmCodes)), elements]),
     );
-    h(format!(
+    Html::raw(format!(
         "<form method=\"post\" action=\"#\" id=\"concept-map-editor\">{}</form>",
         panel_sections_card(v.tr(Msg::TmEditConceptMap), section)
     ))

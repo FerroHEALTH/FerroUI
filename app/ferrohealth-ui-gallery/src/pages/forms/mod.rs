@@ -21,8 +21,8 @@ use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::form::Posted;
 use ferrohealth_ui::view::surface::{Container, page_header};
 
-use crate::app::Page;
 use crate::locale::Msg;
+use crate::page::Page;
 use crate::visit::Visit;
 
 use dates::dates;

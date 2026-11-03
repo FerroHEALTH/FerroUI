@@ -15,30 +15,29 @@ use ferrohealth_ui::view::repeat::{Fields, ROW, Repeat, RepeatAdd, RepeatRow, Ro
 use ferrohealth_ui::view::surface::card;
 
 use crate::locale::Msg;
-use crate::markup::{h, t};
 use crate::visit::Visit;
 
 /// Fields with a part inside their edge: a unit, a prefix, a refused value,
 /// a disabled one and a masked identifier with its hold-to-show eye (R10).
 pub(super) fn edge_parts(v: &Visit) -> Html {
-    let timeout = h(format!(
+    let timeout = Html::raw(format!(
         "<input id=\"edge-timeout\" name=\"timeout\" class=\"{INPUT}\" inputmode=\"numeric\" value=\"1200\" aria-describedby=\"{}\">",
         described_with_unit("edge-timeout", false, false)
     ));
-    let base = h(format!(
+    let base = Html::raw(format!(
         "<input id=\"edge-base\" name=\"base\" class=\"{INPUT}\" spellcheck=\"false\" value=\"cdr-a.example.org\">"
     ));
-    let limit = h(format!(
+    let limit = Html::raw(format!(
         "<input id=\"edge-limit\" name=\"limit\" class=\"{INPUT}\" inputmode=\"numeric\" value=\"fifty\" aria-invalid=\"true\" aria-describedby=\"{}\">",
         described_with_unit("edge-limit", false, true)
     ));
-    let retention = h(format!(
+    let retention = Html::raw(format!(
         "<input id=\"edge-retention\" name=\"retention\" class=\"{INPUT}\" inputmode=\"numeric\" value=\"30\" disabled aria-describedby=\"{}\">",
         described_with_unit("edge-retention", true, false)
     ));
     card(
         v.tr(Msg::FieldEdgeParts),
-        h(format!(
+        Html::raw(format!(
             "<div class=\"{FORM}\">{}{}{}{}{}</div>",
             Field::new("edge-timeout", v.tr(Msg::Timeout))
                 .trailing(Inner::Unit(v.tr(Msg::Milliseconds)))
@@ -48,10 +47,10 @@ pub(super) fn edge_parts(v: &Visit) -> Html {
                 .view(base),
             Field::new("edge-limit", v.tr(Msg::RowLimit))
                 .trailing(Inner::Unit(v.tr(Msg::RowsUnit)))
-                .after(h(format!(
+                .after(Html::raw(format!(
                     "<p id=\"{}\" class=\"{ERROR}\">{}</p>",
                     error_id("edge-limit"),
-                    t(v.tr(Msg::TypeWholeNumber))
+                    Html::text(v.tr(Msg::TypeWholeNumber))
                 )))
                 .view(limit),
             Field::new("edge-retention", v.tr(Msg::Retention))
@@ -93,9 +92,9 @@ const ENDPOINTS: [(&str, &str, &[&str]); 2] = [
 /// The profile row `key` of the endpoint row `endpoint`, holding `url`.
 fn profile_row(v: &Visit, endpoint: &str, key: &str, url: &str) -> RepeatRow {
     let id = format!("ep-{endpoint}-profile-{key}");
-    let input = h(format!(
+    let input = Html::raw(format!(
         "<input id=\"{id}\" name=\"endpoint[{endpoint}][profile][{key}]\" class=\"{INPUT}\" spellcheck=\"false\" value=\"{}\">",
-        t(url)
+        Html::text(url)
     ));
     RepeatRow {
         key: key.to_owned(),
@@ -147,15 +146,15 @@ fn endpoint_row(v: &Visit, key: &str, name: &str, base: &str, urls: &[&str]) -> 
     let id = format!("ep-{key}-id");
     let base_id = format!("ep-{key}-base");
     let named = [("name", Arg::from(name.to_owned()))];
-    let fields = h(format!(
+    let fields = Html::raw(format!(
         "<div class=\"{FIELD_FLOW}\">{}{}</div>{}",
-        Field::new(id.clone(), v.tr(Msg::EpId)).view(h(format!(
+        Field::new(id.clone(), v.tr(Msg::EpId)).view(Html::raw(format!(
             "<input id=\"{id}\" name=\"endpoint[{key}][id]\" class=\"{INPUT}\" spellcheck=\"false\" value=\"{}\">",
-            t(name)
+            Html::text(name)
         ))),
-        Field::new(base_id.clone(), v.tr(Msg::EpBase)).view(h(format!(
+        Field::new(base_id.clone(), v.tr(Msg::EpBase)).view(Html::raw(format!(
             "<input id=\"{base_id}\" name=\"endpoint[{key}][base]\" class=\"{INPUT}\" spellcheck=\"false\" value=\"{}\">",
-            t(base)
+            Html::text(base)
         ))),
         profiles(v, key, name, urls)
     ));
@@ -198,7 +197,7 @@ pub(super) fn endpoints(v: &Visit) -> Html {
     });
     card(
         v.tr(Msg::EpTitle),
-        h(format!(
+        Html::raw(format!(
             "<form method=\"post\" action=\"#\" class=\"{FORM}\">{list}</form>"
         )),
     )

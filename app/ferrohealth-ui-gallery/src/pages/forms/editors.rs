@@ -29,13 +29,12 @@ use ferrohealth_ui::view::surface::{
 use ferrohealth_ui::view::template::list::HeadingCount;
 use ferrohealth_ui::view::upload::{Sending, Upload, UploadWords, upload_field};
 
-use crate::app::DRAFT_ROUTE;
 use crate::data::{
     CLEAN_FILE, CONTEXT_MAPPING, DRAFT_FINDINGS, DRAFT_MAPPING, DRAFT_OPENED, DRAFT_PATH,
     DRAFT_TEXT, FINDING_CODES, LONG_FINDING, MAPPING_PATH, WHOLE_FINDING,
 };
 use crate::locale::{Msg, message};
-use crate::markup::{h, t};
+use crate::request::DRAFT_ROUTE;
 use crate::visit::Visit;
 
 use super::inputs::DRAFT;
@@ -103,12 +102,12 @@ pub(super) fn editor(v: &Visit) -> Html {
     ]
     .into_iter()
     .map(|(line, tone, word, text)| {
-        h(format!(
+        Html::raw(format!(
             "<li>{}<span class=\"fui-issue-head\"><a href=\"#{}\">{}</a>:</span><span class=\"fui-issue-text\">{}</span></li>",
             badge(tone, word),
             line_id(DRAFT, line),
-            t(v.tr_with(Msg::IssueLine, &[("line", Arg::from(line))])),
-            t(text)
+            Html::text(v.tr_with(Msg::IssueLine, &[("line", Arg::from(line))])),
+            Html::text(text)
         ))
     })
     .collect();
@@ -116,12 +115,12 @@ pub(super) fn editor(v: &Visit) -> Html {
         v.tr(Msg::HighlightedEditor),
         Html::join([
             Field::new(DRAFT, v.tr(Msg::File))
-                .after(h(format!(
+                .after(Html::raw(format!(
                     "<p class=\"fui-help\" role=\"status\">{}</p>",
-                    t(size)
+                    Html::text(size)
                 )))
                 .view(field),
-            h(format!("<ul class=\"fui-issues\">{diagnostics}</ul>")),
+            Html::raw(format!("<ul class=\"fui-issues\">{diagnostics}</ul>")),
         ]),
     )
 }
@@ -182,7 +181,7 @@ pub(super) fn mapping_editor(v: &Visit) -> Html {
             ),
         ],
     };
-    let check = h(format!(
+    let check = Html::raw(format!(
         "<button type=\"submit\" class=\"{}\">{}</button>",
         Variant::Secondary.small(),
         label(Some(Glyph::LIST_CHECKS), v.tr(Msg::Check))
@@ -220,7 +219,7 @@ pub(super) fn mapping_editor(v: &Visit) -> Html {
         ),
     );
     editor_split(
-        h(format!(
+        Html::raw(format!(
             "<form method=\"post\" action=\"{DRAFT_ROUTE}\">{panel}</form>"
         )),
         side,
@@ -402,9 +401,9 @@ pub(super) fn filter(v: &Visit) -> Html {
     let items: Html = names
         .iter()
         .map(|name| {
-            h(format!(
+            Html::raw(format!(
                 "<li {ROW_TEXT}=\"{0}\"><code>{0}</code></li>",
-                t(name)
+                Html::text(name)
             ))
         })
         .collect();
@@ -427,9 +426,9 @@ pub(super) fn filter(v: &Visit) -> Html {
     });
     card(
         v.tr(Msg::Filter),
-        h(format!(
+        Html::raw(format!(
             "{filter}<ul id=\"gallery-filter-rows\" class=\"fui-divided\" aria-label=\"{}\">{items}</ul>",
-            t(v.tr(Msg::Files))
+            Html::text(v.tr(Msg::Files))
         )),
     )
 }
@@ -456,7 +455,7 @@ pub(super) fn editor_headers(v: &Visit) -> Html {
     };
     card(
         v.tr(Msg::EditorHeaders),
-        Container::Stack.wrap(h(format!(
+        Container::Stack.wrap(Html::raw(format!(
             "<div data-editor-mode=\"new\">{}</div><div data-editor-mode=\"edit\">{}</div>",
             header(Mode::Creating),
             header(Mode::Editing(String::from("synthetic-007.model.yml")))

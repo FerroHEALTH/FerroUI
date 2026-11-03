@@ -13,9 +13,8 @@ use ferrohealth_ui::view::topology::{
     TopologyGroup, TopologySide, TopologyView, topology,
 };
 
-use crate::app::PROBE_ROUTE;
 use crate::locale::Msg;
-use crate::markup::{h, t};
+use crate::request::PROBE_ROUTE;
 use crate::visit::Visit;
 
 use super::asked::Asked;
@@ -65,14 +64,14 @@ fn services(v: &Visit, brand: Brand, asked: &Asked) -> TopologySide {
 /// The quick look of the card `id`, when it is one of the federation's.
 fn quick_look(v: &Visit, id: &str, brand: Brand, asked: &Asked) -> QuickLook {
     let close = asked.query(|next| next.look = None);
-    let probe = h(format!(
+    let probe = Html::raw(format!(
         "<form method=\"post\" action=\"{PROBE_ROUTE}\" class=\"fui-actions\"><input type=\"hidden\" name=\"node\" value=\"{}\"><button type=\"submit\" class=\"fui-button fui-button-primary fui-button-small\">{}{}</button><a href=\"{}/{}\" class=\"fui-button fui-button-secondary fui-button-small\">{}</a></form>",
-        t(id),
+        Html::text(id),
         ferrohealth_ui::icon::icon(Glyph::ACTIVITY, "14"),
-        t(v.tr(Msg::FedProbeNow)),
-        t(home(brand)),
-        t(id),
-        t(v.tr(Msg::FedOpenPage))
+        Html::text(v.tr(Msg::FedProbeNow)),
+        Html::text(home(brand)),
+        Html::text(id),
+        Html::text(v.tr(Msg::FedOpenPage))
     ));
     QuickLook {
         card: id.to_owned(),
@@ -80,9 +79,9 @@ fn quick_look(v: &Visit, id: &str, brand: Brand, asked: &Asked) -> QuickLook {
         mono: true,
         line: Some(v.tr(Msg::FedLookLine)),
         close: format!("{}{close}", home(brand)),
-        body: h(format!(
+        body: Html::raw(format!(
             "<p class=\"fui-small\">{}</p>{probe}",
-            t(v.tr(Msg::FedLookBody))
+            Html::text(v.tr(Msg::FedLookBody))
         )),
     }
 }
@@ -216,9 +215,9 @@ pub(super) fn federation_map(v: &Visit, brand: Brand, asked: &Asked) -> Html {
                     .collect(),
             },
             tools: None,
-            updated: Some(h(format!(
+            updated: Some(Html::raw(format!(
                 "<span class=\"fui-small fui-muted fui-topology-updated\">{}</span>",
-                t(v.tr(Msg::FedUpdated))
+                Html::text(v.tr(Msg::FedUpdated))
             ))),
             collapse_all: Some(ClusterLink {
                 href: format!(
