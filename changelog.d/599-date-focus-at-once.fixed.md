@@ -1,0 +1,1 @@
+- A date picker moves the focus to the chosen day at once when it draws its grid again, so a key pressed right after a day is clicked, such as Escape, reaches the picker and no longer falls to the page (#599).

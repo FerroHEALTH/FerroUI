@@ -230,10 +230,12 @@ export function assemble(panel, config, body, left, cancel, apply) {
   ));
 }
 
-// Moves the focus to the day `n` once the browser has drawn it.
+// Moves the focus to the day `n` at once: the grid was just drawn again,
+// so the button that held the focus is gone, and a key pressed before a
+// later frame would reach the page and not the picker.
 export function focusDay(panel, n) {
   const target = panel.querySelector("[data-day='" + iso(n) + "']");
-  if (target) requestAnimationFrame(() => target.focus());
+  if (target) target.focus();
 }
 
 // A key on the grid of `state`: the day keyTarget names, when the bounds
