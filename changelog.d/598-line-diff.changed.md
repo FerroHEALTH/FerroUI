@@ -1,1 +1,0 @@
-- `table::change::change_table(locale, caption, key, changes)` takes its key column's heading as `key`, `None` keeping the library's "Setting", and `change_table_keyed` is gone: a console calls `change_table` with `Some(heading)`, such as "File" for a revision's changed files (#598).
