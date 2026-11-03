@@ -11,6 +11,25 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.6.5] - 2026-11-03
+
+### Changed
+
+- A component's form is an argument of its one function or a field of what it draws, and the drawn HTML is unchanged. `table::view::DataTable` carries its `shape` (a `Shape`) and is built with `DataTable::new(caption, columns, body)`, `.with_sorting` and `.with_shape`; `KeyedCombobox` carries its `remote` search. `title_cell(level, href, name, sub)` takes an `Option<u32>` level, `view::dialog::confirm_dialog(locale, confirmation, stakes, form, confirm)` its `Stakes` and an optional `ConfirmForm`, `info_dialog(locale, explanation, body, width)` a `Width`, `view::compare::compare(locale, table, presentation)` a `Presentation`, `view::side_panel::side_panel(panel, shortcut)`, `view::shortcuts::shortcut_legend(locale, groups, go_to)` and `view::secret::secret_state(locale, state, id)` an `Option`, `calendar::Moment::parse(text, with_time, order)` a `DateOrder` and `table::model::Paging::write(query, sizes)` the console's `Sizes`. `docs/consoles.md` lists each call (#579).
+- `table` draws with the view primitives and no module of `view` imports `table`, so four parts moved and each console moves its imports at its next pin: `view::change`, `view::mapping` and `view::versions` are `table::change`, `table::mapping` and `table::versions`; `view::browser::browser_find` is `table::filter::browser_find`; `table::filter::FilterMenu`, `FilterChoice`, `MenuForm` and `filter_menu` are in `view::filter_menu`; and `table::model::PAGE_KEY`, `SIZE_KEY`, `SORT_KEY` and `ORDER_KEY` are in `query`. The drawn HTML is unchanged (#580).
+- `view::flow`, `view::chart`, `view::topology`, `view::tree`, `view::date` and `calendar` are module folders with one file per concern, so no library file is over 800 lines, and eight chart and six tree items moved, each console moving its imports at its next pin: `view::chart::has_gaps` and `line_svg` are in `view::chart::line`, `tick_label` and `value_label` in `view::chart::scale`, `FiguresWords` and `figures` in `view::chart::figures`, and `LegendEntry` and `legend` in `view::chart::legend`; `view::tree::Shown`, `in_sight`, `path_key`, `path_keys`, `Move` and `moved` are in `view::tree::path`. Every other item keeps its path, and the drawn HTML is unchanged (#581).
+- `view::dialog::Modal` takes `stakes: Stakes` in place of `danger: bool`, the same choice the confirmation dialog takes, so each console writes `stakes: Stakes::Danger` or `Stakes::Plain` at its next pin. The drawn HTML is unchanged (#587).
+- The layouts have one owner, `view::layout`: `view::surface::split` is `view::layout::split`, the grids, the cluster and the Add row are `view::layout::Arrangement`, and `view::surface::Container` draws the surfaces only (`Card`, `PanelBody`, `PanelSections`, `Well`). Each console moves its calls at its next pin; the drawn HTML is unchanged (#588).
+
+### Removed
+
+- The component functions that only fixed an argument of another are gone; each console calls the general function with the argument at its next pin. `view::surface::stack`: call `view::layout::stack_at(Gap::Loose, children)`. `view::surface::grid`, `grid_start`, `stat_grid`, `cluster` and `add_row`: call `wrap` on the `view::layout::Arrangement` of the same name. `view::surface::panel`, `panel_body`, `panel_sections` and `well`: call `wrap` on the `view::surface::Container` of the same name (`Container::Card.wrap(body)` for `panel`). `table::view::data_table_wide` and `data_table_unstacked`: call `data_table` on a table `with_shape(Shape::Wide)` or `Shape::Unstacked`. `table::view::title_cell_at`: call `title_cell(Some(level), ..)`. `view::dialog::danger_dialog` and `danger_form_dialog`: call `confirm_dialog` with `Stakes::Danger` and the form. `view::compare::compare_stacked` and `compare_pair`: call `compare` with `Presentation::Stacked { shown }` or `Presentation::Pair { shown }`. `view::combobox::searched_combobox`: call `keyed_combobox` with `KeyedCombobox::remote` set. `view::side_panel::side_panel_with_shortcut`: call `side_panel(panel, Some(shortcut))`. `view::shortcuts::shortcut_legend_with_go_to`: call `shortcut_legend(locale, groups, Some(go_to))`. `view::empty::spinner`: call `busy(label, Busy::Inline)`. `view::form::keyed_check`: call `check`, which takes the id as `&str`. `calendar::Moment::parse_in`: call `Moment::parse`. `table::model::Paging::write_within`: call `Paging::write`. `i18n::Locale::english`: call `Locale::default()`, which is English. `view::action::ActionGroup::none`: call `ActionGroup::default()` (#579).
+- Four public functions no console called are gone: `view::search::answer_id` and `hit_id`, `i18n::message_ids` and `view::surface::wide_card` (#580).
+
+### Fixed
+
+- The combobox's input is not spell-checked, like every other text input the library draws, so the browser no longer underlines a choice such as "SNOMED CT" as a misspelling (#596).
+
 ## [0.6.4] - 2026-11-03
 
 ### Fixed
@@ -3041,7 +3060,8 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.4...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.5...HEAD
+[0.6.5]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.0...v0.6.2

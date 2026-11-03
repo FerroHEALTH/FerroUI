@@ -246,7 +246,7 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-ui"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "askama",
  "axum",
@@ -262,7 +262,7 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-ui-gallery"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "askama",
  "axum",
@@ -374,7 +374,7 @@ dependencies = [
 
 [[package]]
 name = "forwarders"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "anyhow",
  "proc-macro2",
