@@ -1,8 +1,8 @@
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 
-# The English words of the document pane, the code viewer, the copy button and
-# the upload field: one message per `Text` of `src/i18n/words/documents.rs`,
+# The English words of the document pane, the code viewer, the line diff, the
+# copy button and the upload field: one message per `Text` of `src/i18n/words/documents.rs`,
 # in the order of their ids.
 
 code-error = Error:
@@ -17,6 +17,10 @@ copy-copied = Copied
 copy-refused = The browser refused the clipboard.
 copy-said-copied = Copied to the clipboard.
 copy-said-refused = Copy failed: the browser refused the clipboard.
+diff-added = added
+diff-none = No line changes.
+diff-region = { $file }, its removed and added lines
+diff-removed = removed
 document-copy = Copy
 document-format = Format
 document-highlighted = Highlighted

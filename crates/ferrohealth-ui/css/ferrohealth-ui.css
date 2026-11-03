@@ -12579,6 +12579,73 @@
     }
   }
 
+  /* ---- B11 Line diff: a unified diff in B1's box (FerroBRIDGE, for every console) ---- */
+
+  /* The lines run as wide as the longest, so a changed line's ground spans
+     the whole scroll, and never wrap. */
+  .fui-linediff > pre {
+    width: max-content;
+    min-width: 100%;
+    padding-inline: 0;
+  }
+
+  .fui-diff-line,
+  .fui-diff-hunk {
+    display: flex;
+    min-height: var(--leading-code);
+    padding-inline-end: 0.75rem;
+  }
+
+  .fui-diff-num {
+    flex: none;
+    width: 3rem;
+    padding-inline-end: 0.5rem;
+    color: var(--muted);
+    text-align: end;
+    user-select: none;
+  }
+
+  .fui-diff-sign {
+    flex: none;
+    width: 1.25rem;
+    font-weight: 700;
+    text-align: center;
+    user-select: none;
+  }
+
+  .fui-diff-text {
+    white-space: pre;
+  }
+
+  .fui-diff-removed {
+    background: var(--bad-ground);
+  }
+
+  .fui-diff-removed > :is(.fui-diff-num, .fui-diff-sign) {
+    color: var(--bad);
+  }
+
+  .fui-diff-added {
+    background: var(--ok-ground);
+  }
+
+  .fui-diff-added > :is(.fui-diff-num, .fui-diff-sign) {
+    color: var(--ok);
+  }
+
+  /* A hunk's head starts where the lines' text starts. */
+  .fui-diff-hunk {
+    padding-inline-start: 7.25rem;
+    color: var(--muted);
+  }
+
+  @media (forced-colors: active) {
+    .fui-diff-removed,
+    .fui-diff-added {
+      border-inline-start: 3px solid CanvasText;
+    }
+  }
+
   /* ---- Planned and proposed mark (FerroBRIDGE, for every console): a quiet badge and one line ---- */
 
   .fui-proposed {

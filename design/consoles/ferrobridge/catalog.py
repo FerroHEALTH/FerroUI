@@ -28,7 +28,7 @@ PAGES = {
     "mappings-files-no-match": m.page_mappings_files_no_match, "mappings-diagnostics": m.page_mappings_diagnostics, "mappings-more": m.page_mappings_more,
     "mappings-reload": m.page_mappings_reload, "mappings-reloaded": m.page_mappings_reloaded, "mappings-reload-refused": m.page_mappings_reload_refused,
     "mappings-loading": m.page_mappings_loading, "mappings-unreachable": m.page_mappings_unreachable, "mappings-forbidden": m.page_mappings_forbidden,
-    "mappings-empty": m.page_mappings_empty, "mappings-import": m.page_mappings_import,
+    "mappings-empty": m.page_mappings_empty, "mappings-import": m.page_mappings_import, "mappings-revision": m.page_mappings_revision,
     "file": m.page_file, "file-line": m.page_file_line, "file-program": m.page_file_program, "file-more": m.page_file_more, "file-provisioned": m.page_file_provisioned,
     "file-model": m.page_file_model, "file-omocl": m.page_file_omocl, "file-not-utf8": m.page_file_not_utf8,
     "template": m.page_template,

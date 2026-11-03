@@ -12,7 +12,7 @@ match it.
 
 | Path | What it is |
 |---|---|
-| `COMPONENTS.md` | The specification: the family rules, the templates T1 to T3 and About, the table, and every component (R1 to R29, F1 to F14, B1 to B10, M1 to M6, E1 to E8 and the additions). |
+| `COMPONENTS.md` | The specification: the family rules, the templates T1 to T3 and About, the table, and every component (R1 to R29, F1 to F14, B1 to B11, M1 to M6, E1 to E8 and the additions). |
 | `css/ferroui-console.css` | The capture scaffolding the mockups draw with, over the crate's `crates/ferrohealth-ui/css/ferrohealth-ui.css`: an open dialog, menu or picker drawn in the page, and a hover or focus held still. Every rule is prefixed `mk-` and is never component API. |
 | `themes/` | One brand file per console: its accents and the two preview accents Your preferences draws. |
 | `templates/` | The reference templates' page table (`catalog.py`), manifest and the library's helpers (`common.py`, `data.py`). |

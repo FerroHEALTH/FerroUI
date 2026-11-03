@@ -142,6 +142,27 @@ context:
 /// The short digest of [`MAPPING`], as a viewer's head shows it.
 pub const MAPPING_DIGEST: &str = "SHA-256 5712e3f7…f2e0e3fa";
 
+/// A synthetic revision of the mapping file against the one that runs, as
+/// a unified diff: a changed version, a longer profile URL and one more
+/// archetype.
+pub const REVISION_DIFF: &str = "--- a/fhirconnect/gallery.context.yml
++++ b/fhirconnect/gallery.context.yml
+@@ -2,6 +2,6 @@ type: context
+ type: context
+ metadata:
+   name: gallery.context
+-  version: 1.2.0
++  version: 1.3.0
+ spec:
+   system: FHIR
+@@ -10,3 +10,4 @@ context:
+   profile:
+-    url: \"http://example.org/fhir/StructureDefinition/gallery-weight\"
++    url: \"http://example.org/fhir/StructureDefinition/gallery-weight-with-device-and-position\"
+   archetypes:
++    - \"CLUSTER.body_position.v1\"
+";
+
 /// The language tag of a mapping file.
 pub const FHIRCONNECT: &str = "FHIRconnect";
 

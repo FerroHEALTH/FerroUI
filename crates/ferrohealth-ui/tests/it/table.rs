@@ -1150,23 +1150,28 @@ fn header_row(table: &str) -> &str {
 
 #[test]
 fn a_change_table_heads_its_key_column_as_the_console_names_it() {
-    use ferrohealth_ui::table::change::{Change, change_table, change_table_keyed};
+    use ferrohealth_ui::table::change::{Change, change_table};
 
     let changes = [Change {
         key: String::from("/content[openEHR-EHR-OBSERVATION.synthetic.v1]"),
         from: Some(String::from("DV_TEXT")),
         to: Some(String::from("DV_CODED_TEXT")),
     }];
-    let keyed = html(change_table_keyed(
+    let keyed = html(change_table(
         &en(),
         "Release 2 against release 1",
-        "Path <b>",
+        Some(String::from("Path <b>")),
         &changes,
     ));
     let head = header_row(&keyed);
     assert!(head.contains("Path &#60;b&#62;"), "{head}");
     assert!(!head.contains("Setting"), "{head}");
-    let plain = html(change_table(&en(), "Staged against running", &changes));
+    let plain = html(change_table(
+        &en(),
+        "Staged against running",
+        None,
+        &changes,
+    ));
     let head = header_row(&plain);
     assert!(
         head.contains("Setting"),
@@ -1174,7 +1179,12 @@ fn a_change_table_heads_its_key_column_as_the_console_names_it() {
     );
     assert_eq!(
         plain.replace("Staged against running", "caption"),
-        html(change_table_keyed(&en(), "caption", "Setting", &changes)),
+        html(change_table(
+            &en(),
+            "caption",
+            Some(String::from("Setting")),
+            &changes
+        )),
         "the default draws as the keyed table with the library's word"
     );
 }

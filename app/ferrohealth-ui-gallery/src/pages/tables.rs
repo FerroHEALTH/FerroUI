@@ -711,6 +711,7 @@ fn changes(v: &Visit) -> Html {
         change_table(
             &v.locale,
             v.tr(Msg::StagedConfigurationAgainstRunningOne),
+            None,
             &staged,
         ),
     )

@@ -8,7 +8,7 @@ from common import (
     MENU_SEP, action_group, badge, button, card, definitions, dock, dock_field, e, empty_quiet, empty_state, facts_row, field, icon,
     link_button, menu, menu_item, notice, page_heading, pager, pill, refusal, select, shell, table, tabbed, tabs, td, textarea, th, toast, toasts, when,
 )
-from bridge import (wb, quiet, section, sections, RUNNING_COUNTS, codeview, diags_list, file_href, lang_tag, load_report, locked, owner_tag, plan_badge, planned, short, state)
+from bridge import (wb, quiet, section, sections, RUNNING_COUNTS, codeview, diags_list, file_href, lang_tag, linediff, load_report, locked, owner_tag, plan_badge, planned, short, state)
 from data import (CONTEXTS, CONTEXT_YAML, DIAGNOSTICS, DRAFT_ERRORS, EXTENSION_FILES, MODEL_FILES, MODEL_YAML, OMOCL, PROFILE_BASE, SEARCH_FILES, TEMPLATES)
 from parts import skeleton_lines
 from pg_shell import set_menu_items, tech_detail, unreachable_block
@@ -251,6 +251,54 @@ def page_mappings_import():
              link_button("secondary", "Cancel", "mappings.html", "x") + button("primary", "Save as a revision", "save"))
     content = page_heading("Import a mapping set", crumbs=[("Mapping set", "mappings.html")]) + f'<div class="fui-stack">{body}</div>'
     return shell("Import a mapping set", "mappings", content, dock_html=d)
+
+
+REVISION_FILES = [
+    ("fhirconnect/synthetic_body_weight.context.yml", "5712e3f7…f2e0e3fa", "9a03c1d2…7b44e810"),
+    ("fhirconnect/synthetic_device.model.yml", None, "c81f02aa…19e6d3b5"),
+    ("fhirconnect/synthetic_height.model.yml", "e4d90b17…6a2c58f1", None),
+]
+
+REVISION_DIFF = """--- a/fhirconnect/synthetic_body_weight.context.yml
++++ b/fhirconnect/synthetic_body_weight.context.yml
+@@ -2,9 +2,9 @@ type: context
+ type: context
+ metadata:
+   name: synthetic_body_weight.context
+-  version: 1.2.0
++  version: 1.3.0
+ spec:
+   system: FHIR
+   version: R4
+ context:
+   profile:
+-    url: "http://example.org/fhir/StructureDefinition/synthetic-body-weight"
++    url: "http://example.org/fhir/StructureDefinition/synthetic-body-weight-with-device-and-position"
+@@ -16,3 +16,4 @@ context:
+   archetypes:
+     - "OBSERVATION.body_weight.v2"
+     - "CLUSTER.device.v1"
++    - "CLUSTER.body_position.v1"
+"""
+
+
+def change_side(value, removed):
+    if value is None:
+        return '<span class="fui-muted">not set</span>'
+    cls, sign, word = ("fui-change fui-change-removed", "\u2212", "removed") if removed else ("fui-change fui-change-added", "+", "added")
+    return f'<span class="{cls}"><span aria-hidden="true" class="fui-change-sign">{sign}</span><span class="fui-sr-only">{word} </span><code>{e(value)}</code></span>'
+
+
+def page_mappings_revision():
+    head = th("File") + th("Before") + th("After")
+    rows = [f'<tr><th scope="row"><code>{wb(path)}</code></th><td data-label="Before">{change_side(b, True)}</td><td data-label="After">{change_side(a, False)}</td></tr>'
+            for path, b, a in REVISION_FILES]
+    files = section("Files", table("Revision 8 against the running set, by file and digest", head, rows), len(REVISION_FILES))
+    diff = section(wb(REVISION_FILES[0][0]), linediff(REVISION_FILES[0][0], REVISION_DIFF))
+    body = (planned(609, "Compare a revision with the set that runs: the files it changes by their digests, then each changed file line by line.")
+            + f'<section class="fui-card fui-panel">{files}{diff}</section>')
+    content = page_heading("Revision 8 against the running set", crumbs=[("Mapping set", "mappings.html")]) + f'<div class="fui-stack">{body}</div>'
+    return shell("Revision 8 against the running set", "mappings", content)
 
 
 # ---- one mapping file ----
