@@ -230,9 +230,10 @@ pub struct Modal {
     pub id: Cow<'static, str>,
     /// The heading.
     pub title: Word,
-    /// Whether it is the danger form, the bad tone's glyph beside the
-    /// heading, for an action that cannot be undone.
-    pub danger: bool,
+    /// What its action risks: [`Stakes::Danger`] draws the danger form, the
+    /// bad tone's glyph beside the heading, for an action that cannot be
+    /// undone.
+    pub stakes: Stakes,
     /// How wide it is.
     pub width: Width,
     /// The body: the message, or the form's fields.
@@ -281,13 +282,14 @@ pub(crate) fn modal_with(modal: Modal, dismiss: Word, jobs: &'static str) -> Htm
     let Modal {
         id,
         title,
-        danger,
+        stakes,
         width,
         body,
         actions,
         open,
         cancel,
     } = modal;
+    let danger = stakes == Stakes::Danger;
     let mut class = String::from("fui-dialog fui-modal");
     if danger {
         class.push_str(" fui-dialog-danger");
