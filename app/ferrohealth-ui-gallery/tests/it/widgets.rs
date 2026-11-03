@@ -744,6 +744,11 @@ async fn the_combobox_filters_as_typed_and_the_keys_choose() -> Result<(), Box<d
             input.prop("value").await?,
             "the chosen option's words show"
         );
+        assert_eq!(
+            Some(String::from("false")),
+            input.attr("spellcheck").await?,
+            "a choice's words are not spell-checked"
+        );
         input.click().await?;
         until("the list opens", async || {
             Ok(input.attr("aria-expanded").await?.as_deref() == Some("true"))

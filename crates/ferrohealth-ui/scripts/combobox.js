@@ -63,6 +63,7 @@ export function enhance(root) {
     role: "combobox",
     class: "fui-input fui-combobox-input",
     autocomplete: "off",
+    spellcheck: "false",
     "aria-autocomplete": "list",
     "aria-expanded": "false",
     "aria-controls": listId,
