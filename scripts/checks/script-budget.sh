@@ -103,7 +103,9 @@ self_test() {
   head -c 17000 /dev/zero | tr '\0' ' ' >"$work/big.js"
   # Random text, which gzip cannot shrink under S6's cap.
   for want in 1 2 3 4 5 6 7 8 9 10; do
-    head -c 12000 /dev/urandom | base64 | tr -d '\n' | head -c 15000 >"$work/pad$want.js"
+    # 11,250 bytes encode to exactly 15,000 characters, so no reader closes
+    # the pipe early under pipefail.
+    head -c 11250 /dev/urandom | base64 | tr -d '\n' >"$work/pad$want.js"
   done
   : >"$work/fui.js"
   # A page whose one job is small and carries it over S2 by its imports.
