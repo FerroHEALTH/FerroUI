@@ -1,7 +1,8 @@
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # The duplicated lines scripts/checks/duplication.sh measures in
-# app/*/src/, crates/*/src/, crates/*/scripts/ and crates/*/templates/.
+# app/*/src/, crates/*/src/, tools/*/src/, crates/*/scripts/ and
+# crates/*/templates/.
 # It may fall and never rise; --update writes a lower one, and a higher
 # one is a hand edit that says why.
 250
