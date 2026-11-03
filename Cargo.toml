@@ -3,7 +3,7 @@
 
 [workspace]
 resolver = "3"
-members = ["crates/*", "app/*"]
+members = ["crates/*", "app/*", "tools/*"]
 
 [workspace.package]
 version = "0.6.4"
@@ -57,6 +57,14 @@ rustix = { version = "1.1.5", default-features = false, features = ["std", "proc
 # Test-only: decodes a committed screenshot and a fresh capture to compare
 # their pixels on a release branch. Verified against crates.io on 2026-10-25.
 png = "0.18.1"
+# The forwarder ratchet (tools/forwarders) parses the hand-written Rust:
+# the tool's errors, and `span-locations` for a parsed span's line outside a
+# proc macro. syn, proc-macro2 and quote are in the lock already under
+# askama. Verified against crates.io on 2026-11-03.
+anyhow = "1.0.104"
+syn = { version = "3.0.9", default-features = false, features = ["full", "parsing", "printing"] }
+proc-macro2 = { version = "1.0.107", default-features = false, features = ["span-locations"] }
+quote = { version = "1.0.47", default-features = false }
 
 # The reliability bar (no specification governs it: our own design), the
 # FerroHEALTH family's lint set as FerroBRIDGE and FerroFED carry it.

@@ -221,6 +221,30 @@ jobs:
       - name: No file over the budget or past its entry
         run: bash scripts/checks/file-size.sh
 
+  # No function only forwards to another (.claude/rules/rust-style.md,
+  # #578): tools/forwarders lists the functions whose whole body is one
+  # call, and their number may fall and never rise. A rise fails and names
+  # each new forwarder with its target; a fall passes, and
+  # ratchet-tighten.yml lowers the count on main. No rust-cache: the tool
+  # builds proc-macro2, quote, syn and anyhow alone.
+  forwarders:
+    name: forwarders
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache: "false"
+      - name: Forwarder ratchet self-test
+        run: bash scripts/checks/forwarders.sh --self-test
+      - name: The forwarders have not risen
+        run: bash scripts/checks/forwarders.sh
+
   # Every TODO(#N) names an open issue.
   todo-issues:
     name: todo-issues
@@ -797,6 +821,7 @@ jobs:
       - script-budget
       - duplication
       - file-size
+      - forwarders
       - todo-issues
       - guards
       - detect

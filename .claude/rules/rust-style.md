@@ -104,6 +104,55 @@ VernumBOEK's and FerroEHR's rule of the same name).
   removes the entry, so the list only tightens. A file over the budget is split by concern. The
   script modules keep their own byte budget (`scripts/checks/script-budget.sh`).
 
+## No function only forwards to another
+
+No specification governs this: our own design (#578, ported from
+FerroEHR's rule of the same name, FerroHEALTH/FerroEHR#4663).
+
+- **A function exists because it decides something.** It validates,
+  branches, converts, draws, or names a concept its callers need. A
+  function whose body is a single call, with its arguments passed through
+  or merely borrowed and at most `.await`, `?`, `Ok(..)`, `Some(..)`,
+  `.into()` or an error-only `.map_err` around it, is a forwarder. It adds
+  a name and a hop and decides nothing, so its callers call the target
+  directly, and the library's API may break to get there. A forwarder that
+  fixes an argument (`wrap("<div class=\"fui-grid\">", children, "</div>")`)
+  is still one: its callers pass the argument, and a flag that a bare
+  `bool` would hide becomes a named type.
+- **Three kinds are not forwarders.**
+  - The methods of a trait implementation (`Display`, `From`, `Default`
+    and the rest), which the trait requires. A binary's `main`, which the
+    language requires, and a function a specification defines, whose doc
+    comment cites the WCAG, WAI-ARIA, HTML Living Standard or CSS section
+    that defines it with a `§`, stand with them.
+  - A `pub` function in the crate's root API that re-exposes a private
+    module's function under the crate's own name, kept only where the
+    baseline records why.
+  - A constructor (`new`, `with_*`, or an associated function that returns
+    `Self`) that fixes an argument.
+- **The ratchet measures it.** `tools/forwarders` parses every `.rs` file
+  under `app/*/src/`, `crates/*/src/` and `tools/*/src/` with `syn`,
+  leaving out a file that opens with `// @generated`, anything under
+  `#[cfg(test)]`, and `tests/`. It reports a free function or inherent
+  method whose body is one call, to a function or to a method of `self`,
+  whose arguments are parameters, literals and constants, or references,
+  borrows and clones of those. A call that reads a field of `self`, or
+  calls a method of a field or a parameter, reaches what the caller
+  cannot, so an accessor is never reported; nor are the `#[cfg]` arms of
+  one function. `scripts/checks/forwarders.sh` runs it in the `forwarders`
+  CI job and per edit through `.claude/hooks/rust_fmt_clippy.sh`, and
+  holds the total to `scripts/checks/forwarders.count`.
+  `scripts/checks/forwarders-baseline.txt` keys each counted forwarder by
+  its path, owner and target call, with no line number, and a key may
+  carry a tab and the reason the forwarder stays. A rise fails and names
+  each new forwarder, its target and its place. A fall passes with a note,
+  so your pull request leaves both files alone, and the daily
+  `.github/workflows/ratchet-tighten.yml` lowers the count on `main`, as it
+  does for the duplication ratchet. `--update` never raises the count and
+  keeps each reason while its key stands. The 37 forwarders the guard
+  found when it landed, measured on 2026-11-03 at `4028d11f`, stand in the
+  baseline.
+
 ## Comments and documentation
 
 The comment and doc-comment discipline lives in **`comments.md`** (RFC 505

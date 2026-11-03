@@ -4,14 +4,14 @@
 # Ratchet tighten (#566). No specification governs this: our own design,
 # the rule FerroEHR adopted for its ratchet guards (FerroHEALTH/FerroEHR#4554).
 #
-# The ratchet guards (scripts/checks/duplication.sh and file-size.sh) fail a
-# rise and pass a fall with a note, so a pull request that removes
-# duplication or shortens a file touches none of the ratchet files and
-# conflicts with no other open pull request. This lane does the tightening
-# instead: once a day it runs each guard's --update on main and puts one
-# commit that holds only the ratchet files on its own branch,
-# chore/ratchet-tighten, moving the branch when it is already there. When
-# nothing fell it does nothing.
+# The ratchet guards (scripts/checks/duplication.sh, file-size.sh and
+# forwarders.sh) fail a rise and pass a fall with a note, so a pull request
+# that removes duplication, shortens a file or removes a forwarder touches
+# none of the ratchet files and conflicts with no other open pull request.
+# This lane does the tightening instead: once a day it runs each guard's
+# --update on main and puts one commit that holds only the ratchet files on
+# its own branch, chore/ratchet-tighten, moving the branch when it is
+# already there. When nothing fell it does nothing.
 #
 # It never pushes to main. The commit is made through the Git Data REST API,
 # so GitHub signs it and it shows Verified, as the main ruleset requires
@@ -53,6 +53,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # The forwarder guard builds tools/forwarders; no build cache.
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache: "false"
 
       # A rise on main is a failure for a person to look at, never a count
       # this lane writes down.
@@ -61,6 +65,7 @@ jobs:
           set -euo pipefail
           bash scripts/checks/duplication.sh
           bash scripts/checks/file-size.sh
+          bash scripts/checks/forwarders.sh
 
       - name: Lower the counts
         id: update
@@ -75,14 +80,23 @@ jobs:
             git checkout -- scripts/checks/duplication.count scripts/checks/duplication-baseline.txt
           fi
           bash scripts/checks/file-size.sh --update
+          forwarders_before=$(git show HEAD:scripts/checks/forwarders.count | awk '/^[[:space:]]*(#|$)/ { next } { print; exit }')
+          bash scripts/checks/forwarders.sh --update
+          forwarders_after=$(awk '/^[[:space:]]*(#|$)/ { next } { print; exit }' scripts/checks/forwarders.count)
+          # As for duplication: a key that moved with the count unchanged is no
+          # reason for a branch.
+          if [ "$forwarders_before" = "$forwarders_after" ]; then
+            git checkout -- scripts/checks/forwarders.count scripts/checks/forwarders-baseline.txt
+          fi
 
           git diff --name-only -- \
             scripts/checks/duplication.count scripts/checks/duplication-baseline.txt \
-            scripts/checks/file-size.list >"$RUNNER_TEMP/changed-files.txt"
+            scripts/checks/file-size.list \
+            scripts/checks/forwarders.count scripts/checks/forwarders-baseline.txt >"$RUNNER_TEMP/changed-files.txt"
           other=$(git status --porcelain --untracked-files=no | awk '{ print $2 }' | grep -vxF -f "$RUNNER_TEMP/changed-files.txt" || true)
           if [ -n "$other" ]; then
             echo "$other"
-            echo "::error::--update changed a file outside the three ratchet files."
+            echo "::error::--update changed a file outside the five ratchet files."
             exit 1
           fi
           if [ ! -s "$RUNNER_TEMP/changed-files.txt" ]; then
@@ -91,13 +105,24 @@ jobs:
             exit 0
           fi
           echo "changed=1" >>"$GITHUB_OUTPUT"
+          # What fell, which the commit message carries, so the pull request a
+          # maintainer opens from the branch starts with it as its body.
+          {
+            if [ "$count_before" != "$count_after" ]; then
+              echo "Duplicated lines: ${count_before} to ${count_after}."
+            fi
+            if [ "$forwarders_before" != "$forwarders_after" ]; then
+              echo "Forwarders: ${forwarders_before} to ${forwarders_after}."
+            fi
+            if ! git diff --quiet -- scripts/checks/file-size.list; then
+              echo "File-size list: the entries that shrank or left it."
+            fi
+          } >"$RUNNER_TEMP/falls.md"
           {
             echo '### Ratchet files lowered'
             echo
-            if [ "$count_before" != "$count_after" ]; then
-              echo "Duplicated lines: ${count_before} to ${count_after}."
-              echo
-            fi
+            cat "$RUNNER_TEMP/falls.md"
+            echo
             echo '```'
             git diff --stat
             echo '```'
@@ -131,8 +156,8 @@ jobs:
           jq -n --arg base "$base_tree" --argjson tree "$entries" \
             '{base_tree: $base, tree: $tree}' >"$work/tree.json"
           tree=$(gh api "repos/${REPO}/git/trees" --input "$work/tree.json" --jq .sha)
-          jq -n --arg tree "$tree" --arg parent "$BASE_SHA" \
-            '{message: "chore(checks): lower the ratchet counts", tree: $tree, parents: [$parent]}' \
+          jq -n --arg tree "$tree" --arg parent "$BASE_SHA" --rawfile falls "$RUNNER_TEMP/falls.md" \
+            '{message: ("chore(checks): lower the ratchet counts\n\n" + $falls), tree: $tree, parents: [$parent]}' \
             >"$work/commit.json"
           commit=$(gh api "repos/${REPO}/git/commits" --input "$work/commit.json" --jq .sha)
 
