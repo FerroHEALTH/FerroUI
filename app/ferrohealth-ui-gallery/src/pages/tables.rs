@@ -16,6 +16,7 @@
 
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
+use ferrohealth_ui::table::change::{Change, change_table};
 use ferrohealth_ui::table::filter::{Find, find_form};
 use ferrohealth_ui::table::model::{
     Direction, Noun, OpenWindow, Paging, Sizes, Sort, StateSource, Window, fields, href,
@@ -31,7 +32,6 @@ use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::action_menu::{self, Act, Action, Item, Menu};
 use ferrohealth_ui::view::button::Variant;
-use ferrohealth_ui::view::change::{Change, change_table};
 use ferrohealth_ui::view::empty::empty_quiet;
 use ferrohealth_ui::view::filter::keeps;
 use ferrohealth_ui::view::status::badge;

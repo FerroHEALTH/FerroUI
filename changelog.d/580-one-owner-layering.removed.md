@@ -1,0 +1,1 @@
+- Four public functions no console called are gone: `view::search::answer_id` and `hit_id`, `i18n::message_ids` and `view::surface::wide_card`.

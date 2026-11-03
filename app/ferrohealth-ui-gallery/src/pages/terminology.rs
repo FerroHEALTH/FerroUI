@@ -13,6 +13,9 @@
 
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::{Glyph, icon};
+use ferrohealth_ui::table::mapping::{
+    MapElement, Mapping, Relationship, map_element, map_elements, mapping_columns, mapping_row,
+};
 use ferrohealth_ui::table::view::{
     Body, Column, DataTable, Role, data_table, group_row, title_cell,
 };
@@ -24,9 +27,6 @@ use ferrohealth_ui::view::clause::{
 };
 use ferrohealth_ui::view::coding::{Coding, Layout, MoreCodes, canonical, coding};
 use ferrohealth_ui::view::form::{ERROR, Field, INPUT, SELECT, error_id};
-use ferrohealth_ui::view::mapping::{
-    MapElement, Mapping, Relationship, map_element, map_elements, mapping_columns, mapping_row,
-};
 use ferrohealth_ui::view::repeat::{Fields, ROW, Repeat, RepeatAdd, RepeatRow, RowEnd, repeat};
 use ferrohealth_ui::view::root_matrix::{MatrixRoot, MatrixRow, RootMatrix, root_matrix};
 use ferrohealth_ui::view::surface::{

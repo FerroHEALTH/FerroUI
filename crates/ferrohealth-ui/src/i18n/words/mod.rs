@@ -23,6 +23,7 @@ macro_rules! texts {
         }
 
         /// The area's messages, in the order of their ids.
+        #[cfg(test)]
         pub(super) const ALL: &[Text] = &[$(Text::$name,)+];
     };
 }
@@ -52,8 +53,10 @@ mod terminology;
 mod theme;
 mod trees;
 
-/// Every area by the name of its catalog file, with its messages.
-pub(super) const AREAS: &[(&str, &[crate::i18n::Text])] = &[
+/// Every area by the name of its catalog file, with its messages, which the
+/// catalog tests read.
+#[cfg(test)]
+const AREAS: &[(&str, &[crate::i18n::Text])] = &[
     ("charts", charts::ALL),
     ("clinical", clinical::ALL),
     ("config", config::ALL),

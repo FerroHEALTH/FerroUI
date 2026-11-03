@@ -19,11 +19,11 @@ use askama::Template;
 use crate::html::{Html, Render as _};
 use crate::i18n::{Locale, Text, Word, tr, tr_with};
 use crate::icon::{Glyph, icon};
-use crate::table::model::{
-    Noun, OpenWindow, PAGE_KEY, Paging, SIZE_KEY, SIZES, StateSource, Window, partial_note,
-};
-use crate::table::view::{hidden_fields, method};
+use crate::query::{PAGE_KEY, SIZE_KEY};
+use crate::table::model::{Noun, OpenWindow, Paging, SIZES, StateSource, Window, partial_note};
+use crate::table::view::method;
 use crate::view::button::Variant;
+use crate::view::form::hidden_fields;
 
 /// A step of the pager.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -111,8 +111,11 @@ which your server writes from its own cookie or setting (`theme::Theme`).
 - `script`: the modules as text, one per job, and the loader.
 - `table`: the paging and sorting model (`Paging`, `Window`, `Sort`,
   `StateSource`), the data table with its cells and list card (`view`), the
-  link and `POST` pagers (`pager`) and the find field (`filter`), each a
-  link or a form that works with no script.
+  link and `POST` pagers (`pager`), the find field (`filter`), and the
+  tables of a change, a concept map and a version history (`change`,
+  `mapping`, `versions`), each a link or a form that works with no script;
+  the filter menu is `view::filter_menu`, and the query keys are in
+  `query`.
 - `highlight::html(language, text, lines, marked)`, `icon::icon(glyph, size)`,
   `tone::Tone`, `theme::Theme`.
 

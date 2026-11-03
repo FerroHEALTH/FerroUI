@@ -7,6 +7,18 @@
 
 use std::fmt;
 
+/// The query key of the 1-based page.
+pub const PAGE_KEY: &str = "page";
+
+/// The query key of the page size.
+pub const SIZE_KEY: &str = "size";
+
+/// The query key of the sorted column.
+pub const SORT_KEY: &str = "sort";
+
+/// The query key of the sort's direction.
+pub const ORDER_KEY: &str = "order";
+
 /// The pairs of a query, in order; a name may occur more than once.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Query(Vec<(String, String)>);

@@ -14,17 +14,11 @@
 //! walks with no script. No specification governs the look:
 //! our own design.
 
-use askama::Template;
-
-use crate::html::{Html, Render as _};
+use crate::html::Html;
 use crate::i18n::{Locale, Text, tr, tr_with};
-use crate::icon::{Glyph, icon};
-use crate::table::filter::Find;
-use crate::table::model::PAGE_KEY;
-use crate::table::view::{hidden_fields, method};
+use crate::icon::Glyph;
 use crate::view::button::{Variant, label};
 use crate::view::coding::{MoreCodes, more_codes};
-use crate::view::form::INPUT;
 use crate::view::path::path;
 use crate::view::surface::definitions;
 
@@ -131,44 +125,6 @@ pub fn pane_body(children: Html) -> Html {
         "<div class=\"fui-browser-body\">{}</div>",
         String::from(children)
     ))
-}
-
-#[derive(Template)]
-#[template(
-    source = r#"<form role="search" method="{{ method }}"{% if let Some(action) = action %} action="{{ action }}"{% endif %} class="fui-browser-find">{{ carried }}<div class="fui-list-find"><span class="fui-search-glyph">{{ glyph }}</span><label for="{{ id }}" class="fui-sr-only">{{ label }}</label><input id="{{ id }}" name="{{ name }}" type="search" class="{{ input }}" value="{{ value }}" placeholder="{{ label }}" autocomplete="off" spellcheck="false" enterkeyhint="search"></div></form>"#,
-    ext = "html"
-)]
-struct FindView<'a> {
-    method: &'static str,
-    action: Option<&'a str>,
-    carried: Html,
-    glyph: Html,
-    id: &'a str,
-    label: &'a str,
-    name: &'a str,
-    input: &'static str,
-    value: &'a str,
-}
-
-/// Returns the find field at the top of a pane.
-///
-/// It is one search field with the glyph inside, its label for assistive
-/// technology alone, submitting on Enter as `find` says (a `GET` form, or a
-/// `POST` form for words that can be clinical).
-#[must_use]
-pub fn browser_find(find: Find<'_>) -> Html {
-    FindView {
-        method: method(find.source),
-        action: find.action,
-        carried: hidden_fields(find.fields, &[find.name, PAGE_KEY]),
-        glyph: icon(Glyph::SEARCH, "16"),
-        id: find.id,
-        label: find.label,
-        name: find.name,
-        input: INPUT,
-        value: find.value,
-    }
-    .html()
 }
 
 /// Returns the matches of a search, named `label`: one row each, the row

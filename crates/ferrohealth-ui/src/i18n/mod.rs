@@ -55,17 +55,6 @@ fluent_templates::static_loader! {
     };
 }
 
-/// The ids of every message the library's components draw, by the area
-/// whose catalog file holds it: what a catalog of another language must
-/// hold whole, and what a console's own check may read.
-#[must_use]
-pub fn message_ids() -> Vec<(&'static str, Vec<&'static str>)> {
-    words::AREAS
-        .iter()
-        .map(|(area, texts)| (*area, texts.iter().map(|text| text.id()).collect()))
-        .collect()
-}
-
 /// The library's catalogs, every language it ships, so a catalog of a
 /// console's can draw from them (a pseudo-locale over the English one).
 #[must_use]

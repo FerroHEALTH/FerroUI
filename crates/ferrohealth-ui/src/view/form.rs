@@ -627,6 +627,21 @@ pub fn back_to(field: Option<&str>) -> Option<String> {
     field.filter(|field| own_path(field)).map(str::to_owned)
 }
 
+/// The hidden fields of a form: `fields` without the keys in `dropped`.
+pub(crate) fn hidden_fields(fields: &[(String, String)], dropped: &[&str]) -> Html {
+    fields
+        .iter()
+        .filter(|(name, _)| !dropped.contains(&name.as_str()))
+        .map(|(name, value)| {
+            Html::raw(format!(
+                "<input type=\"hidden\" name=\"{}\" value=\"{}\">",
+                Html::text(name),
+                Html::text(value)
+            ))
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::{

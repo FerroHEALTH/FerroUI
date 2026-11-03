@@ -11,7 +11,6 @@
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
-use ferrohealth_ui::table::filter::{FilterChoice, FilterMenu, MenuForm, filter_menu};
 use ferrohealth_ui::table::model::{Paging, Window};
 use ferrohealth_ui::table::pager::{Listing, link_pager};
 use ferrohealth_ui::table::view::{Body, Column, DataTable, Role, data_table};
@@ -23,6 +22,7 @@ use ferrohealth_ui::view::dialog::{
     Confirmation, Explanation, Stakes, Width, confirm_dialog, info_dialog,
 };
 use ferrohealth_ui::view::error_page::{Detail, ErrorPage, Status, Way, error_page};
+use ferrohealth_ui::view::filter_menu::{FilterChoice, FilterMenu, MenuForm, filter_menu};
 use ferrohealth_ui::view::status::{badge, pill};
 use ferrohealth_ui::view::surface::{Container, Crumb, Header, card, facts_row};
 use ferrohealth_ui::view::tabs::{Tab, TabRow};
