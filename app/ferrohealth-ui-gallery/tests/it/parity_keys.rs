@@ -17,9 +17,8 @@ use ferrohealth_ui::view::menu;
 use ferrohealth_ui::view::shortcuts::tab_at;
 use ferrohealth_ui::view::tabs;
 use ferrohealth_ui::view::topology::{self, Ask, STEPS, asked, stepped};
-use ferrohealth_ui::view::tree::{
-    More, Move, Shown, Tree, TreeKind, TreeNode, TreeWords, in_sight, moved, path_key, tree_view,
-};
+use ferrohealth_ui::view::tree::path::{Move, Shown, in_sight, moved, path_key};
+use ferrohealth_ui::view::tree::{More, Tree, TreeKind, TreeNode, TreeWords, tree_view};
 use ferrohealth_ui::view::worklist::{self, Selection, selection};
 use serde_json::{Value, json};
 

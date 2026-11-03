@@ -26,8 +26,9 @@ use ferrohealth_ui::view::surface::{
     Container, Crumb, Header, SectionHead, definitions, page_heading, panel_section, section_intro,
     titled_panel,
 };
+use ferrohealth_ui::view::tree::path::path_key;
 use ferrohealth_ui::view::tree::{
-    Edit, Mark, More, Tree, TreeKind, TreeNode, TreeWords, path_key, tree_view,
+    Edit, Mark, More, Tree, TreeKind, TreeNode, TreeWords, tree_view,
 };
 
 use crate::app::Page;

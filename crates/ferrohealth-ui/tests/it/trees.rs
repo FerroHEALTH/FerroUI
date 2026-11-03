@@ -15,8 +15,9 @@ use ferrohealth_ui::view::browser::{
 };
 use ferrohealth_ui::view::coding::{Coding, Layout, MoreCodes, coding};
 use ferrohealth_ui::view::path::{archetype, path};
+use ferrohealth_ui::view::tree::path::path_key;
 use ferrohealth_ui::view::tree::{
-    Edit, Mark, More, Tree, TreeKind, TreeNode, TreeWords, path_key, tree_view,
+    Edit, Mark, More, Tree, TreeKind, TreeNode, TreeWords, tree_view,
 };
 
 use crate::markup::{has, tags};
