@@ -36,7 +36,6 @@ use ferrohealth_ui::view::timeline::{Event, timeline};
 use ferrohealth_ui::view::worklist::{WorkRow, row, worklist, worklist_foot};
 
 use crate::locale::Msg;
-use crate::markup::{h, t};
 use crate::records_data::{
     FAMILY_CHANGE, IDENTIFIERS, LEADING, OTHERS, POSTAL_ADDED, SourceRecord, Synthetic, pair_names,
     pair_wait,
@@ -74,7 +73,7 @@ fn record(v: &Visit, source: &SourceRecord) -> CompareRecord {
     let mut cells: Vec<Option<Html>> = source
         .values
         .into_iter()
-        .map(|value| value.map(t))
+        .map(|value| value.map(Html::text))
         .collect();
     cells.push((!ids.is_empty()).then(|| identifier_list(&v.locale, &ids)));
     CompareRecord {
@@ -253,10 +252,10 @@ fn glance(v: &Visit, pair: &Pair, open: &str) -> Html {
                 href: open.to_owned(),
             },
             body: definitions(vec![
-                (v.tr(Msg::RecordsRecordA), t(&pair.a)),
-                (v.tr(Msg::RecordsRecordB), t(&pair.b)),
-                (v.tr(Msg::RecordsGrade), t(pair.grade)),
-                (v.tr(Msg::RecordsWaiting), t(&pair.wait)),
+                (v.tr(Msg::RecordsRecordA), Html::text(&pair.a)),
+                (v.tr(Msg::RecordsRecordB), Html::text(&pair.b)),
+                (v.tr(Msg::RecordsGrade), Html::text(pair.grade)),
+                (v.tr(Msg::RecordsWaiting), Html::text(&pair.wait)),
             ]),
             words: SidePanelWords::of(&v.locale),
         },
@@ -298,14 +297,14 @@ pub fn worklist_section(v: &Visit) -> Html {
                     form: None,
                     checked: index == 3 || index == 4,
                 }),
-                title_cell(None, Some(&open), t(&pair.a), None),
-                cell(b, t(&pair.b)),
+                title_cell(None, Some(&open), Html::text(&pair.a), None),
+                cell(b, Html::text(&pair.b)),
                 cell(
                     domains,
-                    h(format!("<span class=\"fui-cluster\">{tags}</span>")),
+                    Html::raw(format!("<span class=\"fui-cluster\">{tags}</span>")),
                 ),
                 cell(grade, badge(tone, pair.grade)),
-                cell(waiting, t(&pair.wait)),
+                cell(waiting, Html::text(&pair.wait)),
                 menu_cell(Html::join([
                     glance(v, pair, &open),
                     pair_menu(v, pair, &open),
@@ -537,19 +536,19 @@ fn identifiers_table(v: &Visit, revealed: &[&str]) -> Html {
                 state,
                 words: words.clone(),
             });
-            h(format!(
+            Html::raw(format!(
                 "<tr data-key=\"{}\"><th scope=\"row\">{}</th><td data-label=\"{}\">{widget}</td></tr>",
-                t(&each.key),
-                t(domain),
-                t(v.tr(Msg::RecordsIdentifier))
+                Html::text(&each.key),
+                Html::text(domain),
+                Html::text(v.tr(Msg::RecordsIdentifier))
             ))
         })
         .collect();
-    let caption = t(v.tr(Msg::RecordsIdentifiersOf));
-    h(format!(
+    let caption = Html::text(v.tr(Msg::RecordsIdentifiersOf));
+    Html::raw(format!(
         "<div class=\"fui-table-scroll fui-table-stack\" role=\"region\" aria-label=\"{caption}\" id=\"identifiers\"><table class=\"fui-table\"><caption>{caption}</caption><thead><tr><th scope=\"col\">{}</th><th scope=\"col\">{}</th></tr></thead><tbody>{body}</tbody></table></div>",
-        t(v.tr(Msg::RecordsDomain)),
-        t(v.tr(Msg::RecordsIdentifier))
+        Html::text(v.tr(Msg::RecordsDomain)),
+        Html::text(v.tr(Msg::RecordsIdentifier))
     ))
 }
 
@@ -582,9 +581,9 @@ pub fn identifiers_section(v: &Visit) -> Html {
         .unwrap_or_default();
     titled_panel(
         v.tr(Msg::RecordsMasked),
-        h(format!(
+        Html::raw(format!(
             "<span class=\"fui-small fui-muted\">{}</span>",
-            t(v.tr(Msg::RecordsMaskedNote))
+            Html::text(v.tr(Msg::RecordsMaskedNote))
         )),
         Html::join([note, identifiers_table(v, &revealed)]),
     )

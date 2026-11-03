@@ -41,7 +41,6 @@ use ferrohealth_ui::view::surface::{
 use ferrohealth_ui::view::template::list::HeadingCount;
 use ferrohealth_ui::view::time::{relative, timestamp};
 
-use crate::app::Page;
 use crate::clinical_data::{
     AnswerRow, BLOOD_PRESSURE, BODY_TEMPERATURE, CALIBRATED, CALIBRATION, CLINICIAN,
     CODED_OPERATORS, COLUMNS, COMPOSER, Coded, DELETION, DEVICE, DEVICE_NAME, DIASTOLIC, FOREIGN,
@@ -50,7 +49,7 @@ use crate::clinical_data::{
     SUBJECT_NAMESPACE, SUBJECT_VALUE, SYSTOLIC, TEMPERATURE, VERSIONS, VersionRow,
 };
 use crate::locale::Msg;
-use crate::markup::{h, t};
+use crate::page::Page;
 use crate::visit::Visit;
 
 /// The seconds a revealed subject shows.
@@ -119,10 +118,10 @@ fn subjects(v: &Visit, brand: &str) -> Html {
                 count: None,
                 actions: None,
             }),
-            h(format!("<div class=\"fui-panel-body\">{body}</div>")),
+            Html::raw(format!("<div class=\"fui-panel-body\">{body}</div>")),
         )
     };
-    h(format!(
+    Html::raw(format!(
         "<div id=\"subject\">{}</div>",
         panel_sections_card(
             v.tr(Msg::ClSubject),
@@ -150,7 +149,7 @@ fn version(v: &Visit, row: &VersionRow, standing: Standing, read: bool, change: 
             COMPOSER
         }),
         when: relative(&v.locale, row.at, NOW),
-        contribution: h(format!(
+        contribution: Html::raw(format!(
             "<a href=\"#contribution\"><code>{contribution}</code></a>"
         )),
         read,
@@ -247,7 +246,7 @@ fn histories(v: &Visit, brand: &str) -> Html {
             at_time: None,
         },
     );
-    h(format!(
+    Html::raw(format!(
         "<div id=\"versions\">{}</div>",
         panel_sections_card(
             v.tr(Msg::ClVersions),
@@ -370,12 +369,12 @@ fn composition(v: &Visit) -> Html {
         elements: vec![element(v, Msg::ClTemperature, quantity(BODY_TEMPERATURE))],
         sections: Vec::new(),
     };
-    let folded = h(format!(
+    let folded = Html::raw(format!(
         "{} <a href=\"#reading\">{}</a>",
-        t(v.tr(Msg::ClFolded)),
-        t(v.tr(Msg::ClShowDocument))
+        Html::text(v.tr(Msg::ClFolded)),
+        Html::text(v.tr(Msg::ClShowDocument))
     ));
-    h(format!(
+    Html::raw(format!(
         "<div id=\"reading\">{}</div>",
         titled_panel(
             v.tr(Msg::ClReading),
@@ -479,12 +478,12 @@ fn builder(v: &Visit, brand: &str) -> Html {
         ],
         groups: vec![inner],
     };
-    h(format!(
+    Html::raw(format!(
         "<div id=\"query\">{}</div>",
         titled_panel(
             v.tr(Msg::ClQuery),
             Html::empty(),
-            h(format!(
+            Html::raw(format!(
                 "<form method=\"post\" action=\"/{brand}/clinical\" class=\"fui-panel-body\">{}</form>",
                 condition_groups(&v.locale, outer)
             )),
@@ -507,11 +506,16 @@ fn answer_table(v: &Visit) -> Html {
         .iter()
         .map(|row| {
             let [_, high_column, low_column] = &columns;
-            h(format!(
+            Html::raw(format!(
                 "<tr>{}{}{}</tr>",
-                title_cell(None, None, h(format!("<code>{}</code>", row.at)), None),
-                cell(high_column, t(row.systolic.to_string())),
-                cell(low_column, t(row.diastolic.to_string())),
+                title_cell(
+                    None,
+                    None,
+                    Html::raw(format!("<code>{}</code>", row.at)),
+                    None
+                ),
+                cell(high_column, Html::text(row.systolic.to_string())),
+                cell(low_column, Html::text(row.diastolic.to_string())),
             ))
         })
         .collect();
@@ -632,7 +636,7 @@ fn results(v: &Visit, brand: &str) -> Html {
             body: Html::empty(),
         },
     );
-    h(format!(
+    Html::raw(format!(
         "<div id=\"results\">{}</div><div id=\"results-chart\">{}</div><div id=\"results-empty\">{}</div>{}",
         panel_sections_card(v.tr(Msg::ClResultsTable), table),
         panel_sections_card(v.tr(Msg::ClResultsChart), chart),
@@ -643,7 +647,7 @@ fn results(v: &Visit, brand: &str) -> Html {
 
 /// An answer inside the query's own form, as a console whose run is a form
 /// post draws it: the switch submits the form, and Export's items submit it
-/// to [`crate::app::EXPORT_ROUTE`] by `formaction`, the query riding along.
+/// to [`crate::request::EXPORT_ROUTE`] by `formaction`, the query riding along.
 fn riding(v: &Visit, page: &str, count: u64) -> Html {
     let chart = v.param(SHOWN) == Some(Shown::Chart.key());
     let (shown, body) = if chart {
@@ -660,11 +664,11 @@ fn riding(v: &Visit, page: &str, count: u64) -> Html {
             shown,
             switch: Switch::Form { form: None },
             csv: Export::Submit {
-                action: format!("{}/csv", crate::app::EXPORT_ROUTE),
+                action: format!("{}/csv", crate::request::EXPORT_ROUTE),
                 form: None,
             },
             json: Export::Submit {
-                action: format!("{}/json", crate::app::EXPORT_ROUTE),
+                action: format!("{}/json", crate::request::EXPORT_ROUTE),
                 form: None,
             },
             window: v.tr(Msg::ClResultsWindow),
@@ -678,13 +682,13 @@ fn riding(v: &Visit, page: &str, count: u64) -> Html {
             "results-query-text",
             v.tr(Msg::ClResultsQuery),
             None,
-            h(format!(
+            Html::raw(format!(
                 "<textarea id=\"results-query-text\" name=\"query\" class=\"{TEXTAREA} fui-mono\" rows=\"2\" spellcheck=\"false\">{}</textarea>",
-                t(QUERY)
+                Html::text(QUERY)
             )),
         ),
     );
-    h(format!(
+    Html::raw(format!(
         "<form id=\"results-form\" method=\"get\" action=\"{page}#results-form\">{}</form>",
         panel_sections_card(v.tr(Msg::ClResultsForm), Html::join([query, answer]))
     ))
@@ -704,7 +708,7 @@ fn scopes(v: &Visit) -> Html {
         raw: String::from(FOREIGN),
         grant: Grant::Refused(v.tr(Msg::ClNotOpenehr).into()),
     });
-    h(format!(
+    Html::raw(format!(
         "<div id=\"scopes\">{}</div>",
         titled_panel(
             v.tr(Msg::ClScopes),

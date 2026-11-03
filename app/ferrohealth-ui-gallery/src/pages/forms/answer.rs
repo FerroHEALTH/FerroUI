@@ -15,7 +15,6 @@ use ferrohealth_ui::view::form::{ERROR, FORM, INPUT, Posted, field, help_id};
 use ferrohealth_ui::view::surface::card;
 
 use crate::locale::Msg;
-use crate::markup::{h, t};
 use crate::visit::Visit;
 
 /// The field the archetype id check posts.
@@ -49,13 +48,13 @@ pub(super) fn answered_action(v: &Visit, posted: Option<&Posted>) -> Html {
     let note = posted.and_then(|posted| posted.field("note"));
     let answer = note
         .map(|note| match counted(v, note) {
-            Ok(count) => h(format!(
+            Ok(count) => Html::raw(format!(
                 "<p id=\"note-answer\" class=\"fui-help\">{}</p>",
-                t(count)
+                Html::text(count)
             )),
-            Err(refusal) => h(format!(
+            Err(refusal) => Html::raw(format!(
                 "<p id=\"note-answer\" class=\"{ERROR}\">{}</p>",
-                t(refusal)
+                Html::text(refusal)
             )),
         })
         .unwrap_or_default();
@@ -66,20 +65,20 @@ pub(super) fn answered_action(v: &Visit, posted: Option<&Posted>) -> Html {
         .iter()
         .filter(|(name, _)| name != "note")
         .map(|(name, value)| {
-            h(format!(
+            Html::raw(format!(
                 "<input type=\"hidden\" name=\"{}\" value=\"{}\">",
-                t(name),
-                t(value)
+                Html::text(name),
+                Html::text(value)
             ))
         })
         .collect();
-    let input = h(format!(
+    let input = Html::raw(format!(
         "<input id=\"answer-note\" name=\"note\" type=\"text\" class=\"{INPUT}\" value=\"{}\">",
-        t(note.unwrap_or_default())
+        Html::text(note.unwrap_or_default())
     ));
     card(
         v.tr(Msg::ActionAnsweredOnPage),
-        h(format!(
+        Html::raw(format!(
             "<form method=\"post\" class=\"{FORM}\" id=\"answer-form\">{kept}{}<button type=\"submit\" class=\"{}\">{}</button></form><div aria-live=\"polite\">{answer}</div>",
             field("answer-note", v.tr(Msg::NoteToCheck), None, input),
             Variant::Primary.class(),
@@ -128,18 +127,18 @@ pub(super) fn answered_in_place(v: &Visit, posted: Option<&Posted>) -> Html {
     let id = posted.and_then(|posted| posted.field(ARCHETYPE));
     let answer = id
         .map(|id| match checked(v, id) {
-            Ok(names) => h(format!("<p class=\"fui-help\">{}</p>", t(names))),
-            Err(refusal) => h(format!("<p class=\"{ERROR}\">{}</p>", t(refusal))),
+            Ok(names) => Html::raw(format!("<p class=\"fui-help\">{}</p>", Html::text(names))),
+            Err(refusal) => Html::raw(format!("<p class=\"{ERROR}\">{}</p>", Html::text(refusal))),
         })
         .unwrap_or_default();
-    let input = h(format!(
+    let input = Html::raw(format!(
         "<input id=\"check-id\" name=\"{ARCHETYPE}\" type=\"text\" class=\"{INPUT}\" autocomplete=\"off\" spellcheck=\"false\" aria-describedby=\"{} {CHECK_ANSWER}\" value=\"{}\">",
         help_id("check-id"),
-        t(id.unwrap_or_default())
+        Html::text(id.unwrap_or_default())
     ));
     card(
         v.tr(Msg::CheckArchetypeId),
-        h(format!(
+        Html::raw(format!(
             "<form method=\"post\" class=\"{FORM}\" id=\"check-form\"{}>{}<button type=\"submit\" class=\"{}\">{}</button></form><div id=\"{CHECK_ANSWER}\" aria-live=\"polite\">{answer}</div>",
             Answer::new(CHECK_ANSWER)
                 .with_settle(SETTLE_MS)

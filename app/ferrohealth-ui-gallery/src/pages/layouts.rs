@@ -34,9 +34,8 @@ use ferrohealth_ui::view::template::list::HeadingCount;
 use ferrohealth_ui::view::tree::path::path_key;
 use ferrohealth_ui::view::tree::{Children, Tree, TreeKind, TreeNode, TreeWords, tree_view};
 
-use crate::app::Page;
 use crate::locale::Msg;
-use crate::markup::{h, t};
+use crate::page::Page;
 use crate::visit::Visit;
 
 /// The layouts page of the brand `brand`, with `query`.
@@ -207,9 +206,9 @@ fn browser(v: &Visit) -> Html {
     let found = ["SYN-110", "SYN-120", "SYN-300"]
         .into_iter()
         .map(|code| {
-            h(format!(
+            Html::raw(format!(
                 "<a href=\"{}\"><code>{code}</code></a>",
-                t(here(brand, &format!("?concept={code}")))
+                Html::text(here(brand, &format!("?concept={code}")))
             ))
         })
         .collect();
@@ -218,20 +217,26 @@ fn browser(v: &Visit) -> Html {
             "browse-find",
             v.tr(Msg::FindConcept),
             None,
-            h(format!(
+            Html::raw(format!(
                 "<input id=\"browse-find\" name=\"find\" type=\"search\" class=\"{INPUT}\">"
             )),
         ),
         divided_list(Some(v.tr(Msg::Matches).into()), found),
     ]);
     let code = v.param("concept").unwrap_or("SYN-100").to_owned();
-    let detail = h(format!(
+    let detail = Html::raw(format!(
         "<h2 class=\"fui-card-title\">{}</h2>{}",
-        t(&code),
+        Html::text(&code),
         definitions(vec![
-            (v.tr(Msg::Code), h(format!("<code>{}</code>", t(&code)))),
-            (v.tr(Msg::System), t("http://example.org/synthetic")),
-            (v.tr(Msg::Status), t("active")),
+            (
+                v.tr(Msg::Code),
+                Html::raw(format!("<code>{}</code>", Html::text(&code)))
+            ),
+            (
+                v.tr(Msg::System),
+                Html::text("http://example.org/synthetic")
+            ),
+            (v.tr(Msg::Status), Html::text("active")),
             (v.tr(Msg::Parent), or_none(&v.locale, String::new())),
         ])
     ));
@@ -247,14 +252,14 @@ fn browser(v: &Visit) -> Html {
 
 /// A list of value sets beside the one it opens.
 fn listing(v: &Visit) -> Html {
-    let back = t(here(v.brand.key(), ""));
+    let back = Html::text(here(v.brand.key(), ""));
     let items = [
         v.tr(Msg::SyntheticSigns),
         v.tr(Msg::SyntheticSites),
         v.tr(Msg::SyntheticUnits),
     ]
     .into_iter()
-    .map(|name| h(format!("<a href=\"{back}\">{}</a>", t(name))))
+    .map(|name| Html::raw(format!("<a href=\"{back}\">{}</a>", Html::text(name))))
     .collect();
     card(
         v.tr(Msg::MasterDetail),
@@ -264,13 +269,13 @@ fn listing(v: &Visit) -> Html {
                 Gap::Default,
                 Html::join([
                     definitions(vec![
-                        (v.tr(Msg::Name), t(v.tr(Msg::SyntheticSigns))),
-                        (v.tr(Msg::Version), t("1.0.0")),
-                        (v.tr(Msg::Concepts), t("12")),
+                        (v.tr(Msg::Name), Html::text(v.tr(Msg::SyntheticSigns))),
+                        (v.tr(Msg::Version), Html::text("1.0.0")),
+                        (v.tr(Msg::Concepts), Html::text("12")),
                     ]),
                     bullet_list(vec![
-                        t(v.tr(Msg::ComposedTwoSyntheticCodeSystems)),
-                        t(v.tr(Msg::ExcludesInactiveConcepts)),
+                        Html::text(v.tr(Msg::ComposedTwoSyntheticCodeSystems)),
+                        Html::text(v.tr(Msg::ExcludesInactiveConcepts)),
                     ]),
                 ]),
             ),
@@ -297,10 +302,10 @@ fn runner_form(v: &Visit) -> Html {
             v.tr(Msg::SyntheticUnits),
         ),
     ];
-    let reset = h(format!(
+    let reset = Html::raw(format!(
         "<button type=\"reset\" id=\"run-value-set-reset\" class=\"{}\">{}</button>",
         Variant::Secondary.class(),
-        t(v.tr(Msg::UseFirstValueSet))
+        Html::text(v.tr(Msg::UseFirstValueSet))
     ));
     let picker = picker_field(Picker {
         id: String::from("run-value-set"),
@@ -313,31 +318,31 @@ fn runner_form(v: &Visit) -> Html {
         empty_word: v.tr(Msg::ChooseOneServerHolds).into(),
         other_word: v.tr(Msg::AnotherCanonical).into(),
     });
-    let count = h(format!(
+    let count = Html::raw(format!(
         "<input id=\"run-count\" name=\"count\" inputmode=\"numeric\" class=\"{INPUT} {NARROW}\" value=\"25\" aria-describedby=\"{}\">",
         help_id("run-count")
     ));
-    let language = h(format!(
+    let language = Html::raw(format!(
         "<select id=\"run-language\" name=\"language\" class=\"{SELECT} {MEDIUM}\" aria-describedby=\"{}\"><option value=\"en\">{}</option><option value=\"nl\">{}</option></select>",
         help_id("run-language"),
-        t(v.tr(Msg::English)),
-        t(v.tr(Msg::Dutch))
+        Html::text(v.tr(Msg::English)),
+        Html::text(v.tr(Msg::Dutch))
     ));
-    let note = h(format!(
+    let note = Html::raw(format!(
         "<textarea id=\"run-note\" name=\"note\" rows=\"2\" class=\"{PROSE}\" aria-describedby=\"{}\"></textarea>",
         help_id("run-note")
     ));
-    let inactive = h(format!(
+    let inactive = Html::raw(format!(
         "<input id=\"run-inactive\" name=\"inactive\" type=\"checkbox\" aria-describedby=\"{}\">",
         help_id("run-inactive")
     ));
-    h(format!(
+    Html::raw(format!(
         "<form method=\"get\" action=\"{}\" class=\"{FORM}\">{}{picker}<div>{reset}</div>{}{}{}{}<button type=\"submit\" class=\"{}\">{}</button></form>",
-        t(here(brand, "")),
+        Html::text(here(brand, "")),
         split(
-            h(format!(
+            Html::raw(format!(
                 "<h2 class=\"fui-card-title\">{}</h2>",
-                t(v.tr(Msg::ListValueSet))
+                Html::text(v.tr(Msg::ListValueSet))
             )),
             help_switch("run-help", HelpWords::of(&v.locale))
         ),
@@ -381,30 +386,33 @@ fn runner_answer(v: &Visit) -> Html {
     .map(|(name, share, figure)| {
         Html::join([
             split(
-                t(name),
-                h(format!("<span class=\"fui-num\">{}</span>", t(figure))),
+                Html::text(name),
+                Html::raw(format!(
+                    "<span class=\"fui-num\">{}</span>",
+                    Html::text(figure)
+                )),
             ),
             proportion(share, None),
         ])
     })
     .collect();
     let node = |name: &str, tone: Tone, state: &str, time: Msg| {
-        h(format!(
+        Html::raw(format!(
             "<code class=\"fui-break\">{name}</code>{}<span class=\"fui-muted fui-num\">{}</span>",
             pill(tone, state),
-            t(v.tr(time))
+            Html::text(v.tr(time))
         ))
     };
     Html::join([
-        h(format!(
+        Html::raw(format!(
             "<h2 class=\"fui-card-title\">{}</h2>",
-            t(v.tr(Msg::Latency))
+            Html::text(v.tr(Msg::Latency))
         )),
         divided_list(Some(v.tr(Msg::LatencyPerOperation).into()), rows),
         proportion(0, Some(v.tr(Msg::NoTimeSpent0Percent))),
-        h(format!(
+        Html::raw(format!(
             "<h2 class=\"fui-card-title\">{}</h2>",
-            t(v.tr(Msg::Nodes))
+            Html::text(v.tr(Msg::Nodes))
         )),
         tile_list(
             v.tr(Msg::NodesAnswered),
@@ -424,19 +432,19 @@ fn runner_answer(v: &Visit) -> Html {
 /// Rows of fields with columns of their own, as an editor draws them.
 fn rows(v: &Visit) -> Html {
     let input = |id: &'static str, value: &str| {
-        h(format!(
+        Html::raw(format!(
             "<input id=\"{id}\" name=\"{id}\" class=\"{INPUT}\" value=\"{}\">",
-            t(value)
+            Html::text(value)
         ))
     };
     let remove = || {
-        h(format!(
+        Html::raw(format!(
             "<button type=\"button\" class=\"{}\">{}</button>",
             Variant::Danger.class(),
             label(Some(Glyph::TRASH), v.tr(Msg::Remove))
         ))
     };
-    let up = h(format!(
+    let up = Html::raw(format!(
         "<button type=\"button\" class=\"{}\">{}</button>",
         Variant::Secondary.class(),
         label(Some(Glyph::ARROW_UP), v.tr(Msg::Up))
@@ -514,15 +522,15 @@ fn rows(v: &Visit) -> Html {
 /// The stacks at each step of space.
 fn stacks(v: &Visit) -> Html {
     let lines = |gap: Gap, name: String| {
-        h(format!(
+        Html::raw(format!(
             "<div class=\"fui-well\">{}</div>",
             stack_at(
                 gap,
-                h(format!(
+                Html::raw(format!(
                     "<p>{}</p><p class=\"fui-muted\">{}</p><p class=\"fui-muted\">{}</p>",
-                    t(name),
-                    t(v.tr(Msg::SecondLine)),
-                    t(v.tr(Msg::ThirdLine))
+                    Html::text(name),
+                    Html::text(v.tr(Msg::SecondLine)),
+                    Html::text(v.tr(Msg::ThirdLine))
                 ))
             )
         ))
@@ -552,15 +560,15 @@ fn laid_out_lists(v: &Visit) -> Html {
     ];
     let tiles: Html = steps
         .iter()
-        .map(|step| h(format!("<li class=\"fui-well\">{}</li>", t(step))))
+        .map(|step| Html::raw(format!("<li class=\"fui-well\">{}</li>", Html::text(step))))
         .collect();
     let lines: Html = steps
         .iter()
-        .map(|step| h(format!("<li>{}</li>", t(step))))
+        .map(|step| Html::raw(format!("<li>{}</li>", Html::text(step))))
         .collect();
     card(
         v.tr(Msg::ListsLaidOut),
-        h(format!(
+        Html::raw(format!(
             "<ul class=\"fui-grid\">{tiles}</ul><ul class=\"fui-stack fui-gap-tight\">{lines}</ul>"
         )),
     )
@@ -571,14 +579,14 @@ fn laid_out_lists(v: &Visit) -> Html {
 fn fieldset_in_card(v: &Visit) -> Html {
     card(
         v.tr(Msg::FieldsetUnderTitle),
-        h(format!(
+        Html::raw(format!(
             "<fieldset class=\"fui-fieldset\"><legend>{}</legend>{}</fieldset>",
-            t(v.tr(Msg::TheCode)),
+            Html::text(v.tr(Msg::TheCode)),
             field(
                 "fieldset-code",
                 v.tr(Msg::Code),
                 None,
-                h(format!(
+                Html::raw(format!(
                     "<input id=\"fieldset-code\" name=\"code\" class=\"{INPUT}\">"
                 )),
             )
@@ -621,7 +629,7 @@ fn sections_panel(v: &Visit) -> Html {
         v.tr(Msg::Section),
     ]
     .into_iter()
-    .map(t)
+    .map(Html::text)
     .collect();
     let list = panel_section(
         &v.locale,
@@ -633,10 +641,10 @@ fn sections_panel(v: &Visit) -> Html {
         Html::join([
             section_intro(v.tr(Msg::PanelSectionsIntro)),
             divided_list(None, steps),
-            Container::AddRow.wrap(h(format!(
+            Container::AddRow.wrap(Html::raw(format!(
                 "<button type=\"button\" class=\"{}\">{}</button>",
                 Variant::Ghost.small(),
-                t(v.tr(Msg::AddStep))
+                Html::text(v.tr(Msg::AddStep))
             ))),
         ]),
     );

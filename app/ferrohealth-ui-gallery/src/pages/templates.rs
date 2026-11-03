@@ -37,13 +37,13 @@ use ferrohealth_ui::view::template::settings::{
     How, Managed, Setting, SettingsPage, Source, ValueSource, revision_line, settings_page,
 };
 
-use crate::app::Page;
 use crate::data::{
     CONFIG_FILE, EXAMPLE_SERVER, FAULT_TIME, LIBRARY, LOCATION_ID, Location, OPERATOR_SCOPE,
     REQUEST_ID, SELF_DESCRIPTION, SUPPORT, SUPPORT_HREF, library_release, locations,
     many_locations,
 };
 use crate::locale::Msg;
+use crate::page::Page;
 use crate::visit::Visit;
 
 /// The variants the template pages show, as their routes name them.
@@ -580,12 +580,12 @@ fn about(v: &Visit) -> Html {
                 subtitle: Some(v.tr(Msg::AboutIntro).into()),
                 ..Header::default()
             },
-            release: crate::app::footer(v).release(),
+            release: crate::page::footer(v).release(),
             versions: vec![
                 (v.tr(Msg::Server), Html::text(EXAMPLE_SERVER)),
                 (
                     String::from(LIBRARY),
-                    Html::text(library_release(crate::app::VERSION)),
+                    Html::text(library_release(crate::page::VERSION)),
                 ),
             ],
             manufacturer: Manufacturer {

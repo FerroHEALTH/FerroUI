@@ -7,7 +7,7 @@
 //! A page is one function of its module, `page(&Visit) -> Page`, which reads
 //! the request and draws the page once, whole; [`draw`] picks it by path.
 
-use crate::app::Page as Drawn;
+use crate::page::Page as Drawn;
 use crate::visit::Visit;
 
 /// A gallery page, as its path names it.
@@ -97,7 +97,7 @@ pub fn draw(visit: &Visit) -> Drawn {
         return if visit.path == "/" {
             crate::app::index(visit)
         } else {
-            crate::app::not_found(visit)
+            crate::page::not_found(visit)
         };
     };
     if page != Page::SignIn
@@ -107,7 +107,7 @@ pub fn draw(visit: &Visit) -> Drawn {
             .and_then(ferrohealth_ui::style::Brand::parse)
             .is_none()
     {
-        return crate::app::not_found(visit);
+        return crate::page::not_found(visit);
     }
     match page {
         Page::SignIn => pages::sign_in::page(visit),

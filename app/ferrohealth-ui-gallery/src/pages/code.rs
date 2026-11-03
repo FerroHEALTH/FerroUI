@@ -17,12 +17,12 @@ use ferrohealth_ui::view::surface::{
     Container, Crumb, Header, card, definitions, page_heading, page_meta,
 };
 
-use crate::app::Page;
 use crate::data::{
     AQL, FHIRCONNECT, FILE_NAMES, FINDING_CODES, JSON, MAPPING, MAPPING_DIGEST, MAPPING_PATH, XML,
     YAML,
 };
 use crate::locale::Msg;
+use crate::page::Page;
 use crate::visit::Visit;
 
 /// The id prefix of the viewer's lines.

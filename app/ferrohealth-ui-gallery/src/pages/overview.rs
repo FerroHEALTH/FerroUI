@@ -29,9 +29,8 @@ use ferrohealth_ui::view::tabs::{Tab, binder, keyboard_tabs, tab_panels};
 use ferrohealth_ui::view::tag::{Tag, tag};
 use ferrohealth_ui::view::time::timestamp;
 
-use crate::app::Page;
 use crate::locale::Msg;
-use crate::markup::{h, t};
+use crate::page::Page;
 use crate::visit::Visit;
 
 /// The path of the page `page` of the visit's brand.
@@ -48,7 +47,7 @@ fn preview(v: &Visit) -> Html {
         "synthetic-003.context.yml",
     ]
     .into_iter()
-    .map(|file| h(format!("<code>{file}</code>")))
+    .map(|file| Html::raw(format!("<code>{file}</code>")))
     .collect();
     titled_panel(
         v.tr(Msg::RecentFiles),
@@ -79,7 +78,7 @@ fn overview_actions(v: &Visit) -> ActionGroup {
                 Some(Glyph::SLIDERS_HORIZONTAL),
                 v.tr(Msg::SwitchToCompact),
                 Act::Post {
-                    action: String::from(crate::app::PREFERENCE_ROUTE),
+                    action: String::from(crate::request::PREFERENCE_ROUTE),
                     fields: vec![
                         (String::from("density"), String::from("compact")),
                         (String::from("back"), back),
@@ -141,10 +140,10 @@ fn buttons(v: &Visit) -> Html {
     let full = Variant::ALL
         .into_iter()
         .map(|variant| {
-            h(format!(
+            Html::raw(format!(
                 "<button type=\"button\" class=\"{}\" data-variant=\"{}\">{}</button>",
                 variant.class(),
-                t(variant.name(&Locale::default()).text()),
+                Html::text(variant.name(&Locale::default()).text()),
                 label(Some(Glyph::PLAY), variant.name(&v.locale))
             ))
         })
@@ -152,7 +151,7 @@ fn buttons(v: &Visit) -> Html {
     let small: Html = Variant::ALL
         .into_iter()
         .map(|variant| {
-            h(format!(
+            Html::raw(format!(
                 "<button type=\"button\" class=\"{}\">{}</button>",
                 variant.small(),
                 variant.name(&v.locale)
@@ -169,11 +168,11 @@ fn buttons(v: &Visit) -> Html {
         v.tr(Msg::Buttons),
         Html::join([
             Container::Cluster.wrap(full),
-            Container::Cluster.wrap(h(format!(
+            Container::Cluster.wrap(Html::raw(format!(
                     "{small}<button type=\"button\" class=\"{}\" disabled>{}</button>{link}<button type=\"button\" class=\"fui-icon-button\" aria-label=\"{}\">{}</button>",
                     Variant::Primary.class(),
                     label(Some(Glyph::SAVE), v.tr(Msg::Disabled)),
-                    t(v.tr(Msg::Settings)),
+                    Html::text(v.tr(Msg::Settings)),
                     icon(Glyph::SETTINGS, "16")
                 ))),
         ]),
@@ -245,10 +244,10 @@ fn marks_card(v: &Visit) -> Html {
 
 /// A notice in every tone.
 fn notices_card(v: &Visit) -> Html {
-    let deleted = h(format!(
+    let deleted = Html::raw(format!(
         "{}<a href=\"#marks\">{}</a>",
-        t(v.tr(Msg::SyntheticVersionDeleted)),
-        t(v.tr(Msg::BackFiles))
+        Html::text(v.tr(Msg::SyntheticVersionDeleted)),
+        Html::text(v.tr(Msg::BackFiles))
     ));
     card(
         v.tr(Msg::Notices),
@@ -302,17 +301,20 @@ fn facts_across(v: &Visit) -> Html {
     card(
         v.tr(Msg::FactsAcrossRow),
         facts_row(vec![
-            (v.tr(Msg::Concept), t(v.tr(Msg::SyntheticEvaluation))),
-            (v.tr(Msg::Version), t("2.3")),
-            (v.tr(Msg::DefaultLanguage), t("en")),
-            (v.tr(Msg::Languages), t("en")),
+            (
+                v.tr(Msg::Concept),
+                Html::text(v.tr(Msg::SyntheticEvaluation)),
+            ),
+            (v.tr(Msg::Version), Html::text("2.3")),
+            (v.tr(Msg::DefaultLanguage), Html::text("en")),
+            (v.tr(Msg::Languages), Html::text("en")),
             (
                 v.tr(Msg::LastChanged),
                 timestamp(&v.locale, "2026-10-19T01:18:37+02:00"),
             ),
             (
                 v.tr(Msg::Uid),
-                h(format!(
+                Html::raw(format!(
                     "<code>{}</code>",
                     "711d7d49-0000-4a6a-a6b4-synthetic"
                 )),
@@ -327,39 +329,50 @@ fn facts(v: &Visit) -> Html {
     let grid_card = card(
         v.tr(Msg::DefinitionGrid),
         definitions(vec![
-            (v.tr(Msg::ProductColumn), t(v.tr(Msg::FerrohealthUi))),
-            (v.tr(Msg::Version), t("0.1.7")),
+            (
+                v.tr(Msg::ProductColumn),
+                Html::text(v.tr(Msg::FerrohealthUi)),
+            ),
+            (v.tr(Msg::Version), Html::text("0.1.7")),
             (
                 v.tr(Msg::Commit),
-                h(format!("<code>{}</code>", "0123456789ab")),
+                Html::raw(format!("<code>{}</code>", "0123456789ab")),
             ),
             (v.tr(Msg::Profile), or_none(&v.locale, String::new())),
-            (v.tr(Msg::Licence), t(v.tr(Msg::BusinessSourceLicense11))),
+            (
+                v.tr(Msg::Licence),
+                Html::text(v.tr(Msg::BusinessSourceLicense11)),
+            ),
             (
                 v.tr(Msg::Built),
                 timestamp(&v.locale, "2026-10-18T23:18:37.039437+00:00"),
             ),
-            (v.tr(Msg::Locale), t("en")),
+            (v.tr(Msg::Locale), Html::text("en")),
             (
                 v.tr(Msg::Target),
-                h(format!(
+                Html::raw(format!(
                     "<code>{}</code>",
-                    t(v.tr(Msg::Wasm32UnknownUnknown))
+                    Html::text(v.tr(Msg::Wasm32UnknownUnknown))
                 )),
             ),
             (
                 v.tr(Msg::VersionUid),
-                h(String::from(
+                Html::raw(String::from(
                     "<code>01a15050-e772-7541-b5d5-0f5ec26781d6::synthetic.local::1</code>",
                 )),
             ),
             (
                 v.tr(Msg::Subject),
-                t(v.tr(Msg::SelfNoExternalSubjectReference)),
+                Html::text(v.tr(Msg::SelfNoExternalSubjectReference)),
             ),
         ]),
     );
-    let muted = |msg| h(format!("<p class=\"fui-muted\">{}</p>", t(v.tr(msg))));
+    let muted = |msg| {
+        Html::raw(format!(
+            "<p class=\"fui-muted\">{}</p>",
+            Html::text(v.tr(msg))
+        ))
+    };
     let operation = link_card_glyph(
         brand_page(v, "layouts"),
         Glyph::PLAY,
@@ -372,10 +385,10 @@ fn facts(v: &Visit) -> Html {
     );
     let listed = card(
         v.tr(Msg::BulletList),
-        h(format!(
+        Html::raw(format!(
             "<ul class=\"fui-bullets\"><li>{}</li><li>{}</li></ul>",
-            t(v.tr(Msg::ValidateCodeValueSetsServer)),
-            t(v.tr(Msg::TofhirHttpFhirconnectOrgFhir))
+            Html::text(v.tr(Msg::ValidateCodeValueSetsServer)),
+            Html::text(v.tr(Msg::TofhirHttpFhirconnectOrgFhir))
         )),
     );
     let folded = card(
@@ -385,9 +398,9 @@ fn facts(v: &Visit) -> Html {
                 v.tr(Msg::WhatBridgeAnsweredJson),
                 muted(Msg::RawDocumentFoldedUntilAsked),
             ),
-            Container::Well.wrap(h(format!(
+            Container::Well.wrap(Html::raw(format!(
                 "<p class=\"fui-small\">{}</p>",
-                t(v.tr(Msg::WellSetsPassageApartInside))
+                Html::text(v.tr(Msg::WellSetsPassageApartInside))
             ))),
         ]),
     );
@@ -405,7 +418,7 @@ fn facts(v: &Visit) -> Html {
 
 /// The panel of a binder: one sentence.
 fn binder_panel(words: &str) -> Html {
-    h(format!("<p>{}</p>", t(words)))
+    Html::raw(format!("<p>{}</p>", Html::text(words)))
 }
 
 /// The binder tabs: a file's views with a count, a record's seven sections
@@ -478,9 +491,9 @@ fn tab_sets(v: &Visit) -> Html {
             views,
             record,
             preferences,
-            h(format!(
+            Html::raw(format!(
                 "<p class=\"fui-muted\">{}</p>",
-                t(v.tr(Msg::KeyboardTabsLeftRightHome))
+                Html::text(v.tr(Msg::KeyboardTabsLeftRightHome))
             )),
             keyboard,
         ])),
@@ -522,7 +535,7 @@ fn segments(v: &Visit) -> Html {
         v.tr(Msg::SegmentedControls),
         Html::join([
             Container::Cluster.wrap(Html::join([chosen, as_links, posted])),
-            h(format!("<p class=\"fui-muted\">{}</p>", t(shown))),
+            Html::raw(format!("<p class=\"fui-muted\">{}</p>", Html::text(shown))),
         ]),
     )
 }
@@ -597,7 +610,7 @@ fn states(v: &Visit) -> Html {
         Container::Stack.wrap(Html::join([
                 busy(v.tr(Msg::ReadingCapabilityStatement), Busy::Section),
                 busy(v.tr(Msg::AskingBridge), Busy::Inline),
-                h(format!(
+                Html::raw(format!(
                     "<p class=\"fui-cluster\"><button type=\"button\" class=\"{}\" disabled>{}</button>{}</p>",
                     Variant::Primary.class(),
                     label(Some(Glyph::LOG_IN), v.tr(Msg::SignIn)),
@@ -617,7 +630,7 @@ fn icons(v: &Visit) -> Html {
     let all = Glyph::ALL
         .into_iter()
         .map(|(name, glyph)| {
-            h(format!(
+            Html::raw(format!(
                 "<span class=\"fui-badge fui-tone-neutral\">{}{name}</span>",
                 icon(glyph, "16")
             ))

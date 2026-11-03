@@ -39,10 +39,10 @@ use ferrohealth_ui::view::surface::{Container, card, page_header, titled_panel};
 use ferrohealth_ui::view::template::list::{HeadingCount, ListCard, list_card};
 use ferrohealth_ui::view::time::timestamp;
 
-use crate::app::{PAGING_ROUTE, Page, paging_of};
 use crate::data::{Row, SORTABLE, rows, sorted};
 use crate::locale::{Msg, message};
-use crate::markup::{h, t};
+use crate::page::Page;
+use crate::request::{PAGING_ROUTE, paging_of};
 use crate::visit::Visit;
 
 /// What the gallery's rows are, named from its catalog.
@@ -120,11 +120,11 @@ fn row_menu(v: &Visit, name: &str) -> Html {
 /// long for a phone, muted when the set leaves it out.
 fn row(v: &Visit, row: &Row, columns: &[Column; 6]) -> Html {
     let [_, kind, size, changed, state, _] = columns;
-    let canonical = t(format!(
+    let canonical = Html::text(format!(
         "https://mappings.example/fhirconnect/{}/synthetic-model-with-a-long-path",
         row.name
     ));
-    let sub = h(format!(
+    let sub = Html::raw(format!(
         "<span class=\"fui-truncate fui-small\" title=\"{canonical}\">{canonical}</span>"
     ));
     let class = if row.state == "excluded" {
@@ -132,15 +132,15 @@ fn row(v: &Visit, row: &Row, columns: &[Column; 6]) -> Html {
     } else {
         String::new()
     };
-    h(format!(
+    Html::raw(format!(
         "<tr{class}>{}{}{}{}{}{}</tr>",
         title_cell(
             None,
             Some("code"),
-            h(format!("<code>{}</code>", t(&row.name))),
+            Html::raw(format!("<code>{}</code>", Html::text(&row.name))),
             Some(sub)
         ),
-        cell(kind, t(row.kind)),
+        cell(kind, Html::text(row.kind)),
         count_cell(&v.locale, size, row.lines, lines()),
         cell(changed, timestamp(&v.locale, &row.changed)),
         cell(state, badge(tone(row.state), row.state)),
@@ -221,7 +221,7 @@ fn url_table(v: &Visit) -> Html {
             pager: Some(pager),
         },
     );
-    h(format!("<div class=\"fui-list-page\">{find}{card}</div>"))
+    Html::raw(format!("<div class=\"fui-list-page\">{find}{card}</div>"))
 }
 
 /// The same rows paged by a `POST` form whose buttons carry the page and the
@@ -320,7 +320,7 @@ fn review_list(v: &Visit) -> Html {
                     } else {
                         String::new()
                     };
-                    h(format!(
+                    Html::raw(format!(
                         "<tr{class}>{}{}{}{}{}</tr>",
                         check_cell(RowCheck {
                             id: &id,
@@ -333,7 +333,7 @@ fn review_list(v: &Visit) -> Html {
                         title_cell(
                             None,
                             Some("code"),
-                            h(format!("<code>{}</code>", t(&each.name))),
+                            Html::raw(format!("<code>{}</code>", Html::text(&each.name))),
                             None
                         ),
                         count_cell(&v.locale, size, each.lines, lines()),
@@ -342,9 +342,9 @@ fn review_list(v: &Visit) -> Html {
                     ))
                 })
                 .collect();
-            h(format!(
+            Html::raw(format!(
                 "<tbody>{}{members}</tbody>",
-                group_row(&columns, t(kind))
+                group_row(&columns, Html::text(kind))
             ))
         })
         .collect();
@@ -388,20 +388,20 @@ fn result_set(v: &Visit) -> Html {
             .numeric()
             .titled("count(*)")])
         .collect();
-    let name = t(v.tr(Msg::NameLower));
-    let count = t(v.tr(Msg::Count));
+    let name = Html::text(v.tr(Msg::NameLower));
+    let count = Html::text(v.tr(Msg::Count));
     let rows = (1..=3_u32).map(|index| {
-        h(format!(
+        Html::raw(format!(
             "<tr><td><a href=\"#result-{index}\"><code>{index:08}-synthetic::node-a::1</code></a></td><td data-label=\"{name}\">{}</td><td data-label=\"{count}\" class=\"{NUM}\">{}</td></tr>",
-            t(v.tr(Msg::SyntheticVitalSigns)),
+            Html::text(v.tr(Msg::SyntheticVitalSigns)),
             index * 7
         ))
     });
     // A cell holding an identifier longer than its column can hold.
-    let long = h(format!(
+    let long = Html::raw(format!(
         "<tr><td><code>{}</code></td><td data-label=\"{name}\">{}</td><td data-label=\"{count}\" class=\"{NUM}\">1</td></tr>",
-        t(v.tr(Msg::HttpExampleOrgFhirStructuredefinition)),
-        t(v.tr(Msg::SyntheticProfile))
+        Html::text(v.tr(Msg::HttpExampleOrgFhirStructuredefinition)),
+        Html::text(v.tr(Msg::SyntheticProfile))
     ));
     let body = rows.chain([long]).collect();
     card(
@@ -426,14 +426,14 @@ fn paged_columns(v: &Visit) -> [Column; 3] {
 /// A result whose rows arrive a page at a time, each page its own body,
 /// stacked on a phone like any other rows.
 fn result_pages(v: &Visit) -> Html {
-    let committed = t(v.tr(Msg::Committed));
-    let rate = t(v.tr(Msg::Rate));
+    let committed = Html::text(v.tr(Msg::Committed));
+    let rate = Html::text(v.tr(Msg::Rate));
     let bodies = (1..=2_u32)
         .map(|page| {
             let rows: Html = (1..=2_u32)
                 .map(|row| {
                     let index = (page - 1) * 2 + row;
-                    h(format!(
+                    Html::raw(format!(
                         "<tr><td><code>{index:08}-synthetic::node-b::1</code></td><td data-label=\"{committed}\">{}</td><td data-label=\"{rate}\" class=\"{NUM}\">{}</td></tr>",
                         timestamp(
                             &v.locale,
@@ -443,7 +443,7 @@ fn result_pages(v: &Visit) -> Html {
                     ))
                 })
                 .collect();
-            h(format!("<tbody data-page=\"{page}\">{rows}</tbody>"))
+            Html::raw(format!("<tbody data-page=\"{page}\">{rows}</tbody>"))
         })
         .collect();
     card(
@@ -474,7 +474,7 @@ fn fitting(v: &Visit) -> Html {
     ]
     .into_iter()
     .map(|(name, tone, state)| {
-        h(format!(
+        Html::raw(format!(
             "<tr><th scope=\"row\"><code>{name}</code></th><td>{}</td></tr>",
             badge(tone, state)
         ))
@@ -504,7 +504,7 @@ fn hierarchy_columns(v: &Visit) -> [Column; 2] {
 /// A synthetic hierarchy, each concept's title cell stepped in by its level,
 /// one row past the deepest step to show that deeper levels hold it.
 fn hierarchy(v: &Visit) -> Html {
-    let display = t(v.tr(Msg::Display));
+    let display = Html::text(v.tr(Msg::Display));
     let rows = [
         (0, "root", Msg::HierarchyRoot),
         (1, "branch-a", Msg::HierarchyBranchA),
@@ -517,10 +517,15 @@ fn hierarchy(v: &Visit) -> Html {
     ]
     .into_iter()
     .map(|(level, code, words)| {
-        h(format!(
+        Html::raw(format!(
             "<tr>{}<td data-label=\"{display}\">{}</td></tr>",
-            title_cell(Some(level), None, h(format!("<code>{code}</code>")), None),
-            t(v.tr(words))
+            title_cell(
+                Some(level),
+                None,
+                Html::raw(format!("<code>{code}</code>")),
+                None
+            ),
+            Html::text(v.tr(words))
         ))
     })
     .collect();
@@ -546,19 +551,19 @@ fn acted_columns(v: &Visit) -> [Column; 3] {
 /// Rows whose actions are an Edit link and a Remove form, side by side on
 /// the row's first line.
 fn row_actions(v: &Visit) -> Html {
-    let base = t(v.tr(Msg::BaseUrl));
-    let actions = t(v.tr(Msg::Actions));
+    let base = Html::text(v.tr(Msg::BaseUrl));
+    let actions = Html::text(v.tr(Msg::Actions));
     let rows = ["node-a", "node-b"]
         .into_iter()
         .map(|member| {
-            h(format!(
+            Html::raw(format!(
                 "<tr><th scope=\"row\"><code>{}</code></th><td data-label=\"{base}\"><code>{}</code></td><td data-label=\"{actions}\" class=\"{ACTIONS}\"><a href=\"#edit\" class=\"{}\">{}</a> <form method=\"post\" action=\"#remove\"><button type=\"submit\" class=\"{}\">{}</button></form></td></tr>",
-                t(format!("synthetic-{member}")),
-                t(format!("https://{member}.example.org/")),
+                Html::text(format!("synthetic-{member}")),
+                Html::text(format!("https://{member}.example.org/")),
                 Variant::Secondary.small(),
-                t(v.tr(Msg::Edit)),
+                Html::text(v.tr(Msg::Edit)),
                 Variant::Danger.small(),
-                t(v.tr(Msg::Remove))
+                Html::text(v.tr(Msg::Remove))
             ))
         })
         .collect();
@@ -595,16 +600,16 @@ fn model_files(v: &Visit) -> Html {
     ]
     .into_iter()
     .map(|(model, path)| {
-        h(format!(
+        Html::raw(format!(
             "<tr>{}{}</tr>",
-            title_cell(None, None, h(format!("<code>{model}</code>")), None),
-            cell(file, h(format!("<code>{path}</code>"))),
+            title_cell(None, None, Html::raw(format!("<code>{model}</code>")), None),
+            cell(file, Html::raw(format!("<code>{path}</code>"))),
         ))
     })
     .collect();
-    let context = h(format!(
+    let context = Html::raw(format!(
         "<a href=\"#context\">{}</a>",
-        t(v.tr(Msg::ContextDiagnose))
+        Html::text(v.tr(Msg::ContextDiagnose))
     ));
     let group = group_row(&columns, context);
     card(
@@ -612,7 +617,7 @@ fn model_files(v: &Visit) -> Html {
         data_table(DataTable::new(
             &v.tr(Msg::ModelsEachFile),
             &columns,
-            Body::Bodies(h(format!("<tbody>{group}{rows}</tbody>"))),
+            Body::Bodies(Html::raw(format!("<tbody>{group}{rows}</tbody>"))),
         )),
     )
 }
@@ -697,10 +702,10 @@ fn changes(v: &Visit) -> Html {
     ];
     titled_panel(
         v.tr(Msg::StagedChanges),
-        h(format!(
+        Html::raw(format!(
             "<button type=\"button\" class=\"{}\">{}</button>",
             Variant::Primary.small(),
-            t(v.tr(Msg::Apply))
+            Html::text(v.tr(Msg::Apply))
         )),
         change_table(
             &v.locale,

@@ -16,231 +16,24 @@ use ferrohealth_ui::i18n::Arg;
 use ferrohealth_ui::icon::{Glyph, icon};
 use ferrohealth_ui::serve::Assets;
 use ferrohealth_ui::style::Brand;
-use ferrohealth_ui::table::model::Paging;
-use ferrohealth_ui::theme::{Preferences, Theme, cookie};
 use ferrohealth_ui::tone::Tone;
-use ferrohealth_ui::view::empty::empty_state;
 use ferrohealth_ui::view::menu::{Choice, Choices, ThemeChoice, UserLink, UserMenu, user_menu};
 use ferrohealth_ui::view::nav::{Count, Entry, Group, Rail, Sidebar, sidebar};
 use ferrohealth_ui::view::segmented::segmented_links;
 use ferrohealth_ui::view::shell::{
-    Document, Footer, Shell, TopBar, centred, document, lockup, mark, shell, topbar,
+    Document, Shell, TopBar, centred, document, lockup, mark, shell, topbar,
 };
 use ferrohealth_ui::view::status::{Reach, StatusPill, banner, status_pill};
-use ferrohealth_ui::view::toast::{Flash, toast_region};
+use ferrohealth_ui::view::toast::toast_region;
 use ferrohealth_ui::view::version::{VersionSelect, version_select};
 
 use crate::locale::Msg;
+use crate::page::{Frame, Page, VERSION, brand_glyph, footer, title};
+use crate::request::{PREFERENCE_ROUTE, SIDEBAR_ROUTE, SIGN_OUT_ROUTE, rail_of};
 use crate::visit::Visit;
-
-/// The gallery's version.
-pub const VERSION: &str = env!("CARGO_PKG_VERSION");
-
-/// The path of the route every preference posts to, its value under its
-/// cookie's name: Your preferences, the user menu's theme and the
-/// overview's density.
-pub const PREFERENCE_ROUTE: &str = "/preference";
-
-/// The path of the route Reset to defaults posts to.
-pub const RESET_ROUTE: &str = "/preferences/reset";
-
-/// What the gallery puts before each preference's cookie name
-/// ([`ferrohealth_ui::theme::Preference::COOKIE`]), so `gallery-theme` keeps
-/// the theme.
-pub const COOKIE_PREFIX: &str = "gallery-";
-
-/// The gallery's own preferences, shown as a console's own rows.
-///
-/// In FerroPIX's Appearance: how long a revealed identifier stays and
-/// whether leaving the page hides it. In Language and region: FerroTERM's
-/// language concepts are asked for in and the rows a listing shows.
-pub const OWN_PREFERENCES: [&str; 4] = ["reveal", "hide", "concepts", "size"];
-
-/// The path of the route a session listing's pager posts its page and size
-/// to.
-pub const PAGING_ROUTE: &str = "/paging";
-
-/// The listings that keep their position in the gallery's session, each
-/// under the cookie its key names after [`PAGING_COOKIE`].
-pub const PAGED_LISTINGS: [&str; 2] = ["files", "ehrs"];
-
-/// The prefix of the cookie a session listing's position is kept in, for
-/// the browser's session alone and never in a URL.
-pub const PAGING_COOKIE: &str = "gallery-paging-";
-
-/// The path of the route the code editor's form posts its draft to, which
-/// answers with the draft it received.
-pub const DRAFT_ROUTE: &str = "/draft";
-
-/// The path under which an answer riding its query's form is exported, as
-/// `/export/csv` or `/export/json`.
-pub const EXPORT_ROUTE: &str = "/export";
-
-/// The path of the route the topology's Probe now posts to, which sends
-/// the browser back where it came from.
-pub const PROBE_ROUTE: &str = "/probe";
-
-/// The path of the route a member's removal posts to, which returns to the
-/// page naming the member removed.
-pub const REMOVE_ROUTE: &str = "/remove-member";
-
-/// The path of the route the sidebar's Collapse and Expand post to.
-pub const SIDEBAR_ROUTE: &str = "/sidebar";
-
-/// The name of the cookie the sidebar's state is kept in.
-pub const SIDEBAR_COOKIE: &str = "gallery-sidebar";
-
-/// The path under which a brand's Sign out posts.
-pub const SIGN_OUT_ROUTE: &str = "/sign-out";
 
 /// The id of the navigation, which the drawer button opens.
 const SIDEBAR_ID: &str = "sidebar";
-
-/// The brand a request path names: the first segment that is a brand's key,
-/// FerroBRIDGE for a path that names none.
-#[must_use]
-pub fn brand_of(path: &str) -> Brand {
-    path.split('/')
-        .find_map(Brand::parse)
-        .unwrap_or(Brand::Bridge)
-}
-
-/// The preferences the `Cookie` header value `cookies` keeps, each under
-/// its cookie's name after [`COOKIE_PREFIX`].
-#[must_use]
-pub fn preferences_of(cookies: &str) -> Preferences {
-    Preferences::read(cookies, COOKIE_PREFIX)
-}
-
-/// The theme the `Cookie` header value `cookies` names, the system theme for
-/// none.
-#[must_use]
-pub fn theme_of(cookies: &str) -> Theme {
-    preferences_of(cookies).theme
-}
-
-/// The value of the gallery's own preference `name`, one of
-/// [`OWN_PREFERENCES`], that the `Cookie` header value `cookies` keeps.
-#[must_use]
-pub fn own_of<'a>(cookies: &'a str, name: &str) -> Option<&'a str> {
-    cookie(cookies, &format!("{COOKIE_PREFIX}{name}"))
-}
-
-/// The paging of the session listing `listing` that the `Cookie` header
-/// value `cookies` keeps, as `<page>.<size>`, the first page for none.
-#[must_use]
-pub fn paging_of(cookies: &str, listing: &str) -> Paging {
-    let kept = cookie(cookies, &format!("{PAGING_COOKIE}{listing}"))
-        .and_then(|value| value.split_once('.'));
-    Paging::read(kept.map(|(page, _)| page), kept.map(|(_, size)| size))
-}
-
-/// Whether the `Cookie` header value `cookies` asks for the sidebar's rail.
-#[must_use]
-pub fn rail_of(cookies: &str) -> bool {
-    cookie(cookies, SIDEBAR_COOKIE) == Some("rail")
-}
-
-/// How a page is framed.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Frame {
-    /// In the brand's shell: the top bar, the navigation, the footer.
-    Shell,
-    /// Centred above the footer, as the sign-in and a fault are.
-    Centred,
-}
-
-/// A page a handler drew: its title words, its frame and its content.
-#[derive(Debug)]
-pub struct Page {
-    /// The page's own words in the document title; the brand and the
-    /// gallery follow them.
-    pub title: String,
-    /// How the page is framed.
-    pub frame: Frame,
-    /// The page's content.
-    pub content: Html,
-    /// The answer's status.
-    pub status: http::StatusCode,
-    /// The toasts the page arrives with, such as the outcome of the action
-    /// that led to it.
-    pub flash: Vec<Flash>,
-}
-
-impl Page {
-    /// A page in the brand's shell.
-    #[must_use]
-    pub fn shell(title: String, content: Html) -> Self {
-        Self {
-            title,
-            frame: Frame::Shell,
-            content,
-            status: http::StatusCode::OK,
-            flash: Vec::new(),
-        }
-    }
-
-    /// A page centred above the footer.
-    #[must_use]
-    pub fn centred(title: String, content: Html) -> Self {
-        Self {
-            title,
-            frame: Frame::Centred,
-            content,
-            status: http::StatusCode::OK,
-            flash: Vec::new(),
-        }
-    }
-
-    /// This page with the toasts `flash`.
-    #[must_use]
-    pub fn with_flash(mut self, flash: Vec<Flash>) -> Self {
-        self.flash = flash;
-        self
-    }
-
-    /// This page answered with `status`.
-    #[must_use]
-    pub fn with_status(mut self, status: http::StatusCode) -> Self {
-        self.status = status;
-        self
-    }
-}
-
-/// The gallery's name, as its footer and titles name it.
-fn product(visit: &Visit) -> String {
-    visit.tr(Msg::Product)
-}
-
-/// The footer every gallery page carries.
-#[must_use]
-pub fn footer(visit: &Visit) -> Footer {
-    Footer {
-        product: product(visit).into(),
-        version: VERSION.into(),
-        about: "/".into(),
-    }
-}
-
-/// The document title of the page `name` in the visit's brand, the
-/// gallery's for a path under no brand.
-#[must_use]
-pub fn title(visit: &Visit, name: &str) -> String {
-    let product = product(visit);
-    if name.is_empty() {
-        return product;
-    }
-    let under = if visit
-        .path
-        .split('/')
-        .any(|part| Brand::parse(part).is_some())
-    {
-        visit.brand.product().to_owned()
-    } else {
-        visit.tr(Msg::Gallery)
-    };
-    format!("{name} · {under} · {product}")
-}
 
 /// The whole document of `page` for `visit`.
 #[must_use]
@@ -466,19 +259,6 @@ fn brand_choices(visit: &Visit, back: &str) -> Choices {
             .collect(),
     }
 }
-
-/// The glyph a brand's mark draws in the gallery.
-#[must_use]
-pub const fn brand_glyph(brand: Brand) -> Glyph {
-    match brand {
-        Brand::Bridge => Glyph::LAYERS,
-        Brand::Fed => Glyph::USERS,
-        Brand::Ehr => Glyph::HEART_PULSE,
-        Brand::Term => Glyph::LIST_CHECKS,
-        Brand::Pix => Glyph::LINK,
-    }
-}
-
 /// The FHIR version select (M3) the top bar of the visit's page carries:
 /// the terminology page's alone.
 fn fhir_version(visit: &Visit) -> Option<VersionSelect> {
@@ -626,42 +406,4 @@ pub fn index(visit: &Visit) -> Page {
         Html::text(visit.tr(Msg::EveryComponentLibraryEveryProduct)),
     ));
     Page::centred(String::new(), content)
-}
-
-/// The page for a path the gallery does not serve: `404`, and the way back.
-#[must_use]
-pub fn not_found(visit: &Visit) -> Page {
-    let content = empty_state(
-        Glyph::COMPASS,
-        visit.tr(Msg::NotFound),
-        visit.tr(Msg::NotFoundBody),
-        Html::raw(format!(
-            "<a href=\"/\" class=\"fui-button fui-button-primary\">{}{}</a>",
-            icon(Glyph::ARROW_LEFT, "16"),
-            Html::text(visit.tr(Msg::BackGallery))
-        )),
-    );
-    Page::centred(
-        visit.tr(Msg::NotFound),
-        Html::raw(format!("<div class=\"fui-card\">{content}</div>")),
-    )
-    .with_status(http::StatusCode::NOT_FOUND)
-}
-
-#[cfg(test)]
-mod tests {
-    use ferrohealth_ui::style::Brand;
-    use ferrohealth_ui::theme::Theme;
-
-    use super::{brand_of, theme_of};
-
-    #[test]
-    fn the_brand_and_the_theme_are_read_from_the_request() {
-        assert_eq!(Brand::Ehr, brand_of("/ferroehr/tables"));
-        assert_eq!(Brand::Term, brand_of("/sign-in/ferroterm/basic"));
-        assert_eq!(Brand::Bridge, brand_of("/"));
-        assert_eq!(Theme::Dark, theme_of("a=1; gallery-theme=dark"));
-        assert_eq!(Theme::System, theme_of("gallery-theme=sepia"));
-        assert_eq!(Theme::System, theme_of(""));
-    }
 }

@@ -14,9 +14,9 @@ use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::search::find_results;
 use ferrohealth_ui::view::surface::{Crumb, Header, page_heading};
 
-use crate::app::Page;
 use crate::data::SEARCHED;
 use crate::locale::Msg;
+use crate::page::Page;
 use crate::visit::Visit;
 
 /// The find page.

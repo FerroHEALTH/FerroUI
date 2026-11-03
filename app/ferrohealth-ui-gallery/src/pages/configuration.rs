@@ -34,12 +34,11 @@ use ferrohealth_ui::view::template::settings::{
     How, Setting, file_line, setting_row, settings_panel,
 };
 
-use crate::app::Page;
 use crate::data::{
     BROKEN_FILE, CONFIG_FILE, FILE_SECRETS, MAPPING_FILES, NEW_SECRET_FILE, SECRET_FILE, TRIAL,
 };
 use crate::locale::Msg;
-use crate::markup::{h, t};
+use crate::page::Page;
 use crate::visit::Visit;
 
 /// The address of a page of the gallery's current brand, after `root`.
@@ -147,14 +146,14 @@ fn pending(v: &Visit, root: &str) -> Html {
                 ],
             ),
         },
-        Some(h(format!(
+        Some(Html::raw(format!(
             "<button type=\"button\" class=\"{}\" disabled aria-describedby=\"pending-wait-why\">{}</button>",
             Variant::Primary.small(),
             label(Some(Glyph::CHECK), v.tr(Msg::CfApply10))
         ))),
-        Some(h(format!(
+        Some(Html::raw(format!(
             "<p id=\"pending-wait-why\" class=\"fui-small fui-muted\">{}</p>",
-            t(v.tr(Msg::CfApplyWhy))
+            Html::text(v.tr(Msg::CfApplyWhy))
         ))),
     );
     let (deadline, total, left) = TRIAL;
@@ -204,15 +203,15 @@ fn pending(v: &Visit, root: &str) -> Html {
             tone: Some(Tone::Bad),
             lifecycle: applied(v, (StepState::Failed, Msg::CfNotConfirmed, Msg::CfDeadline)),
         },
-        Some(h(format!(
+        Some(Html::raw(format!(
             "<a href=\"{}\" class=\"{}\">{}</a>",
-            t(at(root, "configuration")),
+            Html::text(at(root, "configuration")),
             Variant::Secondary.small(),
             label(None, v.tr(Msg::CfCompare))
         ))),
         None,
     );
-    h(format!(
+    Html::raw(format!(
         "<div id=\"pending\" class=\"fui-stack\">{waiting}{trial}<div id=\"confirmed\">{confirmed}</div><div id=\"rolled-back\">{rolled_back}</div></div>"
     ))
 }
@@ -353,17 +352,17 @@ fn provenance(v: &Visit, root: &str) -> Html {
                 tag(v.tr(Msg::CfDraft))
             };
             let href = locked.then_some(provisioned.as_str());
-            h(format!(
+            Html::raw(format!(
                 "<tr>{}{}{}</tr>",
                 title_cell(
                     None,
                     href,
-                    h(format!("<span class=\"fui-mono\">{file}</span>")),
+                    Html::raw(format!("<span class=\"fui-mono\">{file}</span>")),
                     None
                 ),
                 cell(
                     &columns[1],
-                    h(format!("<span class=\"fui-mono\">{template}</span>"))
+                    Html::raw(format!("<span class=\"fui-mono\">{template}</span>"))
                 ),
                 cell(&columns[2], source),
             ))
@@ -371,9 +370,9 @@ fn provenance(v: &Visit, root: &str) -> Html {
         .collect();
     let caption = v.tr(Msg::CfMappingFiles);
     let table = data_table(DataTable::new(&caption, &columns, Body::Rows(rows)));
-    h(format!(
+    Html::raw(format!(
         "<section class=\"fui-card fui-panel\" id=\"provenance\"><div class=\"fui-panel-head\"><h2 class=\"fui-card-title\">{}</h2><div class=\"fui-actions\">{}</div></div>{table}</section>",
-        t(v.tr(Msg::CfProvenance)),
+        Html::text(v.tr(Msg::CfProvenance)),
         card_action(provisioned.clone(), v.tr(Msg::CfOpenProvisioned))
     ))
 }
@@ -430,7 +429,10 @@ pub fn provisioned(v: &Visit) -> Page {
             tabs: None,
             body: card(
                 v.tr(Msg::CfAboutFile),
-                h(format!("<p>{}</p>", t(v.tr(Msg::CfProvisionedBody)))),
+                Html::raw(format!(
+                    "<p>{}</p>",
+                    Html::text(v.tr(Msg::CfProvisionedBody))
+                )),
             ),
         },
     );
