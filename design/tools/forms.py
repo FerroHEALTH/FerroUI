@@ -57,7 +57,8 @@ for (const el of document.querySelectorAll('input:not([type]), input[type=text],
   cv.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
   const ls = parseFloat(cs.letterSpacing) || 0;
   const need = cv.measureText(el.type === 'password' && el.value ? '•'.repeat(el.value.length) : text).width + ls * text.length;
-  const room = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  // The border box less its borders and padding: Chrome 157 leaves an input's padding out of clientWidth.
+  const room = el.getBoundingClientRect().width - parseFloat(cs.borderLeftWidth) - parseFloat(cs.borderRightWidth) - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
   // A value longer than a field that already spans its row scrolls inside it, as any text input does; only a
   // field narrower than its row, or a placeholder (design text), is a defect.
   const unit = el.closest('.fui-input-group, .fui-secret-field, form.fui-search') || el;
