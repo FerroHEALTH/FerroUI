@@ -678,7 +678,7 @@ jobs:
         id: chrome
         uses: browser-actions/setup-chrome@48ad923757ca74d66703209fe939badbdf80f2f4 # v2.2.0
         with:
-          chrome-version: 155.0.8059.79
+          chrome-version: 157.0.8103.38
           install-chromedriver: true
       # The gallery is a server and its pages' script modules are the
       # library's: a cargo build is the whole build.
@@ -798,7 +798,7 @@ jobs:
         id: chrome
         uses: browser-actions/setup-chrome@48ad923757ca74d66703209fe939badbdf80f2f4 # v2.2.0
         with:
-          chrome-version: 155.0.8059.79
+          chrome-version: 157.0.8103.38
       - name: Build the pages and run every check
         env:
           FERROUI_CHROME: ${{ steps.chrome.outputs.chrome-path }}
