@@ -193,59 +193,83 @@ function stepped(language) {
 
 const AQL_KEYWORDS = new Set("AND AS ASC ASCENDING BY CONTAINS DESC DESCENDING DISTINCT EXISTS FALSE FETCH FROM LIKE LIMIT MATCHES NOT NULL OFFSET OR ORDER SELECT TOP TRUE WHERE XOR".split(" "));
 
+const aqlWord = (c) => alnum(c) || c === "_";
+
+// A predicate from its `[` through the `]` that closes it, the quoted
+// text inside it whole.
+function aqlPredicate(chars) {
+  let value = chars.next();
+  let depth = 1;
+  while (!chars.done()) {
+    const c = chars.peek();
+    if (c === "'" || c === '"') value += chars.quoted();
+    else {
+      value += chars.next();
+      if (c === "[") depth++;
+      else if (c === "]" && --depth === 0) break;
+    }
+  }
+  return value;
+}
+
+// A path: each `/` with its name and its predicates; a lone `/` is
+// punctuation.
+function aqlPath(chars, out) {
+  let value = "";
+  while (chars.peek() === "/") {
+    value += chars.next() + chars.take(aqlWord);
+    while (chars.peek() === "[") value += aqlPredicate(chars);
+  }
+  push(out, value === "/" ? "punctuation" : "path", value);
+}
+
+// A `-`, or the comment two of them open.
+function aqlDash(chars, out) {
+  const dash = chars.next();
+  if (chars.peek() !== "-") push(out, "punctuation", dash);
+  else push(out, "comment", dash + chars.take((x) => x !== "\n" && x !== "\r"));
+}
+
+function aqlName(chars, out) {
+  const w = chars.take(aqlWord);
+  push(out, AQL_KEYWORDS.has(w.toUpperCase()) && /^[\x00-\x7f]*$/.test(w) ? "keyword" : "identifier", w);
+}
+
+function aqlStep(chars, out) {
+  const c = chars.peek();
+  if (c === "'" || c === '"') push(out, "string", chars.quoted());
+  else if (c === "$") push(out, "parameter", chars.next() + chars.take(aqlWord));
+  else if (c === "[") push(out, "path", aqlPredicate(chars));
+  else if (c === "/") aqlPath(chars, out);
+  else if (c === "-") aqlDash(chars, out);
+  else if (digit(c)) push(out, "number", number(chars));
+  else if (alpha(c) || c === "_") aqlName(chars, out);
+  else if (space(c)) push(out, "plain", chars.take(space));
+  else if ("(),;=<>!*.{}:+".includes(c)) push(out, "punctuation", chars.next());
+  else push(out, "plain", chars.next());
+}
+
 function aql(text) {
   const out = [];
   const chars = new Chars(text);
-  const word = (c) => alnum(c) || c === "_";
-  const predicate = () => {
-    let value = chars.next();
-    let depth = 1;
-    while (!chars.done()) {
-      const c = chars.peek();
-      if (c === "'" || c === '"') value += chars.quoted();
-      else {
-        value += chars.next();
-        if (c === "[") depth++;
-        else if (c === "]" && --depth === 0) break;
-      }
-    }
-    return value;
-  };
-  while (!chars.done()) {
-    const c = chars.peek();
-    if (c === "'" || c === '"') push(out, "string", chars.quoted());
-    else if (c === "$") push(out, "parameter", chars.next() + chars.take(word));
-    else if (c === "[") push(out, "path", predicate());
-    else if (c === "/") {
-      let value = "";
-      while (chars.peek() === "/") {
-        value += chars.next() + chars.take(word);
-        while (chars.peek() === "[") value += predicate();
-      }
-      push(out, value === "/" ? "punctuation" : "path", value);
-    } else if (c === "-") {
-      const dash = chars.next();
-      if (chars.peek() !== "-") push(out, "punctuation", dash);
-      else push(out, "comment", dash + chars.take((x) => x !== "\n" && x !== "\r"));
-    } else if (digit(c)) push(out, "number", number(chars));
-    else if (alpha(c) || c === "_") {
-      const w = chars.take(word);
-      push(out, AQL_KEYWORDS.has(w.toUpperCase()) && /^[\x00-\x7f]*$/.test(w) ? "keyword" : "identifier", w);
-    } else if (space(c)) push(out, "plain", chars.take(space));
-    else if ("(),;=<>!*.{}:+".includes(c)) push(out, "punctuation", chars.next());
-    else push(out, "plain", chars.next());
-  }
+  while (!chars.done()) aqlStep(chars, out);
   return out;
 }
 
-function hl7v2(text) {
+const hl7Separator = (c) => !alnum(c) && !space(c) && !/\p{Cc}/u.test(c);
+
+// The separators of a text's characters `all`: those an MSH, BHS or FHS
+// segment at its start declares after its id, the defaults for the rest.
+function hl7Separators(all) {
   const separators = ["|", "^", "~", "\\", "&"];
-  const all = [...text];
-  const isSeparatorChar = (c) => !alnum(c) && !space(c) && !/\p{Cc}/u.test(c);
-  if (["MSH", "BHS", "FHS"].includes(all.slice(0, 3).join("")) && all[3] !== undefined && isSeparatorChar(all[3])) {
-    separators[0] = all[3];
-    for (let at = 4, slot = 1; slot < 5 && at < all.length && all[at] !== all[3] && isSeparatorChar(all[at]); at++, slot++) separators[slot] = all[at];
-  }
+  if (!["MSH", "BHS", "FHS"].includes(all.slice(0, 3).join("")) || all[3] === undefined || !hl7Separator(all[3])) return separators;
+  separators[0] = all[3];
+  for (let at = 4, slot = 1; slot < 5 && at < all.length && all[at] !== all[3] && hl7Separator(all[at]); at++, slot++) separators[slot] = all[at];
+  return separators;
+}
+
+function hl7v2(text) {
+  const separators = hl7Separators([...text]);
   const out = [];
   const chars = new Chars(text);
   const broken = (c) => c === "\r" || c === "\n";
@@ -266,6 +290,95 @@ function hl7v2(text) {
   return out;
 }
 
+const YAML_KEYWORDS = new Set(["true", "false", "null", "~", "True", "False", "Null", "TRUE", "FALSE", "NULL"]);
+
+const blanks = (text) => text.length - text.replace(/^[ \t]+/, "").length;
+
+// The length of the quoted scalar at the start of `text` through its
+// closing quote, or null when it is not closed.
+function yamlQuoted(text, quote) {
+  for (let at = 1; at < text.length; at++) {
+    const c = text[at];
+    if (quote === '"' && c === "\\") {
+      at++;
+      continue;
+    }
+    if (c === quote) {
+      if (quote === "'" && text[at + 1] === "'") {
+        at++;
+        continue;
+      }
+      return at + 1;
+    }
+  }
+  return null;
+}
+
+// Where the `:` that ends a plain key stands, or null before a comment or
+// with none.
+function yamlPlainKey(text) {
+  for (let at = 0; at < text.length; at++) {
+    if (text[at] === ":" && (at + 1 === text.length || text[at + 1] === " " || text[at + 1] === "\t")) return at;
+    if (text[at] === "#" && text.slice(0, at).endsWith(" ")) return null;
+  }
+  return null;
+}
+
+// The length of the key at the start of `text`, or null when it opens none.
+function yamlKey(text) {
+  if (text.startsWith("#") || text === "") return null;
+  const end = text[0] === '"' || text[0] === "'" ? yamlQuoted(text, text[0]) : yamlPlainKey(text);
+  if (end === null || text[end] !== ":") return null;
+  const next = text.slice(end + 1);
+  return next === "" || next[0] === " " || next[0] === "\t" ? end : null;
+}
+
+function yamlNumber(s) {
+  const d = s.replace(/^[-+]/, "");
+  return d !== "" && /\d/.test(d) && /^[\d.eE+-]+$/.test(d) && /^[\d.]/.test(d);
+}
+
+function yamlClass(s) {
+  if (YAML_KEYWORDS.has(s)) return "keyword";
+  return yamlNumber(s) ? "number" : "plain";
+}
+
+// The length of the plain scalar at the start of `rest`: to a comment,
+// less the blanks before it, or to the end.
+function yamlPlainLength(rest) {
+  for (let at = 1; at < rest.length; at++) {
+    if (rest[at] === "#" && (rest[at - 1] === " " || rest[at - 1] === "\t")) {
+      let length = at;
+      while (length > 0 && (rest[length - 1] === " " || rest[length - 1] === "\t")) length--;
+      return length;
+    }
+  }
+  return rest.length;
+}
+
+// A plain scalar, classed by its text less a flow entry's `,` and the
+// white space before it, then that `,`.
+function yamlPlain(rest, take) {
+  const length = yamlPlainLength(rest);
+  const scalar = rest.slice(0, length);
+  const entry = scalar.endsWith(",") ? scalar.slice(0, -1) : scalar;
+  let kept = entry.length;
+  while (kept > 0 && /\p{White_Space}/u.test(entry[kept - 1])) kept--;
+  take(yamlClass(entry.slice(0, kept)), entry.length);
+  if (entry.length < length) take("punctuation", 1);
+}
+
+// The token at the start of `rest`, which opens with no blank.
+function yamlToken(rest, take) {
+  const first = rest[0];
+  if (first === "#") take("comment", rest.length);
+  else if (first === '"' || first === "'") take("string", yamlQuoted(rest, first) ?? rest.length);
+  else if (first === "&" || first === "*" || first === "!") {
+    const end = rest.search(/[ \t]/);
+    take("keyword", end < 0 ? rest.length : end);
+  } else yamlPlain(rest, take);
+}
+
 function yamlLine(line) {
   const out = [];
   let rest = line;
@@ -274,86 +387,20 @@ function yamlLine(line) {
     if (head) out.push({ kind, text: head });
     rest = rest.slice(length);
   };
-  take("plain", rest.length - rest.replace(/^[ \t]+/, "").length);
+  take("plain", blanks(rest));
   while (rest.startsWith("-") && (rest.length === 1 || rest[1] === " " || rest[1] === "\t")) {
     take("punctuation", 1);
-    take("plain", rest.length - rest.replace(/^[ \t]+/, "").length);
+    take("plain", blanks(rest));
   }
-  const quotedLength = (text, quote) => {
-    for (let at = 1; at < text.length; at++) {
-      const c = text[at];
-      if (quote === '"' && c === "\\") {
-        at++;
-        continue;
-      }
-      if (c === quote) {
-        if (quote === "'" && text[at + 1] === "'") {
-          at++;
-          continue;
-        }
-        return at + 1;
-      }
-    }
-    return null;
-  };
-  const keyLength = (text) => {
-    if (text.startsWith("#") || text === "") return null;
-    let end = null;
-    if (text[0] === '"' || text[0] === "'") end = quotedLength(text, text[0]);
-    else {
-      for (let at = 0; at < text.length; at++) {
-        if (text[at] === ":" && (at + 1 === text.length || text[at + 1] === " " || text[at + 1] === "\t")) {
-          end = at;
-          break;
-        }
-        if (text[at] === "#" && text.slice(0, at).endsWith(" ")) return null;
-      }
-    }
-    if (end === null || text[end] !== ":") return null;
-    const next = text.slice(end + 1);
-    return next === "" || next[0] === " " || next[0] === "\t" ? end : null;
-  };
-  const key = keyLength(rest);
+  const key = yamlKey(rest);
   if (key !== null) {
     take("key", key);
     take("punctuation", 1);
   }
-  const isNumber = (s) => {
-    const d = s.replace(/^[-+]/, "");
-    return d !== "" && /\d/.test(d) && /^[\d.eE+-]+$/.test(d) && /^[\d.]/.test(d);
-  };
-  const classify = (s) => {
-    if (["true", "false", "null", "~", "True", "False", "Null", "TRUE", "FALSE", "NULL"].includes(s)) return "keyword";
-    return isNumber(s) ? "number" : "plain";
-  };
   while (rest !== "") {
-    const gap = rest.length - rest.replace(/^[ \t]+/, "").length;
-    if (gap > 0) {
-      take("plain", gap);
-      continue;
-    }
-    const first = rest[0];
-    if (first === "#") take("comment", rest.length);
-    else if (first === '"' || first === "'") take("string", quotedLength(rest, first) ?? rest.length);
-    else if (first === "&" || first === "*" || first === "!") {
-      const end = rest.search(/[ \t]/);
-      take("keyword", end < 0 ? rest.length : end);
-    } else {
-      let length = rest.length;
-      for (let at = 1; at < rest.length; at++) {
-        if (rest[at] === "#" && (rest[at - 1] === " " || rest[at - 1] === "\t")) {
-          length = at;
-          while (length > 0 && (rest[length - 1] === " " || rest[length - 1] === "\t")) length--;
-          break;
-        }
-      }
-      const scalar = rest.slice(0, length);
-      const entry = scalar.endsWith(",") ? scalar.slice(0, -1) : scalar;
-      let kept = entry.length;
-      while (kept > 0 && /\p{White_Space}/u.test(entry[kept - 1])) kept--;
-      take(classify(entry.slice(0, kept)), entry.length);
-      if (entry.length < length) take("punctuation", 1);
-    }
+    const gap = blanks(rest);
+    if (gap > 0) take("plain", gap);
+    else yamlToken(rest, take);
   }
   return out;
 }

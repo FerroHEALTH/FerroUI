@@ -163,34 +163,33 @@ export function enhance(root) {
     if (!kind || !words) return "";
     return fill(kind === "Error" ? words.error_on : words.warning_on, { line: grouped(line, words.grouping.group) });
   }
+  // The marked line `now` (or none) turns current: its line in the layer,
+  // its diagnostic rows and the status line.
+  function moveCurrent(now) {
+    const before = current;
+    current = now;
+    for (const line of [before, now]) {
+      const span = line === null ? null : layer.children[line - 1];
+      if (span) span.className = named(line);
+    }
+    for (const row of list ? list.querySelectorAll("li[data-line]") : []) {
+      const on = current !== null && Number(row.dataset.line) === current;
+      row.classList.toggle("is-current", on);
+      if (on) row.setAttribute("aria-current", "true");
+      else row.removeAttribute("aria-current");
+    }
+    const status = panel?.querySelector(".fui-editor-status [role='status']");
+    if (status) status.textContent = current === null ? "" : said(current);
+  }
+  function showPosition(at) {
+    const position = panel?.querySelector("[data-fui-position]");
+    if (position && words) position.textContent = fill(words.position, { line: grouped(at.line, words.grouping.group), column: grouped(at.column, words.grouping.group) });
+  }
   function follow() {
     const at = caretAt(area.value, area.selectionStart || 0);
     const now = marked.has(at.line) ? at.line : null;
-    if (now !== current) {
-      const before = current;
-      current = now;
-      for (const line of [before, now]) {
-        if (line === null) continue;
-        const span = layer.children[line - 1];
-        if (span) span.className = named(line);
-      }
-      if (list) {
-        for (const row of list.querySelectorAll("li[data-line]")) {
-          const on = current !== null && Number(row.dataset.line) === current;
-          row.classList.toggle("is-current", on);
-          if (on) row.setAttribute("aria-current", "true");
-          else row.removeAttribute("aria-current");
-        }
-      }
-      if (panel) {
-        const status = panel.querySelector(".fui-editor-status [role='status']");
-        if (status) status.textContent = current === null ? "" : said(current);
-      }
-    }
-    if (panel && words) {
-      const position = panel.querySelector("[data-fui-position]");
-      if (position) position.textContent = fill(words.position, { line: grouped(at.line, words.grouping.group), column: grouped(at.column, words.grouping.group) });
-    }
+    if (now !== current) moveCurrent(now);
+    showPosition(at);
   }
   function measure() {
     if (!panel || !words) return;

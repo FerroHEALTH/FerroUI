@@ -30,6 +30,27 @@ export function status(words, a, b) {
   return "";
 }
 
+// The end a range shows: its last day, or with none yet the hovered day
+// past its first, as a tentative end.
+function shownEnd(first, last, hovered) {
+  if (last !== null) return last;
+  return hovered !== null && hovered > first ? hovered : null;
+}
+
+// The range classes of the day `n` for the chosen days `first` and `last`
+// and the hovered day, each null when there is none.
+export function rangeClasses(n, first, last, hovered) {
+  if (first === null) return "";
+  const end = shownEnd(first, last, hovered);
+  if (end === null) return "";
+  const tentative = last === null;
+  let cls = "";
+  if (first < n && n < end) cls += tentative ? " fui-day-between fui-day-tentative" : " fui-day-between";
+  if (first < end && n === first) cls += " fui-day-start";
+  if (first < end && n === end) cls += tentative ? " fui-day-end fui-day-tentative-end" : " fui-day-end";
+  return cls;
+}
+
 export function enhance(root) {
   const cfg = read(root, "data-fui-range");
   if (cfg) rangeField(root, cfg, cfg.words, root.querySelector(":scope > button"));
@@ -53,17 +74,8 @@ function rangeField(root, config, words, button) {
       return a === n || b === n;
     },
     classes(n, out) {
-      let cls = "fui-day" + (out ? " fui-day-out" : "");
       const [first, last] = ends();
-      if (first === null) return cls;
-      const tentative = last === null;
-      const hoveredEnd = hovered !== null && hovered > first ? hovered : null;
-      const end = last === null ? hoveredEnd : last;
-      if (end === null) return cls;
-      if (first < n && n < end) cls += tentative ? " fui-day-between fui-day-tentative" : " fui-day-between";
-      if (first < end && n === first) cls += " fui-day-start";
-      if (first < end && n === end) cls += tentative ? " fui-day-end fui-day-tentative-end" : " fui-day-end";
-      return cls;
+      return "fui-day" + (out ? " fui-day-out" : "") + rangeClasses(n, first, last, hovered);
     },
     hover(n) {
       if (hovered === n) return;

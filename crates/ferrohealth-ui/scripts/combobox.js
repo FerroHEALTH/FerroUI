@@ -37,6 +37,22 @@ export function shown(options, query, typing, remote) {
   return { places: all.slice(0, ROWS), more: all.length > ROWS };
 }
 
+const ARROWS = new Set(["ArrowDown", "ArrowUp"]);
+const MOVES = new Map([
+  ["ArrowDown", (active, count) => (active === null ? 0 : Math.min(active + 1, count - 1))],
+  ["ArrowUp", (active) => (active === null ? 0 : Math.max(active - 1, 0))],
+  ["Home", () => 0],
+  ["End", (active, count) => count - 1],
+]);
+
+// The row the arrows, Home and End move the highlight to from `active`
+// over `count` rows, null with no row, or undefined for any other key.
+export function stepped(key, active, count) {
+  const move = MOVES.get(key);
+  if (!move) return undefined;
+  return count === 0 ? null : move(active, count);
+}
+
 export function enhance(root) {
   const select = root.querySelector("select");
   if (!select) return;
@@ -187,32 +203,30 @@ export function enhance(root) {
     state.active = view().places.length ? 0 : null;
     draw();
   });
+  // Enter chooses the highlighted option; over a remote with none it
+  // submits the typed words.
+  function enter(event, places) {
+    const place = state.active === null ? undefined : places[state.active];
+    if (place === undefined && remote) return;
+    event.preventDefault();
+    if (place !== undefined) choose(place);
+  }
   input.addEventListener("keydown", (event) => {
-    const { places } = view();
     const key = event.key;
-    if (key === "ArrowDown" || key === "ArrowUp") {
+    if (!state.open) {
+      if (!ARROWS.has(key)) return;
       event.preventDefault();
-      if (!state.open) return openAt(chosenPlace());
-      if (places.length === 0) state.active = null;
-      else if (state.active === null) state.active = 0;
-      else state.active = key === "ArrowDown" ? Math.min(state.active + 1, places.length - 1) : Math.max(state.active - 1, 0);
-      return highlight();
+      openAt(chosenPlace());
+      return;
     }
-    if (!state.open) return;
-    if (key === "Home") {
+    const { places } = view();
+    const next = stepped(key, state.active, places.length);
+    if (next !== undefined) {
       event.preventDefault();
-      state.active = places.length ? 0 : null;
+      state.active = next;
       highlight();
-    } else if (key === "End") {
-      event.preventDefault();
-      state.active = places.length ? places.length - 1 : null;
-      highlight();
-    } else if (key === "Enter") {
-      const place = state.active === null ? undefined : places[state.active];
-      if (place === undefined && remote) return;
-      event.preventDefault();
-      if (place !== undefined) choose(place);
-    } else if (key === "Escape") {
+    } else if (key === "Enter") enter(event, places);
+    else if (key === "Escape") {
       event.preventDefault();
       close();
     }

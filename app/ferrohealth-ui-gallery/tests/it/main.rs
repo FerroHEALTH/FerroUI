@@ -42,6 +42,7 @@ mod parity;
 mod parity_dates;
 mod parity_keys;
 mod parity_words;
+mod pinned;
 mod records;
 mod screenshots;
 mod script_pages;

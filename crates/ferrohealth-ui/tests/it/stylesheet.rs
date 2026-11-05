@@ -413,7 +413,7 @@ fn a_findings_code_message_mapping_and_path_break_rather_than_widen_a_phone() {
 #[test]
 fn the_keyboard_tab_leaves_the_row_below_40rem() {
     let phone = STYLESHEET
-        .find("    .fui-tabs > .fui-tab[data-tab=\"keyboard\"] {\n      display: none !important;")
+        .find("    .fui-tabs > .fui-tab[data-tab=\"keyboard\"] {\n      display: none;")
         .expect("the keyboard tab's rule");
     let media = STYLESHEET
         .get(..phone)
