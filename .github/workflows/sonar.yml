@@ -1,0 +1,56 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+
+# SonarQube Cloud analysis beside CodeQL. Advisory, gating no merge
+# (.claude/rules/ci-cd.md). The scan scope lives in sonar-project.properties.
+# SONAR_HOST_URL is not needed for SonarQube Cloud (SonarSource/
+# sonarqube-scan-action README, v8.2.1).
+name: SonarQube Cloud
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# A newer push to a pull request cancels its running analysis. On main a
+# running analysis finishes, so main is analyzed at its latest commit.
+concurrency:
+  group: sonar-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions: {}
+
+jobs:
+  scan:
+    name: analyze
+    # A fork or Dependabot pull request cannot read SONAR_TOKEN; the push to
+    # main after the merge analyzes the merged result.
+    if: github.event_name == 'push' || (github.actor != 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: read # PR decoration reads the pull-request metadata
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history: Sonar assigns issues and new-code status by blame.
+          fetch-depth: 0
+          persist-credentials: false
+
+      # sonar.projectVersion anchors the "Previous version" new-code window to
+      # the workspace version, read from the root Cargo.toml at scan time.
+      - name: Derive sonar.projectVersion from the workspace version
+        run: |
+          set -euo pipefail
+          v="$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2 || true)"
+          if [[ -z "$v" ]]; then
+            echo "Cargo.toml has no [workspace.package] version" >&2
+            exit 1
+          fi
+          echo "sonar.projectVersion=$v" >> sonar-project.properties
+
+      - uses: SonarSource/sonarqube-scan-action@4d1dc0c91ee400dcf8a6dddf2f705ac36542e304 # v8.4.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

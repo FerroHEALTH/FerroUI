@@ -81,10 +81,10 @@ esac
 
 command -v curl > /dev/null || die "curl is not installed"
 mkdir -p "$dir/icons"
-curl --fail --silent --show-error --location --retry 3 \
+curl --proto =https --fail --silent --show-error --location --retry 3 \
   --output "$dir/LICENSE" "$base/LICENSE"
 for name in "${ICONS[@]}"; do
-  curl --fail --silent --show-error --location --retry 3 \
+  curl --proto =https --fail --silent --show-error --location --retry 3 \
     --output "$dir/icons/$name.svg" "$base/icons/$name.svg"
 done
 check
