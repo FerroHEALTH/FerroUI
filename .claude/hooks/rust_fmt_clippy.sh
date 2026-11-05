@@ -69,7 +69,7 @@ fi
 # File-size guard (.claude/rules/rust-style.md, Code is written once): a
 # hand-written file stays within 800 lines, and a listed file never grows
 # past its entry. It runs after rustfmt, so it counts the formatted file.
-if [ -x "$repo_root/scripts/checks/file-size.sh" ]; then
+if [[ -x "$repo_root/scripts/checks/file-size.sh" ]]; then
   findings="$("$repo_root/scripts/checks/file-size.sh" --files "$file_path" 2>&1)" || {
     printf '%s\n' "$findings" >&2
     exit 2
@@ -81,13 +81,14 @@ fi
 # tools/forwarders in the one ./target on first use, a few seconds.
 case "$file_path" in
 */app/*/src/*.rs | */crates/*/src/*.rs | */tools/*/src/*.rs)
-  if [ -x "$repo_root/scripts/checks/forwarders.sh" ]; then
+  if [[ -x "$repo_root/scripts/checks/forwarders.sh" ]]; then
     findings="$("$repo_root/scripts/checks/forwarders.sh" --files "$file_path" 2>&1)" || {
       printf '%s\n' "$findings" >&2
       exit 2
     }
   fi
   ;;
+*) ;;
 esac
 
 exit 0

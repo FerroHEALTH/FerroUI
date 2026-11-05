@@ -33,7 +33,7 @@ cd "$(dirname "$0")/../.."
 design_sets() {
   local f sets="templates"
   for f in design/consoles/*/pages.py; do
-    [ -f "$f" ] || continue
+    [[ -f "$f" ]] || continue
     f="${f%/pages.py}"
     sets="$sets ${f##*/}"
   done
@@ -42,17 +42,19 @@ design_sets() {
 
 # The design sets drawn in BRAND (the BRAND line of each set's console.py).
 sets_of_brand() {
+  local brand="$1"
   local set src out=""
   for set in $(design_sets); do
-    if [ "$set" = templates ]; then src=design/templates; else src="design/consoles/$set"; fi
-    if grep -qx "BRAND = \"$1\"" "$src/console.py" 2> /dev/null; then out="$out $set"; fi
+    if [[ "$set" = templates ]]; then src=design/templates; else src="design/consoles/$set"; fi
+    if grep -qx "BRAND = \"$brand\"" "$src/console.py" 2> /dev/null; then out="$out $set"; fi
   done
   echo "$out"
 }
 
 # The test-name words a library or gallery source file stands for.
 words_of() {
-  case "$1" in
+  local area="$1"
+  case "$area" in
     button) echo "button" ;;
     chart | charts) echo "chart stat" ;;
     code | editor | highlight | aql | json | xml | yaml) echo "editor code diagnostic" ;;
@@ -74,7 +76,7 @@ words_of() {
     time) echo "timestamp" ;;
     toast) echo "toast" ;;
     overview | templates) echo "every_page" ;;
-    *) echo "$1" ;;
+    *) echo "$area" ;;
   esac
 }
 
@@ -88,9 +90,9 @@ classify() {
     rust=true lib=true app=true tool=true gallery=true capture=true journeys_all=true design_all=true
   }
 
-  if [ "$all" = true ]; then everything; fi
+  if [[ "$all" = true ]]; then everything; fi
   while IFS= read -r path; do
-    [ -n "$path" ] || continue
+    [[ -n "$path" ]] || continue
     case "$path" in
       *.md) continue ;;
       .github/workflows/ci.yml | .github/actions/* | scripts/checks/affected.sh | scripts/chrome-lock.sh)
@@ -133,8 +135,9 @@ classify() {
             dir="${path%/*}"
             stem="${dir##*/}"
             ;;
+          *) ;;
         esac
-        if [ "$stem" = mod ]; then
+        if [[ "$stem" = mod ]]; then
           dir="${path%/mod.rs}"
           stem="${dir##*/}"
         fi
@@ -179,35 +182,36 @@ classify() {
       design/*)
         design_all=true
         ;;
+      *) ;;
     esac
   done
-  if [ "$app" = false ] && [ "$lib" = true ]; then app=true; fi
+  if [[ "$app" = false ]] && [[ "$lib" = true ]]; then app=true; fi
 
   local packages=""
-  if [ "$rust" = true ]; then
-    if [ "$lib" = true ]; then packages="ferrohealth-ui"; fi
-    if [ "$app" = true ]; then packages="${packages:+$packages }ferrohealth-ui-gallery"; fi
-    if [ "$tool" = true ]; then packages="${packages:+$packages }forwarders"; fi
+  if [[ "$rust" = true ]]; then
+    if [[ "$lib" = true ]]; then packages="ferrohealth-ui"; fi
+    if [[ "$app" = true ]]; then packages="${packages:+$packages }ferrohealth-ui-gallery"; fi
+    if [[ "$tool" = true ]]; then packages="${packages:+$packages }forwarders"; fi
   fi
 
   local journeys=""
-  if [ "$journeys_all" = true ]; then
+  if [[ "$journeys_all" = true ]]; then
     journeys=all
-  elif [ -n "$words$modules" ] || [ "$page_wide" = true ]; then
+  elif [[ -n "$words$modules" ]] || [[ "$page_wide" = true ]]; then
     # Every touched area also runs the two journeys that load every page.
     local alternation="every_page_of_every_brand_loads|every_page_keeps_its_content" word
-    if [ "$page_wide" = true ]; then alternation="$alternation|every_page|reflow|^painted::"; fi
+    if [[ "$page_wide" = true ]]; then alternation="$alternation|every_page|reflow|^painted::"; fi
     for word in $words; do alternation="$alternation|$word"; done
     for module in $modules; do alternation="$alternation|^$module::"; done
     journeys="test(/$alternation/)"
   fi
 
   local design="" set
-  if [ "$design_all" = true ]; then
+  if [[ "$design_all" = true ]]; then
     design="$(design_sets)"
   else
     for set in $(design_sets); do
-      case " $sets " in *" $set "*) design="${design:+$design }$set" ;; esac
+      case " $sets " in *" $set "*) design="${design:+$design }$set" ;; *) ;; esac
     done
   fi
 
@@ -220,6 +224,7 @@ classify() {
 }
 
 self_test() {
+  local reached_capture="capture=true"
   local failed=0 every
   every="$(design_sets)"
   expect() {
@@ -266,22 +271,22 @@ self_test() {
   expect "the journey tools reach the gallery" 'scripts/release/journey-tools.sh\n' "gallery=true"
   expect "the screenshots reach the gallery's tests" 'docs/screenshots/ferrobridge/overview-light.png\n' "packages=ferrohealth-ui-gallery"
   expect "the screenshots skip the browser" 'docs/screenshots/ferrobridge/overview-light.png\n' "gallery=false"
-  expect "a view reaches the capture" 'crates/ferrohealth-ui/src/view/toast.rs\n' "capture=true"
-  expect "a gallery page reaches the capture" 'app/ferrohealth-ui-gallery/src/pages/forms.rs\n' "capture=true"
-  expect "a theme reaches the capture" 'crates/ferrohealth-ui/themes/ferrofed.css\n' "capture=true"
-  expect "a state area reaches the capture" 'app/ferrohealth-ui-gallery/tests/it/states/overview.rs\n' "capture=true"
-  expect "the capture harness reaches the capture" 'app/ferrohealth-ui-gallery/tests/it/screenshots.rs\n' "capture=true"
-  expect "the browser harness reaches the capture" 'app/ferrohealth-ui-gallery/tests/it/browser.rs\n' "capture=true"
+  expect "a view reaches the capture" 'crates/ferrohealth-ui/src/view/toast.rs\n' "$reached_capture"
+  expect "a gallery page reaches the capture" 'app/ferrohealth-ui-gallery/src/pages/forms.rs\n' "$reached_capture"
+  expect "a theme reaches the capture" 'crates/ferrohealth-ui/themes/ferrofed.css\n' "$reached_capture"
+  expect "a state area reaches the capture" 'app/ferrohealth-ui-gallery/tests/it/states/overview.rs\n' "$reached_capture"
+  expect "the capture harness reaches the capture" 'app/ferrohealth-ui-gallery/tests/it/screenshots.rs\n' "$reached_capture"
+  expect "the browser harness reaches the capture" 'app/ferrohealth-ui-gallery/tests/it/browser.rs\n' "$reached_capture"
   expect "a journey module skips the capture" 'app/ferrohealth-ui-gallery/tests/it/widgets.rs\n' "capture=false"
   expect "a journey module still reaches the gallery" 'app/ferrohealth-ui-gallery/tests/it/widgets.rs\n' "gallery=true"
   expect "the HTTP tests skip the capture" 'app/ferrohealth-ui-gallery/tests/it/http.rs\n' "capture=false"
   expect "docs skip the capture" 'README.md\n' "capture=false"
-  expect "the workflow reaches the capture" '.github/workflows/ci.yml\n' "capture=true"
+  expect "the workflow reaches the capture" '.github/workflows/ci.yml\n' "$reached_capture"
   if ! classify true < /dev/null | grep -qxF "design=$every"; then
     echo "self-test: --all does not reach every design set" >&2
     failed=1
   fi
-  if [ "$failed" -ne 0 ]; then return 1; fi
+  if [[ "$failed" -ne 0 ]]; then return 1; fi
   echo "affected: self-test passed"
 }
 

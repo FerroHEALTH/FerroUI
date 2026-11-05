@@ -59,8 +59,9 @@ TOML
   printf '[advisories]\nversion = 2\nignore = []\n' > "$dir/empty/deny.toml"
   VEX_DIR="$dir/empty" VEX_GATE="$dir/empty/deny.toml" bash scripts/security/vex-generate.sh > /dev/null
   run() {
+    local case_name="$1"
     status=0
-    VEX_DIR="$dir/$1" VEX_GATE="$dir/$1/deny.toml" bash "$self" > "$dir/$1.out" 2>&1 || status=$?
+    VEX_DIR="$dir/$case_name" VEX_GATE="$dir/$case_name/deny.toml" bash "$self" > "$dir/$case_name.out" 2>&1 || status=$?
   }
   run empty
   [[ "$status" -eq 0 ]] || { cat "$dir/empty.out" >&2; echo "self-test: the empty document was refused" >&2; return 1; }

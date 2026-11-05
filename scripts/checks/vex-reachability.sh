@@ -72,12 +72,14 @@ self_test() {
   dir="$(mktemp -d)"
   trap 'rm -rf "$dir"' RETURN
   write() {
-    mkdir -p "$dir/$1"
-    printf '%s\n' "$2" > "$dir/$1/rust-advisories.openvex.json"
+    local case_name="$1" document="$2"
+    mkdir -p "$dir/$case_name"
+    printf '%s\n' "$document" > "$dir/$case_name/rust-advisories.openvex.json"
   }
   run() {
+    local case_name="$1"
     status=0
-    VEX_DIR="$dir/$1" bash "$self" > "$dir/$1.out" 2>&1 || status=$?
+    VEX_DIR="$dir/$case_name" bash "$self" > "$dir/$case_name.out" 2>&1 || status=$?
   }
   write empty '{"statements":[]}'
   run empty

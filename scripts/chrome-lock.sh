@@ -31,6 +31,7 @@ age_of() {
   mtime="$(stat -c %Y "$1" 2> /dev/null || stat -f %m "$1" 2> /dev/null || true)"
   case "$mtime" in
     '' | *[!0-9]*) mtime="$now" ;;
+    *) ;;
   esac
   echo $((now - mtime))
 }
@@ -40,17 +41,17 @@ acquire() {
   local said=false owner
   while ! mkdir "$lock" 2> /dev/null; do
     owner="$(cat "$lock/pid" 2> /dev/null || true)"
-    if [ -n "$owner" ] && ! kill -0 "$owner" 2> /dev/null; then
+    if [[ -n "$owner" ]] && ! kill -0 "$owner" 2> /dev/null; then
       echo "chrome-lock: pid $owner left the lock behind; taking it over" >&2
       rm -rf -- "$lock"
       continue
     fi
-    if [ "$(age_of "$lock")" -gt "$stale" ]; then
+    if [[ "$(age_of "$lock")" -gt "$stale" ]]; then
       echo "chrome-lock: the lock is older than ${stale}s; taking it over" >&2
       rm -rf -- "$lock"
       continue
     fi
-    if [ "$said" = false ]; then
+    if [[ "$said" = false ]]; then
       echo "chrome-lock: waiting for pid ${owner:-?} to finish its Chrome steps ($lock)" >&2
       said=true
     fi
@@ -60,7 +61,7 @@ acquire() {
 }
 
 release() {
-  if [ "$(cat "$lock/pid" 2> /dev/null || true)" = "$$" ]; then
+  if [[ "$(cat "$lock/pid" 2> /dev/null || true)" = "$$" ]]; then
     rm -rf -- "$lock"
   fi
 }
@@ -73,11 +74,11 @@ self_test() {
   unset FERROUI_CHROME_LOCK_HELD
 
   out="$(bash "$0" sh -c 'echo "held=$FERROUI_CHROME_LOCK_HELD"; cat "$FERROUI_CHROME_LOCK/pid" > /dev/null && echo locked')"
-  [ "$out" = "held=1"$'\n'"locked" ] || { echo "self-test: the command did not run under the lock: $out" >&2; return 1; }
-  [ ! -e "$dir/lock" ] || { echo "self-test: the lock outlived its command" >&2; return 1; }
+  [[ "$out" = "held=1"$'\n'"locked" ]] || { echo "self-test: the command did not run under the lock: $out" >&2; return 1; }
+  [[ ! -e "$dir/lock" ]] || { echo "self-test: the lock outlived its command" >&2; return 1; }
 
   bash "$0" sh -c 'exit 3' && { echo "self-test: a failing command passed" >&2; return 1; }
-  [ ! -e "$dir/lock" ] || { echo "self-test: a failing command left the lock" >&2; return 1; }
+  [[ ! -e "$dir/lock" ]] || { echo "self-test: a failing command left the lock" >&2; return 1; }
 
   mkdir "$dir/lock"
   sh -c 'exit 0' &
@@ -85,25 +86,25 @@ self_test() {
   wait "$gone"
   echo "$gone" > "$dir/lock/pid"
   out="$(bash "$0" echo ran 2> /dev/null)"
-  [ "$out" = ran ] || { echo "self-test: a lock left by a dead pid was not taken over" >&2; return 1; }
+  [[ "$out" = ran ]] || { echo "self-test: a lock left by a dead pid was not taken over" >&2; return 1; }
 
   mkdir "$dir/lock"
   echo "$$" > "$dir/lock/pid"
   out="$(FERROUI_CHROME_LOCK_STALE=-1 bash "$0" echo ran 2> /dev/null)"
-  [ "$out" = ran ] || { echo "self-test: a stale lock was not taken over" >&2; return 1; }
+  [[ "$out" = ran ]] || { echo "self-test: a stale lock was not taken over" >&2; return 1; }
 
   mkdir "$dir/lock"
   echo "$$" > "$dir/lock/pid"
   bash "$0" touch "$dir/second" 2> /dev/null &
   local waiter=$!
   sleep 3
-  [ ! -e "$dir/second" ] || { echo "self-test: a second command ran while the lock was held" >&2; return 1; }
+  [[ ! -e "$dir/second" ]] || { echo "self-test: a second command ran while the lock was held" >&2; return 1; }
   rm -rf -- "$dir/lock"
   wait "$waiter"
-  [ -e "$dir/second" ] || { echo "self-test: the waiting command never ran" >&2; return 1; }
+  [[ -e "$dir/second" ]] || { echo "self-test: the waiting command never ran" >&2; return 1; }
 
   out="$(FERROUI_CHROME_LOCK_HELD=1 bash "$0" echo nested)"
-  [ "$out" = nested ] || { echo "self-test: a nested call did not run at once" >&2; return 1; }
+  [[ "$out" = nested ]] || { echo "self-test: a nested call did not run at once" >&2; return 1; }
   echo "chrome-lock: self-test passed"
 }
 
@@ -116,9 +117,10 @@ case "${1:-}" in
     self_test
     exit
     ;;
+  *) ;;
 esac
 
-if [ "${FERROUI_CHROME_LOCK_HELD:-}" = 1 ]; then
+if [[ "${FERROUI_CHROME_LOCK_HELD:-}" = 1 ]]; then
   exec "$@"
 fi
 acquire

@@ -44,12 +44,12 @@ loads() {
   local dir="$1" name seen=" " found
   shift
   local todo=(fui "$@")
-  while [ "${#todo[@]}" -gt 0 ]; do
+  while [[ "${#todo[@]}" -gt 0 ]]; do
     name="${todo[0]}"
     todo=("${todo[@]:1}")
-    case "$seen" in *" $name "*) continue ;; esac
+    case "$seen" in *" $name "*) continue ;; *) ;; esac
     seen="$seen$name "
-    if [ ! -f "$dir/$name.js" ]; then
+    if [[ ! -f "$dir/$name.js" ]]; then
       echo "!$name"
       continue
     fi
@@ -65,11 +65,11 @@ loads() {
 check() {
   local dir="$1" list="$2" report="${3:-false}" file name size packed=0 page jobs total pages=0
   for file in "$dir"/*.js; do
-    [ -f "$file" ] || continue
+    [[ -f "$file" ]] || continue
     name="$(basename "$file")"
     size="$(wc -c <"$file" | tr -d ' ')"
     packed=$((packed + $(gzip -9 -n -c "$file" | wc -c | tr -d ' ')))
-    [ "$size" -le "$module_max" ] || echo "S1 $file: $size bytes, over $module_max"
+    [[ "$size" -le "$module_max" ]] || echo "S1 $file: $size bytes, over $module_max"
     awk -v name="$name" -v fetchers=" $fetchers " '
       /^[ \t]*\/\// { next }
       /(^|[^A-Za-z0-9_.])eval\(|new Function/ { print "S3 " FILENAME ":" FNR ": " $0 }
@@ -77,10 +77,10 @@ check() {
       /(^|[^A-Za-z0-9_.])fetch\(/ && index(fetchers, " " name " ") == 0 { print "S5 " FILENAME ":" FNR ": " $0 }
     ' "$file"
   done
-  [ "$packed" -le "$packed_max" ] || echo "S6 $dir: $packed bytes compressed together, over $packed_max"
-  [ "$report" = false ] || echo "compressed: $packed of $packed_max"
+  [[ "$packed" -le "$packed_max" ]] || echo "S6 $dir: $packed bytes compressed together, over $packed_max"
+  [[ "$report" = false ]] || echo "compressed: $packed of $packed_max"
   while read -r page jobs; do
-    case "$page" in "" | "#"*) continue ;; esac
+    case "$page" in "" | "#"*) continue ;; *) ;; esac
     pages=$((pages + 1))
     total=0
     # shellcheck disable=SC2086 # every job is one word
@@ -90,10 +90,10 @@ check() {
         *) total=$((total + $(wc -c <"$dir/$name.js" | tr -d ' '))) ;;
       esac
     done
-    [ "$total" -le "$page_max" ] || echo "S2 $list: $page loads $total bytes, over $page_max"
-    [ "$report" = false ] || echo "page: $total of $page_max $page"
+    [[ "$total" -le "$page_max" ]] || echo "S2 $list: $page loads $total bytes, over $page_max"
+    [[ "$report" = false ]] || echo "page: $total of $page_max $page"
   done <"$list"
-  [ "$pages" -gt 0 ] || echo "S7 $list: no page"
+  [[ "$pages" -gt 0 ]] || echo "S7 $list: no page"
 }
 
 self_test() {
@@ -153,6 +153,7 @@ case "${1:-}" in
     report=true
     shift
     ;;
+  *) ;;
 esac
 case "${1:-}" in
   "") ;;
@@ -167,13 +168,13 @@ case "${1:-}" in
 esac
 
 cd "$root"
-[ -d "$dir" ] || { echo "script-budget: $dir is no directory" >&2; exit 2; }
-[ -f "$list" ] || { echo "script-budget: $list is no file" >&2; exit 2; }
+[[ -d "$dir" ]] || { echo "script-budget: $dir is no directory" >&2; exit 2; }
+[[ -f "$list" ]] || { echo "script-budget: $list is no file" >&2; exit 2; }
 found="$(check "$dir" "$list" "$report")"
 if printf '%s\n' "$found" | grep -q '^S[0-9] '; then
   printf '%s\n' "$found" | grep '^S[0-9] ' >&2
   echo "script-budget: split or shrink the module, or move the work to the server." >&2
   exit 1
 fi
-[ "$report" = false ] || printf '%s\n' "$found"
+[[ "$report" = false ]] || printf '%s\n' "$found"
 echo "script-budget: every module under $dir within the budget"
