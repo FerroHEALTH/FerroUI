@@ -13,7 +13,7 @@ export function enhance(views) {
     const segment = event.target.closest("a[data-view]");
     if (!segment) return;
     event.preventDefault();
-    views.setAttribute("data-shown", segment.getAttribute("data-view"));
+    views.dataset.shown = segment.dataset.view;
     for (const each of group.querySelectorAll("a[data-view]")) {
       if (each === segment) each.setAttribute("aria-current", "true");
       else each.removeAttribute("aria-current");

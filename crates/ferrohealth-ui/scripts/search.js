@@ -95,10 +95,10 @@ function emphasised(value, query) {
 // `icon`.
 export function hitBody(hit, query, icon) {
   let mark = null;
-  if (hit.mark && hit.mark.Dot) {
+  if (hit.mark?.Dot) {
     mark = el("span", "fui-dot fui-tone-" + String(hit.mark.Dot).toLowerCase());
     mark.setAttribute("aria-hidden", "true");
-  } else if (hit.mark && hit.mark.Glyph) mark = icon(hit.mark.Glyph);
+  } else if (hit.mark?.Glyph) mark = icon(hit.mark.Glyph);
   return [mark, el("span", "fui-hit-name", ...emphasised(hit.name, query)), el("span", "fui-small fui-muted fui-hit-line", ...emphasised(hit.line || "", query)), hit.tag ? el("span", "fui-tag", hit.tag) : null];
 }
 
@@ -107,17 +107,17 @@ export function enhance(form) {
   const submit = form.querySelector("button[type='submit']");
   const glyph = form.querySelector(".fui-search-glyph");
   const icons = form.querySelector("template[data-fui-icons]");
-  const words = JSON.parse(form.getAttribute("data-fui-words") || "{}");
-  const shortcut = form.getAttribute("data-fui-shortcut");
-  const route = form.getAttribute("data-fui-suggest");
-  const from = Number(form.getAttribute("data-fui-from") || "2");
-  const signedOut = form.getAttribute("data-fui-signed-out");
+  const words = JSON.parse(form.dataset.fuiWords || "{}");
+  const shortcut = form.dataset.fuiShortcut;
+  const route = form.dataset.fuiSuggest;
+  const from = Number(form.dataset.fuiFrom || "2");
+  const signedOut = form.dataset.fuiSignedOut;
   const panel = form.querySelector(".fui-search-results");
-  const list = panel && panel.querySelector("[role='listbox']");
+  const list = panel?.querySelector("[role='listbox']");
   const said = form.querySelector(":scope > [role='status']");
   const id = field.id;
   const icon = (name) => {
-    const found = icons && icons.content.querySelector("[data-icon='" + name + "'] svg");
+    const found = icons?.content.querySelector("[data-icon='" + name + "'] svg");
     return found ? found.cloneNode(true) : null;
   };
   let answer = null;

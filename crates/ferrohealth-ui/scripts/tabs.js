@@ -59,14 +59,14 @@ function linkTabs(nav) {
   nav.addEventListener("click", (event) => {
     const tab = event.target.closest("a.fui-tab[data-fui-panel]");
     if (!tab || event.ctrlKey || event.metaKey || event.shiftKey || event.button) return;
-    const panel = document.getElementById(tab.getAttribute("data-fui-panel"));
+    const panel = document.getElementById(tab.dataset.fuiPanel);
     if (!panel) return;
     event.preventDefault();
     for (const other of nav.querySelectorAll("a.fui-tab")) {
       const shown = other === tab;
       if (shown) other.setAttribute("aria-current", "page");
       else other.removeAttribute("aria-current");
-      const id = other.getAttribute("data-fui-panel");
+      const id = other.dataset.fuiPanel;
       const each = id && document.getElementById(id);
       if (each) each.hidden = !shown;
     }

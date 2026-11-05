@@ -36,7 +36,7 @@ export function parseMessage(text) {
   const words = String(text).split(" ");
   // A count is read as the crate's u32 parse reads it: an optional plus,
   // ASCII digits, at most 4294967295.
-  const whole = (word) => (/^\+?[0-9]+$/.test(word || "") && Number(word) <= 4294967295 ? Number(word) : null);
+  const whole = (word) => (/^\+?\d+$/.test(word || "") && Number(word) <= 4294967295 ? Number(word) : null);
   if (words[0] === "ended" && words.length === 1) return { ended: true };
   if (words[0] === "extended" && words.length === 3) {
     const idle = whole(words[1]);
@@ -80,16 +80,16 @@ export function goneTo(address) {
 }
 
 export function enhance(root) {
-  if (root.hasAttribute("data-fui-ended")) {
+  if ("fuiEnded" in root.dataset) {
     gone();
     return;
   }
-  const status = root.getAttribute("data-fui-status");
-  const signIn = root.getAttribute("data-fui-sign-in");
-  const warnAt = Number(root.getAttribute("data-fui-warn-at") || "120");
-  const endsPhrase = JSON.parse(root.getAttribute("data-fui-ends") || '""');
+  const status = root.dataset.fuiStatus;
+  const signIn = root.dataset.fuiSignIn;
+  const warnAt = Number(root.dataset.fuiWarnAt || "120");
+  const endsPhrase = JSON.parse(root.dataset.fuiEnds || '""');
   const ends = root.querySelector("#" + CSS.escape(root.id) + "-ends");
-  let known = { left: { idle: Number(root.getAttribute("data-fui-idle")), absolute: Number(root.getAttribute("data-fui-absolute")) }, at: performance.now(), wall: Date.now() };
+  let known = { left: { idle: Number(root.dataset.fuiIdle), absolute: Number(root.dataset.fuiAbsolute) }, at: performance.now(), wall: Date.now() };
   let timers = [];
   let ticker = null;
   let asking = false;

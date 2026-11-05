@@ -52,7 +52,7 @@ export function enhance(details) {
   const items = () => [...list.querySelectorAll(ITEMS)];
   for (const item of items()) {
     item.tabIndex = -1;
-    if (item.hasAttribute("data-fui-copy")) item.hidden = false;
+    if ("fuiCopy" in item.dataset) item.hidden = false;
   }
   if (cancel) cancel.hidden = false;
   const focused = () => items().indexOf(document.activeElement);
@@ -84,7 +84,7 @@ export function enhance(details) {
     const all = items();
     if (all.includes(document.activeElement)) return;
     const chosen = all.findIndex((item) => item.getAttribute("aria-selected") === "true");
-    focus(all[chosen >= 0 ? chosen : 0]);
+    focus(all[Math.max(chosen, 0)]);
   });
   details.addEventListener("keydown", (event) => {
     const key = event.key;
@@ -99,7 +99,7 @@ export function enhance(details) {
         event.preventDefault();
         details.open = true;
         const all = items();
-        focus(key === "ArrowUp" ? all[all.length - 1] : all[0]);
+        focus(key === "ArrowUp" ? all.at(-1) : all[0]);
       }
       return;
     }
@@ -132,8 +132,8 @@ export function enhance(details) {
       event.preventDefault();
       return;
     }
-    const text = item.getAttribute("data-fui-copy");
-    if (text !== null) copy(text, details);
+    const text = item.dataset.fuiCopy;
+    if (text !== undefined) copy(text, details);
     close();
   });
   if (cancel) cancel.addEventListener("click", close);
@@ -141,8 +141,8 @@ export function enhance(details) {
 
 function copy(text, details) {
   const words = {
-    copied: details.getAttribute("data-copied") || "Copied",
-    refused: details.getAttribute("data-copy-refused") || "The browser refused to copy",
+    copied: details.dataset.copied || "Copied",
+    refused: details.dataset.copyRefused || "The browser refused to copy",
   };
   const say = (ok) =>
     document.dispatchEvent(

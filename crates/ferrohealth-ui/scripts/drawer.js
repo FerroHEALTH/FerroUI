@@ -17,9 +17,11 @@ export function enhance(dialog) {
     if (event.target.closest("a") && dialog.open) dialog.close();
   });
   dialog.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") dialog.setAttribute("data-tips", "off");
+    if (event.key === "Escape") dialog.dataset.tips = "off";
   });
-  const show = () => dialog.removeAttribute("data-tips");
+  const show = () => {
+    delete dialog.dataset.tips;
+  };
   dialog.addEventListener("pointerover", show);
   dialog.addEventListener("focusin", show);
 }

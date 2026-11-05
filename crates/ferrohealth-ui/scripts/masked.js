@@ -11,7 +11,7 @@ export function holds(key) {
 }
 
 export function enhance(button) {
-  const input = document.getElementById(button.getAttribute("data-fui-input") || "");
+  const input = document.getElementById(button.dataset.fuiInput || "");
   if (!input) return;
   const shown = button.querySelector("[data-fui-shown]");
   const masked = button.querySelector("[data-fui-masked]");
@@ -22,7 +22,7 @@ export function enhance(button) {
     if (masked) masked.hidden = on;
   }
   button.disabled = false;
-  button.setAttribute("aria-label", button.getAttribute("data-fui-name") || "");
+  button.setAttribute("aria-label", button.dataset.fuiName || "");
   button.addEventListener("pointerdown", (event) => {
     if (event.button === 0) show(true);
   });

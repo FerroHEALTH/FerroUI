@@ -83,15 +83,15 @@ export function enhance(root) {
   const layer = root.querySelector(".fui-editor-layer");
   const stack = root.querySelector(".fui-editor-stack");
   if (!area || !layer) return;
-  let language = root.getAttribute("data-language") || "plain";
-  const follows = root.hasAttribute("data-fui-detect");
-  const marks = JSON.parse(root.getAttribute("data-marks") || "[]");
+  let language = root.dataset.language || "plain";
+  const follows = "fuiDetect" in root.dataset;
+  const marks = JSON.parse(root.dataset.marks || "[]");
   const marked = kinds(marks);
   const prefix = area.id + "-L";
   const panel = root.closest(".fui-mapping-editor");
-  const words = panel ? JSON.parse(panel.getAttribute("data-fui-words") || "{}") : null;
-  const opened = panel ? (panel.hasAttribute("data-fui-opened") ? panel.getAttribute("data-fui-opened") : area.defaultValue) : null;
-  const isNew = panel ? panel.hasAttribute("data-fui-new") : false;
+  const words = panel ? JSON.parse(panel.dataset.fuiWords || "{}") : null;
+  const opened = panel ? ("fuiOpened" in panel.dataset ? panel.dataset.fuiOpened : area.defaultValue) : null;
+  const isNew = panel ? "fuiNew" in panel.dataset : false;
   const list = area.id ? document.querySelector("ul[data-fui-for='" + CSS.escape(area.id) + "']") : null;
   let model = null;
   const highlighted = (value) => {
@@ -105,7 +105,7 @@ export function enhance(root) {
   };
   let bodies = highlighted(area.value);
   let raw = area.value.split("\n");
-  let current = root.hasAttribute("data-current") ? Number(root.getAttribute("data-current")) : null;
+  let current = "current" in root.dataset ? Number(root.dataset.current) : null;
   if (stack) stack.classList.remove("is-static");
 
   function named(line) {
@@ -129,7 +129,7 @@ export function enhance(root) {
   function redraw() {
     if (follows && detect(area.value) !== language) {
       language = detect(area.value);
-      root.setAttribute("data-language", language);
+      root.dataset.language = language;
       layer.textContent = "";
       bodies = [];
       raw = [];
@@ -174,7 +174,7 @@ export function enhance(root) {
       }
       if (list) {
         for (const row of list.querySelectorAll("li[data-line]")) {
-          const on = current !== null && Number(row.getAttribute("data-line")) === current;
+          const on = current !== null && Number(row.dataset.line) === current;
           row.classList.toggle("is-current", on);
           if (on) row.setAttribute("aria-current", "true");
           else row.removeAttribute("aria-current");
@@ -195,7 +195,7 @@ export function enhance(root) {
     const count = lineCount(area.value);
     const lines = count === 1 ? text(words.one_line) : fill(words.lines, { count: grouped(count, words.grouping.group) });
     const bar = panel.querySelector("[data-fui-lead]");
-    if (bar) bar.textContent = bar.getAttribute("data-fui-lead") + " · " + lines;
+    if (bar) bar.textContent = bar.dataset.fuiLead + " · " + lines;
     const dirty = !isNew && area.value !== opened;
     const state = panel.querySelector("[data-fui-state]");
     if (state) {
@@ -213,9 +213,9 @@ export function enhance(root) {
   if (list) {
     list.addEventListener("click", (event) => {
       const link = event.target.closest("a.fui-diag-where");
-      const row = link && link.closest("li[data-line]");
+      const row = link?.closest("li[data-line]");
       if (!row) return;
-      const at = { line: Number(row.getAttribute("data-line")), column: Number(link.getAttribute("data-column") || "1") };
+      const at = { line: Number(row.dataset.line), column: Number(link.dataset.column || "1") };
       const offset = offsetOf(area.value, at);
       setTimeout(() => {
         area.setSelectionRange(offset, offset);

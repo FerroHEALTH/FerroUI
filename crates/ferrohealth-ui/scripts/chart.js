@@ -7,7 +7,7 @@
 // groups in the plot alone, so the drawing is never parsed again. The last
 // series shown cannot be hidden, so the chart never empties itself.
 export function enhance(legend) {
-  const plot = document.getElementById(legend.getAttribute("data-fui-plot") || "");
+  const plot = document.getElementById(legend.dataset.fuiPlot || "");
   if (!plot) return;
   const keys = [...legend.querySelectorAll(".fui-legend-key")];
   const shown = keys.map(() => true);
@@ -15,7 +15,7 @@ export function enhance(legend) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "fui-legend-chip";
-    button.setAttribute("data-series", key.getAttribute("data-series") || "");
+    button.dataset.series = key.dataset.series || "";
     button.append(...key.childNodes);
     key.replaceWith(button);
     button.addEventListener("click", () => {

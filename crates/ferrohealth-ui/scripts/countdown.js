@@ -34,10 +34,10 @@ export function elapsed(monotonic, wall) {
 }
 
 export function enhance(root) {
-  const start = Number(root.getAttribute("data-left") || "0");
-  const total = Math.max(Number(root.getAttribute("data-total") || "0"), start);
+  const start = Number(root.dataset.left || "0");
+  const total = Math.max(Number(root.dataset.total || "0"), start);
   if (!start) return;
-  const words = JSON.parse(root.getAttribute("data-words") || "{}");
+  const words = JSON.parse(root.dataset.words || "{}");
   const ring = root.querySelector(".fui-countdown-left");
   const strong = root.querySelector("[role='timer'] strong");
   const line = root.querySelector("[role='timer'] span");
