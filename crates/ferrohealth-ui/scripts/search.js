@@ -108,12 +108,24 @@ export async function ask(route, form, name, query) {
 }
 
 async function answered(response) {
+  let answer;
   try {
-    return { answer: await response.json() };
+    answer = await response.json();
   } catch (error) {
     console.warn("fui: the search's answer is unreadable", error);
     return { failure: "unreadable" };
   }
+  if (readable(answer)) return { answer };
+  console.warn("fui: the search's answer is not a SearchAnswer");
+  return { failure: "unreadable" };
+}
+
+// Whether `answer` has the shape the panel draws: an object whose groups,
+// when it names any, are a list of groups that each hold a list of hits.
+function readable(answer) {
+  if (answer === null || typeof answer !== "object" || Array.isArray(answer)) return false;
+  if (answer.groups === undefined) return true;
+  return Array.isArray(answer.groups) && answer.groups.every((group) => group !== null && typeof group === "object" && Array.isArray(group.hits));
 }
 
 function el(tag, cls, ...children) {
@@ -304,7 +316,7 @@ export function enhance(form) {
       if (signedOut) return session.goneTo(signedOut);
       session.gone();
     }
-    if (result.answer && Array.isArray(result.answer.groups || [])) drawAnswer(result.answer);
+    if (result.answer) drawAnswer(result.answer);
     else failed(result.failure || result.status);
   }
 
