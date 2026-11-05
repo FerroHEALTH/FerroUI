@@ -23,7 +23,7 @@ use crate::i18n::{Locale, Text, Word, tr};
 /// A personal preference kept in a cookie of its own (family rule 9).
 pub trait Preference: Default + Sized {
     /// The name of the cookie the preference is kept in.
-    const COOKIE: &'static str;
+    const COOKIE: &str;
 
     /// The value the cookie holds for this choice.
     fn cookie_value(&self) -> &str;
@@ -360,7 +360,7 @@ pub enum Language {
 
 impl Language {
     /// The key of [`Language::Browser`], as its cookie carries it.
-    pub const BROWSER: &'static str = "browser";
+    pub const BROWSER: &str = "browser";
 
     /// The tag of the chosen language, `None` when the browser decides.
     #[must_use]
@@ -373,7 +373,7 @@ impl Language {
 }
 
 impl Preference for Language {
-    const COOKIE: &'static str = "language";
+    const COOKIE: &str = "language";
 
     fn cookie_value(&self) -> &str {
         self.tag().unwrap_or(Self::BROWSER)
@@ -415,7 +415,7 @@ pub struct Preferences {
 impl Preferences {
     /// The names of every preference's cookie, which Reset to defaults
     /// clears.
-    pub const COOKIES: [&'static str; 6] = [
+    pub const COOKIES: [&str; 6] = [
         Theme::COOKIE,
         Density::COOKIE,
         Motion::COOKIE,

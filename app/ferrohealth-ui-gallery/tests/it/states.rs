@@ -101,7 +101,7 @@ fn file(brand: Brand, state: &str, theme: &str) -> PathBuf {
 }
 
 /// Every image the capture wrote, by brand, theme and state.
-static WRITTEN: Mutex<BTreeSet<(&'static str, String, String)>> = Mutex::new(BTreeSet::new());
+static WRITTEN: Mutex<BTreeSet<(&str, String, String)>> = Mutex::new(BTreeSet::new());
 
 /// Refuses a state [`all`] does not list, whose image the screenshot
 /// guard would reject.
