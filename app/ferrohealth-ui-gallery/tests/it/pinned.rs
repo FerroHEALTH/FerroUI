@@ -10,24 +10,38 @@
 
 use std::error::Error;
 
-use serde_json::Value;
+use serde_json::{Value, json};
 
 use crate::browser::with_browser;
 use crate::journeys_enabled;
 use crate::stack::Gallery;
 
 /// The script each test's body runs inside: `mod(name)` imports the module
-/// `name` as the loader does, and the body's answer comes back as JSON.
+/// `name` as the loader does, and the body's answer comes back as JSON. The
+/// body runs once the loader has marked every element that asks for a module
+/// `data-fui-ready`, so a body that drives the page's own modules never
+/// races their load (#638); a page whose modules do not all enhance throws,
+/// naming the jobs left.
 const HARNESS: &str = r#"const done = arguments[arguments.length - 1];
 (async () => {
   const loader = document.querySelector("script[src*='fui.js']");
   const mod = (name) => import(new URL(name + '.js', loader.src).href);
+  const waiting = () => [...document.querySelectorAll("[data-fui]:not([data-fui-ready])")];
+  for (let n = 0; n < 600 && waiting().length; n++) await new Promise((r) => requestAnimationFrame(r));
+  if (waiting().length) throw new Error("not enhanced: " + waiting().map((e) => e.dataset.fui).join(", "));
   BODY
 })().then((out) => done({ out }), (error) => done({ error: String(error && error.stack || error) }));"#;
 
 /// Runs `body` at the gallery page `page` and fails naming every row of its
-/// answer that differs from `expected`, a JSON array.
-async fn pinned(page: &str, body: &str, expected: &str) -> Result<(), Box<dyn Error>> {
+/// answer that differs from `expected`, a JSON array. With `late`, every
+/// request the page makes waits that many milliseconds and nothing comes
+/// from the cache, so its modules arrive after the page has drawn.
+async fn pinned(
+    page: &str,
+    body: &str,
+    expected: &str,
+    late: Option<u32>,
+) -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
         return Ok(());
     }
@@ -35,6 +49,22 @@ async fn pinned(page: &str, body: &str, expected: &str) -> Result<(), Box<dyn Er
     let script = HARNESS.replace("BODY", body);
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
+        if let Some(latency) = late {
+            let cdp = browser.driver().cdp();
+            cdp.send_raw("Network.enable", json!({})).await?;
+            cdp.send_raw("Network.setCacheDisabled", json!({ "cacheDisabled": true }))
+                .await?;
+            cdp.send_raw(
+                "Network.emulateNetworkConditions",
+                json!({
+                    "offline": false,
+                    "latency": latency,
+                    "downloadThroughput": -1,
+                    "uploadThroughput": -1
+                }),
+            )
+            .await?;
+        }
         browser.goto(&gallery.url(page)).await?;
         let answer = browser.driver().execute_async(&script, Vec::new()).await?;
         let answer = answer.json();
@@ -178,6 +208,7 @@ async fn the_combobox_keys_move_open_and_choose_as_pinned() -> Result<(), Box<dy
 ["remote", "Enter", false, "true", null, ""],
 ["remote", "Escape", true, "false", null, ""]
 ]"#,
+        None,
     )
     .await
 }
@@ -221,6 +252,7 @@ async fn the_date_range_day_classes_follow_the_choice_and_the_hover_as_pinned()
 ["click 2026-10-20", []],
 ["click 2026-10-20", []]
 ]"#,
+        None,
     )
     .await
 }
@@ -230,7 +262,6 @@ async fn the_date_range_day_classes_follow_the_choice_and_the_hover_as_pinned()
 /// position.
 const EDITOR: &str = r#"const area = document.getElementById("gallery-mapping");
   const root = area.closest(".fui-editor");
-  for (let n = 0; n < 600 && !root.querySelector(".fui-editor-layer .fui-code-line"); n++) await new Promise((r) => requestAnimationFrame(r));
   const panel = area.closest(".fui-editor-split") || document;
   const lineStart = (line) => area.value.split("\n").slice(0, line - 1).reduce((n, l) => n + l.length + 1, 0);
   const seen = [];
@@ -248,22 +279,28 @@ const EDITOR: &str = r#"const area = document.getElementById("gallery-mapping");
   }
   return seen;"#;
 
-#[tokio::test(flavor = "multi_thread")]
-async fn the_editor_follows_the_caret_to_its_marks_and_position_as_pinned()
--> Result<(), Box<dyn Error>> {
-    pinned(
-        "/ferrobridge/forms",
-        EDITOR,
-        r#"[
+/// What the editor answers at each caret place of [`EDITOR`].
+const EDITOR_PINNED: &str = r#"[
 [16, 3, ["gallery-mapping-L16 fui-code-line fui-mark-error is-current"], ["16:true:true", "6:false:null"], "Line 16 has an error.", "Ln 16, Col 3"],
 [16, 1, ["gallery-mapping-L16 fui-code-line fui-mark-error is-current"], ["16:true:true", "6:false:null"], "Line 16 has an error.", "Ln 16, Col 1"],
 [6, 2, ["gallery-mapping-L6 fui-code-line fui-mark-warning is-current"], ["16:false:null", "6:true:true"], "Line 6 has a warning.", "Ln 6, Col 2"],
 [1, 1, [], ["16:false:null", "6:false:null"], "", "Ln 1, Col 1"],
 [16, 12, ["gallery-mapping-L16 fui-code-line fui-mark-error is-current"], ["16:true:true", "6:false:null"], "Line 16 has an error.", "Ln 16, Col 12"],
 [3, 1, [], ["16:false:null", "6:false:null"], "", "Ln 3, Col 1"]
-]"#,
-    )
-    .await
+]"#;
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_editor_follows_the_caret_to_its_marks_and_position_as_pinned()
+-> Result<(), Box<dyn Error>> {
+    pinned("/ferrobridge/forms", EDITOR, EDITOR_PINNED, None).await
+}
+
+// The editor case with its modules 400 ms late, as on a loaded machine: the
+// harness waits for the page's modules, so the caret is followed (#638).
+#[tokio::test(flavor = "multi_thread")]
+async fn the_editor_follows_the_caret_as_pinned_when_its_module_arrives_late()
+-> Result<(), Box<dyn Error>> {
+    pinned("/ferrobridge/forms", EDITOR, EDITOR_PINNED, Some(400)).await
 }
 
 /// The announced keys over a fixture: a single key outside a field, a chord
@@ -320,6 +357,7 @@ async fn the_keys_press_focus_and_follow_as_pinned() -> Result<(), Box<dyn Error
 ["body", "F11", "", false, "", ""],
 ["body", "F7", "isComposing", false, "", ""]
 ]"#,
+        None,
     )
     .await
 }
@@ -399,6 +437,7 @@ async fn the_search_asks_its_route_and_draws_each_reply_as_pinned() -> Result<()
 ["post", "hitless", [["/pin/suggest?scope=all", "POST", "{\"Accept\":\"application/json\",\"Content-Type\":\"application/x-www-form-urlencoded\"}", "q=an", "same-origin"]], "The search answered in a form this page cannot read.", 0, false, "true", false],
 ["post", "unreachable", [["/pin/suggest?scope=all", "POST", "{\"Accept\":\"application/json\",\"Content-Type\":\"application/x-www-form-urlencoded\"}", "q=an", "same-origin"]], "The search could not be reached.", 0, false, "true", false]
 ]"#,
+        None,
     )
     .await
 }
