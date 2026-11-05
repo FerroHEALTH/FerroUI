@@ -10,6 +10,9 @@ import time
 
 import design_set
 
+# The DevTools method every page script runs through.
+EVALUATE = "Runtime.evaluate"
+
 
 class Chrome:
     def __init__(self, profile, log_dir):
@@ -141,9 +144,9 @@ def load(chrome, session, url, width, height=900, theme=None, reduced_motion=Fal
     chrome.wait_event("Page.loadEventFired", session)
     if theme:
         lock = "document.documentElement.dataset.lockTheme"
-        chrome.send("Runtime.evaluate", {"expression": f"document.documentElement.setAttribute('data-theme', {lock} || '{theme}')"}, session)
+        chrome.send(EVALUATE, {"expression": f"document.documentElement.setAttribute('data-theme', {lock} || '{theme}')"}, session)
     if still:
-        chrome.send("Runtime.evaluate", {"expression": "document.getAnimations().forEach(a => { if (a.effect && a.effect.getComputedTiming().endTime === Infinity) { a.pause(); a.currentTime = 0; } else { a.finish(); } })"}, session)
+        chrome.send(EVALUATE, {"expression": "document.getAnimations().forEach(a => { if (a.effect && a.effect.getComputedTiming().endTime === Infinity) { a.pause(); a.currentTime = 0; } else { a.finish(); } })"}, session)
     settle(chrome, session)
 
 
@@ -166,12 +169,12 @@ def settle(chrome, session):
     """Waits until every box on the page keeps its place for three frames in
     a row (at most 120 frames), so a measure never races a layout still
     running after a load or a viewport change."""
-    chrome.send("Runtime.evaluate", {"expression": SETTLE, "awaitPromise": True, "returnByValue": True}, session)
+    chrome.send(EVALUATE, {"expression": SETTLE, "awaitPromise": True, "returnByValue": True}, session)
 
 
 def evaluate(chrome, session, expression):
     """The JSON value of a JavaScript expression in the page."""
-    return chrome.send("Runtime.evaluate", {"expression": expression, "returnByValue": True}, session)["result"].get("value")
+    return chrome.send(EVALUATE, {"expression": expression, "returnByValue": True}, session)["result"].get("value")
 
 
 def _part(args):
@@ -221,6 +224,15 @@ def plan(checks):
     return still, moving
 
 
+def _measure(chrome, session, url, slug, loads, found):
+    """Loads the page once per distinct load and adds each reader's findings
+    to found, by check module name."""
+    for load_args, readers in loads:
+        load(chrome, session, url, **load_args)
+        for check in readers:
+            found[check.__name__] += check.measure(chrome, session, slug, load_args)
+
+
 def _sweep(args):
     site_name, profile, slugs, names = args
     import importlib
@@ -237,15 +249,9 @@ def _sweep(args):
         for slug in slugs:
             if still:
                 target, session = attach(chrome)
-                for load_args, readers in still:
-                    load(chrome, session, site.page_url(slug), **load_args)
-                    for check in readers:
-                        found[check.__name__] += check.measure(chrome, session, slug, load_args)
+                _measure(chrome, session, site.page_url(slug), slug, still, found)
                 detach(chrome, target, session)
-            for load_args, readers in moving:
-                load(chrome, pointer, site.page_url(slug), **load_args)
-                for check in readers:
-                    found[check.__name__] += check.measure(chrome, pointer, slug, load_args)
+            _measure(chrome, pointer, site.page_url(slug), slug, moving, found)
         return found
     finally:
         chrome.close()
