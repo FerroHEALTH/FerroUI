@@ -50,7 +50,7 @@ export function signInAddress(signIn, here) {
   const joint = signIn.includes("?") ? "&" : "?";
   let out = signIn + joint + "return=";
   for (const byte of new TextEncoder().encode(here)) {
-    const c = String.fromCharCode(byte);
+    const c = String.fromCodePoint(byte);
     out += /[A-Za-z0-9\-._~/]/.test(c) ? c : "%" + byte.toString(16).toUpperCase().padStart(2, "0");
   }
   return out;
@@ -161,12 +161,12 @@ export function enhance(root) {
 
   for (const kind of ["visibilitychange", "focus", "pageshow"]) {
     window.addEventListener(kind, () => {
-      if (!document.hidden) ask(false);
+      if (!document.hidden) void ask(false);
     });
   }
   for (const kind of ["keydown", "pointerdown"]) {
     window.addEventListener(kind, () => {
-      if (!root.open && now().spent >= ACTIVITY_GAP) ask(true);
+      if (!root.open && now().spent >= ACTIVITY_GAP) void ask(true);
     });
   }
   try {
@@ -182,7 +182,7 @@ export function enhance(root) {
   }
   root.addEventListener("cancel", (event) => {
     event.preventDefault();
-    ask(true);
+    void ask(true);
   });
   const stay = root.querySelector("[data-fui-stay]");
   if (stay) stay.addEventListener("click", () => ask(true));

@@ -7917,7 +7917,6 @@
   }
 
   .fui-tooltip {
-    white-space: nowrap;
     position: absolute;
     inset: 50% auto auto calc(100% + 0.5rem);
     z-index: 36;

@@ -89,7 +89,7 @@ export function enhance(form) {
     const by = event.submitter;
     if (plain || event.defaultPrevented || (by && (by.hasAttribute("formaction") || by.hasAttribute("formmethod")))) return;
     event.preventDefault();
-    send(by);
+    void send(by);
   });
   if (settle > 0) {
     form.addEventListener("input", () => {

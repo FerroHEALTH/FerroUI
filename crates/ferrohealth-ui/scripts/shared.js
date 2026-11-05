@@ -11,9 +11,16 @@ const SHUT = "";
 // White space as the crate's str::trim reads it (the Unicode White_Space
 // property), so a rule the crate runs too trims the same characters.
 const SPACE_START = /^\p{White_Space}+/u;
-const SPACE_END = /\p{White_Space}+$/u;
+const SPACE = /\p{White_Space}/u;
 export const trimStart = (value) => value.replace(SPACE_START, "");
-export const trim = (value) => trimStart(value).replace(SPACE_END, "");
+// One character at a time from the end: a trailing `+$` pattern backtracks
+// over a long run of white space.
+export function trimEnd(value) {
+  let end = value.length;
+  while (end > 0 && SPACE.test(value[end - 1])) end--;
+  return value.slice(0, end);
+}
+export const trim = (value) => trimEnd(trimStart(value));
 
 export const text = (word) => (word && typeof word === "object" ? word.en : word || "");
 
@@ -24,7 +31,11 @@ export function fill(phrase, values) {
 }
 
 export function grouped(number, group) {
-  return String(number).replace(/\B(?=(\d{3})+(?!\d))/g, group);
+  return String(number).replace(/\d+/g, (run) => {
+    let out = run.slice(-3);
+    for (let end = run.length - 3; end > 0; end -= 3) out = run.slice(Math.max(0, end - 3), end) + group + out;
+    return out;
+  });
 }
 
 export function element(tag, props, ...children) {

@@ -156,7 +156,7 @@ function field(root, config, words, button) {
     const box = element("div", { class: "fui-datepicker-month" });
     const render = () => {
       box.replaceChildren();
-      const reachesYear = (y) => y >= 1 && y <= 9999 && [...Array(12).keys()].some((i) => reaches(config.bounds, y, i + 1));
+      const reachesYear = (y) => y >= 1 && y <= 9999 && [...new Array(12).keys()].some((i) => reaches(config.bounds, y, i + 1));
       box.append(element("div", { class: "fui-datepicker-head" },
         arrow(root, "chevron-left", text(words.previous_year), "fui-icon-button", !reachesYear(shownYear - 1), () => {
           shownYear -= 1;
@@ -173,7 +173,7 @@ function field(root, config, words, button) {
       ));
       const today = fromNumber(config.today);
       box.append(element("div", { class: "fui-datepicker-months", role: "grid", "aria-label": fill(text(words.months_of), { year: shownYear }) },
-        [...Array(12).keys()].map((i) => element("button", {
+        [...new Array(12).keys()].map((i) => element("button", {
           type: "button",
           class: "fui-datepicker-cell",
           "aria-label": monthTitle(words, shownYear, i + 1),
