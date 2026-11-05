@@ -46,6 +46,22 @@ export function targets(answer) {
   return out;
 }
 
+// Where a match of the lower-cased `needle` that begins at the character
+// `at` of `chars` ends, or -1 when none begins there.
+function matchEnd(chars, at, needle) {
+  let matched = 0;
+  let next = at;
+  while (matched < needle.length) {
+    if (next >= chars.length) return -1;
+    for (const lower of chars[next].toLowerCase()) {
+      if (needle[matched] !== lower) return -1;
+      matched++;
+    }
+    next++;
+  }
+  return next;
+}
+
 // The runs of `value`, each marked when it matches `query` without regard
 // to case, as the crate's runs.
 export function runs(value, query) {
@@ -56,30 +72,48 @@ export function runs(value, query) {
   let plain = "";
   let at = 0;
   while (at < chars.length) {
-    let matched = 0;
-    let next = at;
-    let ok = true;
-    while (matched < needle.length) {
-      if (next >= chars.length) {
-        ok = false;
-        break;
-      }
-      for (const lower of chars[next].toLowerCase()) {
-        if (needle[matched] !== lower) ok = false;
-        matched++;
-      }
-      if (!ok) break;
-      next++;
+    const next = matchEnd(chars, at, needle);
+    if (next < 0) {
+      plain += chars[at++];
+      continue;
     }
-    if (ok) {
-      if (plain) out.push([plain, false]);
-      plain = "";
-      out.push([chars.slice(at, next).join(""), true]);
-      at = next;
-    } else plain += chars[at++];
+    if (plain) out.push([plain, false]);
+    plain = "";
+    out.push([chars.slice(at, next).join(""), true]);
+    at = next;
   }
   if (plain) out.push([plain, false]);
   return out;
+}
+
+// What the search's route answers for `query` from the form `form`: its
+// answer, its status when it refused, or why it could not be read.
+export async function ask(route, form, name, query) {
+  const body = new URLSearchParams([[name, query]]);
+  const post = form.method.toLowerCase() === "post";
+  try {
+    const joint = route.includes("?") ? "&" : "?";
+    const response = await fetch(post ? route : route + joint + body, {
+      method: post ? "POST" : "GET",
+      credentials: "same-origin",
+      headers: post ? { Accept: "application/json", "Content-Type": "application/x-www-form-urlencoded" } : { Accept: "application/json" },
+      body: post ? body.toString() : undefined,
+    });
+    if (!response.ok) return { status: response.status };
+    return await answered(response);
+  } catch (error) {
+    console.warn("fui: the browser refused the search's request", error);
+    return { failure: "unreachable" };
+  }
+}
+
+async function answered(response) {
+  try {
+    return { answer: await response.json() };
+  } catch (error) {
+    console.warn("fui: the search's answer is unreadable", error);
+    return { failure: "unreadable" };
+  }
 }
 
 function el(tag, cls, ...children) {
@@ -263,30 +297,7 @@ export function enhance(form) {
     list.replaceChildren();
     draw([status("", null, text(words.searching))], text(words.searching));
     open(true);
-    const body = new URLSearchParams([[field.name, query]]);
-    const post = form.method.toLowerCase() === "post";
-    let result;
-    try {
-      const joint = route.includes("?") ? "&" : "?";
-      const response = await fetch(post ? route : route + joint + body, {
-        method: post ? "POST" : "GET",
-        credentials: "same-origin",
-        headers: post ? { Accept: "application/json", "Content-Type": "application/x-www-form-urlencoded" } : { Accept: "application/json" },
-        body: post ? body.toString() : undefined,
-      });
-      if (!response.ok) result = { status: response.status };
-      else {
-        try {
-          result = { answer: await response.json() };
-        } catch (error) {
-          console.warn("fui: the search's answer is unreadable", error);
-          result = { failure: "unreadable" };
-        }
-      }
-    } catch (error) {
-      console.warn("fui: the browser refused the search's request", error);
-      result = { failure: "unreachable" };
-    }
+    const result = await ask(route, form, field.name, query);
     if (mine !== asked) return;
     if (result.status === 401) {
       const session = await import("./session.js");

@@ -12,40 +12,45 @@
 const KEY = "fui-tree:";
 const FOCUS = "fui-tree-focus:";
 
+const focusOn = (other) => (other ? { focus: other.key } : null);
+
+// Right opens a closed item, and on an open one moves to its first child.
+function inward(item, next) {
+  if (item.expandable && !item.open) return { open: item.key };
+  if (!item.open) return null;
+  return next && next.parent === item.key ? { focus: next.key } : null;
+}
+
+// Left closes an open item, and on another moves to its parent.
+function outward(item) {
+  if (item.open) return { close: item.key };
+  return item.parent === null ? null : { focus: item.parent };
+}
+
+// Enter and Space follow an item's link, or fold it.
+function activated(item) {
+  if (item.link) return { follow: item.key };
+  if (item.open) return { close: item.key };
+  return item.expandable ? { open: item.key } : null;
+}
+
+const MOVES = new Map([
+  ["ArrowDown", (item, at, shown) => focusOn(shown[at + 1])],
+  ["ArrowUp", (item, at, shown) => (at > 0 ? focusOn(shown[at - 1]) : null)],
+  ["Home", (item, at, shown) => focusOn(shown[0])],
+  ["End", (item, at, shown) => focusOn(shown[shown.length - 1])],
+  ["ArrowRight", (item, at, shown) => inward(item, shown[at + 1])],
+  ["ArrowLeft", outward],
+  ["Enter", activated],
+  [" ", activated],
+]);
+
 // The move a key makes from the item at index `at` of the items `shown`
 // ({key, parent, expandable, open, link}), as the crate's moved.
 export function moved(key, at, shown) {
   const item = shown[at];
-  if (!item) return null;
-  const focus = (other) => (other ? { focus: other.key } : null);
-  switch (key) {
-    case "ArrowDown":
-      return focus(shown[at + 1]);
-    case "ArrowUp":
-      return at > 0 ? focus(shown[at - 1]) : null;
-    case "Home":
-      return focus(shown[0]);
-    case "End":
-      return focus(shown[shown.length - 1]);
-    case "ArrowRight":
-      if (item.expandable && !item.open) return { open: item.key };
-      if (item.open) {
-        const next = shown[at + 1];
-        return next && next.parent === item.key ? { focus: next.key } : null;
-      }
-      return null;
-    case "ArrowLeft":
-      if (item.open) return { close: item.key };
-      return item.parent === null ? null : { focus: item.parent };
-    case "Enter":
-    case " ":
-      if (item.link) return { follow: item.key };
-      if (item.open) return { close: item.key };
-      if (item.expandable) return { open: item.key };
-      return null;
-    default:
-      return null;
-  }
+  const move = MOVES.get(key);
+  return item && move ? move(item, at, shown) : null;
 }
 
 // The items of the tree `list` in sight, in document order, as the

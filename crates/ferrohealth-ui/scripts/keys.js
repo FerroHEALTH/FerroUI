@@ -65,31 +65,40 @@ function lead(key) {
 let pending = null;
 let bound = false;
 
+// Follows the link of the go-to pair `group` opened for the key pressed,
+// and says whether there was one.
+function followed(group, event) {
+  const link = group.querySelector("a[data-fui-go-key='" + CSS.escape(event.key.toLowerCase()) + "']");
+  if (!link) return false;
+  event.preventDefault();
+  link.click();
+  return true;
+}
+
+// Presses the control `hit` reached, or focuses it when it is a field.
+function press(hit, event) {
+  event.preventDefault();
+  if (event.repeat) return;
+  if (field(hit.element)) {
+    hit.element.focus();
+    return;
+  }
+  // A dialog returns the focus to what held it as it opened.
+  if (!hit.row && hit.element.matches("[commandfor], [aria-haspopup]")) hit.element.focus();
+  hit.element.click();
+}
+
 function pressed(event) {
   if (event.defaultPrevented || event.isComposing || event.key === "?" || phone()) return;
   const chord = event.ctrlKey || event.metaKey;
   const free = !chord && !typing(event);
   const group = pending;
   pending = null;
-  if (group && free) {
-    const link = group.querySelector("a[data-fui-go-key='" + CSS.escape(event.key.toLowerCase()) + "']");
-    if (link) {
-      event.preventDefault();
-      link.click();
-      return;
-    }
-  }
+  if (group && free && followed(group, event)) return;
   if (!chord && !free) return;
   const hit = reach(event);
   if (hit) {
-    event.preventDefault();
-    if (event.repeat) return;
-    if (field(hit.element)) hit.element.focus();
-    else {
-      // A dialog returns the focus to what held it as it opened.
-      if (!hit.row && hit.element.matches("[commandfor], [aria-haspopup]")) hit.element.focus();
-      hit.element.click();
-    }
+    press(hit, event);
     return;
   }
   if (free && !document.querySelector("dialog:modal")) {

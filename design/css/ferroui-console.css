@@ -806,10 +806,6 @@
     outline-offset: 2px;
   }
 
-  .mk-short-stack {
-    min-height: 0 !important;
-  }
-
   .mk-ff-tools {
     display: flex;
     flex-wrap: wrap;
@@ -1405,5 +1401,13 @@
     :root:not([data-theme="light"], [data-theme="dark"]) .mk-picker-demo .fui-datepicker {
       background: var(--surface-raised);
     }
+  }
+}
+
+/* A capture's short editor, held short against every component rule by
+   its layer (CSS Cascading and Inheritance Level 5, § 6.4). */
+@layer utilities {
+  .mk-short-stack {
+    min-height: 0;
   }
 }

@@ -34,6 +34,44 @@ function before(runs, column) {
 
 const runsHtml = (runs) => runs.map((run) => span(run.kind, run.text)).join("");
 
+// For each line from `walk.mark` whose start the step that began at
+// `from` in the state `was` read past: how far before its start the step
+// began, and in which state.
+function marked(walk, lines, seen, from, was) {
+  while (walk.mark < lines.length && seen > walk.markStart) {
+    walk.back.push(walk.markStart - from);
+    walk.states.push(was);
+    walk.markStart += lines[walk.mark].length + 1;
+    walk.mark++;
+  }
+}
+
+// Closes the current line and opens the next one; at a line `at.stop`
+// accepts, the scan's answer, its runs before that line complete.
+function broken(walk, lines, at) {
+  walk.runs.push(walk.current);
+  walk.current = [];
+  walk.start += lines[walk.line].length + 1;
+  walk.line++;
+  const k = walk.line - at.mark;
+  if (!at.stop || k < 0 || walk.line >= walk.mark || !at.stop(walk.line, walk.back[k], walk.states[k], walk.start)) return null;
+  return { runs: walk.runs, back: walk.back.slice(0, k), states: walk.states.slice(0, k), end: walk.line };
+}
+
+// Puts the tokens `out` of one step on their lines, or answers where the
+// scan stops.
+function placed(walk, out, lines, at) {
+  for (const token of out) {
+    const parts = token.text.split("\n");
+    for (let n = 0; n < parts.length; n++) {
+      const stopped = n > 0 ? broken(walk, lines, at) : null;
+      if (stopped) return stopped;
+      push(walk.current, token.kind, parts[n]);
+    }
+  }
+  return null;
+}
+
 // The steps of `text` from the unit `at.from` in `at.state`, split into
 // `lines`: the runs of each line from `at.line` (its runs before `from`
 // being `at.prefix`), and for each line from `at.mark` the step that first
@@ -41,50 +79,24 @@ const runsHtml = (runs) => runs.map((run) => span(run.kind, run.text)).join("");
 // before it complete, or at the end of the text.
 function scan(step, text, lines, at) {
   const chars = new Chars(text, at.from);
-  const runs = [];
-  const back = [];
-  const states = [];
-  let current = at.prefix;
-  let line = at.line;
-  let start = at.start;
-  let mark = at.mark;
-  let markStart = at.markStart;
+  const walk = { runs: [], back: [], states: [], current: at.prefix, line: at.line, start: at.start, mark: at.mark, markStart: at.markStart };
   let state = at.state;
   while (!chars.done()) {
     const from = chars.i;
     const was = state;
     const out = [];
     state = step(chars, state, out);
-    while (mark < lines.length && chars.seen > markStart) {
-      back.push(markStart - from);
-      states.push(was);
-      markStart += lines[mark].length + 1;
-      mark++;
-    }
-    for (const token of out) {
-      const parts = token.text.split("\n");
-      for (let n = 0; n < parts.length; n++) {
-        if (n > 0) {
-          runs.push(current);
-          current = [];
-          start += lines[line].length + 1;
-          line++;
-          const k = line - at.mark;
-          if (at.stop && k >= 0 && line < mark && at.stop(line, back[k], states[k], start)) {
-            return { runs, back: back.slice(0, k), states: states.slice(0, k), end: line };
-          }
-        }
-        push(current, token.kind, parts[n]);
-      }
-    }
+    marked(walk, lines, chars.seen, from, was);
+    const stopped = placed(walk, out, lines, at);
+    if (stopped) return stopped;
   }
-  for (; mark < lines.length; mark++) {
-    back.push(markStart - text.length);
-    states.push(state);
-    markStart += lines[mark].length + 1;
+  for (; walk.mark < lines.length; walk.mark++) {
+    walk.back.push(walk.markStart - text.length);
+    walk.states.push(state);
+    walk.markStart += lines[walk.mark].length + 1;
   }
-  runs.push(current);
-  return { runs, back, states, end: lines.length };
+  walk.runs.push(walk.current);
+  return { runs: walk.runs, back: walk.back, states: walk.states, end: lines.length };
 }
 
 // The highlighted lines of a JSON or XML text, kept across its edits, as
