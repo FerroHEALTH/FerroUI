@@ -100,6 +100,10 @@ repository neither needs nor configures one.
   request opened with `gh pr create --label screenshots` gets them on its
   first run.
 - `.github/workflows/codeql.yml`: CodeQL over the `actions` language and Rust.
+- `.github/workflows/sonar.yml`: SonarQube Cloud on every push to `main` and
+  every pull request, with its scope in `sonar-project.properties`.
+  Advisory: it gates no merge, a finding is fixed by hand in a normal
+  change, and a wrong one is recorded on the tracker with its reason.
 - `.github/workflows/scorecard.yml`: OpenSSF Scorecard, published to the
   OpenSSF API and to code scanning.
 - `.github/workflows/release.yml`: dormant until a `v*` tag is pushed. It

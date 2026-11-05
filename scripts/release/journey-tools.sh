@@ -48,7 +48,7 @@ verify() {
 
 # Downloads URL into FILE.
 fetch() {
-  curl --fail --silent --show-error --location --retry 3 --output "$2" "$1"
+  curl --proto =https --fail --silent --show-error --location --retry 3 --output "$2" "$1"
 }
 
 # Prints the URL the API lists for the pinned version of PRODUCT (chrome or
