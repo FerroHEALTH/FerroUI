@@ -524,9 +524,7 @@ async fn the_search_box_submits_and_the_preferences_density_posts_on_change()
                 },
             )
             .await?;
-        browser
-            .element(By::Css(".fui-setting-saved[role='status']"))
-            .await?;
+        browser.element(By::Css("output.fui-setting-saved")).await?;
         preferences_hydrated(browser).await?;
         until("the row just saved has its choice focused", async || {
             let focused = browser.driver().active_element().await?;
@@ -677,7 +675,7 @@ async fn your_preferences_saved_mark_never_moves_its_control() -> Result<(), Box
         let quiet = place("/ferrofed/preferences/language").await?;
         let saved = place("/ferrofed/preferences/language?saved=week-start").await?;
         browser
-            .element(By::Css(".fui-setting-saved[role='status']"))
+            .element(By::Css("output.fui-setting-saved"))
             .await?;
         assert_eq!(quiet, saved, "Saved has its own slot (R28)");
         browser.console_clean("the saved mark").await

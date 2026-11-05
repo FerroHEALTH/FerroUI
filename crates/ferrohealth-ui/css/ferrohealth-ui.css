@@ -6195,6 +6195,7 @@
   .fui-menu-sep {
     height: 1px;
     margin: 0.25rem 0;
+    border: 0;
     background: var(--edge);
   }
 

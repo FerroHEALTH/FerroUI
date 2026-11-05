@@ -689,7 +689,9 @@ fn the_narrow_choices_are_links_and_sign_out_comes_last_after_a_separator() {
     );
     assert!(menu.contains(r#"<div class="fui-menu-version">"#), "{menu}");
     let sign_out = menu.find("/sign-out").expect("a sign-out form");
-    let last_separator = menu.rfind(r#"role="separator""#).expect("a separator");
+    let last_separator = menu
+        .rfind(r#"<hr class="fui-menu-sep">"#)
+        .expect("a separator");
     assert!(last_separator < sign_out, "{menu}");
     assert!(menu[sign_out..].find("menuitem").is_some(), "{menu}");
     assert!(

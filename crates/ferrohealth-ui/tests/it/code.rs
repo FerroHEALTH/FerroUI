@@ -148,8 +148,11 @@ fn copy_reads_the_viewers_lines_and_carries_no_copy_of_the_text() {
     assert!(
         has(
             &drawn,
-            "div",
-            &[("id", "file-copy-text"), ("role", "region")]
+            "section",
+            &[
+                ("id", "file-copy-text"),
+                ("aria-label", "The file, one numbered line per line")
+            ]
         ),
         "Copy reads the box it names: {drawn}"
     );

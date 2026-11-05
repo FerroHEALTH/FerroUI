@@ -358,9 +358,7 @@ async fn preferences_post_and_reset(
     browser
         .at(&gallery.url("/ferrofed/preferences?saved=density"))
         .await?;
-    browser
-        .element(By::Css(".fui-setting-saved[role='status']"))
-        .await?;
+    browser.element(By::Css("output.fui-setting-saved")).await?;
     browser
         .element(By::Css(r#"html[data-density="compact"]"#))
         .await?;
@@ -923,7 +921,7 @@ async fn answer_and_dock(browser: &Browser, gallery: &Gallery) -> Result<(), Box
         .click()
         .await?;
     browser
-        .text("p", "Saved: the settings apply at once.")
+        .text("output", "Saved: the settings apply at once.")
         .await?;
     // Discard leaves the form with its required field emptied (#357).
     browser

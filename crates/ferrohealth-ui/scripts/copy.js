@@ -32,7 +32,7 @@ function source(root) {
 export function enhance(root) {
   const button = root.tagName === "BUTTON" ? root : root.querySelector("button");
   if (!button) return;
-  const status = root.tagName === "BUTTON" ? root.nextElementSibling : root.querySelector("[role='status']");
+  const status = root.tagName === "BUTTON" ? root.nextElementSibling : root.querySelector("output");
   const refused = root.querySelector ? root.querySelector(".fui-copy-refused") : null;
   if (root.tagName === "BUTTON") {
     const text = root.previousElementSibling;

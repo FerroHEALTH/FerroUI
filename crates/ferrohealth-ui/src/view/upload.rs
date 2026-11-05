@@ -492,7 +492,10 @@ mod tests {
             },
         )
         .to_string();
-        assert!(html.contains("fui-spinner"), "{html}");
+        assert!(
+            html.contains("<output class=\"fui-spinner\">"),
+            "the send in flight is a live region: {html}"
+        );
         assert!(
             html.contains(
                 "<div role=\"alert\" class=\"fui-alert\">the server refused &#60;it&#62;</div>"

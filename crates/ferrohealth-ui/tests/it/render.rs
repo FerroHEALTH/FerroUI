@@ -331,13 +331,12 @@ fn a_code_viewer_escapes_its_text_numbers_its_lines_and_draws_each_finding_under
     assert!(
         has(
             &viewer,
-            "div",
+            "section",
             &[
                 (
                     "class",
                     "fui-code-panel fui-code-panel-numbered fui-scroll-cue"
                 ),
-                ("role", "region"),
                 ("tabindex", "0"),
                 (
                     "aria-label",
@@ -2436,11 +2435,7 @@ fn the_copy_button_waits_hidden_and_leaves_its_text_to_the_page() {
         "the text crosses to the browser escaped: {copy}"
     );
     assert!(
-        has(
-            &copy,
-            "span",
-            &[("class", "fui-sr-only"), ("role", "status")]
-        ),
+        has(&copy, "output", &[("class", "fui-sr-only")]),
         "a live region says what came of a press: {copy}"
     );
 }

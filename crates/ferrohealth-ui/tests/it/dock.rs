@@ -81,11 +81,10 @@ fn the_bar_is_a_named_region_whose_decisions_submit_its_post_form() {
     assert!(
         has(
             &html,
-            "div",
+            "section",
             &[
                 ("id", "dock"),
                 ("class", "fui-dock"),
-                ("role", "region"),
                 ("aria-label", "Decision")
             ]
         ),
@@ -373,11 +372,8 @@ fn a_done_bar_confirms_in_words_and_a_stale_one_says_what_happened() {
     assert!(
         has(
             &done,
-            "p",
-            &[
-                ("class", "fui-dock-message fui-dock-done"),
-                ("role", "status")
-            ]
+            "output",
+            &[("class", "fui-dock-message fui-dock-done")]
         ),
         "{done}"
     );

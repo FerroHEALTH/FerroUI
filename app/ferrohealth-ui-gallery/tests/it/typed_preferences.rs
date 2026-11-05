@@ -91,9 +91,7 @@ async fn a_typed_preference_posts_on_change_and_keeps_its_field_focused()
                     == gallery.url(&format!("{LANGUAGE}?saved=size")))
         })
         .await?;
-        browser
-            .element(By::Css(".fui-setting-saved[role='status']"))
-            .await?;
+        browser.element(By::Css("output.fui-setting-saved")).await?;
         assert_eq!("50", value(browser, "size").await?);
         until("the field just saved takes the focus back", async || {
             Ok(focused(browser).await? == "size")

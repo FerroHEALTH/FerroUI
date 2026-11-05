@@ -339,11 +339,7 @@ fn the_editor_draws_its_toolbar_marks_and_status_line() {
         "a changed draft shows the unsaved dot: {shown}"
     );
     assert!(
-        has(
-            &shown,
-            "span",
-            &[("class", "fui-sr-only"), ("role", "status")]
-        ),
+        has(&shown, "output", &[("class", "fui-sr-only")]),
         "the status line has a polite live region: {shown}"
     );
     assert!(
