@@ -456,3 +456,67 @@ async fn the_editor_panel_is_empty_alike() -> Result<(), Box<dyn Error>> {
     }
     held("editor", "(m, text) => m.blank(text)", cases).await
 }
+
+/// The edits the re-highlighter resumes over: each text one of [`INSERTS`]
+/// takes at a spread of its character boundaries, and loses the character
+/// there.
+const INSERTS: &[&str] = &["x", "\n", "\"", "'", "<", ">", "<!--", "-->", "{", "]]>"];
+
+/// The texts of `document` after one edit each, at about eight places.
+fn edited(document: &str) -> Vec<String> {
+    let bounds: Vec<usize> = document
+        .char_indices()
+        .map(|(at, _)| at)
+        .chain([document.len()])
+        .collect();
+    let every = bounds.len().div_ceil(8).max(1);
+    let mut out = Vec::new();
+    for (n, &at) in bounds.iter().enumerate().step_by(every) {
+        let (head, tail) = document.split_at(at);
+        for insert in INSERTS {
+            out.push(format!("{head}{insert}{tail}"));
+        }
+        if let Some(&next) = bounds.get(n + 1) {
+            out.push(format!("{head}{}", document.split_at(next).1));
+        }
+    }
+    out
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_rehighlight_edit_lines_are_the_rust_highlight_lines() -> Result<(), Box<dyn Error>> {
+    let html = |language, text: &str| -> Value {
+        json!(
+            lines(language, text)
+                .iter()
+                .map(|line| line_html(line))
+                .collect::<Vec<String>>()
+        )
+    };
+    let mut cases = Vec::new();
+    for language in [Language::Json, Language::Xml] {
+        for document in CORPUS {
+            cases.push((
+                json!([language_key(language), [document]]),
+                html(language, document),
+            ));
+            for after in edited(document) {
+                cases.push((
+                    json!([language_key(language), [document, after]]),
+                    html(language, &after),
+                ));
+                // A second edit resumes from what the first one kept.
+                cases.push((
+                    json!([language_key(language), [document, after, document]]),
+                    html(language, document),
+                ));
+            }
+        }
+    }
+    held(
+        "rehighlight",
+        "(m, language, texts) => { const kept = new m.Highlight(language, texts[0]); let html = kept.html; for (const text of texts.slice(1)) html = kept.edit(text); return html; }",
+        cases,
+    )
+    .await
+}
