@@ -100,6 +100,8 @@ pub fn load_report(report: LoadReport) -> Html {
         counts,
         action,
     } = report;
+    // NOTE: HTML § 4.10.12 gives `output` phrasing content alone, and the
+    // report holds a list and its actions, so its `div` keeps the role.
     let role = if arrival == Arrival::AfterAction {
         " role=\"status\""
     } else {

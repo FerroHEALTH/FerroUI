@@ -16,7 +16,7 @@ export function keeps(words, texts) {
 export function enhance(box) {
   const input = box.querySelector("input[type='search']");
   const shown = box.querySelector("p[aria-hidden='true']");
-  const status = box.querySelector("p[role='status']");
+  const status = box.querySelector("output");
   const holder = document.getElementById(box.dataset.fuiRows || "");
   const phrase = box.dataset.fuiPhrase || "";
   if (!input || !holder) return;

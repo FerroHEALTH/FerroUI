@@ -546,7 +546,7 @@ fn identifiers_table(v: &Visit, revealed: &[&str]) -> Html {
         .collect();
     let caption = Html::text(v.tr(Msg::RecordsIdentifiersOf));
     Html::raw(format!(
-        "<div class=\"fui-table-scroll fui-table-stack\" role=\"region\" aria-label=\"{caption}\" id=\"identifiers\"><table class=\"fui-table\"><caption>{caption}</caption><thead><tr><th scope=\"col\">{}</th><th scope=\"col\">{}</th></tr></thead><tbody>{body}</tbody></table></div>",
+        "<section class=\"fui-table-scroll fui-table-stack\" aria-label=\"{caption}\" id=\"identifiers\"><table class=\"fui-table\"><caption>{caption}</caption><thead><tr><th scope=\"col\">{}</th><th scope=\"col\">{}</th></tr></thead><tbody>{body}</tbody></table></section>",
         Html::text(v.tr(Msg::RecordsDomain)),
         Html::text(v.tr(Msg::RecordsIdentifier))
     ))

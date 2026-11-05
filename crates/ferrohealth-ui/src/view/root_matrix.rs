@@ -117,7 +117,7 @@ pub fn root_matrix(locale: &Locale, matrix: RootMatrix) -> Html {
         .concat();
     let caption = Html::text(caption);
     Html::raw(format!(
-        "<div class=\"fui-root-matrix\"><div role=\"region\" aria-label=\"{caption}\" tabindex=\"0\" class=\"fui-table-scroll\"><table class=\"fui-table\"><caption class=\"fui-sr-only\">{caption}</caption><thead><tr><th scope=\"col\">{}</th>{heads}</tr></thead><tbody>{body}</tbody></table></div></div>",
+        "<div class=\"fui-root-matrix\"><section aria-label=\"{caption}\" tabindex=\"0\" class=\"fui-table-scroll\"><table class=\"fui-table\"><caption class=\"fui-sr-only\">{caption}</caption><thead><tr><th scope=\"col\">{}</th>{heads}</tr></thead><tbody>{body}</tbody></table></section></div>",
         Html::text(corner)
     ))
 }

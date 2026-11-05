@@ -81,7 +81,7 @@ function field(root, config, words, button) {
   // draw redraws the quick choices and the month.
   let frame = null;
   function build() {
-    const said = element("p", { class: "fui-datepicker-status", role: "status", hidden: true });
+    const said = element("output", { class: "fui-datepicker-status", hidden: true });
     const main = element("div", { class: "fui-datepicker-main" });
     if (config.with_time) {
       const part = (key, label) => element("input", { class: "fui-input", inputmode: "numeric", maxlength: "2", "aria-label": text(label), value: clock[key], oninput: (event) => {

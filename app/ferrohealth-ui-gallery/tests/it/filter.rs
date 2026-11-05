@@ -30,7 +30,7 @@ async fn status(browser: &Browser) -> Result<String, Box<dyn Error>> {
     Ok(browser
         .driver()
         .execute(
-            "return document.querySelector('.fui-table-tools [role=status]').textContent;",
+            "return document.querySelector('.fui-table-tools > output').textContent;",
             Vec::new(),
         )
         .await?
@@ -62,7 +62,7 @@ async fn the_filter_says_its_count_once_the_typing_pauses() -> Result<(), Box<dy
         browser
             .driver()
             .execute(
-                "const region = document.querySelector('.fui-table-tools [role=status]');
+                "const region = document.querySelector('.fui-table-tools > output');
                  window.saidCounts = [];
                  new MutationObserver(() => window.saidCounts.push(region.textContent))
                    .observe(region, { childList: true, characterData: true, subtree: true });",

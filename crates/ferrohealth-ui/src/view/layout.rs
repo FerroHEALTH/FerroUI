@@ -128,7 +128,7 @@ impl Pane {
 fn pane(pane: Pane) -> Html {
     wrap(
         &format!(
-            "<section role=\"region\" aria-label=\"{}\" tabindex=\"0\" class=\"fui-pane\">",
+            "<section aria-label=\"{}\" tabindex=\"0\" class=\"fui-pane\">",
             Html::text(&pane.label)
         ),
         pane.body,

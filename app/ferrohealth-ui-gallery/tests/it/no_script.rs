@@ -592,7 +592,7 @@ async fn page_content(browser: &Browser, page: &str) -> Result<(), Box<dyn Error
             crate::records::identifiers_floor(browser).await?;
         }
         "/tables" => {
-            browser.text("p", "1-25 of 137").await?;
+            browser.text("output", "1-25 of 137").await?;
             let rows = browser
                 .driver()
                 .find_all(By::XPath("(//table)[1]/tbody/tr"))
@@ -797,7 +797,7 @@ async fn links_lead_on_with_the_modules_refused() -> Result<(), Box<dyn Error>> 
             .await?
             .click()
             .await?;
-        browser.text("p", "26-50 of 137").await?;
+        browser.text("output", "26-50 of 137").await?;
         browser
             .element(By::XPath("(//table)[1]//th[contains(., 'Lines')]//button"))
             .await?
@@ -1257,7 +1257,7 @@ async fn a_listing_filters_sorts_and_pages_with_the_modules_refused() -> Result<
                 .contains("q=synthetic-01"))
         })
         .await?;
-        browser.text("p", "1-10 of 10").await?;
+        browser.text("output", "1-10 of 10").await?;
         browser
             .element(By::XPath("(//table)[1]//th[contains(., 'Lines')]//button"))
             .await?
@@ -1279,7 +1279,7 @@ async fn a_listing_filters_sorts_and_pages_with_the_modules_refused() -> Result<
         );
         let next = browser.element(next).await?;
         browser.click_and_load(&next).await?;
-        browser.text("p", "26-50 of 137").await?;
+        browser.text("output", "26-50 of 137").await?;
         let after = browser.driver().current_url().await?;
         assert!(
             !after.as_str().contains("page=") && after.path() == before.path(),

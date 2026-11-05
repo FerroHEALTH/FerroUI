@@ -374,7 +374,7 @@ fn drawn_table(locale: &Locale, table: &Compare<'_>, class: &str) -> Html {
         .collect::<Vec<_>>()
         .concat();
     Html::raw(format!(
-        "<div role=\"region\" aria-label=\"{}\" tabindex=\"0\" class=\"{class}\"><table class=\"fui-compare\"><caption>{caption}</caption><colgroup><col class=\"fui-compare-col-field\"><col class=\"fui-compare-col\">{columns}</colgroup><thead><tr><th scope=\"col\">{}</th>{heads}</tr></thead><tbody>{body}</tbody></table></div>",
+        "<section aria-label=\"{}\" tabindex=\"0\" class=\"{class}\"><table class=\"fui-compare\"><caption>{caption}</caption><colgroup><col class=\"fui-compare-col-field\"><col class=\"fui-compare-col\">{columns}</colgroup><thead><tr><th scope=\"col\">{}</th>{heads}</tr></thead><tbody>{body}</tbody></table></section>",
         Html::text(caption.text()),
         tr(locale, Text::CompareField)
     ))

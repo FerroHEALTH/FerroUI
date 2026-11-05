@@ -110,7 +110,11 @@ written with the page's `i18n::number::Grouping`, carried in its words.
   composition is by value, a part passed as `Html`.
 - No component writes a `style` attribute, a `<style>` element, an inline
   script or handler, or a `javascript:` URL (`markup-rules.sh` reads the
-  templates and the Rust).
+  templates, the Rust and the modules).
+- A live region whose content is phrasing is an `<output>`, a named scroll
+  box a `<section>` with its `aria-label`, and a separator an `<hr>` (ARIA
+  in HTML § 4). An element that keeps the `status`, `region` or
+  `separator` role says why in a `NOTE:` beside it (`markup-rules.sh` M6).
 
 ## 3. Modules
 

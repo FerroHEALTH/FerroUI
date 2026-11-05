@@ -1983,7 +1983,9 @@ fn the_action_group_draws_one_primary_then_more_with_the_destructive_item_last()
         !page.contains("aria-expanded"),
         "the server leaves the state to the summary until the module runs: {page}"
     );
-    let separator = page.find(r#"role="separator""#).expect("a separator");
+    let separator = page
+        .find(r#"<hr class="fui-menu-sep">"#)
+        .expect("a separator");
     let delete = page
         .find("Delete the file\u{2026}")
         .expect("the delete, with an ellipsis");

@@ -238,10 +238,10 @@ fn trial(left: u32) -> String {
 
 /// The text of the first polite status region in `html`.
 fn status_text(html: &str) -> &str {
-    let at = html.find(r#"role="status""#).expect("a status region");
+    let at = html.find("<output").expect("a status region");
     let rest = &html[at..];
     let open = rest.find('>').expect("its start tag ends") + 1;
-    let close = rest.find("</span>").expect("it ends");
+    let close = rest.find("</output>").expect("it ends");
     &rest[open..close]
 }
 
@@ -295,11 +295,7 @@ fn the_time_left_is_a_timer_and_a_polite_region_says_the_set_points() {
         "WAI-ARIA 1.2, timer: the time itself is not announced each second: {drawn}"
     );
     assert!(
-        has(
-            &drawn,
-            "span",
-            &[("class", "fui-sr-only"), ("role", "status")]
-        ) && status_text(&drawn).trim().is_empty(),
+        has(&drawn, "output", &[("class", "fui-sr-only")]) && status_text(&drawn).trim().is_empty(),
         "the polite region starts silent and says only the set points: {drawn}"
     );
     let ended = trial(0);

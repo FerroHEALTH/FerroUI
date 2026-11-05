@@ -22,7 +22,7 @@ where to look.
    `.js` files and the changed line ranges. Read each changed file whole,
    because a rule can hang on code outside the hunk.
 2. **Run the mechanical checks** and report every finding as it prints:
-   - `bash scripts/checks/markup-rules.sh crates/ferrohealth-ui/src crates/ferrohealth-ui/templates app/ferrohealth-ui-gallery/src`
+   - `bash scripts/checks/markup-rules.sh crates/ferrohealth-ui/src crates/ferrohealth-ui/templates crates/ferrohealth-ui/scripts app/ferrohealth-ui-gallery/src`
    - `bash scripts/checks/script-budget.sh`
    - `bash scripts/checks/stray-literals.sh crates/ferrohealth-ui/src crates/ferrohealth-ui/templates app/ferrohealth-ui-gallery/src`
 3. **Walk the review-enforced rules** over the changed lines. Each row says

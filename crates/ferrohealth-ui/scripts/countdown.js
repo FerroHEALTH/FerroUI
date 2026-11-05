@@ -41,7 +41,7 @@ export function enhance(root) {
   const ring = root.querySelector(".fui-countdown-left");
   const strong = root.querySelector("[role='timer'] strong");
   const line = root.querySelector("[role='timer'] span");
-  const said = root.querySelector("[role='status']");
+  const said = root.querySelector("output");
   const began = performance.now();
   const beganWall = Date.now();
   let left = start;

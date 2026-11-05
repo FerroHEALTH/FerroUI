@@ -698,7 +698,7 @@ async fn the_open_pager_steps_with_no_total() -> Result<(), Box<dyn Error>> {
         let range = async |pager: &str| -> Result<String, Box<dyn Error>> {
             let statuses = browser
                 .driver()
-                .find_all(By::Css(format!("{pager} [role='status']")))
+                .find_all(By::Css(format!("{pager} output")))
                 .await?;
             Ok(match statuses.first() {
                 Some(status) => status.text().await.unwrap_or_default(),

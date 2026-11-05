@@ -205,6 +205,8 @@ pub fn pending_card(
         || String::from("fui-pending"),
         |tone| format!("fui-pending {}", tone.class()),
     );
+    // NOTE: HTML § 4.10.12 gives `output` phrasing content alone, and the
+    // card holds its head and steps, so its `section` keeps the role.
     let role = if tone.is_some() {
         " role=\"status\""
     } else {

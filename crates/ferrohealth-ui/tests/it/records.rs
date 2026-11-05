@@ -116,8 +116,8 @@ fn a_compare_draws_two_to_six_records_with_row_headers_and_a_caption() {
         );
         assert!(has(
             &table,
-            "div",
-            &[("role", "region"), ("aria-label", "Records of one person")]
+            "section",
+            &[("aria-label", "Records of one person")]
         ));
         assert!(!table.contains("style="), "{table}");
     }

@@ -563,10 +563,9 @@ fn the_root_matrix_heads_each_column_with_its_root_release_and_state() {
     assert!(
         has(
             &shown,
-            "div",
+            "section",
             &[
                 ("class", "fui-table-scroll"),
-                ("role", "region"),
                 ("aria-label", "What each root declares"),
                 ("tabindex", "0")
             ]

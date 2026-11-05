@@ -117,7 +117,7 @@ pub(super) fn editor(v: &Visit) -> Html {
         Html::join([
             Field::new(DRAFT, v.tr(Msg::File))
                 .after(Html::raw(format!(
-                    "<p class=\"fui-help\" role=\"status\">{}</p>",
+                    "<p class=\"fui-help\"><output>{}</output></p>",
                     Html::text(size)
                 )))
                 .view(field),

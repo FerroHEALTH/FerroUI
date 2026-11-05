@@ -65,7 +65,7 @@ pub struct TableFilter {
 
 #[derive(Template)]
 #[template(
-    source = r#"<div data-fui="filter" data-fui-rows="{{ rows }}" data-fui-phrase="{{ phrase }}" class="fui-table-tools"><div class="fui-field"><label for="{{ id }}" class="fui-label">{{ label }}</label><input id="{{ id }}" name="{{ id }}" type="search" autocomplete="off" value="{{ words }}" class="{{ input }}"></div><p aria-hidden="true" class="fui-muted">{{ count }}</p><p role="status" class="fui-sr-only">{{ count }}</p></div>"#,
+    source = r#"<div data-fui="filter" data-fui-rows="{{ rows }}" data-fui-phrase="{{ phrase }}" class="fui-table-tools"><div class="fui-field"><label for="{{ id }}" class="fui-label">{{ label }}</label><input id="{{ id }}" name="{{ id }}" type="search" autocomplete="off" value="{{ words }}" class="{{ input }}"></div><p aria-hidden="true" class="fui-muted">{{ count }}</p><output class="fui-sr-only">{{ count }}</output></div>"#,
     ext = "html"
 )]
 struct FilterView {

@@ -70,7 +70,7 @@ pub enum Busy {
 
 #[derive(Template)]
 #[template(
-    source = r#"<span class="{{ class }}" role="status"><span class="fui-spinner-ring" aria-hidden="true"></span><span class="{{ words }}">{{ label }}</span></span>"#,
+    source = r#"<output class="{{ class }}"><span class="fui-spinner-ring" aria-hidden="true"></span><span class="{{ words }}">{{ label }}</span></output>"#,
     ext = "html"
 )]
 struct Spinner {
@@ -101,7 +101,7 @@ pub fn busy(label: impl Into<String>, at: Busy) -> Html {
 
 #[derive(Template)]
 #[template(
-    source = r#"<div aria-busy="true"><span class="fui-sr-only" role="status">{{ label }}</span>{% for _ in 0..lines %}<span class="fui-skeleton"></span>{% endfor %}</div>"#,
+    source = r#"<div aria-busy="true"><output class="fui-sr-only">{{ label }}</output>{% for _ in 0..lines %}<span class="fui-skeleton"></span>{% endfor %}</div>"#,
     ext = "html"
 )]
 struct Skeleton {

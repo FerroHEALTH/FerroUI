@@ -367,9 +367,7 @@ pub fn items(menu: &Menu) -> Html {
     let separated = !menu.items.is_empty() && !menu.destructive.is_empty();
     let mut out: Html = menu.items.iter().map(|each| item(each, false)).collect();
     if separated {
-        out = out.then(Html::raw(String::from(
-            "<div class=\"fui-menu-sep\" role=\"separator\"></div>",
-        )));
+        out = out.then(Html::raw(String::from("<hr class=\"fui-menu-sep\">")));
     }
     out.then(
         menu.destructive
