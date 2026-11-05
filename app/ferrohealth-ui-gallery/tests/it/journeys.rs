@@ -398,9 +398,7 @@ async fn the_editor_redraws_only_the_lines_an_edit_changes() -> Result<(), Box<d
 /// the line the cursor is on.
 async fn said(browser: &Browser) -> Result<String, Box<dyn Error>> {
     Ok(browser
-        .element(By::Css(
-            ".fui-editor-split .fui-editor-status [role='status']",
-        ))
+        .element(By::Css(".fui-editor-split .fui-editor-status output"))
         .await?
         .text()
         .await?)

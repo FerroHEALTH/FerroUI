@@ -242,7 +242,7 @@ const EDITOR: &str = r#"const area = document.getElementById("gallery-mapping");
       line, column,
       [...root.querySelectorAll(".fui-editor-layer > *.is-current")].map((e) => e.id + " " + e.className),
       [...panel.querySelectorAll("li[data-line]")].map((r) => r.dataset.line + ":" + r.classList.contains("is-current") + ":" + r.getAttribute("aria-current")),
-      panel.querySelector(".fui-editor-status [role='status']")?.textContent ?? null,
+      panel.querySelector(".fui-editor-status output")?.textContent ?? null,
       panel.querySelector("[data-fui-position]")?.textContent ?? null,
     ]);
   }
@@ -351,7 +351,7 @@ const SEARCH: &str = r#"const m = await mod("search");
     document.body.append(form);
     m.enhance(form);
     const field = form.querySelector("input[type='search']");
-    const said = form.querySelector(":scope > [role=status]");
+    const said = form.querySelector(":scope > output");
     for (const name of Object.keys(replies)) {
       reply = name;
       calls.length = 0;

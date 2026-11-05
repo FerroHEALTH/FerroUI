@@ -44,6 +44,7 @@ mod parity_keys;
 mod parity_words;
 mod pinned;
 mod records;
+mod roles;
 mod screenshots;
 mod script_pages;
 mod session;

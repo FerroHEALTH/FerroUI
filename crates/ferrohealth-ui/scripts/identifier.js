@@ -49,7 +49,7 @@ export function enhance(root) {
   const [masked, shown] = root.querySelectorAll(".fui-identifier-face");
   const ring = root.querySelector(".fui-identifier-countdown-left");
   const count = root.querySelector("[data-fui-count]");
-  const live = root.querySelector(":scope > [role='status']");
+  const live = root.querySelector(":scope > output.fui-sr-only");
   const value = root.querySelector(".fui-identifier-value");
   const hide = root.querySelector("[data-fui-hide]");
   let left = total;

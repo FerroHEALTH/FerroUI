@@ -358,9 +358,7 @@ async fn preferences_post_and_reset(
     browser
         .at(&gallery.url("/ferrofed/preferences?saved=density"))
         .await?;
-    browser
-        .element(By::Css(".fui-setting-saved[role='status']"))
-        .await?;
+    browser.element(By::Css("output.fui-setting-saved")).await?;
     browser
         .element(By::Css(r#"html[data-density="compact"]"#))
         .await?;

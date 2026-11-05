@@ -150,7 +150,7 @@ export function enhance(form) {
   const signedOut = form.dataset.fuiSignedOut;
   const panel = form.querySelector(".fui-search-results");
   const list = panel?.querySelector("[role='listbox']");
-  const said = form.querySelector(":scope > [role='status']");
+  const said = form.querySelector(":scope > output");
   const id = field.id;
   const icon = (name) => {
     const found = icons?.content.querySelector("[data-icon='" + name + "'] svg");

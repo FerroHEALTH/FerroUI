@@ -673,7 +673,14 @@ fn a_reveal_under_way_is_busy_and_a_refusal_is_a_line_in_words() {
         refused.contains("Not revealed: the limit is reached"),
         "{refused}"
     );
-    assert!(has(&refused, "span", &[("role", "status")]), "{refused}");
+    assert!(
+        has(
+            &refused,
+            "output",
+            &[("class", "fui-help fui-error fui-identifier-refused")]
+        ),
+        "{refused}"
+    );
 }
 
 #[test]

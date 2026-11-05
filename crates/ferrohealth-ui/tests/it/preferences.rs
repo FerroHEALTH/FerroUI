@@ -196,7 +196,7 @@ fn saved_marks_only_the_row_just_kept_in_the_slot_before_its_control() {
         Preferences::default(),
         Some("density"),
     ));
-    assert_eq!(1, shown.matches(r#"role="status""#).count(), "{shown}");
+    assert_eq!(1, shown.matches("<output").count(), "{shown}");
     let density = shown.find("Compact fits more rows").unwrap();
     let mark = shown.find("fui-setting-saved").unwrap();
     let cards = shown[density..].find("fui-choice-cards").unwrap() + density;

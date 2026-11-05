@@ -41,9 +41,7 @@ pub(super) async fn preferences(
     browser
         .goto(&gallery.url(&format!("{root}?saved={saved}")))
         .await?;
-    browser
-        .element(By::Css(".fui-setting-saved[role='status']"))
-        .await?;
+    browser.element(By::Css("output.fui-setting-saved")).await?;
     shot_of_view(browser, brand, theme, "preferences-saved").await?;
     browser.goto(&gallery.url(&root)).await?;
     let reset = browser
@@ -67,9 +65,7 @@ pub(super) async fn preferences(
             vec![size.to_json()?],
         )
         .await?;
-    browser
-        .element(By::Css(".fui-setting-saved[role='status']"))
-        .await?;
+    browser.element(By::Css("output.fui-setting-saved")).await?;
     shot_of_view(browser, brand, theme, "preferences-typed-saved").await?;
     window(browser, 390, HEIGHT).await?;
     for (path, state) in [

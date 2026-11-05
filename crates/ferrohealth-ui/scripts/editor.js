@@ -178,7 +178,7 @@ export function enhance(root) {
       if (on) row.setAttribute("aria-current", "true");
       else row.removeAttribute("aria-current");
     }
-    const status = panel?.querySelector(".fui-editor-status [role='status']");
+    const status = panel?.querySelector(".fui-editor-status output");
     if (status) status.textContent = current === null ? "" : said(current);
   }
   function showPosition(at) {

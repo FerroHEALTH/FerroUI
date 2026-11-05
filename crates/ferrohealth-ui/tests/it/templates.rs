@@ -725,13 +725,12 @@ fn the_about_page_writes_the_console_version_in_the_footer_form() {
     assert!(
         has(
             &page,
-            "div",
+            "section",
             &[
                 (
                     "class",
                     "fui-code-panel fui-self-description fui-scroll-cue"
                 ),
-                ("role", "region"),
                 ("tabindex", "0")
             ]
         ),

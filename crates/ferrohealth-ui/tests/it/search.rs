@@ -230,11 +230,7 @@ fn a_suggesting_search_holds_its_panel_closed_and_claims_no_combobox_before_its_
         "{html}"
     );
     assert!(
-        has(
-            &html,
-            "span",
-            &[("role", "status"), ("class", "fui-sr-only")]
-        ),
+        has(&html, "output", &[("class", "fui-sr-only")]),
         "the count is announced from outside the panel: {html}"
     );
     // WAI-ARIA 1.2: with no script the field never expands, so it is no combobox.
