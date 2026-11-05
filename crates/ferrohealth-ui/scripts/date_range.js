@@ -57,7 +57,8 @@ function rangeField(root, config, words, button) {
       const [first, last] = ends();
       if (first === null) return cls;
       const tentative = last === null;
-      const end = last !== null ? last : hovered !== null && hovered > first ? hovered : null;
+      const hoveredEnd = hovered !== null && hovered > first ? hovered : null;
+      const end = last === null ? hoveredEnd : last;
       if (end === null) return cls;
       if (first < n && n < end) cls += tentative ? " fui-day-between fui-day-tentative" : " fui-day-between";
       if (first < end && n === first) cls += " fui-day-start";

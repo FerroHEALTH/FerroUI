@@ -18,14 +18,16 @@ export function wants(words, from) {
 }
 
 export function escaped(open, empty) {
-  return open ? "close" : empty ? "pass" : "clear";
+  if (open) return "close";
+  return empty ? "pass" : "clear";
 }
 
 export function step(active, count, down) {
   if (count === 0) return null;
   const last = count - 1;
   if (!down) return active === null || active === 0 ? last : Math.min(active, count) - 1;
-  return active === null ? 0 : active >= last ? 0 : active + 1;
+  if (active === null || active >= last) return 0;
+  return active + 1;
 }
 
 export function placed(left, right, wide, view) {
@@ -240,7 +242,10 @@ export function enhance(form) {
     answer = null;
     options = [];
     list.replaceChildren();
-    const sentence = failure === "unreachable" ? text(words.unreachable) : failure === "unreadable" ? text(words.unreadable) : fill(words.failed, { status: failure });
+    let sentence;
+    if (failure === "unreachable") sentence = text(words.unreachable);
+    else if (failure === "unreadable") sentence = text(words.unreadable);
+    else sentence = fill(words.failed, { status: failure });
     draw([status(" fui-tone-bad", "circle-alert", sentence)], sentence);
   }
   function pick(target) {
@@ -262,7 +267,8 @@ export function enhance(form) {
     const post = form.method.toLowerCase() === "post";
     let result;
     try {
-      const response = await fetch(post ? route : route + (route.includes("?") ? "&" : "?") + body, {
+      const joint = route.includes("?") ? "&" : "?";
+      const response = await fetch(post ? route : route + joint + body, {
         method: post ? "POST" : "GET",
         credentials: "same-origin",
         headers: post ? { Accept: "application/json", "Content-Type": "application/x-www-form-urlencoded" } : { Accept: "application/json" },

@@ -70,7 +70,9 @@ export function enhance(root) {
     const width = size("data-width");
     const height = size("data-height");
     const now = scale === null ? shownScale() : scale;
-    scale = ask === "in" ? stepped(now, true) : ask === "out" ? stepped(now, false) : null;
+    if (ask === "in") scale = stepped(now, true);
+    else if (ask === "out") scale = stepped(now, false);
+    else scale = null;
     stage.classList.toggle("is-zoomed", scale !== null);
     for (const svg of stage.querySelectorAll(":scope > svg")) {
       const shown = scale === null ? 1 : scale;

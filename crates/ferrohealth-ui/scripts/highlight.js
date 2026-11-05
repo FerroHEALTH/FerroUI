@@ -322,7 +322,10 @@ function yamlLine(line) {
     const d = s.replace(/^[-+]/, "");
     return d !== "" && /\d/.test(d) && /^[\d.eE+-]+$/.test(d) && /^[\d.]/.test(d);
   };
-  const classify = (s) => (["true", "false", "null", "~", "True", "False", "Null", "TRUE", "FALSE", "NULL"].includes(s) ? "keyword" : isNumber(s) ? "number" : "plain");
+  const classify = (s) => {
+    if (["true", "false", "null", "~", "True", "False", "Null", "TRUE", "FALSE", "NULL"].includes(s)) return "keyword";
+    return isNumber(s) ? "number" : "plain";
+  };
   while (rest !== "") {
     const gap = rest.length - rest.replace(/^[ \t]+/, "").length;
     if (gap > 0) {

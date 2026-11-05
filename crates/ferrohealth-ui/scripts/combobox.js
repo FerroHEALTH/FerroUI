@@ -166,7 +166,8 @@ export function enhance(root) {
     state.open = true;
     const { places } = view();
     const at = place === null ? -1 : places.indexOf(place);
-    state.active = at >= 0 ? at : places.length ? 0 : null;
+    const first = places.length ? 0 : null;
+    state.active = at >= 0 ? at : first;
     draw();
   }
   function chosenPlace() {

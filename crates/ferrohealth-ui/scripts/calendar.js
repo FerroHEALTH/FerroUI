@@ -33,7 +33,10 @@ export function fromNumber(n) {
 }
 
 export const leap = (y) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
-export const daysIn = (y, m) => (m === 2 ? (leap(y) ? 29 : 28) : [4, 6, 9, 11].includes(m) ? 30 : 31);
+export function daysIn(y, m) {
+  if (m === 2) return leap(y) ? 29 : 28;
+  return [4, 6, 9, 11].includes(m) ? 30 : 31;
+}
 export const pad = (n, w) => String(n).padStart(w, "0");
 export const iso = (n) => {
   const { y, m, d } = fromNumber(n);
