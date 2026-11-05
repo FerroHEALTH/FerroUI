@@ -437,29 +437,6 @@ pub const OMOP_TABLES: [OmopTable; 2] = [
     ),
 ];
 
-#[cfg(test)]
-mod tests {
-    use super::{ROWS, rows, sorted};
-
-    #[test]
-    fn the_rows_are_the_same_on_every_call_and_sort_both_ways() {
-        assert_eq!(rows(), rows(), "deterministic");
-        assert_eq!(Some(ROWS), u32::try_from(rows().len()).ok());
-        let by_lines = sorted(rows(), "lines", false);
-        assert!(
-            by_lines
-                .windows(2)
-                .all(|pair| pair[0].lines <= pair[1].lines),
-            "ascending"
-        );
-        let down = sorted(rows(), "name", true);
-        assert_eq!(
-            Some("synthetic-137.extension.yml"),
-            down.first().map(|row| row.name.as_str())
-        );
-    }
-}
-
 /// One synthetic location of the page templates' list.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Location {
@@ -617,3 +594,26 @@ pub const MEMBERS: [&str; 2] = ["node-b", "node-c"];
 
 /// The synthetic set whose name the overlays page's More alone menu copies.
 pub const SET_NAME: &str = "synthetic-terminology-set";
+
+#[cfg(test)]
+mod tests {
+    use super::{ROWS, rows, sorted};
+
+    #[test]
+    fn the_rows_are_the_same_on_every_call_and_sort_both_ways() {
+        assert_eq!(rows(), rows(), "deterministic");
+        assert_eq!(Some(ROWS), u32::try_from(rows().len()).ok());
+        let by_lines = sorted(rows(), "lines", false);
+        assert!(
+            by_lines
+                .windows(2)
+                .all(|pair| pair[0].lines <= pair[1].lines),
+            "ascending"
+        );
+        let down = sorted(rows(), "name", true);
+        assert_eq!(
+            Some("synthetic-137.extension.yml"),
+            down.first().map(|row| row.name.as_str())
+        );
+    }
+}
