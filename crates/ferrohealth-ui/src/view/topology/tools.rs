@@ -96,7 +96,7 @@ pub(super) fn cluster(
         ""
     };
     format!(
-        "<div role=\"toolbar\" aria-label=\"{controls}\" class=\"fui-topology-zoom\">{zoom_in}{zoom_out}<span role=\"status\" aria-label=\"{level}\" data-zoom-readout=\"\" class=\"fui-topology-zoom-level\">{readout}</span><button type=\"button\" data-zoom=\"fit\" disabled title=\"{wait_text}\" data-title=\"{fit_tip}\" class=\"{ghost}\">{fit}</button>{sep}{collapse}{minimap}</div>",
+        "<div role=\"toolbar\" aria-label=\"{controls}\" class=\"fui-topology-zoom\">{zoom_in}{zoom_out}<output aria-label=\"{level}\" data-zoom-readout=\"\" class=\"fui-topology-zoom-level\">{readout}</output><button type=\"button\" data-zoom=\"fit\" disabled title=\"{wait_text}\" data-title=\"{fit_tip}\" class=\"{ghost}\">{fit}</button>{sep}{collapse}{minimap}</div>",
         controls = Html::text(tr(locale, Text::TopologyControls).text()),
         zoom_in = cluster_button(Glyph::PLUS, &tr(locale, Text::TopologyZoomIn), "in", &wait),
         zoom_out = cluster_button(

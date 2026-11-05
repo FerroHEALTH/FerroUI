@@ -162,7 +162,7 @@ pub fn elapsed(monotonic: f64, wall: f64) -> f64 {
 
 #[derive(Template)]
 #[template(
-    source = r#"<span id="{{ id }}" data-fui="countdown" data-left="{{ left }}" data-total="{{ total }}" data-words="{{ words }}" class="fui-countdown"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13" class="fui-countdown-track"></circle><circle cx="16" cy="16" r="13" stroke-dasharray="{{ ring }}" stroke-dashoffset="{{ offset }}" class="fui-countdown-left"></circle></svg><span role="timer" aria-live="off" class="fui-countdown-words"><strong>{{ clock }}</strong><span>{{ line }}</span></span><span role="status" class="fui-sr-only"></span></span>"#,
+    source = r#"<span id="{{ id }}" data-fui="countdown" data-left="{{ left }}" data-total="{{ total }}" data-words="{{ words }}" class="fui-countdown"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13" class="fui-countdown-track"></circle><circle cx="16" cy="16" r="13" stroke-dasharray="{{ ring }}" stroke-dashoffset="{{ offset }}" class="fui-countdown-left"></circle></svg><span role="timer" aria-live="off" class="fui-countdown-words"><strong>{{ clock }}</strong><span>{{ line }}</span></span><output class="fui-sr-only"></output></span>"#,
     ext = "html"
 )]
 struct CountdownView {

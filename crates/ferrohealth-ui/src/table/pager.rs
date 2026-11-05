@@ -200,7 +200,7 @@ fn size_choices(locale: &Locale, listing: &Listing, current: u32, size: SizeDraw
 
 #[derive(Template)]
 #[template(
-    source = r#"<nav class="fui-pager" aria-label="{{ label }}">{{ forms }}<p role="status">{{ range }}</p>{% if let Some(steps) = steps %}<div class="fui-pager-steps">{{ steps }}</div>{% endif %}{{ sizes }}</nav>"#,
+    source = r#"<nav class="fui-pager" aria-label="{{ label }}">{{ forms }}<output>{{ range }}</output>{% if let Some(steps) = steps %}<div class="fui-pager-steps">{{ steps }}</div>{% endif %}{{ sizes }}</nav>"#,
     ext = "html"
 )]
 struct Frame {

@@ -510,7 +510,7 @@ async fn the_url_pager_is_links_the_sort_a_get_form_and_the_session_pager_posts(
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
         browser.goto(&gallery.url("/ferrobridge/tables")).await?;
-        browser.text("p", "1-25 of 137").await?;
+        browser.text("output", "1-25 of 137").await?;
         let url_rows = By::XPath("(//table)[1]/tbody/tr");
         assert_eq!(25, browser.driver().find_all(url_rows).await?.len());
         // The label names what a reader sees: the box shows the whole table.
@@ -532,7 +532,7 @@ async fn the_url_pager_is_links_the_sort_a_get_form_and_the_session_pager_posts(
                 .contains("page=2"))
         })
         .await?;
-        browser.text("p", "26-50 of 137").await?;
+        browser.text("output", "26-50 of 137").await?;
         // design/COMPONENTS.md, § The table: a sort is a button in a GET form.
         browser
             .element(By::XPath("(//table)[1]//th[contains(., 'Lines')]//button"))
@@ -569,7 +569,7 @@ async fn session_pager_posts(browser: &Browser, gallery: &Gallery) -> Result<(),
         .click_through(&last, "the session pager draws the last page", async || {
             Ok(browser
                 .driver()
-                .find_all(By::XPath("//p[contains(., '126-137 of 137')]"))
+                .find_all(By::XPath("//output[contains(., '126-137 of 137')]"))
                 .await?
                 .len()
                 == 1)
@@ -1446,7 +1446,7 @@ async fn the_table_header_sticks_below_the_top_bar_on_a_wide_screen() -> Result<
         browser
             .goto(&gallery.url("/ferrobridge/tables?size=100"))
             .await?;
-        browser.text("p", "1-100 of 137").await?;
+        browser.text("output", "1-100 of 137").await?;
         let rows = browser
             .driver()
             .find_all(By::XPath("(//table)[1]/tbody/tr"))
@@ -1526,7 +1526,13 @@ async fn table_boxes_read_whole(browser: &Browser) -> Result<(), Box<dyn Error>>
             .any(|name| name == "fui-compare-scroll")
         {
             assert_eq!(Some(String::from("0")), region.attr("tabindex").await?);
-            assert_eq!(Some(String::from("region")), region.attr("role").await?);
+            assert_eq!("section", region.tag_name().await?);
+            assert!(
+                region
+                    .attr("aria-label")
+                    .await?
+                    .is_some_and(|name| !name.is_empty())
+            );
             let field = region.find(By::Css("tbody th")).await?;
             assert_eq!("sticky", field.css_value("position").await?);
             continue;

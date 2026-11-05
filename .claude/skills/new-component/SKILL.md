@@ -93,7 +93,7 @@ names the section it obeys.
      full gate.
    - The guards: `bash scripts/checks/mod-order.sh`,
      `bash scripts/release/changelog.sh --check`,
-     `bash scripts/checks/markup-rules.sh crates/ferrohealth-ui/src crates/ferrohealth-ui/templates app/ferrohealth-ui-gallery/src`, `bash scripts/checks/script-budget.sh`, `bash scripts/checks/stray-literals.sh crates/ferrohealth-ui/src crates/ferrohealth-ui/templates app/ferrohealth-ui-gallery/src` and `bash scripts/checks/comment-style.sh --all`.
+     `bash scripts/checks/markup-rules.sh crates/ferrohealth-ui/src crates/ferrohealth-ui/templates crates/ferrohealth-ui/scripts app/ferrohealth-ui-gallery/src`, `bash scripts/checks/script-budget.sh`, `bash scripts/checks/stray-literals.sh crates/ferrohealth-ui/src crates/ferrohealth-ui/templates app/ferrohealth-ui-gallery/src` and `bash scripts/checks/comment-style.sh --all`.
 10. **Look at it.** Never run the full screenshot capture. Capture only the
     pages you touched:
     `scripts/chrome-lock.sh env FERROUI_SCREENSHOTS=1 FERROUI_SCREENSHOT_PAGES=<page,...> cargo nextest run --locked -p ferrohealth-ui-gallery -E 'test(every_page_is_captured)'`.

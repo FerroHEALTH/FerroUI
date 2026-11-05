@@ -186,7 +186,7 @@ fn search_pane(
         v.tr(Msg::TreesSearch),
         Html::join([
             pane_body(Html::raw(format!(
-                "{field}<p class=\"fui-small fui-muted\" role=\"status\">{}</p>",
+                "{field}<p class=\"fui-small fui-muted\"><output>{}</output></p>",
                 Html::text(count)
             ))),
             match_list(&v.tr(Msg::TreesMatched), matches),

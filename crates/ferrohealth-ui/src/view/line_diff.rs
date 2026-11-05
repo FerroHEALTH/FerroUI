@@ -153,7 +153,7 @@ pub fn line_diff(locale: &Locale, file: &str, diff: &str) -> Html {
         .collect();
     let label = tr_with(locale, Text::DiffRegion, &[("file", file.into())]);
     Html::raw(format!(
-        "<div role=\"region\" aria-label=\"{}\" tabindex=\"0\" class=\"fui-code-panel fui-linediff fui-scroll-cue\"><pre>{rows}</pre></div>",
+        "<section aria-label=\"{}\" tabindex=\"0\" class=\"fui-code-panel fui-linediff fui-scroll-cue\"><pre>{rows}</pre></section>",
         Html::text(label.text())
     ))
 }

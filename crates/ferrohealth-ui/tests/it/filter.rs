@@ -34,7 +34,7 @@ fn the_filter_shows_its_count_and_says_it_from_a_status_region_of_its_own() {
         "the count in sight is not read twice: {shown}"
     );
     assert!(
-        has(&shown, "p", &[("role", "status"), ("class", "fui-sr-only")]),
+        has(&shown, "output", &[("class", "fui-sr-only")]),
         "{shown}"
     );
     assert_eq!(

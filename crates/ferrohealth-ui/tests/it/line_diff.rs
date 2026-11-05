@@ -19,9 +19,8 @@ fn a_diff_is_a_region_the_keyboard_scrolls_named_by_its_file() {
     assert!(
         has(
             &page,
-            "div",
+            "section",
             &[
-                ("role", "region"),
                 ("tabindex", "0"),
                 (
                     "aria-label",

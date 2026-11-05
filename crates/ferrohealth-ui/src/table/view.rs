@@ -406,7 +406,7 @@ fn header(column: &Column, sorting: &Sorting<'_>) -> Html {
 
 #[derive(Template)]
 #[template(
-    source = r#"<div class="{{ class }}" role="region" aria-label="{{ caption }}" tabindex="0"><table class="fui-table"{% if busy %} aria-busy="true"{% endif %}><caption>{{ caption }}</caption><thead><tr>{{ headers }}</tr></thead>{{ body }}</table></div>"#,
+    source = r#"<section class="{{ class }}" aria-label="{{ caption }}" tabindex="0"><table class="fui-table"{% if busy %} aria-busy="true"{% endif %}><caption>{{ caption }}</caption><thead><tr>{{ headers }}</tr></thead>{{ body }}</table></section>"#,
     ext = "html"
 )]
 struct TableView {

@@ -80,9 +80,7 @@ async fn the_countdown_counts_down_and_the_secret_choice_reveals_its_control()
             Ok(time_left(browser).await? != "1:42")
         })
         .await?;
-        let status = browser
-            .element(By::Css("#trial-countdown [role='status']"))
-            .await?;
+        let status = browser.element(By::Css("#trial-countdown output")).await?;
         assert!(
             status.text().await?.trim().is_empty(),
             "the polite region says nothing between its set points"

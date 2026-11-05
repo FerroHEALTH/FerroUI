@@ -52,6 +52,8 @@ pub fn hl7v2_raw(label: impl Into<String>, message: &str) -> Html {
         .iter()
         .map(|tokens| highlight::line_html(tokens))
         .collect();
+    // NOTE: ARIA in HTML § 4 gives a named `section` the region role, but the
+    // region is the `pre` that holds the message, so the `pre` keeps the role.
     Html::raw(format!(
         "<pre role=\"region\" aria-label=\"{}\" tabindex=\"0\" class=\"fui-hl7-raw\">{}</pre>",
         Html::text(label.into()),

@@ -190,7 +190,7 @@ pub fn filter_menu(locale: &Locale, menu: FilterMenu<'_>) -> Html {
         .map(|note| Html::raw(format!("<p class=\"fui-small fui-muted\">{note}</p>")))
         .unwrap_or_default();
     let body = Html::raw(format!(
-        "<div class=\"fui-menu-items\">{items}</div><div class=\"fui-menu-sep\" role=\"separator\"></div><div class=\"fui-menu-foot\">{note}<button type=\"submit\" class=\"{}\">{}</button></div>",
+        "<div class=\"fui-menu-items\">{items}</div><hr class=\"fui-menu-sep\"><div class=\"fui-menu-foot\">{note}<button type=\"submit\" class=\"{}\">{}</button></div>",
         Variant::Secondary.small(),
         tr(locale, Text::FilterMenuShow)
     ));

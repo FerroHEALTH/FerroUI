@@ -16,6 +16,7 @@ use serde_json::{Value, json};
 use thirtyfour::prelude::*;
 
 use crate::browser::{Browser, with_browser};
+use crate::dates::{open_picker, open_range};
 use crate::journeys_enabled;
 use crate::stack::Gallery;
 
@@ -57,7 +58,7 @@ async fn read(browser: &Browser, selector: &str) -> Result<Vec<Node>, Box<dyn Er
     );
     let mut nodes = Vec::new();
     for (id, element) in ids.into_iter().zip(shown) {
-        if !element.is_displayed().await? && !in_sr_only(&element).await? {
+        if !rendered(browser, &element).await? {
             continue;
         }
         let tree = cdp
@@ -85,19 +86,56 @@ async fn read(browser: &Browser, selector: &str) -> Result<Vec<Node>, Box<dyn Er
     Ok(nodes)
 }
 
-/// Whether `element` is drawn for a screen reader alone, which WebDriver
-/// counts as not displayed although the tree reads it.
-async fn in_sr_only(element: &WebElement) -> Result<bool, Box<dyn Error>> {
-    Ok(element
-        .class_name()
+/// Whether the browser renders `element`: neither it nor an ancestor is
+/// `display: none` (CSSOM View, `checkVisibility()`). An empty live region
+/// and a visually hidden one are rendered, though WebDriver counts neither
+/// as displayed.
+async fn rendered(browser: &Browser, element: &WebElement) -> Result<bool, Box<dyn Error>> {
+    Ok(browser
+        .driver()
+        .execute(
+            "return arguments[0].checkVisibility();",
+            vec![element.to_json()?],
+        )
         .await?
-        .is_some_and(|class| class.split(' ').any(|name| name == "fui-sr-only")))
+        .convert()?)
+}
+
+/// Waits until the loader has marked every element that asks for a module
+/// `data-fui-ready`, so what a module draws is there to read.
+async fn ready(browser: &Browser) -> Result<(), Box<dyn Error>> {
+    let left: Vec<String> = browser
+        .driver()
+        .execute_async(
+            r#"const done = arguments[arguments.length - 1];
+            const waiting = () => [...document.querySelectorAll("[data-fui]:not([data-fui-ready])")];
+            (async () => {
+              for (let n = 0; n < 600 && waiting().length; n++) await new Promise((r) => requestAnimationFrame(r));
+              done(waiting().map((e) => e.dataset.fui));
+            })();"#,
+            Vec::new(),
+        )
+        .await?
+        .convert()?;
+    assert!(left.is_empty(), "not enhanced: {left:?}");
+    Ok(())
 }
 
 /// Every page and the live regions on it, each a component's own.
 const LIVE: &[(&str, &[&str])] = &[
+    (
+        "/ferrobridge/",
+        &["output.fui-spinner", "[aria-busy] > output.fui-sr-only"],
+    ),
     ("/ferrobridge/code", &[".fui-copy > output"]),
-    ("/ferrobridge/configuration", &[".fui-key-hint + output"]),
+    (
+        "/ferrobridge/configuration",
+        &[".fui-key-hint + output", "[data-fui='countdown'] output"],
+    ),
+    (
+        "/ferrobridge/federation",
+        &["output.fui-topology-zoom-level"],
+    ),
     (
         "/ferrobridge/forms",
         &[
@@ -106,6 +144,8 @@ const LIVE: &[(&str, &[&str])] = &[
             "output.fui-identifier-refused",
             "form[data-fui='search'] > output",
             "output[data-upload='read']",
+            ".fui-table-tools > output",
+            ".fui-help > output",
         ],
     ),
     (
@@ -116,6 +156,8 @@ const LIVE: &[(&str, &[&str])] = &[
         "/ferrobridge/preferences?saved=density",
         &["output.fui-setting-saved"],
     ),
+    ("/ferrobridge/tables", &[".fui-pager > output"]),
+    ("/ferrobridge/trees", &[".fui-muted > output"]),
 ];
 
 // WAI-ARIA 1.2 § status: a status has an implicit aria-live of polite.
@@ -129,6 +171,7 @@ async fn a_live_region_is_an_output_the_tree_reads_as_a_polite_status() -> Resul
     with_browser(async |browser| {
         for (page, selectors) in LIVE {
             browser.goto(&gallery.url(page)).await?;
+            ready(browser).await?;
             // An output the module shows later is read as it will be shown.
             browser
                 .driver()
@@ -152,6 +195,45 @@ async fn a_live_region_is_an_output_the_tree_reads_as_a_polite_status() -> Resul
     .await
 }
 
+// WAI-ARIA 1.2 § status: the date pickers' status lines, which their
+// modules draw as a picker opens, are polite statuses too.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_date_pickers_status_line_is_an_output_the_tree_reads_as_a_polite_status()
+-> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        for range in [false, true] {
+            browser.goto(&gallery.url("/ferrobridge/forms")).await?;
+            ready(browser).await?;
+            let picker = if range {
+                open_range(browser).await?
+            } else {
+                open_picker(browser, "audit-from").await?
+            };
+            let picker = picker.id().await?.ok_or("the picker has an id")?;
+            browser
+                .driver()
+                .execute(
+                    "document.querySelectorAll('.fui-datepicker-status').forEach((o) => o.hidden = false);",
+                    Vec::new(),
+                )
+                .await?;
+            for node in read(browser, &format!("#{picker} .fui-datepicker-status")).await? {
+                assert_eq!(
+                    ("OUTPUT", "status", "polite"),
+                    (node.tag.as_str(), node.role.as_str(), node.live.as_str()),
+                    "#{picker}: {node:?}"
+                );
+            }
+        }
+        Ok(())
+    })
+    .await
+}
+
 /// Every page, the control pressed first, if any, and the named boxes the
 /// page then shows.
 const REGIONS: &[(&str, Option<&str>, &str)] = &[
@@ -162,7 +244,21 @@ const REGIONS: &[(&str, Option<&str>, &str)] = &[
         Some(".fui-document-switch > [data-view='raw']"),
         ".fui-document-view > .fui-code-panel",
     ),
+    ("/ferrobridge/code", None, ".fui-linediff"),
+    ("/ferrobridge/forms", None, "#identifiers"),
     ("/ferrobridge/forms?dock=idle", None, ".fui-dock"),
+    ("/ferrobridge/layouts", None, ".fui-pane"),
+    (
+        "/ferrobridge/tables",
+        None,
+        "section.fui-table-scroll:has(> .fui-table)",
+    ),
+    ("/ferrobridge/tables", None, "section:has(> .fui-compare)"),
+    (
+        "/ferrobridge/terminology",
+        None,
+        ".fui-root-matrix > section",
+    ),
     (
         "/ferrobridge/templates/about",
         None,
@@ -181,6 +277,7 @@ async fn a_named_box_is_a_section_the_tree_reads_as_a_region_by_its_name()
     with_browser(async |browser| {
         for (page, press, selector) in REGIONS {
             browser.goto(&gallery.url(page)).await?;
+            ready(browser).await?;
             if let Some(press) = press {
                 browser.element(By::Css(*press)).await?.click().await?;
             }
@@ -198,30 +295,60 @@ async fn a_named_box_is_a_section_the_tree_reads_as_a_region_by_its_name()
     .await
 }
 
+/// The pages whose menus draw a separator: the user menu on every page,
+/// an action menu on the overlays and a filter menu on the federation.
+const SEPARATED: &[&str] = &[
+    "/ferrobridge/code",
+    "/ferrobridge/federation",
+    "/ferrobridge/overlays",
+];
+
 // ARIA in HTML § 4: an hr is a separator, which WAI-ARIA 1.2 § menu lets a
 // menu own.
 #[tokio::test(flavor = "multi_thread")]
-async fn the_user_menus_separator_is_an_hr_the_tree_reads_as_a_separator()
--> Result<(), Box<dyn Error>> {
+async fn a_menus_separator_is_an_hr_the_tree_reads_as_a_separator() -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
         return Ok(());
     }
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
-        browser.goto(&gallery.url("/ferrobridge/code")).await?;
-        browser
-            .driver()
-            .execute(
-                "document.querySelector('.fui-user-menu').showPopover();",
-                Vec::new(),
-            )
-            .await?;
-        for node in read(browser, "[role='menu'] > .fui-menu-sep").await? {
-            assert_eq!(
-                ("HR", "separator"),
-                (node.tag.as_str(), node.role.as_str()),
-                "{node:?}"
-            );
+        for page in SEPARATED {
+            browser.goto(&gallery.url(page)).await?;
+            ready(browser).await?;
+            let count: usize = browser
+                .driver()
+                .execute(
+                    "return document.querySelectorAll('hr.fui-menu-sep').length;",
+                    Vec::new(),
+                )
+                .await?
+                .convert()?;
+            assert!(count > 0, "{page} draws a menu separator");
+            for at in 0..count {
+                // Opens the menu that holds the separator `at`, alone.
+                browser
+                    .driver()
+                    .execute(
+                        r#"document.querySelectorAll(":popover-open").forEach((p) => p.hidePopover());
+                        document.querySelectorAll("details[open]").forEach((d) => d.open = false);
+                        document.querySelectorAll("[data-pin]").forEach((e) => e.removeAttribute("data-pin"));
+                        const sep = document.querySelectorAll("hr.fui-menu-sep")[arguments[0]];
+                        for (let up = sep.parentElement; up; up = up.parentElement) {
+                          if (up.matches("[popover]")) up.showPopover();
+                          if (up.matches("details")) up.open = true;
+                        }
+                        sep.setAttribute("data-pin", "");"#,
+                        vec![json!(at)],
+                    )
+                    .await?;
+                for node in read(browser, "[data-pin]").await? {
+                    assert_eq!(
+                        ("HR", "separator"),
+                        (node.tag.as_str(), node.role.as_str()),
+                        "{page} separator {at}: {node:?}"
+                    );
+                }
+            }
         }
         Ok(())
     })

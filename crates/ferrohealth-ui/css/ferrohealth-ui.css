@@ -2574,7 +2574,7 @@
     gap: var(--space-default) 0.75rem;
   }
 
-  .fui-table-tools > p {
+  .fui-table-tools > :is(p, output) {
     padding-block-end: 0.4375rem;
     font-size: var(--text-body);
     line-height: var(--leading-body);
@@ -2635,7 +2635,8 @@
     gap: var(--space-tight);
   }
 
-  .fui-pager > [role="status"] {
+  /* The design pages draw the range as a p with the status role. */
+  .fui-pager > :is(output, [role="status"]) {
     justify-self: start;
   }
 
@@ -7050,6 +7051,7 @@
   }
 
   .fui-datepicker-status {
+    display: block;
     max-width: 16rem;
     color: var(--muted);
     font-size: var(--text-small);

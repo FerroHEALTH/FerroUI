@@ -139,7 +139,7 @@ function rangeField(root, config, words, button) {
   function build() {
     const presets = element("div", { class: "fui-datepicker-presets", role: "group", "aria-label": text(words.ranges) });
     const pair = element("div", { class: "fui-datepicker-pair" });
-    const said = element("p", { class: "fui-datepicker-status", role: "status", hidden: true });
+    const said = element("output", { class: "fui-datepicker-status", hidden: true });
     const apply = action("primary", words.apply, () => {
       close(false);
       if (from.form) from.form.requestSubmit();

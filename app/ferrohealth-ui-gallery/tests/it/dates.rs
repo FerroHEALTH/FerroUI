@@ -381,7 +381,7 @@ async fn a_typed_text_that_is_no_date_disables_apply_and_says_why() -> Result<()
             .find(By::XPath(".//button[normalize-space(.) = 'Apply']"))
             .await?;
         assert!(!apply.is_enabled().await?, "Apply is disabled");
-        let status = picker.find(By::Css("p[role='status']")).await?;
+        let status = picker.find(By::Css("output.fui-datepicker-status")).await?;
         assert_eq!("Type a date as YYYY-MM-DD.", status.text().await?.trim());
         day_button(&picker, "2026-10-13").await?.click().await?;
         until("a chosen day makes the field valid", async || {
@@ -418,7 +418,7 @@ async fn a_quick_choice_fills_the_field_and_the_line_names_the_day() -> Result<(
             Ok(value_of(browser, "defer-until").await? == "2026-10-26")
         })
         .await?;
-        let status = picker.find(By::Css("p[role='status']")).await?;
+        let status = picker.find(By::Css("output.fui-datepicker-status")).await?;
         assert_eq!(
             "Back in the queue on Monday 26 October 2026.",
             status.text().await?.trim()
@@ -441,7 +441,7 @@ async fn a_range_takes_a_preset_or_two_days_and_apply_submits_it() -> Result<(),
             Ok(picker.rect().await?.x >= 0.0)
         })
         .await?;
-        let status = picker.find(By::Css("p[role='status']")).await?;
+        let status = picker.find(By::Css("output.fui-datepicker-status")).await?;
         picker
             .find(By::XPath(".//button[normalize-space(.) = 'Last 30 days']"))
             .await?

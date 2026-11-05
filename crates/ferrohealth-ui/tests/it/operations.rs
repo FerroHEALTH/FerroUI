@@ -255,7 +255,7 @@ fn the_pair_draws_two_panes_with_their_heads_and_the_answer_in_each_state() {
     assert!(!waiting.contains("fui-transform-status"), "{waiting}");
     let running = pair(Answer::Running(String::from("Converting to FHIR")), None);
     assert!(
-        has(&running, "span", &[("role", "status")]),
+        has(&running, "output", &[("class", "fui-spinner")]),
         "a run in progress is announced: {running}"
     );
     let answered = pair(
