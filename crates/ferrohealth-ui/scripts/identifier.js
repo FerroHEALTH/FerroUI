@@ -22,7 +22,7 @@ function returned(root) {
     if (sessionStorage.getItem(FOCUS) !== root.id) return false;
     sessionStorage.removeItem(FOCUS);
     return true;
-  } catch (_) {
+  } catch {
     // Storage refused (a private window, a blocked site): no focus was kept.
     return false;
   }

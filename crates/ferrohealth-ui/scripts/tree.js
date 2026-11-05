@@ -178,7 +178,7 @@ export function enhance(root) {
   try {
     waiting = sessionStorage.getItem(focusKey);
     sessionStorage.removeItem(focusKey);
-  } catch (_) {
+  } catch {
     // Storage refused (a private window, a blocked site): nothing waits.
     waiting = null;
   }
