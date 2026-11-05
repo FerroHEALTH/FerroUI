@@ -7,6 +7,6 @@
 // place.
 export function enhance(button) {
   const link = button.previousElementSibling;
-  if (link && link.tagName === "A") link.hidden = true;
+  if (link?.tagName === "A") link.hidden = true;
   button.hidden = false;
 }

@@ -50,13 +50,13 @@ function day(y, m, d) {
   return toNumber(y, m, d);
 }
 
-const digits = (text) => /^[0-9]+$/.test(text);
+const digits = (text) => /^\d+$/.test(text);
 
 // Reads a day as Day::parse_in reads it: YYYY-MM-DD always, and the page's
 // order (dmy or mdy) with one- or two-digit parts split by . / or -.
 export function parseDay(text, order) {
   const t = trim(text);
-  const iso = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(t);
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t);
   if (iso) {
     const [y, m, d] = [Number(iso[1]), Number(iso[2]), Number(iso[3])];
     if (y < 1) return { error: "format" };
@@ -91,7 +91,7 @@ export function parseMoment(text, withTime, order) {
   }
   const parsed = parseDay(t.slice(0, at), order);
   if (parsed.error) return parsed;
-  const clock = /^([0-9]{2}):([0-9]{2})$/.exec(trim(t.slice(at + 1)));
+  const clock = /^(\d{2}):(\d{2})$/.exec(trim(t.slice(at + 1)));
   if (!clock || Number(clock[1]) > 23 || Number(clock[2]) > 59) return { error: "time" };
   return { day: parsed.day, hour: Number(clock[1]), minute: Number(clock[2]) };
 }
@@ -132,7 +132,7 @@ export function dayName(words, n) {
 // server drew, so no outline is written twice.
 export function glyph(root, name) {
   const holder = root.querySelector("template[data-fui-icons]");
-  const found = holder && holder.content.querySelector("[data-icon='" + name + "'] svg");
+  const found = holder?.content.querySelector("[data-icon='" + name + "'] svg");
   return found ? found.cloneNode(true) : document.createTextNode("");
 }
 
@@ -172,7 +172,6 @@ export function openingDay(chosen, today, bounds) {
 }
 
 export function picker(root, config, state) {
-  const { words } = config;
   const panel = element("div", { class: "fui-datepicker" + (state.range ? " fui-datepicker-range" : ""), id: config.id + "-picker", role: "dialog", "aria-label": config.label });
   panel.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {

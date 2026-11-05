@@ -15,16 +15,16 @@ export function linesText(holder, finalBreak) {
 }
 
 function source(root) {
-  if (root.hasAttribute("data-fui-copy-text")) return root.getAttribute("data-fui-copy-text");
-  const element = root.getAttribute("data-fui-copy-element");
-  if (element !== null) {
+  if ("fuiCopyText" in root.dataset) return root.dataset.fuiCopyText;
+  const element = root.dataset.fuiCopyElement;
+  if (element !== undefined) {
     const found = document.getElementById(element);
     return found ? found.textContent : null;
   }
-  const lines = root.getAttribute("data-fui-copy-lines");
-  if (lines !== null) {
+  const lines = root.dataset.fuiCopyLines;
+  if (lines !== undefined) {
     const holder = document.getElementById(lines);
-    return holder ? linesText(holder, root.hasAttribute("data-fui-final-break")) : null;
+    return holder ? linesText(holder, "fuiFinalBreak" in root.dataset) : null;
   }
   return null;
 }
@@ -36,7 +36,7 @@ export function enhance(root) {
   const refused = root.querySelector ? root.querySelector(".fui-copy-refused") : null;
   if (root.tagName === "BUTTON") {
     const text = root.previousElementSibling;
-    if (text && text.classList.contains("is-text")) text.hidden = true;
+    if (text?.classList.contains("is-text")) text.hidden = true;
   }
   button.hidden = false;
   const ready = button.querySelector("[data-fui-ready]");

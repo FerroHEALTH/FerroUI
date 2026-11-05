@@ -23,6 +23,7 @@ function returned(root) {
     sessionStorage.removeItem(FOCUS);
     return true;
   } catch (_) {
+    // Storage refused (a private window, a blocked site): no focus was kept.
     return false;
   }
 }
@@ -39,12 +40,12 @@ export function enhance(root) {
       }
     });
   const back = returned(root);
-  const total = Number(root.getAttribute("data-seconds") || "0");
+  const total = Number(root.dataset.seconds || "0");
   if (!total) {
     if (back && link) link.focus();
     return;
   }
-  const words = JSON.parse(root.getAttribute("data-words") || "{}");
+  const words = JSON.parse(root.dataset.words || "{}");
   const [masked, shown] = root.querySelectorAll(".fui-identifier-face");
   const ring = root.querySelector(".fui-identifier-countdown-left");
   const count = root.querySelector("[data-fui-count]");
@@ -60,8 +61,8 @@ export function enhance(root) {
     clearInterval(timer);
     const held = root.contains(document.activeElement);
     if (value) value.textContent = "•".repeat(6);
-    const copy = shown && shown.querySelector("[data-fui-copy-text]");
-    if (copy) copy.removeAttribute("data-fui-copy-text");
+    const copy = shown?.querySelector("[data-fui-copy-text]");
+    if (copy) delete copy.dataset.fuiCopyText;
     shown.classList.add("is-away");
     shown.inert = true;
     masked.classList.remove("is-away");

@@ -17,8 +17,8 @@ export function enhance(box) {
   const input = box.querySelector("input[type='search']");
   const shown = box.querySelector("p[aria-hidden='true']");
   const status = box.querySelector("p[role='status']");
-  const holder = document.getElementById(box.getAttribute("data-fui-rows") || "");
-  const phrase = box.getAttribute("data-fui-phrase") || "";
+  const holder = document.getElementById(box.dataset.fuiRows || "");
+  const phrase = box.dataset.fuiPhrase || "";
   if (!input || !holder) return;
   const rows = () => {
     const marked = [...holder.querySelectorAll("[data-fui-filter-text]")];
@@ -29,7 +29,7 @@ export function enhance(box) {
     const all = rows();
     let kept = 0;
     for (const row of all) {
-      const text = row.getAttribute("data-fui-filter-text") || row.textContent || "";
+      const text = row.dataset.fuiFilterText || row.textContent || "";
       const keep = keeps(input.value, [text]);
       row.hidden = !keep;
       if (keep) kept++;

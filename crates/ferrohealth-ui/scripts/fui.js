@@ -47,7 +47,7 @@ function sweep(root) {
   for (const element of root.querySelectorAll("[" + HOOK + "]")) enhance(element);
 }
 
-document.documentElement.setAttribute("data-fui-script", "");
+document.documentElement.dataset.fuiScript = "";
 sweep(document.documentElement);
 new MutationObserver((records) => {
   for (const record of records) {

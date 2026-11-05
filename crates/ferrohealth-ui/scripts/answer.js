@@ -11,19 +11,19 @@
 // from typing. An answer to an older request is dropped. An answer that is
 // no 2xx HTML page holding every region, or none at all, and the form posts
 // as it does with no script. The wire is in docs/consoles.md.
-const KEPT = ["id", "aria-live", "aria-busy", "role"];
+const KEPT = new Set(["id", "aria-live", "aria-busy", "role"]);
 
 // The address the form posts to: its action, or the page's own address.
 const address = (form) => new URL(form.getAttribute("action") || document.location.href, document.baseURI);
 
 export function enhance(form) {
-  const ids = (form.getAttribute("data-fui-answer") || "").split(/\s+/).filter(Boolean);
+  const ids = (form.dataset.fuiAnswer || "").split(/\s+/).filter(Boolean);
   const regions = ids.map((id) => document.getElementById(id));
   if (!ids.length || regions.some((region) => !region || region.contains(form)) || address(form).origin !== location.origin) return;
   for (const region of regions) {
     if (!region.hasAttribute("aria-live") && !/^(status|alert|log)$/.test(region.getAttribute("role") || "")) region.setAttribute("aria-live", "polite");
   }
-  const settle = Number(form.getAttribute("data-fui-settle") || "0");
+  const settle = Number(form.dataset.fuiSettle || "0");
   const get = (form.getAttribute("method") || "get").toLowerCase() === "get";
   const multipart = form.getAttribute("enctype") === "multipart/form-data";
   let asked = 0;
@@ -40,11 +40,11 @@ export function enhance(form) {
     const fresh = ids.map((id) => page.getElementById(id));
     if (fresh.some((region) => !region)) return false;
     const focused = document.activeElement;
-    const held = focused && focused.id && regions.some((region) => region.contains(focused)) ? focused.id : null;
+    const held = focused?.id && regions.some((region) => region.contains(focused)) ? focused.id : null;
     regions.forEach((region, at) => {
       const from = fresh[at];
-      for (const { name } of [...region.attributes]) if (!KEPT.includes(name) && !from.hasAttribute(name)) region.removeAttribute(name);
-      for (const { name, value } of [...from.attributes]) if (!KEPT.includes(name)) region.setAttribute(name, value);
+      for (const { name } of [...region.attributes]) if (!KEPT.has(name) && !from.hasAttribute(name)) region.removeAttribute(name);
+      for (const { name, value } of from.attributes) if (!KEPT.has(name)) region.setAttribute(name, value);
       region.replaceChildren(...from.childNodes);
     });
     const back = held && document.getElementById(held);

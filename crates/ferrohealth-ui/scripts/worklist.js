@@ -59,7 +59,7 @@ export function enhance(root) {
     }
   }
   const start = rows().findIndex((row) => row.hasAttribute("aria-current"));
-  apply(start < 0 ? 0 : start);
+  apply(Math.max(start, 0));
   if (header) header.hidden = false;
   sync();
   root.addEventListener("change", (event) => {
@@ -94,7 +94,7 @@ export function enhance(root) {
     const head = root.querySelector("thead");
     const top = head ? Math.max(head.getBoundingClientRect().bottom, 0) : 0;
     const card = root.closest(".fui-worklist");
-    const foot = card && card.querySelector(".fui-worklist-foot");
+    const foot = card?.querySelector(".fui-worklist-foot");
     const bottom = foot ? Math.min(foot.getBoundingClientRect().top, innerHeight) : innerHeight;
     if (rect.top < top) scrollBy(0, rect.top - top);
     else if (rect.bottom > bottom) scrollBy(0, rect.bottom - bottom);

@@ -17,7 +17,7 @@ export const STEPS = [0.25, 0.33, 0.5, 0.67, 0.8, 1.0, 1.25, 1.5, 2.0];
 export function stepped(scale, inward) {
   const next = inward ? STEPS.find((step) => step > scale + 0.005) : [...STEPS].reverse().find((step) => step < scale - 0.005);
   if (next !== undefined) return next;
-  return inward ? STEPS[STEPS.length - 1] : STEPS[0];
+  return inward ? STEPS.at(-1) : STEPS[0];
 }
 
 export function asked(key, onCard) {
@@ -39,12 +39,12 @@ export function moved(key, at, count) {
 }
 
 export function enhance(root) {
-  const words = JSON.parse(root.getAttribute("data-fui-words") || "{}");
+  const words = JSON.parse(root.dataset.fuiWords || "{}");
   const stage = root.querySelector(".fui-pipeline-stage");
   const scroll = root.querySelector(".fui-topology-scroll");
   let scale = null;
   let drag = null;
-  const size = (name) => Number(stage && stage.getAttribute(name)) || 1;
+  const size = (name) => Number(stage?.getAttribute(name)) || 1;
   const drawn = () => (stage ? stage.querySelector(":scope > svg") : null);
   const shownScale = () => {
     const svg = drawn();
@@ -54,7 +54,7 @@ export function enhance(root) {
   function frame() {
     const view = root.querySelector(".fui-minimap-view");
     if (!view || !scroll || !stage) return;
-    const mini = Number(view.getAttribute("data-scale")) || 1;
+    const mini = Number(view.dataset.scale) || 1;
     const shown = shownScale();
     const at = {
       x: scroll.scrollLeft / shown,
@@ -114,7 +114,7 @@ export function enhance(root) {
   }
 
   for (const button of root.querySelectorAll("[data-zoom]")) {
-    const title = button.getAttribute("data-title");
+    const title = button.dataset.title;
     if (title) button.setAttribute("title", title);
     else button.removeAttribute("title");
     button.disabled = false;
@@ -124,7 +124,7 @@ export function enhance(root) {
   root.addEventListener("click", (event) => {
     const button = event.target.closest("[data-zoom]");
     if (!button || !root.contains(button)) return;
-    const ask = button.getAttribute("data-zoom");
+    const ask = button.dataset.zoom;
     if (ask === "in" || ask === "out" || ask === "fit") zoom(ask);
   });
   root.addEventListener("keydown", (event) => {
@@ -138,7 +138,7 @@ export function enhance(root) {
     const onCard = target.matches(".fui-tnode-link");
     const ask = asked(event.key.toLowerCase(), onCard);
     if (ask === "look") {
-      const link = target.parentElement && target.parentElement.querySelector(".fui-tnode-info a");
+      const link = target.parentElement?.querySelector(".fui-tnode-info a");
       if (link) {
         event.preventDefault();
         link.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));

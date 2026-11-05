@@ -25,7 +25,7 @@ export function enhance(root) {
     };
     const other = (control) => {
       const option = control.selectedOptions ? control.selectedOptions[0] : control;
-      return Boolean(option && option.hasAttribute("data-other"));
+      return option?.dataset.other !== undefined;
     };
     // The listed option chosen last: a select's place, a combobox's value.
     let before = { place: 0, value: "" };
@@ -39,7 +39,7 @@ export function enhance(root) {
       const select = pick.querySelector("select");
       if (select) {
         const option = select.options[before.place];
-        select.selectedIndex = option && !option.hasAttribute("data-other") ? before.place : 0;
+        select.selectedIndex = option && !("other" in option.dataset) ? before.place : 0;
         return;
       }
       const combobox = pick.querySelector("[data-fui='combobox']");
@@ -54,7 +54,7 @@ export function enhance(root) {
   }
   const select = root.querySelector(":scope > select");
   const box = root.querySelector("[data-fui-picker-input]");
-  const input = box && box.querySelector("input");
+  const input = box?.querySelector("input");
   if (!select || !box || !input) return;
   let stepping = false;
   const other = () => select.selectedIndex === select.options.length - 1;
@@ -78,7 +78,7 @@ export function enhance(root) {
     show();
   });
   input.addEventListener("input", () => {
-    const at = [...select.options].findIndex((option, index) => index > 0 && !option.hasAttribute("data-other") && option.value === input.value);
+    const at = [...select.options].findIndex((option, index) => index > 0 && !("other" in option.dataset) && option.value === input.value);
     if (at > 0) select.selectedIndex = at;
     else if (input.value === "") select.selectedIndex = 0;
     else select.selectedIndex = select.options.length - 1;

@@ -42,13 +42,13 @@ export function decode(bytes) {
 }
 
 export function enhance(root) {
-  const words = JSON.parse(root.getAttribute("data-fui-words") || "{}");
-  const accept = (root.getAttribute("data-fui-accept") || "").split(",").filter(Boolean);
-  const max = Number(root.getAttribute("data-fui-max") || "0");
+  const words = JSON.parse(root.dataset.fuiWords || "{}");
+  const accept = (root.dataset.fuiAccept || "").split(",").filter(Boolean);
+  const max = Number(root.dataset.fuiMax || "0");
   const zone = root.querySelector(".fui-drop");
-  const input = zone && zone.querySelector("input[type='file']");
+  const input = zone?.querySelector("input[type='file']");
   const area = root.querySelector("textarea");
-  const said = zone && zone.querySelector("[data-upload='words']");
+  const said = zone?.querySelector("[data-upload='words']");
   const line = (name) => root.querySelector("[data-upload='" + name + "']");
   if (!zone || !input || !area) return;
 

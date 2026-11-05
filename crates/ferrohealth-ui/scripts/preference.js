@@ -21,7 +21,7 @@ export function enhance(form) {
       sent = false;
     });
   });
-  if (form.hasAttribute("data-fui-saved")) {
+  if ("fuiSaved" in form.dataset) {
     const control = form.querySelector("input:checked, select, input[type='checkbox'], input.fui-setting-input");
     if (control) control.focus();
   }

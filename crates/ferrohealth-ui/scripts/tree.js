@@ -57,8 +57,8 @@ export function inSight(list) {
     .map((item) => {
       const parent = item.parentElement.closest("li[role='treeitem']");
       return {
-        key: item.getAttribute("data-key"),
-        parent: parent && own(parent) ? parent.getAttribute("data-key") : null,
+        key: item.dataset.key,
+        parent: parent && own(parent) ? parent.dataset.key : null,
         expandable: item.hasAttribute("aria-expanded"),
         open: item.getAttribute("aria-expanded") === "true",
         link: Boolean(item.querySelector(":scope > .fui-tree-row > a.fui-tree-label")),
@@ -78,7 +78,7 @@ export function enhance(root) {
   const groupOf = (item) => item.querySelector(":scope > ul[role='group']");
   const toggleOf = (item) => item.querySelector(":scope > .fui-tree-row > .fui-tree-toggle");
   const isOpen = (item) => item.getAttribute("aria-expanded") === "true";
-  const byKey = (key) => items().find((item) => item.getAttribute("data-key") === key);
+  const byKey = (key) => items().find((item) => item.dataset.key === key);
 
   function kept() {
     try {
@@ -98,7 +98,7 @@ export function enhance(root) {
   }
   function sync() {
     if (!fields) return;
-    const name = fields.getAttribute("data-fui-open-fields");
+    const name = fields.dataset.fuiOpenFields;
     fields.replaceChildren(
       ...items()
         .filter(isOpen)
@@ -106,7 +106,7 @@ export function enhance(root) {
           const input = document.createElement("input");
           input.type = "hidden";
           input.name = name;
-          input.value = item.getAttribute("data-key");
+          input.value = item.dataset.key;
           return input;
         }),
     );
@@ -116,7 +116,7 @@ export function enhance(root) {
     const toggle = toggleOf(item);
     if (!toggle) return;
     toggle.setAttribute("aria-label", toggle.getAttribute(open ? "data-fui-collapse" : "data-fui-expand") || "");
-    const glyph = icons && icons.content.querySelector("[data-icon='" + (open ? "chevron-down" : "chevron-right") + "'] svg");
+    const glyph = icons?.content.querySelector("[data-icon='" + (open ? "chevron-down" : "chevron-right") + "'] svg");
     const old = toggle.querySelector("svg");
     if (glyph && old) old.replaceWith(glyph.cloneNode(true));
   }
@@ -128,7 +128,7 @@ export function enhance(root) {
       group.hidden = true;
     }
     mark(item, false);
-    keep(item.getAttribute("data-key"), false);
+    keep(item.dataset.key, false);
     sync();
   }
   // Whether the item opened in place; an item the server did not draw open
@@ -138,12 +138,12 @@ export function enhance(root) {
     if (group) {
       group.hidden = false;
       mark(item, true);
-      keep(item.getAttribute("data-key"), true);
+      keep(item.dataset.key, true);
       sync();
       return true;
     }
     const toggle = toggleOf(item);
-    if (toggle && toggle.tagName === "A") {
+    if (toggle?.tagName === "A") {
       const loading = document.createElement("ul");
       loading.setAttribute("role", "group");
       loading.className = "fui-tree-group";
@@ -153,7 +153,7 @@ export function enhance(root) {
       const ring = document.createElement("span");
       ring.className = "fui-spinner-ring";
       ring.setAttribute("aria-hidden", "true");
-      row.append(ring, root.getAttribute("data-fui-reading") || "");
+      row.append(ring, root.dataset.fuiReading || "");
       loading.append(row);
       item.append(loading);
       mark(item, true);
@@ -168,7 +168,7 @@ export function enhance(root) {
 
   for (const [key, isOpenNow] of Object.entries(kept())) {
     const item = byKey(key);
-    if (!item || !item.hasAttribute("aria-expanded") || isOpen(item) === isOpenNow) continue;
+    if (!item?.hasAttribute("aria-expanded") || isOpen(item) === isOpenNow) continue;
     if (isOpenNow) {
       if (groupOf(item)) open(item);
     } else close(item);
@@ -179,6 +179,7 @@ export function enhance(root) {
     waiting = sessionStorage.getItem(focusKey);
     sessionStorage.removeItem(focusKey);
   } catch (_) {
+    // Storage refused (a private window, a blocked site): nothing waits.
     waiting = null;
   }
   const returned = waiting && byKey(waiting);
@@ -201,7 +202,7 @@ export function enhance(root) {
     const item = event.target;
     if (item.getAttribute("role") !== "treeitem" || !own(item)) return;
     const shown = inSight(list);
-    const at = shown.findIndex((each) => each.key === item.getAttribute("data-key"));
+    const at = shown.findIndex((each) => each.key === item.dataset.key);
     const step = moved(event.key, at, shown);
     if (!step) return;
     event.preventDefault();
@@ -211,7 +212,7 @@ export function enhance(root) {
       const target = byKey(step.open);
       const toggle = toggleOf(target);
       if (groupOf(target)) open(target);
-      else if (toggle && toggle.tagName === "A") {
+      else if (toggle?.tagName === "A") {
         // The level loads with the page its link draws; the focus waits there.
         try {
           sessionStorage.setItem(focusKey, step.open);

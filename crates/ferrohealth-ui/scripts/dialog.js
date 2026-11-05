@@ -13,11 +13,11 @@ const CONTROLS = "[autofocus], input:not([type='hidden']), textarea, select, but
 export function enhance(dialog) {
   dialog.addEventListener("toggle", () => {
     if (!dialog.open) return;
-    const wanted = dialog.getAttribute("data-fui-focus");
+    const wanted = dialog.dataset.fuiFocus;
     const first = (wanted && dialog.querySelector(wanted)) || dialog.querySelector(CONTROLS);
     if (first) first.focus();
   });
-  if (dialog.hasAttribute("data-fui-open") && dialog.open && !dialog.matches(":modal")) {
+  if ("fuiOpen" in dialog.dataset && dialog.open && !dialog.matches(":modal")) {
     dialog.close();
     dialog.showModal();
   }

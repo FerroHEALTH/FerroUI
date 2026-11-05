@@ -60,16 +60,16 @@ function add(list) {
   const blank = own(list, "fieldset[data-repeat='blank']")[0];
   const rows = own(list, "[data-repeat='rows']")[0];
   if (!blank || !rows) return false;
-  const token = blank.getAttribute("data-token") || "__row__";
+  const token = blank.dataset.token || "__row__";
   const key = freshKey((key) => own(list, "[data-row='" + key + "']").length > 0);
   const copy = document.createDocumentFragment();
   for (const child of blank.cloneNode(true).childNodes) copy.append(child);
   for (const element of copy.querySelectorAll("*")) {
-    for (const attribute of [...element.attributes]) {
+    for (const attribute of element.attributes) {
       if (attribute.value.includes(token)) attribute.value = attribute.value.split(token).join(key);
     }
-    element.removeAttribute("data-fui-done");
-    if (element.matches(".fui-repeat")) element.removeAttribute("data-fui");
+    delete element.dataset.fuiDone;
+    if (element.matches(".fui-repeat")) delete element.dataset.fui;
   }
   rows.append(copy);
   markEmpty(list);
@@ -84,7 +84,7 @@ export function enhance(root) {
     if (!button) return;
     const list = listOf(button);
     if (!list || handlerOf(list) !== root) return;
-    const kind = button.getAttribute("data-repeat");
+    const kind = button.dataset.repeat;
     if (kind === "remove") {
       event.preventDefault();
       remove(list, button);

@@ -82,7 +82,7 @@ export function enhance(region) {
       else lineSlot.remove();
     }
     const link = toast.querySelector("a[data-fui-action]");
-    if (link && action && action.href) {
+    if (link && action?.href) {
       link.href = action.href;
       link.textContent = action.label || "";
       link.hidden = false;
@@ -101,7 +101,7 @@ export function enhance(region) {
     event.preventDefault();
     // A confirm inside a dialog has done the dialog's work.
     const dialog = control.closest("dialog");
-    if (dialog && dialog.open) dialog.close();
+    if (dialog?.open) dialog.close();
     const words = control.dataset;
     document.dispatchEvent(
       new CustomEvent("fui:toast", {

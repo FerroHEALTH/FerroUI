@@ -41,11 +41,11 @@ export function enhance(root) {
   const select = root.querySelector("select");
   if (!select) return;
   const id = select.id;
-  const name = root.getAttribute("data-fui-name") || select.name;
-  const remote = root.getAttribute("data-fui-remote");
+  const name = root.dataset.fuiName || select.name;
+  const remote = root.dataset.fuiRemote;
   const options = [...select.options]
     .filter((option) => option.value !== "")
-    .map((option) => ({ value: option.value, label: option.textContent, detail: option.getAttribute("data-detail"), other: option.hasAttribute("data-other") }));
+    .map((option) => ({ value: option.value, label: option.textContent, detail: option.dataset.detail, other: "other" in option.dataset }));
   const chosenAt = options.findIndex((option) => option.value === select.value);
   const check = root.querySelector("template[data-fui-icons]");
   const state = {
@@ -53,7 +53,7 @@ export function enhance(root) {
     chosenLabel: chosenAt >= 0 ? options[chosenAt].label : null,
     open: false,
     typing: false,
-    query: remote ? root.getAttribute("data-fui-query") || "" : "",
+    query: remote ? root.dataset.fuiQuery || "" : "",
     active: null,
   };
   const listId = id + "-list";
@@ -68,7 +68,7 @@ export function enhance(root) {
     "aria-expanded": "false",
     "aria-controls": listId,
     "aria-describedby": select.getAttribute("aria-describedby"),
-    placeholder: root.getAttribute("data-fui-placeholder") || "",
+    placeholder: root.dataset.fuiPlaceholder || "",
     name: remote,
   });
   const hidden = element("input", { type: "hidden", name });
@@ -117,14 +117,14 @@ export function enhance(root) {
       list.append(item);
     });
     const empty = (text) => element("li", { class: "fui-combobox-empty", role: "option", "aria-disabled": "true", "aria-selected": "false", text });
-    if (places.length === 0) list.append(empty(root.getAttribute("data-fui-no-match") || ""));
-    if (more) list.append(empty(root.getAttribute("data-fui-more") || ""));
+    if (places.length === 0) list.append(empty(root.dataset.fuiNoMatch || ""));
+    if (more) list.append(empty(root.dataset.fuiMore || ""));
     const active = state.open && state.active !== null ? places[state.active] : undefined;
     if (active === undefined) input.removeAttribute("aria-activedescendant");
     else {
       input.setAttribute("aria-activedescendant", id + "-option-" + active);
       const row = list.children[state.active];
-      if (row && row.scrollIntoView) row.scrollIntoView({ block: "nearest" });
+      if (row?.scrollIntoView) row.scrollIntoView({ block: "nearest" });
     }
   }
   // Moves the highlight among the rows drawn, keeping every row.
@@ -132,15 +132,15 @@ export function enhance(root) {
     const { places } = view();
     [...list.children].forEach((item, row) => {
       if (item.getAttribute("role") !== "option" || item.hasAttribute("aria-disabled")) return;
-      if (state.active === row) item.setAttribute("data-active", "true");
-      else item.removeAttribute("data-active");
+      if (state.active === row) item.dataset.active = "true";
+      else delete item.dataset.active;
     });
     const active = state.open && state.active !== null ? places[state.active] : undefined;
     if (active === undefined) input.removeAttribute("aria-activedescendant");
     else {
       input.setAttribute("aria-activedescendant", id + "-option-" + active);
       const row = list.children[state.active];
-      if (row && row.scrollIntoView) row.scrollIntoView({ block: "nearest" });
+      if (row?.scrollIntoView) row.scrollIntoView({ block: "nearest" });
     }
   }
   function choose(place) {
@@ -222,7 +222,7 @@ export function enhance(root) {
     const option = options.find((option) => option.value === value && !option.other);
     state.selected = option ? option.value : null;
     state.chosenLabel = option ? option.label : null;
-    hidden.removeAttribute("data-other");
+    delete hidden.dataset.other;
     close();
   });
   draw();

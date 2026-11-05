@@ -27,7 +27,7 @@ const space = (c) => /\p{White_Space}/u.test(c);
 const alpha = (c) => /\p{Alphabetic}/u.test(c);
 const alnum = (c) => /[\p{Alphabetic}\p{N}]/u.test(c);
 const asciiAlpha = (c) => /^[A-Za-z]$/.test(c);
-const digit = (c) => /^[0-9]$/.test(c);
+const digit = (c) => /^\d$/.test(c);
 
 export function push(out, kind, text) {
   if (!text) return;
@@ -195,7 +195,7 @@ function stepped(language) {
   };
 }
 
-const AQL_KEYWORDS = "AND AS ASC ASCENDING BY CONTAINS DESC DESCENDING DISTINCT EXISTS FALSE FETCH FROM LIKE LIMIT MATCHES NOT NULL OFFSET OR ORDER SELECT TOP TRUE WHERE XOR".split(" ");
+const AQL_KEYWORDS = new Set("AND AS ASC ASCENDING BY CONTAINS DESC DESCENDING DISTINCT EXISTS FALSE FETCH FROM LIKE LIMIT MATCHES NOT NULL OFFSET OR ORDER SELECT TOP TRUE WHERE XOR".split(" "));
 
 function aql(text) {
   const out = [];
@@ -234,7 +234,7 @@ function aql(text) {
     } else if (digit(c)) push(out, "number", number(chars));
     else if (alpha(c) || c === "_") {
       const w = chars.take(word);
-      push(out, AQL_KEYWORDS.includes(w.toUpperCase()) && /^[\x00-\x7f]*$/.test(w) ? "keyword" : "identifier", w);
+      push(out, AQL_KEYWORDS.has(w.toUpperCase()) && /^[\x00-\x7f]*$/.test(w) ? "keyword" : "identifier", w);
     } else if (space(c)) push(out, "plain", chars.take(space));
     else if ("(),;=<>!*.{}:+".includes(c)) push(out, "punctuation", chars.next());
     else push(out, "plain", chars.next());
@@ -324,7 +324,7 @@ function yamlLine(line) {
   }
   const isNumber = (s) => {
     const d = s.replace(/^[-+]/, "");
-    return d !== "" && /[0-9]/.test(d) && /^[0-9.eE+-]+$/.test(d) && /^[0-9.]/.test(d);
+    return d !== "" && /\d/.test(d) && /^[\d.eE+-]+$/.test(d) && /^[\d.]/.test(d);
   };
   const classify = (s) => (["true", "false", "null", "~", "True", "False", "Null", "TRUE", "FALSE", "NULL"].includes(s) ? "keyword" : isNumber(s) ? "number" : "plain");
   while (rest !== "") {
