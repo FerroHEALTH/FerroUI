@@ -34,7 +34,7 @@ check() {
   while IFS= read -r file; do
     files+=("$file")
   done < <(find "$@" -type f \( -name '*.html' -o -name '*.rs' \) | LC_ALL=C sort)
-  [ "${#files[@]}" -gt 0 ] || return 0
+  [[ "${#files[@]}" -gt 0 ]] || return 0
   awk '
     FNR == 1 { off = 0; rust = FILENAME ~ /\.rs$/ }
     off { next }
@@ -92,7 +92,7 @@ mod tests {
 EOF
   status=0
   out="$(check "$work")" || status=$?
-  [ "$status" = 0 ] || { echo "self-test: the check failed to run" >&2; return 1; }
+  [[ "$status" = 0 ]] || { echo "self-test: the check failed to run" >&2; return 1; }
   for want in M1 M2 M3 M4 M5; do
     printf '%s\n' "$out" | grep -q "^$want .*bad.html" ||
       { echo "self-test: $want was not reported" >&2; printf '%s\n' "$out" >&2; return 1; }
@@ -120,14 +120,15 @@ case "${1:-}" in
     echo "usage: scripts/checks/markup-rules.sh ROOT... | --self-test" >&2
     exit 2
     ;;
+  *) ;;
 esac
 
 cd "$root"
 for dir in "$@"; do
-  [ -d "$dir" ] || { echo "markup-rules: $dir is no directory" >&2; exit 2; }
+  [[ -d "$dir" ]] || { echo "markup-rules: $dir is no directory" >&2; exit 2; }
 done
 found="$(check "$@")"
-if [ -n "$found" ]; then
+if [[ -n "$found" ]]; then
   printf '%s\n' "$found" >&2
   echo "markup-rules: move the style to the stylesheet and the behaviour to a script module (crates/ferrohealth-ui/scripts/)." >&2
   exit 1

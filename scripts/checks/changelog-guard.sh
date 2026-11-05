@@ -26,7 +26,8 @@ set -euo pipefail
 # unreleased REV: the body of the [Unreleased] section of CHANGELOG.md at REV,
 # from its heading to the next version heading or link reference.
 unreleased() {
-  git show "$1:CHANGELOG.md" 2> /dev/null | awk '
+  local rev="$1"
+  git show "$rev:CHANGELOG.md" 2> /dev/null | awk '
     /^## \[Unreleased\][[:space:]]*$/ { on = 1; next }
     on && (/^## \[/ || /^\[[^]]+\]: /) { exit }
     on { print }
@@ -35,7 +36,8 @@ unreleased() {
 
 # versions REV: the version headings of CHANGELOG.md at REV, one per line.
 versions() {
-  git show "$1:CHANGELOG.md" 2> /dev/null | grep -E '^## \[[0-9]' | sort || true
+  local rev="$1"
+  git show "$rev:CHANGELOG.md" 2> /dev/null | grep -E '^## \[[0-9]' | sort || true
 }
 
 # The self-test builds a stub repository in a temporary directory, with a copy

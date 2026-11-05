@@ -32,12 +32,14 @@ self_test() {
       -c commit.gpgsign=false -c core.hooksPath=/dev/null "$@"
   }
   commit() {
+    local message="$1"
     stub_git add -A
-    stub_git commit -q -m "$1"
+    stub_git commit -q -m "$message"
   }
   branch() {
+    local name="$1"
     stub_git checkout -q main
-    stub_git checkout -q -b "$1"
+    stub_git checkout -q -b "$name"
   }
   expect() {
     local name=$1 want=$2 branch=$3

@@ -25,7 +25,8 @@ export LC_ALL=C
 # check FILE: prints `FILE:LINE: …` for each declaration that sorts before the
 # one above it.
 check() {
-  awk -v file="$1" '
+  local path="$1"
+  awk -v file="$path" '
     match($0, /^(pub(\([a-z:_ ]+\))? )?mod [A-Za-z_][A-Za-z0-9_]*;/) {
       name = $0
       sub(/^(pub(\([a-z:_ ]+\))? )?mod /, "", name)
@@ -36,7 +37,7 @@ check() {
       last = name
       seen = 1
     }
-  ' "$1"
+  ' "$path"
 }
 
 # The gallery's screenshot driver, whose area lists check_driver also reads.
@@ -45,7 +46,8 @@ driver="app/ferrohealth-ui-gallery/tests/it/states.rs"
 # check_driver FILE: prints `FILE:LINE: …` for each `AREAS` entry and each
 # capture call that sorts before the one above it.
 check_driver() {
-  awk -v file="$1" '
+  local path="$1"
+  awk -v file="$path" '
     match($0, /^ +[a-z_][a-z0-9_]*::STATES,$/) {
       name = $0
       sub(/^ +/, "", name)
@@ -66,7 +68,7 @@ check_driver() {
       calls_last = name
       calls_seen = 1
     }
-  ' "$1"
+  ' "$path"
 }
 
 # The gallery's journeys, whose page list check_pages reads.
@@ -75,7 +77,8 @@ pages="app/ferrohealth-ui-gallery/tests/it/journeys.rs"
 # check_pages FILE: prints `FILE:LINE: …` for each entry of the `PAGES` list
 # that sorts before the one above it, and when the file holds no such list.
 check_pages() {
-  awk -v file="$1" '
+  local path="$1"
+  awk -v file="$path" '
     /^pub\(crate\) const PAGES: &\[&str\] = &\[$/ { inside = 1; found = 1; next }
     inside && /^\];$/ { inside = 0; next }
     inside {
@@ -95,7 +98,7 @@ check_pages() {
     END {
       if (!found) printf "%s: no `pub(crate) const PAGES: &[&str] = &[` list\n", file
     }
-  ' "$1"
+  ' "$path"
 }
 
 self_test() {

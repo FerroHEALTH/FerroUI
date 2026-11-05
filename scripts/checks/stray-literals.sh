@@ -74,13 +74,13 @@ files=()
 while IFS= read -r file; do
   files+=("$file")
 done < <(find "$@" -type f -name '*.rs' | LC_ALL=C sort)
-if [ "${#files[@]}" -eq 0 ] && [ -z "$(find "$@" -type f -name '*.html' | head -n 1)" ]; then
+if [[ "${#files[@]}" -eq 0 ]] && [[ -z "$(find "$@" -type f -name '*.html' | head -n 1)" ]]; then
   echo "stray-literals: no .rs or .html file under $*"
   exit 0
 fi
 
 found=""
-[ "${#files[@]}" -eq 0 ] || found="$(
+[[ "${#files[@]}" -eq 0 ]] || found="$(
   awk -v allowfile="$allow" '
     function wordy(t,    bare, n, i, toks, plain) {
       bare = t
@@ -191,7 +191,7 @@ templates=()
 while IFS= read -r file; do
   templates+=("$file")
 done < <(find "$@" -type f -name '*.html' | LC_ALL=C sort)
-if [ "${#templates[@]}" -gt 0 ]; then
+if [[ "${#templates[@]}" -gt 0 ]]; then
   found="$(
     printf '%s\n' "$found"
     awk '

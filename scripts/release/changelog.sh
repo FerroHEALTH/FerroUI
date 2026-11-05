@@ -369,6 +369,7 @@ name_issue() {
 }
 
 self_test() {
+  local entry='- An entry.'
   local script status
   # Global, so the EXIT trap still sees it after the function returns.
   work="$(mktemp -d)"
@@ -418,12 +419,12 @@ self_test() {
   expect "a well-formed fragment beside the README" 0 --check
   local bad
   for bad in 3-Upper.added.md a-no-issue.added.md 3-a.unknown.md 3-a.added.txt 3-a_b.fixed.md 3-.fixed.md; do
-    fragment "$bad" '- An entry.'
+    fragment "$bad" "$entry"
     expect "the misnamed fragment $bad" 1 --check
     grep -q "$bad is not named" "$work/out" || flunk "the misnamed fragment $bad failed without naming it."
     unfragment "$bad"
   done
-  fragment 4-heading.fixed.md '### Fixed' '' '- An entry.'
+  fragment 4-heading.fixed.md '### Fixed' '' "$entry"
   expect "a fragment holding a heading" 1 --check
   unfragment 4-heading.fixed.md
   fragment 4-prose.fixed.md 'A sentence, no list item.'
@@ -573,15 +574,15 @@ EOF
   stub_git commit -q -a -m "the cut"
   expect "a release with no entry" 1 --assemble 0.0.3 2026-10-11
   grep -q 'would be empty' "$work/out" || flunk "the empty release was not named."
-  printf '%s\n' '# Changelog' '' '## [Unreleased]' '' '### Improved' '' '- An entry.' '' \
+  printf '%s\n' '# Changelog' '' '## [Unreleased]' '' '### Improved' '' "$entry" '' \
     '[Unreleased]: https://example.org/r/compare/v0.0.2...HEAD' > "$work/CHANGELOG.md"
   cp "$work/CHANGELOG.md" "$work/before"
   expect "a section Keep a Changelog does not define" 1 --assemble 0.0.3 2026-10-11
   cmp -s "$work/before" "$work/CHANGELOG.md" || flunk "a refused cut wrote CHANGELOG.md."
-  printf '%s\n' '# Changelog' '' '## [Unreleased]' '' 'Loose prose.' '' '### Added' '' '- An entry.' '' \
+  printf '%s\n' '# Changelog' '' '## [Unreleased]' '' 'Loose prose.' '' '### Added' '' "$entry" '' \
     '[Unreleased]: https://example.org/r/compare/v0.0.2...HEAD' > "$work/CHANGELOG.md"
   expect "text outside a section heading" 1 --assemble 0.0.3 2026-10-11
-  printf '%s\n' '# Changelog' '' '## [Unreleased]' '' '### Added' '' '- An entry.' > "$work/CHANGELOG.md"
+  printf '%s\n' '# Changelog' '' '## [Unreleased]' '' '### Added' '' "$entry" > "$work/CHANGELOG.md"
   expect "no [Unreleased] link reference" 1 --assemble 0.0.3 2026-10-11
 
   echo "changelog: self-test passed."
