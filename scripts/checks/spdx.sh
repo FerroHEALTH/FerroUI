@@ -21,6 +21,7 @@ checked=0
 while IFS= read -r -d '' f; do
   case "$f" in
     *.png | *.jpg | *.ico) continue ;;
+    *) ;;
   esac
   checked=$((checked + 1))
   head="$(head -n 12 -- "$f")"

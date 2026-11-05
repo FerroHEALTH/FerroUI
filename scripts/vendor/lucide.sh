@@ -46,7 +46,7 @@ die() {
 check() {
   local name missing=0
   for name in "${ICONS[@]}"; do
-    if [ ! -s "$dir/icons/$name.svg" ]; then
+    if [[ ! -s "$dir/icons/$name.svg" ]]; then
       echo "lucide: $name.svg is not vendored" >&2
       missing=1
     fi
@@ -59,11 +59,11 @@ check() {
       missing=1
     fi
   done
-  [ -s "$dir/LICENSE" ] || {
+  [[ -s "$dir/LICENSE" ]] || {
     echo "lucide: the licence is not vendored" >&2
     missing=1
   }
-  [ "$missing" -eq 0 ] || exit 1
+  [[ "$missing" -eq 0 ]] || exit 1
   echo "lucide: ${#ICONS[@]} icons of Lucide ${version} are vendored"
 }
 
