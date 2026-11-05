@@ -32,25 +32,33 @@ def page_function(catalog, slug):
     return catalog.PAGES[slug]
 
 
-def main():
-    site, only = design_set.site_from_argv(__doc__)
-    import catalog  # the set's slug-to-page table, found through the site's path
-
-    entries = list(site.pages.flat())
-    slugs = [e[3] for e in entries]
+def manifest_problems(site, catalog, slugs, routes):
+    """The set's manifest findings: a slug twice, a slug without its page
+    function or a page function without its slug, a slug both a page and a
+    route-only page, and a module that reads a path on one machine."""
     problems = []
     if len(slugs) != len(set(slugs)):
         problems.append(("manifest", "a slug appears twice"))
     if hasattr(catalog, "PAGES"):
         problems += [("manifest", f"{s} has no page function") for s in slugs if s not in catalog.PAGES]
         problems += [("manifest", f"{s} is not in pages.py") for s in catalog.PAGES if s not in slugs]
-    routes = catalog.route_pages() if hasattr(catalog, "route_pages") else {}
     problems += [("manifest", f"{s} is both a page and a route-only page") for s in routes if s in slugs]
-    every = slugs + sorted(s for s in routes if s not in slugs)
     for name in sorted(os.listdir(site.src)):
         if name.endswith(".py"):
             with open(os.path.join(site.src, name), encoding="utf-8") as fh:
                 problems += [("manifest", f"{name}:{n} reads a path on one machine") for n in checks.local_paths(fh.read())]
+    return problems
+
+
+def main():
+    site, only = design_set.site_from_argv(__doc__)
+    import catalog  # the set's slug-to-page table, found through the site's path
+
+    entries = list(site.pages.flat())
+    slugs = [e[3] for e in entries]
+    routes = catalog.route_pages() if hasattr(catalog, "route_pages") else {}
+    problems = manifest_problems(site, catalog, slugs, routes)
+    every = slugs + sorted(s for s in routes if s not in slugs)
     site.copy_assets()
     exempt = set(getattr(site.console, "EXEMPT_CHECKS", ()))
     html_of = {}

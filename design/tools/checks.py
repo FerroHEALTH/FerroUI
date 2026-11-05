@@ -57,8 +57,8 @@ def dead(html):
     """No link that looks like a button leads nowhere: href="#" is allowed
     on one only for an external target named as such (rel=...)."""
     return [f"a button-looking link leads nowhere: {m.group(0)[:120]}"
-            for m in re.finditer(r'<a [^>]*href="#"[^>]*>', html)
-            if "fui-button" in m.group(0) and "rel=" not in m.group(0)]
+            for m in re.finditer(r'<a [^>]*>', html)
+            if 'href="#"' in m.group(0) and "fui-button" in m.group(0) and "rel=" not in m.group(0)]
 
 
 def plural(html):

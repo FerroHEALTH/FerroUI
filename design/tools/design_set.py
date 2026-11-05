@@ -92,12 +92,9 @@ class Site:
     def baseline_path(self):
         return os.path.join(self.src, "baseline.tsv")
 
-    def verdict(self, check, findings, ran):
-        """Prints a check's findings against the set's baseline and returns
-        the exit status: 1 when a finding is not in the baseline, or when a
-        baseline entry for a page that ran no longer occurs (the baseline only
-        shrinks). A finding is a tuple of strings whose first item is the
-        page's slug; its key is the check's name followed by the tuple."""
+    def baseline(self):
+        """The finding keys the set's baseline file holds, none when it has
+        no file."""
         known = set()
         if os.path.exists(self.baseline_path()):
             with open(self.baseline_path(), encoding="utf-8") as fh:
@@ -105,6 +102,15 @@ class Site:
                     line = line.rstrip("\n")
                     if line and not line.startswith("#"):
                         known.add(line)
+        return known
+
+    def verdict(self, check, findings, ran):
+        """Prints a check's findings against the set's baseline and returns
+        the exit status: 1 when a finding is not in the baseline, or when a
+        baseline entry for a page that ran no longer occurs (the baseline only
+        shrinks). A finding is a tuple of strings whose first item is the
+        page's slug; its key is the check's name followed by the tuple."""
+        known = self.baseline()
         keys = {"\t".join((check,) + tuple(str(x).replace("\t", " ").replace("\n", " ") for x in f)) for f in findings}
         if os.environ.get("FERROUI_DESIGN_BASELINE") == "write":
             kept = {k for k in known if not (k.split("\t")[0] == check and k.split("\t")[1] in ran)}
