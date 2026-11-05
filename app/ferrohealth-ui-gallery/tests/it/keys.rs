@@ -430,7 +430,7 @@ async fn a_save_without_a_reason_asks_for_it_and_a_save_with_one_is_done()
         reason.send_keys("Synthetic night thresholds").await?;
         save.click().await?;
         browser
-            .text("p", "Saved: the settings apply at once.")
+            .text("output", "Saved: the settings apply at once.")
             .await?;
         assert!(
             browser

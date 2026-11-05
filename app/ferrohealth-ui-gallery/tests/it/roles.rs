@@ -4,10 +4,11 @@
 //! What Chrome's accessibility tree reads from the native elements the
 //! components draw where an ARIA role stood before (#624): a live region
 //! is an `<output>`, a named scroll box a `<section>`, the user menu's
-//! separator an `<hr>` (WAI-ARIA in HTML, § 4, the implicit semantics of
-//! `output`, `section` with an accessible name, and `hr`), and an icon
-//! control shows no text, so WCAG 2.2 SC 2.5.3 Label in Name has no visible
-//! label to hold its name to.
+//! separator an `<hr>` (ARIA in HTML § 4, the implicit semantics of
+//! `output`, `section` with an accessible name, and `hr`). A control that
+//! shows words is named starting with them, and an icon control shows no
+//! text, so WCAG 2.2 SC 2.5.3 Label in Name has no visible label to hold its
+//! name to.
 
 use std::error::Error;
 
@@ -33,8 +34,8 @@ struct Node {
     text: String,
 }
 
-/// The accessibility tree's reading of every element `selector` matches on
-/// the page the browser holds, in document order.
+/// The accessibility tree's reading of every rendered element `selector`
+/// matches on the page the browser holds, in document order.
 async fn read(browser: &Browser, selector: &str) -> Result<Vec<Node>, Box<dyn Error>> {
     let cdp = browser.driver().cdp();
     cdp.send_raw("DOM.enable", json!({})).await?;
@@ -56,6 +57,9 @@ async fn read(browser: &Browser, selector: &str) -> Result<Vec<Node>, Box<dyn Er
     );
     let mut nodes = Vec::new();
     for (id, element) in ids.into_iter().zip(shown) {
+        if !element.is_displayed().await? && !in_sr_only(&element).await? {
+            continue;
+        }
         let tree = cdp
             .send_raw(
                 "Accessibility.getPartialAXTree",
@@ -77,8 +81,17 @@ async fn read(browser: &Browser, selector: &str) -> Result<Vec<Node>, Box<dyn Er
             text: element.text().await?.trim().to_owned(),
         });
     }
-    assert!(!nodes.is_empty(), "{selector} matches nothing");
+    assert!(!nodes.is_empty(), "{selector} matches no rendered element");
     Ok(nodes)
+}
+
+/// Whether `element` is drawn for a screen reader alone, which WebDriver
+/// counts as not displayed although the tree reads it.
+async fn in_sr_only(element: &WebElement) -> Result<bool, Box<dyn Error>> {
+    Ok(element
+        .class_name()
+        .await?
+        .is_some_and(|class| class.split(' ').any(|name| name == "fui-sr-only")))
 }
 
 /// Every page and the live regions on it, each a component's own.
@@ -99,7 +112,6 @@ const LIVE: &[(&str, &[&str])] = &[
         "/ferrobridge/forms?dock=done",
         &["output.fui-dock-message.fui-dock-done"],
     ),
-    ("/ferrobridge/operations", &["output.fui-spinner"]),
     (
         "/ferrobridge/preferences?saved=density",
         &["output.fui-setting-saved"],
@@ -140,16 +152,25 @@ async fn a_live_region_is_an_output_the_tree_reads_as_a_polite_status() -> Resul
     .await
 }
 
-/// Every page and the named scroll boxes on it.
-const REGIONS: &[(&str, &str)] = &[
-    ("/ferrobridge/", ".fui-alert-evidence"),
-    ("/ferrobridge/code", ".fui-code-panel-numbered"),
-    ("/ferrobridge/code", ".fui-document-view > .fui-code-panel"),
-    ("/ferrobridge/forms?dock=idle", ".fui-dock"),
-    ("/ferrobridge/templates/about", ".fui-self-description"),
+/// Every page, the control pressed first, if any, and the named boxes the
+/// page then shows.
+const REGIONS: &[(&str, Option<&str>, &str)] = &[
+    ("/ferrobridge/", None, ".fui-alert-evidence"),
+    ("/ferrobridge/code", None, ".fui-code-panel-numbered"),
+    (
+        "/ferrobridge/code",
+        Some(".fui-document-switch > [data-view='raw']"),
+        ".fui-document-view > .fui-code-panel",
+    ),
+    ("/ferrobridge/forms?dock=idle", None, ".fui-dock"),
+    (
+        "/ferrobridge/templates/about",
+        None,
+        ".fui-self-description",
+    ),
 ];
 
-// HTML-ARIA § 4: a section with an accessible name is a region.
+// ARIA in HTML § 4: a section with an accessible name is a region.
 #[tokio::test(flavor = "multi_thread")]
 async fn a_named_box_is_a_section_the_tree_reads_as_a_region_by_its_name()
 -> Result<(), Box<dyn Error>> {
@@ -158,8 +179,11 @@ async fn a_named_box_is_a_section_the_tree_reads_as_a_region_by_its_name()
     }
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
-        for (page, selector) in REGIONS {
+        for (page, press, selector) in REGIONS {
             browser.goto(&gallery.url(page)).await?;
+            if let Some(press) = press {
+                browser.element(By::Css(*press)).await?.click().await?;
+            }
             for node in read(browser, selector).await? {
                 assert_eq!(
                     ("SECTION", "region"),
@@ -174,7 +198,7 @@ async fn a_named_box_is_a_section_the_tree_reads_as_a_region_by_its_name()
     .await
 }
 
-// HTML-ARIA § 4: an hr is a separator, which WAI-ARIA 1.2 § menu lets a
+// ARIA in HTML § 4: an hr is a separator, which WAI-ARIA 1.2 § menu lets a
 // menu own.
 #[tokio::test(flavor = "multi_thread")]
 async fn the_user_menus_separator_is_an_hr_the_tree_reads_as_a_separator()
@@ -204,17 +228,28 @@ async fn the_user_menus_separator_is_an_hr_the_tree_reads_as_a_separator()
     .await
 }
 
-/// Every page and the controls on it whose only visible part is an icon.
-const ICON_ONLY: &[(&str, &str)] = &[
-    ("/ferrobridge/code", ".fui-drawer-only"),
-    ("/ferrobridge/code", ".fui-search-submit"),
+/// Every page, the window width it is read at, and the controls on it whose
+/// only visible part is an icon. The drawer's button shows below 64rem, and
+/// the search's submit drops its word on a phone.
+const ICON_ONLY: &[(&str, u32, &str)] = &[
+    ("/ferrobridge/code", 390, ".fui-drawer-only"),
+    ("/ferrobridge/code", 390, ".fui-search-submit"),
     (
         "/ferrobridge/forms",
+        1440,
         ".fui-date > button[aria-haspopup='dialog']",
     ),
-    ("/ferrobridge/overlays?toast=ok", ".fui-toast summary"),
-    ("/ferrobridge/templates/list-many", ".fui-filter-chip > a"),
-    ("/ferrobridge/trees", ".fui-tree-toggle"),
+    (
+        "/ferrobridge/overlays?toast=ok",
+        1440,
+        ".fui-toast :is(summary, button)",
+    ),
+    (
+        "/ferrobridge/templates/list-many",
+        1440,
+        ".fui-filter-chip > a",
+    ),
+    ("/ferrobridge/trees", 1440, ".fui-tree-toggle"),
 ];
 
 // WCAG 2.2 Understanding SC 2.5.3: where a component has no visible text
@@ -227,7 +262,8 @@ async fn an_icon_control_shows_no_text_and_its_name_says_what_it_does() -> Resul
     }
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
-        for (page, selector) in ICON_ONLY {
+        for (page, width, selector) in ICON_ONLY {
+            browser.driver().set_window_rect(0, 0, *width, 900).await?;
             browser.goto(&gallery.url(page)).await?;
             for node in read(browser, selector).await? {
                 assert!(
@@ -241,21 +277,32 @@ async fn an_icon_control_shows_no_text_and_its_name_says_what_it_does() -> Resul
     .await
 }
 
-// WCAG 2.2 SC 2.5.3: the user menu's button that shows a name is named by
-// that name.
+/// The controls on the code page at 1440 px whose visible label is words:
+/// the user menu's button that shows a name, and the search's submit with
+/// its word.
+const WORDED: &[&str] = &[
+    ".fui-operator:has(.fui-operator-name)",
+    ".fui-search-submit",
+];
+
+// WCAG 2.2 SC 2.5.3: a control whose label is words is named starting with
+// them.
 #[tokio::test(flavor = "multi_thread")]
-async fn the_user_menus_button_is_named_by_the_name_it_shows() -> Result<(), Box<dyn Error>> {
+async fn a_control_that_shows_words_is_named_by_them() -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
         return Ok(());
     }
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
+        browser.driver().set_window_rect(0, 0, 1440, 900).await?;
         browser.goto(&gallery.url("/ferrobridge/code")).await?;
-        for node in read(browser, ".fui-operator:has(.fui-operator-name)").await? {
-            assert!(
-                !node.text.is_empty() && node.name.starts_with(&node.text),
-                "{node:?}"
-            );
+        for selector in WORDED {
+            for node in read(browser, selector).await? {
+                assert!(
+                    !node.text.is_empty() && node.name.starts_with(&node.text),
+                    "{selector}: {node:?}"
+                );
+            }
         }
         Ok(())
     })

@@ -921,7 +921,7 @@ async fn answer_and_dock(browser: &Browser, gallery: &Gallery) -> Result<(), Box
         .click()
         .await?;
     browser
-        .text("p", "Saved: the settings apply at once.")
+        .text("output", "Saved: the settings apply at once.")
         .await?;
     // Discard leaves the form with its required field emptied (#357).
     browser
