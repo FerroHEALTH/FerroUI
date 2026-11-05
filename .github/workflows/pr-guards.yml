@@ -68,11 +68,12 @@ jobs:
           # `detect` holds the plan it read when it started, so it is stale
           # when it started before the label was added.
           stale() {
-            if [ "$1" = detect ]; then
-              [ -n "${labelled}" ] && [[ "$3" < "${labelled}" ]]
+            local job="$1" conclusion="$2" started="$3"
+            if [ "$job" = detect ]; then
+              [ -n "${labelled}" ] && [[ "$started" < "${labelled}" ]]
               return
             fi
-            case "${ACTION}:$2" in
+            case "${ACTION}:${conclusion}" in
               labeled:failure | unlabeled:success) return 0 ;;
               *) return 1 ;;
             esac

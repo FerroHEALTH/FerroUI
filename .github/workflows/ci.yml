@@ -369,6 +369,7 @@ jobs:
               # The compare API lists at most 300 files; a longer list reaches everything.
               gh api "repos/$GH_REPO/compare/$QUEUE_BASE...$QUEUE_HEAD" --jq '.files[].filename' > "$RUNNER_TEMP/changed"
               ;;
+            *) ;; # a push or a manual run reaches everything
           esac
           if [ -f "$RUNNER_TEMP/changed" ] && [ "$(wc -l < "$RUNNER_TEMP/changed")" -lt 300 ]; then
             echo "changed paths:"
@@ -378,14 +379,20 @@ jobs:
             plan="$(bash scripts/checks/affected.sh --all)"
           fi
           echo "$plan"
-          get() { printf '%s\n' "$plan" | sed -n "s/^$1=//p"; }
+          get() {
+            local key="$1"
+            printf '%s\n' "$plan" | sed -n "s/^${key}=//p"
+          }
           # The refresh and the release pull request, a pull request with the
           # `screenshots` label (which commits images, as the screenshot-path
           # guard allows it) and a manual run capture every page and state and
           # compare them with the committed images by their pixels, whatever
           # paths they touch.
           refresh=false
-          case "$HEAD_REF" in chore/screenshots | release/*) refresh=true ;; esac
+          case "$HEAD_REF" in
+            chore/screenshots | release/*) refresh=true ;;
+            *) ;;
+          esac
           # The labels are read when the step runs: `gh pr create --label`
           # adds them after the `opened` event, whose payload carries none,
           # and pr-guards.yml re-runs this job when the label comes later (#481).
@@ -563,7 +570,7 @@ jobs:
           YQ_SHA256: fa52a4e758c63d38299163fbdd1edfb4c4963247918bf9c1c5d31d84789eded4
         run: |
           set -euo pipefail
-          curl -fsSL --retry 3 --retry-delay 2 --retry-all-errors -o "$RUNNER_TEMP/yq" "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64"
+          curl --proto =https -fsSL --retry 3 --retry-delay 2 --retry-all-errors -o "$RUNNER_TEMP/yq" "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64"
           echo "${YQ_SHA256}  $RUNNER_TEMP/yq" | sha256sum -c -
           sudo install -m 0755 "$RUNNER_TEMP/yq" /usr/local/bin/yq
           yq --version

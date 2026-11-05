@@ -28,7 +28,7 @@ jobs:
     # main after the merge analyzes the merged result.
     if: github.event_name == 'push' || (github.actor != 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     permissions:
       contents: read
       pull-requests: read # PR decoration reads the pull-request metadata
@@ -38,6 +38,28 @@ jobs:
           # Full history: Sonar assigns issues and new-code status by blame.
           fetch-depth: 0
           persist-credentials: false
+
+      # The lcov file sonar.rust.lcov.reportPaths names, from the workspace
+      # tests ci.yml's nextest job runs. The journeys and the screenshot
+      # capture stay off without their FERROUI_ gates.
+      - uses: ./.github/actions/setup-rust
+        with:
+          # llvm-tools-preview carries the profdata reader cargo-llvm-cov needs.
+          components: llvm-tools-preview
+          cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: taiki-e/install-action@1e29709c0ec63babbe8f266397a465f29a825f91 # v2.87.31
+        with:
+          tool: cargo-llvm-cov,cargo-nextest
+      - name: Instrumented tests to lcov
+        run: |
+          set -euo pipefail
+          cargo llvm-cov nextest --workspace --locked --no-tests=pass --lcov --output-path lcov.info
+          lines="$(grep -c '^DA:' lcov.info || true)"
+          echo "lcov.info carries ${lines} line records"
+          if [[ "${lines}" == "0" ]]; then
+            echo "the coverage report is empty" >&2
+            exit 1
+          fi
 
       # sonar.projectVersion anchors the "Previous version" new-code window to
       # the workspace version, read from the root Cargo.toml at scan time.
