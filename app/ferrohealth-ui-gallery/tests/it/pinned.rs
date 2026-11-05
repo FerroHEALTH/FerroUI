@@ -326,8 +326,9 @@ async fn the_keys_press_focus_and_follow_as_pinned() -> Result<(), Box<dyn Error
 
 /// The top bar's typeahead over a stubbed `fetch`, by GET to a route with and
 /// without a query and by POST: what it asked and what it drew for hits, no
-/// hits, a refusal, an unreadable answer, an answer with no list of groups
-/// and an unreachable route.
+/// hits, a refusal, an unreadable answer, an answer with no list of groups,
+/// a `null` answer, a group with no list of hits and an unreachable route,
+/// and whether the form's text then holds the word "undefined".
 const SEARCH: &str = r#"const m = await mod("search");
   const until = async (ok) => { for (let n = 0; n < 600 && !ok(); n++) await new Promise((r) => requestAnimationFrame(r)); return ok(); };
   const calls = [];
@@ -337,6 +338,8 @@ const SEARCH: &str = r#"const m = await mod("search");
     refused: () => new Response("no", { status: 503 }),
     unreadable: () => new Response("not json", { status: 200 }),
     grouped: () => new Response(JSON.stringify({ groups: "no list" }), { status: 200 }),
+    nothing: () => new Response("null", { status: 200 }),
+    hitless: () => new Response(JSON.stringify({ query: "an", groups: [{ kind: "Patients" }] }), { status: 200 }),
     unreachable: () => { throw new TypeError("refused"); },
   };
   let reply = null;
@@ -359,7 +362,7 @@ const SEARCH: &str = r#"const m = await mod("search");
       field.value = name === "hits" ? "  an " : "an";
       field.dispatchEvent(new Event("input", { bubbles: true }));
       await until(() => calls.length > 0 && said.textContent !== "" && said.textContent !== "Searching…");
-      out.push([method, name, calls.slice(), said.textContent, form.querySelectorAll("[role=option]").length, form.querySelector(".fui-search-results").hidden, field.getAttribute("aria-expanded")]);
+      out.push([method, name, calls.slice(), said.textContent, form.querySelectorAll("[role=option]").length, form.querySelector(".fui-search-results").hidden, field.getAttribute("aria-expanded"), form.textContent.includes("undefined")]);
     }
     form.remove();
   }
@@ -371,24 +374,30 @@ async fn the_search_asks_its_route_and_draws_each_reply_as_pinned() -> Result<()
         "/ferropix/forms",
         SEARCH,
         r#"[
-["get", "hits", [["/pin/suggest?q=an", "GET", "{\"Accept\":\"application/json\"}", null, "same-origin"]], "Results for “an”: 2", 4, false, "true"],
-["get", "none", [["/pin/suggest?q=an", "GET", "{\"Accept\":\"application/json\"}", null, "same-origin"]], "No matches for “an”", 0, false, "true"],
-["get", "refused", [["/pin/suggest?q=an", "GET", "{\"Accept\":\"application/json\"}", null, "same-origin"]], "The search did not answer (503).", 0, false, "true"],
-["get", "unreadable", [["/pin/suggest?q=an", "GET", "{\"Accept\":\"application/json\"}", null, "same-origin"]], "The search answered in a form this page cannot read.", 0, false, "true"],
-["get", "grouped", [["/pin/suggest?q=an", "GET", "{\"Accept\":\"application/json\"}", null, "same-origin"]], "The search did not answer (undefined).", 0, false, "true"],
-["get", "unreachable", [["/pin/suggest?q=an", "GET", "{\"Accept\":\"application/json\"}", null, "same-origin"]], "The search could not be reached.", 0, false, "true"],
-["get", "hits", [["/pin/suggest?scope=all&q=an", "GET", "{\"Accept\":\"application/json\"}", null, "same-origin"]], "Results for “an”: 2", 4, false, "true"],
-["get", "none", [["/pin/suggest?scope=all&q=an", "GET", "{\"Accept\":\"application/json\"}", null, "same-origin"]], "No matches for “an”", 0, false, "true"],
-["get", "refused", [["/pin/suggest?scope=all&q=an", "GET", "{\"Accept\":\"application/json\"}", null, "same-origin"]], "The search did not answer (503).", 0, false, "true"],
-["get", "unreadable", [["/pin/suggest?scope=all&q=an", "GET", "{\"Accept\":\"application/json\"}", null, "same-origin"]], "The search answered in a form this page cannot read.", 0, false, "true"],
-["get", "grouped", [["/pin/suggest?scope=all&q=an", "GET", "{\"Accept\":\"application/json\"}", null, "same-origin"]], "The search did not answer (undefined).", 0, false, "true"],
-["get", "unreachable", [["/pin/suggest?scope=all&q=an", "GET", "{\"Accept\":\"application/json\"}", null, "same-origin"]], "The search could not be reached.", 0, false, "true"],
-["post", "hits", [["/pin/suggest?scope=all", "POST", "{\"Accept\":\"application/json\",\"Content-Type\":\"application/x-www-form-urlencoded\"}", "q=an", "same-origin"]], "Results for “an”: 2", 4, false, "true"],
-["post", "none", [["/pin/suggest?scope=all", "POST", "{\"Accept\":\"application/json\",\"Content-Type\":\"application/x-www-form-urlencoded\"}", "q=an", "same-origin"]], "No matches for “an”", 0, false, "true"],
-["post", "refused", [["/pin/suggest?scope=all", "POST", "{\"Accept\":\"application/json\",\"Content-Type\":\"application/x-www-form-urlencoded\"}", "q=an", "same-origin"]], "The search did not answer (503).", 0, false, "true"],
-["post", "unreadable", [["/pin/suggest?scope=all", "POST", "{\"Accept\":\"application/json\",\"Content-Type\":\"application/x-www-form-urlencoded\"}", "q=an", "same-origin"]], "The search answered in a form this page cannot read.", 0, false, "true"],
-["post", "grouped", [["/pin/suggest?scope=all", "POST", "{\"Accept\":\"application/json\",\"Content-Type\":\"application/x-www-form-urlencoded\"}", "q=an", "same-origin"]], "The search did not answer (undefined).", 0, false, "true"],
-["post", "unreachable", [["/pin/suggest?scope=all", "POST", "{\"Accept\":\"application/json\",\"Content-Type\":\"application/x-www-form-urlencoded\"}", "q=an", "same-origin"]], "The search could not be reached.", 0, false, "true"]
+["get", "hits", [["/pin/suggest?q=an", "GET", "{\"Accept\":\"application/json\"}", null, "same-origin"]], "Results for “an”: 2", 4, false, "true", false],
+["get", "none", [["/pin/suggest?q=an", "GET", "{\"Accept\":\"application/json\"}", null, "same-origin"]], "No matches for “an”", 0, false, "true", false],
+["get", "refused", [["/pin/suggest?q=an", "GET", "{\"Accept\":\"application/json\"}", null, "same-origin"]], "The search did not answer (503).", 0, false, "true", false],
+["get", "unreadable", [["/pin/suggest?q=an", "GET", "{\"Accept\":\"application/json\"}", null, "same-origin"]], "The search answered in a form this page cannot read.", 0, false, "true", false],
+["get", "grouped", [["/pin/suggest?q=an", "GET", "{\"Accept\":\"application/json\"}", null, "same-origin"]], "The search answered in a form this page cannot read.", 0, false, "true", false],
+["get", "nothing", [["/pin/suggest?q=an", "GET", "{\"Accept\":\"application/json\"}", null, "same-origin"]], "The search answered in a form this page cannot read.", 0, false, "true", false],
+["get", "hitless", [["/pin/suggest?q=an", "GET", "{\"Accept\":\"application/json\"}", null, "same-origin"]], "The search answered in a form this page cannot read.", 0, false, "true", false],
+["get", "unreachable", [["/pin/suggest?q=an", "GET", "{\"Accept\":\"application/json\"}", null, "same-origin"]], "The search could not be reached.", 0, false, "true", false],
+["get", "hits", [["/pin/suggest?scope=all&q=an", "GET", "{\"Accept\":\"application/json\"}", null, "same-origin"]], "Results for “an”: 2", 4, false, "true", false],
+["get", "none", [["/pin/suggest?scope=all&q=an", "GET", "{\"Accept\":\"application/json\"}", null, "same-origin"]], "No matches for “an”", 0, false, "true", false],
+["get", "refused", [["/pin/suggest?scope=all&q=an", "GET", "{\"Accept\":\"application/json\"}", null, "same-origin"]], "The search did not answer (503).", 0, false, "true", false],
+["get", "unreadable", [["/pin/suggest?scope=all&q=an", "GET", "{\"Accept\":\"application/json\"}", null, "same-origin"]], "The search answered in a form this page cannot read.", 0, false, "true", false],
+["get", "grouped", [["/pin/suggest?scope=all&q=an", "GET", "{\"Accept\":\"application/json\"}", null, "same-origin"]], "The search answered in a form this page cannot read.", 0, false, "true", false],
+["get", "nothing", [["/pin/suggest?scope=all&q=an", "GET", "{\"Accept\":\"application/json\"}", null, "same-origin"]], "The search answered in a form this page cannot read.", 0, false, "true", false],
+["get", "hitless", [["/pin/suggest?scope=all&q=an", "GET", "{\"Accept\":\"application/json\"}", null, "same-origin"]], "The search answered in a form this page cannot read.", 0, false, "true", false],
+["get", "unreachable", [["/pin/suggest?scope=all&q=an", "GET", "{\"Accept\":\"application/json\"}", null, "same-origin"]], "The search could not be reached.", 0, false, "true", false],
+["post", "hits", [["/pin/suggest?scope=all", "POST", "{\"Accept\":\"application/json\",\"Content-Type\":\"application/x-www-form-urlencoded\"}", "q=an", "same-origin"]], "Results for “an”: 2", 4, false, "true", false],
+["post", "none", [["/pin/suggest?scope=all", "POST", "{\"Accept\":\"application/json\",\"Content-Type\":\"application/x-www-form-urlencoded\"}", "q=an", "same-origin"]], "No matches for “an”", 0, false, "true", false],
+["post", "refused", [["/pin/suggest?scope=all", "POST", "{\"Accept\":\"application/json\",\"Content-Type\":\"application/x-www-form-urlencoded\"}", "q=an", "same-origin"]], "The search did not answer (503).", 0, false, "true", false],
+["post", "unreadable", [["/pin/suggest?scope=all", "POST", "{\"Accept\":\"application/json\",\"Content-Type\":\"application/x-www-form-urlencoded\"}", "q=an", "same-origin"]], "The search answered in a form this page cannot read.", 0, false, "true", false],
+["post", "grouped", [["/pin/suggest?scope=all", "POST", "{\"Accept\":\"application/json\",\"Content-Type\":\"application/x-www-form-urlencoded\"}", "q=an", "same-origin"]], "The search answered in a form this page cannot read.", 0, false, "true", false],
+["post", "nothing", [["/pin/suggest?scope=all", "POST", "{\"Accept\":\"application/json\",\"Content-Type\":\"application/x-www-form-urlencoded\"}", "q=an", "same-origin"]], "The search answered in a form this page cannot read.", 0, false, "true", false],
+["post", "hitless", [["/pin/suggest?scope=all", "POST", "{\"Accept\":\"application/json\",\"Content-Type\":\"application/x-www-form-urlencoded\"}", "q=an", "same-origin"]], "The search answered in a form this page cannot read.", 0, false, "true", false],
+["post", "unreachable", [["/pin/suggest?scope=all", "POST", "{\"Accept\":\"application/json\",\"Content-Type\":\"application/x-www-form-urlencoded\"}", "q=an", "same-origin"]], "The search could not be reached.", 0, false, "true", false]
 ]"#,
     )
     .await
