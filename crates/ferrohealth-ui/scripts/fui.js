@@ -36,7 +36,7 @@ function enhance(element) {
         },
       ),
   );
-  Promise.all(runs).then((done) => {
+  void Promise.all(runs).then((done) => {
     if (done.every(Boolean)) element.setAttribute(READY, "");
   });
 }

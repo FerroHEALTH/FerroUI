@@ -49,12 +49,8 @@ export class Chars {
     if (end > this.seen) this.seen = end;
   }
   point(at) {
-    const high = this.t.charCodeAt(at);
-    if (high >= 0xd800 && high <= 0xdbff) {
-      const low = this.t.charCodeAt(at + 1);
-      if (low >= 0xdc00 && low <= 0xdfff) return this.t.slice(at, at + 2);
-    }
-    return this.t[at];
+    const code = this.t.codePointAt(at);
+    return code === undefined ? undefined : String.fromCodePoint(code);
   }
   peek() {
     if (this.done()) return undefined;
@@ -343,13 +339,16 @@ function yamlLine(line) {
       let length = rest.length;
       for (let at = 1; at < rest.length; at++) {
         if (rest[at] === "#" && (rest[at - 1] === " " || rest[at - 1] === "\t")) {
-          length = rest.slice(0, at).replace(/[ \t]+$/, "").length;
+          length = at;
+          while (length > 0 && (rest[length - 1] === " " || rest[length - 1] === "\t")) length--;
           break;
         }
       }
       const scalar = rest.slice(0, length);
       const entry = scalar.endsWith(",") ? scalar.slice(0, -1) : scalar;
-      take(classify(entry.replace(/\p{White_Space}+$/u, "")), entry.length);
+      let kept = entry.length;
+      while (kept > 0 && /\p{White_Space}/u.test(entry[kept - 1])) kept--;
+      take(classify(entry.slice(0, kept)), entry.length);
       if (entry.length < length) take("punctuation", 1);
     }
   }
