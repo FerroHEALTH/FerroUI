@@ -1151,6 +1151,11 @@
     background: var(--surface-raised);
     padding: 0.75rem;
     color: var(--ink);
+    /* The navigation is the shell's: the same metrics on every page,
+       whatever the page's density (review round 1, item 7). */
+    --space-tight: 0.25rem;
+    --space-default: 0.5rem;
+    --control: 2.25rem;
   }
 
   .fui-sidebar[open] {
@@ -2311,6 +2316,9 @@
   @media (width < 40rem) {
     .fui-table-stack {
       overflow: visible;
+      border: 0;
+      background: transparent;
+      box-shadow: none;
     }
 
     /* The table takes its container's width, never its widest cell's: a
@@ -2336,12 +2344,6 @@
 
     .fui-table-stack .fui-table :is(tbody, tr) {
       display: block;
-    }
-
-    .fui-table-stack {
-      border: 0;
-      background: transparent;
-      box-shadow: none;
     }
 
     /* A panel's table runs to the panel's edge; its cards keep the panel's
@@ -4254,8 +4256,11 @@
   }
 
   /* A chart's frame: the Y labels in a gutter left of the plot, spaced to
-     the grid lines (the plot's top and bottom margins less half a line). */
+     the grid lines (the plot's top and bottom margins less half a line).
+     It is the container the X labels query: each label the server thinned
+     names the chart width it shows from, so a narrow chart drops it. */
   .fui-chart-frame {
+    container-type: inline-size;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     column-gap: var(--space-default);
@@ -4277,12 +4282,6 @@
     display: block;
     width: 100%;
     overflow: visible;
-  }
-
-  /* The X labels a narrow chart has no room for: each label the server
-     thinned names the chart width it shows from. */
-  .fui-chart-frame {
-    container-type: inline-size;
   }
 
   @container (width < 15rem) {
@@ -5518,6 +5517,12 @@
     border-radius: var(--radius-control);
     background: var(--surface-raised);
     transition: border-color var(--motion-state) ease-out;
+    /* The control measures itself, so a field squeezed by a long operator's
+       name keeps room for its words: the submit gives up its word first (its
+       name stays in aria-label, so the word takes no layout and never runs
+       past a clipped box), then the key cap goes. The box sizes from its
+       row, never from its content, so the containment moves nothing. */
+    container: fui-search / inline-size;
   }
 
   .fui-search:hover {
@@ -5650,15 +5655,6 @@
     .fui-search-word {
       display: none;
     }
-  }
-
-  /* The control measures itself, so a field squeezed by a long operator's
-     name keeps room for its words: the submit gives up its word first (its
-     name stays in aria-label, so the word takes no layout and never runs
-     past a clipped box), then the key cap goes. The box sizes from its
-     row, never from its content, so the containment moves nothing. */
-  .fui-search {
-    container: fui-search / inline-size;
   }
 
   @container fui-search (width < 22rem) {
@@ -6371,14 +6367,11 @@
     background: var(--accent-tint);
     padding: 0.5rem var(--space-loose);
     font-weight: 500;
+    position: relative;
   }
 
   .fui-selection-bar > .fui-actions {
     margin-inline-start: auto;
-  }
-
-  .fui-selection-bar {
-    position: relative;
   }
 
   /* On a phone a popover takes the width of the bar it opens from. */
@@ -7675,6 +7668,7 @@
 
   .fui-listbox-text {
     min-width: 0;
+    display: grid;
   }
 
   .fui-listbox-text > span:first-child {
@@ -7694,10 +7688,6 @@
      focus: the accent text never sits on the hover bar. */
   .fui-listbox-option[aria-selected="true"]:is(:hover, :focus-visible) {
     background: var(--accent-tint);
-  }
-
-  .fui-listbox-text {
-    display: grid;
   }
 
   .fui-listbox-note {
@@ -7769,6 +7759,9 @@
     line-height: var(--leading-micro);
     font-variant-numeric: tabular-nums;
     font-weight: 500;
+    /* A count past 99 shows whole in the full sidebar, and as "99+" on the
+       rail's badge, which stays on its glyph; its phrase is its name. */
+    flex: none;
   }
 
   .fui-nav-entry[aria-current="page"] .fui-nav-count {
@@ -7777,12 +7770,6 @@
 
   .fui-nav-count.fui-nav-count-unknown {
     color: var(--muted);
-  }
-
-  /* A count past 99 shows whole in the full sidebar, and as "99+" on the
-     rail's badge, which stays on its glyph; its phrase is its name. */
-  .fui-nav-count {
-    flex: none;
   }
 
   .fui-nav-count-short {
@@ -7803,14 +7790,6 @@
     .fui-sidebar-rail .fui-nav-count.is-long {
       inset: 0.125rem auto auto calc(50% + 0.125rem);
     }
-  }
-
-  /* The navigation is the shell's: the same metrics on every page,
-     whatever the page's density (review round 1, item 7). */
-  .fui-sidebar {
-    --space-tight: 0.25rem;
-    --space-default: 0.5rem;
-    --control: 2.25rem;
   }
 
   /* The collapsed rail: the glyphs alone, each named by its title and its
@@ -10210,7 +10189,9 @@
       max-height: calc(100dvh - 1rem);
       border-width: 1px 0 0;
       padding: 0.5rem 0.75rem 1rem;
-      box-shadow: 0 -8px 24px -8px rgb(15 23 42 / 0.25);
+      /* The sheet carries its own scrim: a spread shadow drawn under the
+         sheet, so no stacking context between them can put the scrim on top. */
+      box-shadow: 0 -8px 24px -8px rgb(15 23 42 / 0.25), 0 0 0 100vmax var(--scrim);
     }
 
     .fui-menu-sheet .fui-menu-sheet-title {
@@ -10244,12 +10225,6 @@
       color: var(--ink);
       font: inherit;
       font-weight: 600;
-    }
-
-    /* The sheet carries its own scrim: a spread shadow drawn under the
-       sheet, so no stacking context between them can put the scrim on top. */
-    .fui-menu.fui-menu-anchored.fui-menu-sheet {
-      box-shadow: 0 -8px 24px -8px rgb(15 23 42 / 0.25), 0 0 0 100vmax var(--scrim);
     }
   }
 
@@ -10433,14 +10408,11 @@
 
   .fui-table tbody tr:has(a.fui-row-link) {
     cursor: pointer;
+    position: relative;
   }
 
   .fui-table tbody tr:has(a.fui-row-link):hover {
     background: var(--surface-sunken);
-  }
-
-  .fui-table tbody tr:has(a.fui-row-link) {
-    position: relative;
   }
 
   .fui-table a.fui-row-link::after {
@@ -11353,9 +11325,6 @@
     font-family: var(--font-mono);
     font-size: var(--text-small);
     line-height: var(--leading-body);
-  }
-
-  .fui-codeview .fui-code-panel {
     overflow-x: auto;
   }
 
@@ -15104,10 +15073,6 @@
   /* R28 on a phone: the cards keep a compact padding and a small title,
      so "Comfortable" fits whole in a third of the row. */
   @media (width < 40rem) {
-    .fui-choice-card {
-      padding: 0.375rem;
-    }
-
     .fui-choice-card :is(strong, .fui-choice-card-title, .fui-choice-title) {
       font-size: var(--text-small);
 
@@ -15115,6 +15080,7 @@
     }
 
     .fui-choice-card {
+      padding: 0.375rem;
       font-size: var(--text-small);
 
       line-height: var(--leading-body);
