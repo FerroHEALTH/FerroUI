@@ -51,10 +51,13 @@ check() {
       missing=1
     fi
   done
-  local file
+  # The list is read from a here-string: grep -q closing a pipe early would
+  # end printf with SIGPIPE, which pipefail reads as an unlisted icon.
+  local file listed
+  listed="$(printf '%s\n' "${ICONS[@]}")"
   for file in "$dir"/icons/*.svg; do
     name="$(basename "$file" .svg)"
-    if ! printf '%s\n' "${ICONS[@]}" | grep -qx -- "$name"; then
+    if ! grep -qx -- "$name" <<<"$listed"; then
       echo "lucide: $name.svg is vendored but not listed" >&2
       missing=1
     fi
