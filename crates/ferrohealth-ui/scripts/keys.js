@@ -50,7 +50,8 @@ function reach(event) {
     if (!element.checkVisibility() || !parse(element.getAttribute("aria-keyshortcuts")).some((s) => matches(s, event))) continue;
     const row = element.closest("[data-fui~='worklist'] tr[data-key]");
     if (row && !row.contains(active)) continue;
-    const near = row ? 0 : element.form && active && element.form === active.form ? 1 : 2;
+    const formNear = element.form && active && element.form === active.form ? 1 : 2;
+    const near = row ? 0 : formNear;
     found.push({ element, row, near });
   }
   found.sort((a, b) => a.near - b.near);

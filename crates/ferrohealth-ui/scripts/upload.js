@@ -95,9 +95,9 @@ export function enhance(root) {
     event.preventDefault();
     over(false);
     const files = event.dataTransfer ? event.dataTransfer.files : null;
-    if (files && files.length) void read(files[0], files.length > 1);
+    if (files?.length) void read(files[0], files.length > 1);
   });
   input.addEventListener("change", () => {
-    if (input.files && input.files.length) void read(input.files[0], false);
+    if (input.files?.length) void read(input.files[0], false);
   });
 }

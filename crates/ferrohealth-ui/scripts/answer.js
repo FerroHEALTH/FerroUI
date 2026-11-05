@@ -61,12 +61,14 @@ export function enhance(form) {
     if (get) url.search = new URLSearchParams(data);
     busy(true);
     let page = null;
+    let body;
+    if (!get) body = multipart ? data : new URLSearchParams(data);
     try {
       const response = await fetch(url, {
         method: get ? "GET" : "POST",
         credentials: "same-origin",
         headers: { Accept: "text/html" },
-        body: get ? undefined : multipart ? data : new URLSearchParams(data),
+        body,
       });
       if (mine !== asked) return;
       if (response.redirected) return window.location.assign(response.url);

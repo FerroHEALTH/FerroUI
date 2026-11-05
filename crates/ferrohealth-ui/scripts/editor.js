@@ -54,7 +54,8 @@ export function offsetOf(value, at) {
 // The grammar of a text, as the crate's Language::detect reads it.
 export function detect(value) {
   const first = trimStart(value).charAt(0);
-  return first === "{" || first === "[" ? "json" : first === "<" ? "xml" : "plain";
+  if (first === "{" || first === "[") return "json";
+  return first === "<" ? "xml" : "plain";
 }
 
 // Whether the editor holds no text but white space, its panel then
@@ -90,7 +91,8 @@ export function enhance(root) {
   const prefix = area.id + "-L";
   const panel = root.closest(".fui-mapping-editor");
   const words = panel ? JSON.parse(panel.dataset.fuiWords || "{}") : null;
-  const opened = panel ? ("fuiOpened" in panel.dataset ? panel.dataset.fuiOpened : area.defaultValue) : null;
+  let opened = null;
+  if (panel) opened = "fuiOpened" in panel.dataset ? panel.dataset.fuiOpened : area.defaultValue;
   const isNew = panel ? "fuiNew" in panel.dataset : false;
   const list = area.id ? document.querySelector("ul[data-fui-for='" + CSS.escape(area.id) + "']") : null;
   let model = null;
@@ -200,7 +202,8 @@ export function enhance(root) {
     const state = panel.querySelector("[data-fui-state]");
     if (state) {
       state.classList.toggle("fui-editor-dirty", dirty);
-      state.textContent = text(isNew ? words.new_file : dirty ? words.changed : words.unchanged);
+      const word = dirty ? words.changed : words.unchanged;
+      state.textContent = text(isNew ? words.new_file : word);
     }
     panel.classList.toggle("is-empty", blank(area.value));
   }
