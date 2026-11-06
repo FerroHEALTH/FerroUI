@@ -340,7 +340,7 @@ everything; your console provides four parts.
 | Read | `GET {status}`, `Accept: application/json`, the page's own cookies. A read never extends the session: answer it without touching the idle timeout. |
 | Extend | `POST {status}` with no body. It is the user's own activity (Stay signed in, or their input once a minute): start the idle timeout again, never past the absolute lifetime. |
 | Answer | `200` with `application/json`: `{"idle": 840, "absolute": 27000}`, the whole seconds left until the idle timeout and until the absolute lifetime ends (`view::session::Left`) |
-| Gone | `401`: the page loads `{sign_in}?return={path and query}`, and every tab leaves |
+| Gone | `401`: the page loads `{sign_in}?return={path and query}`, and every tab leaves. A page whose own form is already loading the next document, your sign-out among them, tells the other tabs and lets its form's navigation complete |
 | Any other status, or no answer | The page keeps its own count, and leaves once that has run out |
 
 When it asks:

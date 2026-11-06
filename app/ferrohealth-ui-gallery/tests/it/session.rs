@@ -232,6 +232,75 @@ async fn sign_out_in_one_tab_ends_every_tab() -> Result<(), Box<dyn Error>> {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn a_watch_refused_during_sign_out_leaves_the_sign_out_its_page() -> Result<(), Box<dyn Error>>
+{
+    // FerroUI #654: the watch's 401 lands while the sign-out form is under way; the form's
+    // navigation completes and only the other tab leaves for sign-in with its own return.
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        window(browser, 1440, 900).await?;
+        start(browser, &gallery, 600, 3600).await?;
+        let first = browser.driver().window().await?;
+        let second = browser.driver().new_tab().await?;
+        browser.driver().switch_to_window(second).await?;
+        browser.goto(&gallery.url("/ferrobridge/tables")).await?;
+        browser.hydrated().await?;
+        // The watch's read is held in the page, and answered 401 once the sign-out form has
+        // been submitted and nothing stopped it, so the answer always meets the navigation.
+        let held: u64 = browser
+            .driver()
+            .execute(
+                "const route = arguments[0];
+                 const real = window.fetch;
+                 const held = [];
+                 window.fetch = (input, init) => {
+                   const read = new URL(String(input), location.href).pathname === route
+                     && (!init || !init.method || init.method === 'GET');
+                   if (!read) return real(input, init);
+                   return new Promise((answer) => held.push(answer));
+                 };
+                 window.addEventListener('submit', (event) => {
+                   if (event.defaultPrevented) return;
+                   for (const answer of held) answer(new Response(null, { status: 401 }));
+                 });
+                 window.dispatchEvent(new Event('focus'));
+                 return held.length;",
+                vec![serde_json::Value::from(
+                    ferrohealth_ui_gallery::session::SESSION_ROUTE,
+                )],
+            )
+            .await?
+            .convert()?;
+        assert_eq!(1, held, "the focus asks the session route once");
+        let sign_out = browser
+            .element(By::Css(format!(
+                "form[action='{}/ferrobridge'] button[type='submit']",
+                ferrohealth_ui_gallery::request::SIGN_OUT_ROUTE
+            )))
+            .await?;
+        browser
+            .driver()
+            .execute(
+                "arguments[0].form.requestSubmit(arguments[0]);",
+                vec![sign_out.to_json()?],
+            )
+            .await?;
+        browser
+            .at(&gallery.url("/sign-in/ferrobridge/signed-out"))
+            .await?;
+        browser.driver().switch_to_window(first).await?;
+        browser
+            .at(&gallery.url("/sign-in/ferrobridge/expired?return=/ferrobridge"))
+            .await?;
+        only_the_refusal(browser).await
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn a_search_that_meets_the_end_of_the_session_ends_every_tab() -> Result<(), Box<dyn Error>> {
     // FerroUI #474: the search's 401 loads the signed-out page in its own tab and tells every
     // other tab, which leaves for sign-in although its own session route still answers.
