@@ -80,7 +80,7 @@ function rangeField(root, config, words, button) {
     hover(n) {
       if (hovered === n) return;
       hovered = n;
-      if (open) draw(false);
+      if (open) paint();
     },
     choose(n) {
       const [first, last] = ends();
@@ -179,6 +179,15 @@ function rangeField(root, config, words, button) {
     const [a, b] = ends();
     frame.apply.disabled = (a !== null) !== (b !== null);
     if (focus) focusDay(panel, state.focused);
+  }
+  // A hover changes only the preview, so it repaints the days drawn and
+  // draws none again: the day the keyboard holds keeps the focus (#650).
+  function paint() {
+    if (!panel) return;
+    for (const day of panel.querySelectorAll(".fui-datepicker-grid button")) {
+      const out = !day.dataset.day;
+      day.className = state.classes(parseIso(out ? day.dataset.outDay : day.dataset.day), out);
+    }
   }
   function close(restore) {
     if (restore) [from.value, to.value] = saved;
