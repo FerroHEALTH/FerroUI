@@ -11,6 +11,43 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.6.7] - 2026-11-06
+
+### Changed
+
+- The live regions of the copy button, the code editor's status line, the
+  identifier, the top bar's search, the decision dock, the upload field and
+  Your preferences' saved mark are `<output>` elements; the code box, the
+  self-description, the document pane's raw text, a refusal's evidence and
+  the decision dock are named `<section>` elements; the user menu's
+  separator is an `<hr>`. Each keeps the role the ARIA attribute gave it,
+  and draws as before. A console script or test that selected one by
+  `[role="status"]`, `[role="region"]` or `[role="separator"]` selects it by
+  its element (#624).
+- `fui-unit` and `fui-nowrap` keep their text whole from the stylesheet's
+  `utilities` layer, which comes after every component rule, in place of
+  `!important`, so a console's own unlayered rule can now override them. The
+  menu sheet's title, the lockup's accent word and the phone's Keyboard tab
+  hold by the cascade alone, and draw as before (#626).
+- The pager's range, the filter's count, the countdown's set points, the
+  topology's zoom level, the busy spinner and skeleton lines and the date
+  pickers' status lines are `<output>` elements; the data table's,
+  compare's, line diff's and root matrix's scroll boxes are named
+  `<section>` elements, and the reading pane's `<section>` drops its
+  redundant role; the action menu's and the filter menu's separators are
+  `<hr>` elements. Each keeps its role and draws as before. A console
+  script or test that selected one by `[role="status"]`, `[role="region"]`
+  or `[role="separator"]` selects it by its element, and
+  `scripts/checks/markup-rules.sh` (M6) refuses a new such role unless a
+  `NOTE:` beside it says why the element keeps it (#639).
+
+### Fixed
+
+- The top bar's typeahead shows its unreadable-answer sentence for an OK
+  reply it cannot read (a `null` answer, `groups` that is not a list, a
+  group with no list of hits), where it said "The search did not answer
+  (undefined)." or stopped at "Searching…" (#633).
+
 ## [0.6.6] - 2026-11-03
 
 ### Added
@@ -3075,7 +3112,8 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.6...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.7...HEAD
+[0.6.7]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.6...v0.6.7
 [0.6.6]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.5...v0.6.6
 [0.6.5]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.3...v0.6.4
