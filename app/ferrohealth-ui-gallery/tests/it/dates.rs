@@ -428,8 +428,77 @@ async fn a_quick_choice_fills_the_field_and_the_line_names_the_day() -> Result<(
     .await
 }
 
+/// Takes a preset, then two days, and applies the range, with every
+/// request `late` milliseconds late when it is set.
+async fn range_applies(
+    browser: &Browser,
+    gallery: &Gallery,
+    late: Option<u32>,
+) -> Result<(), Box<dyn Error>> {
+    if let Some(latency) = late {
+        browser.late(latency).await?;
+    }
+    browser.goto(&gallery.url(FORMS)).await?;
+    let picker = open_range(browser).await?;
+    until("the range opens inside the screen", async || {
+        Ok(picker.rect().await?.x >= 0.0)
+    })
+    .await?;
+    let status = picker.find(By::Css("output.fui-datepicker-status")).await?;
+    picker
+        .find(By::XPath(".//button[normalize-space(.) = 'Last 30 days']"))
+        .await?
+        .click()
+        .await?;
+    until("the preset fills the range", async || {
+        Ok(status.text().await?.trim() == "2026-09-22 to 2026-10-21 · 30 days.")
+    })
+    .await?;
+    day_button(&picker, "2026-10-12").await?.click().await?;
+    until("the first day asks for the end", async || {
+        Ok(status.text().await?.trim() == "From 2026-10-12: now choose the end.")
+    })
+    .await?;
+    let apply = picker
+        .find(By::XPath(".//button[normalize-space(.) = 'Apply']"))
+        .await?;
+    assert!(!apply.is_enabled().await?, "a half range cannot apply");
+    day_button(&picker, "2026-10-10").await?.click().await?;
+    until("an earlier second day starts the range", async || {
+        Ok(status.text().await?.trim() == "2026-10-10 to 2026-10-12 · 3 days.")
+    })
+    .await?;
+    apply.click().await?;
+    browser
+        .at(&gallery.url(&format!("{FORMS}?from=2026-10-10&to=2026-10-12#date-range")))
+        .await?;
+    browser.console_clean("the range").await
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn a_range_takes_a_preset_or_two_days_and_apply_submits_it() -> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| range_applies(browser, &gallery, None).await).await
+}
+
+// The same with every request 400 ms late, as on a loaded machine (#650).
+#[tokio::test(flavor = "multi_thread")]
+async fn a_range_applies_when_each_page_loads_late() -> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| range_applies(browser, &gallery, Some(400)).await).await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn hovering_a_day_previews_the_range_and_keeps_the_day_that_holds_the_focus()
+-> Result<(), Box<dyn Error>> {
+    // A hover repaints the preview on the days drawn; it never draws them
+    // again, so the day the keyboard holds keeps the focus (#650).
     if !journeys_enabled() {
         return Ok(());
     }
@@ -437,39 +506,44 @@ async fn a_range_takes_a_preset_or_two_days_and_apply_submits_it() -> Result<(),
     with_browser(async |browser| {
         browser.goto(&gallery.url(FORMS)).await?;
         let picker = open_range(browser).await?;
-        until("the range opens inside the screen", async || {
-            Ok(picker.rect().await?.x >= 0.0)
-        })
-        .await?;
         let status = picker.find(By::Css("output.fui-datepicker-status")).await?;
-        picker
-            .find(By::XPath(".//button[normalize-space(.) = 'Last 30 days']"))
-            .await?
-            .click()
-            .await?;
-        until("the preset fills the range", async || {
-            Ok(status.text().await?.trim() == "2026-09-22 to 2026-10-21 · 30 days.")
-        })
-        .await?;
         day_button(&picker, "2026-10-12").await?.click().await?;
         until("the first day asks for the end", async || {
             Ok(status.text().await?.trim() == "From 2026-10-12: now choose the end.")
         })
         .await?;
-        let apply = picker
-            .find(By::XPath(".//button[normalize-space(.) = 'Apply']"))
-            .await?;
-        assert!(!apply.is_enabled().await?, "a half range cannot apply");
-        day_button(&picker, "2026-10-10").await?.click().await?;
-        until("an earlier second day starts the range", async || {
-            Ok(status.text().await?.trim() == "2026-10-10 to 2026-10-12 · 3 days.")
-        })
-        .await?;
-        apply.click().await?;
+        let held = day_button(&picker, "2026-10-13").await?;
+        let end = day_button(&picker, "2026-10-15").await?;
         browser
-            .at(&gallery.url(&format!("{FORMS}?from=2026-10-10&to=2026-10-12#date-range")))
+            .driver()
+            .execute("arguments[0].focus();", vec![held.to_json()?])
             .await?;
-        browser.console_clean("the range").await
+        browser
+            .driver()
+            .action_chain()
+            .move_to_element_center(&end)
+            .perform()
+            .await?;
+        until(
+            "the hovered end previews the range on the held day",
+            async || {
+                Ok(held
+                    .class_name()
+                    .await?
+                    .is_some_and(|class| class.contains("fui-day-tentative")))
+            },
+        )
+        .await?;
+        let kept: bool = browser
+            .driver()
+            .execute(
+                "return arguments[0].isConnected && document.activeElement === arguments[0];",
+                vec![held.to_json()?],
+            )
+            .await?
+            .convert()?;
+        assert!(kept, "the hover drew the held day again and took its focus");
+        browser.console_clean("the range's hover").await
     })
     .await
 }
