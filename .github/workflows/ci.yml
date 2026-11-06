@@ -744,7 +744,10 @@ jobs:
           retention-days: 1
 
   # The brands' screenshots as the one `gallery-screenshots` artifact the
-  # refresh and the release pull request download (docs/release.md).
+  # refresh and the release pull request download (docs/release.md). It
+  # keeps the brands' artifacts, which expire after a day: a re-run of the
+  # run's failed jobs runs this job again and not the captures that passed,
+  # so it merges them again (#651).
   gallery-screenshots:
     name: gallery-screenshots
     needs: [detect, gallery]
@@ -758,7 +761,6 @@ jobs:
           name: gallery-screenshots
           pattern: gallery-screenshots-*
           retention-days: 14
-          delete-merged: true
 
   # ---- Tier 4 ---------------------------------------------------------------
   # Every first-party file of the design library carries the SPDX lines.
