@@ -236,6 +236,22 @@ async fn a_watch_refused_during_sign_out_leaves_the_sign_out_its_page() -> Resul
 {
     // FerroUI #654: the watch's 401 lands while the sign-out form is under way; the form's
     // navigation completes and only the other tab leaves for sign-in with its own return.
+    refused_during_sign_out(&[]).await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_sign_out_form_with_controls_named_target_and_method_still_leaves_its_page()
+-> Result<(), Box<dyn Error>> {
+    // FerroUI #660: a control named `target`, `method` or `getAttribute` shadows the form's
+    // property of that name (HTML, the form element's supported property names), so the watch
+    // reads the content attributes through `Element.prototype`.
+    refused_during_sign_out(&["target", "method", "getAttribute"]).await
+}
+
+/// Submits the sign-out form, holding hidden controls named by `controls`,
+/// while the watch's read is answered `401`, and asserts that the form's tab
+/// shows the signed-out page and the other tab leaves for sign-in.
+async fn refused_during_sign_out(controls: &[&str]) -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {
         return Ok(());
     }
@@ -284,8 +300,16 @@ async fn a_watch_refused_during_sign_out_leaves_the_sign_out_its_page() -> Resul
         browser
             .driver()
             .execute(
-                "arguments[0].form.requestSubmit(arguments[0]);",
-                vec![sign_out.to_json()?],
+                "const form = arguments[0].form;
+                 for (const name of arguments[1]) {
+                   const control = document.createElement('input');
+                   control.type = 'hidden';
+                   control.name = name;
+                   control.value = name === 'method' ? 'dialog' : 'elsewhere';
+                   form.append(control);
+                 }
+                 form.requestSubmit(arguments[0]);",
+                vec![sign_out.to_json()?, serde_json::to_value(controls)?],
             )
             .await?;
         browser
