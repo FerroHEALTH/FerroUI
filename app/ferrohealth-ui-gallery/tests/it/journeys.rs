@@ -1846,6 +1846,63 @@ async fn a_control_tabbed_to_above_the_fold_lands_below_the_sticky_top_bar()
     .await
 }
 
+/// Measures the top bar's status pill on the forms page at eight widths,
+/// once the page's modules have enhanced it, with every request `late`
+/// milliseconds late when it is set (F12).
+async fn top_bar_status(
+    browser: &Browser,
+    gallery: &Gallery,
+    late: Option<u32>,
+) -> Result<(), Box<dyn Error>> {
+    if let Some(latency) = late {
+        browser.late(latency).await?;
+    }
+    for width in [390, 640, 768, 900, 1024, 1100, 1280, 1440] {
+        window(browser, width, 900).await?;
+        browser.goto(&gallery.url("/ferroehr/forms")).await?;
+        browser.element(By::Css("main h1")).await?;
+        browser.ready().await?;
+        let measured = browser
+            .driver()
+            .execute(
+                r"const pill = document.querySelector('.fui-topbar-end .fui-topbar-status');
+                const words = pill.querySelector('.fui-roomy-text');
+                const end = document.querySelector('.fui-topbar-end').getBoundingClientRect();
+                const middle = document.querySelector('.fui-topbar-middle');
+                const box = pill.getBoundingClientRect();
+                const search = middle.getBoundingClientRect();
+                const clear = middle.offsetTop !== pill.offsetTop
+                  ? true
+                  : box.left >= search.right;
+                const read = words.getBoundingClientRect();
+                return [pill.getClientRects().length > 0, read.width > 1,
+                  pill.scrollWidth <= pill.clientWidth + 1, end.right <= document.documentElement.clientWidth + 0.5,
+                  clear, words.textContent];",
+                vec![],
+            )
+            .await?;
+        let (shown, worded, whole, inside, clear, name): (bool, bool, bool, bool, bool, String) =
+            serde_json::from_value(measured.json().clone())?;
+        assert!(shown, "the status pill keeps its shape at {width} px");
+        assert_eq!("Library up", name, "the words stay its name at {width} px");
+        assert!(whole, "the status pill is cut short at {width} px");
+        assert!(
+            inside,
+            "the top bar's end runs past the window at {width} px"
+        );
+        assert!(
+            clear,
+            "the status pill overlaps the search box at {width} px"
+        );
+        assert_eq!(
+            width >= 1024,
+            worded,
+            "the words show from 64 rem up alone, at {width} px"
+        );
+    }
+    browser.console_clean("the top bar status").await
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn the_top_bar_status_keeps_its_shape_and_shows_its_words_from_64_rem()
 -> Result<(), Box<dyn Error>> {
@@ -1854,46 +1911,18 @@ async fn the_top_bar_status_keeps_its_shape_and_shows_its_words_from_64_rem()
         return Ok(());
     }
     let gallery = Gallery::start().await?;
-    with_browser(async |browser| {
-        for width in [390, 640, 768, 900, 1024, 1100, 1280, 1440] {
-            window(browser, width, 900).await?;
-            browser.goto(&gallery.url("/ferroehr/forms")).await?;
-            browser.element(By::Css("main h1")).await?;
-            let measured = browser
-                .driver()
-                .execute(
-                    r"const pill = document.querySelector('.fui-topbar-end .fui-topbar-status');
-                    const words = pill.querySelector('.fui-roomy-text');
-                    const end = document.querySelector('.fui-topbar-end').getBoundingClientRect();
-                    const middle = document.querySelector('.fui-topbar-middle');
-                    const box = pill.getBoundingClientRect();
-                    const search = middle.getBoundingClientRect();
-                    const clear = middle.offsetTop !== pill.offsetTop
-                      ? true
-                      : box.left >= search.right;
-                    const read = words.getBoundingClientRect();
-                    return [pill.getClientRects().length > 0, read.width > 1,
-                      pill.scrollWidth <= pill.clientWidth + 1, end.right <= document.documentElement.clientWidth + 0.5,
-                      clear, words.textContent];",
-                    vec![],
-                )
-                .await?;
-            let (shown, worded, whole, inside, clear, name): (bool, bool, bool, bool, bool, String) =
-                serde_json::from_value(measured.json().clone())?;
-            assert!(shown, "the status pill keeps its shape at {width} px");
-            assert_eq!("Library up", name, "the words stay its name at {width} px");
-            assert!(whole, "the status pill is cut short at {width} px");
-            assert!(inside, "the top bar's end runs past the window at {width} px");
-            assert!(clear, "the status pill overlaps the search box at {width} px");
-            assert_eq!(
-                width >= 1024,
-                worded,
-                "the words show from 64 rem up alone, at {width} px"
-            );
-        }
-        browser.console_clean("the top bar status").await
-    })
-    .await
+    with_browser(async |browser| top_bar_status(browser, &gallery, None).await).await
+}
+
+// The same with the modules 400 ms late, as on a loaded machine (#642).
+#[tokio::test(flavor = "multi_thread")]
+async fn the_top_bar_status_keeps_its_shape_when_its_modules_arrive_late()
+-> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| top_bar_status(browser, &gallery, Some(400)).await).await
 }
 
 #[tokio::test(flavor = "multi_thread")]

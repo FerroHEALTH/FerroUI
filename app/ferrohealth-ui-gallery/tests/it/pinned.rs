@@ -10,7 +10,7 @@
 
 use std::error::Error;
 
-use serde_json::{Value, json};
+use serde_json::Value;
 
 use crate::browser::with_browser;
 use crate::journeys_enabled;
@@ -50,20 +50,7 @@ async fn pinned(
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
         if let Some(latency) = late {
-            let cdp = browser.driver().cdp();
-            cdp.send_raw("Network.enable", json!({})).await?;
-            cdp.send_raw("Network.setCacheDisabled", json!({ "cacheDisabled": true }))
-                .await?;
-            cdp.send_raw(
-                "Network.emulateNetworkConditions",
-                json!({
-                    "offline": false,
-                    "latency": latency,
-                    "downloadThroughput": -1,
-                    "uploadThroughput": -1
-                }),
-            )
-            .await?;
+            browser.late(latency).await?;
         }
         browser.goto(&gallery.url(page)).await?;
         let answer = browser.driver().execute_async(&script, Vec::new()).await?;

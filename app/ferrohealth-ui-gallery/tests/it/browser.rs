@@ -315,6 +315,51 @@ impl Browser {
         Ok(())
     }
 
+    /// Makes every request the page sends wait `latency` milliseconds, with
+    /// nothing from the cache, so the modules arrive after the page has
+    /// drawn, as on a loaded machine (#638).
+    pub(crate) async fn late(&self, latency: u32) -> Result<(), Box<dyn Error>> {
+        let cdp = self.driver.cdp();
+        cdp.send_raw("Network.enable", json!({})).await?;
+        cdp.send_raw("Network.setCacheDisabled", json!({ "cacheDisabled": true }))
+            .await?;
+        cdp.send_raw(
+            "Network.emulateNetworkConditions",
+            json!({
+                "offline": false,
+                "latency": latency,
+                "downloadThroughput": -1,
+                "uploadThroughput": -1
+            }),
+        )
+        .await?;
+        Ok(())
+    }
+
+    /// Waits until the loader has marked every element that asks for a
+    /// module `data-fui-ready`, and fails naming the jobs left when the
+    /// modules do not all enhance (#638).
+    pub(crate) async fn ready(&self) -> Result<(), Box<dyn Error>> {
+        let left: Vec<String> = self
+            .driver
+            .execute_async(
+                r#"const done = arguments[arguments.length - 1];
+                const waiting = () => [...document.querySelectorAll("[data-fui]:not([data-fui-ready])")];
+                (async () => {
+                  for (let n = 0; n < 600 && waiting().length; n++) await new Promise((r) => requestAnimationFrame(r));
+                  done(waiting().map((e) => e.dataset.fui));
+                })();"#,
+                Vec::new(),
+            )
+            .await?
+            .convert()?;
+        if left.is_empty() {
+            Ok(())
+        } else {
+            Err(format!("not enhanced: {left:?}").into())
+        }
+    }
+
     /// Drains the browser log and returns every `SEVERE` entry it held since
     /// the last call, each as its level and message.
     pub(crate) async fn console_errors(&self) -> Result<Vec<String>, Box<dyn Error>> {
@@ -358,15 +403,15 @@ impl Browser {
         Ok(())
     }
 
-    /// Waits until the page's loader runs: the root element carries its
-    /// mark (`ferrohealth_ui::script::MARK`). The loader writes it before
-    /// any module has arrived, so a journey that drives a control whose
-    /// module changes nothing it can see waits for the control's
-    /// `ferrohealth_ui::script::READY` too.
+    /// Waits until the page's loader has run and every module the page
+    /// asked for has enhanced its element ([`Self::ready`]). The loader
+    /// writes its mark (`ferrohealth_ui::script::MARK`) before any module
+    /// has arrived, so the mark alone let a journey send an event no
+    /// listener heard yet (#642).
     pub(crate) async fn hydrated(&self) -> Result<(), Box<dyn Error>> {
         self.element(By::Css(format!("html[{}]", ferrohealth_ui::script::MARK)))
             .await?;
-        Ok(())
+        self.ready().await
     }
 
     /// Waits until the page's layout holds still: its fonts loaded
@@ -572,4 +617,67 @@ where
     };
     browser.quit().await?;
     outcome
+}
+
+/// The test group `.config/nextest.toml` caps at four threads, since more
+/// browsers at once starve each other's renderers (#642).
+const BROWSER_GROUP: &str = "test-group = 'browser'";
+
+// Every journey lives in this binary, so the browser group holds the whole
+// binary: a group that names modules one by one misses each new one, and
+// those then start a browser per CPU (#642).
+#[test]
+fn every_test_of_this_binary_runs_in_the_capped_browser_group() -> Result<(), Box<dyn Error>> {
+    let config = std::fs::read_to_string(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.config/nextest.toml"),
+    )?;
+    let lines: Vec<&str> = config.lines().collect();
+    let at = lines
+        .iter()
+        .position(|line| line.trim() == BROWSER_GROUP)
+        .ok_or("an override puts tests in the browser group")?;
+    let filter = at
+        .checked_sub(1)
+        .and_then(|before| lines.get(before))
+        .ok_or("the browser override has a filter")?;
+    assert_eq!(
+        "filter = 'package(ferrohealth-ui-gallery) & binary(it)'",
+        filter.trim(),
+        "the browser group holds every test of the gallery's test binary"
+    );
+    assert!(
+        config.contains("browser = { max-threads = 4 }"),
+        "the browser group runs four at once"
+    );
+    Ok(())
+}
+
+// A journey waits on `hydrated` before it sends an event, so it holds every
+// module enhanced, even when each one arrives 400 ms late (#642).
+#[tokio::test(flavor = "multi_thread")]
+async fn hydrated_holds_every_module_enhanced_when_the_modules_arrive_late()
+-> Result<(), Box<dyn Error>> {
+    if !crate::journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = crate::stack::Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.late(400).await?;
+        browser.goto(&gallery.url("/ferrobridge/forms")).await?;
+        browser.hydrated().await?;
+        let waiting: u64 = browser
+            .driver()
+            .execute(
+                "return document.querySelectorAll('[data-fui]:not([data-fui-ready])').length;",
+                Vec::new(),
+            )
+            .await?
+            .convert()?;
+        assert_eq!(
+            0, waiting,
+            "every element that asked for a module is enhanced"
+        );
+        Ok(())
+    })
+    .await
 }
