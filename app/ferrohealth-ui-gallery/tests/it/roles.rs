@@ -101,26 +101,6 @@ async fn rendered(browser: &Browser, element: &WebElement) -> Result<bool, Box<d
         .convert()?)
 }
 
-/// Waits until the loader has marked every element that asks for a module
-/// `data-fui-ready`, so what a module draws is there to read.
-async fn ready(browser: &Browser) -> Result<(), Box<dyn Error>> {
-    let left: Vec<String> = browser
-        .driver()
-        .execute_async(
-            r#"const done = arguments[arguments.length - 1];
-            const waiting = () => [...document.querySelectorAll("[data-fui]:not([data-fui-ready])")];
-            (async () => {
-              for (let n = 0; n < 600 && waiting().length; n++) await new Promise((r) => requestAnimationFrame(r));
-              done(waiting().map((e) => e.dataset.fui));
-            })();"#,
-            Vec::new(),
-        )
-        .await?
-        .convert()?;
-    assert!(left.is_empty(), "not enhanced: {left:?}");
-    Ok(())
-}
-
 /// Every page and the live regions on it, each a component's own.
 const LIVE: &[(&str, &[&str])] = &[
     (
@@ -171,7 +151,7 @@ async fn a_live_region_is_an_output_the_tree_reads_as_a_polite_status() -> Resul
     with_browser(async |browser| {
         for (page, selectors) in LIVE {
             browser.goto(&gallery.url(page)).await?;
-            ready(browser).await?;
+            browser.ready().await?;
             // An output the module shows later is read as it will be shown.
             browser
                 .driver()
@@ -207,7 +187,7 @@ async fn a_date_pickers_status_line_is_an_output_the_tree_reads_as_a_polite_stat
     with_browser(async |browser| {
         for range in [false, true] {
             browser.goto(&gallery.url("/ferrobridge/forms")).await?;
-            ready(browser).await?;
+            browser.ready().await?;
             let picker = if range {
                 open_range(browser).await?
             } else {
@@ -277,7 +257,7 @@ async fn a_named_box_is_a_section_the_tree_reads_as_a_region_by_its_name()
     with_browser(async |browser| {
         for (page, press, selector) in REGIONS {
             browser.goto(&gallery.url(page)).await?;
-            ready(browser).await?;
+            browser.ready().await?;
             if let Some(press) = press {
                 browser.element(By::Css(*press)).await?.click().await?;
             }
@@ -314,7 +294,7 @@ async fn a_menus_separator_is_an_hr_the_tree_reads_as_a_separator() -> Result<()
     with_browser(async |browser| {
         for page in SEPARATED {
             browser.goto(&gallery.url(page)).await?;
-            ready(browser).await?;
+            browser.ready().await?;
             let count: usize = browser
                 .driver()
                 .execute(

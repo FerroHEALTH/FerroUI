@@ -2,11 +2,14 @@
 # SPDX-License-Identifier: BUSL-1.1
 
 # Each browser journey starts its own Chrome and its own gallery, so at most
-# four run at once: more crash the browser on a laptop or a CI runner.
+# four run at once: more crash the browser on a laptop or a CI runner, or
+# starve each other's renderers past chromedriver's 60 s wait (#642). Every
+# journey lives in the gallery's one test binary, so the group holds the
+# whole binary and a new journey module joins it with no line here.
 # https://nexte.st/docs/configuration/test-groups/
 [test-groups]
 browser = { max-threads = 4 }
 
 [[profile.default.overrides]]
-filter = 'package(ferrohealth-ui-gallery) & (test(/^dates::/) | test(/^journeys::/) | test(/^keys::/) | test(/^menus::/) | test(/^no_script::/) | test(/^painted::/) | test(/^screenshots::(every_page|one_brand)/) | test(/^states::/) | test(/^tabs_and_toasts::/) | test(/^widgets::/))'
+filter = 'package(ferrohealth-ui-gallery) & binary(it)'
 test-group = 'browser'
