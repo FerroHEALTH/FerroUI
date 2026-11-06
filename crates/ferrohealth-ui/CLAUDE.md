@@ -82,7 +82,9 @@ Sheet (idle and absolute timeouts, logout across tabs). The decisions:
   the same; the wire is in `docs/consoles.md` § The session's end.
 - **Leaving:** when the time is up the `session` module asks the route; a
   `401`, or no answer once its own count has run out, loads the console's
-  sign-in page with the page's path and query as `return`.
+  sign-in page with the page's path and query as `return`, unless a form
+  of the page is already loading the next document (a sign-out), which
+  then completes while the other tabs leave.
 - **The warning:** `WARN_AT` seconds (120) before the idle timeout, never
   fewer than 20, a modal `<dialog role="alertdialog">` names the time left
   and offers Stay signed in, which takes the focus, and Sign out; Escape

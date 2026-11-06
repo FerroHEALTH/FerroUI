@@ -7,7 +7,9 @@
 // the focus, and on the user's own input once a minute (only that input
 // extends the session, a POST), opens the warning before the idle timeout,
 // leaves for sign-in with this page as the return address once the
-// session has ended, and tells every other tab over a BroadcastChannel.
+// session has ended, and tells every other tab over a BroadcastChannel. A
+// page whose own form is already loading the next document (a sign-out
+// among them) only tells the others, so its navigation completes.
 // The plan, the messages and the address are the crate's plan, Message and
 // sign_in_address.
 import { clock, elapsed } from "./countdown.js";
@@ -79,6 +81,17 @@ export function goneTo(address) {
   window.location.assign(address);
 }
 
+// Whether the submit `event` loads the next document in this tab: a dialog
+// form closes its dialog and a named target opens another browsing context
+// (HTML, form submission algorithm).
+export function leavesHere(event) {
+  const form = event.target;
+  const by = event.submitter;
+  const method = by && by.hasAttribute("formmethod") ? by.formMethod : form.method;
+  const target = by && by.hasAttribute("formtarget") ? by.formTarget : form.target;
+  return method !== "dialog" && ["", "_self", "_parent", "_top"].includes(target.toLowerCase());
+}
+
 export function enhance(root) {
   if ("fuiEnded" in root.dataset) {
     gone();
@@ -94,6 +107,7 @@ export function enhance(root) {
   let ticker = null;
   let asking = false;
   let leaving = false;
+  let navigating = false;
 
   const now = () => {
     const spent = elapsed(performance.now() - known.at, Date.now() - known.wall);
@@ -115,6 +129,7 @@ export function enhance(root) {
     leaving = true;
     clear();
     if (tellOthers) tell({ ended: true });
+    if (navigating) return;
     window.location.assign(signInAddress(signIn, location.pathname + location.search));
   }
   function learn(left) {
@@ -164,6 +179,9 @@ export function enhance(root) {
       if (!document.hidden) void ask(false);
     });
   }
+  window.addEventListener("submit", (event) => {
+    if (!event.defaultPrevented && leavesHere(event)) navigating = true;
+  });
   for (const kind of ["keydown", "pointerdown"]) {
     window.addEventListener(kind, () => {
       if (!root.open && now().spent >= ACTIVITY_GAP) void ask(true);
