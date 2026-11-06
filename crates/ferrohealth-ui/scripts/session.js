@@ -83,13 +83,16 @@ export function goneTo(address) {
 
 // Whether the submit `event` loads the next document in this tab: a dialog
 // form closes its dialog and a named target opens another browsing context
-// (HTML, form submission algorithm).
+// (HTML, form submission algorithm). The content attributes are read through
+// `Element.prototype`, since a control named `method`, `target` or
+// `getAttribute` shadows the form's own property (HTML, the form element's
+// supported property names).
 export function leavesHere(event) {
   const form = event.target;
   const by = event.submitter;
-  const method = by && by.hasAttribute("formmethod") ? by.formMethod : form.method;
-  const target = by && by.hasAttribute("formtarget") ? by.formTarget : form.target;
-  return method !== "dialog" && ["", "_self", "_parent", "_top"].includes(target.toLowerCase());
+  const read = (element, name) => (Element.prototype.getAttribute.call(element, name) ?? "").toLowerCase();
+  const chosen = (name) => (by && by.hasAttribute("form" + name) ? read(by, "form" + name) : read(form, name));
+  return chosen("method") !== "dialog" && ["", "_self", "_parent", "_top"].includes(chosen("target"));
 }
 
 export function enhance(root) {
