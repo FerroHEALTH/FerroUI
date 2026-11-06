@@ -84,7 +84,9 @@ pub(super) async fn upload(
         .await?;
     let input = browser.element(By::Id("gallery-upload-file")).await?;
     input.send_keys(read.to_string_lossy()).await?;
-    browser.text("output", "synthetic-vital-signs.opt read").await?;
+    browser
+        .text("output", "synthetic-vital-signs.opt read")
+        .await?;
     shot_of(browser, brand, theme, "drop-chosen", &field).await?;
     input.send_keys(refused.to_string_lossy()).await?;
     browser.text("p", "notes.txt was not read").await?;
