@@ -43,9 +43,19 @@ Actions Security Cheat Sheet, SLSA v1.0, OpenSSF Scorecard, and Sigstore.
   formed (`scripts/release/changelog.sh --check`) and every module list
   alphabetical (`scripts/checks/mod-order.sh`), and on a pull request the
   changelog guard and the screenshot-path guard (`parallel-prs.md`), with
-  the labels read when it runs. The `test` job runs the screenshot guard on
-  the refresh pull request, a `release/` branch, the `screenshots` label
-  and a manual run.
+  the labels read when it runs. The first journeys part of the gallery job
+  runs the screenshot guard on the refresh pull request, a `release/`
+  branch, the `screenshots` label and a manual run.
+- **Few jobs, started at once.** Every guard is a step of the one `guards`
+  job, beside the forwarder ratchet and the publish dry run, and the Rust
+  lints are steps of the one `lint` job; `guards`, `lint`, `nextest` and
+  `detect` start together. The hosted runner pool is shared across the
+  organisation, so every job pays a wait for a runner however short its
+  work, and a job that waits on another pays it twice: on a busy day a run
+  of 26 jobs in three waves took 54 minutes for 13 runner-minutes of work
+  (#669). Add a step to one of these jobs before adding a job, and give a
+  guard step `if: ${{ !cancelled() }}` so a run still reports every
+  finding.
 - **What a change reaches** is `scripts/checks/affected.sh`'s answer over
   the paths it touches, read by the `detect` job: a pull request's merge
   commit against its base, a merge group against the queue's base, and
@@ -58,13 +68,19 @@ Actions Security Cheat Sheet, SLSA v1.0, OpenSSF Scorecard, and Sigstore.
   change. Markdown reaches neither. The CI workflow, its actions and the
   classifier itself reach everything, so a change to the gate runs the
   whole gate. Each rule of the table has a case in its `--self-test`.
-- **The merge queue reruns what a merge can break**: clippy, nextest and
-  the doctests, rustdoc, cargo-deny, the publish dry run, the gallery job
-  and the design sets the group reaches. It leaves out the per-file lints
-  (zizmor, actionlint, shellcheck, comment-style, todo-issues, rustfmt,
-  lucide, design-licence): a pull request joins the queue only with
-  `conclusion` green on its head, those lints read each file alone, and the
-  push to `main` runs every one of them again over the merged tree.
+- **The merge queue proves the merged tree, not the browsers**: it reruns
+  clippy, nextest and the doctests, rustdoc, cargo-deny, the publish dry run
+  and the guards that read more than one file. It leaves out the per-file
+  lints (zizmor, actionlint, shellcheck, comment-style, todo-issues,
+  rustfmt, lucide, the design SPDX lines): a pull request joins the queue
+  only with `conclusion` green on its head, those lints read each file
+  alone, and the push to `main` runs every one of them again over the
+  merged tree. It also leaves out the browser gates, the gallery journeys,
+  the capture and the design sets (the owner's family CI target of
+  2026-11-09: a merge-queue run finishes in under 20 minutes): they ran on
+  the pull request, they run again on the push to `main`, and `detect`
+  says so in its summary. No gate changes its threshold, its corpus or its
+  coverage; only the event it runs on.
 - **The Rust build cache** is `Swatinem/rust-cache` inside
   `actions-rust-lang/setup-rust-toolchain`, both pinned by commit, through
   `.github/actions/setup-rust` in every job that compiles; only `main`
