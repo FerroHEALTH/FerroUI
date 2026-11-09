@@ -1,14 +1,12 @@
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 
-# CI in three tiers (no specification governs this: our own design).
+# CI in four tiers (no specification governs this: our own design).
 #
-#   1. The workflow, shell and guard tier needs no Rust and runs on every
-#      change.
-#   2. The Rust tier runs when the workspace exists (the `detect` job looks
-#      for the root Cargo.toml after checkout, which hashFiles() at `if:` time
-#      cannot): fmt, clippy, nextest with the
-#      contrast test, rustdoc, cargo-deny, the publish dry run.
+#   1. `guards`: every workflow, shell and repository guard, the forwarder
+#      ratchet and the publish dry run, none with a build cache.
+#   2. `lint` (rustfmt, clippy, rustdoc, cargo-deny) and `nextest (with the
+#      contrast test)`, each over the build cache.
 #   3. The gallery tier runs when the change reaches the gallery: the gallery
 #      built with cargo build, then the browser journeys in two parts and,
 #      when the change can move a pixel, the screenshot capture in one job
@@ -17,14 +15,21 @@
 #      and runs its checks in headless Chrome, one job per design set the
 #      change reaches.
 #
+# Tiers 1 and 2 and `detect` start at once. The hosted runner pool is shared
+# across the organisation, so every job pays a wait for a runner however
+# short its work, and a job that waits on another pays it twice: the guards
+# share one job for that reason (#669).
+#
 # What a change reaches is scripts/checks/affected.sh's answer over the
 # paths it touches (the `detect` job); a push to main and a manual run reach
 # everything. A merge-group run leaves out the per-file lints (zizmor,
-# actionlint, shellcheck, comment-style, todo-issues, rustfmt, lucide,
-# design-licence): a pull request enters the queue only with `conclusion`
+# actionlint, shellcheck, comment-style, todo-issues, rustfmt, lucide, the
+# design SPDX lines): a pull request enters the queue only with `conclusion`
 # green on its head, and the push to main runs them again over the merged
-# tree. Every job that builds, tests or renders the merged tree runs in the
-# queue.
+# tree. It also leaves out the browser gates, the gallery journeys, the
+# capture and the design sets, which ran on the pull request and run again
+# on the push to main; `detect` says so in its summary. Every job that
+# builds or tests the merged tree runs in the queue.
 #
 # The `conclusion` job is the single required status check on main.
 name: CI
@@ -51,232 +56,24 @@ concurrency:
 permissions: {}
 
 jobs:
-  # ---- Tier 1 ---------------------------------------------------------------
-  workflow-audit:
-    name: zizmor
-    if: github.event_name != 'merge_group'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
-        with:
-          tool: zizmor@1.31.1
-      - name: Audit .github
-        # GH_TOKEN enables the online audits (impostor-commit verifies every
-        # pinned commit belongs to the repository it names).
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: zizmor --min-severity=low .github/
-
-  workflow-lint:
-    name: actionlint
-    if: github.event_name != 'merge_group'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Lint .github/workflows
-        # The official image, digest-pinned; it bundles the shellcheck that
-        # reads every run: block. SC2016 is excluded alone: every occurrence
-        # here is a jq filter or a printf format.
-        run: |
-          docker run --rm \
-            -v "$PWD:/repo" --workdir /repo \
-            -e SHELLCHECK_OPTS='-e SC2016' \
-            rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 \
-            -color
-
-  shellcheck:
-    name: shellcheck
-    if: github.event_name != 'merge_group'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
-        with:
-          tool: shellcheck@0.11.0
-      - name: Every tracked shell program is clean at severity=style
-        run: git ls-files -z '*.sh' | xargs -0 -r shellcheck --severity=style
-      - name: The release milestone script refuses open items and closes only after every leg
-        run: bash scripts/release/milestone.sh --self-test
-      - name: The crate version guard reads files past the pipe buffer and refuses a missing section
-        run: bash scripts/checks/crate-version-guard.sh --self-test
-      - name: The change classifier, the local gate and the Chrome lock pass their self-tests
-        run: |
-          bash scripts/checks/affected.sh --self-test
-          bash scripts/fast.sh --self-test
-          bash scripts/chrome-lock.sh --self-test
-
-  comment-style:
-    name: comment-style
-    if: github.event_name != 'merge_group'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - run: bash scripts/checks/comment-style.sh --all
-
-  # No string a reader sees in a component outside the catalogs, in the
-  # Rust and in the templates.
-  stray-literals:
-    name: stray-literals
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - run: bash scripts/checks/stray-literals.sh crates/ferrohealth-ui/src crates/ferrohealth-ui/templates app/ferrohealth-ui-gallery/src
-
-  # The markup keeps a console's policy at script-src 'self' and
-  # style-src 'self': no style attribute or element, no inline script or
-  # handler, no javascript: URL; with its self-test.
-  markup-rules:
-    name: markup-rules
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - run: bash scripts/checks/markup-rules.sh --self-test
-      - run: bash scripts/checks/markup-rules.sh crates/ferrohealth-ui/src crates/ferrohealth-ui/templates crates/ferrohealth-ui/scripts app/ferrohealth-ui-gallery/src
-
-  # The script modules within their budget, with no eval, no absolute URL
-  # and no fetch outside the three documented wires; with its self-test.
-  script-budget:
-    name: script-budget
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - run: bash scripts/checks/script-budget.sh --self-test
-      - run: bash scripts/checks/script-budget.sh
-
-  # Code is written once (.claude/rules/rust-style.md, #536): the duplicated
-  # lines jscpd measures in the Rust, the script modules and the templates
-  # may fall and never rise. jscpd runs from its official image, pinned by
-  # digest in docs/VERSIONS.md, and the count and the key of every counted
-  # block are committed beside the guard. A rise fails and names the new
-  # blocks by both places; a fall passes with a note, and
-  # ratchet-tighten.yml lowers the count on main (#566).
-  duplication:
-    name: duplication
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Duplication ratchet self-test
-        run: bash scripts/checks/duplication.sh --self-test
-      - name: The duplicated lines have not risen
-        run: bash scripts/checks/duplication.sh
-
-  # A hand-written Rust file carries at most 800 lines, its inline tests
-  # included (#536). A file over it on the day the guard landed stands in
-  # scripts/checks/file-size.list with its length and may shrink and never
-  # grow; a shrink passes with a note, and ratchet-tighten.yml lowers the
-  # entry on main (#566).
-  file-size:
-    name: file-size
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: File-size ratchet self-test
-        run: bash scripts/checks/file-size.sh --self-test
-      - name: No file over the budget or past its entry
-        run: bash scripts/checks/file-size.sh
-
-  # No function only forwards to another (.claude/rules/rust-style.md,
-  # #578): tools/forwarders lists the functions whose whole body is one
-  # call, and their number may fall and never rise. A rise fails and names
-  # each new forwarder with its target; a fall passes, and
-  # ratchet-tighten.yml lowers the count on main. No rust-cache: the tool
-  # builds proc-macro2, quote, syn and anyhow alone.
-  forwarders:
-    name: forwarders
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-rust
-        with:
-          cache: "false"
-      - name: Forwarder ratchet self-test
-        run: bash scripts/checks/forwarders.sh --self-test
-      - name: The forwarders have not risen
-        run: bash scripts/checks/forwarders.sh
-
-  # Every TODO(#N) names an open issue.
-  todo-issues:
-    name: todo-issues
-    if: github.event_name != 'merge_group'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-      issues: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Every pending-work pointer names an open issue
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        run: bash scripts/checks/todo-issues.sh
-
-  # The guards that keep parallel pull requests off each other's lines (no
-  # specification governs them: our own design): every changelog fragment is
-  # well formed and every module list is alphabetical. On a pull request, the
-  # change adds a fragment and leaves [Unreleased] alone (`no-changelog`
-  # waives the fragment), and commits no screenshot unless it is the refresh
-  # pull request. Labels are read when the job runs, and pr-guards.yml re-runs
-  # the job when `no-changelog` is added or removed (#377).
+  # Every guard of the repository in one job, so the run pays one runner
+  # queue wait for them (#669). Each step runs when an earlier one failed, so
+  # a run still reports every finding; the per-file lints leave out a merge
+  # group (see the header). The parallel-PR guards keep parallel pull
+  # requests off each other's lines (no specification governs them: our own
+  # design): every changelog fragment is well formed and every module list is
+  # alphabetical. On a pull request, the change adds a fragment and leaves
+  # [Unreleased] alone (`no-changelog` waives the fragment), and commits no
+  # screenshot unless it is the refresh pull request. Labels are read when
+  # the job runs, and pr-guards.yml re-runs the job when `no-changelog` is
+  # added or removed (#377).
   guards:
     name: guards
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     permissions:
       contents: read
+      issues: read
       pull-requests: read
     steps:
       # The whole history of commits and trees, each old blob fetched when a
@@ -286,7 +83,12 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
           filter: blob:none
+      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
+        if: github.event_name != 'merge_group'
+        with:
+          tool: zizmor@1.31.1,shellcheck@0.11.0
       - name: The guards prove themselves over stub repositories
+        if: ${{ !cancelled() }}
         run: |
           set -euo pipefail
           bash scripts/release/changelog.sh --self-test
@@ -295,17 +97,22 @@ jobs:
           bash scripts/release/plan.sh --self-test
           bash scripts/checks/screenshot-paths.sh --self-test
           bash scripts/checks/mod-order.sh --self-test
-      - run: bash scripts/release/changelog.sh --check
+      - name: Every changelog fragment is well formed
+        if: ${{ !cancelled() }}
+        run: bash scripts/release/changelog.sh --check
       # Regulation (EU) 2024/2847 Annex I Part II(2), (4) and (8), on the
       # fragments assembled as the next release will carry them: every
       # Security entry names its GHSA advisory or VEX statement, and a
       # Security section beside other changes opens with its reason. The
       # release plan runs the same checks over the section it cuts.
       - name: The changelog the next release carries holds its structure and Security rules
+        if: ${{ !cancelled() }}
         run: bash scripts/checks/changelog-unreleased.sh
-      - run: bash scripts/checks/mod-order.sh
+      - name: Every module list is alphabetical
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/mod-order.sh
       - name: The pull request adds a fragment and commits no screenshot
-        if: github.event_name == 'pull_request' && github.event.pull_request.user.type != 'Bot'
+        if: ${{ !cancelled() && (github.event_name == 'pull_request' && github.event.pull_request.user.type != 'Bot') }}
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -324,6 +131,168 @@ jobs:
           else
             bash scripts/checks/screenshot-paths.sh "$BASE" "$HEAD"
           fi
+      - name: zizmor audits .github
+        if: ${{ !cancelled() && github.event_name != 'merge_group' }}
+        # GH_TOKEN enables the online audits (impostor-commit verifies every
+        # pinned commit belongs to the repository it names).
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: zizmor --min-severity=low .github/
+      - name: actionlint lints .github/workflows
+        if: ${{ !cancelled() && github.event_name != 'merge_group' }}
+        # The official image, digest-pinned; it bundles the shellcheck that
+        # reads every run: block. SC2016 is excluded alone: every occurrence
+        # here is a jq filter or a printf format.
+        run: |
+          docker run --rm \
+            -v "$PWD:/repo" --workdir /repo \
+            -e SHELLCHECK_OPTS='-e SC2016' \
+            rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 \
+            -color
+      - name: Every tracked shell program is clean at severity=style
+        if: ${{ !cancelled() && github.event_name != 'merge_group' }}
+        run: git ls-files -z '*.sh' | xargs -0 -r shellcheck --severity=style
+      - name: The release milestone script refuses open items and closes only after every leg
+        if: ${{ !cancelled() && github.event_name != 'merge_group' }}
+        run: bash scripts/release/milestone.sh --self-test
+      - name: The crate version guard reads files past the pipe buffer and refuses a missing section
+        if: ${{ !cancelled() && github.event_name != 'merge_group' }}
+        run: bash scripts/checks/crate-version-guard.sh --self-test
+      - name: The change classifier, the local gate and the Chrome lock pass their self-tests
+        if: ${{ !cancelled() && github.event_name != 'merge_group' }}
+        run: |
+          bash scripts/checks/affected.sh --self-test
+          bash scripts/fast.sh --self-test
+          bash scripts/chrome-lock.sh --self-test
+      - name: Comment style
+        if: ${{ !cancelled() && github.event_name != 'merge_group' }}
+        run: bash scripts/checks/comment-style.sh --all
+      # No string a reader sees in a component outside the catalogs, in the
+      # Rust and in the templates.
+      - name: No stray literal
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/stray-literals.sh crates/ferrohealth-ui/src crates/ferrohealth-ui/templates app/ferrohealth-ui-gallery/src
+      # The markup keeps a console's policy at script-src 'self' and
+      # style-src 'self': no style attribute or element, no inline script or
+      # handler, no javascript: URL; with its self-test.
+      - name: Markup rules self-test
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/markup-rules.sh --self-test
+      - name: Markup rules
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/markup-rules.sh crates/ferrohealth-ui/src crates/ferrohealth-ui/templates crates/ferrohealth-ui/scripts app/ferrohealth-ui-gallery/src
+      # The script modules within their budget, with no eval, no absolute URL
+      # and no fetch outside the three documented wires; with its self-test.
+      - name: Script budget self-test
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/script-budget.sh --self-test
+      - name: Script budget
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/script-budget.sh
+      # Code is written once (.claude/rules/rust-style.md, #536): the duplicated
+      # lines jscpd measures in the Rust, the script modules and the templates
+      # may fall and never rise. jscpd runs from its official image, pinned by
+      # digest in docs/VERSIONS.md, and the count and the key of every counted
+      # block are committed beside the guard. A rise fails and names the new
+      # blocks by both places; a fall passes with a note, and
+      # ratchet-tighten.yml lowers the count on main (#566).
+      - name: Duplication ratchet self-test
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/duplication.sh --self-test
+      - name: The duplicated lines have not risen
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/duplication.sh
+      # A hand-written Rust file carries at most 800 lines, its inline tests
+      # included (#536). A file over it on the day the guard landed stands in
+      # scripts/checks/file-size.list with its length and may shrink and never
+      # grow; a shrink passes with a note, and ratchet-tighten.yml lowers the
+      # entry on main (#566).
+      - name: File-size ratchet self-test
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/file-size.sh --self-test
+      - name: No file over the budget or past its entry
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/file-size.sh
+      # Every TODO(#N) names an open issue.
+      - name: Every pending-work pointer names an open issue
+        if: ${{ !cancelled() && github.event_name != 'merge_group' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: bash scripts/checks/todo-issues.sh
+      # The published Rust advisory VEX is exactly what deny.toml and
+      # security/vex/rust-advisories.toml generate, and every hand-written
+      # OpenVEX document is well formed. No specification governs the gate: our
+      # own design, the one FerroEHR and FerroFED run.
+      # deny.toml and the prose file are TOML, which jq cannot read. Pinned by
+      # version and verified by checksum: this binary decides whether the gate
+      # passes.
+      - name: Install yq
+        if: ${{ !cancelled() }}
+        env:
+          YQ_VERSION: v4.53.3
+          YQ_SHA256: fa52a4e758c63d38299163fbdd1edfb4c4963247918bf9c1c5d31d84789eded4
+        run: |
+          set -euo pipefail
+          curl --proto =https -fsSL --retry 3 --retry-delay 2 --retry-all-errors -o "$RUNNER_TEMP/yq" "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64"
+          echo "${YQ_SHA256}  $RUNNER_TEMP/yq" | sha256sum -c -
+          sudo install -m 0755 "$RUNNER_TEMP/yq" /usr/local/bin/yq
+          yq --version
+      - name: Every accepted advisory has a published VEX justification
+        if: ${{ !cancelled() }}
+        run: |
+          bash scripts/checks/vex-advisories.sh --self-test
+          bash scripts/checks/vex-advisories.sh
+      # The vendored Lucide set is whole: every listed icon and its licence, and
+      # no file the list does not name.
+      - name: The vendored Lucide set is whole
+        if: ${{ !cancelled() && github.event_name != 'merge_group' }}
+        run: bash scripts/vendor/lucide.sh --check
+      # Every first-party file of the design library carries the SPDX lines.
+      - name: Every design file carries the SPDX lines
+        if: ${{ !cancelled() && github.event_name != 'merge_group' }}
+        run: bash scripts/checks/spdx.sh design scripts/checks/spdx.sh
+      # No tracked file keeps an unresolved merge conflict (#610; no
+      # specification governs the guard: our own design).
+      - name: The guard refuses each marker and skips the vendored trees
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/conflict-markers.sh --self-test
+      - name: No tracked file keeps a conflict marker
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/conflict-markers.sh
+      - name: The version, the lock and the changelog agree
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: bash scripts/checks/crate-version-guard.sh "$BASE" "$HEAD"
+      - name: Dependency review
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure
+      # No function only forwards to another (.claude/rules/rust-style.md,
+      # #578): tools/forwarders lists the functions whose whole body is one
+      # call, and their number may fall and never rise. A rise fails and names
+      # each new forwarder with its target; a fall passes, and
+      # ratchet-tighten.yml lowers the count on main. No rust-cache: the tool
+      # builds proc-macro2, quote, syn and anyhow alone.
+      # The dry run restores no cache either: it checks the bytes a publish
+      # would upload.
+      - uses: ./.github/actions/setup-rust
+        if: ${{ !cancelled() }}
+        with:
+          cache: "false"
+      - name: Forwarder ratchet self-test
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/forwarders.sh --self-test
+      - name: The forwarders have not risen
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/forwarders.sh
+      - name: Publish dry run
+        if: ${{ !cancelled() }}
+        run: cargo publish -p ferrohealth-ui --dry-run --locked
 
   detect:
     name: detect
@@ -406,6 +375,18 @@ jobs:
             if [ "$(get gallery)" = true ] || [ "$refresh" = true ]; then gallery=true; fi
             if [ "$(get capture)" = true ] || [ "$refresh" = true ]; then capture=true; fi
           fi
+          design_sets="$(get design)"
+          # The merge queue proves the merged tree builds and passes its
+          # tests; the browser journeys, the capture and the design sweeps
+          # ran on the pull request and run again on the push to main.
+          if [ "$EVENT" = merge_group ]; then
+            gallery=false capture=false design_sets=""
+            {
+              echo "### The browser gates leave out the merge queue"
+              echo
+              echo "The gallery journeys, the screenshot capture and the design sets ran on the pull request and run again on the push to main over the merged tree. The queue runs the guards, clippy, rustdoc, cargo-deny, nextest and the publish dry run."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
           {
             if [ -f Cargo.toml ]; then echo "cargo=true"; else echo "cargo=false"; fi
             echo "gallery=$gallery"
@@ -419,57 +400,66 @@ jobs:
             # GitHub runs at most five macOS jobs at once on this plan, so a
             # change that reaches one or two sets runs each console in two
             # jobs (every other page in one), and a wider change one job per set.
-            get design | tr ' ' '\n' | jq -nRr '
+            printf '%s\n' "$design_sets" | tr ' ' '\n' | jq -nRr '
               [inputs | select(length > 0)]
               | (length <= 2) as $halve
               | map(if $halve and . != "templates" then {set: ., part: "1/2"}, {set: ., part: "2/2"} else {set: ., part: ""} end)
               | "design=" + tojson'
           } | tee -a "$GITHUB_OUTPUT"
 
-  # ---- Tier 2 ---------------------------------------------------------------
-  fmt:
-    name: rustfmt
-    needs: detect
-    if: github.event_name != 'merge_group' && needs.detect.outputs.cargo == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-rust
-        with:
-          components: rustfmt
-          cache: "false"
-      - run: cargo fmt --all --check
-
-  clippy:
-    name: clippy
-    needs: detect
-    if: needs.detect.outputs.cargo == 'true'
+  # ---- Rust ------------------------------------------------------------------
+  lint:
+    name: lint
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: read
+    env:
+      RUSTDOCFLAGS: -D warnings
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-rust
         with:
-          components: clippy
+          components: rustfmt,clippy
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
-      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
+        with:
+          tool: cargo-deny
+      - name: rustfmt
+        if: ${{ !cancelled() && github.event_name != 'merge_group' }}
+        run: cargo fmt --all --check
+      - name: clippy
+        if: ${{ !cancelled() }}
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
       # A console that serves the assets itself builds the library without
       # its axum feature.
-      - run: cargo clippy -p ferrohealth-ui --all-targets --locked --no-default-features -- -D warnings
+      - name: clippy without the axum feature
+        if: ${{ !cancelled() }}
+        run: cargo clippy -p ferrohealth-ui --all-targets --locked --no-default-features -- -D warnings
+      - name: rustdoc
+        if: ${{ !cancelled() }}
+        run: cargo doc --locked --workspace --no-deps --document-private-items
+      - name: cargo-deny
+        if: ${{ !cancelled() }}
+        run: cargo deny check
+      # An `ignore` entry that outlived its finding: cargo-deny reports it as a
+      # warning, so the step above stays green on one; this promotes it to an
+      # error. Here because cargo-deny and the toolchain are installed.
+      - name: No exception for an advisory that no longer fires
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/advisory-exceptions.sh
+      # A VEX statement whose published argument names the wrong dependency
+      # path: compared with the graph cargo resolves, in both directions.
+      - name: Every VEX statement names the real dependency path
+        if: ${{ !cancelled() }}
+        run: |
+          bash scripts/checks/vex-reachability.sh --self-test
+          bash scripts/checks/vex-reachability.sh
 
   test:
     name: nextest (with the contrast test)
-    needs: detect
-    if: needs.detect.outputs.cargo == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -486,171 +476,6 @@ jobs:
           tool: cargo-nextest
       - run: cargo nextest run --workspace --locked
       - run: cargo test --doc --workspace --locked
-      # Every page and state has both images, and no other image is kept:
-      # on the runs that capture the states (the refresh pull request, a
-      # release pull request, the `screenshots` label and a manual run, the
-      # `detect` job's `states`), since a feature pull request commits no
-      # screenshot.
-      - name: The screenshot set is whole
-        if: needs.detect.outputs.states == 'true'
-        env:
-          FERROUI_SCREENSHOT_GUARD: "1"
-        run: cargo nextest run --locked -p ferrohealth-ui-gallery -E 'test(every_shot_has_its_light_and_dark_image)'
-
-  doc:
-    name: rustdoc
-    needs: detect
-    if: needs.detect.outputs.cargo == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    permissions:
-      contents: read
-    env:
-      RUSTDOCFLAGS: -D warnings
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-rust
-        with:
-          cache-save-if: ${{ github.ref == 'refs/heads/main' }}
-      - run: cargo doc --locked --workspace --no-deps --document-private-items
-
-  cargo-deny:
-    name: cargo-deny
-    needs: detect
-    if: needs.detect.outputs.cargo == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-rust
-        with:
-          cache: "false"
-      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
-        with:
-          tool: cargo-deny
-      - run: cargo deny check
-      # An `ignore` entry that outlived its finding: cargo-deny reports it as a
-      # warning, so the step above stays green on one; this promotes it to an
-      # error. Here because cargo-deny and the toolchain are installed.
-      - name: No exception for an advisory that no longer fires
-        run: bash scripts/checks/advisory-exceptions.sh
-      # A VEX statement whose published argument names the wrong dependency
-      # path: compared with the graph cargo resolves, in both directions.
-      - name: Every VEX statement names the real dependency path
-        run: |
-          bash scripts/checks/vex-reachability.sh --self-test
-          bash scripts/checks/vex-reachability.sh
-
-  # The published Rust advisory VEX is exactly what deny.toml and
-  # security/vex/rust-advisories.toml generate, and every hand-written
-  # OpenVEX document is well formed. No specification governs the gate: our
-  # own design, the one FerroEHR and FerroFED run.
-  vex:
-    name: vex
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      # deny.toml and the prose file are TOML, which jq cannot read. Pinned by
-      # version and verified by checksum: this binary decides whether the gate
-      # passes.
-      - name: Install yq
-        env:
-          YQ_VERSION: v4.53.3
-          YQ_SHA256: fa52a4e758c63d38299163fbdd1edfb4c4963247918bf9c1c5d31d84789eded4
-        run: |
-          set -euo pipefail
-          curl --proto =https -fsSL --retry 3 --retry-delay 2 --retry-all-errors -o "$RUNNER_TEMP/yq" "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64"
-          echo "${YQ_SHA256}  $RUNNER_TEMP/yq" | sha256sum -c -
-          sudo install -m 0755 "$RUNNER_TEMP/yq" /usr/local/bin/yq
-          yq --version
-      - name: Every accepted advisory has a published VEX justification
-        run: |
-          bash scripts/checks/vex-advisories.sh --self-test
-          bash scripts/checks/vex-advisories.sh
-
-  # The vendored Lucide set is whole: every listed icon and its licence, and
-  # no file the list does not name.
-  lucide:
-    name: lucide
-    needs: detect
-    if: github.event_name != 'merge_group' && needs.detect.outputs.cargo == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - run: bash scripts/vendor/lucide.sh --check
-
-  # No cache: the dry run checks the bytes a publish would upload.
-  publish-dry-run:
-    name: publish-dry-run
-    needs: detect
-    if: needs.detect.outputs.cargo == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-rust
-        with:
-          cache: "false"
-      - run: cargo publish -p ferrohealth-ui --dry-run --locked
-
-  crate-version-guard:
-    name: crate-version-guard
-    needs: detect
-    if: github.event_name == 'pull_request' && needs.detect.outputs.cargo == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      # The whole history of commits and trees, each old blob fetched when a
-      # guard reads it: the screenshots of every release stay on the server (#497).
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-          filter: blob:none
-      - name: The version, the lock and the changelog agree
-        env:
-          BASE: ${{ github.event.pull_request.base.sha }}
-          HEAD: ${{ github.event.pull_request.head.sha }}
-        run: bash scripts/checks/crate-version-guard.sh "$BASE" "$HEAD"
-
-  dependency-review:
-    name: dependency-review
-    needs: detect
-    if: github.event_name == 'pull_request' && needs.detect.outputs.cargo == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
-        with:
-          fail-on-severity: high
-          comment-summary-in-pr: on-failure
 
   # ---- Tier 3 ---------------------------------------------------------------
   # The gallery in headless Chrome for Testing at the pinned release, in
@@ -690,6 +515,17 @@ jobs:
       # The gallery is a server and its pages' script modules are the
       # library's: a cargo build is the whole build.
       - run: cargo build --locked -p ferrohealth-ui-gallery
+      # Every page and state has both images, and no other image is kept:
+      # on the runs that capture the states (the refresh pull request, a
+      # release pull request, the `screenshots` label and a manual run, the
+      # `detect` job's `states`), since a feature pull request commits no
+      # screenshot. The first journeys part runs it, since a run that
+      # captures the states always runs the journeys.
+      - name: The screenshot set is whole
+        if: matrix.part == 'journeys' && matrix.partition == '1/2' && needs.detect.outputs.states == 'true'
+        env:
+          FERROUI_SCREENSHOT_GUARD: "1"
+        run: cargo nextest run --locked -p ferrohealth-ui-gallery -E 'test(every_shot_has_its_light_and_dark_image)'
       # Every test of the gallery's package, split by count into the parts
       # (nextest, --partition), so each part opens its share of the browsers.
       - name: Run the journeys
@@ -762,21 +598,6 @@ jobs:
           pattern: gallery-screenshots-*
           retention-days: 14
 
-  # ---- Tier 4 ---------------------------------------------------------------
-  # Every first-party file of the design library carries the SPDX lines.
-  design-licence:
-    name: design-licence
-    if: github.event_name != 'merge_group'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - run: bash scripts/checks/spdx.sh design scripts/checks/spdx.sh
-
   # The design pages of each set the change reaches, built and checked:
   # links, the BSN eleven-proof, plurals and one-sentence intros, then
   # overflow and broken words, hover stability, contrast, selects, popups
@@ -815,56 +636,19 @@ jobs:
           FERROUI_DESIGN_PART: ${{ matrix.part }}
         run: bash design/tools/check.sh "$DESIGN_SET"
 
-  # No tracked file keeps an unresolved merge conflict (#610; no
-  # specification governs the guard: our own design).
-  conflict-markers:
-    name: conflict-markers
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: The guard refuses each marker and skips the vendored trees
-        run: bash scripts/checks/conflict-markers.sh --self-test
-      - run: bash scripts/checks/conflict-markers.sh
-
   # ---- The single required check --------------------------------------------
   # It needs every other job and runs on always(), so it reports even when a
   # gated tier is skipped; it fails when a needed job failed or was cancelled.
   conclusion:
     name: conclusion
     needs:
-      - workflow-audit
-      - workflow-lint
-      - shellcheck
-      - comment-style
-      - stray-literals
-      - markup-rules
-      - script-budget
-      - duplication
-      - file-size
-      - forwarders
-      - todo-issues
       - guards
       - detect
-      - fmt
-      - clippy
+      - lint
       - test
-      - doc
-      - cargo-deny
-      - vex
-      - lucide
-      - publish-dry-run
-      - crate-version-guard
-      - dependency-review
       - gallery
       - gallery-screenshots
-      - design-licence
       - design
-      - conflict-markers
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5

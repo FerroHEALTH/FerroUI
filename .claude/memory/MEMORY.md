@@ -32,6 +32,9 @@
   leg; check it after a manual or recovery release; owner 2026-10-19 (#124)
 - [Console UI mode](reactive-console-ui.md): owner 2026-10-29, server-rendered HTML with a little plain JavaScript, reversing the hydrated mode of 2026-10-25 (FerroUI #510); confirmed 2026-10-31 with its reopen triggers (#545)
 - [Actions open no pull requests](actions-open-no-prs.md): a scheduled lane pushes its own branch and a maintainer opens the pull request; request bodies go through `gh api --input`; owner 2026-11-02
+- [CI under 20 minutes](ci-under-20-minutes.md): pull-request and merge-queue
+  CI each under 20 minutes; few jobs started at once; the queue leaves the
+  browser gates to the pull request and `main`; owner 2026-11-09
 
 ## Family rules (carried in every FerroHEALTH repository, 2026-11-09)
 
