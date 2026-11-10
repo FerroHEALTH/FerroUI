@@ -16,10 +16,21 @@
 //! refused Content-Security-Policy, or a resource the page could not load.
 //! Every wait polls the page for an element or a state until
 //! [`WAIT`] runs out, never a fixed sleep.
+//!
+//! A session keeps the trail of the commands it sent last and the step the
+//! journey named last ([`Browser::step`]), and [`with_browser`] puts both
+//! into the error of a journey that fails, so the failure names its step.
+//! When [`DRIVER_LOGS_ENV`] names a directory, each session's chromedriver
+//! writes its log there, and the log of a journey that passes is deleted.
 
+use std::collections::VecDeque;
 use std::error::Error;
+use std::fmt;
+use std::panic::Location;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
+use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::{Mutex, PoisonError};
 use std::time::Duration;
 
 use serde_json::json;
@@ -35,6 +46,14 @@ const WEBDRIVER_ENV: &str = "FERROUI_WEBDRIVER";
 /// The environment variable naming the chromedriver binary, when it is not
 /// the one in [`installed`], or else [`CHROMEDRIVER`] on `PATH`.
 const CHROMEDRIVER_ENV: &str = "FERROUI_CHROMEDRIVER";
+
+/// The environment variable naming the directory each session's
+/// chromedriver writes its log into, at every level, as one file per
+/// session named after its test.
+const DRIVER_LOGS_ENV: &str = "FERROUI_DRIVER_LOGS";
+
+/// How many commands a failure names, the newest last.
+const TRAIL: usize = 8;
 
 /// The chromedriver binary looked up on `PATH`.
 const CHROMEDRIVER: &str = "chromedriver";
@@ -127,10 +146,10 @@ impl Chromedriver {
     /// needs the same port free on IPv6, and exits when another process
     /// holds it there. Only that exit starts a new chromedriver, at most
     /// [`DRIVER_ATTEMPTS`] in all, and each one says why on standard error.
-    async fn start() -> Result<(Self, String), Box<dyn Error>> {
+    async fn start(log: Option<&Path>) -> Result<(Self, String), Box<dyn Error>> {
         let mut attempt = 1;
         loop {
-            match Self::start_once().await {
+            match Self::start_once(log).await {
                 Ok(started) => return Ok(started),
                 Err(DriverStart::PortTaken(line)) if attempt < DRIVER_ATTEMPTS => {
                     note_port_taken(attempt, &line);
@@ -148,8 +167,8 @@ impl Chromedriver {
     }
 
     /// Starts one chromedriver on a port the system picks and waits until it
-    /// says it listens.
-    async fn start_once() -> Result<(Self, String), DriverStart> {
+    /// says it listens, appending its log to `log` when one is named.
+    async fn start_once(log: Option<&Path>) -> Result<(Self, String), DriverStart> {
         let binary = std::env::var_os(CHROMEDRIVER_ENV)
             .map(PathBuf::from)
             .or_else(|| installed().0)
@@ -157,6 +176,13 @@ impl Chromedriver {
         let mut command = Command::new(&binary);
         #[cfg(unix)]
         command.process_group(0);
+        if let Some(log) = log {
+            command.arg(format!("--log-path={}", log.display())).args([
+                "--log-level=ALL",
+                "--append-log",
+                "--readable-timestamp",
+            ]);
+        }
         let mut child = command
             .arg("--port=0")
             .stdin(Stdio::null())
@@ -238,6 +264,145 @@ impl Drop for Chromedriver {
     }
 }
 
+/// The file the chromedriver of a session started now logs to, under the
+/// directory [`DRIVER_LOGS_ENV`] names, or `None` when it names none.
+///
+/// The file is named after the test, which nextest runs on a thread of
+/// that name, with the process id and a count, since one test may open
+/// more than one session.
+fn driver_log() -> Result<Option<PathBuf>, Box<dyn Error>> {
+    static SESSIONS: AtomicU32 = AtomicU32::new(0);
+    let Some(directory) = std::env::var_os(DRIVER_LOGS_ENV) else {
+        return Ok(None);
+    };
+    let directory = PathBuf::from(directory);
+    std::fs::create_dir_all(&directory)
+        .map_err(|error| format!("{} is no directory: {error}", directory.display()))?;
+    let test: String = std::thread::current()
+        .name()
+        .unwrap_or("journey")
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '_' {
+                c
+            } else {
+                '-'
+            }
+        })
+        .collect();
+    let session = SESSIONS.fetch_add(1, Ordering::Relaxed);
+    Ok(Some(directory.join(format!(
+        "{test}.{}.{session}.log",
+        std::process::id()
+    ))))
+}
+
+/// What a session did last: the step the journey named last and the
+/// commands it sent since, the newest last, each with how many times in a
+/// row it was sent.
+#[derive(Debug, Default)]
+struct Trail {
+    /// The step [`Browser::step`] named last.
+    step: Option<String>,
+    /// The last [`TRAIL`] commands.
+    commands: VecDeque<(String, u32)>,
+}
+
+impl Trail {
+    /// Names the step the journey takes next and starts its commands afresh.
+    fn name(&mut self, step: &str) {
+        self.step = Some(step.to_owned());
+        self.commands.clear();
+    }
+
+    /// Adds `command`, counting it again when it is the one sent last, as a
+    /// wait's polls are, and keeps the last [`TRAIL`].
+    fn push(&mut self, command: String) {
+        if let Some((last, times)) = self.commands.back_mut()
+            && *last == command
+        {
+            *times = times.saturating_add(1);
+            return;
+        }
+        if self.commands.len() == TRAIL {
+            self.commands.pop_front();
+        }
+        self.commands.push_back((command, 1));
+    }
+
+    /// The failure of `error` in this trail's step, with its commands and
+    /// the chromedriver `log`.
+    fn failure(&self, error: Box<dyn Error>, log: Option<PathBuf>) -> Failure {
+        Failure {
+            error,
+            step: self.step.clone(),
+            commands: self
+                .commands
+                .iter()
+                .map(|(command, times)| match times {
+                    1 => command.clone(),
+                    _ => format!("{command} ({times} times)"),
+                })
+                .collect(),
+            log,
+        }
+    }
+}
+
+/// A journey that failed: its error, the step it failed in and the
+/// commands it sent last.
+pub(crate) struct Failure {
+    /// The error the journey returned.
+    error: Box<dyn Error>,
+    /// The step the journey named last, if it named one.
+    step: Option<String>,
+    /// The commands it sent last, the newest last.
+    commands: Vec<String>,
+    /// Where its chromedriver logged, if it logged.
+    log: Option<PathBuf>,
+}
+
+impl fmt::Display for Failure {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let step = self
+            .step
+            .as_deref()
+            .unwrap_or("the journey's first, unnamed");
+        match self.commands.last() {
+            Some(command) => write!(f, "the journey failed in step {step}, at {command}"),
+            None => write!(
+                f,
+                "the journey failed in step {step}, before its first command"
+            ),
+        }
+    }
+}
+
+impl fmt::Debug for Failure {
+    /// Writes the step, the error and the trail, as a test that returns the
+    /// failure prints it.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "{self}: {}", self.error)?;
+        writeln!(f, "its last commands, the newest last:")?;
+        for command in &self.commands {
+            writeln!(f, "  {command}")?;
+        }
+        match &self.log {
+            Some(log) => write!(f, "chromedriver's log: {}", log.display()),
+            None => write!(
+                f,
+                "chromedriver kept no log (set {DRIVER_LOGS_ENV} to keep one)"
+            ),
+        }
+    }
+}
+
+impl Error for Failure {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        Some(self.error.as_ref())
+    }
+}
+
 /// A browser session a journey drives.
 #[derive(Debug)]
 pub(crate) struct Browser {
@@ -246,6 +411,11 @@ pub(crate) struct Browser {
     /// The chromedriver of this session alone, unless [`WEBDRIVER_ENV`]
     /// named a running one.
     chromedriver: Option<Chromedriver>,
+    /// Where that chromedriver logs, when [`DRIVER_LOGS_ENV`] names a
+    /// directory.
+    log: Option<PathBuf>,
+    /// The step and the commands a failure names.
+    trail: Mutex<Trail>,
 }
 
 impl Browser {
@@ -279,11 +449,12 @@ impl Browser {
                 .ok_or_else(|| format!("{} is no UTF-8 path", chrome.display()))?;
             capabilities.set_binary(chrome)?;
         }
-        let (chromedriver, endpoint) = match std::env::var(WEBDRIVER_ENV) {
-            Ok(endpoint) => (None, endpoint),
+        let (chromedriver, endpoint, log) = match std::env::var(WEBDRIVER_ENV) {
+            Ok(endpoint) => (None, endpoint, None),
             Err(_unset) => {
-                let (chromedriver, endpoint) = Chromedriver::start().await?;
-                (Some(chromedriver), endpoint)
+                let log = driver_log()?;
+                let (chromedriver, endpoint) = Chromedriver::start(log.as_deref()).await?;
+                (Some(chromedriver), endpoint, log)
             }
         };
         let driver = WebDriver::new(endpoint.as_str(), capabilities)
@@ -292,7 +463,29 @@ impl Browser {
         Ok(Self {
             driver,
             chromedriver,
+            log,
+            trail: Mutex::new(Trail::default()),
         })
+    }
+
+    /// Names the step the journey takes next, which a failure names until
+    /// the journey names another.
+    pub(crate) fn step(&self, name: &str) {
+        let mut trail = self.trail.lock().unwrap_or_else(PoisonError::into_inner);
+        trail.name(name);
+    }
+
+    /// Adds `command` to the trail a failure names.
+    fn record(&self, command: String) {
+        let mut trail = self.trail.lock().unwrap_or_else(PoisonError::into_inner);
+        trail.push(command);
+    }
+
+    /// Wraps `error`, which the journey returned, in the step it failed in
+    /// and the commands it sent last.
+    fn failure(&self, error: Box<dyn Error>) -> Failure {
+        let trail = self.trail.lock().unwrap_or_else(PoisonError::into_inner);
+        trail.failure(error, self.log.clone())
     }
 
     /// Ends the session, closes the browser and stops the session's own
@@ -304,13 +497,17 @@ impl Browser {
         Ok(())
     }
 
-    /// The `WebDriver` session.
+    /// The `WebDriver` session, recorded in the trail as a command sent
+    /// from the line that asks for it.
+    #[track_caller]
     pub(crate) fn driver(&self) -> &WebDriver {
+        self.record(format!("a command from {}", Location::caller()));
         &self.driver
     }
 
     /// Loads `url` and waits for the document to load.
     pub(crate) async fn goto(&self, url: &str) -> Result<(), Box<dyn Error>> {
+        self.record(format!("goto {url}"));
         self.driver.goto(url).await?;
         Ok(())
     }
@@ -319,6 +516,7 @@ impl Browser {
     /// nothing from the cache, so the modules arrive after the page has
     /// drawn, as on a loaded machine (#638).
     pub(crate) async fn late(&self, latency: u32) -> Result<(), Box<dyn Error>> {
+        self.record(format!("every request {latency} ms late"));
         let cdp = self.driver.cdp();
         cdp.send_raw("Network.enable", json!({})).await?;
         cdp.send_raw("Network.setCacheDisabled", json!({ "cacheDisabled": true }))
@@ -340,6 +538,7 @@ impl Browser {
     /// module `data-fui-ready`, and fails naming the jobs left when the
     /// modules do not all enhance (#638).
     pub(crate) async fn ready(&self) -> Result<(), Box<dyn Error>> {
+        self.record(String::from("wait for every module to enhance"));
         let left: Vec<String> = self
             .driver
             .execute_async(
@@ -363,6 +562,7 @@ impl Browser {
     /// Drains the browser log and returns every `SEVERE` entry it held since
     /// the last call, each as its level and message.
     pub(crate) async fn console_errors(&self) -> Result<Vec<String>, Box<dyn Error>> {
+        self.record(String::from("read the browser log"));
         let entries = self.driver.browser_log().await?;
         Ok(entries
             .iter()
@@ -396,6 +596,7 @@ impl Browser {
     /// whichever pages the session loaded before it (#472). No
     /// specification governs this: our own design.
     pub(crate) async fn hide_scrollbars(&self) -> Result<(), Box<dyn Error>> {
+        self.record(String::from("hide the scrollbars"));
         self.driver
             .cdp()
             .send_raw("Emulation.setScrollbarsHidden", json!({ "hidden": true }))
@@ -419,6 +620,7 @@ impl Browser {
     /// in two reads one frame apart, so a capture never measures a page
     /// still settling.
     pub(crate) async fn settled(&self) -> Result<(), Box<dyn Error>> {
+        self.record(String::from("wait for the layout to hold still"));
         self.driver
             .execute_async(
                 "const done = arguments[arguments.length - 1]; document.fonts.ready.then(() => done(true));",
@@ -449,6 +651,7 @@ impl Browser {
     ///
     /// A wait that runs out names the page the browser is at and its text.
     pub(crate) async fn element(&self, by: By) -> Result<WebElement, Box<dyn Error>> {
+        self.record(format!("wait for the element {by}"));
         let found = self.driver.query(by.clone()).wait(WAIT, POLL).first().await;
         match found {
             Ok(element) => Ok(element),
@@ -471,7 +674,9 @@ impl Browser {
 
     /// Waits for the link whose text is `text`, and follows it.
     pub(crate) async fn follow(&self, text: &str) -> Result<(), Box<dyn Error>> {
-        self.element(By::LinkText(text)).await?.click().await?;
+        let link = self.element(By::LinkText(text)).await?;
+        self.record(format!("follow the link {text}"));
+        link.click().await?;
         Ok(())
     }
 
@@ -479,6 +684,7 @@ impl Browser {
     /// new document has its own of (Chrome DevTools Protocol,
     /// `Page.getFrameTree`, `Frame.loaderId`).
     pub(crate) async fn loader(&self) -> Result<String, Box<dyn Error>> {
+        self.record(String::from("read the document's loader id"));
         let tree = self
             .driver
             .cdp()
@@ -502,6 +708,7 @@ impl Browser {
     /// to the old document, so the journey finds afresh what it reads after.
     pub(crate) async fn click_and_load(&self, control: &WebElement) -> Result<(), Box<dyn Error>> {
         let old = self.loader().await?;
+        self.record(String::from("click a control that loads a new document"));
         control.click().await?;
         until("a new document replaces the old", async || {
             Ok(self.loader().await? != old)
@@ -537,6 +744,7 @@ impl Browser {
     /// stack drops `is-static` once its module runs. The text area takes
     /// keys from the first paint, so its `readonly` tells nothing (#356).
     pub(crate) async fn editor_live(&self, area: &WebElement) -> Result<bool, Box<dyn Error>> {
+        self.record(String::from("read whether the editor is enhanced"));
         let live = self
             .driver
             .execute(
@@ -549,6 +757,7 @@ impl Browser {
 
     /// Waits until the browser is at `url`.
     pub(crate) async fn at(&self, url: &str) -> Result<(), Box<dyn Error>> {
+        self.record(format!("wait until the browser is at {url}"));
         let arrived = until(&format!("the browser is at {url}"), async || {
             Ok(self.driver.current_url().await?.as_str() == url)
         })
@@ -606,17 +815,31 @@ where
 
 /// Runs `journey` in a fresh browser, closes the browser whatever the
 /// journey did, and fails on a console error the browser logged last.
+///
+/// A journey that fails returns a [`Failure`] naming its step and its last
+/// commands; one that passes deletes its chromedriver's log.
 pub(crate) async fn with_browser<F>(journey: F) -> Result<(), Box<dyn Error>>
 where
     F: AsyncFnOnce(&Browser) -> Result<(), Box<dyn Error>>,
 {
     let browser = Browser::open().await?;
     let outcome = match journey(&browser).await {
-        Ok(()) => browser.console_clean("the end of the journey").await,
+        Ok(()) => {
+            browser.step("the end of the journey");
+            browser.console_clean("the end of the journey").await
+        }
         Err(error) => Err(error),
     };
-    browser.quit().await?;
-    outcome
+    let outcome = outcome.map_err(|error| browser.failure(error));
+    let log = browser.log.clone();
+    let quit = browser.quit().await;
+    outcome?;
+    quit?;
+    if let Some(log) = log {
+        std::fs::remove_file(&log)
+            .map_err(|error| format!("{} is not deleted: {error}", log.display()))?;
+    }
+    Ok(())
 }
 
 /// The test group `.config/nextest.toml` caps at four threads, since more
@@ -650,6 +873,53 @@ fn every_test_of_this_binary_runs_in_the_capped_browser_group() -> Result<(), Bo
         "the browser group runs four at once"
     );
     Ok(())
+}
+
+// A failure names the step the journey named last and its commands since,
+// the newest last, each run of one command counted once.
+#[test]
+fn a_failure_names_its_step_and_its_last_commands() {
+    let mut trail = Trail::default();
+    trail.push(String::from("goto /before"));
+    trail.name("Ctrl S saves");
+    for _ in 0..3 {
+        trail.push(String::from("a command from keys.rs:1:1"));
+    }
+    for n in 0..TRAIL {
+        trail.push(format!("wait for the element #{n}"));
+    }
+    let failure = trail.failure("loader has changed".into(), None);
+    assert_eq!(
+        format!(
+            "the journey failed in step Ctrl S saves, at wait for the element #{}",
+            TRAIL - 1
+        ),
+        failure.to_string()
+    );
+    assert_eq!(
+        TRAIL,
+        failure.commands.len(),
+        "only the last commands are kept"
+    );
+    assert!(
+        !failure
+            .commands
+            .iter()
+            .any(|command| command.contains("/before")),
+        "a step starts its commands afresh"
+    );
+    assert!(
+        format!("{failure:?}").contains(": loader has changed\n"),
+        "the failure prints its error: {failure:?}"
+    );
+    let mut polls = Trail::default();
+    polls.push(String::from("a command from keys.rs:1:1"));
+    polls.push(String::from("a command from keys.rs:1:1"));
+    assert_eq!(
+        vec![String::from("a command from keys.rs:1:1 (2 times)")],
+        polls.failure("x".into(), None).commands,
+        "a wait's polls are counted"
+    );
 }
 
 // A journey waits on `hydrated` before it sends an event, so it holds every
