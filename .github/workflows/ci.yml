@@ -534,6 +534,7 @@ jobs:
           FERROUI_JOURNEYS: "1"
           FERROUI_CHROME: ${{ steps.chrome.outputs.chrome-path }}
           FERROUI_CHROMEDRIVER: ${{ steps.chrome.outputs.chromedriver-path }}
+          FERROUI_DRIVER_LOGS: ${{ github.workspace }}/target/driver-logs
           PARTITION: ${{ matrix.partition }}
         run: cargo nextest run --locked -p ferrohealth-ui-gallery --partition "count:$PARTITION"
       - name: Capture the screenshots
@@ -543,6 +544,7 @@ jobs:
           FERROUI_SCREENSHOT_BRAND: ${{ matrix.brand }}
           FERROUI_CHROME: ${{ steps.chrome.outputs.chrome-path }}
           FERROUI_CHROMEDRIVER: ${{ steps.chrome.outputs.chromedriver-path }}
+          FERROUI_DRIVER_LOGS: ${{ github.workspace }}/target/driver-logs
         run: cargo nextest run --locked -p ferrohealth-ui-gallery -E 'test(every_page_is_captured)'
       # On the refresh and the release pull request and a manual run the states are captured
       # too, so the artifact holds the whole set the pull request commits,
@@ -557,6 +559,7 @@ jobs:
           FERROUI_SCREENSHOT_BRAND: ${{ matrix.brand }}
           FERROUI_CHROME: ${{ steps.chrome.outputs.chrome-path }}
           FERROUI_CHROMEDRIVER: ${{ steps.chrome.outputs.chromedriver-path }}
+          FERROUI_DRIVER_LOGS: ${{ github.workspace }}/target/driver-logs
         run: cargo nextest run --locked -p ferrohealth-ui-gallery -E 'test(every_state_is_captured)'
       - name: The committed screenshots show what the gallery draws
         if: matrix.part == 'capture' && needs.detect.outputs.states == 'true'
@@ -564,6 +567,16 @@ jobs:
           FERROUI_SCREENSHOT_PIXELS: "1"
           FERROUI_SCREENSHOT_BRAND: ${{ matrix.brand }}
         run: cargo nextest run --locked -p ferrohealth-ui-gallery -E 'test(every_committed_screenshot_shows_what_a_fresh_capture_draws)'
+      # The chromedriver log of every journey that failed, which names the
+      # command each step sent and what the browser did meanwhile (#659); a
+      # journey that passes deletes its log.
+      - if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: chromedriver-logs-${{ matrix.part }}-${{ strategy.job-index }}-attempt-${{ github.run_attempt }}
+          path: target/driver-logs/
+          if-no-files-found: ignore
+          retention-days: 14
       # The artifact is kept when the pixel check fails too: it holds the
       # captures the refresh and the release pull request commit, since a
       # capture is compared only with one made on the same runner image. Each
