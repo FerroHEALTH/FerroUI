@@ -108,11 +108,12 @@ works (`build.rustc-wrapper` in your own `~/.cargo/config.toml`); the
 repository neither needs nor configures one.
 - `.github/workflows/pr-guards.yml`: `ci.yml` runs on `opened`, `synchronize`
   and `reopened` only, so a commit gets one run; when `no-changelog` or
-  `screenshots` changes, this waits for the CI run on the head commit to
-  complete and re-runs `guards`, which re-runs `conclusion` with it. A
-  `screenshots` label added after `detect` started also re-runs `detect`
-  and every job after it, so the run captures the states and checks the
-  pixels; `detect` reads the label from the API when it runs, so a pull
+  `screenshots` changed after `guards` started and flips its verdict, this
+  re-runs `guards`, which re-runs `conclusion` with it. A `screenshots` label
+  added after `detect` started also re-runs `detect` and every job after it,
+  so the run captures the states and checks the pixels. It starts on the
+  label event and on the completion of a pull request's CI run, and never
+  waits for CI: a run still in flight is left to its own completion (#673); `detect` reads the label from the API when it runs, so a pull
   request opened with `gh pr create --label screenshots` gets them on its
   first run.
 - `.github/workflows/codeql.yml`: CodeQL over the `actions` language and Rust.
