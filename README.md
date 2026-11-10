@@ -7,8 +7,8 @@
 **The component library every FerroHEALTH console is built from, in Rust.**
 
 [Documentation](crates/ferrohealth-ui/README.md) ·
-[Quick start](#quick-start) ·
-[What ships today](#what-ships-today) ·
+[What it provides](#what-it-provides) ·
+[Install](#install) ·
 [Licensing](https://ferrohealth.eu/docs/licensing.html)
 
 **Project**<br>
@@ -19,7 +19,7 @@
 [![Docs](https://img.shields.io/docsrs/ferrohealth-ui?logo=docsdotrs&label=docs.rs)](https://docs.rs/ferrohealth-ui)
 
 **Quality and security**<br>
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/FerroHEALTH/FerroUI/badge)](https://scorecard.dev/viewer/?uri=github.com/FerroHEALTH/FerroUI)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/FerroHEALTH/FerroUI/badge)](https://scorecard.dev/viewer/?uri=github.com/FerroHEALTH/FerroUI)
 [![CodeQL](https://img.shields.io/github/actions/workflow/status/FerroHEALTH/FerroUI/codeql.yml?branch=main&logo=github&label=CodeQL)](https://github.com/FerroHEALTH/FerroUI/actions/workflows/codeql.yml)
 [![Signed releases](https://img.shields.io/badge/releases-signed-brightgreen?logo=github)](docs/release.md)
 [![SLSA Build L3](https://slsa.dev/images/gh-badge-level3.svg)](docs/release.md)
@@ -73,17 +73,68 @@ and FerroPIX are all built from FerroUI.
   <img alt="Gallery pages in four brands at desktop width (the FerroBRIDGE code page, the FerroFED federation page, the FerroTERM terminology page and the FerroEHR clinical record) beside the FerroPIX tables page on a phone" src="docs/hero.png">
 </picture>
 
-## Quick start
+## What it provides
 
-Add the crate to an axum application, pinned exactly:
+One crate, [`ferrohealth-ui`](crates/ferrohealth-ui/README.md), with one
+feature, `axum` (on by default), which adds the router that serves the
+stylesheet, the themes and the script modules. The components:
+
+- [Page templates](design/COMPONENTS.md#page-templates): list, detail, settings, About and the error page
+- [The table](design/COMPONENTS.md#the-table): find, filter, sort and page by links and forms, with the state in the URL or the session
+- [Forms and overlays](design/COMPONENTS.md#from-ferropix-r1-to-r29): tabs, form fields, the date picker, toasts, sign-in and the preferences page
+- [Configuration views](design/COMPONENTS.md#from-ferrofed-f1-to-f14-for-every-console): revisions, the commit-confirm countdown, the secret field, the topology
+- [Code and operations views](design/COMPONENTS.md#from-ferrobridge-b1-to-b11-for-every-console): the code viewer and editor, diagnostics, run reports, the HL7 v2 viewer
+- [Terminology views](design/COMPONENTS.md#from-ferroterm-m1-to-m6-for-every-console): the concept tree, the coding, the version select, the value set clause
+- [Clinical views](design/COMPONENTS.md#from-ferroehr-e1-to-e8-for-every-console): version history, the clinical reading, the folder tree, the query builder
+- [Five brands, light and dark](crates/ferrohealth-ui/README.md#the-stylesheet-and-a-theme), with highlighters for YAML, JSON, XML and AQL and the Lucide icons
+- [Locales](crates/ferrohealth-ui/README.md#locales), chosen by the configuration or negotiated over `Accept-Language`
+- [The gallery](app/ferrohealth-ui-gallery), every component in every brand, with its [screenshots](docs/screenshots/)
+
+## Install
+
+The crate needs Rust 1.98 or newer (edition 2024). Pin the version exactly,
+as every FerroHEALTH console does: a console moves its pin after looking at
+its own screens.
 
 ```sh
 cargo add ferrohealth-ui@=0.6.9
 ```
 
+## Usage
+
+Every component is a function that returns `html::Html`, which your own
+Askama template writes with `{{ part }}`. A handler draws its page and
+returns the whole document, and the console mounts the asset router once:
+
+```rust
+use ferrohealth_ui::html::Html;
+use ferrohealth_ui::i18n::Locale;
+use ferrohealth_ui::serve::{Assets, PREFIX, axum_router};
+use ferrohealth_ui::style::Brand;
+use ferrohealth_ui::theme::Preferences;
+use ferrohealth_ui::view::shell::{Document, document};
+
+let app: axum::Router = axum::Router::new()
+    // .route("/templates", get(templates)) and the rest of your pages
+    .nest(PREFIX, axum_router::router());
+
+let page = document(Document {
+    locale: Locale::default(),
+    preferences: Preferences::default(),
+    title: String::from("Templates · FerroBRIDGE"),
+    assets: Assets::of(Brand::Bridge),
+    nonce: None,
+    head: Html::empty(),
+    body: Html::text("the page"),
+});
+```
+
 The [crate README](crates/ferrohealth-ui/README.md) is the integration
-guide: the assets, the document, the stylesheet and theme, and the
-locales. To see every component, run the gallery from a checkout:
+guide: the assets, the stylesheet and a theme, the components, the top bar,
+the locales and the preferences. The [console guide](docs/consoles.md) says
+what the library owns and what a console owns.
+
+To see every component, run the gallery from a checkout:
 
 ```sh
 git clone https://github.com/FerroHEALTH/FerroUI && cd FerroUI
@@ -92,39 +143,56 @@ cargo run -p ferrohealth-ui-gallery
 
 Then open <http://127.0.0.1:3000>.
 
-## What ships today
+## Security and accessibility
 
-- [Page templates](design/COMPONENTS.md#page-templates): list, detail, settings, About and the error page
-- [The table](design/COMPONENTS.md#the-table): find, filter, sort and page by links and forms, with the state in the URL or the session
-- [Forms and overlays](design/COMPONENTS.md#from-ferropix-r1-to-r29): tabs, form fields, the date picker, toasts, sign-in and the preferences page
-- [Configuration views](design/COMPONENTS.md#from-ferrofed-f1-to-f14-for-every-console): revisions, the commit-confirm countdown, the secret field, the topology
-- [Code and operations views](design/COMPONENTS.md#from-ferrobridge-b1-to-b10-for-every-console): the code viewer and editor, diagnostics, run reports, the HL7 v2 viewer
-- [Terminology views](design/COMPONENTS.md#from-ferroterm-m1-to-m6-for-every-console): the concept tree, the coding, the version select, the value set clause
-- [Clinical views](design/COMPONENTS.md#from-ferroehr-e1-to-e8-for-every-console): version history, the clinical reading, the folder tree, the query builder
-- [Five brands, light and dark](crates/ferrohealth-ui/README.md), with highlighters for YAML, JSON, XML and AQL and the Lucide icons
-- [The gallery](app/ferrohealth-ui-gallery), every component in every brand, with its [screenshots](docs/screenshots/)
+- Every page is rendered on the server and complete without scripts: every
+  important action is a link or a form, and the script modules only add
+  behaviour on top.
+- A console's policy is `script-src 'self'; style-src 'self'`; the document
+  loads one script, the loader `fui.js`, and needs a nonce only when the
+  console's own policy keeps one.
+- Markup is escaped once: a component returns `Html`, which Askama writes
+  without escaping it again.
+- Every colour pairing of every theme meets WCAG 2.2 AA, held by the crate's
+  tests and a browser journey over the gallery.
+- The crate contains no `unsafe` code (`unsafe_code = "forbid"`), and
+  `cargo-deny` checks every dependency on every pull request.
+- Report a vulnerability privately as the [security policy](SECURITY.md)
+  describes.
 
-<details>
-<summary><b>Published crates</b> (1)</summary>
+## Versioning
 
-| Crate | What it does | Version | Docs | Downloads |
-|---|---|---|---|---|
-| [`ferrohealth-ui`](https://crates.io/crates/ferrohealth-ui) | The shared UI components of the FerroHEALTH consoles: server-rendered Askama components, role tokens, plain script modules, a highlighter and one table model | [![crates.io](https://img.shields.io/crates/v/ferrohealth-ui?logo=rust&label=crates.io)](https://crates.io/crates/ferrohealth-ui) | [![docs.rs](https://img.shields.io/docsrs/ferrohealth-ui?logo=docsdotrs&label=docs.rs)](https://docs.rs/ferrohealth-ui) | [![downloads](https://img.shields.io/crates/d/ferrohealth-ui?logo=rust&label=downloads)](https://crates.io/crates/ferrohealth-ui) |
+The crate follows [Cargo's SemVer rules](https://doc.rust-lang.org/cargo/reference/semver.html)
+and is released by the signed tag `vX.Y.Z`, with the [changelog](CHANGELOG.md)
+written from the fragments under `changelog.d/`. On the `0.x` line a release
+that breaks a public API moves the minor version, and its changelog entry
+names what a console changes; the
+[0.6 migration guide](docs/migration-0.6.md) is the latest such guide. The
+release process is in [`docs/release.md`](docs/release.md).
 
-</details>
+## Documentation
 
-## Learn more
+- The [crate README](crates/ferrohealth-ui/README.md) and the API reference
+  on [docs.rs](https://docs.rs/ferrohealth-ui).
+- The [component specs](design/COMPONENTS.md) and [the design](design/README.md),
+  where a component change starts.
+- The [console guide](docs/consoles.md) and the
+  [rendering model](docs/rendering-model.md).
+- The [FerroHEALTH book](https://ferrohealth.eu/docs/).
 
-- [The crate README](crates/ferrohealth-ui/README.md), [the component specs](design/COMPONENTS.md) and [what the library and a console each own](docs/consoles.md)
-- [The design](design/README.md), where a component change starts
-- [Changelog](CHANGELOG.md) and [milestones](https://github.com/FerroHEALTH/FerroUI/milestones)
-- [Security policy](SECURITY.md) and the [FerroHEALTH book](https://ferrohealth.eu/docs/)
-- [Contributing](CONTRIBUTING.md), [code of conduct](CODE_OF_CONDUCT.md), [support](SUPPORT.md), [governance](GOVERNANCE.md) and [maintainers](MAINTAINERS.md)
+## Support
+
+[SUPPORT.md](SUPPORT.md) says where to ask a question and how to report a
+defect. Read [CONTRIBUTING.md](CONTRIBUTING.md) and the
+[code of conduct](CODE_OF_CONDUCT.md) before you open a pull request;
+[GOVERNANCE.md](GOVERNANCE.md) and [MAINTAINERS.md](MAINTAINERS.md) say who
+decides and who reviews.
 
 ## Licence
 
-Business Source License 1.1 ([LICENSE](LICENSE)), with Apache License 2.0 as
-the Change License four years after each version; the vendored Lucide icons
-keep their ISC licence. The
+Business Source License 1.1 ([LICENSE](LICENSE), [NOTICE](NOTICE)), with
+Apache License 2.0 as the Change License four years after each version; the
+vendored Lucide icons keep their ISC licence. Non-production use and
+non-commercial production use are free; the
 [licensing page](https://ferrohealth.eu/docs/licensing.html) says when you
 need a commercial licence from Cadasto B.V.
