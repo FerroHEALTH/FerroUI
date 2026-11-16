@@ -11,6 +11,33 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.6.10] - 2026-11-16
+
+### Added
+
+- `style::Brand::Smart`, the FerroSMART brand, "Bronze & Iron": the
+  palette of FerroAUTH's brand tokens, the repository the SMART
+  authorization server ships from, as `themes/ferrosmart.css`; light
+  bronze `#78350f` and dark bronze-light `#fbbf24`, each pairing held to
+  WCAG 2.2 AA. `Brand::ALL` holds six brands, and the gallery draws every
+  page under `/ferrosmart` (#678).
+- The gallery's brand switch moves from the top bar to the navigation and
+  the user menu: six brands do not fit beside the search, which keeps its
+  word at 1440 px (#678).
+- `error_page::Status::BadRequest` draws a 400, "Bad request · 400", for a
+  request a console cannot read, so a console no longer shows a 403 in its
+  place (R20) (#680).
+- `surface::page_card(lockup, title, body)` is a page of its own in the
+  centred layout, such as a consent or a management page: the product's
+  lockup when given, then the title as the page's one `h1` (R30). The gallery draws it at `/consent/:brand` and the 400 at
+  `/:brand/templates/bad-request` (#680).
+
+### Changed
+
+- `SECURITY.md` names `security@cadasto.com` as the email route for a
+  vulnerability report, in place of `info@cadasto.com`, which stays the
+  address for licensing and other business questions (#666).
+
 ## [0.6.9] - 2026-11-06
 
 ### Fixed
@@ -3136,7 +3163,8 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.9...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.10...HEAD
+[0.6.10]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.9...v0.6.10
 [0.6.9]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.8...v0.6.9
 [0.6.8]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.7...v0.6.8
 [0.6.7]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.6...v0.6.7
