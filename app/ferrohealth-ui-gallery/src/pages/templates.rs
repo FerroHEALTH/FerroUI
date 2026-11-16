@@ -652,36 +652,14 @@ fn forbidden(v: &Visit) -> Html {
     )
 }
 
-/// The 400 page.
-fn bad_request(v: &Visit) -> Html {
+/// An error page that leads back to the locations: the 400 and the 404.
+fn back_to_locations(v: &Visit, status: Status, title: Msg, body: Msg) -> Html {
     error_page(
         &v.locale,
         ErrorPage {
-            status: Status::BadRequest,
-            title: v.tr(Msg::BadRequestTitle),
-            body: Html::text(v.tr(Msg::BadRequestBody)),
-            hint: None,
-            ways: vec![
-                Way {
-                    label: v.tr(Msg::Locations),
-                    href: at(v, "list"),
-                    glyph: Some(Glyph::LAYERS),
-                },
-                to_overview(v),
-            ],
-            detail: None,
-        },
-    )
-}
-
-/// The 404 page.
-fn not_found(v: &Visit) -> Html {
-    error_page(
-        &v.locale,
-        ErrorPage {
-            status: Status::NotFound,
-            title: v.tr(Msg::NotFoundTitle),
-            body: Html::text(v.tr(Msg::NotFoundTemplateBody)),
+            status,
+            title: v.tr(title),
+            body: Html::text(v.tr(body)),
             hint: None,
             ways: vec![
                 Way {
@@ -709,9 +687,25 @@ pub fn page(v: &Visit) -> Page {
         "settings" => (v.tr(Msg::SettingsTab), settings_file(v)),
         "settings-managed" => (v.tr(Msg::SettingsTab), settings_managed(v)),
         "about" => (v.tr(Msg::AboutTitle), about(v)),
-        "bad-request" => (v.tr(Msg::BadRequestTitle), bad_request(v)),
+        "bad-request" => (
+            v.tr(Msg::BadRequestTitle),
+            back_to_locations(
+                v,
+                Status::BadRequest,
+                Msg::BadRequestTitle,
+                Msg::BadRequestBody,
+            ),
+        ),
         "forbidden" => (v.tr(Msg::ForbiddenTitle), forbidden(v)),
-        _ => (v.tr(Msg::NotFoundTitle), not_found(v)),
+        _ => (
+            v.tr(Msg::NotFoundTitle),
+            back_to_locations(
+                v,
+                Status::NotFound,
+                Msg::NotFoundTitle,
+                Msg::NotFoundTemplateBody,
+            ),
+        ),
     };
     Page::shell(title, page)
 }
