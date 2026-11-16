@@ -1,6 +1,6 @@
 ---
 name: brand-palettes
-description: "Each product keeps its own accent: BRIDGE indigo, FED azure, EHR its viewer teal, TERM teal, PIX plum; a shade moves only when it fails WCAG 2.2 AA, and the change says so"
+description: "Each product keeps its own accent: BRIDGE indigo, FED azure, EHR its viewer teal, TERM teal, PIX plum, SMART the bronze of FerroAUTH; a shade moves only when it fails WCAG 2.2 AA, and the change says so"
 metadata:
   type: project
 ---
@@ -11,7 +11,9 @@ metadata:
 Owner decision, 2026-10-18: FerroEHR keeps its viewer palette (teal), not a
 new one; FerroBRIDGE keeps indigo, FerroFED its azure accent, FerroTERM its
 teal. FerroPIX, the fifth console, takes the plum of its own brand tokens
-(`themes/ferropix.css`). The default theme with no brand is the FerroHEALTH
+(`themes/ferropix.css`). FerroSMART, the SMART authorization server that
+ships from the FerroAUTH repository, takes FerroAUTH's "Bronze & Iron"
+(`themes/ferrosmart.css`, FerroHEALTH/FerroUI#678, 2026-11-16). The default theme with no brand is the FerroHEALTH
 steel.
 
 Two shades moved to pass the contrast test, and the theme files say why:

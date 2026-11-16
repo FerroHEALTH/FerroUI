@@ -100,6 +100,7 @@ const fn federation_entry(brand: Brand) -> &'static str {
         Brand::Ehr => "/ferroehr/federation",
         Brand::Term => "/ferroterm/federation",
         Brand::Pix => "/ferropix/federation",
+        Brand::Smart => "/ferrosmart/federation",
     }
 }
 
@@ -224,6 +225,7 @@ fn brand_links(visit: &Visit, back: &str) -> Vec<(Brand, String, String)> {
                 Brand::Ehr => Msg::Ehr,
                 Brand::Term => Msg::Term,
                 Brand::Pix => Msg::Pix,
+                Brand::Smart => Msg::Smart,
             });
             (each, format!("/{}{page}", each.key()), words)
         })

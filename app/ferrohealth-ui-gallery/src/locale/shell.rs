@@ -142,6 +142,8 @@ messages! {
     Pages = "pages",
     /// `PIX`
     Pix = "pix",
+    /// `SMART`
+    Smart = "smart",
     /// The gallery's product name in the footer.
     Product = "product",
     /// `Provider sign-in`

@@ -15,7 +15,7 @@
 - [Licence: BUSL 1.1](license-busl.md): the FerroHEALTH terms, Cadasto B.V.
   the Licensor, Apache 2.0 four years after each version
 - [Brand palettes](brand-palettes.md): each product keeps its own accent
-  (BRIDGE indigo, FED azure, EHR and TERM teal, PIX plum), a shade moved only to pass
+  (BRIDGE indigo, FED azure, EHR and TERM teal, PIX plum, SMART bronze), a shade moved only to pass
   contrast; owner 2026-10-18
 - [Sign-in screens](sign-in-screens.md): a plain `POST` like every form; two
   forms, a basic form and an OAuth2

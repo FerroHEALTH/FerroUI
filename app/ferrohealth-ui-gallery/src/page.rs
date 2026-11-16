@@ -128,6 +128,7 @@ pub const fn brand_glyph(brand: Brand) -> Glyph {
         Brand::Ehr => Glyph::HEART_PULSE,
         Brand::Term => Glyph::LIST_CHECKS,
         Brand::Pix => Glyph::LINK,
+        Brand::Smart => Glyph::KEY_ROUND,
     }
 }
 

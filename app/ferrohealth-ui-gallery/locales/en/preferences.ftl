@@ -7,6 +7,7 @@
 accent-azure = Azure
 accent-indigo = Indigo
 accent-plum = Plum
+accent-bronze = Bronze
 accent-teal = Teal
 concept-language = Concepts are asked for in
 concept-language-desc = The language tag the server answers a concept's display in, such as nl-NL.

@@ -1,0 +1,45 @@
+/* SPDX-FileCopyrightText: Cadasto B.V. */
+/* SPDX-License-Identifier: BUSL-1.1 */
+/* The FerroSMART brand, "Bronze & Iron": the accent of each theme over the
+   roles of ferrohealth-ui.css, in the shape of the library's other brand
+   files. FerroSMART, the SMART authorization server, ships from the
+   FerroAUTH repository and takes its palette (FerroAUTH
+   assets/brand/tokens.css): light takes bronze (--ferroauth-bronze,
+   #78350F) with amber 950 as its hover; dark takes bronze-light
+   (--ferroauth-bronze-light, #FBBF24) with the ink of the tile as the text
+   on it, and a translucent tint of 10 %: the 12 % of FerroFED and FerroPIX
+   leaves the muted text at 4.42:1 on this brighter accent.
+   Loaded after ferrohealth-ui.css; every pairing holds WCAG 2.2 AA, which
+   tests/it/contrast.rs checks. */
+:root {
+  --accent: #78350f;
+  --accent-hover: #451a03;
+  --accent-ink: #ffffff;
+  --accent-tint: rgb(120 53 15 / 0.1);
+  --focus: #78350f;
+}
+
+:root[data-theme="dark"] {
+  --accent: #fbbf24;
+  --accent-hover: #fcd34d;
+  --accent-ink: #0f172a;
+  --accent-tint: rgb(251 191 36 / 0.1);
+  --focus: #fbbf24;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"], [data-theme="dark"]) {
+    --accent: #fbbf24;
+    --accent-hover: #fcd34d;
+    --accent-ink: #0f172a;
+    --accent-tint: rgb(251 191 36 / 0.1);
+    --focus: #fbbf24;
+  }
+}
+
+/* The accents the theme previews in Your preferences draw, one per theme,
+   whatever theme the page itself is in. */
+:root {
+  --preview-accent-light: #78350f;
+  --preview-accent-dark: #fbbf24;
+}
