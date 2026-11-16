@@ -17,6 +17,8 @@ pub enum Page {
     SignIn,
     /// `/fault/:brand`.
     Fault,
+    /// `/consent/:brand`.
+    Consent,
     /// `/:brand/templates/:variant`.
     Template,
     /// `/:brand`.
@@ -65,6 +67,7 @@ impl Page {
         Some(match parts.as_slice() {
             ["sign-in", _, _] => Self::SignIn,
             ["fault", _] => Self::Fault,
+            ["consent", _] => Self::Consent,
             [_] => Self::Overview,
             [_, "templates", _] => Self::Template,
             [_, "forms"] => Self::Forms,
@@ -102,6 +105,7 @@ pub fn draw(visit: &Visit) -> Drawn {
     };
     if page != Page::SignIn
         && page != Page::Fault
+        && page != Page::Consent
         && visit
             .segment(0)
             .and_then(ferrohealth_ui::style::Brand::parse)
@@ -112,6 +116,7 @@ pub fn draw(visit: &Visit) -> Drawn {
     match page {
         Page::SignIn => pages::sign_in::page(visit),
         Page::Fault => pages::templates::fault(visit),
+        Page::Consent => pages::templates::consent(visit),
         Page::Template => pages::templates::page(visit),
         Page::Overview => pages::overview::page(visit),
         Page::Forms => pages::forms::page(visit, None),

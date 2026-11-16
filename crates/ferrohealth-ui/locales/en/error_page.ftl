@@ -4,6 +4,7 @@
 # The English words of the error page: one message per `Text` of
 # `src/i18n/words/error_page.rs`, in the order of their ids.
 
+error-bad-request = Bad request
 error-detail = Technical detail
 error-fault = Fault
 error-forbidden = Not allowed

@@ -24,6 +24,10 @@ messages! {
     AllUnits = "all-units",
     /// `Audit`
     Audit = "audit",
+    /// `The link you followed names the sort order twice, so the console cannot tell which you meant. Go back to the list and choose one order.`
+    BadRequestBody = "bad-request-body",
+    /// `This address asks for two orders at once`
+    BadRequestTitle = "bad-request-title",
     /// `Best effort`
     BestEffort = "best-effort",
     /// `A caller may ask for a partial answer.`
@@ -36,6 +40,20 @@ messages! {
     ColumnState = "column-state",
     /// `Units`
     ColumnUnits = "column-units",
+    /// `Allow`
+    ConsentAllow = "consent-allow",
+    /// `What Growth chart may read`
+    ConsentChoose = "consent-choose",
+    /// `Deny`
+    ConsentDeny = "consent-deny",
+    /// `Growth chart asks to read part of your record. Choose what it may read; you can withdraw this later.`
+    ConsentIntro = "consent-intro",
+    /// `Your measurements`
+    ConsentObservations = "consent-observations",
+    /// `Who you are`
+    ConsentPatient = "consent-patient",
+    /// `Allow Growth chart to read your record?`
+    ConsentTitle = "consent-title",
     /// `Copy the location id`
     CopyLocationId = "copy-location-id",
     /// `{ $count } degraded`

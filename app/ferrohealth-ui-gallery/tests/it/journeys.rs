@@ -35,6 +35,7 @@ pub(crate) const PAGES: &[&str] = &[
     "/preferences/language",
     "/tables",
     "/templates/about",
+    "/templates/bad-request",
     "/templates/detail",
     "/templates/forbidden",
     "/templates/list",

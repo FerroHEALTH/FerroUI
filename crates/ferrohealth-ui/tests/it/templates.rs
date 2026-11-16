@@ -795,6 +795,7 @@ fn error(status: Status, detail: bool) -> String {
 #[test]
 fn the_error_page_says_the_status_in_words_before_its_number() {
     for (status, line) in [
+        (Status::BadRequest, "Bad request · 400"),
         (Status::Forbidden, "Not allowed · 403"),
         (Status::NotFound, "Not found · 404"),
         (Status::Fault, "Fault · 500"),

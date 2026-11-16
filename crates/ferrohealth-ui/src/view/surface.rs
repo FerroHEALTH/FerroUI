@@ -4,10 +4,11 @@
 //! The surfaces a page is built from.
 //!
 //! They are the page header with its trail and meta line, the editor's
-//! header, the card and the panel with its header action, the sections of a
-//! tab panel (B10), the stat card, the definition grids, the well, the chip,
-//! the disclosure, each in the box [`Container`] draws. The layouts that
-//! place them are in [`crate::view::layout`].
+//! header, the card, the page card of the centred layout and the panel
+//! with its header action, the sections of a tab panel (B10), the stat
+//! card, the definition grids, the well, the chip, the disclosure, each in
+//! the box [`Container`] draws. The layouts that place them are in
+//! [`crate::view::layout`].
 
 use std::borrow::Cow;
 
@@ -263,6 +264,28 @@ pub fn card(title: impl Into<String>, body: Html) -> Html {
     wrap(
         &format!(
             "<section class=\"fui-card\"><h2 class=\"fui-card-title\">{}</h2>",
+            Html::text(title.into())
+        ),
+        body,
+        "</section>",
+    )
+}
+
+/// Returns a card that is a whole page in the centred layout (R30): the
+/// product's `lockup` when there is one, then `title` as the page's one
+/// `h1`, sized as a page's heading, over `body`.
+///
+/// A console draws a page of its own before or beside the shell with it,
+/// such as a consent or a management page, so the page keeps its first-level
+/// heading; inside the shell the page's heading is [`page_header`].
+#[must_use]
+pub fn page_card(lockup: Option<Html>, title: impl Into<String>, body: Html) -> Html {
+    let lockup = lockup
+        .map(|lockup| wrap("<div class=\"fui-page-card-lockup\">", lockup, "</div>"))
+        .unwrap_or_default();
+    wrap(
+        &format!(
+            "<section class=\"fui-card fui-page-card\">{lockup}<h1 class=\"fui-page-card-title\">{}</h1>",
             Html::text(title.into())
         ),
         body,

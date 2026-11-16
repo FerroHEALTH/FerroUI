@@ -39,6 +39,7 @@
 /:brand/preferences/language drawer keep menu preference search tabs toast user_menu
 /:brand/tables dialog drawer keys menu search side_panel toast user_menu worklist
 /:brand/templates/about copy drawer search toast user_menu
+/:brand/templates/bad-request drawer search toast user_menu
 /:brand/templates/detail drawer keep menu search tabs toast user_menu
 /:brand/templates/forbidden drawer search toast user_menu
 /:brand/templates/list drawer search toast user_menu
@@ -50,6 +51,7 @@
 /:brand/templates/settings-managed copy drawer keep menu search tabs toast user_menu
 /:brand/terminology drawer menu repeat search toast user_menu
 /:brand/trees drawer keep search toast tree user_menu
+/consent/:brand toast
 /fault/:brand toast
 /sign-in/:brand/basic toast
 /sign-in/:brand/expired toast

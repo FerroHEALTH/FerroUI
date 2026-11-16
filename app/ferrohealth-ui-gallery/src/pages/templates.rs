@@ -11,6 +11,7 @@
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
+use ferrohealth_ui::style::Brand;
 use ferrohealth_ui::table::model::{Paging, Window};
 use ferrohealth_ui::table::pager::{Listing, link_pager};
 use ferrohealth_ui::table::view::{Body, Column, DataTable, Role, data_table};
@@ -23,9 +24,11 @@ use ferrohealth_ui::view::dialog::{
 };
 use ferrohealth_ui::view::error_page::{Detail, ErrorPage, Status, Way, error_page};
 use ferrohealth_ui::view::filter_menu::{FilterChoice, FilterMenu, MenuForm, filter_menu};
+use ferrohealth_ui::view::form::{check, fieldset};
 use ferrohealth_ui::view::layout::Arrangement;
+use ferrohealth_ui::view::shell::{lockup_plain, mark};
 use ferrohealth_ui::view::status::{badge, pill};
-use ferrohealth_ui::view::surface::{Crumb, Header, card, facts_row};
+use ferrohealth_ui::view::surface::{Crumb, Header, card, facts_row, page_card};
 use ferrohealth_ui::view::tabs::{Tab, TabRow};
 use ferrohealth_ui::view::template::about::{
     AboutPage, Link, Manufacturer, SelfDescription, about_page,
@@ -39,12 +42,12 @@ use ferrohealth_ui::view::template::settings::{
 };
 
 use crate::data::{
-    CONFIG_FILE, EXAMPLE_SERVER, FAULT_TIME, LIBRARY, LOCATION_ID, Location, OPERATOR_SCOPE,
-    REQUEST_ID, SELF_DESCRIPTION, SUPPORT, SUPPORT_HREF, library_release, locations,
-    many_locations,
+    CONFIG_FILE, CONSENT_SCOPES, EXAMPLE_SERVER, FAULT_TIME, LIBRARY, LOCATION_ID, Location,
+    OPERATOR_SCOPE, REQUEST_ID, SELF_DESCRIPTION, SUPPORT, SUPPORT_HREF, library_release,
+    locations, many_locations,
 };
 use crate::locale::Msg;
-use crate::page::Page;
+use crate::page::{Page, brand_glyph};
 use crate::visit::Visit;
 
 /// The variants the template pages show, as their routes name them.
@@ -649,6 +652,28 @@ fn forbidden(v: &Visit) -> Html {
     )
 }
 
+/// The 400 page.
+fn bad_request(v: &Visit) -> Html {
+    error_page(
+        &v.locale,
+        ErrorPage {
+            status: Status::BadRequest,
+            title: v.tr(Msg::BadRequestTitle),
+            body: Html::text(v.tr(Msg::BadRequestBody)),
+            hint: None,
+            ways: vec![
+                Way {
+                    label: v.tr(Msg::Locations),
+                    href: at(v, "list"),
+                    glyph: Some(Glyph::LAYERS),
+                },
+                to_overview(v),
+            ],
+            detail: None,
+        },
+    )
+}
+
 /// The 404 page.
 fn not_found(v: &Visit) -> Html {
     error_page(
@@ -684,6 +709,7 @@ pub fn page(v: &Visit) -> Page {
         "settings" => (v.tr(Msg::SettingsTab), settings_file(v)),
         "settings-managed" => (v.tr(Msg::SettingsTab), settings_managed(v)),
         "about" => (v.tr(Msg::AboutTitle), about(v)),
+        "bad-request" => (v.tr(Msg::BadRequestTitle), bad_request(v)),
         "forbidden" => (v.tr(Msg::ForbiddenTitle), forbidden(v)),
         _ => (v.tr(Msg::NotFoundTitle), not_found(v)),
     };
@@ -713,4 +739,53 @@ pub fn fault(v: &Visit) -> Page {
         },
     );
     Page::centred(v.tr(Msg::FaultTitle), page)
+}
+
+/// A page of its own in the centred layout (R30): a consent page whose
+/// title is the page's `h1`, its choices a plain form.
+#[must_use]
+pub fn consent(v: &Visit) -> Page {
+    let Some(brand) = v.segment(1).and_then(Brand::parse) else {
+        return crate::page::not_found(v);
+    };
+    let checks = Html::join(
+        [
+            ("scope-patient", Msg::ConsentPatient),
+            ("scope-observations", Msg::ConsentObservations),
+        ]
+        .into_iter()
+        .zip(CONSENT_SCOPES)
+        .map(|((id, words), scope)| {
+            let checkbox = Html::raw(format!(
+                "<input type=\"checkbox\" id=\"{id}\" name=\"scope\" value=\"{scope}\" checked>"
+            ));
+            check(id, format!("{} ({scope})", v.tr(words)), checkbox)
+        }),
+    );
+    let form = Html::raw(format!(
+        "<form method=\"get\" action=\"/consent/{key}\" class=\"fui-stack\">{fields}\
+         <div class=\"fui-cluster\">\
+         <button type=\"submit\" name=\"decision\" value=\"allow\" class=\"{primary}\">{allow}</button>\
+         <button type=\"submit\" name=\"decision\" value=\"deny\" class=\"{secondary}\">{deny}</button>\
+         </div></form>",
+        key = brand.key(),
+        fields = fieldset(v.tr(Msg::ConsentChoose), checks),
+        primary = Variant::Primary.class(),
+        secondary = Variant::Secondary.class(),
+        allow = label(Some(Glyph::CHECK), v.tr(Msg::ConsentAllow)),
+        deny = label(None, v.tr(Msg::ConsentDeny)),
+    ));
+    let lockup = lockup_plain(
+        mark(brand_glyph(brand)),
+        brand.product(),
+        v.tr(Msg::Gallery),
+    );
+    let body = Html::join([
+        Html::raw(format!("<p>{}</p>", Html::text(v.tr(Msg::ConsentIntro)))),
+        form,
+    ]);
+    Page::centred(
+        v.tr(Msg::ConsentTitle),
+        page_card(Some(lockup), v.tr(Msg::ConsentTitle), body),
+    )
 }

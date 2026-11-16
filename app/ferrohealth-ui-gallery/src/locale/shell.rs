@@ -96,6 +96,10 @@ messages! {
     Name = "name",
     /// `About`
     NavAbout = "nav-about",
+    /// `Error 400`
+    NavBadRequest = "nav-bad-request",
+    /// `Page card`
+    NavConsent = "nav-consent",
     /// `T2 Detail`
     NavDetail = "nav-detail",
     /// `Error 500`
