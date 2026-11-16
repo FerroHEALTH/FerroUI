@@ -34,6 +34,7 @@ fn accent(v: &Visit, brand: Brand) -> String {
         Brand::Fed => Msg::AccentAzure,
         Brand::Ehr | Brand::Term => Msg::AccentTeal,
         Brand::Pix => Msg::AccentPlum,
+        Brand::Smart => Msg::AccentBronze,
     })
 }
 

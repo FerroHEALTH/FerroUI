@@ -72,6 +72,7 @@ overlays = Overlays
 overview = Overview
 pages = Pages
 pix = PIX
+smart = SMART
 product = FerroHEALTH UI Gallery
 provider-sign = Provider sign-in
 remove = Remove

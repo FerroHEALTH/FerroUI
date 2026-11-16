@@ -86,7 +86,7 @@ stylesheet, the themes and the script modules. The components:
 - [Code and operations views](design/COMPONENTS.md#from-ferrobridge-b1-to-b11-for-every-console): the code viewer and editor, diagnostics, run reports, the HL7 v2 viewer
 - [Terminology views](design/COMPONENTS.md#from-ferroterm-m1-to-m6-for-every-console): the concept tree, the coding, the version select, the value set clause
 - [Clinical views](design/COMPONENTS.md#from-ferroehr-e1-to-e8-for-every-console): version history, the clinical reading, the folder tree, the query builder
-- [Five brands, light and dark](crates/ferrohealth-ui/README.md#the-stylesheet-and-a-theme), with highlighters for YAML, JSON, XML and AQL and the Lucide icons
+- [Six brands, light and dark](crates/ferrohealth-ui/README.md#the-stylesheet-and-a-theme), with highlighters for YAML, JSON, XML and AQL and the Lucide icons
 - [Locales](crates/ferrohealth-ui/README.md#locales), chosen by the configuration or negotiated over `Accept-Language`
 - [The gallery](app/ferrohealth-ui-gallery), every component in every brand, with its [screenshots](docs/screenshots/)
 

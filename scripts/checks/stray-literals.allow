@@ -14,7 +14,7 @@ allow ^(Esc|Space|Ctrl|Control|Shift|Alt|Meta)$  # a key as printed on its cap a
 allow ^Ctrl s$                          # a shortcut's keys, drawn as key caps
 allow ^j k \| up down$                 # a shortcut's keys, drawn as key caps
 allow ^(checkbox|radio|button|submit|reset|range|color|file|image)$   # the input types that take no typed text
-allow ^Ferro(BRIDGE|FED|EHR|TERM|PIX)$ # product names, the same in every language
+allow ^Ferro(BRIDGE|FED|EHR|TERM|PIX|SMART)$ # product names, the same in every language
 allow ^Cadasto B\.V\.$                  # the maker's legal name
 allow ^(start|middle|end)$              # SVG text-anchor keywords
 allow ^%2F$                             # a tree's path key: the percent-encoded separator inside a key

@@ -13,6 +13,8 @@ messages! {
     AccentIndigo = "accent-indigo",
     /// `Plum`
     AccentPlum = "accent-plum",
+    /// `Bronze`
+    AccentBronze = "accent-bronze",
     /// `Teal`
     AccentTeal = "accent-teal",
     /// `Concepts are asked for in`

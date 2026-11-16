@@ -808,9 +808,10 @@ async fn links_lead_on_with_the_modules_refused() -> Result<(), Box<dyn Error>> 
                 "//th[@aria-sort = 'ascending' and contains(., 'Lines')]",
             ))
             .await?;
-        // The brand switch is links to the same page.
+        // The brand switch, in the navigation since the sixth brand, is links
+        // to the same page.
         browser
-            .element(By::Css("a[href='/ferrofed/tables']"))
+            .element(By::Css("#sidebar a[href='/ferrofed/tables']"))
             .await?
             .click()
             .await?;

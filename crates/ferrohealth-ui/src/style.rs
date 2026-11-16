@@ -29,11 +29,21 @@ pub enum Brand {
     Term,
     /// FerroPIX, Plum and Iron.
     Pix,
+    /// FerroSMART, Bronze and Iron, the palette of FerroAUTH, whose
+    /// repository it ships from.
+    Smart,
 }
 
 impl Brand {
     /// Every brand, in the order the gallery shows them.
-    pub const ALL: [Self; 5] = [Self::Bridge, Self::Fed, Self::Ehr, Self::Term, Self::Pix];
+    pub const ALL: [Self; 6] = [
+        Self::Bridge,
+        Self::Fed,
+        Self::Ehr,
+        Self::Term,
+        Self::Pix,
+        Self::Smart,
+    ];
 
     /// The brand's key, as a URL path segment or a file name carries it.
     #[must_use]
@@ -44,6 +54,7 @@ impl Brand {
             Self::Ehr => "ferroehr",
             Self::Term => "ferroterm",
             Self::Pix => "ferropix",
+            Self::Smart => "ferrosmart",
         }
     }
 
@@ -56,6 +67,7 @@ impl Brand {
             Self::Ehr => "FerroEHR",
             Self::Term => "FerroTERM",
             Self::Pix => "FerroPIX",
+            Self::Smart => "FerroSMART",
         }
     }
 
@@ -69,6 +81,7 @@ impl Brand {
             Self::Ehr => include_str!("../themes/ferroehr.css"),
             Self::Term => include_str!("../themes/ferroterm.css"),
             Self::Pix => include_str!("../themes/ferropix.css"),
+            Self::Smart => include_str!("../themes/ferrosmart.css"),
         }
     }
 

@@ -326,7 +326,7 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
           # One capture job per brand, in Brand::ALL's order; the gallery's
           # tests hold this list to the brands (the_ci_capture_runs_one_job_per_brand).
-          CAPTURE_BRANDS: "ferrobridge ferrofed ferroehr ferroterm ferropix"
+          CAPTURE_BRANDS: "ferrobridge ferrofed ferroehr ferroterm ferropix ferrosmart"
           JOURNEY_PARTS: "2"
         run: |
           set -euo pipefail
