@@ -232,8 +232,9 @@ fn brand_links(visit: &Visit, back: &str) -> Vec<(Brand, String, String)> {
         .collect()
 }
 
-/// The brand switcher of the top bar from 40 rem up: the same page in each
-/// brand, the one in force marked current.
+/// The brand switcher of the top bar from 64 rem up, where the six brands
+/// fit beside the search: the same page in each brand, the one in force
+/// marked current.
 fn brand_switch(visit: &Visit, back: &str) -> Html {
     let links = brand_links(visit, back);
     let current = links
@@ -247,7 +248,7 @@ fn brand_switch(visit: &Visit, back: &str) -> Html {
     segmented_links(visit.tr(Msg::Brand), choices, current)
 }
 
-/// The brand switcher as the user menu holds it below 40 rem.
+/// The brand switcher as the user menu holds it at every width.
 fn brand_choices(visit: &Visit, back: &str) -> Choices {
     Choices {
         label: visit.tr(Msg::Brand),
@@ -345,7 +346,7 @@ fn brand_shell(visit: &Visit, content: Html, toasts: Html) -> Html {
     let version = fhir_version(visit);
     let end = Html::join([
         Html::raw(format!(
-            "<span class=\"fui-wide-only\">{}</span>",
+            "<span class=\"fui-roomy-only\">{}</span>",
             brand_switch(visit, back)
         )),
         version
