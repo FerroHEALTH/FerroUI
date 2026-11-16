@@ -4,5 +4,6 @@
   bronze `#78350f` and dark bronze-light `#fbbf24`, each pairing held to
   WCAG 2.2 AA. `Brand::ALL` holds six brands, and the gallery draws every
   page under `/ferrosmart`.
-- The gallery's top bar draws its brand switch from 64 rem up, where the
-  six brands fit beside the search; the user menu holds it at every width.
+- The gallery's brand switch moves from the top bar to the navigation and
+  the user menu: six brands do not fit beside the search, which keeps its
+  word at 1440 px.

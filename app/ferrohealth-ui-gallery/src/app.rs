@@ -19,7 +19,6 @@ use ferrohealth_ui::style::Brand;
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::menu::{Choice, Choices, ThemeChoice, UserLink, UserMenu, user_menu};
 use ferrohealth_ui::view::nav::{Count, Entry, Group, Rail, Sidebar, sidebar};
-use ferrohealth_ui::view::segmented::segmented_links;
 use ferrohealth_ui::view::shell::{
     Document, Shell, TopBar, centred, document, lockup, mark, shell, topbar,
 };
@@ -174,9 +173,10 @@ fn sign_ins(visit: &Visit, brand: Brand) -> Vec<Entry> {
     .collect()
 }
 
-/// The navigation groups of `brand`: its pages, its page templates and
-/// its sign-in cards. The brand itself is chosen in the top bar, so the
-/// navigation marks one page.
+/// The navigation groups of `brand`: its pages, its page templates, its
+/// sign-in cards, and the same page in each other brand, so the navigation
+/// marks one page. Six brands do not fit the top bar beside the search, so
+/// the brand switch is here and in the user menu.
 fn navigation(visit: &Visit, brand: Brand) -> Vec<Group> {
     let mut pages = entries(visit, brand);
     // The honest count (R12): a number on the overlays, and none known for the charts.
@@ -207,6 +207,15 @@ fn navigation(visit: &Visit, brand: Brand) -> Vec<Group> {
             title: visit.tr(Msg::SignInGroup).into(),
             entries: sign_ins(visit, brand),
         },
+        Group {
+            id: "nav-brands",
+            title: visit.tr(Msg::Brand).into(),
+            entries: brand_links(visit, &visit.path)
+                .into_iter()
+                .filter(|(each, _, _)| *each != brand)
+                .map(|(each, href, words)| entry(href, words, brand_glyph(each), true))
+                .collect(),
+        },
     ]
 }
 
@@ -230,22 +239,6 @@ fn brand_links(visit: &Visit, back: &str) -> Vec<(Brand, String, String)> {
             (each, format!("/{}{page}", each.key()), words)
         })
         .collect()
-}
-
-/// The brand switcher of the top bar from 64 rem up, where the six brands
-/// fit beside the search: the same page in each brand, the one in force
-/// marked current.
-fn brand_switch(visit: &Visit, back: &str) -> Html {
-    let links = brand_links(visit, back);
-    let current = links
-        .iter()
-        .position(|(each, _, _)| *each == visit.brand)
-        .unwrap_or(0);
-    let choices = links
-        .into_iter()
-        .map(|(_, href, words)| (href, words))
-        .collect();
-    segmented_links(visit.tr(Msg::Brand), choices, current)
 }
 
 /// The brand switcher as the user menu holds it at every width.
@@ -345,10 +338,6 @@ fn brand_shell(visit: &Visit, content: Html, toasts: Html) -> Html {
     });
     let version = fhir_version(visit);
     let end = Html::join([
-        Html::raw(format!(
-            "<span class=\"fui-roomy-only\">{}</span>",
-            brand_switch(visit, back)
-        )),
         version
             .clone()
             .map(|select| version_select(locale, select))
