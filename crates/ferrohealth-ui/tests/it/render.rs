@@ -42,8 +42,8 @@ use ferrohealth_ui::view::refusal::{Issue, Refusal, Severity, refusal};
 use ferrohealth_ui::view::shell::{Footer, footer, lockup, mark};
 use ferrohealth_ui::view::side_panel::{Opener, SidePanel, SidePanelWords, side_panel};
 use ferrohealth_ui::view::surface::{
-    Container, Header, SectionHead, Stat, definitions, page_header, page_heading, panel_section,
-    section_intro, source_split, stat_card,
+    Container, Header, SectionHead, Stat, definitions, page_card, page_header, page_heading,
+    panel_section, section_intro, source_split, stat_card,
 };
 use ferrohealth_ui::view::tabs::{Tab, binder};
 use ferrohealth_ui::view::tabs::{keyboard_tabs, tab_panels};
@@ -598,6 +598,31 @@ fn a_page_heading_in_the_body_face_writes_no_class_on_its_title() {
     assert!(
         mono.contains(r#"<h1 class="fui-page-title-mono">vitals.v1</h1>"#),
         "{mono}"
+    );
+}
+
+#[test]
+fn a_page_card_gives_the_centred_page_its_one_first_level_heading() {
+    let page = html(page_card(
+        None,
+        "Allow <Growth chart>?",
+        Html::text("body & more"),
+    ));
+    assert!(
+        page.starts_with(r#"<section class="fui-card fui-page-card"><h1 class="fui-page-card-title">Allow &#60;Growth chart&#62;?</h1>"#),
+        "{page}"
+    );
+    assert!(page.contains("body &#38; more"), "{page}");
+    assert_eq!(page.matches("<h1").count(), 1, "{page}");
+    assert!(page.ends_with("</section>"), "{page}");
+    let branded = html(page_card(
+        Some(Html::text("FerroSMART")),
+        "Apps you allowed",
+        Html::empty(),
+    ));
+    assert!(
+        branded.contains(r#"<div class="fui-page-card-lockup">FerroSMART</div><h1 class="fui-page-card-title">Apps you allowed</h1>"#),
+        "the lockup leads, the title follows: {branded}"
     );
 }
 

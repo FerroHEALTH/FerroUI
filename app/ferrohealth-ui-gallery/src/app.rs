@@ -138,6 +138,7 @@ fn templates(visit: &Visit, brand: Brand) -> Vec<Entry> {
     entries.extend(
         [
             ("about", Msg::NavAbout, Glyph::INFO),
+            ("bad-request", Msg::NavBadRequest, Glyph::CIRCLE_ALERT),
             ("forbidden", Msg::NavForbidden, Glyph::SHIELD_OFF),
             ("not-found", Msg::NavNotFound, Glyph::COMPASS),
         ]
@@ -155,6 +156,12 @@ fn templates(visit: &Visit, brand: Brand) -> Vec<Entry> {
         format!("/fault/{key}"),
         visit.tr(Msg::NavFault),
         Glyph::SERVER_CRASH,
+        true,
+    ));
+    entries.push(entry(
+        format!("/consent/{key}"),
+        visit.tr(Msg::NavConsent),
+        Glyph::KEY_ROUND,
         true,
     ));
     entries

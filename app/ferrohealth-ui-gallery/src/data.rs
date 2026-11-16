@@ -567,6 +567,10 @@ pub const MAPPING_FILES: [(&str, &str, bool); 3] = [
     ),
 ];
 
+/// The scopes the gallery's consent page offers: who you are, then the
+/// measurements.
+pub const CONSENT_SCOPES: [&str; 2] = ["patient/Patient.rs", "patient/Observation.rs"];
+
 /// The operator scope the 403 page names.
 pub const OPERATOR_SCOPE: &str = "__example.operator";
 

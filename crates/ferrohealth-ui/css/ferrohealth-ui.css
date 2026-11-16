@@ -8310,6 +8310,29 @@
     text-align: center;
   }
 
+  /* ---- R30. A page card: a whole page in the centred layout, the
+     product's lockup over its title, the page's heading, its words read
+     from the start. ---- */
+  .fui-page-card {
+    display: flex;
+    width: min(36rem, 100%);
+    flex-direction: column;
+    gap: var(--space-loose);
+    text-align: start;
+  }
+
+  .fui-page-card-lockup {
+    display: flex;
+  }
+
+  .fui-page-card-title {
+    margin: 0;
+    overflow-wrap: anywhere;
+    font-size: var(--text-heading);
+    line-height: var(--leading-heading);
+    font-weight: 600;
+  }
+
   /* ---- R20. An error page: the status, the sentence, the way on ---- */
 
   .fui-status-page {

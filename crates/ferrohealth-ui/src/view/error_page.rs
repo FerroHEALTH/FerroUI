@@ -5,9 +5,10 @@
 //!
 //! It says what happened in plain words first: the status as one quiet line
 //! of its words then its number ("Not allowed · 403"), the title naming the
-//! error, then what it means for the reader. A 403 says who you are and the
-//! scope or role the page needs, a 404 the address that is not known and
-//! what it may mean, a 500 that the console cannot tell and who can fix it.
+//! error, then what it means for the reader. A 400 says what in the request
+//! could not be read, a 403 who you are and the scope or role the page
+//! needs, a 404 the address that is not known and what it may mean, a 500
+//! that the console cannot tell and who can fix it.
 //! A quiet hint carries the raw scope or key, the way on is one or more
 //! links (the first the primary), and the time and the request id sit in a
 //! closed disclosure. The page renders in the shell for a signed-in reader
@@ -25,6 +26,8 @@ use crate::view::button::{Variant, link_button};
 /// What went wrong.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Status {
+    /// The request could not be read: 400.
+    BadRequest,
     /// The reader may not see the page: 403.
     Forbidden,
     /// No page at the address: 404.
@@ -38,6 +41,7 @@ impl Status {
     #[must_use]
     pub const fn code(self) -> u16 {
         match self {
+            Self::BadRequest => 400,
             Self::Forbidden => 403,
             Self::NotFound => 404,
             Self::Fault => 500,
@@ -47,6 +51,7 @@ impl Status {
     /// The glyph beside the status.
     const fn glyph(self) -> Glyph {
         match self {
+            Self::BadRequest => Glyph::CIRCLE_ALERT,
             Self::Forbidden => Glyph::BAN,
             Self::NotFound => Glyph::COMPASS,
             Self::Fault => Glyph::SERVER_CRASH,
@@ -57,6 +62,7 @@ impl Status {
     #[must_use]
     pub fn line(self, locale: &Locale) -> Word {
         let words = match self {
+            Self::BadRequest => tr(locale, Text::ErrorBadRequest),
             Self::Forbidden => tr(locale, Text::ErrorForbidden),
             Self::NotFound => tr(locale, Text::ErrorNotFound),
             Self::Fault => tr(locale, Text::ErrorFault),

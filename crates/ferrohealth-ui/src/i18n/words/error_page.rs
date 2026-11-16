@@ -6,6 +6,8 @@
 use crate::i18n::Text;
 
 texts! {
+    /// The words of a 400.
+    ErrorBadRequest = "error-bad-request",
     /// The summary of an error's technical detail.
     ErrorDetail = "error-detail",
     /// The words of a 500.

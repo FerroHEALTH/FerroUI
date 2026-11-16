@@ -444,7 +444,7 @@ async fn templates_content(browser: &Browser, page: &str) -> Result<(), Box<dyn 
             let shown = text_of(browser, By::Css(".fui-self-description")).await?;
             assert!(!shown.is_empty(), "the self-description shows");
         }
-        "/templates/forbidden" | "/templates/not-found" => {
+        "/templates/bad-request" | "/templates/forbidden" | "/templates/not-found" => {
             browser
                 .element(By::Css(".fui-status-page a.fui-button-primary[href]"))
                 .await?;
