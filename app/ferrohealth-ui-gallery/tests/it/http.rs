@@ -332,6 +332,35 @@ async fn a_removal_dialog_is_its_actions_form_and_a_plain_post_of_it_removes_the
     Ok(())
 }
 
+// FerroSMART's lockup draws its own shield with the keyhole wherever the
+// gallery draws one: the shell, a sign-in page and a centred page card (#686).
+#[tokio::test]
+async fn every_ferrosmart_lockup_draws_its_shield_with_the_keyhole() -> Result<(), Box<dyn Error>> {
+    for path in [
+        "/ferrosmart/overlays",
+        "/sign-in/ferrosmart/basic",
+        "/consent/ferrosmart",
+    ] {
+        let (parts, body) = get(path).await?;
+        assert_eq!(StatusCode::OK, parts.status, "{path}");
+        let lockup = body
+            .split("class=\"fui-lockup\"")
+            .nth(1)
+            .and_then(|rest| rest.split("fui-lockup-name").next())
+            .unwrap_or_default();
+        assert!(
+            lockup.contains("fui-mark-ferrosmart"),
+            "{path}: the lockup draws FerroSMART's mark: {lockup}"
+        );
+    }
+    let (_, other) = get("/ferropix/overlays").await?;
+    assert!(
+        !other.contains("fui-mark-ferrosmart"),
+        "another brand's lockup keeps its glyph"
+    );
+    Ok(())
+}
+
 #[tokio::test]
 async fn a_launch_answers_see_other_for_the_new_window_and_refuses_an_unknown_app()
 -> Result<(), Box<dyn Error>> {

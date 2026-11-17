@@ -26,7 +26,7 @@ use ferrohealth_ui::view::error_page::{Detail, ErrorPage, Status, Way, error_pag
 use ferrohealth_ui::view::filter_menu::{FilterChoice, FilterMenu, MenuForm, filter_menu};
 use ferrohealth_ui::view::form::{check, fieldset};
 use ferrohealth_ui::view::layout::Arrangement;
-use ferrohealth_ui::view::shell::{lockup_plain, mark};
+use ferrohealth_ui::view::shell::lockup_plain;
 use ferrohealth_ui::view::status::{badge, pill};
 use ferrohealth_ui::view::surface::{Crumb, Header, card, facts_row, page_card};
 use ferrohealth_ui::view::tabs::{Tab, TabRow};
@@ -47,7 +47,7 @@ use crate::data::{
     locations, many_locations,
 };
 use crate::locale::Msg;
-use crate::page::{Page, brand_glyph};
+use crate::page::{Page, brand_mark};
 use crate::visit::Visit;
 
 /// The variants the template pages show, as their routes name them.
@@ -769,11 +769,7 @@ pub fn consent(v: &Visit) -> Page {
         allow = label(Some(Glyph::CHECK), v.tr(Msg::ConsentAllow)),
         deny = label(None, v.tr(Msg::ConsentDeny)),
     ));
-    let lockup = lockup_plain(
-        mark(brand_glyph(brand)),
-        brand.product(),
-        v.tr(Msg::Gallery),
-    );
+    let lockup = lockup_plain(brand_mark(brand), brand.product(), v.tr(Msg::Gallery));
     let body = Html::join([
         Html::raw(format!("<p>{}</p>", Html::text(v.tr(Msg::ConsentIntro)))),
         form,

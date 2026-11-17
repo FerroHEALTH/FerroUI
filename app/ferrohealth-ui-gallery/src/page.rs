@@ -9,7 +9,7 @@ use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::{Glyph, icon};
 use ferrohealth_ui::style::Brand;
 use ferrohealth_ui::view::empty::empty_state;
-use ferrohealth_ui::view::shell::Footer;
+use ferrohealth_ui::view::shell::{Footer, ferrosmart_mark, mark};
 use ferrohealth_ui::view::toast::Flash;
 
 use crate::locale::Msg;
@@ -119,11 +119,19 @@ pub fn title(visit: &Visit, name: &str) -> String {
     format!("{name} · {under} · {product}")
 }
 
-/// The glyph that stands for a brand in the gallery's lists and lockups.
-///
-/// FerroSMART's lockup draws its own shield with the keyhole
-/// ([`ferrohealth_ui::view::shell::ferrosmart_mark`]); the Lucide shield
-/// stands for it in a list.
+/// The mark a brand's lockup draws: FerroSMART's own shield with the
+/// keyhole, and the brand's glyph in the accent for every other brand.
+#[must_use]
+pub fn brand_mark(brand: Brand) -> Html {
+    if brand == Brand::Smart {
+        ferrosmart_mark()
+    } else {
+        mark(brand_glyph(brand))
+    }
+}
+
+/// The glyph that stands for a brand in the gallery's lists, and its mark
+/// beside the product's name where it has no drawn one ([`brand_mark`]).
 #[must_use]
 pub const fn brand_glyph(brand: Brand) -> Glyph {
     match brand {
