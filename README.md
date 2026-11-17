@@ -99,7 +99,7 @@ as every FerroHEALTH console does: a console moves its pin after looking at
 its own screens.
 
 ```sh
-cargo add ferrohealth-ui@=0.6.10
+cargo add ferrohealth-ui@=0.6.11
 ```
 
 ## Usage

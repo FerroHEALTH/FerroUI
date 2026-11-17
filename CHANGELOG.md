@@ -11,6 +11,42 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.6.11] - 2026-11-17
+
+### Added
+
+- `action_menu::Act::PostToNewWindow { action, fields }` posts a plain form
+  whose answer opens in a new window (`target="_blank"`, `rel="noopener"`),
+  with no script, so the page stays open behind it, as a SMART app's EHR
+  launch needs. A menu item and an action button draw it with the
+  external-link icon (`Glyph::EXTERNAL_LINK`) after their words, and say
+  "(opens in a new window)" to assistive technology (WCAG 2.2 technique
+  G201). The gallery's overlays page launches a stand-in app from its More
+  menu (#685).
+- `view::shell::ferrosmart_mark()` draws FerroSMART's mark, the shield with
+  the keyhole of FerroHEALTH/FerroSMART `assets/brand/ferrosmart-icon.svg`,
+  for `lockup`, in place of `mark(Glyph::KEY_ROUND)`: the shield in the
+  accent and the keyhole in the yellow, amber 100 on a dark ground.
+  `Glyph::SHIELD` (Lucide `shield`) stands for FerroSMART in a list (#686).
+- A theme file may set `--accent-fill`, `--accent-fill-hover` and
+  `--accent-fill-ink` when its accent cannot be a fill on a light ground;
+  the primary action, the split button and the chosen day paint with them,
+  and a theme that leaves them out fills with its accent as before (#686).
+
+### Changed
+
+- `action_menu::items` takes the page's `&Locale` first, for the words of
+  an item whose answer opens in a new window. A console that draws a
+  menu's items itself passes its locale: `items(&locale, &menu)` (#685).
+- `style::Brand::Smart` takes FerroSMART's own brand from
+  FerroHEALTH/FerroSMART `assets/brand/tokens.css`: its yellow `#fbbf24` is
+  the fill of the primary action, the split button and the chosen day on a
+  light ground, carrying ink at 10.7:1, and the tint of a chosen row, while
+  bronze `#78350f` stays the text, link, edge and focus colour there, since
+  the yellow is 1.6:1 on a light surface. On dark the yellow is the accent
+  throughout. The gallery names the accent Yellow and no longer calls the
+  palette "Bronze & Iron" (#686).
+
 ## [0.6.10] - 2026-11-16
 
 ### Added
@@ -3163,7 +3199,8 @@ FerroHEALTH consoles.
   component in every product theme, light and dark, with browser journeys,
   a painted-colour check and the screenshots under `docs/screenshots/`.
 
-[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.10...HEAD
+[Unreleased]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.11...HEAD
+[0.6.11]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.10...v0.6.11
 [0.6.10]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.9...v0.6.10
 [0.6.9]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.8...v0.6.9
 [0.6.8]: https://github.com/FerroHEALTH/FerroUI/compare/v0.6.7...v0.6.8
