@@ -284,6 +284,20 @@ pub fn mark(glyph: Glyph) -> Html {
 }
 
 #[derive(Template)]
+#[template(path = "shell/parts.html", block = "ferrosmart_mark")]
+struct FerroSmartMarkView;
+
+/// Returns FerroSMART's mark for [`lockup`]: the shield with the keyhole.
+///
+/// The drawing is FerroHEALTH/FerroSMART `assets/brand/ferrosmart-icon.svg`:
+/// the shield in the accent and the keyhole in the brand's yellow, which
+/// turns amber 100 on a dark ground as FerroSMART's dark lockup draws it.
+#[must_use]
+pub fn ferrosmart_mark() -> Html {
+    FerroSmartMarkView.html()
+}
+
+#[derive(Template)]
 #[template(path = "shell/parts.html", block = "brand_mark")]
 struct BrandMarkView<'a> {
     light: &'a str,

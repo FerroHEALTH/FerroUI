@@ -119,7 +119,11 @@ pub fn title(visit: &Visit, name: &str) -> String {
     format!("{name} · {under} · {product}")
 }
 
-/// The glyph a brand's mark draws in the gallery.
+/// The glyph that stands for a brand in the gallery's lists and lockups.
+///
+/// FerroSMART's lockup draws its own shield with the keyhole
+/// ([`ferrohealth_ui::view::shell::ferrosmart_mark`]); the Lucide shield
+/// stands for it in a list.
 #[must_use]
 pub const fn brand_glyph(brand: Brand) -> Glyph {
     match brand {
@@ -128,7 +132,7 @@ pub const fn brand_glyph(brand: Brand) -> Glyph {
         Brand::Ehr => Glyph::HEART_PULSE,
         Brand::Term => Glyph::LIST_CHECKS,
         Brand::Pix => Glyph::LINK,
-        Brand::Smart => Glyph::KEY_ROUND,
+        Brand::Smart => Glyph::SHIELD,
     }
 }
 

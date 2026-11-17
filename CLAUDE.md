@@ -35,7 +35,8 @@ never publish under it.
   layer order, defining every `fui-` class a component writes, so a console
   needs no scan of the crate. A console sets its brand in a theme file
   (`themes/*.css`): seven custom properties, five per theme and the two
-  preview accents. `tests/it/contrast.rs`
+  preview accents, and the three fill roles where the brand's fill is not
+  its accent (FerroSMART). `tests/it/contrast.rs`
   holds every role pairing of every brand to WCAG 2.2 AA.
 - **Highlighters** for YAML, JSON, XML and AQL (`highlight`), total and
   deterministic; the `highlight` module runs the same grammars in the

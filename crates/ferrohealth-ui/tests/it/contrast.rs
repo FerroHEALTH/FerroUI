@@ -77,6 +77,7 @@ const TEXT_PAIRS: &[(&str, &[&str])] = &[
     ("accent", ACCENT_GROUNDS),
     ("accent-hover", ACCENT_GROUNDS),
     ("accent-ink", &["accent", "accent-hover"]),
+    ("accent-fill-ink", &["accent-fill", "accent-fill-hover"]),
     ("neutral", OPAQUE),
     ("ok", &["ok-ground", "surface-raised"]),
     ("warn", &["warn-ground", "surface-raised"]),
@@ -237,6 +238,14 @@ const BLOCKS: [(&str, &str); 3] = [
     ),
 ];
 
+/// The fill roles a brand may set apart from its accent, each with the
+/// accent role it falls back to (`var(--accent-fill, var(--accent))`).
+const FILLS: [(&str, &str); 3] = [
+    ("accent-fill", "accent"),
+    ("accent-fill-hover", "accent-hover"),
+    ("accent-fill-ink", "accent-ink"),
+];
+
 /// The accents a brand file declares for the theme previews in Your
 /// preferences, outside its three theme blocks: the light one and the dark one.
 const PREVIEW: [&str; 2] = ["preview-accent-light", "preview-accent-dark"];
@@ -255,6 +264,11 @@ fn themes(brand: Option<Brand>) -> Vec<(String, BTreeMap<String, Rgba>)> {
                 theme.extend(colours(&block(over, selector)));
             }
             theme.retain(|name, _| !PREVIEW.contains(&name.as_str()));
+            for (fill, accent) in FILLS {
+                if let Some(colour) = theme.get(accent).copied() {
+                    theme.entry(fill.to_owned()).or_insert(colour);
+                }
+            }
             let label = match brand {
                 Some(brand) => format!("{} {name}", brand.product()),
                 None => format!("default {name}"),
@@ -330,6 +344,9 @@ fn a_brand_sets_its_accent_alone() {
         "accent-ink",
         "accent-tint",
         "focus",
+        FILLS[0].0,
+        FILLS[1].0,
+        FILLS[2].0,
         PREVIEW[0],
         PREVIEW[1],
     ];

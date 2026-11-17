@@ -34,7 +34,7 @@ ICONS=(
   log-out menu message-square minus monitor moon network panel-left-close panel-left-open
   panel-right pencil play plug plus
   radio-tower refresh-cw rotate-ccw rotate-ccw-clock route save scroll-text search search-code search-x
-  send server server-crash settings shield-check shield-off sliders-horizontal
+  send server server-crash settings shield shield-check shield-off sliders-horizontal
   square-terminal sun table-2 tags trash triangle-alert undo upload user-plus user-round-search users x
 )
 
