@@ -26,11 +26,13 @@
 use std::collections::VecDeque;
 use std::error::Error;
 use std::fmt;
-use std::panic::Location;
+use std::panic::{AssertUnwindSafe, Location};
 use std::path::{Path, PathBuf};
+use std::pin::Pin;
 use std::process::Stdio;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Mutex, PoisonError};
+use std::task::{Context, Poll};
 use std::time::Duration;
 
 use serde_json::json;
@@ -459,7 +461,13 @@ impl Browser {
         };
         let driver = WebDriver::new(endpoint.as_str(), capabilities)
             .await
-            .map_err(|error| format!("no WebDriver session at {endpoint}: {error}"))?;
+            .map_err(|error| {
+                let kept = log.as_ref().map_or_else(
+                    || format!("set {DRIVER_LOGS_ENV} to keep chromedriver's log"),
+                    |log| format!("chromedriver's log: {}", log.display()),
+                );
+                format!("no WebDriver session at {endpoint}: {error} ({kept})")
+            })?;
         Ok(Self {
             driver,
             chromedriver,
@@ -813,22 +821,53 @@ where
     }
 }
 
+/// A journey's future, polled so that an assertion it fails comes back as
+/// the panic's payload, which [`with_browser`] names the step of, in place
+/// of unwinding past the session.
+struct Caught<F>(Pin<Box<F>>);
+
+impl<F: Future> Future for Caught<F> {
+    type Output = std::thread::Result<F::Output>;
+
+    fn poll(mut self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
+        match std::panic::catch_unwind(AssertUnwindSafe(|| self.0.as_mut().poll(context))) {
+            Ok(Poll::Pending) => Poll::Pending,
+            Ok(Poll::Ready(output)) => Poll::Ready(Ok(output)),
+            Err(payload) => Poll::Ready(Err(payload)),
+        }
+    }
+}
+
+/// The message a panic carried, as `panic!` and the assertions write it.
+fn panicked(payload: &(dyn std::any::Any + Send)) -> String {
+    payload
+        .downcast_ref::<&str>()
+        .map(|text| (*text).to_owned())
+        .or_else(|| payload.downcast_ref::<String>().cloned())
+        .map_or_else(
+            || String::from("an assertion failed"),
+            |text| format!("an assertion failed: {text}"),
+        )
+}
+
 /// Runs `journey` in a fresh browser, closes the browser whatever the
 /// journey did, and fails on a console error the browser logged last.
 ///
-/// A journey that fails returns a [`Failure`] naming its step and its last
-/// commands; one that passes deletes its chromedriver's log.
+/// A journey that fails, by an error or a failed assertion, returns a
+/// [`Failure`] naming its step and its last commands; one that passes
+/// deletes its chromedriver's log.
 pub(crate) async fn with_browser<F>(journey: F) -> Result<(), Box<dyn Error>>
 where
     F: AsyncFnOnce(&Browser) -> Result<(), Box<dyn Error>>,
 {
     let browser = Browser::open().await?;
-    let outcome = match journey(&browser).await {
-        Ok(()) => {
+    let outcome = match Caught(Box::pin(journey(&browser))).await {
+        Ok(Ok(())) => {
             browser.step("the end of the journey");
             browser.console_clean("the end of the journey").await
         }
-        Err(error) => Err(error),
+        Ok(Err(error)) => Err(error),
+        Err(payload) => Err(panicked(payload.as_ref()).into()),
     };
     let outcome = outcome.map_err(|error| browser.failure(error));
     let log = browser.log.clone();
@@ -873,6 +912,22 @@ fn every_test_of_this_binary_runs_in_the_capped_browser_group() -> Result<(), Bo
         "the browser group runs four at once"
     );
     Ok(())
+}
+
+// A failed assertion inside a journey comes back as its message, so the
+// failure that wraps it names its step.
+#[tokio::test]
+async fn a_failed_assertion_comes_back_with_its_message() {
+    let caught = Caught(Box::pin(async {
+        assert_eq!(1, 2, "the dock saves");
+    }))
+    .await;
+    let payload = caught.expect_err("the assertion panics");
+    let said = panicked(payload.as_ref());
+    assert!(
+        said.starts_with("an assertion failed: assertion `left == right` failed: the dock saves"),
+        "{said}"
+    );
 }
 
 // A failure names the step the journey named last and its commands since,
