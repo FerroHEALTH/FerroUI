@@ -49,6 +49,27 @@ pub const DRAFT_ROUTE: &str = "/draft";
 /// `/export/csv` or `/export/json`.
 pub const EXPORT_ROUTE: &str = "/export";
 
+/// The path of the route an app's launch posts to, whose answer opens in a
+/// new window.
+pub const LAUNCH_ROUTE: &str = "/launch";
+
+/// The app the gallery's launch item launches.
+pub const LAUNCHED_APP: &str = "growth-chart";
+
+/// What the gallery's launch item does: it posts [`LAUNCHED_APP`] and the
+/// page `back` it was chosen on to [`LAUNCH_ROUTE`], whose answer opens in
+/// a new window.
+#[must_use]
+pub fn launch(back: String) -> ferrohealth_ui::view::action_menu::Act {
+    ferrohealth_ui::view::action_menu::Act::PostToNewWindow {
+        action: String::from(LAUNCH_ROUTE),
+        fields: vec![
+            (String::from("app"), String::from(LAUNCHED_APP)),
+            (String::from("back"), back),
+        ],
+    }
+}
+
 /// The path of the route the topology's Probe now posts to, which sends
 /// the browser back where it came from.
 pub const PROBE_ROUTE: &str = "/probe";

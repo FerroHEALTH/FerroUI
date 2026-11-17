@@ -13,6 +13,7 @@ hold-show = Show the text while held
 hold-show-needs-script = The text stays masked: showing it works once the page has loaded
 menu-more = More
 menu-variants = { $action }: variants
+new-window = (opens in a new window)
 select-name = { $label }: { $value }
 tab-draft = draft
 tab-draft-choice = { $tab } (draft)

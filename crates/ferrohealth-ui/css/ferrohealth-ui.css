@@ -10044,6 +10044,13 @@
     color: var(--muted);
   }
 
+  /* An action whose answer opens in a new window ends with the
+     external-link icon after its words, in the colour of the icon before
+     them (WCAG 2.2 technique G201). */
+  .fui-new-window {
+    flex: none;
+  }
+
   .fui-menu-item-text {
     display: grid;
     flex: 1 1 auto;

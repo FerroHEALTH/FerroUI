@@ -37,6 +37,7 @@ mod kbd;
 mod line_diff;
 mod locale;
 mod markup;
+mod new_window;
 mod operations;
 mod preferences;
 mod records;

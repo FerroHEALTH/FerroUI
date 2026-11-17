@@ -139,6 +139,10 @@ impl Glyph {
     pub const EQUAL_NOT: Self = Self(
         r#"<line x1="5" x2="19" y1="9" y2="9" /><line x1="5" x2="19" y1="15" y2="15" /><line x1="19" x2="5" y1="5" y2="19" />"#,
     );
+    /// Lucide `external-link`.
+    pub const EXTERNAL_LINK: Self = Self(
+        r#"<path d="M15 3h6v6" /><path d="M10 14 21 3" /><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />"#,
+    );
     /// Lucide `eye`.
     pub const EYE: Self = Self(
         r#"<path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" /><circle cx="12" cy="12" r="3" />"#,
@@ -428,7 +432,7 @@ impl Glyph {
     pub const X: Self = Self(r#"<path d="M18 6 6 18" /><path d="m6 6 12 12" />"#);
 
     /// Every glyph, with the Lucide name of its vendored file.
-    pub const ALL: [(&str, Self); 111] = [
+    pub const ALL: [(&str, Self); 112] = [
         ("activity", Self::ACTIVITY),
         ("arrow-down", Self::ARROW_DOWN),
         ("arrow-left", Self::ARROW_LEFT),
@@ -465,6 +469,7 @@ impl Glyph {
         ("download", Self::DOWNLOAD),
         ("ellipsis", Self::ELLIPSIS),
         ("equal-not", Self::EQUAL_NOT),
+        ("external-link", Self::EXTERNAL_LINK),
         ("eye", Self::EYE),
         ("eye-off", Self::EYE_OFF),
         ("file-clock", Self::FILE_CLOCK),

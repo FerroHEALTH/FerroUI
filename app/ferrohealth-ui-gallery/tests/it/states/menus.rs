@@ -24,6 +24,7 @@ pub(super) const STATES: &[&str] = &[
     "split-open",
     "row-menu-open",
     "copy-menu-open",
+    "new-window-item-hover",
     "listbox-open",
     "listbox-hover-chosen",
     "action-group-390",
@@ -84,7 +85,8 @@ async fn closed_menu(browser: &Browser, id: &str) -> Result<(), Box<dyn Error>> 
 
 /// The title row's action group, More open by the pointer and by the
 /// keyboard, its plain and its danger item under the pointer, the split
-/// button's variants, a row menu, the menu with a copy item and the select
+/// button's variants, a row menu, the menu with a copy item, its item whose
+/// answer opens in a new window under the pointer, and the select
 /// button's listbox, open and with its chosen option under the pointer,
 /// then the action group, More's bottom sheet and the listbox's at 390 px.
 pub(super) async fn menu_states(
@@ -136,6 +138,16 @@ pub(super) async fn menu_states(
     opened_menu(browser, brand, theme, "row-menu-open", "row-menu-0").await?;
     closed_menu(browser, "row-menu-0").await?;
     opened_menu(browser, brand, theme, "copy-menu-open", "alone-more").await?;
+    closed_menu(browser, "alone-more").await?;
+    let away = "form[target='_blank'] .fui-menu-item";
+    hovered_item(
+        browser,
+        brand,
+        theme,
+        "new-window-item-hover",
+        ("alone-more", away),
+    )
+    .await?;
     closed_menu(browser, "alone-more").await?;
     opened_menu(browser, brand, theme, "listbox-open", "version-list").await?;
     closed_menu(browser, "version-list").await?;

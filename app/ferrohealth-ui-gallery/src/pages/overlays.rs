@@ -328,6 +328,11 @@ fn action_groups(v: &Visit) -> Html {
                 v.tr(Msg::CopyTheSetName),
                 Act::Copy(String::from(crate::data::SET_NAME)),
             )),
+            Item::new(Action::new(
+                Some(Glyph::PLAY),
+                v.tr(Msg::LaunchTheApp),
+                crate::request::launch(page_path(v, "overlays")),
+            )),
         ],
     ));
     let beside = ActionGroup::primary(Action::new(

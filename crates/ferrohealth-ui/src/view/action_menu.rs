@@ -8,6 +8,10 @@
 //! opens and closes them with no script, and every item is a link, a submit
 //! button of a plain form or of the console's own form (by `formaction`
 //! where it posts elsewhere), or a button that opens a confirmation dialog.
+//! A plain form whose answer opens in a new window (`target="_blank"`,
+//! HTML Living Standard, form submission) says so after its words, to
+//! assistive technology in words and to the eye by an icon (WCAG 2.2
+//! technique G201).
 //! The `<details>` of every menu on a page share one `name`, so opening one
 //! closes the others (HTML Living Standard, the `details` element). The
 //! `menu` module adds what HTML leaves out, after the WAI-ARIA Authoring
@@ -29,7 +33,7 @@ use askama::Template;
 
 use crate::html::{Html, Render as _};
 use crate::i18n::{Arg, Locale, Text, Word, tr, tr_with};
-use crate::icon::{Glyph, icon};
+use crate::icon::{Glyph, icon, icon_classed};
 use crate::view::form::hidden_fields;
 
 /// The ellipsis after the words of an action a confirmation follows.
@@ -47,6 +51,17 @@ pub enum Act {
     /// Posts a plain form to `action` with each of `fields` as a hidden
     /// input, named and valued.
     Post {
+        /// Where the form posts.
+        action: String,
+        /// The hidden inputs, each its name and value.
+        fields: Vec<(String, String)>,
+    },
+    /// Posts a plain form to `action` with each of `fields` as a hidden
+    /// input, and opens its answer in a new window, so the page stays open
+    /// behind it, such as an app's launch (SMART App Launch 2.2.0, EHR
+    /// launch: "a new browser instance"). The window opens with no opener
+    /// (`rel="noopener"`), and the action says it opens a new window.
+    PostToNewWindow {
         /// Where the form posts.
         action: String,
         /// The hidden inputs, each its name and value.
@@ -102,6 +117,7 @@ impl Action {
             Act::Link(_)
             | Act::Download(_)
             | Act::Post { .. }
+            | Act::PostToNewWindow { .. }
             | Act::Submit(_)
             | Act::SubmitTo { .. }
             | Act::Copy(_) => self.label.clone(),
@@ -297,8 +313,20 @@ fn item_inside(glyph: Option<Glyph>, words: &str, line: Option<&str>) -> String 
     )
 }
 
-/// Returns the item `item`, in the danger tone when `danger`.
-fn item(item: &Item, danger: bool) -> Html {
+/// Returns what follows the words of an action whose answer opens in a new
+/// window: `away` to assistive technology, and the external-link icon.
+#[must_use]
+pub fn new_window_mark(away: &Word) -> Html {
+    Html::raw(format!(
+        "<span class=\"fui-sr-only\"> {}</span>",
+        Html::from(away.clone())
+    ))
+    .then(icon_classed(Glyph::EXTERNAL_LINK, "14", "fui-new-window"))
+}
+
+/// Returns the item `item`, in the danger tone when `danger`; `away` is
+/// what an item whose answer opens in a new window says after its words.
+fn item(item: &Item, danger: bool, away: &Word) -> Html {
     let class = if danger {
         "fui-menu-item fui-menu-danger"
     } else {
@@ -326,6 +354,12 @@ fn item(item: &Item, danger: bool) -> Html {
             "<form method=\"post\" action=\"{}\" class=\"fui-menu-form\">{}<button type=\"submit\" role=\"menuitem\" class=\"{class}\">{inside}</button></form>",
             Html::text(action),
             hidden_fields(fields, &[])
+        ),
+        Act::PostToNewWindow { action, fields } => format!(
+            "<form method=\"post\" action=\"{}\" target=\"_blank\" rel=\"noopener\" class=\"fui-menu-form\">{}<button type=\"submit\" role=\"menuitem\" class=\"{class}\">{inside}{}</button></form>",
+            Html::text(action),
+            hidden_fields(fields, &[]),
+            new_window_mark(away)
         ),
         Act::Submit(form) => format!(
             "<button type=\"submit\" form=\"{}\" role=\"menuitem\" class=\"{class}\">{inside}</button>",
@@ -363,16 +397,21 @@ fn copies(menu: &Menu) -> bool {
 /// Returns the items of `menu`: its items, then its destructive ones after
 /// a separator.
 #[must_use]
-pub fn items(menu: &Menu) -> Html {
+pub fn items(locale: &Locale, menu: &Menu) -> Html {
+    let away = tr(locale, Text::NewWindow);
     let separated = !menu.items.is_empty() && !menu.destructive.is_empty();
-    let mut out: Html = menu.items.iter().map(|each| item(each, false)).collect();
+    let mut out: Html = menu
+        .items
+        .iter()
+        .map(|each| item(each, false, &away))
+        .collect();
     if separated {
         out = out.then(Html::raw(String::from("<hr class=\"fui-menu-sep\">")));
     }
     out.then(
         menu.destructive
             .iter()
-            .map(|each| item(each, true))
+            .map(|each| item(each, true, &away))
             .collect(),
     )
 }
@@ -432,7 +471,7 @@ fn placed(locale: &Locale, menu: &Menu, trigger: Trigger, name: String) -> Html 
             trigger,
             copies: copies(menu),
         },
-        items(menu),
+        items(locale, menu),
     )
 }
 

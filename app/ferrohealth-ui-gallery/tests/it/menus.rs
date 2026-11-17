@@ -233,6 +233,84 @@ async fn a_copy_item_copies_its_text_and_says_so_in_a_toast() -> Result<(), Box<
     .await
 }
 
+// NOTE: HTML Living Standard, form submission: a `_blank` target opens a new
+// navigable with no opener; WCAG 2.2 G201 names the new window before it opens.
+#[tokio::test(flavor = "multi_thread")]
+async fn an_item_posts_into_a_new_window_by_the_keyboard_and_the_page_stays()
+-> Result<(), Box<dyn Error>> {
+    if !journeys_enabled() {
+        return Ok(());
+    }
+    let gallery = Gallery::start().await?;
+    with_browser(async |browser| {
+        browser.step("the keyboard reaches the item, named with its new window");
+        window(browser, 1440, 900).await?;
+        let page = gallery.url("/ferrobridge/overlays");
+        browser.goto(&page).await?;
+        let more = hydrated_trigger(browser, "alone-more").await?;
+        more.scroll_into_view().await?;
+        focus(browser, &more).await?;
+        press(browser, Key::Enter).await?;
+        until("More opens on its first item", async || {
+            Ok(is_open(browser, "alone-more").await? && !focused_words(browser).await?.is_empty())
+        })
+        .await?;
+        press(browser, Key::End).await?;
+        until("End reaches the launch, the last item", async || {
+            Ok(focused_words(browser)
+                .await?
+                .starts_with("Launch the growth chart"))
+        })
+        .await?;
+        let named = crate::roles::read(browser, "#alone-more form[target='_blank'] button").await?;
+        let launch = named.first().ok_or("the launch item is not rendered")?;
+        assert_eq!("menuitem", launch.role, "{launch:?}");
+        assert_eq!(
+            "Launch the growth chart (opens in a new window)", launch.name,
+            "the name says the item opens a new window"
+        );
+        browser.step("Enter posts into a new window and the page stays");
+        let home = browser.driver().window().await?;
+        let before = browser.driver().windows().await?;
+        press(browser, Key::Enter).await?;
+        let mut opened = None;
+        until("the answer opens in a new window", async || {
+            let now = browser.driver().windows().await?;
+            opened = now.into_iter().find(|handle| !before.contains(handle));
+            Ok(opened.is_some())
+        })
+        .await?;
+        assert_eq!(
+            page,
+            browser.driver().current_url().await?.as_str(),
+            "the page the item sits on stays where it was"
+        );
+        assert!(
+            !is_open(browser, "alone-more").await?,
+            "choosing the item closes the menu"
+        );
+        browser.step("the new window holds the answer and no opener");
+        let opened = opened.ok_or("no new window")?;
+        browser.driver().switch_to_window(opened).await?;
+        let answer = gallery.url("/ferrobridge/overlays?launched=growth-chart");
+        browser.at(&answer).await?;
+        let alone = browser
+            .driver()
+            .execute("return window.opener === null;", vec![])
+            .await?;
+        assert_eq!(
+            Some(true),
+            alone.json().as_bool(),
+            "the new window has no opener (rel=noopener)"
+        );
+        browser.console_clean("the launched window").await?;
+        browser.driver().close_window().await?;
+        browser.driver().switch_to_window(home).await?;
+        browser.console_clean("the menu with a launch item").await
+    })
+    .await
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn more_is_a_bottom_sheet_with_its_cancel_on_a_phone() -> Result<(), Box<dyn Error>> {
     if !journeys_enabled() {

@@ -13,7 +13,7 @@
   `git-branch`, `list-filter` and `list-tree` later that day, and
   `arrow-left-right`, `book-open`, `git-compare`, `send` and
   `user-round-search` on 2026-10-23 too, and `scroll-text` that day as
-  well, from the same release. The
+  well, and `external-link` on 2026-11-17, from the same release. The
   release names `building-2` a deprecated alias of `building-complex`,
   `trash-2` one of `trash` and `history` one of `rotate-ccw-clock`, so
   each file is vendored under its current name.
