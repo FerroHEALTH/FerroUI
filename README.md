@@ -62,10 +62,12 @@ FerroHEALTH is five servers, each its own product, that reach each other
 only over published standards: FerroEHR stores the record, FerroBRIDGE
 translates it to FHIR and the OMOP research model, FerroFED connects records
 across organisations and borders, FerroPIX matches patient identities, and
-FerroTERM serves the code systems (the shared lists of medical terms). Work
-that every server needs lives in three shared libraries: FerroAUTH for
-sign-in and access control, FerroAUDIT for the audit trail, and FerroUI for
-the web consoles. The consoles of FerroBRIDGE, FerroFED, FerroEHR, FerroTERM
+FerroTERM serves the code systems (the shared lists of medical terms).
+FerroSMART, the SMART authorization server being built, issues the access
+tokens, and every server checks its callers with FerroSMART's
+`ferrohealth-smart`. Work that every server needs lives in shared libraries:
+FerroAUDIT for the audit trail, FerroUI for the web consoles and FerroSYS
+for the system plumbing. The consoles of FerroBRIDGE, FerroFED, FerroEHR, FerroTERM
 and FerroPIX are all built from FerroUI.
 
 <picture>
