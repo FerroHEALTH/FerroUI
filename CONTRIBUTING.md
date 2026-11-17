@@ -31,6 +31,18 @@ FERROUI_JOURNEYS=1 cargo nextest run -p ferrohealth-ui-gallery --locked
 FERROUI_SCREENSHOTS=1 cargo nextest run -p ferrohealth-ui-gallery --locked screenshots
 ```
 
+`FERROUI_DRIVER_LOGS=<dir>` keeps each session's chromedriver log there;
+a journey that passes deletes its own. A journey that fails names the step
+it failed in and its last commands.
+
+On macOS, an on-access malware scanner that runs as an Endpoint Security
+extension (`systemextensionsctl list` names one) holds every file Chrome
+opens until it has looked at it. Four Chromes starting at once then wait in
+its queue together, and on a busy machine a session can wait past
+chromedriver's 60 seconds (#645). Exclude `target/journey-tools/` and
+Chrome's profiles under `$TMPDIR` from on-access scanning, or ask whoever
+manages the scanner to.
+
 A change you can see is captured and looked at, every image it changed,
 before you ask for review. Leave `docs/screenshots/` as `main` has it: CI
 uploads the capture as an artifact for the reviewer, and the refresh pull

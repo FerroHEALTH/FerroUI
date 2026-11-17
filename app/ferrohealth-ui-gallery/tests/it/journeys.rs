@@ -2166,8 +2166,10 @@ async fn a_pick_or_type_field_shows_one_control_and_its_own_label_at_a_time()
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
         browser.goto(&gallery.url("/ferroterm/forms")).await?;
-        // The combobox replaces its select once the page is enhanced, which is
-        // when the select's change listener is there too.
+        // Every module has enhanced the page, the picker whose change listener
+        // the choice below needs among them: the combobox's own mark says
+        // nothing of the picker, a module of its own.
+        browser.hydrated().await?;
         browser
             .element(By::Css("#pick-canonical-choice[role='combobox']"))
             .await?;
