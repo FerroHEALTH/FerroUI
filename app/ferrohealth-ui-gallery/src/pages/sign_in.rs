@@ -11,11 +11,11 @@ use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::style::Brand;
 use ferrohealth_ui::view::session::session_ended;
-use ferrohealth_ui::view::shell::{lockup_plain, mark};
+use ferrohealth_ui::view::shell::lockup_plain;
 use ferrohealth_ui::view::sign_in::{Basic, Notice, Provider, Retry, SignIn, State, sign_in};
 
 use crate::locale::Msg;
-use crate::page::{Page, brand_glyph};
+use crate::page::{Page, brand_mark};
 use crate::visit::Visit;
 
 /// Every state of the sign-in page the gallery draws, by the key its path
@@ -108,7 +108,7 @@ fn card(visit: &Visit, brand: Brand, key: &str) -> Html {
     sign_in(
         &visit.locale,
         SignIn {
-            lockup: lockup_plain(mark(brand_glyph(brand)), brand.product(), tr(Msg::Gallery)),
+            lockup: lockup_plain(brand_mark(brand), brand.product(), tr(Msg::Gallery)),
             title: Some(tr(Msg::SignInTitle)),
             state,
             provider: Some(Provider {
