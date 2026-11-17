@@ -22,6 +22,7 @@ files-disk-compile-replace-running = The files on disk compile and replace the r
 how-reloading-works = How reloading works
 information = Information
 keyboard-shortcuts = Keyboard shortcuts
+launch-the-app = Launch the growth chart
 member-removed = { $member } was removed; the reason is kept with the revision.
 menus-and-selects = Menus and select buttons
 method = Method

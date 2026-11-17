@@ -146,6 +146,7 @@ async fn ctrl_s_saves_through_the_dock_and_r_moves_to_its_reason() -> Result<(),
     }
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
+        browser.step("r moves the focus to the dock's reason");
         window(browser, 1440, 900).await?;
         browser
             .goto(&gallery.url("/ferroehr/forms?dock=idle"))
@@ -165,6 +166,7 @@ async fn ctrl_s_saves_through_the_dock_and_r_moves_to_its_reason() -> Result<(),
             reason.prop("value").await?,
             "the key is not typed into the field"
         );
+        browser.step("r in the reason is text");
         press(browser, "r").await?;
         let typed = reason.prop("value").await?.unwrap_or_default();
         assert_eq!(
@@ -172,6 +174,7 @@ async fn ctrl_s_saves_through_the_dock_and_r_moves_to_its_reason() -> Result<(),
             typed.chars().count(),
             "in the field r is text: {typed}"
         );
+        browser.step("Ctrl S from inside the reason saves");
         chord(browser, "s").await?;
         until("Ctrl S from inside the reason saves", async || {
             Ok(browser
@@ -183,6 +186,7 @@ async fn ctrl_s_saves_through_the_dock_and_r_moves_to_its_reason() -> Result<(),
         })
         .await?;
         // A single key presses its decision outside a field.
+        browser.step("d outside a field presses Discard");
         browser
             .goto(&gallery.url("/ferroehr/forms?dock=idle"))
             .await?;
@@ -199,6 +203,7 @@ async fn ctrl_s_saves_through_the_dock_and_r_moves_to_its_reason() -> Result<(),
         })
         .await?;
         // A phone has no keyboard: r and d are no shortcuts there (family rule 6).
+        browser.step("r and d are no shortcuts below 40 rem");
         window(browser, 390, 844).await?;
         browser
             .goto(&gallery.url("/ferroehr/forms?dock=idle"))

@@ -819,6 +819,43 @@
     color: var(--accent);
   }
 
+  /* FerroSMART's mark (FerroHEALTH/FerroSMART assets/brand): the shield in
+     the accent, bronze on light and yellow on dark, and the keyhole in the
+     yellow, amber 100 on a dark ground, as its lockups draw them. */
+  .fui-mark-ferrosmart > svg {
+    display: block;
+  }
+
+  .fui-ferrosmart-shield {
+    stroke: var(--accent);
+  }
+
+  .fui-ferrosmart-keyhole {
+    fill: #fbbf24;
+  }
+
+  .fui-ferrosmart-stem {
+    stroke: #fbbf24;
+  }
+
+  :root[data-theme="dark"] .fui-ferrosmart-keyhole {
+    fill: #fef3c7;
+  }
+
+  :root[data-theme="dark"] .fui-ferrosmart-stem {
+    stroke: #fef3c7;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"], [data-theme="dark"]) .fui-ferrosmart-keyhole {
+      fill: #fef3c7;
+    }
+
+    :root:not([data-theme="light"], [data-theme="dark"]) .fui-ferrosmart-stem {
+      stroke: #fef3c7;
+    }
+  }
+
   /* A console's own drawn mark: the light image, and the dark one under the
      dark theme, chosen by the stylesheet before any script runs. */
   .fui-brand-mark {
@@ -1290,14 +1327,17 @@
       border-color var(--motion-state) ease-out;
   }
 
+  /* A primary action is the brand's fill, which a brand whose text accent
+     cannot be a fill on light (FerroSMART's yellow) sets apart; every other
+     brand's fill is its accent. */
   .fui-button-primary {
-    background: var(--accent);
-    color: var(--accent-ink);
+    background: var(--accent-fill, var(--accent));
+    color: var(--accent-fill-ink, var(--accent-ink));
   }
 
   .fui-button-primary:hover {
-    background: var(--accent-hover);
-    color: var(--accent-ink);
+    background: var(--accent-fill-hover, var(--accent-hover));
+    color: var(--accent-fill-ink, var(--accent-ink));
   }
 
   .fui-button-secondary {
@@ -6906,8 +6946,8 @@
 
   /* The chosen day, and a range's two ends: filled. */
   td[aria-selected="true"] > .fui-day {
-    background: var(--accent);
-    color: var(--accent-ink);
+    background: var(--accent-fill, var(--accent));
+    color: var(--accent-fill-ink, var(--accent-ink));
     font-weight: 600;
   }
 
@@ -6975,8 +7015,8 @@
   }
 
   .fui-datepicker-cell[aria-selected="true"] {
-    background: var(--accent);
-    color: var(--accent-ink);
+    background: var(--accent-fill, var(--accent));
+    color: var(--accent-fill-ink, var(--accent-ink));
     font-weight: 600;
   }
 
@@ -10044,6 +10084,13 @@
     color: var(--muted);
   }
 
+  /* An action whose answer opens in a new window ends with the
+     external-link icon after its words, in the colour of the icon before
+     them (WCAG 2.2 technique G201). */
+  .fui-new-window {
+    flex: none;
+  }
+
   .fui-menu-item-text {
     display: grid;
     flex: 1 1 auto;
@@ -10293,18 +10340,18 @@
 
   .fui-split-button .fui-split-toggle {
     min-width: 2.25rem;
-    border-inline-start: 1px solid color-mix(in srgb, var(--accent-ink) 40%, var(--accent));
+    border-inline-start: 1px solid color-mix(in srgb, var(--accent-fill-ink, var(--accent-ink)) 40%, var(--accent-fill, var(--accent)));
     border-start-start-radius: 0;
     border-end-start-radius: 0;
     padding-inline: 0.5rem;
-    background: var(--accent);
-    color: var(--accent-ink);
-    border-color: var(--accent);
+    background: var(--accent-fill, var(--accent));
+    color: var(--accent-fill-ink, var(--accent-ink));
+    border-color: var(--accent-fill, var(--accent));
   }
 
   .fui-split-button .fui-split-toggle[aria-expanded="true"] {
-    background: var(--accent-hover);
-    color: var(--accent-ink);
+    background: var(--accent-fill-hover, var(--accent-hover));
+    color: var(--accent-fill-ink, var(--accent-ink));
   }
 
   /* F13 and R29 on their native floor: the trigger is the summary of a
@@ -10331,8 +10378,8 @@
   }
 
   .fui-split-button details[open] > .fui-split-toggle {
-    background: var(--accent-hover);
-    color: var(--accent-ink);
+    background: var(--accent-fill-hover, var(--accent-hover));
+    color: var(--accent-fill-ink, var(--accent-ink));
   }
 
   details[open] > .fui-select-button {

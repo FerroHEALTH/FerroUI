@@ -333,6 +333,31 @@ async fn a_removal_dialog_is_its_actions_form_and_a_plain_post_of_it_removes_the
 }
 
 #[tokio::test]
+async fn a_launch_answers_see_other_for_the_new_window_and_refuses_an_unknown_app()
+-> Result<(), Box<dyn Error>> {
+    let (_, body) = get("/ferrofed/overlays").await?;
+    assert!(
+        body.contains(
+            r#"<form method="post" action="/launch" target="_blank" rel="noopener" class="fui-menu-form">"#
+        ) && body.contains(r#"name="back" value="/ferrofed/overlays""#),
+        "the launch item posts into a new window from the page it sits on: {body}"
+    );
+    let (parts, _) = send(form(
+        "/launch",
+        "app=growth-chart&back=%2Fferrofed%2Foverlays",
+    )?)
+    .await?;
+    assert_eq!(StatusCode::SEE_OTHER, parts.status);
+    assert_eq!(
+        "/ferrofed/overlays?launched=growth-chart",
+        parts.headers[header::LOCATION]
+    );
+    let (parts, _) = send(form("/launch", "app=other&back=%2F")?).await?;
+    assert_eq!(StatusCode::BAD_REQUEST, parts.status, "an app not listed");
+    Ok(())
+}
+
+#[tokio::test]
 async fn a_removal_returns_naming_the_member_and_refuses_one_with_no_reason()
 -> Result<(), Box<dyn Error>> {
     let (parts, _) = send(form(

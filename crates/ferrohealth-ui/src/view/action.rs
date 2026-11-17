@@ -20,8 +20,8 @@ use std::hash::{DefaultHasher, Hash as _, Hasher as _};
 use askama::Template;
 
 use crate::html::{Html, Render as _};
-use crate::i18n::Locale;
-use crate::view::action_menu::{Act, Action, Menu, more_menu, variants_menu};
+use crate::i18n::{Locale, Text, tr};
+use crate::view::action_menu::{Act, Action, Menu, more_menu, new_window_mark, variants_menu};
 use crate::view::button::{Variant, label};
 use crate::view::copy::{CopySource, CopyWords, copy_from};
 use crate::view::popover::{PopoverForm, popover_form};
@@ -119,6 +119,7 @@ struct ButtonView {
     act: Act,
     class: &'static str,
     inside: Html,
+    away: Html,
 }
 
 /// The button [`action_button`] and [`small_action_button`] draw, with the
@@ -139,6 +140,7 @@ fn button_of(locale: &Locale, action: Action, class: &'static str) -> Html {
     let words = action.words();
     ButtonView {
         inside: label(action.glyph, words),
+        away: new_window_mark(&tr(locale, Text::NewWindow)),
         act: action.act,
         class,
     }

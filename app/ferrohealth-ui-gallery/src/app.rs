@@ -20,7 +20,7 @@ use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::menu::{Choice, Choices, ThemeChoice, UserLink, UserMenu, user_menu};
 use ferrohealth_ui::view::nav::{Count, Entry, Group, Rail, Sidebar, sidebar};
 use ferrohealth_ui::view::shell::{
-    Document, Shell, TopBar, centred, document, lockup, mark, shell, topbar,
+    Document, Shell, TopBar, centred, document, ferrosmart_mark, lockup, mark, shell, topbar,
 };
 use ferrohealth_ui::view::status::{Reach, StatusPill, banner, status_pill};
 use ferrohealth_ui::view::toast::toast_region;
@@ -319,7 +319,11 @@ fn brand_shell(visit: &Visit, content: Html, toasts: Html) -> Html {
     let locale = &visit.locale;
     let lockup = lockup(
         "/",
-        mark(brand_glyph(brand)),
+        if brand == Brand::Smart {
+            ferrosmart_mark()
+        } else {
+            mark(brand_glyph(brand))
+        },
         brand.product(),
         visit.tr(Msg::Gallery),
     );

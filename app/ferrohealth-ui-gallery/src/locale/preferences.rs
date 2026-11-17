@@ -13,10 +13,10 @@ messages! {
     AccentIndigo = "accent-indigo",
     /// `Plum`
     AccentPlum = "accent-plum",
-    /// `Bronze`
-    AccentBronze = "accent-bronze",
     /// `Teal`
     AccentTeal = "accent-teal",
+    /// `Yellow`
+    AccentYellow = "accent-yellow",
     /// `Concepts are asked for in`
     ConceptLanguage = "concept-language",
     /// `The language tag the server answers a concept's display in, such as nl-NL.`

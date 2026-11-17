@@ -32,9 +32,9 @@ use http::{HeaderValue, Method, StatusCode};
 use tower_http::set_header::SetResponseHeaderLayer;
 
 use crate::request::{
-    COOKIE_PREFIX, DRAFT_ROUTE, EXPORT_ROUTE, OWN_PREFERENCES, PAGED_LISTINGS, PAGING_COOKIE,
-    PAGING_ROUTE, PREFERENCE_ROUTE, PROBE_ROUTE, REMOVE_ROUTE, RESET_ROUTE, SIDEBAR_COOKIE,
-    SIDEBAR_ROUTE, SIGN_OUT_ROUTE,
+    COOKIE_PREFIX, DRAFT_ROUTE, EXPORT_ROUTE, LAUNCH_ROUTE, LAUNCHED_APP, OWN_PREFERENCES,
+    PAGED_LISTINGS, PAGING_COOKIE, PAGING_ROUTE, PREFERENCE_ROUTE, PROBE_ROUTE, REMOVE_ROUTE,
+    RESET_ROUTE, SIDEBAR_COOKIE, SIDEBAR_ROUTE, SIGN_OUT_ROUTE,
 };
 use crate::visit::Visit;
 
@@ -48,6 +48,7 @@ pub fn router() -> axum::Router {
         .route("/favicon.svg", get(favicon))
         .route("/favicon.ico", get(favicon))
         .route(PREFERENCE_ROUTE, post(choose_preference))
+        .route(LAUNCH_ROUTE, post(launch))
         .route(PROBE_ROUTE, post(probe))
         .route(REMOVE_ROUTE, post(remove_member))
         .route(RESET_ROUTE, post(reset_preferences))
@@ -322,6 +323,27 @@ async fn remove_member(Form(removal): Form<Removal>) -> Response {
     }
     let back = return_path(&removal.back);
     Redirect::to(&format!("{back}?removed={}", removal.member)).into_response()
+}
+
+/// What an app's launch posts: the app, and the page it was launched from.
+#[derive(Debug, serde::Deserialize)]
+struct Launch {
+    /// The app launched, [`LAUNCHED_APP`].
+    app: String,
+    /// The page the launch was chosen on.
+    back: String,
+}
+
+/// Launches the synthetic app, as a console's launch route draws a
+/// single-use launch value and answers `303` to the app's launch address:
+/// the gallery has no app, so the new window loads the page the launch was
+/// chosen on, naming the app launched. Any other app answers `400`.
+async fn launch(Form(launch): Form<Launch>) -> Response {
+    if launch.app != LAUNCHED_APP {
+        return (StatusCode::BAD_REQUEST, "no such app").into_response();
+    }
+    let back = return_path(&launch.back);
+    Redirect::to(&format!("{back}?launched={LAUNCHED_APP}")).into_response()
 }
 
 /// Answers the topology's Probe now: the gallery probes nothing, so it

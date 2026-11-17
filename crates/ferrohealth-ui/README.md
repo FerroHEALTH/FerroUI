@@ -89,6 +89,10 @@ A theme file sets seven properties. Five (`--accent`, `--accent-hover`,
 Two (`--preview-accent-light`, `--preview-accent-dark`) are written once, in
 a closing `:root` block: the accents the theme previews in Your preferences
 draw, whatever theme the page itself is in.
+A brand whose accent cannot be a fill on a light ground also sets
+`--accent-fill`, `--accent-fill-hover` and `--accent-fill-ink` in the three
+blocks, which the primary action, the split button and the chosen day
+paint with; a brand that leaves them out fills with its accent.
 The theme choice is `data-theme` (`light`, `dark` or `system`) on `<html>`,
 which your server writes from its own cookie or setting (`theme::Theme`).
 

@@ -22,11 +22,11 @@ use crate::stack::Gallery;
 
 /// What the accessibility tree says of one element.
 #[derive(Debug)]
-struct Node {
+pub(crate) struct Node {
     /// The computed role, such as `status`.
-    role: String,
+    pub(crate) role: String,
     /// The computed accessible name.
-    name: String,
+    pub(crate) name: String,
     /// The `live` property, empty when the node has none.
     live: String,
     /// The element's tag name, upper case.
@@ -37,7 +37,7 @@ struct Node {
 
 /// The accessibility tree's reading of every rendered element `selector`
 /// matches on the page the browser holds, in document order.
-async fn read(browser: &Browser, selector: &str) -> Result<Vec<Node>, Box<dyn Error>> {
+pub(crate) async fn read(browser: &Browser, selector: &str) -> Result<Vec<Node>, Box<dyn Error>> {
     let cdp = browser.driver().cdp();
     cdp.send_raw("DOM.enable", json!({})).await?;
     cdp.send_raw("Accessibility.enable", json!({})).await?;

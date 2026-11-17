@@ -212,7 +212,11 @@ entry, and a new role joins the contrast test in the change that adds it.
   `prefers-color-scheme`), then `--preview-accent-light` and
   `--preview-accent-dark` once in a closing `:root` block, the accents the
   theme previews in Your preferences draw whatever theme the page is in,
-  each the accent of its theme. Nothing else.
+  each the accent of its theme. A brand whose accent cannot be a fill on
+  a light ground also sets `--accent-fill`, `--accent-fill-hover` and
+  `--accent-fill-ink` in the three blocks: the primary action, the split
+  button and the chosen day paint with them, and every other brand's fill
+  falls back to its accent (FerroSMART's yellow, #686). Nothing else.
 - The theme is `data-theme` (`light`, `dark`, `system`) on `<html>`, written
   by the console's server from its cookie, so the first paint is right; with
   no cookie it follows the system. The top bar carries no theme control

@@ -1,6 +1,6 @@
 ---
 name: brand-palettes
-description: "Each product keeps its own accent: BRIDGE indigo, FED azure, EHR its viewer teal, TERM teal, PIX plum, SMART the bronze of FerroAUTH; a shade moves only when it fails WCAG 2.2 AA, and the change says so"
+description: "Each product keeps its own accent: BRIDGE indigo, FED azure, EHR its viewer teal, TERM teal, PIX plum, SMART its yellow with bronze for text on light; a shade moves only when it fails WCAG 2.2 AA, and the change says so"
 metadata:
   type: project
 ---
@@ -11,9 +11,11 @@ metadata:
 Owner decision, 2026-10-18: FerroEHR keeps its viewer palette (teal), not a
 new one; FerroBRIDGE keeps indigo, FerroFED its azure accent, FerroTERM its
 teal. FerroPIX, the fifth console, takes the plum of its own brand tokens
-(`themes/ferropix.css`). FerroSMART, the SMART authorization server that
-ships from the FerroAUTH repository, takes FerroAUTH's "Bronze & Iron"
-(`themes/ferrosmart.css`, FerroHEALTH/FerroUI#678, 2026-11-16). The default theme with no brand is the FerroHEALTH
+(`themes/ferropix.css`). FerroSMART takes its own yellow `#FBBF24`, with
+bronze `#78350F` for text, links and the focus on a light ground, where
+the yellow (1.6:1) is only a fill carrying ink (`themes/ferrosmart.css`,
+FerroHEALTH/FerroSMART `assets/brand/tokens.css`, FerroUI #686,
+2026-11-17). The default theme with no brand is the FerroHEALTH
 steel.
 
 Two shades moved to pass the contrast test, and the theme files say why:
@@ -22,5 +24,6 @@ fails 4.5:1 as link text, and its dark tint is a translucent teal because the
 viewer's teal 900 ground fails the muted text.
 
 **How to apply:** a theme file sets the five accent properties in three blocks
-and nothing else. A palette change that fails `tests/it/contrast.rs` moves the
+and nothing else, and the three fill roles only where its fill is not its
+accent. A palette change that fails `tests/it/contrast.rs` moves the
 smallest shade that passes and names the move in the pull request.

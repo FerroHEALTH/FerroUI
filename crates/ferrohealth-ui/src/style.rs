@@ -29,8 +29,8 @@ pub enum Brand {
     Term,
     /// FerroPIX, Plum and Iron.
     Pix,
-    /// FerroSMART, Bronze and Iron, the palette of FerroAUTH, whose
-    /// repository it ships from.
+    /// FerroSMART, its yellow with bronze for text on a light ground
+    /// (FerroHEALTH/FerroSMART `assets/brand/tokens.css`).
     Smart,
 }
 

@@ -42,6 +42,8 @@ messages! {
     Information = "information",
     /// `Keyboard shortcuts`
     KeyboardShortcuts = "keyboard-shortcuts",
+    /// `Launch the growth chart`
+    LaunchTheApp = "launch-the-app",
     /// The line that says the member `$member` was removed.
     MemberRemoved = "member-removed",
     /// `Menus and select buttons`

@@ -12,7 +12,9 @@ use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::flow::FlowState;
 use ferrohealth_ui::view::menu::{Choice, Choices, ThemeChoice, UserLink, UserMenu, user_menu};
 use ferrohealth_ui::view::nav::{Count, Entry, Group, Nest, NestItem, Rail, Sidebar, sidebar};
-use ferrohealth_ui::view::shell::{TopBar, lockup, lockup_plain, mark, skip_link, topbar};
+use ferrohealth_ui::view::shell::{
+    TopBar, ferrosmart_mark, lockup, lockup_plain, mark, skip_link, topbar,
+};
 use ferrohealth_ui::view::sign_in::{
     Basic, NOTICE_ID, Notice, Provider, Retry, SignIn, State, sign_in,
 };
@@ -1074,4 +1076,27 @@ fn a_navigation_or_tab_count_groups_its_digits() {
         tabs.contains(r#"<span aria-hidden="true">12,345</span>"#),
         "{tabs}"
     );
+}
+
+// FerroSMART's mark is its own shield with the keyhole, hidden from
+// assistive technology beside the product's name, with no inline style.
+#[test]
+fn ferrosmart_s_mark_is_its_shield_with_the_keyhole() {
+    let html: String = ferrosmart_mark().into();
+    assert!(
+        html.starts_with(r#"<span aria-hidden="true" class="fui-mark fui-mark-ferrosmart">"#),
+        "{html}"
+    );
+    assert!(
+        html.contains(r#"viewBox="0 0 64 64""#)
+            && html.contains(r#"d="M32 6 L52 13 V30 C52 44 43 53 32 58 C21 53 12 44 12 30 V13 Z""#)
+            && html.contains(r#"<circle cx="32" cy="28" r="5.5" class="fui-ferrosmart-keyhole"/>"#),
+        "the shield and the keyhole of ferrosmart-icon.svg: {html}"
+    );
+    assert!(
+        !html.contains("style=") && !html.contains("fill=\"#") && !html.contains("stroke=\"#"),
+        "its colours come from the stylesheet, so they follow the theme: {html}"
+    );
+    let marked: String = lockup("/", ferrosmart_mark(), "FerroSMART", "Consent").into();
+    assert!(marked.contains("fui-mark-ferrosmart"), "{marked}");
 }

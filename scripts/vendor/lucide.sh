@@ -27,14 +27,14 @@ ICONS=(
   book-a book-open book-x building-complex calendar chart-line check chevron-down chevron-left chevron-right
   chevron-up
   chevrons-left chevrons-right circle-alert circle-check circle-user
-  circle-x clipboard-copy clock code compass copy corner-down-right database download ellipsis equal-not eye eye-off
+  circle-x clipboard-copy clock code compass copy corner-down-right database download ellipsis equal-not external-link eye eye-off
   file-clock file-code file-plus file-text files flame flask-conical folder
   folder-open folder-plus folder-search folder-x funnel gauge git-branch git-commit-horizontal git-compare heart-pulse
   inbox info key-round keyboard layers layout-dashboard link list-checks list-filter list-tree lock log-in
   log-out menu message-square minus monitor moon network panel-left-close panel-left-open
   panel-right pencil play plug plus
   radio-tower refresh-cw rotate-ccw rotate-ccw-clock route save scroll-text search search-code search-x
-  send server server-crash settings shield-check shield-off sliders-horizontal
+  send server server-crash settings shield shield-check shield-off sliders-horizontal
   square-terminal sun table-2 tags trash triangle-alert undo upload user-plus user-round-search users x
 )
 

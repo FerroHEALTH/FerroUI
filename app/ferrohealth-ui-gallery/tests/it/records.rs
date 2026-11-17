@@ -440,6 +440,7 @@ async fn the_focus_follows_reveal_hide_and_a_refusal_to_the_face_that_shows()
     }
     let gallery = Gallery::start().await?;
     with_browser(async |browser| {
+        browser.step("Reveal by the keyboard hands the focus to Hide");
         window(browser, 1440, 900).await?;
         open_identifiers(browser, &gallery, "ferropix").await?;
         let reveal = browser.element(reveal_link("bsn")).await?;
@@ -462,11 +463,13 @@ async fn the_focus_follows_reveal_hide_and_a_refusal_to_the_face_that_shows()
             focus_is(browser, "#identifier-bsn button[aria-pressed='true']").await
         })
         .await?;
+        browser.step("Hide hands the focus back to Reveal");
         press(browser, Key::Enter).await?;
         until("the focus returns to Reveal once hidden", async || {
             focus_is(browser, "#identifier-bsn a.fui-identifier-reveal").await
         })
         .await?;
+        browser.step("a refused Reveal hands the focus back to Reveal");
         let refused = browser.element(reveal_link("ssn")).await?;
         browser
             .driver()

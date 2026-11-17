@@ -169,6 +169,48 @@ async fn more_opens(browser: &Browser) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+/// Checks that the item whose answer opens in a new window is a plain form
+/// post: with no script it shows in its open menu, and choosing it opens
+/// the answer in a new window while the page stays (#685).
+async fn launch_opens(browser: &Browser) -> Result<(), Box<dyn Error>> {
+    let more = browser
+        .element(By::Css("summary[aria-controls='alone-more']"))
+        .await?;
+    more.scroll_into_view().await?;
+    more.click().await?;
+    let launch = browser
+        .element(By::Css(
+            "#alone-more form[target='_blank'][rel='noopener'] button[type='submit']",
+        ))
+        .await?;
+    assert!(
+        launch.is_displayed().await?,
+        "the launch item shows with no script"
+    );
+    let page = browser.driver().current_url().await?;
+    let home = browser.driver().window().await?;
+    let before = browser.driver().windows().await?;
+    launch.click().await?;
+    let mut opened = None;
+    until("the launch opens a new window with no script", async || {
+        let now = browser.driver().windows().await?;
+        opened = now.into_iter().find(|handle| !before.contains(handle));
+        Ok(opened.is_some())
+    })
+    .await?;
+    assert_eq!(
+        page,
+        browser.driver().current_url().await?,
+        "the page stays where it was"
+    );
+    let opened = opened.ok_or("no new window")?;
+    browser.driver().switch_to_window(opened).await?;
+    browser.driver().close_window().await?;
+    browser.driver().switch_to_window(home).await?;
+    more.click().await?;
+    Ok(())
+}
+
 /// Checks that the side panel's opener is a link to its content's route,
 /// and the button that opens it in place waits for its module.
 async fn side_panel_floor(browser: &Browser) -> Result<(), Box<dyn Error>> {
@@ -522,6 +564,7 @@ async fn overlays_content(browser: &Browser) -> Result<(), Box<dyn Error>> {
         copy.attr("hidden").await?.is_some(),
         "the copy item, which needs its script, waits hidden"
     );
+    launch_opens(browser).await?;
     side_panel_floor(browser).await?;
     let opener = browser.element(By::Id("open-shortcuts")).await?;
     assert!(

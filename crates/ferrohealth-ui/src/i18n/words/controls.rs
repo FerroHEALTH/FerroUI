@@ -24,6 +24,9 @@ texts! {
     MenuMore = "menu-more",
     /// The name of a split button's toggle: the variants of `$action`.
     MenuVariants = "menu-variants",
+    /// What an action whose answer opens in a new window says after its
+    /// words to assistive technology (WCAG 2.2 technique G201).
+    NewWindow = "new-window",
     /// The name of a select button: its `$label` and the `$value` chosen.
     SelectName = "select-name",
     /// The badge of a tab whose section holds a draft.
